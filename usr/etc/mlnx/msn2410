@@ -1,0 +1,823 @@
+#
+# Copyright (C) 2010-2015, Mellanox Technologies Ltd.  ALL RIGHTS RESERVED.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+#
+#
+
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:        bsp for msn2410 system
+# Required-Start:  $syslog 
+# Required-Stop:   $syslog
+# Default-Start:   2 3 4 5       
+# Default-Stop:    0 1 6
+# Short-Description: Mellanox x86 MSN2410 system bsp
+# Description:       MLNX MSN2410 BSP
+# Available options:
+# start        - install all BSP kernel drivers, connect drivers to devices, create BSP dictionary as symbolic
+#                links to sysfs entries
+# stop         - destroy BSP dictionary, disconnect drivers from devices, uninstall BSP kernel drivers
+# restart      - combined stop and start sequence
+# reprobe_asic - disconnect ASIC driver from device and connect it again, can be used in case ASIC core
+#                driver reloading
+### END INIT INFO
+
+. /lib/lsb/init-functions
+
+mux2=/sys/bus/i2c/devices/i2c-2
+mux5=/sys/bus/i2c/devices/i2c-5
+mux7=/sys/bus/i2c/devices/i2c-7
+mux7=/sys/bus/i2c/devices/i2c-8
+mux10=/sys/bus/i2c/devices/i2c-10
+mux11=/sys/bus/i2c/devices/i2c-11
+mux12=/sys/bus/i2c/devices/i2c-12
+mux13=/sys/bus/i2c/devices/i2c-13
+mux14=/sys/bus/i2c/devices/i2c-14
+mux15=/sys/bus/i2c/devices/i2c-15
+mux16=/sys/bus/i2c/devices/i2c-16
+mux17=/sys/bus/i2c/devices/i2c-17
+
+cpu=/sys/devices/platform/coretemp.0
+asic=/sys/bus/i2c/devices/2-0048
+cpld=/sys/bus/i2c/devices/2-0060
+ucd1=/sys/bus/i2c/devices/5-0027
+ucd2=/sys/bus/i2c/devices/5-0041
+a2d_swb=/sys/bus/i2c/devices/5-006d
+temp_swb=/sys/bus/i2c/devices/7-004a
+psu1=/sys/bus/i2c/devices/10-0059
+psu2=/sys/bus/i2c/devices/10-0058
+eeprom_fan1=/sys/bus/i2c/devices/11-0050
+eeprom_fan2=/sys/bus/i2c/devices/12-0050
+eeprom_fan3=/sys/bus/i2c/devices/13-0050
+eeprom_fan4=/sys/bus/i2c/devices/14-0050
+a2d_mnb=/sys/bus/i2c/devices/15-006d
+eeprom_mnb=/sys/bus/i2c/devices/16-0051
+temp_mnb=/sys/bus/i2c/devices/17-0049
+eeprom_psu1=/sys/bus/i2c/devices/10-0051
+eeprom_psu2=/sys/bus/i2c/devices/10-0050
+
+ACTION=$1
+
+is_module()
+{
+        /sbin/lsmod | grep -w "$1" > /dev/null
+        RC=$?
+        return $RC
+}
+
+load_modules()
+{
+	log_daemon_msg "Starting Mellanox x86 system bsp modules"
+	log_end_msg 0
+
+	if is_module lpci2c; then
+		log_warning_msg "lpci2c module has already been loaded"
+	else
+		if modprobe lpci2c 2>/dev/null; then
+			log_success_msg "lpci2c module load passed"
+		else
+			log_failure_msg "lpci2c module load failed"
+		fi
+	fi
+
+	if is_module i2c_mux; then
+		log_warning_msg "i2c_mux module has already been loaded"
+	else
+		if modprobe i2c_mux 2>/dev/null; then
+			log_success_msg "i2c_mux module load passed"
+		else
+			log_failure_msg "i2c_mux module load failed"
+		fi
+	fi
+
+	if is_module mlnx_mux_drv; then
+		log_warning_msg "mlnx_mux_drv module has already been loaded"
+	else
+		if modprobe mlnx_mux_drv 2>/dev/null; then
+			log_success_msg "mlnx_mux_drv module load passed"
+		else
+			log_failure_msg "mlnx_mux_drv module load failed"
+		fi
+	fi
+
+	if is_module mlnx_cpld_drv; then
+		log_warning_msg "mlnx_cpld_drv module has already been loaded"
+	else
+		if modprobe mlnx_cpld_drv psu_control_driver=dps460 2>/dev/null; then
+			log_success_msg "mlnx_cpld_drv module load passed"
+		else
+			log_failure_msg "mlnx_cpld_drv module load failed"
+		fi
+	fi
+
+	if is_module mlnx_asic_drv; then
+		log_warning_msg "mlnx_asic_drv module has already been loaded"
+	else
+		if modprobe mlnx_asic_drv 2>/dev/null; then
+			log_success_msg "mlnx_asic_drv module load passed"
+		else
+			log_failure_msg "mlnx_asic_drv module load failed"
+		fi
+	fi
+
+	if is_module mlnx_a2d_drv; then
+		log_warning_msg "mlnx_a2d_drv module has already been loaded"
+	else
+		if modprobe mlnx_a2d_drv 2>/dev/null; then
+			log_success_msg "mlnx_a2d_drv module load passed"
+		else
+			log_failure_msg "mlnx_a2d_drv module load failed"
+		fi
+	fi
+
+	if is_module pmbus_core; then
+		log_warning_msg "pmbus_core module has already been loaded"
+	else
+		if modprobe pmbus_core 2>/dev/null; then
+			log_success_msg "pmbus_core module load passed"
+		else
+			log_failure_msg "pmbus_core module load failed"
+		fi
+	fi
+
+	if is_module pmbus; then
+		log_warning_msg "pmbus module has already been loaded"
+	else
+		if modprobe pmbus 2>/dev/null; then
+			log_success_msg "pmbus module load passed"
+		else
+			log_failure_msg "pmbus module load failed"
+		fi
+	fi
+
+	if is_module ucd9200; then
+		log_warning_msg "ucd9200 module has already been loaded"
+	else
+		if modprobe ucd9200 2>/dev/null; then
+			log_success_msg "ucd9200 module load passed"
+		else
+			log_failure_msg "ucd9200 module load failed"
+		fi
+	fi
+
+	if is_module coretemp; then
+		log_warning_msg "coretemp module has already been loaded"
+	else
+		if modprobe coretemp 2>/dev/null; then
+			log_success_msg "coretemp module load passed"
+		else
+			log_failure_msg "coretemp module load failed"
+		fi
+	fi
+
+	if is_module lm75; then
+		log_warning_msg "lm75 module has already been loaded"
+	else
+		if modprobe lm75 2>/dev/null; then
+			log_success_msg "lm75 module load passed"
+		else
+			log_failure_msg "lm75 module load failed"
+		fi
+	fi
+
+	if is_module at24; then
+		log_warning_msg "at24 module has already been loaded"
+	else
+		if modprobe at24 io_limit=32 2>/dev/null; then
+			log_success_msg "at24 module load passed"
+		else
+			log_failure_msg "at24 module load failed"
+		fi
+	fi
+}
+
+unload_modules()
+{
+	log_daemon_msg "Stopping Mellanox x86 system bsp module"
+	log_end_msg 0
+
+	if is_module at24; then
+		if rmmod at24 2>/dev/null ; then
+			log_success_msg "at24 module is unloaded"
+		else
+			log_failure_msg "at24 module unload failed"
+		fi
+	else
+		log_warning_msg "No at24 module loaded"
+	fi
+
+	if is_module lm75; then
+		if rmmod lm75 2>/dev/null ; then
+			log_success_msg "lm75 module is unloaded"
+		else
+			log_failure_msg "lm75 module unload failed"
+		fi
+	else
+		log_warning_msg "No lm75 module loaded"
+	fi
+
+	if is_module coretemp; then
+		if rmmod coretemp 2>/dev/null ; then
+			log_success_msg "coretemp module is unloaded"
+		else
+			log_failure_msg "coretemp module unload failed"
+		fi
+	else
+		log_warning_msg "No coretemp module loaded"
+	fi
+
+	if is_module ucd9200; then
+		if rmmod ucd9200 2>/dev/null ; then
+			log_success_msg "ucd9200 module is unloaded"
+		else
+			log_failure_msg "ucd9200 module unload failed"
+		fi
+	else
+		log_warning_msg "No ucd9200 module loaded"
+	fi
+
+	if is_module pmbus; then
+		if rmmod pmbus 2>/dev/null ; then
+			log_success_msg "pmbus module is unloaded"
+		else
+			log_failure_msg "pmbus module unload failed"
+		fi
+	else
+		log_warning_msg "No pmbus module loaded"
+	fi
+
+	if is_module pmbus_core; then
+		if rmmod pmbus_core 2>/dev/null ; then
+			log_success_msg "pmbus_core module is unloaded"
+		else
+			log_failure_msg "pmbus_core module unload failed"
+		fi
+	else
+		log_warning_msg "No pmbus_core module loaded"
+	fi
+
+	if is_module mlnx_a2d_drv; then
+		if rmmod mlnx_a2d_drv 2>/dev/null ; then
+			log_success_msg "mlnx_a2d_drv module is unloaded"
+		else
+			log_failure_msg "mlnx_a2d_drv module unload failed"
+		fi
+	else
+		log_warning_msg "No mlnx_a2d_drv module loaded"
+	fi
+
+	if is_module mlnx_asic_drv; then
+		if rmmod mlnx_asic_drv 2>/dev/null ; then
+			log_success_msg"mlnx_asic_drv module is unloaded"
+		else
+			log_failure_msg "mlnx_asic_drv module unload failed"
+		fi
+	else
+		log_warning_msg "No mlnx_aisc_drv module loaded"
+	fi
+
+	if is_module mlnx_cpld_drv; then
+		if rmmod mlnx_cpld_drv 2>/dev/null ; then
+			log_success_msg "mlnx_cpld_drv module is unloaded"
+		else
+			log_failure_msg "mlnx_cpld_drv module unload failed"
+		fi
+	else
+		log_warning_msg "No mlnx_cpld_drv module loaded"
+	fi
+
+	if is_module mlnx_mux_drv; then
+		if rmmod mlnx_mux_drv 2>/dev/null ; then
+			log_success_msg "mlnx_mux_drv module is unloaded"
+		else
+			log_failure_msg "mlnx_mux_drv module unload failed"
+		fi
+	else
+		log_warning_msg "No mlnx_mux_drv module loaded"
+	fi
+
+	if is_module i2c_mux; then
+		if rmmod i2c_mux 2>/dev/null ; then
+			log_success_msg "i2c_mux module is unloaded"
+		else
+			log_failure_msg "i2c_mux module unload failed"
+		fi
+	else
+		log_warning_msg "No i2c_mux module loaded"
+	fi
+
+	if is_module lpci2c; then
+		if rmmod lpci2c 2>/dev/null ; then
+			log_success_msg "lpci2c module is unloaded"
+		else
+			log_failure_msg "lpci2c module unload failed"
+		fi
+	else
+		log_warning_msg "No lpci2c module loaded"
+	fi
+
+	return 0
+}
+
+status()
+{
+    lsmod
+}
+
+connect_platform()
+{
+        if [ ! -d $cpld ]; then
+            echo mlnx-cpld-drv 0x60 > /sys/bus/i2c/devices/i2c-2/new_device
+        fi
+        if [ ! -d $asic ]; then
+            echo mlnx-asic-drv-56 0x48 > /sys/bus/i2c/devices/i2c-2/new_device
+            attr=`ls $asic/hwmon`
+            asic=$asic/hwmon/$attr
+        fi
+        if [ ! -d $ucd1 ]; then
+            echo ucd9200 0x27 > /sys/bus/i2c/devices/i2c-5/new_device
+            attr=`ls $ucd1/hwmon`
+            ucd1=$ucd1/hwmon/$attr
+        fi
+        if [ ! -d $ucd2 ]; then
+            echo ucd9200 0x41 > /sys/bus/i2c/devices/i2c-5/new_device
+            attr=`ls $ucd2/hwmon`
+            ucd1=$ucd2/hwmon/$attr
+        fi
+        if [ ! -d $a2d_swb ]; then
+            echo mlnxa2dswb 0x6d > /sys/bus/i2c/devices/i2c-5/new_device
+        fi
+        if [ ! -d $temp_swb ]; then
+            echo lm75 0x4a > /sys/bus/i2c/devices/i2c-7/new_device
+            tmp_temp_swb=`ls $temp_swb/hwmon`
+            tmp_temp_swb=$temp_swb/hwmon/$attr
+            if [ -f $tmp_temp_swb/name ]; then
+                temp_swb=$tmp_temp_swb
+            fi
+        fi
+        if [ ! -d $a2d_mnb ]; then
+            echo mlnxa2dmnb 0x6d > /sys/bus/i2c/devices/i2c-15/new_device
+        fi
+        if [ ! -d /sys/bus/i2c/devices/16-0051 ]; then
+            echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-16/new_device
+        fi
+        if [ ! -d $temp_mnb ]; then
+            echo lm75 0x49 > /sys/bus/i2c/devices/i2c-17/new_device
+            tmp_temp_mnb=`ls $temp_mnb/hwmon`
+            tmp_temp_mnb=$temp_mnb/hwmon/$attr
+            if [ -f $tmp_temp_mnb/name ]; then
+                temp_mnb=$tmp_temp_mnb
+            fi
+        fi
+}
+
+disconnect_platform()
+{
+        if [ -d $temp_mnb ]; then
+                echo 0x49 > /sys/bus/i2c/devices/i2c-17/delete_device
+        fi
+        if [ -d /sys/bus/i2c/devices/16-0051 ]; then
+            echo 0x51 > /sys/bus/i2c/devices/i2c-16/delete_device
+        fi
+        if [ -d $a2d_mnb ]; then
+            echo 0x6d > /sys/bus/i2c/devices/i2c-15/delete_device
+        fi
+        if [ -d $temp_swb ]; then
+                echo 0x4a > /sys/bus/i2c/devices/i2c-7/delete_device
+        fi
+        if [ -d /sys/bus/i2c/devices/6-006d ]; then
+            echo 0x6d > /sys/bus/i2c/devices/i2c-5/delete_device
+        fi
+        if [ -d $ucd2 ]; then
+            echo 0x41 > /sys/bus/i2c/devices/i2c-5/delete_device
+        fi
+        if [ -d $ucd1 ]; then
+            echo 0x27 > /sys/bus/i2c/devices/i2c-5/delete_device
+        fi
+        if [ -d $asic ]; then
+            echo 0x48 > /sys/bus/i2c/devices/i2c-2/delete_device
+        fi
+        if [ -d $cpld ]; then
+            echo 0x60 > /sys/bus/i2c/devices/i2c-2/delete_device
+        fi
+}
+
+case $ACTION in
+        start)
+                load_modules
+                connect_platform
+
+                if [ ! -d /bsp/power ]; then
+                    mkdir -p /bsp/power
+                fi
+                if [ ! -d /bsp/thermal ]; then
+                    mkdir -p /bsp/thermal
+                fi
+                if [ ! -d /bsp/fan ]; then
+                    mkdir -p /bsp/fan
+                fi
+                if [ ! -d /bsp/module ]; then
+                    mkdir -p /bsp/module
+                fi
+                if [ ! -d /bsp/cpld ]; then
+                    mkdir -p /bsp/cpld
+                fi
+                if [ ! -d /bsp/led ]; then
+                    mkdir -p /bsp/led
+                fi
+                if [ ! -d /bsp/system ]; then
+                    mkdir -p /bsp/system
+                fi
+                if [ ! -d /bsp/eeprom ]; then
+                    mkdir -p /bsp/eeprom
+                fi
+                if [ ! -d /bsp/qsfp ]; then
+                    mkdir -p /bsp/qsfp
+                fi
+                if [ ! -d /bsp/thermal_zone1 ]; then
+                    mkdir -p /bsp/thermal_zone1
+                fi
+
+                # Voltage
+
+                # Power
+                if [ -e $psu1 ]; then
+                    attr=`ls $psu1/hwmon`
+                    psu1=$psu1/hwmon/$attr
+                    if [ ! -L /bsp/power/psu1_power_in ]; then
+                        attr=`find $psu1/ -name power1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu1_power_in
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu1_power ]; then
+                        attr=`find $psu1/ -name power2_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu1_power
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu1_curr ]; then
+                        attr=`find $psu1/ -name curr2_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu1_curr
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu1_volt ]; then
+                        attr=`find $psu1/ -name in3_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu1_volt
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu1_curr_in ]; then
+                        attr=`find $psu1/ -name curr1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu1_curr_in
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu1_volt_in ]; then
+                        attr=`find $psu1/ -name in1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu1_volt_in
+                        fi
+                    fi
+                fi
+                if [ -e $psu2 ]; then
+                    attr=`ls $psu2/hwmon`
+                    psu1=$psu2/hwmon/$attr
+                    if [ ! -L /bsp/power/psu2_power_in ]; then
+                        attr=`find $psu2/ -name power1_input`
+                        if [ -e $attr ]; then
+                            ln -s  $attr /bsp/power/psu2_power_in
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu2_power ]; then
+                        attr=`find $psu2/ -name power2_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu2_power
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu2_curr ]; then
+                        attr=`find $psu2/ -name curr2_input`
+                        if [ -e $attr ]; then
+                           ln -s $attr /bsp/power/psu2_curr
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu2_volt ]; then
+                        attr=`find $psu2/ -name in3_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu2_volt
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu2_curr_in ]; then
+                        attr=`find $psu2/ -name curr1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu2_curr_in
+                        fi
+                    fi
+                    if [ ! -L /bsp/power/psu2_volt_in ]; then
+                        attr=`find $psu1/ -name in1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/power/psu2_volt_in
+                        fi
+                    fi
+                fi
+                if [ ! -L /bsp/power/psu2_12_aux ]; then
+                    ln -s $a2d_mnb/curr1_input /bsp/power/psu2_12_aux
+                fi
+                if [ ! -L /bsp/power/psu1_12_aux ]; then
+                    ln -s $a2d_mnb/curr2_input /bsp/power/psu1_12_aux
+                fi
+
+                # Thermal
+                attr=`find $cpu/ -name temp1_input`
+                if [ ! -L /bsp/thermal/cpu_pack ]; then
+                    ln -s $attr /bsp/thermal/cpu_pack
+                fi
+                attr=`find $cpu/ -name temp2_input`
+                if [ ! -L /bsp/thermal/cpu_core0 ]; then
+                    ln -s $attr /bsp/thermal/cpu_core0
+                fi
+                attr=`find $cpu/ -name temp3_input`
+                if [ ! -L /bsp/thermal/cpu_core1 ]; then
+                    ln -s $attr /bsp/thermal/cpu_core1
+                fi
+                attr=`find $temp_swb/ -name temp1_input`
+                if [ ! -L /bsp/thermal/port_amb ]; then
+                    ln -s $attr /bsp/thermal/port_amb
+                fi
+                attr=`find $temp_mnb/ -name temp1_input`
+                if [ ! -L /bsp/thermal/board_amb ]; then
+                    ln -s $attr /bsp/thermal/board_amb
+                fi
+                if [ ! -L /bsp/thermal/asic ]; then
+                    ln -s $asic/temp1_input /bsp/thermal/asic
+                fi
+                if [ -e $psu1 ]; then
+                    if [ ! -L /bsp/thermal/psu1 ]; then
+                        attr=`find $psu1/ -name temp1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/thermal/psu1
+                        fi
+                    fi
+                fi
+                if [ -e $psu2 ]; then
+                    if [ ! -L /bsp/thermal/psu2 ]; then
+                        attr=`find $psu2/ -name temp1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/thermal/psu2
+                        fi
+                    fi
+                fi
+
+                # FAN
+                for i in 1 2 3 4 5 6 7 8
+                do
+                        if [ ! -L /bsp/fan/fan"$i"_speed_get ]; then
+                            ln -s $asic/fan"$i"_input /bsp/fan/fan"$i"_speed_get
+                        fi
+                        if [ ! -L /bsp/fan/fan"$i"_speed_set ]; then
+                            ln -s $asic/pwm"$i" /bsp/fan/fan"$i"_speed_set
+                        fi
+                        if [ ! -L /bsp/fan/fan"$i"_min ]; then
+                            ln -s $asic/fan"$i"_min /bsp/fan/fan"$i"_min
+                        fi
+                        if [ ! -L /bsp/fan/fan"$i"_max ]; then
+                            ln -s $asic/fan"$i"_max /bsp/fan/fan"$i"_max
+                        fi
+                        if [ ! -L /bsp/fan/fan"$i"_enable ]; then
+                            ln -s $asic/fan"$i"_enable /bsp/fan/fan"$i"_enable
+                        fi
+                done
+
+                #Init PSU1 FAN
+                i2cset -f -y 10 0x59 0x3b 0x3c 0x00 0xbc i 
+                if [ -e $psu1 ]; then
+                    if [ ! -L /bsp/fan/psu1_fan1_speed_get ]; then
+                        attr=`find $psu1/ -name fan1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/fan/psu1_fan1_speed_get
+                        fi
+                    fi
+                fi
+
+                #Init PSU2 FAN
+                i2cset -f -y 10 0x58 0x3b 0x3c 0x00 0x90 i
+                if [ -e $psu2 ]; then
+                    if [ ! -L /bsp/fan/psu2_fan1_speed_get ]; then
+                        attr=`find $psu2/ -name fan1_input`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/fan/psu2_fan1_speed_get
+                        fi
+                    fi
+                fi
+
+                # LED
+                for i in 1 2 3 4
+                do
+                    if [ ! -L /bsp/led/led_fan"$i" ]; then
+                        ln -s $cpld/led"$i" /bsp/led/led_fan"$i"
+                    fi
+                    if [ ! -L /bsp/led/led_fan"$i"_capability ]; then
+                            ln -s $cpld/led"$i"_capability /bsp/led/led_fan"$i"_capability
+                    fi
+                done
+
+                if [ ! -L /bsp/led/led_psu ]; then
+                    ln -s $cpld/led5 /bsp/led/led_psu
+                fi
+                if [ ! -L /bsp/led/led_psu_capability ]; then
+                    ln -s $cpld/led5_capability /bsp/led/led_psu_capability
+                fi
+
+                if [ ! -L /bsp/led/led_status ]; then
+                    ln -s $cpld/led6 /bsp/led/led_status
+                fi
+                if [ ! -L /bsp/led/led_status_capability ]; then
+                    ln -s $cpld/led6_capability /bsp/led/led_status_capability
+                fi
+
+                # CPLD
+                if [ ! -L /bsp/cpld/cpld_mgmt_version ]; then
+                    ln -s $cpld/cpld1_version /bsp/cpld/cpld_mgmt_version
+                fi
+                if [ ! -L /bsp/cpld/cpld_brd_version ]; then
+                    ln -s $cpld/cpld2_version /bsp/cpld/cpld_brd_version
+                fi
+                if [ ! -L /bsp/cpld/cpld_port_version ]; then
+                    ln -s $asic/cpld3_version /bsp/cpld/cpld_port_version
+                fi
+
+                # Module
+                for i in 1 2 3 4
+                do
+                    if [ ! -L /bsp/module/fan"$i"_status ]; then
+                       ln -s $cpld/fan"$i"_status /bsp/module/fan"$i"_status
+                    fi
+                    if [ ! -L /bsp/module/fan"$i"_event ]; then
+                        ln -s $cpld/fan"$i"_event /bsp/module/fan"$i"_event
+                    fi
+                    if [ ! -L /bsp/module/fan"$i"_mask ]; then
+                        ln -s $cpld/fan"$i"_mask /bsp/module/fan"$i"_mask
+                    fi
+                done
+
+                for i in 1 2
+                do
+                    if [ ! -L /bsp/module/psu"$i"_status ]; then
+                            ln -s $cpld/psu"$i"_status /bsp/module/psu"$i"_status
+                    fi
+                    if [ ! -L /bsp/module/psu"$i"_event ]; then
+                            ln -s $cpld/psu"$i"_event /bsp/module/psu"$i"_event
+                    fi
+
+                    if [ ! -L /bsp/module/psu"$i"_mask ]; then
+                            ln -s $cpld/psu"$i"_mask /bsp/module/psu"$i"_mask
+                    fi
+
+                    if [ ! -L /bsp/module/psu"$i"_pwr_status ]; then
+                            ln -s $cpld/psu"$i"_pg_status /bsp/module/psu"$i"_pwr_status
+                    fi
+                    if [ ! -L /bsp/module/psu"$i"_pwr_event ]; then
+                            ln -s $cpld/psu"$i"_pg_event /bsp/module/psu"$i"_pwr_event
+                    fi
+                    if [ ! -L /bsp/module/psu"$i"_pwr_mask ]; then
+                            ln -s $cpld/psu"$i"_pg_mask /bsp/module/psu"$i"_pwr_mask
+                    fi
+
+                    if [ ! -L /bsp/module/psu"$i"_alarm_status ]; then
+                            ln -s $cpld/psu"$i"_alarm_status /bsp/module/psu"$i"_alarm_status
+                    fi
+                    if [ ! -L /bsp/module/psu"$i"_alarm_event ]; then
+                            ln -s $cpld/psu"$i"_alarm_event /bsp/module/psu"$i"_alarm_event
+                    fi
+                    if [ ! -L /bsp/module/psu"$i"_alarm_mask ]; then
+                            ln -s $cpld/psu"$i"_alarm_mask  /bsp/module/psu"$i"_alarm_mask
+                    fi
+                done
+
+                # System
+                if [ ! -L /bsp/system/power_cycle ]; then
+                    ln -s $cpld/sys_pwr_cycle1 /bsp/system/power_cycle
+                fi
+                if [ ! -L /bsp/system/reset_reason ]; then
+                    ln -s $cpld/reset_cause1 /bsp/system/reset_reason
+                fi
+
+                # EEPROM
+                if [ ! -L /bsp/eeprom/cpu_info ]; then
+                    attr=`find $eeprom_mnb/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/cpu_info
+                    fi
+                fi
+                if [ ! -L /bsp/eeprom/fan1_info ]; then
+                    attr=`find $eeprom_fan1/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/fan1_info
+                    fi
+                fi
+                if [ ! -L /bsp/eeprom/fan2_info ]; then
+                    attr=`find $eeprom_fan2/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/fan2_info
+                    fi
+                fi
+                if [ ! -L /bsp/eeprom/fan3_info ]; then
+                    attr=`find $eeprom_fan3/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/fan3_info
+                    fi
+                fi
+                if [ ! -L /bsp/eeprom/fan4_info ]; then
+                    attr=`find $eeprom_fan4/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/fan4_info
+                    fi
+                fi
+                if [ -e $eeprom_psu1 ]; then
+                    if [ ! -L /bsp/eeprom/psu1_info ]; then
+                        attr=`find $eeprom_psu1/ -name eeprom`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/eeprom/psu1_info
+                        fi
+                    fi
+                fi
+                if [ -e $eeprom_psu2 ]; then
+                    if [ ! -L /bsp/eeprom/psu2_info ]; then
+                        attr=`find $eeprom_psu2/ -name eeprom`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/eeprom/psu2_info
+                        fi
+                    fi
+                fi
+
+               # QSFP
+		for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56
+                do
+                    if [ ! -L /bsp/qsfp/qsfp"$i" ]; then
+                       ln -s $asic/qsfp"$i"_eeprom /bsp/qsfp/qsfp"$i"
+                    fi
+                done
+
+                for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56
+                do
+                    if [ ! -L /bsp/qsfp/qsfp"$i"_status ]; then
+                       ln -s $asic/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
+                    fi
+                done
+
+                # Thermal zone control
+                if [ ! -L /bsp/thermal_zone1/thermal_control_activate ]; then
+                    if [ -f  /usr/sbin/thermal_watch_start.sh ]; then
+                        ln -s /usr/sbin/thermal_watch_start.sh /bsp/thermal_zone1/thermal_control_activate
+                    fi
+                fi
+                if [ ! -L /bsp/thermal_zone1/thermal_control_deactivate ]; then
+                    if [ -f  /usr/sbin/thermal_watch_stop.sh ]; then
+                        ln -s /usr/sbin/thermal_watch_stop.sh /bsp/thermal_zone1/thermal_control_deactivate
+                    fi
+                fi
+        ;;
+        stop)
+                # Clean bsp directory
+                if [ -d /bsp ]; then
+                    rm -rf /bsp
+                fi
+
+                disconnect_platform
+                unload_modules
+        ;;
+        restart)
+                $0 stop
+                $0 start
+        ;;
+        reprobe_asic)
+                if [ -d $asic ]; then
+                    echo 0x48 > /sys/bus/i2c/devices/i2c-2/delete_device
+                fi
+                echo mlnx-asic-drv-56 0x48 > /sys/bus/i2c/devices/i2c-2/new_device
+        ;;
+        status)
+                status
+        ;;
+        *)
+                echo
+                echo "Usage: `basename $0` {start|stop|restart|reprobe_asic}"
+                echo
+                exit 1
+        ;;
+esac

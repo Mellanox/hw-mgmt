@@ -1,0 +1,5 @@
+hw-management (1.mlnx.@SED_VERSION@) unstable; urgency=low
+  [ MLNX ]
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Adir Atias <adira@mellanox.com>  Sun, 06 Sep 2015 14:54:17 +0300

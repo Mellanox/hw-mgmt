@@ -1,0 +1,31 @@
+diff --git a/drivers/leds/Kconfig b/drivers/leds/Kconfig
+index 5ae2834..a983d06 100644
+--- a/drivers/leds/Kconfig
++++ b/drivers/leds/Kconfig
+@@ -617,6 +617,14 @@ config LEDS_VERSATILE
+ 	  This option enabled support for the LEDs on the ARM Versatile
+ 	  and RealView boards. Say Y to enabled these.
+ 
++config LEDS_MLNX
++	tristate "LED support for the Mellanox boards"
++	depends on X86_64 && DMI
++	depends on LEDS_CLASS
++	help
++	  This option enabled support for the LEDs on the Mellanox
++	  boards. Say Y to enabled these.
++
+ comment "LED Triggers"
+ source "drivers/leds/trigger/Kconfig"
+ 
+diff --git a/drivers/leds/Makefile b/drivers/leds/Makefile
+index cb2013d..9506c50 100644
+--- a/drivers/leds/Makefile
++++ b/drivers/leds/Makefile
+@@ -67,6 +67,7 @@ obj-$(CONFIG_LEDS_KTD2692)		+= leds-ktd2692.o
+ obj-$(CONFIG_LEDS_POWERNV)		+= leds-powernv.o
+ obj-$(CONFIG_LEDS_SEAD3)		+= leds-sead3.o
+ obj-$(CONFIG_LEDS_IS31FL32XX)		+= leds-is31fl32xx.o
++obj-$(CONFIG_LEDS_MLNX) 		+= leds-mlnx.o
+ 
+ # LED SPI Drivers
+ obj-$(CONFIG_LEDS_DAC124S085)		+= leds-dac124s085.o
