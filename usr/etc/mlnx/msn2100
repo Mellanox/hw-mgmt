@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Copyright (C) 2010-2015, Mellanox Technologies Ltd.  ALL RIGHTS RESERVED.
 #
@@ -16,8 +17,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 #
 #
-
-#!/bin/sh
 
 ### BEGIN INIT INFO
 # Provides:        bsp for msn2100 system
