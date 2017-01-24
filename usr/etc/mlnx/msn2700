@@ -202,12 +202,32 @@ load_modules()
 			log_failure_msg "at24 module load failed"
 		fi
 	fi
+
+	if is_module i2c_dev; then
+		log_warning_msg "i2c_dev module has already been loaded"
+	else
+		if modprobe i2c_dev 2>/dev/null; then
+			log_success_msg "i2c_dev module load passed"
+		else
+			log_failure_msg "i2c_dev module load failed"
+		fi
+	fi
 }
 
 unload_modules()
 {
 	log_daemon_msg "Stopping Mellanox x86 system bsp module"
 	log_end_msg 0
+
+	if is_module i2c_dev; then
+		if rmmod i2c_dev 2>/dev/null ; then
+			log_success_msg "i2c_dev module is unloaded"
+		else
+			log_failure_msg "i2c_dev module unload failed"
+		fi
+	else
+		log_warning_msg "No i2c_dev module loaded"
+	fi
 
 	if is_module at24; then
 		if rmmod at24 2>/dev/null ; then
