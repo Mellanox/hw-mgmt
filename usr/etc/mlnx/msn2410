@@ -611,12 +611,12 @@ case $ACTION in
                             ln -s $attr /bsp/fan/psu1_fan1_speed_get
                         fi
                     fi
-                    if [ ! -L /bsp/fan/psu1_fan1_fault ]; then
-                        attr=`find $psu1/ -name fan1_fault`
-                        if [ -e $attr ]; then
-                            ln -s $attr /bsp/fan/psu1_fan1_fault
-                        fi
-                    fi
+                    if [ ! -L /bsp/fan/psu1_fan1_fault ]; then
+                        attr=`find $psu1/ -name fan1_fault`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/fan/psu1_fan1_fault
+                        fi
+                    fi
                 fi
 
                 #Init PSU2 FAN
@@ -628,12 +628,12 @@ case $ACTION in
                             ln -s $attr /bsp/fan/psu2_fan1_speed_get
                         fi
                     fi
-                    if [ ! -L /bsp/fan/psu2_fan1_fault ]; then
-                        attr=`find $psu1/ -name fan1_fault`
-                        if [ -e $attr ]; then
-                            ln -s $attr /bsp/fan/psu2_fan1_fault
-                        fi
-                    fi
+                    if [ ! -L /bsp/fan/psu2_fan1_fault ]; then
+                        attr=`find $psu2/ -name fan1_fault`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/fan/psu2_fan1_fault
+                        fi
+                    fi
                 fi
 
                 # LED
