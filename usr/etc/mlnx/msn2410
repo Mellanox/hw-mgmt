@@ -57,6 +57,7 @@ ucd1=/sys/bus/i2c/devices/5-0027
 ucd2=/sys/bus/i2c/devices/5-0041
 a2d_swb=/sys/bus/i2c/devices/5-006d
 temp_swb=/sys/bus/i2c/devices/7-004a
+sys_eeprom=/sys/bus/i2c/devices/8-0051
 psu1=/sys/bus/i2c/devices/10-0059
 psu2=/sys/bus/i2c/devices/10-0058
 eeprom_fan1=/sys/bus/i2c/devices/11-0050
@@ -368,6 +369,9 @@ connect_platform()
                 temp_swb=$tmp_temp_swb
             fi
         fi
+        if [ ! -d /sys/bus/i2c/devices/8-0051 ]; then
+            echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-8/new_device
+        fi
         if [ ! -d $a2d_mnb ]; then
             echo mlnxa2dmnb 0x6d > /sys/bus/i2c/devices/i2c-15/new_device
         fi
@@ -397,6 +401,9 @@ disconnect_platform()
         fi
         if [ -d $temp_swb ]; then
                 echo 0x4a > /sys/bus/i2c/devices/i2c-7/delete_device
+        fi
+        if [ -d /sys/bus/i2c/devices/8-0051 ]; then
+            echo 0x51 > /sys/bus/i2c/devices/i2c-8/delete_device
         fi
         if [ -d /sys/bus/i2c/devices/6-006d ]; then
             echo 0x6d > /sys/bus/i2c/devices/i2c-5/delete_device
@@ -611,12 +618,12 @@ case $ACTION in
                             ln -s $attr /bsp/fan/psu1_fan1_speed_get
                         fi
                     fi
-                    if [ ! -L /bsp/fan/psu1_fan1_fault ]; then
-                        attr=`find $psu1/ -name fan1_fault`
-                        if [ -e $attr ]; then
-                            ln -s $attr /bsp/fan/psu1_fan1_fault
-                        fi
-                    fi
+                    if [ ! -L /bsp/fan/psu1_fan1_fault ]; then
+                        attr=`find $psu1/ -name fan1_fault`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/fan/psu1_fan1_fault
+                        fi
+                    fi
                 fi
 
                 #Init PSU2 FAN
@@ -628,12 +635,12 @@ case $ACTION in
                             ln -s $attr /bsp/fan/psu2_fan1_speed_get
                         fi
                     fi
-                    if [ ! -L /bsp/fan/psu2_fan1_fault ]; then
-                        attr=`find $psu1/ -name fan1_fault`
-                        if [ -e $attr ]; then
-                            ln -s $attr /bsp/fan/psu2_fan1_fault
-                        fi
-                    fi
+                    if [ ! -L /bsp/fan/psu2_fan1_fault ]; then
+                        attr=`find $psu2/ -name fan1_fault`
+                        if [ -e $attr ]; then
+                            ln -s $attr /bsp/fan/psu2_fan1_fault
+                        fi
+                    fi
                 fi
 
                 # LED
@@ -729,6 +736,12 @@ case $ACTION in
                 fi
 
                 # EEPROM
+                if [ ! -L /bsp/eeprom/sys_eeprom ]; then
+                    attr=`find $sys_eeprom/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/sys_eeprom
+                    fi
+                fi
                 if [ ! -L /bsp/eeprom/cpu_info ]; then
                     attr=`find $eeprom_mnb/ -name eeprom`
                     if [ -e $attr ]; then
