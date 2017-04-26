@@ -47,6 +47,7 @@
 #define TEMP_PASSIVE_INTERVAL (30 * 1000) /* interval to wait between polls when performing passive cooling is 30 seconds */
 #define MAX_PWM_DUTY_CYCLE    255
 #define PWM_DUTY_CYCLE_STEP    10
+#define MAX_ASIC_TEMP        (105 * 1000) /* maximum allowed temperature for ASIC is 105 degrees */
 
 #define ASIC_GROUP_NUM             4
 #define FAN_NUM                   12
@@ -849,10 +850,7 @@ static ssize_t show_temp(struct device *dev,
         case temp_min:
                 break;
         case temp_max:
-	        err = temp_get(&asicdata->switchdevif, temp, 0, 0);
-		if (err)
-			return -EEXIST;
-	        res = temp->max_temperature;
+	        res = MAX_ASIC_TEMP;
                 break;
         case temp_crit:
 	        err = temp_get(&asicdata->switchdevif, temp, 0, 0);
