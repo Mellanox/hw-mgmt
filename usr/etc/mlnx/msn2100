@@ -109,7 +109,7 @@ load_modules()
 	if is_module mlnx_cpld_drv; then
 		log_warning_msg "mlnx_cpld_drv module has already been loaded"
 	else
-		if modprobe mlnx_cpld_drv 2>/dev/null; then
+		if modprobe mlnx_cpld_drv psu_control_driver=dps460 2>/dev/null; then
 			log_success_msg "mlnx_cpld_drv module load passed"
 		else
 			log_failure_msg "mlnx_cpld_drv module load failed"
