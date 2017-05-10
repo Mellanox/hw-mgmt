@@ -79,6 +79,12 @@ load_modules()
 	if is_module lpci2c; then
 		log_warning_msg "lpci2c module has already been loaded"
 	else
+		# SN2100 comes with Intel Atom chip, for which kernel tries
+		# to load i2c_ismt module if available, which uses same bus
+		# as lpci2c
+		if is_module i2c_ismt; then
+			rmmod i2c_ismt 2>/dev/null;
+		fi
 		if modprobe lpci2c 2>/dev/null; then
 			log_success_msg "lpci2c module load passed"
 		else
