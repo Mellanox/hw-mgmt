@@ -39,7 +39,7 @@
 
 #define THREAD_IRQ_SLEEP_SECS	2
 #define THREAD_IRQ_SLEEP_MSECS	(THREAD_IRQ_SLEEP_SECS * MSEC_PER_SEC)
-#define LED_NUM               7
+#define LED_NUM               8
 #define PSU_MODULE_NUM        2
 #define FAN_MODULE_NUM        4
 #define CPLD_NUM              3
@@ -47,7 +47,8 @@
 #define WP_REG_NUM            4
 #define INIT_REG_NUM          2
 #define MUX_NUM               2
-#define MUX_CHAN_NUM          8
+#define MUX_CHAN_NUM_DFLT     8
+#define MUX_CHAN_NUM_MAX     24
 #define MAX_LED_STATUS       11
 #define MAX_LED_NAME_LEN     32
 #define LED_IS_OFF           0x00
@@ -61,6 +62,7 @@
 #define LED_GREEN_STATIC_ON  0x0D
 #define LED_GREEN_BLINK_3HZ  0x0E
 #define LED_GREEN_BLINK_6HZ  0x0F
+#define NOT_USED_LED_OFFSET  0xFE
 typedef enum led_color {
 	led_nocolor           = 0,
 	led_yellow            = 1 << 0,
@@ -265,6 +267,11 @@ typedef enum event_type {
 	fan_event   = 4,
 } event_type_t;
 
+char *mux_driver_tor = "cpld_mux_tor";
+char *mux_driver_mgmt = "cpld_mux_mgmt";
+char *mux_driver_mgmt_ext = "cpld_mux_mgmt_ext";
+char *mux_driver[MUX_NUM] = {NULL};
+
 /**
  * cpld_led_profile (defined per system class) -
  * @offset - offset for led access in CPLD device
@@ -286,6 +293,7 @@ struct cpld_leds_profile {
 	u8 psu_led_offset;
 	u8 status_led_offset;
 	u8 uid_led_offset;
+	u8 bp_led_offset;
 	struct cpld_led_profile *profile;
 };
 static struct cpld_leds_profile leds_profile;
@@ -498,8 +506,8 @@ struct reset_config_params {
 };
 
 struct mux_params {
-        char *mux_driver;
-        u8 parent_mux;
+    char *mux_driver;
+    u8 parent_mux;
 	struct cpld_mux_platform_data *platform;
 	struct i2c_adapter *adapter;
 	struct i2c_client *client;
@@ -706,7 +714,7 @@ module_param_array(parent_mux, ushort, NULL, 0644);
 MODULE_PARM_DESC(parent_mux, "BUS/MUX where MUX device is attached (default 1, 1)");
 static unsigned short mux_first_num[MUX_NUM] = { 2, 10};
 module_param_array(mux_first_num, ushort, NULL, 0644);
-MODULE_PARM_DESC(mux_first_num, "The first channel on MUX device (default 2, 9)");
+MODULE_PARM_DESC(mux_first_num, "The first channel on MUX device (default 2, 10)");
 static unsigned short mux_chan_num[MUX_NUM] = { 8, 8};
 module_param_array(mux_chan_num, ushort, NULL, 0644);
 MODULE_PARM_DESC(mux_chan_num, "Number of channels per MUX device (default 8, 8)");
@@ -1965,6 +1973,8 @@ SENSOR_DEVICE_ATTR_LED(3);
 SENSOR_DEVICE_ATTR_LED(4);
 SENSOR_DEVICE_ATTR_LED(5);
 SENSOR_DEVICE_ATTR_LED(6);
+SENSOR_DEVICE_ATTR_LED(7);
+SENSOR_DEVICE_ATTR_LED(8);
 
 #define SENSOR_DEVICE_ATTR_PSU_MODULE(id)                              \
 static SENSOR_DEVICE_ATTR_2(psu##id##_status, S_IRUGO,                 \
@@ -2192,6 +2202,14 @@ static inline void led_config_clean(struct cpld_data *cplddata)
 			CPLD_REMOVE(led6);
 			CPLD_REMOVE(led6_name);
 			break;
+		case 6:
+			CPLD_REMOVE(led7);
+			CPLD_REMOVE(led7_name);
+			break;
+		case 7:
+			CPLD_REMOVE(led8);
+			CPLD_REMOVE(led8_name);
+			break;
 		default:
 			break;
 		}
@@ -2226,6 +2244,7 @@ static int led_config(struct cpld_data *cplddata)
 		break;
 	case led_red_blink:
 		cplddata->cfg_led.led_alarm_mask = LED_RED_BLINK_3HZ;
+		break;
 	case led_yellow_blink_fast:
 		cplddata->cfg_led.led_alarm_mask = LED_YELLOW_BLINK_6HZ;
 		break;
@@ -2245,14 +2264,13 @@ static int led_config(struct cpld_data *cplddata)
 	}
 
 	for (id = 0; id < cplddata->cfg_led.num_led; id++) {
-                memset(&cplddata->cfg_led.led[id], 0, sizeof(struct led_config_params));
+                memset(&cplddata->cfg_led.led[id], 0, sizeof(struct led_config));
                 cplddata->cfg_led.led[id].entry.index = id + 1;
                 cplddata->cfg_led.led[id].params.offset = leds_profile.profile[id].offset;
                 cplddata->cfg_led.led[id].params.access_mask = leds_profile.profile[id].mask;
-
-		cplddata->cfg_led.led[id].params.num_led_capability =
+                cplddata->cfg_led.led[id].params.num_led_capability =
 					leds_profile.profile[id].num_capabilities;
-		cplddata->cfg_led.led[id].params.blue_flag = leds_profile.profile[id].blue_flag;
+                cplddata->cfg_led.led[id].params.blue_flag = leds_profile.profile[id].blue_flag;
                 for (i = 0; i < cplddata->cfg_led.led[id].params.num_led_capability; i++) {
                         cplddata->cfg_led.led[id].params.capability[i] = leds_profile.profile[id].capability[i];
                 }
@@ -2263,6 +2281,9 @@ static int led_config(struct cpld_data *cplddata)
                 else if (cplddata->cfg_led.led[id].entry.index == leds_profile.uid_led_offset + 1) {
                 	sprintf(cplddata->cfg_led.led[id].entry.name, "%s\n", "uid");
                 }
+                else if (cplddata->cfg_led.led[id].entry.index == leds_profile.bp_led_offset + 1) {
+					sprintf(cplddata->cfg_led.led[id].entry.name, "%s\n", "bad_port");
+		}
                 else if (cplddata->cfg_led.led[id].entry.index > leds_profile.psu_led_offset) {
                 	sprintf(cplddata->cfg_led.led[id].entry.name, "%s%d\n", "psu",
                 	cplddata->cfg_led.led[id].entry.index - leds_profile.psu_led_offset);
@@ -2275,27 +2296,35 @@ static int led_config(struct cpld_data *cplddata)
 	        switch (id) {
 	        case 0:
 	        	CPLD_CREATE(led1);
-			CPLD_CREATE(led1_name);
+	        	CPLD_CREATE(led1_name);
 	        	break;
 	        case 1:
 	        	CPLD_CREATE(led2);
-			CPLD_CREATE(led2_name);
+	        	CPLD_CREATE(led2_name);
 	        	break;
 	        case 2:
 	        	CPLD_CREATE(led3);
-			CPLD_CREATE(led3_name);
+	        	CPLD_CREATE(led3_name);
 	        	break;
 	        case 3:
 	        	CPLD_CREATE(led4);
-			CPLD_CREATE(led4_name);
+	        	CPLD_CREATE(led4_name);
 	        	break;
 	        case 4:
 	        	CPLD_CREATE(led5);
-			CPLD_CREATE(led5_name);
+	        	CPLD_CREATE(led5_name);
 	        	break;
 	        case 5:
 	        	CPLD_CREATE(led6);
-			CPLD_CREATE(led6_name);
+	        	CPLD_CREATE(led6_name);
+	        	break;
+	        case 6:
+	        	CPLD_CREATE(led7);
+	        	CPLD_CREATE(led7_name);
+	        	break;
+	        case 7:
+	        	CPLD_CREATE(led8);
+	        	CPLD_CREATE(led8_name);
 	        	break;
 	        default:
 	        	break;
@@ -2570,7 +2599,7 @@ static int topology_config(struct cpld_data *cplddata)
 		cplddata->cfg_fan_module.module[id].eeprom_topology.addr = fan_eeprom_addr[id];
 	}
 
-	for (id = 0; id < cplddata->cfg_fan_module.num_fan_modules; id++) {
+	for (id = 0; id < cplddata->cfg_psu_module.num_psu_modules; id++) {
 		cplddata->cfg_psu_module.module[id].eeprom_topology.mux = psu_mux[id];
 		cplddata->cfg_psu_module.module[id].eeprom_topology.addr = psu_eeprom_addr[id];
 		cplddata->cfg_psu_module.module[id].topology.mux = psu_mux[id];
@@ -2647,12 +2676,12 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
 	}
 	i2c_set_clientdata(client, data);
 
-        /* Register sysfs hooks */
+    /* Register sysfs hooks */
 	err = sysfs_create_group(&client->dev.kobj, &mlnx_cpld_group[cpld_db.mlnx_system_type]);
 	if (err)
 		goto fail_create_group;
 
-        /* Create MUX topolgy */
+    /* Create MUX topolgy */
 	memcpy(&data->exec_tab, &exec_table_profile[exec_id], sizeof(struct exec_table));
 
 	INIT_DELAYED_WORK(&data->dwork, cpld_work_handler);
@@ -2720,24 +2749,24 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
         */
 	for (id = 0; id < data->cfg_fan_module.num_fan_modules; id++) {
 		data->cfg_fan_module.module[id].presence_status_cache = 0;
-        	bus_access_func(data,
-                        	data->cfg_fan_module.module[id].presence_status.offset,
-                        	data->cfg_fan_module.module[id].presence_status.offset,
-                        	1, &data->cfg_fan_module.module[id].presence_status_cache, 1);
-        	data->cfg_fan_module.module[id].presence_status_cache = (~data->cfg_fan_module.module[id].presence_status_cache & 0xff);
-        	data->cfg_fan_module.module[id].presence_status_cache &=
-        	        	(1 << data->cfg_fan_module.module[id].presence_mask.bit);
+		bus_access_func(data,
+						data->cfg_fan_module.module[id].presence_status.offset,
+						data->cfg_fan_module.module[id].presence_status.offset,
+						1, &data->cfg_fan_module.module[id].presence_status_cache, 1);
+		data->cfg_fan_module.module[id].presence_status_cache = (~data->cfg_fan_module.module[id].presence_status_cache & 0xff);
+		data->cfg_fan_module.module[id].presence_status_cache &=
+					(1 << data->cfg_fan_module.module[id].presence_mask.bit);
 
-        	if (data->cfg_fan_module.module[id].presence_status_cache) {
+		if (data->cfg_fan_module.module[id].presence_status_cache) {
 			fan_presence_status++;
-                        /* Set LED for FAN according to presence bit */
-                        err = data->exec_tab.fan_init_entry(data, id, 1, 0, no_event);
-                        SET_FAN(1, id, default_fan_speed, err);
-                        data->cfg_led.led[leds_profile.fan_led_offset + id].led_cache = led_green;
+						/* Set LED for FAN according to presence bit */
+						err = data->exec_tab.fan_init_entry(data, id, 1, 0, no_event);
+						SET_FAN(1, id, default_fan_speed, err);
+						data->cfg_led.led[leds_profile.fan_led_offset + id].led_cache = led_green;
 
 			/* Connect FAN EEPROM drivers */
 			if (!(data->cfg_fan_module.module[id].eeprom_adapter =
-			      i2c_get_adapter(data->cfg_fan_module.module[id].eeprom_topology.mux))) {
+				  i2c_get_adapter(data->cfg_fan_module.module[id].eeprom_topology.mux))) {
 				printk(KERN_INFO "%s: failed to get adapter for mux %d\n",
 					__func__, data->cfg_fan_module.module[id].eeprom_topology.mux);
 				err = -EFAULT;
@@ -2747,20 +2776,20 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
 			board_info.addr = data->cfg_fan_module.module[id].eeprom_topology.addr;
 			memcpy(board_info.type, fan_eeprom_driver, I2C_NAME_SIZE);
 			if (!(data->cfg_fan_module.module[id].eeprom_client =
-			      i2c_new_device(data->cfg_fan_module.module[id].eeprom_adapter,
-					    (struct i2c_board_info const*)&board_info))) {
-			        printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
+				  i2c_new_device(data->cfg_fan_module.module[id].eeprom_adapter,
+						(struct i2c_board_info const*)&board_info))) {
+					printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
 					__func__, fan_eeprom_driver, data->cfg_fan_module.module[id].eeprom_topology.mux,
 					data->cfg_fan_module.module[id].eeprom_topology.addr);
-			        i2c_put_adapter(data->cfg_fan_module.module[id].eeprom_adapter);
+					i2c_put_adapter(data->cfg_fan_module.module[id].eeprom_adapter);
 				err = -EFAULT;
 				goto fail_connect_fan_eeprom;
 			}
-        	}
-        	else {
-                        err = data->exec_tab.fan_init_entry(data, id, 0, 0, no_event);
-                        data->cfg_led.led[leds_profile.fan_led_offset + id].led_cache = def_led_alarm_color;
-        	}
+		}
+		else {
+			err = data->exec_tab.fan_init_entry(data, id, 0, 0, no_event);
+			data->cfg_led.led[leds_profile.fan_led_offset + id].led_cache = def_led_alarm_color;
+		}
 	}
 
         /* Connect drivers for PSU, which are present */
@@ -2768,28 +2797,28 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
 		data->cfg_psu_module.module[id].presence_status_cache = 0;
 		data->cfg_psu_module.module[id].power_status_cache = 0;
 
-        	bus_access_func(data,
-                        	data->cfg_psu_module.module[id].presence_status.offset,
-                        	data->cfg_psu_module.module[id].presence_status.offset,
-                        	1, &data->cfg_psu_module.module[id].presence_status_cache, 1);
-        	data->cfg_psu_module.module[id].presence_status_cache = (~data->cfg_psu_module.module[id].presence_status_cache & 0xff);
-        	data->cfg_psu_module.module[id].presence_status_cache &=
-        	        	(1 << data->cfg_psu_module.module[id].presence_mask.bit);
-        	bus_access_func(data,
-                        	data->cfg_psu_module.module[id].power_status.offset,
-                        	data->cfg_psu_module.module[id].power_status.offset,
-                        	1, &data->cfg_psu_module.module[id].power_status_cache, 1);
-        	data->cfg_psu_module.module[id].power_status_cache = (data->cfg_psu_module.module[id].power_status_cache &
-                        	BIT_MASK(data->cfg_psu_module.module[id].power_mask.bit));
-        	data->cfg_psu_module.module[id].power_status_cache &=
-        	        	(1 << data->cfg_psu_module.module[id].power_mask.bit);
-        	psu_presence_power_status &= (data->cfg_psu_module.module[id].presence_status_cache ==
-        					data->cfg_psu_module.module[id].power_status_cache);
+		bus_access_func(data,
+						data->cfg_psu_module.module[id].presence_status.offset,
+						data->cfg_psu_module.module[id].presence_status.offset,
+						1, &data->cfg_psu_module.module[id].presence_status_cache, 1);
+		data->cfg_psu_module.module[id].presence_status_cache = (~data->cfg_psu_module.module[id].presence_status_cache & 0xff);
+		data->cfg_psu_module.module[id].presence_status_cache &=
+					(1 << data->cfg_psu_module.module[id].presence_mask.bit);
+		bus_access_func(data,
+						data->cfg_psu_module.module[id].power_status.offset,
+						data->cfg_psu_module.module[id].power_status.offset,
+						1, &data->cfg_psu_module.module[id].power_status_cache, 1);
+		data->cfg_psu_module.module[id].power_status_cache = (data->cfg_psu_module.module[id].power_status_cache &
+						BIT_MASK(data->cfg_psu_module.module[id].power_mask.bit));
+		data->cfg_psu_module.module[id].power_status_cache &=
+					(1 << data->cfg_psu_module.module[id].power_mask.bit);
+		psu_presence_power_status &= (data->cfg_psu_module.module[id].presence_status_cache ==
+						data->cfg_psu_module.module[id].power_status_cache);
 
-        	if (data->cfg_psu_module.module[id].presence_status_cache) {
+		if (data->cfg_psu_module.module[id].presence_status_cache) {
 			/* Connect PSU EEPROM drivers */
 			if (!(data->cfg_psu_module.module[id].eeprom_adapter =
-			      i2c_get_adapter(data->cfg_psu_module.module[id].eeprom_topology.mux))) {
+				  i2c_get_adapter(data->cfg_psu_module.module[id].eeprom_topology.mux))) {
 				printk(KERN_INFO "%s: failed to get adapter for mux %d\n",
 					__func__, data->cfg_psu_module.module[id].eeprom_topology.mux);
 				err = -EFAULT;
@@ -2799,21 +2828,21 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
 			board_info.addr = data->cfg_psu_module.module[id].eeprom_topology.addr;
 			memcpy(board_info.type, psu_eeprom_driver, I2C_NAME_SIZE);
 			if (!(data->cfg_psu_module.module[id].eeprom_client =
-			      i2c_new_device(data->cfg_psu_module.module[id].eeprom_adapter,
-					    (struct i2c_board_info const*)&board_info))) {
-			        printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
+				  i2c_new_device(data->cfg_psu_module.module[id].eeprom_adapter,
+						(struct i2c_board_info const*)&board_info))) {
+					printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
 					__func__, psu_eeprom_driver, data->cfg_psu_module.module[id].eeprom_topology.mux,
 					data->cfg_psu_module.module[id].eeprom_topology.addr);
-			        i2c_put_adapter(data->cfg_psu_module.module[id].eeprom_adapter);
+					i2c_put_adapter(data->cfg_psu_module.module[id].eeprom_adapter);
 				err = -EFAULT;
 				goto fail_connect_psu_eeprom;
 			}
-        	}
+		}
 
-        	if (data->cfg_psu_module.module[id].power_status_cache) {
+		if (data->cfg_psu_module.module[id].power_status_cache) {
 			/* Connect PSU controller drivers */
 			if (!(data->cfg_psu_module.module[id].control_adapter =
-			      i2c_get_adapter(data->cfg_psu_module.module[id].topology.mux))) {
+				  i2c_get_adapter(data->cfg_psu_module.module[id].topology.mux))) {
 				printk(KERN_INFO "%s: failed to get adapter for mux %d\n",
 					__func__, data->cfg_psu_module.module[id].topology.mux);
 				err = -EFAULT;
@@ -2823,16 +2852,16 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
 			board_info.addr = data->cfg_psu_module.module[id].topology.addr;
 			memcpy(board_info.type, psu_control_driver, I2C_NAME_SIZE);
 			if (!(data->cfg_psu_module.module[id].control_client =
-			      i2c_new_device(data->cfg_psu_module.module[id].control_adapter,
-					    (struct i2c_board_info const*)&board_info))) {
-			        printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
+				  i2c_new_device(data->cfg_psu_module.module[id].control_adapter,
+						(struct i2c_board_info const*)&board_info))) {
+					printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
 					__func__, psu_eeprom_driver, data->cfg_psu_module.module[id].eeprom_topology.mux,
 					data->cfg_psu_module.module[id].topology.addr);
-			        i2c_put_adapter(data->cfg_psu_module.module[id].control_adapter);
+					i2c_put_adapter(data->cfg_psu_module.module[id].control_adapter);
 				err = -EFAULT;
 				goto fail_connect_psu_controller;
 			}
-        	}
+		}
 	}
 
         /* Set LED for PS according to presence and power good bit */
@@ -2914,7 +2943,7 @@ static int cpld_detect(struct i2c_client *new_client,
 static int cpld_remove(struct i2c_client *client)
 {
         struct cpld_data *data = i2c_get_clientdata(client);
-	int id, flush, err = 0;
+        int id, flush, err = 0;
 
         /* Disonnect drivers for PSU */
 	for (id = 0; id < data->cfg_psu_module.num_psu_modules; id++) {
@@ -2989,7 +3018,7 @@ static struct i2c_driver mlnx_cpld_drv = {
 static int __init mlnx_cpld_init(void)
 {
 	struct i2c_board_info board_info;
-	struct cpld_mux_platform_mode modes[MUX_CHAN_NUM];
+	struct cpld_mux_platform_mode modes[MUX_CHAN_NUM_MAX];
 	int err = 0, i, id;
 	int mlnx_system_type;
 
@@ -3018,8 +3047,9 @@ static int __init mlnx_cpld_init(void)
 		leds_profile.psu_led_offset = 1;
 		leds_profile.status_led_offset = 3;
 		leds_profile.uid_led_offset = 4;
+		leds_profile.bp_led_offset = NOT_USED_LED_OFFSET;
 		irq_line = 0;
-		mux_driver =  "cpld_mux_mgmt";
+		mux_driver[0] = mux_driver_mgmt; mux_driver[1] = mux_driver_mgmt;
 
 		for (i = 0; i < num_fixed_psu_modules; i++)
 			psu_module_alarm_status_offset[i] =
@@ -3040,9 +3070,10 @@ static int __init mlnx_cpld_init(void)
 		leds_profile.fan_led_offset = 0;
 		leds_profile.psu_led_offset = 4;
 		leds_profile.status_led_offset = 5;
-		leds_profile.uid_led_offset = 0xff;
+		leds_profile.bp_led_offset = NOT_USED_LED_OFFSET;
+		leds_profile.uid_led_offset = NOT_USED_LED_OFFSET;
 		irq_line = DEF_IRQ_LINE;
-		mux_driver =  "cpld_mux_tor";
+		mux_driver[0] = mux_driver_tor; mux_driver[1] = mux_driver_tor;
 		break;
 	}
 
@@ -3050,27 +3081,27 @@ static int __init mlnx_cpld_init(void)
 	i2c_add_driver(&mlnx_cpld_drv);
 
 	cpld_db.cfg_mux.num_mux = num_mux;
-	memset(modes, 0, sizeof(struct cpld_mux_platform_mode) * MUX_CHAN_NUM);
-        for (i = 0; i < MUX_CHAN_NUM; i++) {
-        	modes[i].deselect_on_exit = deselect_on_exit;
-        	modes[i].adap_id = force_chan;
-        }
+	memset(modes, 0, sizeof(struct cpld_mux_platform_mode) * MUX_CHAN_NUM_MAX);
+	for (i = 0; i < MUX_CHAN_NUM_MAX; i++) {
+		modes[i].deselect_on_exit = deselect_on_exit;
+		modes[i].adap_id = force_chan;
+	}
 	for (id = 0; id < num_mux; id++) {
-        	memset(&cpld_db.cfg_mux.mux[id], 0, sizeof(struct mux_params));
-        	memset(&board_info, 0, sizeof(struct i2c_board_info));
+		memset(&cpld_db.cfg_mux.mux[id], 0, sizeof(struct mux_params));
+		memset(&board_info, 0, sizeof(struct i2c_board_info));
 
-        	if (!(cpld_db.cfg_mux.mux[id].platform = kzalloc(sizeof(struct cpld_mux_platform_data), GFP_KERNEL))) {
+        if (!(cpld_db.cfg_mux.mux[id].platform = kzalloc(sizeof(struct cpld_mux_platform_data), GFP_KERNEL))) {
 			err = -ENOMEM;
 			goto fail_no_memory;
 		}
-        	cpld_db.cfg_mux.mux[id].mux_driver = mux_driver;
-        	cpld_db.cfg_mux.mux[id].platform->modes = modes;
-        	cpld_db.cfg_mux.mux[id].platform->num_modes = mux_chan_num[id];
-        	cpld_db.cfg_mux.mux[id].platform->id = mux_reg_offset[id];
-        	cpld_db.cfg_mux.mux[id].platform->sel_reg_addr = mux_reg_offset[id];
-        	cpld_db.cfg_mux.mux[id].platform->first_channel = mux_first_num[id];
-        	cpld_db.cfg_mux.mux[id].platform->addr = mux_reg_offset[id];
-        	cpld_db.cfg_mux.mux[id].parent_mux = parent_mux[id];
+		cpld_db.cfg_mux.mux[id].mux_driver = mux_driver[id];
+		cpld_db.cfg_mux.mux[id].platform->modes = modes;
+		cpld_db.cfg_mux.mux[id].platform->num_modes = mux_chan_num[id];
+		cpld_db.cfg_mux.mux[id].platform->id = mux_reg_offset[id];
+		cpld_db.cfg_mux.mux[id].platform->sel_reg_addr = mux_reg_offset[id];
+		cpld_db.cfg_mux.mux[id].platform->first_channel = mux_first_num[id];
+		cpld_db.cfg_mux.mux[id].platform->addr = mux_reg_offset[id];
+		cpld_db.cfg_mux.mux[id].parent_mux = parent_mux[id];
 		if (!(cpld_db.cfg_mux.mux[id].adapter =
 			i2c_get_adapter(cpld_db.cfg_mux.mux[id].parent_mux))) {
 				printk(KERN_INFO "%s: failed to get adapter for mux %d\n",
@@ -3083,13 +3114,13 @@ static int __init mlnx_cpld_init(void)
 		board_info.platform_data = cpld_db.cfg_mux.mux[id].platform;
 		board_info.flags = I2C_CLIENT_TEN;
 		board_info.addr = cpld_db.cfg_mux.mux[id].platform->addr & 0xff;
-		memcpy(board_info.type, mux_driver, I2C_NAME_SIZE);
+		memcpy(board_info.type, mux_driver[id], I2C_NAME_SIZE);
 
 		if (!(cpld_db.cfg_mux.mux[id].client =
 			i2c_new_device(cpld_db.cfg_mux.mux[id].adapter,
 					    (struct i2c_board_info const*)&board_info))) {
 			printk(KERN_INFO "%s: failed to create client %s at mux %d at addr 0x%02x\n",
-				__func__, mux_driver, cpld_db.cfg_mux.mux[id].parent_mux,
+				__func__, mux_driver[id], cpld_db.cfg_mux.mux[id].parent_mux,
 				board_info.addr);
 			i2c_put_adapter(cpld_db.cfg_mux.mux[id].adapter);
 			err = -EFAULT;
