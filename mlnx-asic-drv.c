@@ -608,6 +608,7 @@ static int qsfp_get_eeprom(struct switchdev_if *devif, struct qsfp_config *qsfp,
 	u8  page_number[QSFP_PAGE_NUM] = { 0xa0, 0x00, 0x01, 0x02, 0x03 }; /* ftp://ftp.seagate.com/sff/SFF-8436.PDF */
 	u16  page_shift[QSFP_PAGE_NUM + 1] = { 0x00, 0x80, 0x80, 0x80, 0x80, 0x00 };
 	u16 sub_page_size[QSFP_SUB_PAGE_NUM] = { QSFP_SUB_PAGE_SIZE, QSFP_SUB_PAGE_SIZE, QSFP_LAST_SUB_PAGE_SIZE};
+	u16 copysize;
 
 	if (!devif->REG_MCIA || !devif->DEV_CONTEXT)
 		return ENODEV;
@@ -645,15 +646,22 @@ static int qsfp_get_eeprom(struct switchdev_if *devif, struct qsfp_config *qsfp,
 			for (k = 0; k < size; k++, rbuf++) {
 				tbuf[k] = ntohl(*rbuf);
 			}
-			memcpy(buf, tbuf, reg_data.mcia_reg.size);
+
+			if (count > reg_data.mcia_reg.size)
+				copysize = reg_data.mcia_reg.size;
+			else 
+				copysize = count;
+
+			memcpy(buf, tbuf, copysize);
+
+			buf += copysize;
+			off += copysize;
+			count -= copysize;
+			res += copysize;
+			reg_data.mcia_reg.device_address += copysize;
 
 			if (count <= 0)
 				return res;
-			buf += reg_data.mcia_reg.size;
-			off += reg_data.mcia_reg.size;
-			count -= reg_data.mcia_reg.size;
-			res += reg_data.mcia_reg.size;
-			reg_data.mcia_reg.device_address += reg_data.mcia_reg.size;
 		}
 		reg_data.mcia_reg.device_address = page_shift[i + 1];
 	}
@@ -1108,8 +1116,6 @@ static ssize_t qsfp_eeprom_bin_read(struct file *filp, struct kobject *kobj,
 		return 0;
 	if ((off + count) > asicdata->qsfp_config.eeprom[module->module_index].size)
 		count = asicdata->qsfp_config.eeprom[module->module_index].size - off;
-	if ((off + count) < asicdata->qsfp_config.eeprom[module->module_index].size)
-		return count;
 
         return qsfp_get_eeprom(&asicdata->switchdevif, module, buf, off, count);
 }
