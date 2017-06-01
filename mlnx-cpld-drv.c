@@ -61,6 +61,7 @@
 #define LED_GREEN_STATIC_ON  0x0D
 #define LED_GREEN_BLINK_3HZ  0x0E
 #define LED_GREEN_BLINK_6HZ  0x0F
+#define NOT_USED_LED_OFFSET  0xFE
 typedef enum led_color {
 	led_nocolor           = 0,
 	led_yellow            = 1 << 0,
@@ -286,6 +287,7 @@ struct cpld_leds_profile {
 	u8 psu_led_offset;
 	u8 status_led_offset;
 	u8 uid_led_offset;
+	u8 bp_led_offset;
 	struct cpld_led_profile *profile;
 };
 static struct cpld_leds_profile leds_profile;
@@ -2226,6 +2228,7 @@ static int led_config(struct cpld_data *cplddata)
 		break;
 	case led_red_blink:
 		cplddata->cfg_led.led_alarm_mask = LED_RED_BLINK_3HZ;
+		break;
 	case led_yellow_blink_fast:
 		cplddata->cfg_led.led_alarm_mask = LED_YELLOW_BLINK_6HZ;
 		break;
@@ -2245,7 +2248,7 @@ static int led_config(struct cpld_data *cplddata)
 	}
 
 	for (id = 0; id < cplddata->cfg_led.num_led; id++) {
-                memset(&cplddata->cfg_led.led[id], 0, sizeof(struct led_config_params));
+                memset(&cplddata->cfg_led.led[id], 0, sizeof(struct led_config));
                 cplddata->cfg_led.led[id].entry.index = id + 1;
                 cplddata->cfg_led.led[id].params.offset = leds_profile.profile[id].offset;
                 cplddata->cfg_led.led[id].params.access_mask = leds_profile.profile[id].mask;
@@ -2263,6 +2266,9 @@ static int led_config(struct cpld_data *cplddata)
                 else if (cplddata->cfg_led.led[id].entry.index == leds_profile.uid_led_offset + 1) {
                 	sprintf(cplddata->cfg_led.led[id].entry.name, "%s\n", "uid");
                 }
+                else if (cplddata->cfg_led.led[id].entry.index == leds_profile.bp_led_offset + 1) {
+					sprintf(cplddata->cfg_led.led[id].entry.name, "%s\n", "bad_port");
+		}
                 else if (cplddata->cfg_led.led[id].entry.index > leds_profile.psu_led_offset) {
                 	sprintf(cplddata->cfg_led.led[id].entry.name, "%s%d\n", "psu",
                 	cplddata->cfg_led.led[id].entry.index - leds_profile.psu_led_offset);
@@ -2275,27 +2281,27 @@ static int led_config(struct cpld_data *cplddata)
 	        switch (id) {
 	        case 0:
 	        	CPLD_CREATE(led1);
-			CPLD_CREATE(led1_name);
+	        	CPLD_CREATE(led1_name);
 	        	break;
 	        case 1:
 	        	CPLD_CREATE(led2);
-			CPLD_CREATE(led2_name);
+	        	CPLD_CREATE(led2_name);
 	        	break;
 	        case 2:
 	        	CPLD_CREATE(led3);
-			CPLD_CREATE(led3_name);
+	        	CPLD_CREATE(led3_name);
 	        	break;
 	        case 3:
 	        	CPLD_CREATE(led4);
-			CPLD_CREATE(led4_name);
+	        	CPLD_CREATE(led4_name);
 	        	break;
 	        case 4:
 	        	CPLD_CREATE(led5);
-			CPLD_CREATE(led5_name);
+	        	CPLD_CREATE(led5_name);
 	        	break;
 	        case 5:
 	        	CPLD_CREATE(led6);
-			CPLD_CREATE(led6_name);
+	        	CPLD_CREATE(led6_name);
 	        	break;
 	        default:
 	        	break;
@@ -2570,7 +2576,7 @@ static int topology_config(struct cpld_data *cplddata)
 		cplddata->cfg_fan_module.module[id].eeprom_topology.addr = fan_eeprom_addr[id];
 	}
 
-	for (id = 0; id < cplddata->cfg_fan_module.num_fan_modules; id++) {
+	for (id = 0; id < cplddata->cfg_psu_module.num_psu_modules; id++) {
 		cplddata->cfg_psu_module.module[id].eeprom_topology.mux = psu_mux[id];
 		cplddata->cfg_psu_module.module[id].eeprom_topology.addr = psu_eeprom_addr[id];
 		cplddata->cfg_psu_module.module[id].topology.mux = psu_mux[id];
@@ -3018,6 +3024,7 @@ static int __init mlnx_cpld_init(void)
 		leds_profile.psu_led_offset = 1;
 		leds_profile.status_led_offset = 3;
 		leds_profile.uid_led_offset = 4;
+		leds_profile.bp_led_offset = NOT_USED_LED_OFFSET;
 		irq_line = 0;
 		mux_driver =  "cpld_mux_mgmt";
 
@@ -3040,7 +3047,8 @@ static int __init mlnx_cpld_init(void)
 		leds_profile.fan_led_offset = 0;
 		leds_profile.psu_led_offset = 4;
 		leds_profile.status_led_offset = 5;
-		leds_profile.uid_led_offset = 0xff;
+		leds_profile.bp_led_offset = NOT_USED_LED_OFFSET;
+		leds_profile.uid_led_offset = NOT_USED_LED_OFFSET;
 		irq_line = DEF_IRQ_LINE;
 		mux_driver =  "cpld_mux_tor";
 		break;
