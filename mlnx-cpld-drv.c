@@ -561,7 +561,7 @@ struct cpld_container {
 	struct list_head list;
         struct device            *cpld_hwmon_dev;
         struct mux_config_params  cfg_mux;
-    enum mlnx_system_types mlnx_system_type;
+	enum mlnx_system_types mlnx_system_type;
 };
 static struct cpld_container cpld_db;
 
@@ -2154,6 +2154,7 @@ static struct attribute *mlnx_cpld_msn2100_attributes[] = {
 static const struct attribute_group mlnx_cpld_group[] = {
         {.attrs = mlnx_cpld_attributes},
         {.attrs = mlnx_cpld_msn2100_attributes},
+        {.attrs = mlnx_cpld_attributes},
 };
 
 #define CPLD_CREATE(id) \
@@ -3031,6 +3032,30 @@ static int __init mlnx_cpld_init(void)
 		for (i = 0; i < num_fixed_psu_modules; i++)
 			psu_module_alarm_status_offset[i] =
 					psu_module_power_event_offset[i];
+		break;
+
+	case msn2740_sys_type:
+		cpld_db.mlnx_system_type = msn2740_sys_type;
+		num_psu_modules = 2;
+		num_fixed_psu_modules = 0;
+		num_fan_modules = 4;
+		num_cpld = 2;
+		num_reset = 3;
+		num_mux = 2;
+		leds_profile.profile = led_default_profile;
+		num_led = ARRAY_SIZE(led_default_profile);
+		leds_profile.fan_led_offset = 0;
+		leds_profile.psu_led_offset = 4;
+		leds_profile.status_led_offset = 5;
+		leds_profile.uid_led_offset = NOT_USED_LED_OFFSET;
+		leds_profile.bp_led_offset = NOT_USED_LED_OFFSET;
+		leds_profile.uid_led_offset = NOT_USED_LED_OFFSET;
+		irq_line = DEF_IRQ_LINE;
+		psu_module_mux[0] = 4;
+		psu_module_mux[1] = 4;
+		psu_mux[0] = 4;
+		psu_mux[1] = 4;
+		mux_driver =  "cpld_mux_mgmt";
 		break;
 
 	case mlnx_dflt_sys_type:
