@@ -44,6 +44,7 @@
 #define VOLT_SENS_SW_NUM_DFLT       1
 #define VOLT_SENS_SW_NUM_MSN2100    5
 #define CURR_SENS_SW_NUM_MSN2100    2
+#define VOLT_SENS_SW_NUM_MSN2740    4
 #define CURR_SENS_MAIN_NUM_MSN2100  0
 
 #define CURR_SENS_NUM    2
@@ -82,78 +83,95 @@ static unsigned short sw_board_read_size = 7;
 
 static unsigned short mnb_expect_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 675, 870, 3300, 1800, 1050, 1050, 1350, 5000, 1500, 0, 0, 0, 0 },
-	{ 1000, 1000, 675, 1000, 1350, 1800, 3300, 12000, 1350, 1070, 1500, \
+	{ 1000, 1000, 675, 1000, 1350, 1800, 3300, 12000, 1350, 1070, 1500,
+	  5000, 3300 },
+	{ 1000, 1000, 675, 1000, 1350, 1800, 3300, 12000, 1350, 1070, 1500,
 	  5000, 3300 },
 };
 
 static unsigned short mnb_expect_volt_dev[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 10, 15, 10, 10, 10, 10, 10, 10, 10, 0, 0, 0, 0 },
 	{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 },
+	{ 20, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 },
 };
 
 static unsigned short mnb_scale_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 8, 8, 16, 8, 8, 8, 8, 24, 8, 0, 0, 0, 0 },
+	{ 8, 8, 8, 8, 8, 8, 16, 88, 8, 8, 8, 25, 16 },
 	{ 8, 8, 8, 8, 8, 8, 16, 88, 8, 8, 8, 25, 16 },
 };
 
 static unsigned short mnb_offset_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 },
 };
 
 static unsigned short mnb_rail_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 0, 1, 3, 4, 5, 6, 7, 3, 5, 0, 0, 0, 0 },
 	{ 0, 1, 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7 },
+	{ 0, 1, 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7 },
 };
 
 static char *mnb_label_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
-	{ "ddr3_0.675", "cpu_0.9", "sys", "cpu_1.8", "cpu_pch_1.05", \
+	{ "ddr3_0.675", "cpu_0.9", "sys", "cpu_1.8", "cpu_pch_1.05",
 	  "cpu_1.05", "ddr3_1.35", "usb_5", "lan_1.05", "", "", "", "" },
-	{ "soc_core", "soc_vnn", "cpu_0.675v", "1v", "vddq", "1.8v", \
+	{ "soc_core", "soc_vnn", "cpu_0.675v", "1v", "vddq", "1.8v",
+	  "sys_3.3v", "12v", "1.35v", "vccsram", "1.5v", "5v", "3.3v_aux" },
+	{ "soc_core", "soc_vnn", "cpu_0.675v", "1v", "vddq", "1.8v",
 	  "sys_3.3v", "12v", "1.35v", "vccsram", "1.5v", "5v", "3.3v_aux" },
 };
 
 static unsigned short mnb_expect_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ 2, 2 },
 	{ 0, 0 },
+	{ 0, 0 },
 };
 
 static unsigned short mnb_scale_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ 8, 8 },
+	{ 0, 0 },
 	{ 0, 0 },
 };
 
 static unsigned short mnb_offset_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ 0, 1 },
 	{ 0, 0 },
+	{ 0, 0 },
 };
 
 static unsigned short mnb_rail_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ 2, 2 },
+	{ 0, 0 },
 	{ 0, 0 },
 };
 
 static char *mnb_label_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ "ps2_12_aux", "ps1_12_aux" },
 	{ "", "" },
+	{ "", "" },
 };
 
 static unsigned short swb_expect_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 1800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 12000, 12000, 3300,12000, 5000, 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 12000, 12000, 3300, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
 static unsigned short swb_expect_volt_dev[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 10, 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
 static unsigned short swb_scale_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 59, 59, 16, 59, 33, 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 59, 59, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
 static unsigned short swb_offset_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
@@ -161,15 +179,19 @@ static unsigned short swb_offset_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 static unsigned short swb_rail_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0 },
+	{ 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
 static char *swb_label_volt[SYS_TYPE][VOLT_SENS_NUM_MAX] = {
 	{ "1.8V_sw_spc", "", "", "", "", "", "", "", "", "", "", "", "" },
-	{ "12v_1", "12v_2", "3.3v", "12v_aux", "5v_usb", "", "", "", "", "", \
+	{ "12v_1", "12v_2", "3.3v", "12v_aux", "5v_usb", "", "", "", "", "",
 	  "", "", "" },
+	{ "12v", "12v_aux", "3.3v_aux", "", "", "", "", "", "", "", "", "", ""
+	},
 };
 
 static unsigned short swb_expect_curr[SYS_TYPE][CURR_SENS_NUM] = {
+	{ 0, 0 },
 	{ 0, 0 },
 	{ 0, 0 },
 };
@@ -177,9 +199,11 @@ static unsigned short swb_expect_curr[SYS_TYPE][CURR_SENS_NUM] = {
 static unsigned short swb_scale_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ 0, 0 },
 	{ 80, 80 },
+	{ 0, 0 },
 };
 
 static unsigned short swb_offset_curr[SYS_TYPE][CURR_SENS_NUM] = {
+	{ 0, 0 },
 	{ 0, 0 },
 	{ 0, 0 },
 };
@@ -187,11 +211,13 @@ static unsigned short swb_offset_curr[SYS_TYPE][CURR_SENS_NUM] = {
 static unsigned short swb_rail_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ 0, 0 },
 	{ 5, 6 },
+	{ 0, 0 },
 };
 
 static char *swb_label_curr[SYS_TYPE][CURR_SENS_NUM] = {
 	{ "", "" },
 	{ "12v_1_curr", "12v_2_curr" },
+	{ "", "" },
 };
 
 enum a2d_types {
@@ -619,14 +645,32 @@ static struct attribute *mlnx_swb_msn2100_a2d_attributes[] = {
         NULL
 };
 
+static struct attribute *mlnx_swb_msn2740_a2d_attributes[] = {
+        &sensor_dev_attr_in1_input.dev_attr.attr,
+        &sensor_dev_attr_in1_min.dev_attr.attr,
+        &sensor_dev_attr_in1_max.dev_attr.attr,
+        &sensor_dev_attr_in1_label.dev_attr.attr,
+        &sensor_dev_attr_in2_input.dev_attr.attr,
+        &sensor_dev_attr_in2_min.dev_attr.attr,
+        &sensor_dev_attr_in2_max.dev_attr.attr,
+        &sensor_dev_attr_in2_label.dev_attr.attr,
+        &sensor_dev_attr_in3_input.dev_attr.attr,
+        &sensor_dev_attr_in3_min.dev_attr.attr,
+        &sensor_dev_attr_in3_max.dev_attr.attr,
+        &sensor_dev_attr_in3_label.dev_attr.attr,
+        NULL
+};
+
 static const struct attribute_group mlnx_mnb_a2d_group[SYS_TYPE] = {
 	{.attrs = mlnx_mnb_a2d_attributes},
+	{.attrs = mlnx_mnb_sff_a2d_attributes},
 	{.attrs = mlnx_mnb_sff_a2d_attributes},
 };
 
 static const struct attribute_group mlnx_swb_a2d_group[SYS_TYPE] = {
 	{.attrs = mlnx_swb_a2d_attributes},
 	{.attrs = mlnx_swb_msn2100_a2d_attributes},
+	{.attrs = mlnx_swb_msn2740_a2d_attributes},
 };
 
 static int a2d_config(struct a2d_data *a2d_data)
@@ -718,6 +762,12 @@ static int a2d_probe(struct i2c_client *client, const struct i2c_device_id *devi
 		num_sw_board_volt_sensors = VOLT_SENS_SW_NUM_MSN2100;
 		num_sw_board_curr_sensors = CURR_SENS_SW_NUM_MSN2100;
 		num_main_board_curr_sensors = CURR_SENS_MAIN_NUM_MSN2100;
+		break;
+
+	case msn2740_sys_type:
+		data->mlnx_system_type = msn2740_sys_type;
+		num_main_board_volt_sensors = VOLT_SENS_NUM_SFF;
+		num_sw_board_volt_sensors = VOLT_SENS_SW_NUM_MSN2740;
 		break;
 
 	case mlnx_dflt_sys_type:

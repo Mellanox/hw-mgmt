@@ -18,17 +18,19 @@
  *
  */
 
-#define SYS_TYPE     2
+#define SYS_TYPE     3
 
 enum mlnx_system_types
 {
     mlnx_dflt_sys_type,
     msn2100_sys_type,
+    msn2740_sys_type,
 };
 
 const char* mlnx_product_names[] = {
     "DFLT",
     "MSN2100",
+    "MSN2740",
     NULL
 };
 
