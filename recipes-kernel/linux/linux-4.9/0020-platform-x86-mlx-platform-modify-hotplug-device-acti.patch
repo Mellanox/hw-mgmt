@@ -1,0 +1,351 @@
+From c2e714e56360e34f88e0a75ee74e467d8b82de75 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Tue, 26 Sep 2017 22:21:51 +0000
+Subject: [v4.9 backport 20/28] platform/x86: mlx-platform: modify hotplug
+ device activation
+
+It modifies mlx-platform driver hotplug interface. Instead driver
+mlxcpld-hotplug, which is to be removed, mlx-platform will use more
+generic architecture independent and regmap based mlxreg-hotplug
+driver.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+Acked-by: Andy Shevchenko <andy.shevchenko@gmail.com>
+---
+ drivers/platform/x86/Kconfig        |  10 --
+ drivers/platform/x86/Makefile       |   1 -
+ drivers/platform/x86/mlx-platform.c | 225 +++++++++++++++++++++++++++---------
+ 3 files changed, 172 insertions(+), 64 deletions(-)
+
+diff --git a/drivers/platform/x86/Kconfig b/drivers/platform/x86/Kconfig
+index eb4e7dd..cd34275 100644
+--- a/drivers/platform/x86/Kconfig
++++ b/drivers/platform/x86/Kconfig
+@@ -1040,14 +1040,4 @@ config MLX_PLATFORM
+ 
+ 	  If you have a Mellanox system, say Y or M here.
+ 
+-config MLX_CPLD_PLATFORM
+-	tristate "Mellanox platform hotplug driver support"
+-	default n
+-	depends on MLX_PLATFORM
+-	select HWMON
+-	select I2C
+-	---help---
+-	  This driver handles hot-plug events for the power suppliers, power
+-	  cables and fans on the wide range Mellanox IB and Ethernet systems.
+-
+ endif # X86_PLATFORM_DEVICES
+diff --git a/drivers/platform/x86/Makefile b/drivers/platform/x86/Makefile
+index 2d6a587..51e413a 100644
+--- a/drivers/platform/x86/Makefile
++++ b/drivers/platform/x86/Makefile
+@@ -72,4 +72,3 @@ obj-$(CONFIG_INTEL_TELEMETRY)	+= intel_telemetry_core.o \
+ 				   intel_telemetry_debugfs.o
+ obj-$(CONFIG_INTEL_PMC_CORE)    += intel_pmc_core.o
+ obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
+-obj-$(CONFIG_MLX_CPLD_PLATFORM)	+= mlxcpld-hotplug.o
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 8f98c21..fa21a3c 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -35,20 +35,22 @@
+ #include <linux/dmi.h>
+ #include <linux/i2c.h>
+ #include <linux/i2c-mux.h>
++#include <linux/io.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
+ #include <linux/platform_data/i2c-mux-reg.h>
+-#include <linux/platform_data/mlxcpld-hotplug.h>
++#include <linux/platform_data/mlxreg.h>
++#include <linux/regmap.h>
+ 
+ #define MLX_PLAT_DEVICE_NAME		"mlxplat"
+ 
+ /* LPC bus IO offsets */
+ #define MLXPLAT_CPLD_LPC_I2C_BASE_ADRR		0x2000
+ #define MLXPLAT_CPLD_LPC_REG_BASE_ADRR		0x2500
+-#define MLXPLAT_CPLD_LPC_REG_AGGR_ADRR		0x253a
+-#define MLXPLAT_CPLD_LPC_REG_PSU_ADRR		0x2558
+-#define MLXPLAT_CPLD_LPC_REG_PWR_ADRR		0x2564
+-#define MLXPLAT_CPLD_LPC_REG_FAN_ADRR		0x2588
++#define MLXPLAT_CPLD_LPC_REG_AGGR_ADRR		0x3a
++#define MLXPLAT_CPLD_LPC_REG_PSU_ADRR		0x58
++#define MLXPLAT_CPLD_LPC_REG_PWR_ADRR		0x64
++#define MLXPLAT_CPLD_LPC_REG_FAN_ADRR		0x88
+ #define MLXPLAT_CPLD_LPC_IO_RANGE		0x100
+ #define MLXPLAT_CPLD_LPC_I2C_CH1_OFF		0xdb
+ #define MLXPLAT_CPLD_LPC_I2C_CH2_OFF		0xda
+@@ -138,86 +140,192 @@ static struct i2c_mux_reg_platform_data mlxplat_mux_data[] = {
+ };
+ 
+ /* Platform hotplug devices */
+-static struct mlxcpld_hotplug_device mlxplat_mlxcpld_psu[] = {
++static struct i2c_board_info mlxplat_mlxcpld_psu[] = {
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("24c02", 0x51) },
+-		.bus = 10,
++		I2C_BOARD_INFO("24c02", 0x51),
+ 	},
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("24c02", 0x50) },
+-		.bus = 10,
++		I2C_BOARD_INFO("24c02", 0x50),
+ 	},
+ };
+ 
+-static struct mlxcpld_hotplug_device mlxplat_mlxcpld_pwr[] = {
++static struct i2c_board_info mlxplat_mlxcpld_pwr[] = {
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("dps460", 0x59) },
+-		.bus = 10,
++		I2C_BOARD_INFO("dps460", 0x59),
+ 	},
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("dps460", 0x58) },
+-		.bus = 10,
++		I2C_BOARD_INFO("dps460", 0x58),
+ 	},
+ };
+ 
+-static struct mlxcpld_hotplug_device mlxplat_mlxcpld_fan[] = {
++static struct i2c_board_info mlxplat_mlxcpld_fan[] = {
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("24c32", 0x50) },
+-		.bus = 11,
++		I2C_BOARD_INFO("24c32", 0x50),
+ 	},
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("24c32", 0x50) },
+-		.bus = 12,
++		I2C_BOARD_INFO("24c32", 0x50),
+ 	},
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("24c32", 0x50) },
+-		.bus = 13,
++		I2C_BOARD_INFO("24c32", 0x50),
+ 	},
+ 	{
+-		.brdinfo = { I2C_BOARD_INFO("24c32", 0x50) },
+-		.bus = 14,
++		I2C_BOARD_INFO("24c32", 0x50),
+ 	},
+ };
+ 
+ /* Platform hotplug default data */
++static struct mlxreg_core_data mlxplat_mlxcpld_default_psu_items_data[] = {
++	{
++		.label = "psu1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_ADRR,
++		.mask = BIT(0),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_psu[0],
++		.hpdev.nr = 10,
++	},
++	{
++		.label = "psu2",
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_ADRR,
++		.mask = BIT(1),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_psu[1],
++		.hpdev.nr = 10,
++	},
++};
++
++static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_items_data[] = {
++	{
++		.label = "pwr1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
++		.mask = BIT(0),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[0],
++		.hpdev.nr = 10,
++	},
++	{
++		.label = "pwr2",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
++		.mask = BIT(1),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[1],
++		.hpdev.nr = 10,
++	},
++};
++
++static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_items_data[] = {
++	{
++		.label = "fan1",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_ADRR,
++		.mask = BIT(0),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_fan[0],
++		.hpdev.nr = 11,
++	},
++	{
++		.label = "fan2",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_ADRR,
++		.mask = BIT(1),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_fan[1],
++		.hpdev.nr = 12,
++	},
++	{
++		.label = "fan3",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_ADRR,
++		.mask = BIT(2),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_fan[2],
++		.hpdev.nr = 13,
++	},
++	{
++		.label = "fan4",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_ADRR,
++		.mask = BIT(3),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_fan[3],
++		.hpdev.nr = 14,
++	},
++};
++
++static struct mlxreg_core_item mlxplat_mlxcpld_default_items[] = {
++	{
++		.data = mlxplat_mlxcpld_default_psu_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PSU_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_ADRR,
++		.mask = MLXPLAT_CPLD_PSU_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_psu),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_pwr_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PWR_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
++		.mask = MLXPLAT_CPLD_PWR_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_pwr),
++		.inversed = 0,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_fan_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_FAN_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_ADRR,
++		.mask = MLXPLAT_CPLD_FAN_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_fan),
++		.inversed = 1,
++		.health = false,
++	},
++};
++
+ static
+-struct mlxcpld_hotplug_platform_data mlxplat_mlxcpld_default_data = {
+-	.top_aggr_offset = MLXPLAT_CPLD_LPC_REG_AGGR_ADRR,
+-	.top_aggr_mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+-	.top_aggr_psu_mask = MLXPLAT_CPLD_AGGR_PSU_MASK_DEF,
+-	.psu_reg_offset = MLXPLAT_CPLD_LPC_REG_PSU_ADRR,
+-	.psu_mask = MLXPLAT_CPLD_PSU_MASK,
+-	.psu_count = ARRAY_SIZE(mlxplat_mlxcpld_psu),
+-	.psu = mlxplat_mlxcpld_psu,
+-	.top_aggr_pwr_mask = MLXPLAT_CPLD_AGGR_PWR_MASK_DEF,
+-	.pwr_reg_offset = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
+-	.pwr_mask = MLXPLAT_CPLD_PWR_MASK,
+-	.pwr_count = ARRAY_SIZE(mlxplat_mlxcpld_pwr),
+-	.pwr = mlxplat_mlxcpld_pwr,
+-	.top_aggr_fan_mask = MLXPLAT_CPLD_AGGR_FAN_MASK_DEF,
+-	.fan_reg_offset = MLXPLAT_CPLD_LPC_REG_FAN_ADRR,
+-	.fan_mask = MLXPLAT_CPLD_FAN_MASK,
+-	.fan_count = ARRAY_SIZE(mlxplat_mlxcpld_fan),
+-	.fan = mlxplat_mlxcpld_fan,
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_data = {
++	.items = mlxplat_mlxcpld_default_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_items),
++	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_ADRR,
++	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+ };
+ 
+ /* Platform hotplug MSN21xx system family data */
++static struct mlxreg_core_item mlxplat_mlxcpld_msn21xx_items[] = {
++	{
++		.data = mlxplat_mlxcpld_default_pwr_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PWR_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
++		.mask = MLXPLAT_CPLD_PWR_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_pwr),
++		.inversed = 0,
++		.health = false,
++	},
++};
++
+ static
+-struct mlxcpld_hotplug_platform_data mlxplat_mlxcpld_msn21xx_data = {
+-	.top_aggr_offset = MLXPLAT_CPLD_LPC_REG_AGGR_ADRR,
+-	.top_aggr_mask = MLXPLAT_CPLD_AGGR_MASK_MSN21XX,
+-	.top_aggr_pwr_mask = MLXPLAT_CPLD_AGGR_MASK_MSN21XX,
+-	.pwr_reg_offset = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
+-	.pwr_mask = MLXPLAT_CPLD_PWR_MASK,
+-	.pwr_count = ARRAY_SIZE(mlxplat_mlxcpld_pwr),
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_msn21xx_data = {
++	.items = mlxplat_mlxcpld_msn21xx_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_msn21xx_items),
++	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_ADRR,
++	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
++};
++
++static int
++mlxplat_mlxcpld_reg_read(void *context, unsigned int reg, unsigned int *val)
++{
++	*val = ioread8(context + reg);
++	return 0;
++}
++
++static int
++mlxplat_mlxcpld_reg_write(void *context, unsigned int reg, unsigned int val)
++{
++	iowrite8(val, context + reg);
++	return 0;
++}
++
++const struct regmap_config mlxplat_mlxcpld_regmap_config = {
++	.reg_bits = 8,
++	.val_bits = 8,
++	.max_register = 255,
++	.reg_read = mlxplat_mlxcpld_reg_read,
++	.reg_write = mlxplat_mlxcpld_reg_write,
+ };
+ 
+ static struct resource mlxplat_mlxcpld_resources[] = {
+-	[0] = DEFINE_RES_IRQ_NAMED(17, "mlxcpld-hotplug"),
++	[0] = DEFINE_RES_IRQ_NAMED(17, "mlxreg-hotplug"),
+ };
+ 
+ struct platform_device *mlxplat_dev;
+-struct mlxcpld_hotplug_platform_data *mlxplat_hotplug;
++struct mlxreg_core_hotplug_platform_data *mlxplat_hotplug;
+ 
+ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+ {
+@@ -289,7 +397,8 @@ static struct dmi_system_id mlxplat_dmi_table[] __initdata = {
+ static int __init mlxplat_init(void)
+ {
+ 	struct mlxplat_priv *priv;
+-	int i, err;
++	void __iomem *base;
++	int i, err = 0;
+ 
+ 	if (!dmi_check_system(mlxplat_dmi_table))
+ 		return -ENODEV;
+@@ -328,8 +437,18 @@ static int __init mlxplat_init(void)
+ 		}
+ 	}
+ 
++	base = devm_ioport_map(&mlxplat_dev->dev,
++			       mlxplat_lpc_resources[1].start, 1);
++	if (IS_ERR(base))
++		goto fail_platform_mux_register;
++
++	mlxplat_hotplug->regmap = devm_regmap_init(&mlxplat_dev->dev, NULL,
++					base, &mlxplat_mlxcpld_regmap_config);
++	if (IS_ERR(mlxplat_hotplug->regmap))
++		goto fail_platform_mux_register;
++
+ 	priv->pdev_hotplug = platform_device_register_resndata(
+-				&mlxplat_dev->dev, "mlxcpld-hotplug",
++				&mlxplat_dev->dev, "mlxreg-hotplug",
+ 				PLATFORM_DEVID_NONE,
+ 				mlxplat_mlxcpld_resources,
+ 				ARRAY_SIZE(mlxplat_mlxcpld_resources),
+-- 
+2.1.4
+

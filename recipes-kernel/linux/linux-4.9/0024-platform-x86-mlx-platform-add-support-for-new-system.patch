@@ -1,0 +1,189 @@
+From ae4c6f185a791890dcf9cab7bc7764ba44e2e696 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Thu, 28 Sep 2017 20:37:29 +0000
+Subject: [v4.9 backport 24/28] platform/x86: mlx-platform: add support for new
+ system types
+
+It adds support for new Mellanox system types: QMB700 (40x200GbE
+InfiniBand switch), MSN2740 (32x100GbE Ethernet switch), MSN2010 (18x10GbE
+plus 4x4x25GbE).
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/x86/mlx-platform.c | 106 ++++++++++++++++++++++++++++++++++--
+ 1 file changed, 102 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index fa21a3c..2dbf749 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -72,6 +72,7 @@
+ #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
+ #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
+ #define MLXPLAT_CPLD_FAN_MASK		GENMASK(3, 0)
++#define MLXPLAT_CPLD_FAN_NG_MASK	GENMASK(5, 0)
+ 
+ /* Start channel numbers */
+ #define MLXPLAT_CPLD_CH1			2
+@@ -80,9 +81,14 @@
+ /* Number of LPC attached MUX platform devices */
+ #define MLXPLAT_CPLD_LPC_MUX_DEVS		2
+ 
++/* PSU adapter numbers */
++#define MLXPLAT_CPLD_PSU_DEFAULT_NR		10
++#define MLXPLAT_CPLD_PSU_MSNXXXX_NR		4
++
+ /* mlxplat_priv - platform private data
+  * @pdev_i2c - i2c controller platform device
+  * @pdev_mux - array of mux platform devices
++ * @pdev_hotplug - hotplug platform devices
+  */
+ struct mlxplat_priv {
+ 	struct platform_device *pdev_i2c;
+@@ -180,14 +186,14 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_psu_items_data[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PSU_ADRR,
+ 		.mask = BIT(0),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_psu[0],
+-		.hpdev.nr = 10,
++		.hpdev.nr = MLXPLAT_CPLD_PSU_DEFAULT_NR,
+ 	},
+ 	{
+ 		.label = "psu2",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PSU_ADRR,
+ 		.mask = BIT(1),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_psu[1],
+-		.hpdev.nr = 10,
++		.hpdev.nr = MLXPLAT_CPLD_PSU_DEFAULT_NR,
+ 	},
+ };
+ 
+@@ -197,14 +203,14 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_items_data[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
+ 		.mask = BIT(0),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[0],
+-		.hpdev.nr = 10,
++		.hpdev.nr = MLXPLAT_CPLD_PSU_DEFAULT_NR,
+ 	},
+ 	{
+ 		.label = "pwr2",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PWR_ADRR,
+ 		.mask = BIT(1),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[1],
+-		.hpdev.nr = 10,
++		.hpdev.nr = MLXPLAT_CPLD_PSU_DEFAULT_NR,
+ 	},
+ };
+ 
+@@ -355,6 +361,74 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
+ 	return 1;
+ };
+ 
++static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
++{
++	struct mlxreg_core_data *data_psu =
++					mlxplat_mlxcpld_default_psu_items_data;
++	struct mlxreg_core_data *data_pwr =
++					mlxplat_mlxcpld_default_pwr_items_data;
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mux_data); i++) {
++		mlxplat_mux_data[i].values = mlxplat_msn21xx_channels;
++		mlxplat_mux_data[i].n_values =
++				ARRAY_SIZE(mlxplat_msn21xx_channels);
++	}
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_default_psu_items_data);
++	     i++, data_psu++)
++		data_psu->hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR;
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_default_pwr_items_data);
++	     i++, data_pwr++)
++		data_pwr->hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR;
++	mlxplat_hotplug = &mlxplat_mlxcpld_default_data;
++
++	return 1;
++};
++
++static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
++{
++	struct mlxreg_core_data *data_psu =
++					mlxplat_mlxcpld_default_psu_items_data;
++	struct mlxreg_core_data *data_pwr =
++					mlxplat_mlxcpld_default_pwr_items_data;
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mux_data); i++) {
++		mlxplat_mux_data[i].values = mlxplat_msn21xx_channels;
++		mlxplat_mux_data[i].n_values =
++				ARRAY_SIZE(mlxplat_msn21xx_channels);
++	}
++	mlxplat_mlxcpld_default_items[2].mask = MLXPLAT_CPLD_FAN_NG_MASK;
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_default_psu_items_data);
++	     i++, data_psu++)
++		data_psu->hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR;
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_default_pwr_items_data);
++	     i++, data_pwr++)
++		data_pwr->hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR;
++	mlxplat_hotplug = &mlxplat_mlxcpld_default_data;
++
++	return 1;
++};
++
++static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
++{
++	struct mlxreg_core_data *data_pwr =
++					mlxplat_mlxcpld_default_pwr_items_data;
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mux_data); i++) {
++		mlxplat_mux_data[i].values = mlxplat_msn21xx_channels;
++		mlxplat_mux_data[i].n_values =
++				ARRAY_SIZE(mlxplat_msn21xx_channels);
++	}
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_default_pwr_items_data);
++	     i++, data_pwr++)
++		data_pwr->hpdev.nr = MLXPLAT_CPLD_PSU_DEFAULT_NR;
++	mlxplat_hotplug = &mlxplat_mlxcpld_msn21xx_data;
++
++	return 1;
++};
++
+ static struct dmi_system_id mlxplat_dmi_table[] __initdata = {
+ 	{
+ 		.callback = mlxplat_dmi_default_matched,
+@@ -391,6 +465,27 @@ static struct dmi_system_id mlxplat_dmi_table[] __initdata = {
+ 			DMI_MATCH(DMI_PRODUCT_NAME, "MSN21"),
+ 		},
+ 	},
++	{
++		.callback = mlxplat_dmi_msn274x_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "MSN274"),
++		},
++	},
++	{
++		.callback = mlxplat_dmi_msn201x_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "MSN201"),
++		},
++	},
++	{
++		.callback = mlxplat_dmi_qmb7xx_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "QMB7"),
++		},
++	},
+ 	{ }
+ };
+ 
+@@ -494,3 +589,6 @@ MODULE_ALIAS("dmi:*:*Mellanox*:MSN27*:");
+ MODULE_ALIAS("dmi:*:*Mellanox*:MSB*:");
+ MODULE_ALIAS("dmi:*:*Mellanox*:MSX*:");
+ MODULE_ALIAS("dmi:*:*Mellanox*:MSN21*:");
++MODULE_ALIAS("dmi:*:*Mellanox*MSN274*:");
++MODULE_ALIAS("dmi:*:*Mellanox*MSN201*:");
++MODULE_ALIAS("dmi:*:*Mellanox*QMB7*:");
+-- 
+2.1.4
+

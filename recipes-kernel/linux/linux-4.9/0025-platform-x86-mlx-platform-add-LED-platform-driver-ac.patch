@@ -1,0 +1,351 @@
+From 90fcad9b077a4660896dbdc815509cee3440886b Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Thu, 28 Sep 2017 23:32:42 +0000
+Subject: [v4.9 backport 25/28] platform/x86: mlx-platform: add LED platform
+ driver activation
+
+It adds support for LED driver activation form Mellanox platform driver.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/x86/mlx-platform.c | 240 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 240 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 2dbf749..d7d8fca 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -47,6 +47,11 @@
+ /* LPC bus IO offsets */
+ #define MLXPLAT_CPLD_LPC_I2C_BASE_ADRR		0x2000
+ #define MLXPLAT_CPLD_LPC_REG_BASE_ADRR		0x2500
++#define MLXPLAT_CPLD_LPC_REG_LED1_ADRR		0x20
++#define MLXPLAT_CPLD_LPC_REG_LED2_ADRR		0x21
++#define MLXPLAT_CPLD_LPC_REG_LED3_ADRR		0x22
++#define MLXPLAT_CPLD_LPC_REG_LED4_ADRR		0x23
++#define MLXPLAT_CPLD_LPC_REG_LED5_ADRR		0x24
+ #define MLXPLAT_CPLD_LPC_REG_AGGR_ADRR		0x3a
+ #define MLXPLAT_CPLD_LPC_REG_PSU_ADRR		0x58
+ #define MLXPLAT_CPLD_LPC_REG_PWR_ADRR		0x64
+@@ -73,6 +78,8 @@
+ #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
+ #define MLXPLAT_CPLD_FAN_MASK		GENMASK(3, 0)
+ #define MLXPLAT_CPLD_FAN_NG_MASK	GENMASK(5, 0)
++#define MLXPLAT_CPLD_LED_LO_NIBBLE_MASK	GENMASK(3, 0)
++#define MLXPLAT_CPLD_LED_HI_NIBBLE_MASK	GENMASK(7, 4)
+ 
+ /* Start channel numbers */
+ #define MLXPLAT_CPLD_CH1			2
+@@ -89,11 +96,13 @@
+  * @pdev_i2c - i2c controller platform device
+  * @pdev_mux - array of mux platform devices
+  * @pdev_hotplug - hotplug platform devices
++ * @pdev_led - led platform devices
+  */
+ struct mlxplat_priv {
+ 	struct platform_device *pdev_i2c;
+ 	struct platform_device *pdev_mux[MLXPLAT_CPLD_LPC_MUX_DEVS];
+ 	struct platform_device *pdev_hotplug;
++	struct platform_device *pdev_led;
+ };
+ 
+ /* Regions for LPC I2C controller and LPC base register space */
+@@ -304,6 +313,218 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_msn21xx_data = {
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+ };
+ 
++/* Platform led default data */
++static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
++	{
++		.label = "status:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "status:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK
++	},
++	{
++		.label = "psu:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "psu:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan1:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan1:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan2:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan2:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan3:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan3:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan4:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan4:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++};
++
++static struct mlxreg_core_led_platform_data mlxplat_default_led_data = {
++		.data = mlxplat_mlxcpld_default_led_data,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_led_data),
++};
++
++/* Platform led MSN21xx system family data */
++static struct mlxreg_core_data mlxplat_mlxcpld_msn21xx_led_data[] = {
++	{
++		.label = "status:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "status:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK
++	},
++	{
++		.label = "fan:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "psu1:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED4_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "psu1:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED4_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "psu2:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED4_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "psu2:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED4_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "uid:blue",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED5_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++};
++
++static struct mlxreg_core_led_platform_data mlxplat_msn21xx_led_data = {
++		.data = mlxplat_mlxcpld_msn21xx_led_data,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_msn21xx_led_data),
++};
++
++/* Platform led for default data for 200GbE systems */
++static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_led_data[] = {
++	{
++		.label = "status:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "status:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK
++	},
++	{
++		.label = "psu:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "psu:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED1_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan1:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan1:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan2:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan2:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED2_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan3:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan3:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan4:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan4:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED3_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan5:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED4_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan5:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED4_ADRR,
++		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++	},
++	{
++		.label = "fan6:green",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED5_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++	{
++		.label = "fan6:red",
++		.reg = MLXPLAT_CPLD_LPC_REG_LED5_ADRR,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++	},
++};
++
++static struct mlxreg_core_led_platform_data mlxplat_default_ng_led_data = {
++		.data = mlxplat_mlxcpld_default_ng_led_data,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_led_data),
++};
++
+ static int
+ mlxplat_mlxcpld_reg_read(void *context, unsigned int reg, unsigned int *val)
+ {
+@@ -332,6 +553,7 @@ static struct resource mlxplat_mlxcpld_resources[] = {
+ 
+ struct platform_device *mlxplat_dev;
+ struct mlxreg_core_hotplug_platform_data *mlxplat_hotplug;
++struct mlxreg_core_led_platform_data *mlxplat_led;
+ 
+ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+ {
+@@ -343,6 +565,7 @@ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+ 				ARRAY_SIZE(mlxplat_default_channels[i]);
+ 	}
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_default_data;
++	mlxplat_led = &mlxplat_default_led_data;
+ 
+ 	return 1;
+ };
+@@ -357,6 +580,7 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
+ 				ARRAY_SIZE(mlxplat_msn21xx_channels);
+ 	}
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_msn21xx_data;
++	mlxplat_led = &mlxplat_msn21xx_led_data;
+ 
+ 	return 1;
+ };
+@@ -381,6 +605,7 @@ static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
+ 	     i++, data_pwr++)
+ 		data_pwr->hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR;
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_default_data;
++	mlxplat_led = &mlxplat_default_ng_led_data;
+ 
+ 	return 1;
+ };
+@@ -406,6 +631,7 @@ static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
+ 	     i++, data_pwr++)
+ 		data_pwr->hpdev.nr = MLXPLAT_CPLD_PSU_MSNXXXX_NR;
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_default_data;
++	mlxplat_led = &mlxplat_default_ng_led_data;
+ 
+ 	return 1;
+ };
+@@ -425,6 +651,7 @@ static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
+ 	     i++, data_pwr++)
+ 		data_pwr->hpdev.nr = MLXPLAT_CPLD_PSU_DEFAULT_NR;
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_msn21xx_data;
++	mlxplat_led = &mlxplat_msn21xx_led_data;
+ 
+ 	return 1;
+ };
+@@ -553,8 +780,20 @@ static int __init mlxplat_init(void)
+ 		goto fail_platform_mux_register;
+ 	}
+ 
++	mlxplat_led->regmap = mlxplat_hotplug->regmap;
++	priv->pdev_led = platform_device_register_resndata(
++				&mlxplat_dev->dev, "leds-mlxreg",
++				PLATFORM_DEVID_NONE, NULL, 0,
++				mlxplat_led, sizeof(*mlxplat_led));
++	if (IS_ERR(priv->pdev_led)) {
++		err = PTR_ERR(priv->pdev_led);
++		goto fail_platform_hotplug_register;
++	}
++
+ 	return 0;
+ 
++fail_platform_hotplug_register:
++	platform_device_unregister(priv->pdev_hotplug);
+ fail_platform_mux_register:
+ 	while (--i >= 0)
+ 		platform_device_unregister(priv->pdev_mux[i]);
+@@ -571,6 +810,7 @@ static void __exit mlxplat_exit(void)
+ 	struct mlxplat_priv *priv = platform_get_drvdata(mlxplat_dev);
+ 	int i;
+ 
++	platform_device_unregister(priv->pdev_led);
+ 	platform_device_unregister(priv->pdev_hotplug);
+ 
+ 	for (i = ARRAY_SIZE(mlxplat_mux_data) - 1; i >= 0 ; i--)
+-- 
+2.1.4
+

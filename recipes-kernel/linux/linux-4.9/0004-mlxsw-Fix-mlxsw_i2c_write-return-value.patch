@@ -1,0 +1,32 @@
+From 515dc42e5f57aa4b2dbb18fbe6b3200224d051a7 Mon Sep 17 00:00:00 2001
+From: Elad Raz <eladr@mellanox.com>
+Date: Mon, 9 Jan 2017 11:25:44 +0100
+Subject: [v4.9 backport 04/28] mlxsw: Fix mlxsw_i2c_write return value
+
+The "err" variable is been checked, return always 0.
+
+Signed-off-by: Elad Raz <eladr@mellanox.com>
+Acked-by: Ido Schimmel <idosch@mellanox.com>
+Acked-by: Vadim Pasternak <vadimp@mellanox.com>
+Signed-off-by: Jiri Pirko <jiri@mellanox.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/mellanox/mlxsw/i2c.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+index e50c8db..12c3a44 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+@@ -338,7 +338,7 @@ mlxsw_i2c_write(struct device *dev, size_t in_mbox_size, u8 *in_mbox, int num,
+ 		return -EIO;
+ 	}
+ 
+-	return err > 0 ? 0 : err;
++	return 0;
+ }
+ 
+ /* Routine executes I2C command. */
+-- 
+2.1.4
+
