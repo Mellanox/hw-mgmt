@@ -30,5 +30,6 @@ SRC_URI += " \
 	file://0026-i2c-mlxcpld-aligned-structure-after-for-back-porting.patch \
 	file://0027-mlxsw-core-disable-setting-temperature-in-hwmon-at-i.patch \
 	file://0028-mlxsw-Add-bus-capability-flag.patch \
+	file://0029-platform-x86-mlx-platform-add-support-for-new-system.patch \
 	"
 
