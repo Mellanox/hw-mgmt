@@ -33,7 +33,7 @@
 #  MSN24*		Spider
 #  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2
 #  MSN201*		Boxer
-#  QMB7*		Jupiter, Jaguar
+#  QMB7*|SN37*|SN34*	Jupiter, Jaguar, Anaconda
 # Available options:
 # start        - install all BSP kernel drivers, connect drivers to devices, create BSP dictionary as symbolic
 #                links to sysfs entries
@@ -138,6 +138,9 @@ qmb700_dis_table=(	0x64 5 \
 			0x51 16 \	
 			0x48 2)
 
+fan_max_speed=23000
+fan_min_speed=10500
+
 ACTION=$1
 
 is_module()
@@ -219,7 +222,7 @@ check_system()
 				dis_table[i]=${msn2010_dis_table[i]}
        			done
 			;;
-		QMB7*)
+		QMB7*|SN37*|SN34*)
 			connect_size=${#qmb700_connect_table[@]}
         		for ((i=0; i<$connect_size; i++))
         		do
@@ -364,10 +367,15 @@ case $ACTION in
 		depmod -a 2>/dev/null
 		load_modules
 		sleep 1
-		connect_platform
 		if [ ! -d /bsp ]; then
 			mkdir /bsp
 		fi
+		if [ ! -d /bsp/config ]; then
+			mkdir -p /bsp/config
+		fi
+		echo $fan_max_speed > /bsp/config/fan_max_speed
+		echo $fan_min_speed > /bsp/config/fan_min_speed
+		connect_platform
 	;;
         stop)
 		check_system
