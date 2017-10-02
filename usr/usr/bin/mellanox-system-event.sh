@@ -11,7 +11,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-echo $1 and $2 and $3 and $4 and $5 >> /root/msg.txt
+# echo $1 and $2 and $3 and $4 and $5 >> /root/msg.txt
 if [ "$1" == "add" ]; then
   if [ ! -d /bsp/thermal ]; then
       mkdir -p /bsp/thermal/
@@ -68,13 +68,12 @@ if [ "$1" == "add" ]; then
     fi
   fi
   if [ "$2" == "a2d" ]; then
-    ln -sf $3$4/in_voltage-voltage_scale /bsp/environment/$2_voltage_scale
-    ln -sf $3$4/in_voltage6_raw /bsp/environment/$2_1_8v
-    ln -sf $3$4/in_voltage5_raw /bsp/environment/$2_1_2v
-    ln -sf $3$4/in_voltage4_raw /bsp/environment/$2_vcore
-    ln -sf $3$4/in_voltage3_raw /bsp/environment/$2_swb_12v
-    ln -sf $3$4/in_voltage2_raw /bsp/environment/$2_swb_3_3v_aux
-    ln -sf $3$4/in_voltage1_raw /bsp/environment/$2_swb_3_3v_sen
+    ln -sf $3$4/in_voltage-voltage_scale /bsp/environment/$2_$5_voltage_scale
+    for i in {1..12}; do
+      if [ -f $3$4/in_voltage"$i"_raw ]; then
+        ln -sf $3$4/in_voltage"$i"_raw /bsp/environment/$2_$5_raw_"$i"
+      fi
+    done
   fi
   if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]; then
     ln -sf $3$4/in1_input /bsp/environment/$2_in1_input
@@ -177,10 +176,10 @@ if [ "$1" == "add" ]; then
            id=$(($i-1))
            name="core$id"
         fi
-        ln -sf $3$4/temp"$i"_input /bsp/thermal/cpu_${name}
-        ln -sf $3$4/temp"$i"_crit /bsp/thermal/cpu_${name}_crit
-        ln -sf $3$4/temp"$i"_crit_alarm /bsp/thermal/cpu_${name}_crit_alarm
-        ln -sf $3$4/temp"$i"_max /bsp/thermal/cpu_${name}_max
+        ln -sf $3$4/temp"$i"_input /bsp/thermal/cpu_$name
+        ln -sf $3$4/temp"$i"_crit /bsp/thermal/cpu_"$name"_crit
+        ln -sf $3$4/temp"$i"_crit_alarm /bsp/thermal/cpu_"$name"_crit_alarm
+        ln -sf $3$4/temp"$i"_max /bsp/thermal/cpu_"$name"_max
       fi
     done
   fi
@@ -220,13 +219,12 @@ else
     unlink /bsp/fan/$2_fan_input
   fi
   if [ "$2" == "a2d" ]; then
-    unlink /bsp/environment/$2_voltage_scale
-    unlink /bsp/environment/$2_1_8v
-    unlink /bsp/environment/$2_1_2v
-    unlink /bsp/environment/$2_vcore
-    unlink /bsp/environment/$2_swb_12v
-    unlink /bsp/environment/$2_swb_3_3v_aux
-    unlink /bsp/environment/$2_swb_3_3v_sen
+    unlink /bsp/environment/$2_$5_voltage_scale
+    for i in {1..12}; do
+      if [ -f /bsp/environment/$2_$5_raw_"$i" ]; then
+        unlink /bsp/environment/$2_$5_raw_"$i"
+      fi
+    done
   fi
   if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]; then
     unlink /bsp/environment/$2_in1_input

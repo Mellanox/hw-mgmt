@@ -48,6 +48,7 @@ module_load_path=(	i2c/i2c-dev.ko \
 			hwmon/pmbus/pmbus.ko \
 			hwmon/pmbus/tps53679.ko \
 			iio/adc/max1363.ko \
+			hwmon/coretemp.ko \
 			hwmon/lm75.ko \
 			hwmon/tmp102.ko \
 			misc/eeprom/at24.ko \
@@ -57,7 +58,7 @@ module_load_path=(	i2c/i2c-dev.ko \
 
 module_unload_list=(	mlxsw_minimal mlxsw_i2c leds_mlxreg mlxreg_hotplug \
 			i2c_mlxcpld mlx_platform ledtrig_timer at24 tmp102 \
-			lm75 max1363 tps53679 pmbus i2c_dev)
+			lm75 coretemp max1363 tps53679 pmbus i2c_dev)
 
 msn2700_connect_table=(	mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
