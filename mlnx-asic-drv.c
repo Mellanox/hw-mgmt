@@ -47,7 +47,6 @@
 #define TEMP_PASSIVE_INTERVAL (30 * 1000) /* interval to wait between polls when performing passive cooling is 30 seconds */
 #define MAX_PWM_DUTY_CYCLE    255
 #define PWM_DUTY_CYCLE_STEP    10
-#define MAX_ASIC_TEMP        (105 * 1000) /* maximum allowed temperature for ASIC is 105 degrees */
 
 #define ASIC_GROUP_NUM             4
 #define FAN_NUM                   12
@@ -307,9 +306,9 @@ MODULE_PARM_DESC(tacho_flat, "Each tachometer is presented as fan, default is 1"
 static unsigned short speed_min = 10500;
 module_param(speed_min, ushort, 0);
 MODULE_PARM_DESC(speed, "fan minimum speed (round per minute), default is 10500 RPM");
-static unsigned short speed_max = 23000;
+static unsigned short speed_max = 21000;
 module_param(speed_max, ushort, 0);
-MODULE_PARM_DESC(speed_max, "fan maximum speed (round per minute), default is 23000 (100 percent)");
+MODULE_PARM_DESC(speed_max, "fan maximum speed (round per minute), default is 21000 (100 percent)");
 static unsigned short pwm_duty_cycle = 153;
 module_param(pwm_duty_cycle, ushort, 0);
 MODULE_PARM_DESC(pwm_duty_cycle, "Duty cycle of the PWM, value range from 0..255, default is 153");
@@ -344,10 +343,6 @@ static unsigned short port_led_control = 0;
 module_param(port_led_control, ushort, 0);
 MODULE_PARM_DESC(port_led_control, "Port led control is enable, default is no");
 
-static ssize_t store_bind_sx_core(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t len);
-static struct kobj_attribute bind_sx_core_attr = __ATTR(bind_sx_core, S_IWUSR, NULL, store_bind_sx_core);
-static struct switchdev_if *g_switchdev_if = NULL;
-
 int mlxsw_local_port_mapping[] = {
 	0x2d, 0x2f, 0x2a, 0x2b, 0x26, 0x28, 0x23, 0x25, 0x01, 0x21, 0x05, 0x03,
 	0x08, 0x06, 0x0b, 0x0a, 0x0f, 0x0d, 0x1d, 0x1f, 0x19, 0x1b, 0x15, 0x17,
@@ -371,12 +366,8 @@ int mlxsw_local_port_mapping[] = {
         reg_data.op_tlv.tid = 0;                         \
 	reg_data.dev_id = devif->dev_id;
 
-#define REG_ACCESS(devif, REGID, reg_data, err, ret_on_null_ptr)                \
+#define REG_ACCESS(devif, REGID, reg_data, err)                                     \
 	mutex_lock(&devif->access_lock);                                            \
-	if (!devif->REG_##REGID || !devif->DEV_CONTEXT) {                           \
-		mutex_unlock(&devif->access_lock);                                      \
-        return ret_on_null_ptr;                                                 \
-	}                                                                           \
 	err = devif->REG_##REGID((struct sx_dev *)devif->DEV_CONTEXT(), &reg_data); \
 	mutex_unlock(&devif->access_lock);                                          \
 	if (err)                                                                    \
@@ -385,72 +376,6 @@ int mlxsw_local_port_mapping[] = {
 #define ENTRY_DATA_VALID(entry, refresh)                                       \
 	if (time_before(jiffies, entry.last_updated + refresh) && entry.valid) \
 		return 0;
-
-#define GET_ONE_SX_CORE_FUNC(func_name)                                     \
-    if (!(g_switchdev_if->func_name)) {                                     \
-    	g_switchdev_if->func_name = __symbol_get("sx_ACCESS_"#func_name);   \
-    }
-
-#define PUT_ONE_SX_CORE_FUNC(func_name)                    \
-	if (g_switchdev_if->func_name) {                       \
-		__symbol_put("sx_ACCESS_"#func_name);              \
-		g_switchdev_if->func_name = NULL;                  \
-	}
-
-static ssize_t store_bind_sx_core(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t len)
-{
-	int ret;
-	int value;
-
-	ret = kstrtoint(buf, 10, &value);
-	if (ret) {
-		printk(KERN_INFO "sysfs entry bind_sx_core got invalid value\n");
-		return ret;
-	}
-
-	if (value) {
-		mutex_lock(&(g_switchdev_if->access_lock));
-		if (!g_switchdev_if->DEV_CONTEXT) {
-			g_switchdev_if->DEV_CONTEXT = __symbol_get("sx_get_dev_context");
-		}
-		GET_ONE_SX_CORE_FUNC(REG_MFSC);
-		GET_ONE_SX_CORE_FUNC(REG_MFSM);
-		GET_ONE_SX_CORE_FUNC(REG_MTMP);
-		GET_ONE_SX_CORE_FUNC(REG_MTCAP);
-		GET_ONE_SX_CORE_FUNC(REG_MCIA);
-		GET_ONE_SX_CORE_FUNC(REG_PMPC);
-		GET_ONE_SX_CORE_FUNC(REG_MSCI);
-		GET_ONE_SX_CORE_FUNC(REG_MJTAG);
-		GET_ONE_SX_CORE_FUNC(REG_PMAOS);
-		GET_ONE_SX_CORE_FUNC(REG_MFCR);
-		GET_ONE_SX_CORE_FUNC(REG_MGIR);
-		GET_ONE_SX_CORE_FUNC(REG_MLCR);
-		GET_ONE_SX_CORE_FUNC(REG_PMLP);
-		mutex_unlock(&(g_switchdev_if->access_lock));
-	} else {
-		mutex_lock(&(g_switchdev_if->access_lock));
-		if (g_switchdev_if->DEV_CONTEXT) {
-			__symbol_put("sx_get_dev_context");
-			g_switchdev_if->DEV_CONTEXT = NULL;
-		}
-		PUT_ONE_SX_CORE_FUNC(REG_MFSC);
-		PUT_ONE_SX_CORE_FUNC(REG_MFSM);
-		PUT_ONE_SX_CORE_FUNC(REG_MTMP);
-		PUT_ONE_SX_CORE_FUNC(REG_MTCAP);
-		PUT_ONE_SX_CORE_FUNC(REG_MCIA);
-		PUT_ONE_SX_CORE_FUNC(REG_PMPC);
-		PUT_ONE_SX_CORE_FUNC(REG_MSCI);
-		PUT_ONE_SX_CORE_FUNC(REG_MJTAG);
-		PUT_ONE_SX_CORE_FUNC(REG_PMAOS);
-		PUT_ONE_SX_CORE_FUNC(REG_MFCR);
-		PUT_ONE_SX_CORE_FUNC(REG_MGIR);
-		PUT_ONE_SX_CORE_FUNC(REG_MLCR);
-		PUT_ONE_SX_CORE_FUNC(REG_PMLP);
-		mutex_unlock(&(g_switchdev_if->access_lock));
-	}
-
-	return len;
-}
 
 static int fan_get_power(struct switchdev_if *devif, struct fan_config *fan, u8 cache_drop)
 {
@@ -461,11 +386,14 @@ static int fan_get_power(struct switchdev_if *devif, struct fan_config *fan, u8 
 	if (!cache_drop)
 		ENTRY_DATA_VALID(fan->entry, ENTRY_DATA_VALID_TIME);
 
+	if (!devif->REG_MFSC || !devif->DEV_CONTEXT)
+		return err;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mfsc_reg));
 	SET_REG_TEMPLATE(reg_data, MFSC_REG_ID, method, devif);
         reg_data.mfsc_reg.pwm = fan->pwm_id; /* Will affect all FANs */
 
-        REG_ACCESS(devif, MFSC, reg_data, err, err);
+        REG_ACCESS(devif, MFSC, reg_data, err);
 
         fan->entry.last_updated = jiffies;
         fan->entry.valid = 1;
@@ -480,12 +408,15 @@ static int fan_set_power(struct switchdev_if *devif, struct fan_config *fan)
 	u8 method = REG_WRITE;
 	struct ku_access_mfsc_reg reg_data;
 
+	if (!devif->REG_MFSC || !devif->DEV_CONTEXT)
+		return err;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mfsc_reg));
 	SET_REG_TEMPLATE(reg_data, MFSC_REG_ID, method, devif);
         reg_data.mfsc_reg.pwm = fan->pwm_id; /* Will affect all FANs */
 	reg_data.mfsc_reg.pwm_duty_cycle = fan->pwm_duty_cycle;
 
-        REG_ACCESS(devif, MFSC, reg_data, err, err);
+        REG_ACCESS(devif, MFSC, reg_data, err);
 
 	return err;
 }
@@ -498,11 +429,14 @@ static int fan_get_speed(struct switchdev_if *devif, struct fan_config *fan, cha
 
 	ENTRY_DATA_VALID(fan->entry, ENTRY_DATA_VALID_TIME);
 
+	if (!devif->REG_MFSM || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mfsm_reg));
 	SET_REG_TEMPLATE(reg_data, MFSM_REG_ID, method, devif);
         reg_data.mfsm_reg.tacho = fan->tacho_id[tacho_id];
 
-        REG_ACCESS(devif, MFSM, reg_data, err, ENODEV);
+        REG_ACCESS(devif, MFSM, reg_data, err);
         fan->entry.last_updated = jiffies;
         fan->entry.valid = 1;
 
@@ -568,10 +502,13 @@ static int fan_get_config(struct switchdev_if *devif, struct fan_config_params *
 
 	ENTRY_DATA_VALID(fan_config->entry, ENTRY_DATA_VALID_TIME);
 
+	if (!devif->REG_MFCR || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mfcr_reg));
 	SET_REG_TEMPLATE(reg_data, MFCR_REG_ID, method, devif);
 
-        REG_ACCESS(devif, MFCR, reg_data, err, ENODEV);
+        REG_ACCESS(devif, MFCR, reg_data, err);
         fan_config->entry.last_updated = jiffies;
         fan_config->entry.valid = 1;
 
@@ -591,11 +528,14 @@ static int temp_get(struct switchdev_if *devif, struct temp_config *temp, u8 id,
 	if (!cache_drop)
 		ENTRY_DATA_VALID(temp->entry, ENTRY_DATA_VALID_TIME);
 
+	if (!devif->REG_MTMP || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mtmp_reg));
 	SET_REG_TEMPLATE(reg_data, MTMP_REG_ID, method, devif);
 	reg_data.mtmp_reg.sensor_index = temp->sensor_index + id; /* Sensors index to access */
 
-        REG_ACCESS(devif, MTMP, reg_data, err, ENODEV);
+        REG_ACCESS(devif, MTMP, reg_data, err);
         temp->entry.last_updated = jiffies;
         temp->entry.valid = 1;
         /* For temp->temperature < 0 consider to set:
@@ -616,10 +556,13 @@ static int temp_get_config(struct switchdev_if *devif, struct temp_config_params
 	u8 method = REG_QUERY;
 	struct ku_access_mtcap_reg reg_data;
 
+	if (!devif->REG_MTCAP || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mtcap_reg));
 	SET_REG_TEMPLATE(reg_data, MTCAP_REG_ID, method, devif);
 
-        REG_ACCESS(devif, MTCAP, reg_data, err, ENODEV);
+        REG_ACCESS(devif, MTCAP, reg_data, err);
 
 	temp_config->sensor_active = reg_data.mtcap_reg.sensor_count;
 
@@ -634,14 +577,19 @@ static int qsfp_get(struct switchdev_if *devif, struct qsfp_config *qsfp)
 
 	ENTRY_DATA_VALID(qsfp->entry, ENTRY_DATA_VALID_TIME);
 
+	if (!devif->REG_MCIA || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mcia_reg));
 	SET_REG_TEMPLATE(reg_data, MCIA_REG_ID, method, devif);
+        reg_data.mcia_reg.i2c_device_address = qsfp_eeprom_i2c_addr;
+        reg_data.mcia_reg.device_address = 0;
         reg_data.mcia_reg.module = qsfp->module_index;
         reg_data.mcia_reg.l = qsfp->lock;
         reg_data.mcia_reg.page_number = 0;
         reg_data.mcia_reg.size = QSFP_SUB_PAGE_SIZE;
 
-        REG_ACCESS(devif, MCIA, reg_data, err, ENODEV);
+        REG_ACCESS(devif, MCIA, reg_data, err);
         qsfp->entry.last_updated = jiffies;
         qsfp->entry.valid = 1;
 
@@ -662,6 +610,9 @@ static int qsfp_get_eeprom(struct switchdev_if *devif, struct qsfp_config *qsfp,
 	u16  page_shift[QSFP_PAGE_NUM + 1] = { 0x00, 0x80, 0x80, 0x80, 0x80, 0x00 };
 	u16 sub_page_size[QSFP_SUB_PAGE_NUM] = { QSFP_SUB_PAGE_SIZE, QSFP_SUB_PAGE_SIZE, QSFP_LAST_SUB_PAGE_SIZE};
 	u16 copysize;
+
+	if (!devif->REG_MCIA || !devif->DEV_CONTEXT)
+		return ENODEV;
 
 	memset(&reg_data, 0, sizeof(struct ku_access_mcia_reg));
 	SET_REG_TEMPLATE(reg_data, MCIA_REG_ID, method, devif);
@@ -685,7 +636,7 @@ static int qsfp_get_eeprom(struct switchdev_if *devif, struct qsfp_config *qsfp,
         		else
         			reg_data.mcia_reg.size = sub_page_size[j];
 
-			REG_ACCESS(devif, MCIA, reg_data, err, ENODEV);
+			REG_ACCESS(devif, MCIA, reg_data, err);
 
 			if (reg_data.mcia_reg.status)
 				return err;
@@ -727,10 +678,13 @@ static int qsfp_get_event(struct switchdev_if *devif, struct qsfp_config_params 
 
 	ENTRY_DATA_VALID(qsfp_config->entry, ENTRY_DATA_VALID_TIME);
 
+	if (!devif->REG_PMPC || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_pmpc_reg));
 	SET_REG_TEMPLATE(reg_data, PMPC_REG_ID, method, devif);
 
-        REG_ACCESS(devif, PMPC, reg_data, err, ENODEV);
+        REG_ACCESS(devif, PMPC, reg_data, err);
         qsfp_config->entry.last_updated = jiffies;
         qsfp_config->entry.valid = 1;
 
@@ -746,13 +700,16 @@ static int qsfp_set_event(struct switchdev_if *devif, u32 *bitmap)
 	u8 method = REG_WRITE;
 	struct ku_access_pmpc_reg reg_data;
 
+	if (!devif->REG_PMPC || !devif->DEV_CONTEXT)
+		return ENODEV;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_pmpc_reg));
 	SET_REG_TEMPLATE(reg_data, PMPC_REG_ID, method, devif);
 
 	memcpy(reg_data.pmpc_reg.module_state_updated_bitmap, bitmap,
 		sizeof(reg_data.pmpc_reg.module_state_updated_bitmap[0] * 8));
 
-        REG_ACCESS(devif, PMPC, reg_data, err, ENODEV);
+        REG_ACCESS(devif, PMPC, reg_data, err);
 
 	return err;
 }
@@ -764,11 +721,14 @@ static int cpld_get(struct switchdev_if *devif, struct cpld_config *cpld)
 	u8 method = REG_QUERY;
 	struct ku_access_msci_reg reg_data;
 
+	if (!devif->REG_MSCI || !devif->DEV_CONTEXT)
+		return err;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_msci_reg));
 	SET_REG_TEMPLATE(reg_data, MSCI_REG_ID, method, devif);
         reg_data.msci_reg.index = cpld->index;
 
-        REG_ACCESS(devif, MSCI, reg_data, err, err);
+        REG_ACCESS(devif, MSCI, reg_data, err);
         cpld->entry.last_updated = jiffies;
         cpld->entry.valid = 1;
 
@@ -783,10 +743,13 @@ static int mgir_get(struct switchdev_if *devif, u16 *device_id)
 	u8 method = REG_QUERY;
 	struct ku_access_mgir_reg reg_data;
 
+	if (!devif->REG_MGIR || !devif->DEV_CONTEXT)
+		return err;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mgir_reg));
 	SET_REG_TEMPLATE(reg_data, MGIR_REG_ID, method, devif);
 
-        REG_ACCESS(devif, MGIR, reg_data, err, err);
+        REG_ACCESS(devif, MGIR, reg_data, err);
 
         *device_id = reg_data.mgir_reg.hw_info.device_id;
 
@@ -799,11 +762,14 @@ static int pmlp_get(struct switchdev_if *devif, u8 local_port, u8 *width)
 	u8 method = REG_QUERY;
 	struct ku_access_pmlp_reg reg_data;
 
+	if (!devif->REG_PMLP || !devif->DEV_CONTEXT)
+		return err;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mgir_reg));
 	SET_REG_TEMPLATE(reg_data, PMLP_REG_ID, method, devif);
         reg_data.pmlp_reg.local_port = local_port;
 
-        REG_ACCESS(devif, PMLP, reg_data, err, err);
+        REG_ACCESS(devif, PMLP, reg_data, err);
 
 	*width = reg_data.pmlp_reg.width;
 
@@ -858,7 +824,10 @@ static ssize_t show_temp(struct device *dev,
         case temp_min:
                 break;
         case temp_max:
-	        res = MAX_ASIC_TEMP;
+	        err = temp_get(&asicdata->switchdevif, temp, 0, 0);
+		if (err)
+			return -EEXIST;
+	        res = temp->max_temperature;
                 break;
         case temp_crit:
 	        err = temp_get(&asicdata->switchdevif, temp, 0, 0);
@@ -1998,6 +1967,9 @@ static int _mlxsw_port_led_brightness(struct led_classdev *led,
 	struct ku_access_mlcr_reg reg_data;
 	int err = 0;
 
+	if (!devif->REG_MLCR || !devif->DEV_CONTEXT)
+		return err;
+
 	memset(&reg_data, 0, sizeof(struct ku_access_mlcr_reg));
 	SET_REG_TEMPLATE(reg_data, MLCR_REG_ID, method, devif);
 	mlcr_reg.led_type = pled->led_type;
@@ -2012,7 +1984,7 @@ static int _mlxsw_port_led_brightness(struct led_classdev *led,
 	else
 		mlcr_reg.beacon_duration = LED_OFF_COLOR;
 
-        REG_ACCESS(devif, MLCR, reg_data, err, err);
+        REG_ACCESS(devif, MLCR, reg_data, err);
 
 	return err;
 }
@@ -2283,7 +2255,6 @@ static int asic_probe(struct i2c_client *client, const struct i2c_device_id *dev
 		err = -ENOMEM;
 		goto exit_no_memory;
 	}
-	g_switchdev_if = &(asicdata->switchdevif);
 	i2c_set_clientdata(client, asicdata);
 
 	INIT_LIST_HEAD(&asicdata->list);
@@ -2455,16 +2426,7 @@ static int asic_probe(struct i2c_client *client, const struct i2c_device_id *dev
 			goto exit_remove_thermal_bind;
 	}
 
-    err = sysfs_create_file(&(THIS_MODULE->mkobj.kobj), &(bind_sx_core_attr.attr));
-    if (err) {
-    	goto exit_remove_port_led;
-    }
-
 	return 0;
-
-exit_remove_port_led:
-	if (port_led_control)
-		port_led_remove(asicdata);
 
 exit_remove_thermal_bind:
 	if (auto_thermal_control)
@@ -2498,8 +2460,6 @@ exit_remove:
 static int asic_remove(struct i2c_client *client)
 {
         struct asic_data *asicdata = i2c_get_clientdata(client);
-
-    sysfs_remove_file(&(THIS_MODULE->mkobj.kobj), &(bind_sx_core_attr.attr));
 
 	if (port_led_control)
 		port_led_remove(asicdata);

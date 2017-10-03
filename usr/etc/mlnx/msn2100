@@ -1,4 +1,3 @@
-#!/bin/sh
 #
 # Copyright (C) 2010-2015, Mellanox Technologies Ltd.  ALL RIGHTS RESERVED.
 #
@@ -18,8 +17,10 @@
 #
 #
 
+#!/bin/sh
+
 ### BEGIN INIT INFO
-# Provides:        bsp for msn2100 system
+# Provides:          bsp for msn2100 system
 # Required-Start:  $syslog 
 # Required-Stop:   $syslog
 # Default-Start:   2 3 4 5       
@@ -36,6 +37,8 @@
 ### END INIT INFO
 
 . /lib/lsb/init-functions
+
+msn2100_platform=x86-64-mlnx-msn2100-r0
 
 mux2=/sys/bus/i2c/devices/i2c-2
 mux5=/sys/bus/i2c/devices/i2c-5
@@ -60,7 +63,6 @@ a2d_swb=/sys/bus/i2c/devices/5-006d
 a2d_mnb=/sys/bus/i2c/devices/15-006d
 eeprom_mnb=/sys/bus/i2c/devices/16-0051
 led=/sys/class/leds/
-sys_eeprom=/sys/bus/i2c/devices/8-0051
 
 
 ACTION=$1
@@ -74,200 +76,89 @@ is_module()
 
 load_modules()
 {
+	curr_platform=$(cat /etc/onl/platform)
+	if [ "$curr_platform" != "$msn2100_platform" ]; then
+		echo $curr_platform "!=" $msn2100_platform 
+		exit 0
+	fi
+
 	log_daemon_msg "Starting Mellanox x86 system bsp modules"
 	log_end_msg 0
+
+	if is_module sx_core; then
+		log_warning_msg "sx_core module has already been loaded"
+	else
+	    	if insmod /lib/modules/`uname -r`/updates/kernel/drivers/net/mlx_sx/sx_core.ko 2>/dev/null; then
+	    		log_success_msg "sx_core module load passed"
+	    		sleep 10
+		else
+	    		log_failure_msg "sx_core module load failed"
+		fi
+	fi
 
 	if is_module lpci2c; then
 		log_warning_msg "lpci2c module has already been loaded"
 	else
-		# SN2100 comes with Intel Atom chip, for which kernel tries
-		# to load i2c_ismt module if available, which uses same bus
-		# as lpci2c
-		if is_module i2c_ismt; then
-			rmmod i2c_ismt 2>/dev/null;
-		fi
-		if modprobe lpci2c 2>/dev/null; then
-			log_success_msg "lpci2c module load passed"
+	    	if insmod /lib/modules/`uname -r`/lpci2c.ko 2>/dev/null; then
+	    		log_success_msg "lpci2c module load passed"
 		else
-			log_failure_msg "lpci2c module load failed"
-		fi
-	fi
-
-	if is_module i2c_mux; then
-		log_warning_msg "i2c_mux module has already been loaded"
-	else
-		if modprobe i2c_mux 2>/dev/null; then
-			log_success_msg "i2c_mux module load passed"
-		else
-			log_failure_msg "i2c_mux module load failed"
-		fi
+	    		log_failure_msg "lpci2c module load failed"
+	    	fi
 	fi
 
 	if is_module mlnx_mux_drv; then
 		log_warning_msg "mlnx_mux_drv module has already been loaded"
 	else
-		if modprobe mlnx_mux_drv 2>/dev/null; then
-			log_success_msg "mlnx_mux_drv module load passed"
+	    	if insmod /lib/modules/`uname -r`/mlnx-mux-drv.ko 2>/dev/null; then
+	    		log_success_msg "mlnx_mux_drv module load passed"
 		else
-			log_failure_msg "mlnx_mux_drv module load failed"
-		fi
+	    		log_failure_msg "mlnx_mux_drv module load failed"
+	    	fi
 	fi
 
 	if is_module mlnx_cpld_drv; then
 		log_warning_msg "mlnx_cpld_drv module has already been loaded"
 	else
-		if modprobe mlnx_cpld_drv psu_control_driver=dps460 2>/dev/null; then
+		if insmod /lib/modules/`uname -r`/mlnx-cpld-drv.ko 2>/dev/null; then
 			log_success_msg "mlnx_cpld_drv module load passed"
 		else
-			log_failure_msg "mlnx_cpld_drv module load failed"
+	    		log_failure_msg "mlnx_cpld_drv module load failed"
 		fi
 	fi
 
 	if is_module mlnx_asic_drv; then
 		log_warning_msg "mlnx_asic_drv module has already been loaded"
 	else
-		if modprobe mlnx_asic_drv 2>/dev/null; then
-			log_success_msg "mlnx_asic_drv module load passed"
+	    	if insmod /lib/modules/`uname -r`/mlnx-asic-drv.ko speed_max=25000 2>/dev/null; then
+	    		log_success_msg "mlnx_asic_drv module load passed"
 		else
-			log_failure_msg "mlnx_asic_drv module load failed"
-		fi
+	    		log_failure_msg "mlnx_asic_drv module load failed"
+	    	fi
 	fi
 
 	if is_module mlnx_a2d_drv; then
-		log_warning_msg "mlnx_a2d_drv module has already been loaded"
-	else
-		if modprobe mlnx_a2d_drv 2>/dev/null; then
-			log_success_msg "mlnx_a2d_drv module load passed"
+		log_progress_msg "mlnx_a2d_drv module has already been loaded" || true
+		log_end_msg 0 || true
+	else	
+	    	if insmod /lib/modules/`uname -r`/mlnx-a2d-drv.ko 2>/dev/null; then
+			log_progress_msg "mlnx_a2d_drv module load passed" || true
+			log_end_msg 0 || true
 		else
-			log_failure_msg "mlnx_a2d_drv module load failed"
-		fi
-	fi
-
-	if is_module pmbus_core; then
-		log_warning_msg "pmbus_core module has already been loaded"
-	else
-		if modprobe pmbus_core 2>/dev/null; then
-			log_success_msg "pmbus_core module load passed"
-		else
-			log_failure_msg "pmbus_core module load failed"
-		fi
-	fi
-
-	if is_module pmbus; then
-		log_warning_msg "pmbus module has already been loaded"
-	else
-		if modprobe pmbus 2>/dev/null; then
-			log_success_msg "pmbus module load passed"
-		else
-			log_failure_msg "pmbus module load failed"
-		fi
-	fi
-
-	if is_module ucd9200; then
-		log_warning_msg "ucd9200 module has already been loaded"
-	else
-		if modprobe ucd9200 2>/dev/null; then
-			log_success_msg "ucd9200 module load passed"
-		else
-			log_failure_msg "ucd9200 module load failed"
-		fi
-	fi
-
-	if is_module coretemp; then
-		log_warning_msg "coretemp module has already been loaded"
-	else
-		if modprobe coretemp 2>/dev/null; then
-			log_success_msg "coretemp module load passed"
-		else
-			log_failure_msg "coretemp module load failed"
-		fi
-	fi
-
-	if is_module lm75; then
-		log_warning_msg "lm75 module has already been loaded"
-	else
-		if modprobe lm75 2>/dev/null; then
-			log_success_msg "lm75 module load passed"
-		else
-			log_failure_msg "lm75 module load failed"
-		fi
-	fi
-
-	if is_module at24; then
-		log_warning_msg "at24 module has already been loaded"
-	else
-		if modprobe at24 io_limit=32 2>/dev/null; then
-			log_success_msg "at24 module load passed"
-		else
-			log_failure_msg "at24 module load failed"
+			log_progress_msg "mlnx_a2d_drv module load failed" || true
+			log_end_msg 1 || true
 		fi
 	fi
 }
 
 unload_modules()
 {
+	curr_platform=$(cat /etc/onl/platform)
+	if [ "$curr_platform" != "$msn2100_platform" ]; then
+		exit 0
+	fi
+
 	log_daemon_msg "Stopping Mellanox x86 system bsp module"
 	log_end_msg 0
-
-	if is_module at24; then
-		if rmmod at24 2>/dev/null ; then
-			log_success_msg "at24 module is unloaded"
-		else
-			log_failure_msg "at24 module unload failed"
-		fi
-	else
-		log_warning_msg "No at24 module loaded"
-	fi
-
-	if is_module lm75; then
-		if rmmod lm75 2>/dev/null ; then
-			log_success_msg "lm75 module is unloaded"
-		else
-			log_failure_msg "lm75 module unload failed"
-		fi
-	else
-		log_warning_msg "No lm75 module loaded"
-	fi
-
-	if is_module coretemp; then
-		if rmmod coretemp 2>/dev/null ; then
-			log_success_msg "coretemp module is unloaded"
-		else
-			log_failure_msg "coretemp module unload failed"
-		fi
-	else
-		log_warning_msg "No coretemp module loaded"
-	fi
-
-	if is_module ucd9200; then
-		if rmmod ucd9200 2>/dev/null ; then
-			log_success_msg "ucd9200 module is unloaded"
-		else
-			log_failure_msg "ucd9200 module unload failed"
-		fi
-	else
-		log_warning_msg "No ucd9200 module loaded"
-	fi
-
-	if is_module pmbus; then
-		if rmmod pmbus 2>/dev/null ; then
-			log_success_msg "pmbus module is unloaded"
-		else
-			log_failure_msg "pmbus module unload failed"
-		fi
-	else
-		log_warning_msg "No pmbus module loaded"
-	fi
-
-	if is_module pmbus_core; then
-		if rmmod pmbus_core 2>/dev/null ; then
-			log_success_msg "pmbus_core module is unloaded"
-		else
-			log_failure_msg "pmbus_core module unload failed"
-		fi
-	else
-		log_warning_msg "No pmbus_core module loaded"
-	fi
 
 	if is_module mlnx_a2d_drv; then
 		if rmmod mlnx_a2d_drv 2>/dev/null ; then
@@ -281,7 +172,7 @@ unload_modules()
 
 	if is_module mlnx_asic_drv; then
 		if rmmod mlnx_asic_drv 2>/dev/null ; then
-			log_success_msg"mlnx_asic_drv module is unloaded"
+			log_success_msg "mlnx_asic_drv module is unloaded"
 		else
 			log_failure_msg "mlnx_asic_drv module unload failed"
 		fi
@@ -309,16 +200,6 @@ unload_modules()
 		log_warning_msg "No mlnx_mux_drv module loaded"
 	fi
 
-	if is_module i2c_mux; then
-		if rmmod i2c_mux 2>/dev/null ; then
-			log_success_msg "i2c_mux module is unloaded"
-		else
-			log_failure_msg "i2c_mux module unload failed"
-		fi
-	else
-		log_warning_msg "No i2c_mux module loaded"
-	fi
-
 	if is_module lpci2c; then
 		if rmmod lpci2c 2>/dev/null ; then
 			log_success_msg "lpci2c module is unloaded"
@@ -327,6 +208,16 @@ unload_modules()
 		fi
 	else
 		log_warning_msg "No lpci2c module loaded"
+	fi
+
+	if is_module sx_core; then
+		if rmmod sx_core 2>/dev/null ; then
+			log_success_msg "sx_core module is unloaded"
+		else
+			log_failure_msg "sx_core module unload failed"
+		fi
+	else
+		log_warning_msg "No sx_core module loaded"
 	fi
 
 	return 0
@@ -382,9 +273,6 @@ connect_platform()
                 temp_mnb=$tmp_temp_mnb
             fi
         fi
-        if [ ! -d /sys/bus/i2c/devices/8-0051 ]; then
-            echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-8/new_device
-        fi
 }
 
 disconnect_platform()
@@ -415,9 +303,6 @@ disconnect_platform()
         fi
         if [ -d $cpld ]; then
             echo 0x60 > /sys/bus/i2c/devices/i2c-2/delete_device
-        fi
-        if [ -d /sys/bus/i2c/devices/8-0051 ]; then
-            echo 0x51 > /sys/bus/i2c/devices/i2c-8/delete_device
         fi
 }
 
@@ -456,8 +341,8 @@ case $ACTION in
                 if [ ! -d /bsp/thermal_zone1 ]; then
                     mkdir -p /bsp/thermal_zone1
                 fi
-
-		# Power
+                
+                # Power
                 if [ -e $a2d_swb ]; then
                     for i in 1 2
                     do
@@ -502,21 +387,21 @@ case $ACTION in
                 # FAN
                 for i in 1 2 3 4
                 do
-                        if [ ! -L /bsp/fan/fan"$i"_speed_get ]; then
-                            ln -s $asic/fan"$i"_input /bsp/fan/fan"$i"_speed_get
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_speed_set ]; then
-                            ln -s $asic/pwm"$i" /bsp/fan/fan"$i"_speed_set
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_min ]; then
-                            ln -s $asic/fan"$i"_min /bsp/fan/fan"$i"_min
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_max ]; then
-                            ln -s $asic/fan"$i"_max /bsp/fan/fan"$i"_max
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_enable ]; then
-                            ln -s $asic/fan"$i"_enable /bsp/fan/fan"$i"_enable
-                        fi
+                    if [ ! -L /bsp/fan/fan"$i"_speed_get ]; then
+                        ln -s $asic/fan"$i"_input /bsp/fan/fan"$i"_speed_get
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_speed_set ]; then
+                        ln -s $asic/pwm"$i" /bsp/fan/fan"$i"_speed_set
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_min ]; then
+                        ln -s $asic/fan"$i"_min /bsp/fan/fan"$i"_min
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_max ]; then
+                        ln -s $asic/fan"$i"_max /bsp/fan/fan"$i"_max
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_enable ]; then
+                        ln -s $asic/fan"$i"_enable /bsp/fan/fan"$i"_enable
+                    fi
                 done
 
                 # LED
@@ -600,12 +485,6 @@ case $ACTION in
                         ln -s $attr /bsp/eeprom/cpu_info
                     fi
                 fi
-                if [ ! -L /bsp/eeprom/sys_eeprom ]; then
-                    attr=`find $sys_eeprom/ -name eeprom`
-                    if [ -e $attr ]; then
-                        ln -s $attr /bsp/eeprom/sys_eeprom
-                    fi
-                fi
 
                # QSFP
                 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
@@ -638,7 +517,7 @@ case $ACTION in
                 # Clean bsp directory
                 if [ -d /bsp ]; then
                     rm -rf /bsp
-                fi
+                fi 
 
                 disconnect_platform
                 unload_modules

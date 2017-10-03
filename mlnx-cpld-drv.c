@@ -561,7 +561,7 @@ struct cpld_container {
 	struct list_head list;
         struct device            *cpld_hwmon_dev;
         struct mux_config_params  cfg_mux;
-	enum mlnx_system_types mlnx_system_type;
+    enum mlnx_system_types mlnx_system_type;
 };
 static struct cpld_container cpld_db;
 
@@ -2302,7 +2302,7 @@ static int led_config(struct cpld_data *cplddata)
 	        	break;
 	        case 5:
 	        	CPLD_CREATE(led6);
-	        	CPLD_CREATE(led6_name);
+			CPLD_CREATE(led6_name);
 	        	break;
 	        default:
 	        	break;
@@ -2654,12 +2654,12 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
 	}
 	i2c_set_clientdata(client, data);
 
-        /* Register sysfs hooks */
+    /* Register sysfs hooks */
 	err = sysfs_create_group(&client->dev.kobj, &mlnx_cpld_group[cpld_db.mlnx_system_type]);
 	if (err)
 		goto fail_create_group;
 
-        /* Create MUX topolgy */
+    /* Create MUX topolgy */
 	memcpy(&data->exec_tab, &exec_table_profile[exec_id], sizeof(struct exec_table));
 
 	INIT_DELAYED_WORK(&data->dwork, cpld_work_handler);
@@ -2921,7 +2921,7 @@ static int cpld_detect(struct i2c_client *new_client,
 static int cpld_remove(struct i2c_client *client)
 {
         struct cpld_data *data = i2c_get_clientdata(client);
-	int id, flush, err = 0;
+        int id, flush, err = 0;
 
         /* Disonnect drivers for PSU */
 	for (id = 0; id < data->cfg_psu_module.num_psu_modules; id++) {

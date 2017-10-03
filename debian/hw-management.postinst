@@ -1,4 +1,5 @@
 #!/bin/sh
 set -e
 
-depmod -a
+#nothing
+#depmod -a

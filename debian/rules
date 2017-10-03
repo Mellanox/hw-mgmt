@@ -21,7 +21,5 @@ override_dh_auto_install:
 	cp *.ko           debian/$(pname)/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)
 	dh_installdirs -p$(pname)  etc/mlnx
 	cp usr/etc/mlnx/*  debian/$(pname)/etc/mlnx
-	dh_installdirs -p$(pname)  etc/modprobe.d
-	cp usr/etc/modprobe.d/* debian/$(pname)/etc/modprobe.d
 	dh_installdirs -p$(pname)  usr/sbin
 	cp usr/usr/sbin/* debian/$(pname)/usr/sbin
