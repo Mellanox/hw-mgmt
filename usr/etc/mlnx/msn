@@ -376,6 +376,13 @@ case $ACTION in
 		fi
 		echo $fan_max_speed > /bsp/config/fan_max_speed
 		echo $fan_min_speed > /bsp/config/fan_min_speed
+		if [ ! -d /bsp/cpld ]; then
+			mkdir -p /bsp/cpld
+		fi
+		echo "/usr/sbin/iorw -b 0x2500 -r -l1 | awk '{print $5}'" > /bsp/cpld/cpld_mgmt_version
+		echo "/usr/sbin/iorw -b 0x2501 -r -l1 | awk '{print $5}'" > /bsp/cpld/cpld_brd_version
+		echo "sudo /usr/bin/mlxreg -d /dev/mst/mt52100_pciconf0 --get --reg_id 0x902A --reg_len 16 | tail -n4 | head -n1 | awk '{print $3}'" > /bsp/cpld/cpld_port_version
+		chmod 755 /bsp/cpld/*
 		connect_platform
 	;;
         stop)

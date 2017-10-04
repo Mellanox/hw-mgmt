@@ -49,7 +49,7 @@ if [ "$1" == "add" ]; then
     ln -sf $5$3/temp1_input /bsp/thermal/$2
     ln -sf $5$3/temp1_max /bsp/thermal/$2_max
     ln -sf $5$3/temp1_max_alarm /bsp/thermal/$2_alarm
-    ln -sf $5$3/in1_input /bsp/power/$2_vin
+    ln -sf $5$3/in1_input /bsp/power/$2_volt_in
     ln -sf $5$3/in2_input /bsp/power/$2_volt
     ln -sf $5$3/power1_input /bsp/power/$2_power_in
     ln -sf $5$3/power2_input /bsp/power/$2_power
@@ -194,7 +194,7 @@ if [ "$1" == "add" ]; then
             ln -sf $3$4/psu$i /bsp/module/psu"$i"_status
         fi
 	if [ -f $3$4/pwr$i ]; then
-            ln -sf $3$4/pwr$i /bsp/module/pwr"$i"_status
+            ln -sf $3$4/pwr$i /bsp/module/psu"$i"_pwr_status
         fi
     done
   fi
@@ -210,7 +210,7 @@ else
     unlink /bsp/thermal/$2
     unlink /bsp/thermal/$2_max
     unlink /bsp/thermal/$2_alarm
-    unlink /bsp/power/$2_vin
+    unlink /bsp/power/$2_volt_in
     unlink /bsp/power/$2_volt
     unlink /bsp/power/$2_power_in
     unlink /bsp/power/$2_power
@@ -324,7 +324,7 @@ else
             unlink /bsp/module/psu"$i"_status
         fi
 	if [ -f /bsp/module/pwr"$i"_status ]; then
-            unlink /bsp/module/pwr"$i"_status
+            unlink /bsp/module/psu"$i"_pwr_status
         fi
     done
   fi
