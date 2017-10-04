@@ -75,7 +75,7 @@ else
     unlink /bsp/thermal/$2
     unlink /bsp/thermal/$2_max
     unlink /bsp/thermal/$2_alarm
-    unlink /bsp/power/$2_vin
+    unlink /bsp/power/$2_volt_in
     unlink /bsp/power/$2_volt
     unlink /bsp/power/$2_power_in
     unlink /bsp/power/$2_power
