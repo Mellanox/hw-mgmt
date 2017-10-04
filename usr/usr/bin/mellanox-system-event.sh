@@ -13,11 +13,23 @@
 #
 # echo $1 and $2 and $3 and $4 and $5 >> /root/msg.txt
 if [ "$1" == "add" ]; then
+  if [ ! -d /bsp/thermal ]; then
+      mkdir -p /bsp/thermal/
+  fi
+  if [ ! -d /bsp/power ]; then
+      mkdir -p /bsp/power
+  fi
+  if [ ! -d /bsp/fan ]; then
+      mkdir -p /bsp/fan/
+  fi
+  if [ ! -d /bsp/fru ]; then
+      mkdir -p /bsp/fru/
+  fi
   if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
     ln -sf $5$3/temp1_input /bsp/thermal/$2
     ln -sf $5$3/temp1_max /bsp/thermal/$2_max
     ln -sf $5$3/temp1_max_alarm /bsp/thermal/$2_alarm
-    ln -sf $5$3/in1_input /bsp/power/$2_vin
+    ln -sf $5$3/in1_input /bsp/power/$2_volt_in
     ln -sf $5$3/in2_input /bsp/power/$2_volt
     ln -sf $5$3/power1_input /bsp/power/$2_power_in
     ln -sf $5$3/power2_input /bsp/power/$2_power
@@ -78,6 +90,7 @@ else
     unlink /bsp/fru/psu2_eeprom
   fi
   if [ "$2" == "eeprom_fan1" ]; then
+    unlink /bsp/fru/fan2_eeprom
   fi
   if [ "$2" == "eeprom_fan2" ]; then
     unlink /bsp/fru/fan2_eeprom
