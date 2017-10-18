@@ -53,22 +53,22 @@ if [ "$1" == "add" ]; then
     ln -sf $3$4/eeprom /bsp/eeprom/cpu_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_psu1" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/psu1_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/psu1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_psu2" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/psu2_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/psu2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan1_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan2_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan3_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan4_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
   fi
 else
   if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
@@ -84,21 +84,21 @@ else
     unlink /bsp/fan/$2_fan_input
   fi
   if [ "$2" == "eeprom_psu1" ]; then
-    unlink /bsp/eeprom/psu1_eeprom
+    unlink /bsp/eeprom/psu1_info
   fi
   if [ "$2" == "eeprom_psu2" ]; then
-    unlink /bsp/eeprom/psu2_eeprom
+    unlink /bsp/eeprom/psu2_info
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    unlink /bsp/eeprom/fan2_eeprom
+    unlink /bsp/eeprom/fan2_info
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    unlink /bsp/eeprom/fan2_eeprom
+    unlink /bsp/eeprom/fan2_info
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    unlink /bsp/eeprom/fan3_eeprom
+    unlink /bsp/eeprom/fan3_info
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    unlink /bsp/eeprom/fan4_eeprom
+    unlink /bsp/eeprom/fan4_info
   fi
 fi
