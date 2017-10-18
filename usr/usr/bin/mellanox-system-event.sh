@@ -22,8 +22,8 @@ if [ "$1" == "add" ]; then
   if [ ! -d /bsp/fan ]; then
       mkdir -p /bsp/fan/
   fi
-  if [ ! -d /bsp/fru ]; then
-      mkdir -p /bsp/fru/
+  if [ ! -d /bsp/eeprom ]; then
+      mkdir -p /bsp/eeprom/
   fi
   if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
     ln -sf $5$3/temp1_input /bsp/thermal/$2
@@ -47,28 +47,28 @@ if [ "$1" == "add" ]; then
     fi
   fi
   if [ "$2" == "eeprom_vpd" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/vpd_info 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/vpd_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_cpu" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/cpu_info 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/cpu_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_psu1" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/psu1_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/psu1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_psu2" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/psu2_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/psu2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan1_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan2_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan3_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan4_eeprom 2>/dev/null
+    ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
   fi
 else
   if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
@@ -84,21 +84,21 @@ else
     unlink /bsp/fan/$2_fan_input
   fi
   if [ "$2" == "eeprom_psu1" ]; then
-    unlink /bsp/fru/psu1_eeprom
+    unlink /bsp/eeprom/psu1_info
   fi
   if [ "$2" == "eeprom_psu2" ]; then
-    unlink /bsp/fru/psu2_eeprom
+    unlink /bsp/eeprom/psu2_info
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    unlink /bsp/fru/fan2_eeprom
+    unlink /bsp/eeprom/fan2_info
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    unlink /bsp/fru/fan2_eeprom
+    unlink /bsp/eeprom/fan2_info
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    unlink /bsp/fru/fan3_eeprom
+    unlink /bsp/eeprom/fan3_info
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    unlink /bsp/fru/fan4_eeprom
+    unlink /bsp/eeprom/fan4_info
   fi
 fi
