@@ -2,7 +2,7 @@
 
 ########################################################################
 # Copyright (c) 2017 Mellanox Technologies.
-# Copyright (c) 2017 Vadim Pasternak <nataliyay@mellanox.com>
+# Copyright (c) 2017 Vadim Pasternak <vadimp@mellanox.com>
 #
 # Licensed under the GNU General Public License Version 2
 #
@@ -28,8 +28,8 @@ if [ "$1" == "add" ]; then
   if [ ! -d /bsp/fan ]; then
       mkdir -p /bsp/fan/
   fi
-  if [ ! -d /bsp/fru ]; then
-      mkdir -p /bsp/fru/
+  if [ ! -d /bsp/eeprom ]; then
+      mkdir -p /bsp/eeprom/
   fi
   if [ ! -d /bsp/leds ]; then
       mkdir -p /bsp/leds/
@@ -111,28 +111,28 @@ if [ "$1" == "add" ]; then
     done
   fi
   if [ "$2" == "eeprom_vpd" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/vpd_info
+    ln -sf $3$4/eeprom /bsp/eeprom/vpd_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_cpu" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/cpu_info
+    ln -sf $3$4/eeprom /bsp/eeprom/cpu_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_psu1" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/psu1_eeprom
+    ln -sf $3$4/eeprom /bsp/eeprom/psu1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_psu2" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/psu2_eeprom
+    ln -sf $3$4/eeprom /bsp/eeprom/psu2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan1_eeprom
+    ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan2_eeprom
+    ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan3_eeprom
+    ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    ln -sf $3$4/eeprom /bsp/fru/fan4_eeprom
+    ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
   fi
   if [ "$2" == "led" ]; then
 	name=`echo $5 | cut -d':' -f2`
@@ -258,22 +258,22 @@ else
     done
   fi
   if [ "$2" == "eeprom_psu1" ]; then
-    unlink /bsp/fru/psu1_eeprom
+    unlink /bsp/eeprom/psu1_info
   fi
   if [ "$2" == "eeprom_psu2" ]; then
-    unlink /bsp/fru/psu2_eeprom
+    unlink /bsp/eeprom/psu2_info
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    unlink /bsp/fru/fan1_eeprom
+    unlink /bsp/eeprom/fan2_info
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    unlink /bsp/fru/fan2_eeprom
+    unlink /bsp/eeprom/fan2_info
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    unlink /bsp/fru/fan3_eeprom
+    unlink /bsp/eeprom/fan3_info
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    unlink /bsp/fru/fan4_eeprom
+    unlink /bsp/eeprom/fan4_info
   fi
   if [ "$2" == "led" ]; then
     name=`echo $5 | cut -d':' -f2`
