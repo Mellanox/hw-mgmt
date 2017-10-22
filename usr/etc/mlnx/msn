@@ -217,19 +217,19 @@ check_system()
         		do
 				connect_table[i]=${msn2010_connect_table[i]}
        			done
-			disconnect_size={$#msn2010_dis_table[@]}
+			disconnect_size=${#msn2010_dis_table[@]}
 			for ((i=0; i<$disconnect_size; i++))
         		do
 				dis_table[i]=${msn2010_dis_table[i]}
        			done
 			;;
-		QMB7*|SN37*|SN34*)
+		QMB7*|MB7*|SN37*|SN34*|N37*|N34*)
 			connect_size=${#qmb700_connect_table[@]}
         		for ((i=0; i<$connect_size; i++))
         		do
 				connect_table[i]=${qmb700_connect_table[i]}
        			done
-			disconnect_size={$#qmb700_dis_table[@]}
+			disconnect_size=${#qmb700_dis_table[@]}
 			for ((i=0; i<$disconnect_size; i++))
         		do
 				dis_table[i]=${qmb700_dis_table[i]}
@@ -385,7 +385,12 @@ case $ACTION in
 		if [ ! -f /bsp/pwr_consum ]; then
 			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/pwr_consum
 		fi
-		chmod 755 /bsp/cpld/*
+		if [ ! -f /bsp/pwr_sys ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/pwr_sys
+		fi
+		if [ ! -f /bsp/pwr_aux ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/pwr_aux
+		fi
 		connect_platform
 	;;
         stop)

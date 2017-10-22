@@ -28,7 +28,21 @@ if [ "$0" == "/bsp/pwr_consum" ]; then
 	fi
 
 	/usr/sbin/iorw -b 0x2532 -w -l1 -v$regnew
-	iioreg=`cat /bsp/environment/a2d_iio\:device0_raw_1`
+	iioreg=`cat /bsp/environment/a2d_iio\:device1_raw_0`
 	echo $(($iioreg * 80 * 12))
+fi
+
+if [ "$0" == "/bsp/pwr_sys" ]; then
+
+
+	if [ "$1" == "psu1" ]; then
+		iioreg_vin=`cat /bsp/environment/a2d_iio\:device0_raw_0`
+		iioreg_iin=`cat /bsp/environment/a2d_iio\:device0_raw_5`
+	elif [ "$1" == "psu2" ]; then
+		iioreg_vin=`cat /bsp/environment/a2d_iio\:device0_raw_1`
+		iioreg_iin=`cat /bsp/environment/a2d_iio\:device0_raw_6`
+	fi
+
+	echo $(($iioreg_vin * $iioreg_iin * 59 * 80))
 fi
 
