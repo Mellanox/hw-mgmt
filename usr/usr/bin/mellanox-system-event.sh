@@ -95,8 +95,8 @@ if [ "$1" == "add" ]; then
         if [ -f $3$4/fan"$i"_input ]; then
             ln -sf $3$4/fan"$i"_input /bsp/fan/fan"$i"_speed_get
             ln -sf $3$4/pwm1 /bsp/fan/fan"$i"_speed_set
-            ln -sf /bsp/config/fan_min_speed /bsp/fan/fan"$i"_speed_min
-            ln -sf /bsp/config/fan_max_speed /bsp/fan/fan"$i"_speed_max
+            ln -sf /bsp/config/fan_min_speed /bsp/fan/fan"$i"_min
+            ln -sf /bsp/config/fan_max_speed /bsp/fan/fan"$i"_max
         fi
     done
   fi
@@ -123,16 +123,34 @@ if [ "$1" == "add" ]; then
     ln -sf $3$4/eeprom /bsp/eeprom/psu2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
+    if [ -f $3$4/eeprom ]; then
+      ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
+    fi
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
+    if [ -f $3$4/eeprom ]; then
+      ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
+    fi
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
+    if [ -f $3$4/eeprom ]; then
+      ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
+    fi
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
+    if [ -f $3$4/eeprom ]; then
+      ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
+    fi
+  fi
+  if [ "$2" == "eeprom_fan5" ]; then
+    if [ -f $3$4/eeprom ]; then
+      ln -sf $3$4/eeprom /bsp/eeprom/fan5_info 2>/dev/null
+    fi
+  fi
+  if [ "$2" == "eeprom_fan6" ]; then
+    if [ -f $3$4/eeprom ]; then
+      ln -sf $3$4/eeprom /bsp/eeprom/fan6_info 2>/dev/null
+    fi
   fi
   if [ "$2" == "led" ]; then
 	name=`echo $5 | cut -d':' -f2`
