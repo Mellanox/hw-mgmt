@@ -1,3 +1,3 @@
 #!/bin/bash
 
-/etc/mlnx/msn $1
+/etc/mlnx/mlnx-hw-management $1
