@@ -31,8 +31,8 @@ if [ "$1" == "add" ]; then
   if [ ! -d /bsp/eeprom ]; then
       mkdir -p /bsp/eeprom/
   fi
-  if [ ! -d /bsp/leds ]; then
-      mkdir -p /bsp/leds/
+  if [ ! -d /bsp/led ]; then
+      mkdir -p /bsp/led/
   fi
   if [ ! -d /bsp/qsfp ]; then
       mkdir -p /bsp/qsfp
@@ -155,17 +155,17 @@ if [ "$1" == "add" ]; then
   if [ "$2" == "led" ]; then
     name=`echo $5 | cut -d':' -f2`
     color=`echo $5 | cut -d':' -f3`
-    ln -sf $3$4/brightness /bsp/leds/led_"$name"_"$color"
+    ln -sf $3$4/brightness /bsp/led/led_"$name"_"$color"
     echo timer > $3$4/trigger
-    ln -sf $3$4/delay_on  /bsp/leds/led_"$name"_"$color"_delay_on
-    ln -sf $3$4/delay_off /bsp/leds/led_"$name"_"$color"_delay_off
+    ln -sf $3$4/delay_on  /bsp/led/led_"$name"_"$color"_delay_on
+    ln -sf $3$4/delay_off /bsp/led/led_"$name"_"$color"_delay_off
 
-    if [ ! -f /bsp/leds/led_"$name"_capability ]; then
-      echo none blink ${color} > /bsp/leds/led_"$name"_capability
+    if [ ! -f /bsp/led/led_"$name"_capability ]; then
+      echo none ${color} ${color}_blink > /bsp/led/led_"$name"_capability
     else
-      capability=`cat /bsp/leds/led_"$name"_capability`
-      capability="${capability} ${color}"
-      echo $capability > /bsp/leds/led_"$name"_capability
+      capability=`cat /bsp/led/led_"$name"_capability`
+      capability="${capability} ${color} ${color}_blink"
+      echo $capability > /bsp/led/led_"$name"_capability
     fi
   fi
   if [ "$2" == "thermal_zone" ]; then
@@ -317,11 +317,11 @@ else
   if [ "$2" == "led" ]; then
     name=`echo $5 | cut -d':' -f2`
     color=`echo $5 | cut -d':' -f3`
-    unlink /bsp/leds/led_"$name"_"$color"
-    unlink /bsp/leds/led_"$name"_"$color"_delay_on
-    unlink /bsp/leds/led_"$name"_"$color"_delay_off
-    if [ -f /bsp/leds/led_"$name"_capability ]; then
-    rm -rf /bsp/leds/led_"$name"_capability
+    unlink /bsp/led/led_"$name"_"$color"
+    unlink /bsp/led/led_"$name"_"$color"_delay_on
+    unlink /bsp/led/led_"$name"_"$color"_delay_off
+    if [ -f /bsp/led/led_"$name"_capability ]; then
+      rm -rf /bsp/led/led_"$name"_capability
     fi
   fi
   if [ "$2" == "thermal_zone" ]; then
