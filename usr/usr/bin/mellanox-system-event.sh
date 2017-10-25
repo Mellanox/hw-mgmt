@@ -153,12 +153,20 @@ if [ "$1" == "add" ]; then
     fi
   fi
   if [ "$2" == "led" ]; then
-	name=`echo $5 | cut -d':' -f2`
-	color=`echo $5 | cut -d':' -f3`
-	ln -sf $3$4/brightness /bsp/leds/led_"$name"_"$color"
-        echo timer > $3$4/trigger
-        ln -sf $3$4/delay_on  /bsp/leds/led_"$name"_"$color"_delay_on
-        ln -sf $3$4/delay_off /bsp/leds/led_"$name"_"$color"_delay_off
+    name=`echo $5 | cut -d':' -f2`
+    color=`echo $5 | cut -d':' -f3`
+    ln -sf $3$4/brightness /bsp/leds/led_"$name"_"$color"
+    echo timer > $3$4/trigger
+    ln -sf $3$4/delay_on  /bsp/leds/led_"$name"_"$color"_delay_on
+    ln -sf $3$4/delay_off /bsp/leds/led_"$name"_"$color"_delay_off
+
+    if [ ! -f /bsp/leds/led_"$name"_capability ]; then
+      echo none blink ${color} > /bsp/leds/led_"$name"_capability
+    else
+      capability=`cat /bsp/leds/led_"$name"_capability`
+      capability="${capability} ${color}"
+      echo $capability > /bsp/leds/led_"$name"_capability
+    fi
   fi
   if [ "$2" == "thermal_zone" ]; then
     busfolder=`basename $3$4`
@@ -312,6 +320,9 @@ else
     unlink /bsp/leds/led_"$name"_"$color"
     unlink /bsp/leds/led_"$name"_"$color"_delay_on
     unlink /bsp/leds/led_"$name"_"$color"_delay_off
+    if [ -f /bsp/leds/led_"$name"_capability ]; then
+    rm -rf /bsp/leds/led_"$name"_capability
+    fi
   fi
   if [ "$2" == "thermal_zone" ]; then
     zonefolder=`basename /bsp/thermal_zone/$5*`

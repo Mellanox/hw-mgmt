@@ -4,7 +4,7 @@ if [ "$0" == "/bsp/cpld" ]; then
 	if [ "$1" == "mgmt" ]; then
 		ver=`/usr/sbin/iorw -b 0x2500 -r -l1 | awk '{print $5}'`
 	elif [ "$1" == "brd" ]; then
-		
+		ver=`/usr/sbin/iorw -b 0x2501 -r -l1 | awk '{print $5}'`
 	elif [ "$1" == "port" ]; then
 		ver=0
 		if [ -f /dev/mst/mt52100_pciconf0 ]; then
