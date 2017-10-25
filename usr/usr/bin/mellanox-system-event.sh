@@ -162,17 +162,16 @@ if [ "$1" == "add" ]; then
   fi
   if [ "$2" == "thermal_zone" ]; then
     busfolder=`basename $3$4`
+    zonename=`echo $5`
     zonetype=`cat $3$4/type`
     if [ "$zonetype" == "mlxsw" ]; then
       # Disable thermal algorithm
       echo disabled > $3$4/mode
       # Set default fan speed
       echo 6 > $3$4/cdev0/cur_state
-      mkdir -p /bsp/thermal_zone/$zonetype
       zone=$zonetype
     else
-      zonename=`echo $5 | tail -c +9`
-      zone=$zonename-$zonetype
+       zone=$zonename-$zonetype
     fi
     mkdir -p /bsp/thermal_zone/$zone
     ln -sf $3$4/mode /bsp/thermal_zone/$zone/mode
@@ -239,7 +238,7 @@ else
   if [ "$2" == "a2d" ]; then
     unlink /bsp/environment/$2_$5_voltage_scale
     for i in {1..12}; do
-      if [ -f /bsp/environment/$2_$5_raw_"$i" ]; then
+      if [ -L /bsp/environment/$2_$5_raw_"$i" ]; then
         unlink /bsp/environment/$2_$5_raw_"$i"
       fi
     done
@@ -254,23 +253,31 @@ else
     unlink /bsp/environment/$2_power3_input
   fi
   if [ "$2" == "asic" ]; then
-    unlink /bsp/thermal/$2_temp
-    unlink /bsp/thermal/$2_temp_highest
+    unlink /bsp/thermal/$2
+    unlink /bsp/thermal/$2_highest
   fi
   if [ "$2" == "fan" ]; then
     for i in {1..12}; do
-	if [ -f $3$4/fan$i ]; then
+	if [ -L /bsp/fan/fan"$i"_speed_get ]; then
             unlink /bsp/fan/fan"$i"_speed_get
+        fi
+	if [ -L /bsp/fan/fan"$i"_speed_set ]; then
             unlink /bsp/fan/fan"$i"_speed_set
-            unlink /bsp/fan/fan"$i"_speed_min
-            unlink /bsp/fan/fan"$i"_speed_max
+        fi
+	if [ -L /bsp/fan/fan"$i"_min ]; then
+            unlink /bsp/fan/fan"$i"_min
+        fi
+	if [ -L /bsp/fan/fan"$i"_max ]; then
+            unlink /bsp/fan/fan"$i"_max
         fi
     done
   fi
   if [ "$2" == "qsfp" ]; then
-    for i in $3$4/qsfp[1-64]; do
-        if [ -f $3$4/fan$i ]; then
+    for i in {1..64}; do
+        if [ -L /bsp/qsfp/qsfp$i ]; then
             unlink /bsp/qsfp/qsfp"$i"
+        fi
+        if [ -L /bsp/qsfp/qsfp"$i"_status ]; then
             unlink /bsp/qsfp/qsfp"$i"_status
         fi
     done
@@ -293,6 +300,12 @@ else
   if [ "$2" == "eeprom_fan4" ]; then
     unlink /bsp/eeprom/fan4_info
   fi
+  if [ "$2" == "eeprom_vpd" ]; then
+    unlink /bsp/eeprom/vpd_info
+  fi
+  if [ "$2" == "eeprom_cpu" ]; then
+    unlink /bsp/eeprom/cpu_info
+  fi
   if [ "$2" == "led" ]; then
     name=`echo $5 | cut -d':' -f2`
     color=`echo $5 | cut -d':' -f3`
@@ -300,22 +313,24 @@ else
     unlink /bsp/leds/led_"$name"_"$color"_delay_on
     unlink /bsp/leds/led_"$name"_"$color"_delay_off
   fi
-  if [ "$2" == "thermal_zone[0-5]" ]; then
-    busfolder=`basename $3$4`
-    zonetype=`cat $3$4/type`
-    if [ "$zonetype" == "mlxsw" ]; then
-      # Disable thermal algorithm
-      echo disabled > $3$4/mode
-      # Set default fan speed
-      echo 6 > $3$4/cdev0/cur_state
-      mkdir -p /bsp/thermal_zone/$zonetype
-      zone=$zonetype
-    else
-      zonename=`echo $5 | tail -c +9`
-      zone=$zonename-$zonetype
+  if [ "$2" == "thermal_zone" ]; then
+    zonefolder=`basename /bsp/thermal_zone/$5*`
+    if [ ! -d /bsp/thermal_zone/$zonefolder ]; then
+        zonefolder=mlxsw
     fi
-    unlink /bsp/thermal_zone/$zone/mode
-    unlink /bsp/thermal_zone/$zone/*
+    if [ -d /bsp/thermal_zone/$zonefolder ]; then
+      unlink /bsp/thermal_zone/$zonefolder/mode
+      for i in {0..11}; do
+        if [ -L /bsp/thermal_zone/$zonefolder/trip_point_$i ]; then
+          unlink /bsp/thermal_zone/$zonfoldere/trip_point_$i
+        fi
+        if [ -L /bsp/thermal_zone/$zonefolder/cooling"$i"_current_state ]; then
+          unlink /bsp/thermal_zone/$zonefolder/cooling"$i"_current_state
+        fi
+      done
+      unlink /bsp/thermal_zone/$zonefolder/*
+      rm -rf /bsp/thermal_zone/$zonefolder
+    fi
   fi
   if [ "$2" == "cputemp" ]; then
     unlink /bsp/thermal/cpu_pack
@@ -323,7 +338,7 @@ else
     unlink /bsp/thermal/cpu_pack_crit_alarm
     unlink /bsp/thermal/cpu_pack_max
     for i in {1..8}; do
-      if [ -f /bsp/thermal/cpu_core"$i" ]; then
+      if [ -L /bsp/thermal/cpu_core"$i" ]; then
         unlink /bsp/thermal/cpu_core"$i"
         unlink /bsp/thermal/cpu_core"$i"_crit
         unlink /bsp/thermal/cpu_core"$i"_crit_alarm
@@ -333,15 +348,15 @@ else
   fi
   if [ "$2" == "hotplug" ]; then
     for i in {1..12}; do
-	if [ -f /bsp/module/fan"$i"_status ]; then
+	if [ -L /bsp/module/fan"$i"_status ]; then
             unlink /bsp/module/fan"$i"_status
         fi
     done
     for i in {1..2}; do
-	if [ -f /bsp/module/psu"$i"_status ]; then
+	if [ -L /bsp/module/psu"$i"_status ]; then
             unlink /bsp/module/psu"$i"_status
         fi
-	if [ -f /bsp/module/pwr"$i"_status ]; then
+	if [ -L /bsp/module/psu"$i"_pwr_status ]; then
             unlink /bsp/module/psu"$i"_pwr_status
         fi
     done

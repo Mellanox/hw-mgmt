@@ -2,10 +2,11 @@
 
 if [ "$0" == "/bsp/cpld" ]; then
 	if [ "$1" == "mgmt" ]; then
-		echo $(($ver))
+		ver=`/usr/sbin/iorw -b 0x2500 -r -l1 | awk '{print $5}'`
 	elif [ "$1" == "brd" ]; then
-		echo $(($ver))
+		
 	elif [ "$1" == "port" ]; then
+		ver=0
 		if [ -f /dev/mst/mt52100_pciconf0 ]; then
 			ver=`sudo /usr/bin/mlxreg -d /dev/mst/mt52100_pciconf0 --get --reg_id 0x902A --reg_len 16 | tail -n4 | head -n1 | awk '{print $3}'`
 		fi
