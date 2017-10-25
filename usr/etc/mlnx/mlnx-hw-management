@@ -53,6 +53,7 @@ module_load_path=(	i2c/i2c-dev.ko \
 			misc/eeprom/at24.ko \
 			leds/trigger/ledtrig-timer.ko
 			net/ethernet/mellanox/mlxsw/mlxsw_minimal.ko \
+			i2c/busses/i2c-mlxcpld.ko \
 			platform/x86/mlx-platform.ko)
 
 module_unload_list=(	at24 tmp102 lm75 coretemp max1363 tps53679 pmbus \	
@@ -308,7 +309,11 @@ connect_device()
 disconnect_device()
 {
 	if [ -f /sys/bus/i2c/devices/i2c-$2/delete_device ]; then
-		echo $1 > /sys/bus/i2c/devices/i2c-$2/delete_device
+		addr=`echo $1 | tail -c +3`
+		if [ -d /sys/bus/i2c/devices/$2-00$addr ] ||
+		   [ -d /sys/bus/i2c/devices/$2-000$addr ]; then
+			echo $1 > /sys/bus/i2c/devices/i2c-$2/delete_device
+		fi
 	fi
 
 	return 0
