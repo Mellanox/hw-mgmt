@@ -1,0 +1,104 @@
+From acf30a9f0714a734531078b7a6d85ab7762c3589 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Sun, 29 Oct 2017 10:07:50 +0000
+Subject: [v4.9 backport 32/32] mlxsw: i2c: Fix buffer increment counter for
+ write transaction
+
+It fixes buffer pointer increment in mlxsw_i2c_write procedure, which
+should be incremented by the constant value.
+It adds high and low temperature thresholds for mtmp register.
+
+Fixes: 6882b0aee180 ("mlxsw: Introduce support for I2C bus")
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c |  9 +++++++++
+ drivers/net/ethernet/mellanox/mlxsw/i2c.c        |  2 +-
+ drivers/net/ethernet/mellanox/mlxsw/reg.h        | 25 ++++++++++++++++++++++++
+ 3 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 69c33ee..ab710e3 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -263,6 +263,7 @@ static void mlxsw_hwmon_attr_add(struct mlxsw_hwmon *mlxsw_hwmon,
+ static int mlxsw_hwmon_temp_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
+ 	char mtcap_pl[MLXSW_REG_MTCAP_LEN] = {0};
++	char mtmp_pl[MLXSW_REG_MTMP_LEN];
+ 	u8 sensor_count;
+ 	int i;
+ 	int err;
+@@ -274,6 +275,14 @@ static int mlxsw_hwmon_temp_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 	}
+ 	sensor_count = mlxsw_reg_mtcap_sensor_count_get(mtcap_pl);
+ 	for (i = 0; i < sensor_count; i++) {
++		mlxsw_reg_mtmp_pack(mtmp_pl, i, true, true);
++		err = mlxsw_reg_write(mlxsw_hwmon->core,
++				      MLXSW_REG(mtmp), mtmp_pl);
++		if (err) {
++			dev_err(mlxsw_hwmon->bus_info->dev, "Failed to setup temp sensor number %d\n",
++				i);
++			return err;
++		}
+ 		mlxsw_hwmon_attr_add(mlxsw_hwmon,
+ 				     MLXSW_HWMON_ATTR_TYPE_TEMP, i, i);
+ 		mlxsw_hwmon_attr_add(mlxsw_hwmon,
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+index c1e6b38..5c31665 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+@@ -294,7 +294,7 @@ mlxsw_i2c_write(struct device *dev, size_t in_mbox_size, u8 *in_mbox, int num,
+ 		write_tran.len = MLXSW_I2C_ADDR_WIDTH + chunk_size;
+ 		mlxsw_i2c_set_slave_addr(tran_buf, off);
+ 		memcpy(&tran_buf[MLXSW_I2C_ADDR_BUF_SIZE], in_mbox +
+-		       chunk_size * i, chunk_size);
++		       MLXSW_I2C_BLK_MAX * i, chunk_size);
+ 
+ 		j = 0;
+ 		end = jiffies + timeout;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 45e43fc..20dd6be 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -4689,6 +4689,29 @@ MLXSW_ITEM32(reg, mtmp, mtr, 0x08, 30, 1);
+  */
+ MLXSW_ITEM32(reg, mtmp, max_temperature, 0x08, 0, 16);
+ 
++/* reg_mtmp_tee
++ * Temperature Event Enable.
++ * 0 - Do not generate event
++ * 1 - Generate event
++ * 2 - Generate single event
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mtmp, tee, 0x0C, 30, 2);
++
++#define MLXSW_REG_MTMP_THRESH_HI 0x348	/* 105 Celsius */
++
++/* reg_mtmp_temperature_threshold_hi
++ * High threshold for Temperature Warning Event. In 0.125 Celsius.
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mtmp, temperature_threshold_hi, 0x0C, 0, 16);
++
++/* reg_mtmp_temperature_threshold_lo
++ * Low threshold for Temperature Warning Event. In 0.125 Celsius.
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mtmp, temperature_threshold_lo, 0x10, 0, 16);
++
+ #define MLXSW_REG_MTMP_SENSOR_NAME_SIZE 8
+ 
+ /* reg_mtmp_sensor_name
+@@ -4705,6 +4728,8 @@ static inline void mlxsw_reg_mtmp_pack(char *payload, u8 sensor_index,
+ 	mlxsw_reg_mtmp_sensor_index_set(payload, sensor_index);
+ 	mlxsw_reg_mtmp_mte_set(payload, max_temp_enable);
+ 	mlxsw_reg_mtmp_mtr_set(payload, max_temp_reset);
++	mlxsw_reg_mtmp_temperature_threshold_hi_set(payload,
++						    MLXSW_REG_MTMP_THRESH_HI);
+ }
+ 
+ static inline void mlxsw_reg_mtmp_unpack(char *payload, unsigned int *p_temp,
+-- 
+2.1.4
+
