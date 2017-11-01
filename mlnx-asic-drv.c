@@ -636,6 +636,8 @@ static int qsfp_get(struct switchdev_if *devif, struct qsfp_config *qsfp)
 
 	memset(&reg_data, 0, sizeof(struct ku_access_mcia_reg));
 	SET_REG_TEMPLATE(reg_data, MCIA_REG_ID, method, devif);
+        reg_data.mcia_reg.i2c_device_address = qsfp_eeprom_i2c_addr;
+        reg_data.mcia_reg.device_address = 0;
         reg_data.mcia_reg.module = qsfp->module_index;
         reg_data.mcia_reg.l = qsfp->lock;
         reg_data.mcia_reg.page_number = 0;
