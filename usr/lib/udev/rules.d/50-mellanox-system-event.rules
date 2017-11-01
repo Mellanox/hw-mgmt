@@ -58,6 +58,12 @@ SUBSYSTEM=="i2c", KERNEL=="14-0050", ACTION=="add", RUN+="/usr/bin/mellanox-syst
 SUBSYSTEM=="i2c", KERNEL=="14-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_fan4 %S %p"
 
 # LED
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 

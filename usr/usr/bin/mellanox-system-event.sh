@@ -55,7 +55,7 @@ if [ "$1" == "add" ]; then
     ln -sf $5$3/power2_input /bsp/power/$2_power
     ln -sf $5$3/curr1_input /bsp/power/$2_curr_in
     ln -sf $5$3/curr2_input /bsp/power/$2_curr
-    ln -sf $5$3/fan1_input /bsp/fan/$2_fan_input
+    ln -sf $5$3/fan1_input /bsp/fan/$2_fan1_speed_get
 
     #FAN speed set
     busdir=`echo $5$3 |xargs dirname |xargs dirname`
@@ -159,6 +159,7 @@ if [ "$1" == "add" ]; then
     echo timer > $3$4/trigger
     ln -sf $3$4/delay_on  /bsp/led/led_"$name"_"$color"_delay_on
     ln -sf $3$4/delay_off /bsp/led/led_"$name"_"$color"_delay_off
+    ln -sf /usr/bin/led_state.sh /bsp/led/led_"$name"_state
 
     if [ ! -f /bsp/led/led_"$name"_capability ]; then
       echo none ${color} ${color}_blink > /bsp/led/led_"$name"_capability
@@ -167,6 +168,7 @@ if [ "$1" == "add" ]; then
       capability="${capability} ${color} ${color}_blink"
       echo $capability > /bsp/led/led_"$name"_capability
     fi
+    /bsp/led/led_"$name"_state
   fi
   if [ "$2" == "thermal_zone" ]; then
     busfolder=`basename $3$4`
@@ -198,7 +200,7 @@ if [ "$1" == "add" ]; then
         if [ $i -eq 1 ]; then
            name="pack"
         else
-           id=$(($i-1))
+           id=$(($i-2))
            name="core$id"
         fi
         ln -sf $3$4/temp"$i"_input /bsp/thermal/cpu_$name
@@ -241,7 +243,7 @@ else
     unlink /bsp/power/$2_power
     unlink /bsp/power/$2_curr_in
     unlink /bsp/power/$2_curr
-    unlink /bsp/fan/$2_fan_input
+    unlink /bsp/fan/$2_fan1_speed_get
   fi
   if [ "$2" == "a2d" ]; then
     unlink /bsp/environment/$2_$5_voltage_scale
@@ -320,8 +322,12 @@ else
     unlink /bsp/led/led_"$name"_"$color"
     unlink /bsp/led/led_"$name"_"$color"_delay_on
     unlink /bsp/led/led_"$name"_"$color"_delay_off
+    unlink /bsp/led/led_"$name"_state
+    if [ -f /bsp/led/led_"$name" ]; then
+      rm -f /bsp/led/led_"$name"
+    fi
     if [ -f /bsp/led/led_"$name"_capability ]; then
-      rm -rf /bsp/led/led_"$name"_capability
+      rm -f /bsp/led/led_"$name"_capability
     fi
   fi
   if [ "$2" == "thermal_zone" ]; then
@@ -350,10 +356,11 @@ else
     unlink /bsp/thermal/cpu_pack_max
     for i in {1..8}; do
       if [ -L /bsp/thermal/cpu_core"$i" ]; then
-        unlink /bsp/thermal/cpu_core"$i"
-        unlink /bsp/thermal/cpu_core"$i"_crit
-        unlink /bsp/thermal/cpu_core"$i"_crit_alarm
-        unlink /bsp/thermal/cpu_core"$i"_max
+	j=$((i+1))
+        unlink /bsp/thermal/cpu_core"$j"
+        unlink /bsp/thermal/cpu_core"$j"_crit
+        unlink /bsp/thermal/cpu_core"$j"_crit_alarm
+        unlink /bsp/thermal/cpu_core"$j"_max
       fi
     done
   fi

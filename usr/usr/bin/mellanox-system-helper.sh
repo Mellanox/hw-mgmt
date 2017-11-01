@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$0" == "/bsp/cpld" ]; then
+if echo "$0" | grep -q "/cpld" ; then
 	if [ "$1" == "mgmt" ]; then
 		ver=`/usr/sbin/iorw -b 0x2500 -r -l1 | awk '{print $5}'`
 	elif [ "$1" == "brd" ]; then
@@ -12,16 +12,16 @@ if [ "$0" == "/bsp/cpld" ]; then
 		fi
 	fi
 	echo $(($ver))
+	exit 0
 fi
 
-if [ "$0" == "/bsp/system" ]; then
-	if [ "$1" == "pwr_cycle" ]; then
-		/usr/sbin/iorw -b 0x2531 -w -l1 -v0x00
-		/usr/sbin/iorw -b 0x2530 -w -l1 -v0x04
-	fi
+if echo "$0" | grep -q "pwr_cycle" ; then
+	/usr/sbin/iorw -b 0x2531 -w -l1 -v0x00
+	/usr/sbin/iorw -b 0x2530 -w -l1 -v0x04
+	exit 0
 fi
 
-if [ "$0" == "/bsp/pwr_consum" ]; then
+if echo "$0" | grep -q "/pwr_consum" ; then
 	/usr/sbin/iorw -b 0x2533 -w -l1 -v0xbf
 	regval=`/usr/sbin/iorw -b 0x2532 -r -l1 | awk '{print $5}'`
 
@@ -34,11 +34,10 @@ if [ "$0" == "/bsp/pwr_consum" ]; then
 	/usr/sbin/iorw -b 0x2532 -w -l1 -v$regnew
 	iioreg=`cat /bsp/environment/a2d_iio\:device1_raw_1`
 	echo $(($iioreg * 80 * 12))
+	exit 0
 fi
 
-if [ "$0" == "/bsp/pwr_sys" ]; then
-
-
+if echo "$0" | grep -q "/pwr_sys" ; then
 	if [ "$1" == "psu1" ]; then
 		iioreg_vin=`cat /bsp/environment/a2d_iio\:device0_raw_1`
 		iioreg_iin=`cat /bsp/environment/a2d_iio\:device0_raw_6`
@@ -48,5 +47,6 @@ if [ "$0" == "/bsp/pwr_sys" ]; then
 	fi
 
 	echo $(($iioreg_vin * $iioreg_iin * 59 * 80))
+	exit 0
 fi
 

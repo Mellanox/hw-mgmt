@@ -81,6 +81,26 @@ msn2700_dis_table=(	0x27 5 \
 			0x49 17 \
 			0x48 2)
 
+msn2100_connect_table=(	mlxsw_minimal 0x48 2 \
+			pmbus 0x27 5 \
+			pmbus 0x41 5 \
+			max1363 0x6d 5 \
+			lm75 0x4a 7 \
+			lm75 0x4b 7 \
+			24c32 0x51 8 \
+			max1363 0x6d 15 \
+			24c32 0x51 16)
+
+msn2100_dis_table=(	0x27 5 \
+			0x41 5 \
+			0x6d 5 \
+			0x4a 7 \
+			0x4b 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x51 16 \
+			0x48 2)
+
 msn2740_connect_table=(	mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -176,15 +196,15 @@ check_system()
        			done
 			;;
 		MSN21*)
-			connect_size=${#msn2700_connect_table[@]}
+			connect_size=${#msn2100_connect_table[@]}
         		for ((i=0; i<$connect_size; i++))
         		do
-				connect_table[i]=${msn2700_connect_table[i]}
+				connect_table[i]=${msn2100_connect_table[i]}
        			done
-			disconnect_size=${#msn2700_dis_table[@]}
+			disconnect_size=${#msn2100_dis_table[@]}
 			for ((i=0; i<$disconnect_size; i++))
         		do
-				dis_table[i]=${msn2700_dis_table[i]}
+				dis_table[i]=${msn2100_dis_table[i]}
        			done
 			;;
 		MSN24*)
@@ -383,20 +403,29 @@ case $ACTION in
 		fi
 		echo $fan_max_speed > /bsp/config/fan_max_speed
 		echo $fan_min_speed > /bsp/config/fan_min_speed
-		if [ ! -f /bsp/cpld ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/cpld
+		if [ ! -d /bsp/cpld ]; then
+			mkdir /bsp/cpld
 		fi
-		if [ ! -f /bsp/system ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/system
+		if [ ! -h /bsp/cpld/cpld_version ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/cpld/cpld_version
 		fi
-		if [ ! -f /bsp/pwr_consum ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/pwr_consum
+		/bsp/cpld/cpld_version mgmt > /bsp/cpld/cpld_mgmt_version
+		/bsp/cpld/cpld_version brd > /bsp/cpld/cpld_brd_version
+		/bsp/cpld/cpld_version port > /bsp/cpld/cpld_port_version
+		if [ ! -d /bsp/system ]; then
+			mkdir /bsp/system
 		fi
-		if [ ! -f /bsp/pwr_sys ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/pwr_sys
+		if [ ! -h /bsp/system/pwr_cycle ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/system/pwr_cycle
 		fi
-		if [ ! -f /bsp/pwr_aux ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/pwr_aux
+		if [ ! -d /bsp/power ]; then
+			mkdir -p /bsp/power
+		fi
+		if [ ! -h /bsp/power/pwr_consum ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/power/pwr_consum
+		fi
+		if [ ! -h /bsp/power/pwr_sys ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/power/pwr_sys
 		fi
 		connect_platform
 	;;
