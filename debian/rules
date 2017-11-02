@@ -19,13 +19,13 @@ override_dh_auto_build:
 override_dh_auto_install:
 	dh_installdirs -p$(pname)  lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)
 	cp *.ko           debian/$(pname)/lib/modules/$(KVERSION)/$(INSTALL_MOD_DIR)
-	dh_installdirs -p$(pname)  etc/mlnx
+	dh_installdirs -p$(pname) etc/mlnx
 	cp usr/etc/mlnx/*  debian/$(pname)/etc/mlnx
-	dh_installdirs -p$(pname)  etc/modprobe.d
+	dh_installdirs -p$(pname) etc/modprobe.d
 	cp usr/etc/modprobe.d/* debian/$(pname)/etc/modprobe.d
-	dh_installdirs -p$(pname)  usr/sbin
+	dh_installdirs -p$(pname) usr/sbin
 	cp usr/usr/sbin/* debian/$(pname)/usr/sbin
 	dh_installdirs -p$(pname) usr/bin
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
-	dh_installdirs -p$(pname) usr/lib/udev/rules.d/
-	cp usr/lib/udev/rules.d/* debian/$(pname)/usr/lib/udev/rules.d/
+	dh_installdirs -p$(pname) lib/udev/rules.d/
+	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
