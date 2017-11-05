@@ -123,34 +123,22 @@ if [ "$1" == "add" ]; then
     ln -sf $3$4/eeprom /bsp/eeprom/psu2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    if [ -f $3$4/eeprom ]; then
-      ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
-    fi
+    ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    if [ -f $3$4/eeprom ]; then
-      ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
-    fi
+    ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    if [ -f $3$4/eeprom ]; then
-      ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
-    fi
+    ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    if [ -f $3$4/eeprom ]; then
-      ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
-    fi
+    ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan5" ]; then
-    if [ -f $3$4/eeprom ]; then
-      ln -sf $3$4/eeprom /bsp/eeprom/fan5_info 2>/dev/null
-    fi
+    ln -sf $3$4/eeprom /bsp/eeprom/fan5_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan6" ]; then
-    if [ -f $3$4/eeprom ]; then
-      ln -sf $3$4/eeprom /bsp/eeprom/fan6_info 2>/dev/null
-    fi
+    ln -sf $3$4/eeprom /bsp/eeprom/fan6_info 2>/dev/null
   fi
   if [ "$2" == "led" ]; then
     name=`echo $5 | cut -d':' -f2`
@@ -309,6 +297,12 @@ else
   fi
   if [ "$2" == "eeprom_fan4" ]; then
     unlink /bsp/eeprom/fan4_info
+  fi
+  if [ "$2" == "eeprom_fan5" ]; then
+    unlink /bsp/eeprom/fan5_info
+  fi
+  if [ "$2" == "eeprom_fan6" ]; then
+    unlink /bsp/eeprom/fan6_info
   fi
   if [ "$2" == "eeprom_vpd" ]; then
     unlink /bsp/eeprom/vpd_info
