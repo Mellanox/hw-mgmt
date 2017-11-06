@@ -34,5 +34,8 @@ SRC_URI += " \
 	file://0030-platform-x86-mlx-platform-align-with-upstream-v15-pa.patch \
 	file://0031-mlxsw-core-extend-QSFP-EEPROM-sysfs-size.patch \
 	file://0032-mlxsw-i2c-Fix-buffer-increment-counter-for-write-tra.patch \
+	file://0033-mlxsw-qsfp_sysfs-Use-minimum-length-and-caching-for-.patch \
+	file://0034-platform-x86-mlx-platform-fix-setting-for-LED-masks.patch \
+	file://0035-mlxsw-thermal-qsfp-add-support-for-cpld-reading-and-.patch \
 	"
 
