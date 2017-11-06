@@ -91,12 +91,22 @@ if [ "$1" == "add" ]; then
   if [ "$2" == "fan" ]; then
     # Take time for adding infrastructure
     sleep 3
+    inv=0
+echo 9 > /bsp/config/fan_inversed
+    if [ -f /bsp/config/fan_inversed ]; then
+      inv=`cat /bsp/config/fan_inversed`
+    fi
     for i in {1..12}; do
         if [ -f $3$4/fan"$i"_input ]; then
-            ln -sf $3$4/fan"$i"_input /bsp/fan/fan"$i"_speed_get
-            ln -sf $3$4/pwm1 /bsp/fan/fan"$i"_speed_set
-            ln -sf /bsp/config/fan_min_speed /bsp/fan/fan"$i"_min
-            ln -sf /bsp/config/fan_max_speed /bsp/fan/fan"$i"_max
+          if [ $(inv) -eq 0 ]; then
+            j=$i
+          else
+            j=`echo $(($inv - $i))`
+          fi
+          ln -sf $3$4/fan"$i"_input /bsp/fan/fan"$j"_speed_get
+          ln -sf $3$4/pwm1 /bsp/fan/fan"$j"_speed_set
+          ln -sf /bsp/config/fan_min_speed /bsp/fan/fan"$j"_min
+          ln -sf /bsp/config/fan_max_speed /bsp/fan/fan"$j"_max
         fi
     done
   fi
@@ -105,8 +115,8 @@ if [ "$1" == "add" ]; then
     sleep 5
     for i in {1..64}; do
         if [ -f $3$4/qsfp$i ]; then
-            ln -sf $3$4/qsfp$i /bsp/qsfp/qsfp"$i"
-            ln -sf $3$4/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
+          ln -sf $3$4/qsfp$i /bsp/qsfp/qsfp"$i"
+          ln -sf $3$4/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
         fi
     done
   fi
