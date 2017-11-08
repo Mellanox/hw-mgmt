@@ -13,9 +13,21 @@ FNAMES=(`ls "$DNAME"/"$LED_NAME"*`)
 
 check_led_blink()
 {
-	val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on`
-	val2=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off`
-	val3=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
+	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on ]; then
+		val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on`
+	else
+		val1=0
+	fi
+	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off ]; then
+		val2=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off`
+	else
+		val2=0
+	fi
+	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then
+		val3=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
+	else
+		val3=0
+	fi
 	if [ "${val1}" != "0" ] && [ "${val2}" != "0" ] && [ "${val3}" != "0" ] ; then
 		LED_STATE="$COLOR"_blink
 		return 1
@@ -38,8 +50,12 @@ do
 			break;
 		fi
 	fi
-	if [ "${CURR_FILE}" == "$DNAME"/"${LED_NAME}_${COLOR}" ] ; then 
-		val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
+	if [ "${CURR_FILE}" == "$DNAME"/"${LED_NAME}_${COLOR}" ] ; then
+		if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then 
+			val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
+		else
+			val1=0
+		fi
 		if [ "${val1}" != "0" ]; then
 			check_led_blink $COLOR
 			if [ $? -eq 1 ]; then

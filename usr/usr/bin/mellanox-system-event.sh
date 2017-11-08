@@ -297,7 +297,7 @@ else
     unlink /bsp/eeprom/psu2_info
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    unlink /bsp/eeprom/fan2_info
+    unlink /bsp/eeprom/fan1_info
   fi
   if [ "$2" == "eeprom_fan2" ]; then
     unlink /bsp/eeprom/fan2_info
