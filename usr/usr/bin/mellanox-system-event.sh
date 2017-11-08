@@ -91,8 +91,6 @@ if [ "$1" == "add" ]; then
   if [ "$2" == "fan" ]; then
     # Take time for adding infrastructure
     sleep 3
-    inv=0
-echo 9 > /bsp/config/fan_inversed
     if [ -f /bsp/config/fan_inversed ]; then
       inv=`cat /bsp/config/fan_inversed`
     fi

@@ -184,7 +184,7 @@ msn274x_specific()
 	do
 		dis_table[i]=${msn2740_dis_table[i]}
 	done
-	echo 9 > /bsp/config/fan_inversed
+	echo 5 > /bsp/config/fan_inversed
 }
 
 msn21xx_specific()
@@ -199,7 +199,7 @@ msn21xx_specific()
 	do
 		dis_table[i]=${msn2100_dis_table[i]}
 	done
-	echo 9 > /bsp/config/fan_inversed
+	echo 5 > /bsp/config/fan_inversed
 }
 
 msn24xx_specific()
