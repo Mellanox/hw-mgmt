@@ -35,7 +35,7 @@ if [ "$1" == "add" ]; then
     ln -sf $5$3/power2_input /bsp/power/$2_power
     ln -sf $5$3/curr1_input /bsp/power/$2_curr_in
     ln -sf $5$3/curr2_input /bsp/power/$2_curr
-    ln -sf $5$3/fan1_input /bsp/fan/$2_fan_input
+    ln -sf $5$3/fan1_input /bsp/fan/$2_fan1_speed_get
     #FAN speed set
     busdir=`echo $5$3 |xargs dirname |xargs dirname`
     busfolder=`basename $busdir`
@@ -81,7 +81,7 @@ else
     unlink /bsp/power/$2_power
     unlink /bsp/power/$2_curr_in
     unlink /bsp/power/$2_curr
-    unlink /bsp/fan/$2_fan_input
+    unlink /bsp/fan/$2_fan1_speed_get
   fi
   if [ "$2" == "eeprom_psu1" ]; then
     unlink /bsp/eeprom/psu1_info
