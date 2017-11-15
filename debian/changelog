@@ -1,5 +1,4 @@
-hw-management (1.mlnx.@SED_VERSION@) unstable; urgency=low
+hw-management (1.mlnx.onl.deb9.15.11.2017) stable; urgency=low
   [ MLNX ]
-  * Initial release. (Closes: #XXXXXX)
 
- -- Adir Atias <adira@mellanox.com>  Sun, 06 Sep 2015 14:54:17 +0300
+ -- MellanoxBSP <system-sw-low-level@mellanox.com>  Thu, 15 Nov 2017 14:54:17 +0300

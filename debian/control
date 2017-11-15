@@ -1,6 +1,6 @@
 Source: hw-management
 Priority: extra
-Maintainer: Adir Atias <adira@dev-r-vrt-128-008>
+Maintainer: MellanoxBSP <system-sw-low-level@mellanox.com>
 Build-Depends:
 Standards-Version:
 Section: libs

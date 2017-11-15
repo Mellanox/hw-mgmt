@@ -424,7 +424,7 @@ status()
 }
 
 case $ACTION in
-        start)1
+        start)
 		if [ ! -d /bsp ]; then
 			mkdir /bsp
 		fi
