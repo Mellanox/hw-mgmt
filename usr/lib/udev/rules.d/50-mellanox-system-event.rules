@@ -11,17 +11,17 @@
 #
 
 # PSU cables
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0059", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0059", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0059", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh psu1 %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0059", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh psu1 %p %k %S %n"
 
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0058", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0058", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0058", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh psu2 %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0058", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh psu2 %p %k %S %n"
 
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0059", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0059", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0059", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh psu1 %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0059", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh psu1 %p %k %S %n"
 
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0058", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
-SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0058", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh 1 psu %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0058", ACTION=="add", RUN+="/lib/udev/mellanox-events.sh psu2 %p %k %S %n"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-4/4-0058", ACTION=="remove", RUN+="/lib/udev/mellanox-events.sh psu2 %p %k %S %n"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0059/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add psu1 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/lpci2c/i2c-1/i2c-10/10-0059/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm psu1 %p %k %S %n"
