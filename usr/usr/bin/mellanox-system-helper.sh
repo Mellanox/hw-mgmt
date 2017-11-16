@@ -15,12 +15,6 @@ if echo "$0" | grep -q "/cpld" ; then
 	exit 0
 fi
 
-if echo "$0" | grep -q "pwr_cycle" ; then
-	/usr/sbin/iorw -b 0x2531 -w -l1 -v0x00
-	/usr/sbin/iorw -b 0x2530 -w -l1 -v0x04
-	exit 0
-fi
-
 if echo "$0" | grep -q "/pwr_consum" ; then
 	/usr/sbin/iorw -b 0x2533 -w -l1 -v0xbf
 	regval=`/usr/sbin/iorw -b 0x2532 -r -l1 | awk '{print $5}'`

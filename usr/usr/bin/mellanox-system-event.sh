@@ -40,6 +40,9 @@ if [ "$1" == "add" ]; then
   if [ ! -d /bsp/module ]; then
       mkdir -p /bsp/module
   fi
+  if [ ! -d /bsp/system ]; then
+      mkdir -p /bsp/system
+  fi
   if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
     ln -sf $3$4/temp1_input /bsp/thermal/$2
     ln -sf $3$4/temp1_max /bsp/thermal/$2_max
@@ -208,18 +211,38 @@ if [ "$1" == "add" ]; then
   fi
   if [ "$2" == "hotplug" ]; then
     for i in {1..12}; do
-	if [ -f $3$4/fan$i ]; then
-            ln -sf $3$4/fan$i /bsp/module/fan"$i"_status
-        fi
+      if [ -f $3$4/fan$i ]; then
+        ln -sf $3$4/fan$i /bsp/module/fan"$i"_status
+      fi
     done
     for i in {1..2}; do
-	if [ -f $3$4/psu$i ]; then
-            ln -sf $3$4/psu$i /bsp/module/psu"$i"_status
-        fi
-	if [ -f $3$4/pwr$i ]; then
-            ln -sf $3$4/pwr$i /bsp/module/psu"$i"_pwr_status
-        fi
+      if [ -f $3$4/psu$i ]; then
+        ln -sf $3$4/psu$i /bsp/module/psu"$i"_status
+      fi
+      if [ -f $3$4/pwr$i ]; then
+        ln -sf $3$4/pwr$i /bsp/module/psu"$i"_pwr_status
+      fi
     done
+  fi
+  if [ "$2" == "regio" ]; then
+    if [ -f $3$4/select_iio ]; then
+      ln -sf $3$4/select_iio /bsp/system/select_iio
+    fi
+    if [ -f $3$4/pwr_cycle ]; then
+      ln -sf $3$4/pwr_cycle /bsp/system/pwr_cycle
+    fi
+    if [ -f $3$4/psu1_on ]; then
+      ln -sf $3$4/psu1_on /bsp/system/psu1_on
+    fi
+    if [ -f $3$4/psu2_on ]; then
+      ln -sf $3$4/psu2_on /bsp/system/psu2_on
+    fi
+    if [ -f $3$4/cpld1_version ]; then
+      ln -sf $3$4/cpld1_version /bsp/cpld/cpld_mgmt_version
+    fi
+    if [ -f $3$4/cpld2_version ]; then
+      ln -sf $3$4/cpld2_version /bsp/cpld/cpld_brd_version
+    fi
   fi
 elif [ "$1" == "change" ]; then
     echo "Do nothing on change"
@@ -380,5 +403,25 @@ else
             unlink /bsp/module/psu"$i"_pwr_status
         fi
     done
+  fi
+  if [ "$2" == "regio" ]; then
+    if [ -L /bsp/system/select_iio ]; then
+      unlink /bsp/system/select_iio
+    fi
+    if [ -L /bsp/system/pwr_cycle ]; then
+      unlink /bsp/system/pwr_cycle
+    fi
+    if [ -L /bsp/system/psu1_on ]; then
+      unlink /bsp/system/psu1_on
+    fi
+    if [ -L /bsp/system/psu2_on ]; then
+      unlink /bsp/system/psu2_on
+    fi
+    if [ -L /bsp/cpld/cpld_mgmt_version ]; then
+      unlink /bsp/cpld/cpld_mgmt_version
+    fi
+    if [ -L /bsp/cpld/cpld_brd_version ]; then
+      unlink /bsp/cpld/cpld_brd_version
+    fi
   fi
 fi

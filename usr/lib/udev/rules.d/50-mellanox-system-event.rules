@@ -209,3 +209,7 @@ SUBSYSTEM=="thermal", KERNEL=="thermal_zone5", ACTION=="remove", RUN+="/usr/bin/
 # Hotplug devices statuses
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add hotplug %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm hotplug %S %p"
+
+# Register space attributes
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm regio %S %p"
