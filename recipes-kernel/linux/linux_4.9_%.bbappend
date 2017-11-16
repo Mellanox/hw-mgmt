@@ -39,5 +39,6 @@ SRC_URI += " \
 	file://0035-mlxsw-thermal-qsfp-add-support-for-cpld-reading-and-.patch \
 	file://0036-platform-x86-mlx-platform-fix-setting-for-empty-devi.patch \
 	file://0037-mlxsw-reg-fix-description-for-msci-register.patch \
+	file://0038-platform-mellonox-introduce-mlxreg-io-driver-and-add.patch \
 	"
 
