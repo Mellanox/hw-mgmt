@@ -1,0 +1,11 @@
+[Unit]
+Description=The msn script for Mellanox chassis management
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/sh -c "msn-chassis.sh start"
+ExecStop=/bin/sh -c "msn-chassis.sh stop"
+
+[Install]
+WantedBy=multi-user.target

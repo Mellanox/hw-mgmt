@@ -1,0 +1,141 @@
+From 2926024b5081fc8d4b086677bafa1ac55ea0b911 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Mon, 31 Oct 2016 07:22:33 +0000
+Subject: [v4.9 backport 05/28] platform/x86: mlx-platform: Move module from
+ arch/x86
+
+Since mlx-platform is not an architectural driver, it is moved out
+of arch/x86/platform to drivers/platform/x86.
+Relevant Makefile and Kconfig are updated.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+Acked-by: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+
+Conflicts:
+	drivers/platform/x86/Kconfig
+	drivers/platform/x86/Makefile
+---
+ MAINTAINERS                                        |  2 +-
+ arch/x86/Kconfig                                   | 12 ------------
+ arch/x86/platform/Makefile                         |  1 -
+ arch/x86/platform/mellanox/Makefile                |  1 -
+ drivers/platform/x86/Kconfig                       | 22 ++++++++++++++++++++++
+ drivers/platform/x86/Makefile                      |  2 ++
+ .../platform/x86}/mlx-platform.c                   |  1 -
+ 7 files changed, 25 insertions(+), 16 deletions(-)
+ delete mode 100644 arch/x86/platform/mellanox/Makefile
+ rename {arch/x86/platform/mellanox => drivers/platform/x86}/mlx-platform.c (99%)
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index c4adb60..775e833 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -7910,7 +7910,7 @@ MELLANOX PLATFORM DRIVER
+ M:      Vadim Pasternak <vadimp@mellanox.com>
+ L:      platform-driver-x86@vger.kernel.org
+ S:      Supported
+-F:      arch/x86/platform/mellanox/mlx-platform.c
++F:      drivers/platform/x86/mlx-platform.c
+ 
+ SOFT-ROCE DRIVER (rxe)
+ M:	Moni Shoua <monis@mellanox.com>
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index bada636..ccd5ff7 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -550,18 +550,6 @@ config X86_INTEL_QUARK
+ 	  Say Y here if you have a Quark based system such as the Arduino
+ 	  compatible Intel Galileo.
+ 
+-config MLX_PLATFORM
+-	tristate "Mellanox Technologies platform support"
+-	depends on X86_64
+-	depends on X86_EXTENDED_PLATFORM
+-	---help---
+-	  This option enables system support for the Mellanox Technologies
+-	  platform.
+-
+-	  Say Y here if you are building a kernel for Mellanox system.
+-
+-	  Otherwise, say N.
+-
+ config X86_INTEL_LPSS
+ 	bool "Intel Low Power Subsystem Support"
+ 	depends on X86 && ACPI
+diff --git a/arch/x86/platform/Makefile b/arch/x86/platform/Makefile
+index 3c3c19e..184842e 100644
+--- a/arch/x86/platform/Makefile
++++ b/arch/x86/platform/Makefile
+@@ -8,7 +8,6 @@ obj-y	+= iris/
+ obj-y	+= intel/
+ obj-y	+= intel-mid/
+ obj-y	+= intel-quark/
+-obj-y	+= mellanox/
+ obj-y	+= olpc/
+ obj-y	+= scx200/
+ obj-y	+= sfi/
+diff --git a/arch/x86/platform/mellanox/Makefile b/arch/x86/platform/mellanox/Makefile
+deleted file mode 100644
+index f43c931..0000000
+--- a/arch/x86/platform/mellanox/Makefile
++++ /dev/null
+@@ -1 +0,0 @@
+-obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
+diff --git a/drivers/platform/x86/Kconfig b/drivers/platform/x86/Kconfig
+index b8a21d7..4639d97 100644
+--- a/drivers/platform/x86/Kconfig
++++ b/drivers/platform/x86/Kconfig
+@@ -1027,4 +1027,26 @@ config INTEL_TELEMETRY
+ 	  used to get various SoC events and parameters
+ 	  directly via debugfs files. Various tools may use
+ 	  this interface for SoC state monitoring.
++
++config MLX_PLATFORM
++	tristate "Mellanox Technologies platform support"
++	depends on X86_64
++	---help---
++	  This option enables system support for the Mellanox Technologies
++	  platform. The Mellanox systems provide data center networking
++	  solutions based on Virtual Protocol Interconnect (VPI) technology
++	  enable seamless connectivity to 56/100Gb/s InfiniBand or 10/40/56GbE
++	  connection.
++
++	  If you have a Mellanox system, say Y or M here.
++
++config MLX_CPLD_PLATFORM
++	tristate "Mellanox platform hotplug driver support"
++	default n
++	select HWMON
++	select I2C
++	---help---
++	  This driver handles hot-plug events for the power suppliers, power
++	  cables and fans on the wide range Mellanox IB and Ethernet systems.
++
+ endif # X86_PLATFORM_DEVICES
+diff --git a/drivers/platform/x86/Makefile b/drivers/platform/x86/Makefile
+index 2efa86d..2d6a587 100644
+--- a/drivers/platform/x86/Makefile
++++ b/drivers/platform/x86/Makefile
+@@ -71,3 +71,5 @@ obj-$(CONFIG_INTEL_TELEMETRY)	+= intel_telemetry_core.o \
+ 				   intel_telemetry_pltdrv.o \
+ 				   intel_telemetry_debugfs.o
+ obj-$(CONFIG_INTEL_PMC_CORE)    += intel_pmc_core.o
++obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
++obj-$(CONFIG_MLX_CPLD_PLATFORM)	+= mlxcpld-hotplug.o
+diff --git a/arch/x86/platform/mellanox/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+similarity index 99%
+rename from arch/x86/platform/mellanox/mlx-platform.c
+rename to drivers/platform/x86/mlx-platform.c
+index c0355d7..72eebe8 100644
+--- a/arch/x86/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -1,5 +1,4 @@
+ /*
+- * arch/x86/platform/mellanox/mlx-platform.c
+  * Copyright (c) 2016 Mellanox Technologies. All rights reserved.
+  * Copyright (c) 2016 Vadim Pasternak <vadimp@mellanox.com>
+  *
+-- 
+2.1.4
+

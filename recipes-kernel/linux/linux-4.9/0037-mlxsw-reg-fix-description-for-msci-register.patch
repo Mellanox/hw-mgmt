@@ -1,0 +1,30 @@
+From 589428b6233c6a9bffbf8c8bca86f62838f35021 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Tue, 7 Nov 2017 06:45:45 +0000
+Subject: [v4.9 backport 37/37] mlxsw: reg: fix description for msci register
+
+It fixes msci register description.
+
+Signed-off-by: Vadim Pasterank <vadimp@mellanox.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index b606171..2c0c331 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -4960,8 +4960,8 @@ static const struct mlxsw_reg_info mlxsw_reg_msci = {
+  */
+ MLXSW_ITEM32(reg, msci, index, 0x00, 0, 4);
+ 
+-/* reg_msci_pwm_version
+- * Controls the frequency of the PWM signal.
++/* reg_msci_version
++ * CPLD version.
+  * Access: R0
+  */
+ MLXSW_ITEM32(reg, msci, version, 0x04, 0, 32);
+-- 
+2.1.4
+

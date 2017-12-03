@@ -1,0 +1,35 @@
+From 65f178307a4274f1ab52f4e729e1eabe00ee2d96 Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@mellanox.com>
+Date: Tue, 26 Sep 2017 11:36:56 +0000
+Subject: [v4.9 backport 12/28] mlxsw: core: backport core_hwmon fixes
+
+Signed-off-by: Michael Shych <michaelsh@mellanox.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 1ac8bf1..ab710e3 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -262,7 +262,7 @@ static void mlxsw_hwmon_attr_add(struct mlxsw_hwmon *mlxsw_hwmon,
+ 
+ static int mlxsw_hwmon_temp_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
+-	char mtcap_pl[MLXSW_REG_MTCAP_LEN];
++	char mtcap_pl[MLXSW_REG_MTCAP_LEN] = {0};
+ 	char mtmp_pl[MLXSW_REG_MTMP_LEN];
+ 	u8 sensor_count;
+ 	int i;
+@@ -295,7 +295,7 @@ static int mlxsw_hwmon_temp_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 
+ static int mlxsw_hwmon_fans_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
+-	char mfcr_pl[MLXSW_REG_MFCR_LEN];
++	char mfcr_pl[MLXSW_REG_MFCR_LEN] = {0};
+ 	enum mlxsw_reg_mfcr_pwm_frequency freq;
+ 	unsigned int type_index;
+ 	unsigned int num;
+-- 
+2.1.4
+

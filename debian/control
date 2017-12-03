@@ -1,0 +1,18 @@
+Source: hw-management
+Priority: extra
+Maintainer: MellanoxBSP <system-sw-low-level@mellanox.com>
+Build-Depends:
+Standards-Version:
+Section: libs
+Homepage: http://www.mellanox.com
+
+Package: hw-management
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
+Description: Hardware Management kernel drivers
+
+#Package: hw-management-dev
+#Section: libdevel
+#Architecture: any
+#Depends: ${misc:Depends}, hw-management (= ${binary:Version})
+#Description: Development files for the sx_complib libraries

@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+pname:=hw-management
+
+KVERSION ?= $(shell uname -r)
+K_SRC ?= "/lib/modules/$(KVERSION)/build"
+
+pwd=$(shell pwd)
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+
+override_dh_auto_build:
+
+override_dh_auto_install:
+	dh_installdirs -p$(pname) etc/mlnx
+	cp usr/etc/mlnx/* debian/$(pname)/etc/mlnx
+	dh_installdirs -p$(pname) etc/modprobe.d
+	cp usr/etc/modprobe.d/* debian/$(pname)/etc/modprobe.d
+	dh_installdirs -p$(pname) usr/sbin
+	cp usr/usr/sbin/* debian/$(pname)/usr/sbin
+	dh_installdirs -p$(pname) usr/bin
+	cp usr/usr/bin/* debian/$(pname)/usr/bin
+	dh_installdirs -p$(pname) lib/udev/rules.d/
+	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
+	dh_installdirs -p$(pname) lib/systemd/system/
+	cp usr/lib/systemd/system/* debian/$(pname)/lib/systemd/system/
