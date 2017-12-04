@@ -6,7 +6,7 @@ This git contain 4 active branchs
 1. Master        - compliance to Kernel 4.9 supports Debian9, Sonic and ONL.
 2. Sonic-3.16    - compliance to Sonic OS based Kernel 3.16.
 3. ONL-3.16      - compliance to ONL OS based Kernel 3.16.
-4. Extended-3.16 - compliance to Debian8.
+4. Common-3.16   - compliance to Debian8.
 
 
 Supported systems:
