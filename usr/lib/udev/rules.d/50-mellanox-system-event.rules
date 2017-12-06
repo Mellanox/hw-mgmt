@@ -32,17 +32,17 @@ SUBSYSTEM=="i2c", KERNEL=="16-0051", ACTION=="add", RUN+="/usr/bin/mellanox-syst
 SUBSYSTEM=="i2c", KERNEL=="16-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_cpu %S %p"
 
 # EEPROM PSU
-SUBSYSTEM=="i2c", KERNEL=="4-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu2 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="4-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu2 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="4-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu1 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="4-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu1 %S %p"
 
-SUBSYSTEM=="i2c", KERNEL=="4-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu1 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="4-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu1 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="4-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu2 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="4-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu2 %S %p"
 
-SUBSYSTEM=="i2c", KERNEL=="10-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu2 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="10-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu2 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="10-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu1 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="10-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu1 %S %p"
 
-SUBSYSTEM=="i2c", KERNEL=="10-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu1 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="10-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu1 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="10-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu2 %S %p"
+SUBSYSTEM=="i2c", KERNEL=="10-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu2 %S %p"
 
 # EEPROM FAN
 SUBSYSTEM=="i2c", KERNEL=="11-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_fan1 %S %p"
