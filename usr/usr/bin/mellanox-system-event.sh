@@ -83,7 +83,7 @@ if [ "$1" == "add" ]; then
     ln -sf $3$4/in2_input /bsp/environment/$2_in2_input
     ln -sf $3$4/curr2_input /bsp/environment/$2_curr2_input
     ln -sf $3$4/power2_input /bsp/environment/$2_power2_input
-    ln -sf $3$4/in3_input /bsp/environment/$2_in2_input
+    ln -sf $3$4/in3_input /bsp/environment/$2_in3_input
     ln -sf $3$4/curr3_input /bsp/environment/$2_curr3_input
     ln -sf $3$4/power3_input /bsp/environment/$2_power3_input
   fi
@@ -277,7 +277,7 @@ else
     unlink /bsp/environment/$2_in2_input
     unlink /bsp/environment/$2_curr2_input
     unlink /bsp/environment/$2_power2_input
-    unlink /bsp/environment/$2_in2_input
+    unlink /bsp/environment/$2_in3_input
     unlink /bsp/environment/$2_curr3_input
     unlink /bsp/environment/$2_power3_input
   fi
