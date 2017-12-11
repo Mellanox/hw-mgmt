@@ -177,7 +177,7 @@ msn274x_specific()
 	connect_size=${#msn2740_connect_table[@]}
 	for ((i=0; i<$connect_size; i++))
 	do
-		connect_table[i]=${msn2700_connect_table[i]}
+		connect_table[i]=${msn2740_connect_table[i]}
 	done
 	disconnect_size=${#msn2740_dis_table[@]}
 	for ((i=0; i<$disconnect_size; i++))
