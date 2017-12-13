@@ -64,10 +64,10 @@ module_unload_list=(	at24 tmp102 lm75 coretemp max1363 tps53679 pmbus \
 msn2700_connect_table=(	mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
-			max1363 0x6d 5 \
+			max11603 0x6d 5 \
 			lm75 0x4a 7 \
 			24c32 0x51 8 \
-			max1363 0x6d 15 \
+			max11603 0x6d 15 \
 			24c32 0x51 16 \
 			lm75 0x49 17)
 
@@ -84,11 +84,11 @@ msn2700_dis_table=(	0x27 5 \
 msn2100_connect_table=(	mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
-			max1363 0x6d 5 \
+			max11603 0x6d 5 \
 			lm75 0x4a 7 \
 			lm75 0x4b 7 \
 			24c32 0x51 8 \
-			max1363 0x6d 15 \
+			max11603 0x6d 15 \
 			24c32 0x51 16)
 
 msn2100_dis_table=(	0x27 5 \
@@ -104,10 +104,10 @@ msn2100_dis_table=(	0x27 5 \
 msn2740_connect_table=(	mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
-			max1363 0x64 5 \
+			max11603 0x64 5 \
 			tmp102 0x49 6 \
 			tmp102 0x48 7 \
-			max1363 0x6d 15 \
+			max11603 0x6d 15 \
 			24c32 0x51 16)
 
 msn2740_dis_table=(	0x27 5 \
@@ -121,13 +121,13 @@ msn2740_dis_table=(	0x27 5 \
 			0x48 2)
 
 msn2010_connect_table=(	mlxsw_minimal 0x48 2 \
-			max1363 0x6d 5 \
+			max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			lm75 0x4a 7 \
 			lm75 0x4b 7 \
 			24c32 0x51 8 \
-			max1363 0x6d 15 \
+			max11603 0x6d 15 \
 			24c32 0x51 16)
 
 msn2010_dis_table=(	0x71 5 \
