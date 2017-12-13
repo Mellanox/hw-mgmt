@@ -134,32 +134,32 @@ if [ "$1" == "add" ]; then
     ln -sf $3$4/eeprom /bsp/eeprom/psu2_info 2>/dev/null
   fi
   if [ "$2" == "eeprom_fan1" ]; then
-    if [ sf $3$4/name != holder ]; then
+    if [ $3$4/name != "holder" ]; then
       ln -sf $3$4/eeprom /bsp/eeprom/fan1_info 2>/dev/null
     fi
   fi
   if [ "$2" == "eeprom_fan2" ]; then
-    if [ sf $3$4/name != holder ]; then
+    if [ $3$4/name != "holder" ]; then
       ln -sf $3$4/eeprom /bsp/eeprom/fan2_info 2>/dev/null
     fi
   fi
   if [ "$2" == "eeprom_fan3" ]; then
-    if [ sf $3$4/name != holder ]; then
+    if [ $3$4/name != "holder" ]; then
       ln -sf $3$4/eeprom /bsp/eeprom/fan3_info 2>/dev/null
     fi
   fi
   if [ "$2" == "eeprom_fan4" ]; then
-    if [ sf $3$4/name != holder ]; then
+    if [ $3$4/name != "holder" ]; then
       ln -sf $3$4/eeprom /bsp/eeprom/fan4_info 2>/dev/null
     fi
   fi
   if [ "$2" == "eeprom_fan5" ]; then
-    if [ sf $3$4/name != holder ]; then
+    if [ $3$4/name != "holder" ]; then
       ln -sf $3$4/eeprom /bsp/eeprom/fan5_info 2>/dev/null
     fi
   fi
   if [ "$2" == "eeprom_fan6" ]; then
-    if [ sf $3$4/name != holder ]; then
+    if [ $3$4/name != "holder" ]; then
       ln -sf $3$4/eeprom /bsp/eeprom/fan6_info 2>/dev/null
     fi
   fi
