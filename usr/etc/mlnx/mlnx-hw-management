@@ -124,8 +124,8 @@ msn2010_connect_table=(	mlxsw_minimal 0x48 2 \
 			max1363 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
-			tmp102 0x4a 7 \
-			tmp102 0x4b 7 \
+			lm75 0x4a 7 \
+			lm75 0x4b 7 \
 			24c32 0x51 8 \
 			max1363 0x6d 15 \
 			24c32 0x51 16)
