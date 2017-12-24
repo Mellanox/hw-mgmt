@@ -19,8 +19,6 @@ override_dh_auto_install:
 	cp usr/etc/mlnx/* debian/$(pname)/etc/mlnx
 	dh_installdirs -p$(pname) etc/modprobe.d
 	cp usr/etc/modprobe.d/* debian/$(pname)/etc/modprobe.d
-	dh_installdirs -p$(pname) usr/sbin
-	cp usr/usr/sbin/* debian/$(pname)/usr/sbin
 	dh_installdirs -p$(pname) usr/bin
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
 	dh_installdirs -p$(pname) lib/udev/rules.d/
