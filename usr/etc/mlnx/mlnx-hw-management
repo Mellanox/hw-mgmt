@@ -447,10 +447,6 @@ case $ACTION in
 		if [ ! -d /bsp/cpld ]; then
 			mkdir /bsp/cpld
 		fi
-		if [ ! -h /bsp/cpld/cpld_version ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/cpld/cpld_version
-		fi
-		/bsp/cpld/cpld_version port > /bsp/cpld/cpld_port_version
 		if [ ! -d /bsp/system ]; then
 			mkdir /bsp/system
 		fi

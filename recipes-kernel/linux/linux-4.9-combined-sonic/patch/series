@@ -9,3 +9,6 @@
 0008-hwmon-pmbus-Add-support-for-Texas-Instruments-tps536.patch
 0009-platform-mellonox-introduce-mlxreg-io-driver-and-add.patch
 0010-config-mellanox-configuration.patch
+0011-platform-mellanox-mlxreg-hotplug-driver-add-check-fo.patch
+0012-mlxsw-qsfp_sysfs-Support-CPLD-version-reading-based-.patch
+0013-platform-x86-mlx-platform-Add-support-for-more-reset.patch

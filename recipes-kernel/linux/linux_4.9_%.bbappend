@@ -40,5 +40,7 @@ SRC_URI += " \
 	file://0036-platform-x86-mlx-platform-fix-setting-for-empty-devi.patch \
 	file://0037-mlxsw-reg-fix-description-for-msci-register.patch \
 	file://0038-platform-mellonox-introduce-mlxreg-io-driver-and-add.patch \
+	file://0039-mlxsw-qsfp_sysfs-Support-CPLD-version-reading-based-.patch \
+	file://0040-platform-x86-mlx-platform-Add-support-for-more-reset.patch \
 	"
 

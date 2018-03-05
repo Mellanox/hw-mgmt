@@ -43,6 +43,9 @@ if [ "$1" == "add" ]; then
   if [ ! -d /bsp/system ]; then
       mkdir -p /bsp/system
   fi
+  if [ ! -d /bsp/cpld ]; then
+      mkdir -p /bsp/cpld
+  fi
   if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
     ln -sf $3$4/temp1_input /bsp/thermal/$2
     ln -sf $3$4/temp1_max /bsp/thermal/$2_max
@@ -120,6 +123,9 @@ if [ "$1" == "add" ]; then
           ln -sf $3$4/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
         fi
     done
+    if [ -f $3$4/cpld3_version ]; then
+      ln -sf $3$4/cpld3_version /bsp/cpld/cpld_port_version
+    fi
   fi
   if [ "$2" == "eeprom_vpd" ]; then
     ln -sf $3$4/eeprom /bsp/eeprom/vpd_info 2>/dev/null
@@ -255,6 +261,30 @@ if [ "$1" == "add" ]; then
     if [ -f $3$4/cpld2_version ]; then
       ln -sf $3$4/cpld2_version /bsp/cpld/cpld_brd_version
     fi
+    if [ -f $3$4/cause_main_pwr_fail ]; then
+      ln -sf $3$4/cause_main_pwr_fail /bsp/system/cause_main_pwr_fail
+    fi
+    if [ -f $3$4/cause_aux_pwr_or_refresh ]; then
+      ln -sf $3$4/cause_aux_pwr_or_refresh /bsp/system/cause_aux_pwr_or_refresh
+    fi
+    if [ -f $3$4/cause_sw_reset ]; then
+      ln -sf $3$4/cause_sw_reset /bsp/system/cause_sw_reset
+    fi
+    if [ -f $3$4/cause_long_pb ]; then
+      ln -sf $3$4/cause_long_pb /bsp/system/cause_long_pb
+    fi
+    if [ -f $3$4/cause_hotswap_or_wd ]; then
+      ln -sf $3$4/cause_hotswap_or_wd /bsp/system/cause_hotswap_or_wd
+    fi
+    if [ -f $3$4/cause_short_pb ]; then
+      ln -sf $3$4/cause_short_pb /bsp/system/cause_short_pb
+    fi
+    if [ -f $3$4/cause_fw_reset ]; then
+      ln -sf $3$4/cause_fw_reset /bsp/system/cause_fw_reset
+    fi
+    if [ -f $3$4/cause_asic_thermal ]; then
+      ln -sf $3$4/cause_asic_thermal /bsp/system/cause_asic_thermal
+    fi
   fi
 elif [ "$1" == "change" ]; then
     echo "Do nothing on change"
@@ -322,6 +352,9 @@ else
             unlink /bsp/qsfp/qsfp"$i"_status
         fi
     done
+    if [ -L /bsp/cpld/cpld_port_version ]; then
+      unlink /bsp/cpld/cpld_port_version
+    fi
   fi
   if [ "$2" == "eeprom_psu1" ]; then
     unlink /bsp/eeprom/psu1_info
@@ -434,6 +467,30 @@ else
     fi
     if [ -L /bsp/cpld/cpld_brd_version ]; then
       unlink /bsp/cpld/cpld_brd_version
+    fi
+    if [ -L /bsp/cpld/cause_main_pwr_fail ]; then
+      unlink /bsp/cpld/cause_main_pwr_fail
+    fi
+    if [ -L /bsp/cpld/cause_aux_pwr_or_refresh ]; then
+      unlink /bsp/cpld/cause_aux_pwr_or_refresh
+    fi
+    if [ -L /bsp/cpld/cause_sw_reset ]; then
+      unlink /bsp/cpld/cause_sw_reset
+    fi
+    if [ -L /bsp/cpld/cause_long_pb ]; then
+      unlink /bsp/cpld/cause_long_pb
+    fi
+    if [ -L /bsp/cpld/cause_hotswap_or_wd ]; then
+      unlink /bsp/cpld/cause_hotswap_or_wd
+    fi
+    if [ -L /bsp/cpld/cause_short_pb ]; then
+      unlink /bsp/cpld/cause_short_pb
+    fi
+    if [ -L /bsp/cpld/cause_fw_reset ]; then
+      unlink /bsp/cpld/cause_fw_reset
+    fi
+    if [ -L /bsp/cpld/cause_asic_thermal ]; then
+      unlink /bsp/cpld/cause_asic_thermal
     fi
   fi
 fi
