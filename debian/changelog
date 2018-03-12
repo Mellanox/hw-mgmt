@@ -1,4 +1,9 @@
-hw-management (1.mlnx.onl.deb9.11.03.2018) stable; urgency=low
+hw-management (1.mlnx.12.03.2018) stable; urgency=low
   [ MLNX ]
+  * Quarterly update.
+    - CPLD port version.
+    - Reset commands & cause.
+    - Adding iorw util.
+  * Kernel 4.9 support.
 
- -- MellanoxBSP <system-sw-low-level@mellanox.com>  Sun, 11 Mar 2018 10:54:17 +0300
+ -- MellanoxBSP <system-sw-low-level@mellanox.com>  Mon, 12 Mar 2018 10:54:17 +0300
