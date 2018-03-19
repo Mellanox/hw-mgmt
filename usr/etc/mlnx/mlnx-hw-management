@@ -270,37 +270,56 @@ qmb7xxx_sn37x_sn34x_specific()
 check_system()
 {
 	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
-	if [ "$manufacturer" != "Mellanox" ]; then
-		echo $manufacturer is not Mellanox 
-		exit 0
+	if [ "$manufacturer" = "Mellanox" ]; then
+		product=`cat /sys/devices/virtual/dmi/id/product_name`
+		case $product in
+			MSN274*)
+				msn274x_specific
+				;;
+			MSN21*)
+				msn21xx_specific
+				;;
+			MSN24*)
+				msn24xx_specific
+				;;
+			MSN27*|MSB*|MSX*)
+				msn27xx_msb_msx_specific
+				;;
+			MSN201*)
+				msn201x_specific
+				;;
+			QMB7*|SN37*|SN34*)
+				qmb7xxx_sn37x_sn34x_specific
+				;;
+			*)
+				echo $product is not supported
+				exit 0
+				;;
+		esac
+	else
+		# Check ODM
+		board=`cat /sys/devices/virtual/dmi/id/board_name`
+		case $board in
+			VMOD0001)
+				msn27xx_msb_msx_specific
+				;;
+			VMOD0002)
+				msn21xx_specific
+				;;
+			VMOD0003)
+				msn274x_specific
+				;;
+			VMOD0004)
+				msn201x_specific
+				;;
+			VMOD0005)
+				qmb7xxx_sn37x_sn34x_specific
+				;;
+			*)
+				echo $manufacturer is not Mellanox
+				exit 0
+		esac
 	fi
-
-	product=`cat /sys/devices/virtual/dmi/id/product_name`
-
-	case $product in
-		MSN274*)
-			msn274x_specific
-			;;
-		MSN21*)
-			msn21xx_specific
-			;;
-		MSN24*)
-			msn24xx_specific
-			;;
-		MSN27*|MSB*|MSX*)
-			msn27xx_msb_msx_specific
-			;;
-		MSN201*)
-			msn201x_specific
-			;;
-		QMB7*|SN37*|SN34*)
-			qmb7xxx_sn37x_sn34x_specific
-			;;
-		*)
-			echo $product is not supported 
-			exit 0
-			;;
-	esac
 
 	kernel_release=`uname -r`
 }

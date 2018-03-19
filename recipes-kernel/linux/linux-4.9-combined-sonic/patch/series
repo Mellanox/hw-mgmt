@@ -12,3 +12,8 @@
 0011-platform-mellanox-mlxreg-hotplug-driver-add-check-fo.patch
 0012-mlxsw-qsfp_sysfs-Support-CPLD-version-reading-based-.patch
 0013-platform-x86-mlx-platform-Add-support-for-more-reset.patch
+0014-platform-mellanox-mlxreg-hotplug-add-extra-run-cycle.patch
+0015-platform-mellanox-add-new-OEM-system-types-to-mlx-pl.patch
+0016-platform-x86-mlx-platform-fix-module-aliases.patch
+0017-platform-x86-mlx-platform-Add-bus-detection-and-diff.patch
+0018-i2c-busses-Add-capabilities-to-i2c-mlxcpld.patch
