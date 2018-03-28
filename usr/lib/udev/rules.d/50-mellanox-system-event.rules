@@ -64,11 +64,17 @@ SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:green", ACTION=="remove", RUN+="/usr/bin/
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan1:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
@@ -76,11 +82,17 @@ SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:green", ACTION=="remove", RUN+="/usr/bin
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan2:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan3:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan3:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan3:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan3:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan3:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan3:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
@@ -88,11 +100,17 @@ SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:green", ACTION=="remove", RUN+="/usr/bin
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan4:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan5:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan5:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan5:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan5:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan5:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan5:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
@@ -100,11 +118,17 @@ SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:green", ACTION=="remove", RUN+="/usr/bin
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:fan6:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:psu:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:psu:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
@@ -112,11 +136,17 @@ SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:green", ACTION=="remove", RUN+="/usr/bin
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
+SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:psu1:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu2:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu2:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu2:red", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:psu2:red", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:psu2:orange", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:psu2:orange", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:status:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:status:green", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm led %S %p %k"
