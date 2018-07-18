@@ -11,7 +11,33 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 #
-# echo $1 and $2 and $3 and $4 and $5 >> /root/msg.txt
+#
+fan_command=0x3b
+fan_psu_default=0x3c
+i2c_bus_max=10
+i2c_bus_offset=0
+i2c_asic_bus_default=2
+
+find_i2c_bus()
+{
+	# Find physical bus number of Mellanox I2C controller. The default
+	# number is 1, but it could be assigned to others id numbers on
+	# systems with different CPU types.
+	for ((i=1; i<$i2c_bus_max; i++)); do
+		folder=/sys/bus/i2c/devices/i2c-$i
+		if [ -d $folder ]; then
+			name=`cat $folder/name | cut -d' ' -f 1`
+			if [ "$name" == "i2c-mlxcpld" ]; then
+				i2c_bus_offset=$(($i-1))
+				return
+			fi
+		fi
+	done
+
+	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	exit 0
+}
+
 if [ "$1" == "add" ]; then
   if [ ! -d /bsp/thermal ]; then
       mkdir -p /bsp/thermal/
@@ -68,9 +94,9 @@ if [ "$1" == "add" ]; then
     busfolder=`basename $busdir`
     bus="${busfolder:0:${#busfolder}-5}"
     if [ "$2" == "psu1" ]; then
-      i2cset -f -y $bus 0x59 0x3b 0x3c 0x00 0xbc i
+      i2cset -f -y $bus 0x59 $fan_command $fan_psu_default wp
     else
-      i2cset -f -y $bus 0x58 0x3b 0x3c 0x00 0x90 i
+      i2cset -f -y $bus 0x58 $fan_command $fan_psu_default wp
     fi
   fi
   if [ "$2" == "a2d" ]; then
@@ -288,6 +314,29 @@ if [ "$1" == "add" ]; then
   fi
 elif [ "$1" == "change" ]; then
     echo "Do nothing on change"
+	if [ "$2" == "hotplug_asic" ]; then
+		if [ -d /sys/module/mlxsw_pci ]; then
+			return
+		fi
+		find_i2c_bus
+		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+		path=/sys/bus/i2c/devices/i2c-$bus
+		echo $2 $3 $4 $5 $6 $7 $8 $9 $path >> /tmp/trace
+		if [ "$3" == "up" ]; then
+			if [ ! -d /sys/module/mlxsw_minimal ]; then
+				modprobe mlxsw_minimal
+			fi
+			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
+			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
+				echo mlxsw_minimal 0x48 > $path/new_device
+			fi
+		elif [ "$3" == "down" ]; then
+			if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
+			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
+				echo 0x48 > $path/delete_device
+			fi
+		fi
+	fi
 else
   if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
     unlink /bsp/thermal/$2
