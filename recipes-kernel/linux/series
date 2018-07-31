@@ -1,4 +1,3 @@
-driver-support-intel-igb-bcm5461-phy.patch
 0001-i2c-mlxcpld-add-master-driver-for-Mellanox-systems.patch
 0002-i2c-mux-mlxcpld-add-driver-for-Mellanox-systems.patch
 0003-platform-mellanox-Introduce-Mellanox-hardware-platfo.patch
