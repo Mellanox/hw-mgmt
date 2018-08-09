@@ -32,7 +32,7 @@
 #  MSN24*		Spider
 #  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2
 #  MSN201*		Boxer
-#  QMB7*|MQM87*|SN37*|SN34*	Jupiter, Jaguar, Anaconda
+#  QMB7*|MQM87*|MSN37*|MSN34*	Jupiter, Jaguar, Anaconda
 # Available options:
 # start        - install all BSP kernel drivers, connect drivers to devices, create BSP dictionary as symbolic
 #                links to sysfs entries
@@ -290,7 +290,7 @@ check_system()
 			MSN201*)
 				msn201x_specific
 				;;
-			QMB7*|MQM87*|SN37*|SN34*)
+			QMB7*|MQM87*|MSN37*|MSN34*)
 				mqm87xx_sn37x_sn34x_specific
 				;;
 			*)
