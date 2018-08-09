@@ -445,7 +445,7 @@ index 61cbe35..e03f03f 100644
 -MODULE_ALIAS("dmi:*:*Mellanox*:MSN21*:");
 -MODULE_ALIAS("dmi:*:*Mellanox*MSN274*:");
 -MODULE_ALIAS("dmi:*:*Mellanox*MSN201*:");
--MODULE_ALIAS("dmi:*:*Mellanox*MQM87*:");
+-MODULE_ALIAS("dmi:*:*Mellanox*QMB7*:");
 -MODULE_ALIAS("dmi:*:*Mellanox*SN37*:");
 -MODULE_ALIAS("dmi:*:*Mellanox*QM34*:");
 diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h

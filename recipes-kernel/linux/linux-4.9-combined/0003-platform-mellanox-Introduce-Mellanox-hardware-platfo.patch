@@ -1323,21 +1323,21 @@ diff -Nur a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platf
 +		.callback = mlxplat_dmi_qmb7xx_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
-+			DMI_MATCH(DMI_PRODUCT_NAME, "MQM87"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "QMB7"),
 +		},
 +	},
 +	{
 +		.callback = mlxplat_dmi_qmb7xx_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
-+			DMI_MATCH(DMI_PRODUCT_NAME, "MSN37"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "SN37"),
 +		},
 +	},
 +	{
 +		.callback = mlxplat_dmi_qmb7xx_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
-+			DMI_MATCH(DMI_PRODUCT_NAME, "MSN34"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "SN34"),
 +		},
 +	},
 +	{ }
@@ -1458,6 +1458,6 @@ diff -Nur a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platf
 +MODULE_ALIAS("dmi:*:*Mellanox*:MSN21*:");
 +MODULE_ALIAS("dmi:*:*Mellanox*MSN274*:");
 +MODULE_ALIAS("dmi:*:*Mellanox*MSN201*:");
-+MODULE_ALIAS("dmi:*:*Mellanox*MQM87*:");
++MODULE_ALIAS("dmi:*:*Mellanox*QMB7*:");
 +MODULE_ALIAS("dmi:*:*Mellanox*SN37*:");
 +MODULE_ALIAS("dmi:*:*Mellanox*QM34*:");
