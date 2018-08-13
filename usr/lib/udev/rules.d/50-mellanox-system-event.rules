@@ -245,3 +245,7 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 # Register space attributes
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add regio %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm regio %S %p"
+
+# CPLD FAN
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add fan %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm fan %S %p"
