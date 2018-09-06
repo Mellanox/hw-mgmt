@@ -107,7 +107,7 @@ msn2740_connect_table=(	mlxsw_minimal 0x48 2 \
 			max11603 0x64 5 \
 			tmp102 0x49 6 \
 			tmp102 0x48 7 \
-            24c32 0x51 8 \
+			24c32 0x51 8 \
 			max11603 0x6d 15 \
 			24c32 0x51 16)
 
