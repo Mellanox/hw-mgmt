@@ -151,7 +151,7 @@ mqm8700_connect_table=(	mlxsw_minimal 0x48 2 \
 			max11603 0x6d 15 \
 			24c32 0x50 16)
 
-mm8700_dis_table=(	0x64 5 \
+mqm8700_dis_table=(	0x64 5 \
 			0x70 5 \
 			0x71 5 \
 			0x49 7 \
