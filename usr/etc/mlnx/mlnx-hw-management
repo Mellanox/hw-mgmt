@@ -1,21 +1,34 @@
 #!/bin/bash
+
+# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
 #
-# Copyright (C) 2010-2017, Mellanox Technologies Ltd.  ALL RIGHTS RESERVED.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
-#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
 
 ### BEGIN INIT INFO
@@ -52,17 +65,12 @@ module_load_path=(	i2c/i2c-dev.ko \
 			hwmon/tmp102.ko \
 			misc/eeprom/at24.ko \
 			leds/trigger/ledtrig-timer.ko
-			net/ethernet/mellanox/mlxsw/mlxsw_minimal.ko \
-			i2c/busses/i2c-mlxcpld.ko \
-			platform/x86/mlx-platform.ko)
+			net/ethernet/mellanox/mlxsw/mlxsw_minimal.ko)
 
 module_unload_list=(	at24 tmp102 lm75 coretemp max1363 tps53679 pmbus \	
-			mlxsw_minimal mlxsw_i2c mlxsw_core mlx_platform \
-			mlxreg_io leds_mlxreg mlxreg_hotplug i2c_mlxcpld \
-			ledtrig_timer i2c_dev)
+			mlxsw_minimal mlxsw_i2c mlxsw_core ledtrig_timer i2c_dev)
 
-msn2700_connect_table=(	mlxsw_minimal 0x48 2 \
-			pmbus 0x27 5 \
+msn2700_connect_table=( pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
 			lm75 0x4a 7 \
@@ -78,11 +86,9 @@ msn2700_dis_table=(	0x27 5 \
 			0x51 8 \
 			0x6d 15 \
 			0x51 16 \
-			0x49 17 \
-			0x48 2)
+			0x49 17)
 
-msn2100_connect_table=(	mlxsw_minimal 0x48 2 \
-			pmbus 0x27 5 \
+msn2100_connect_table=( pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
 			lm75 0x4a 7 \
@@ -98,11 +104,9 @@ msn2100_dis_table=(	0x27 5 \
 			0x4b 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x51 16 \
-			0x48 2)
+			0x51 16)
 
-msn2740_connect_table=(	mlxsw_minimal 0x48 2 \
-			pmbus 0x27 5 \
+msn2740_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x64 5 \
 			tmp102 0x49 6 \
@@ -118,11 +122,9 @@ msn2740_dis_table=(	0x27 5 \
 			0x48 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x51 16 \
-			0x48 2)
+			0x51 16)
 
-msn2010_connect_table=(	mlxsw_minimal 0x48 2 \
-			max11603 0x6d 5 \
+msn2010_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			lm75 0x4a 7 \
@@ -138,11 +140,9 @@ msn2010_dis_table=(	0x71 5 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x51 16 \
-			0x48 2)
+			0x51 16)
 
-mqm8700_connect_table=(	mlxsw_minimal 0x48 2 \
-			max11603 0x64 5 \
+mqm8700_connect_table=(	max11603 0x64 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
@@ -158,8 +158,7 @@ mqm8700_dis_table=(	0x64 5 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x50 16 \
-			0x48 2)
+			0x50 16)
 
 
 fan_max_speed=23000
