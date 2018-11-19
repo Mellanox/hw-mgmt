@@ -38,15 +38,7 @@
 # When trigger is matched, rule related data is to be passed to the event
 # handler.
 
-KERNEL=="cooling_device*", ATTR{type}=="mlxsw_fan", SYMLINK+="mlx_cooling"
-
 # Ambient temperatures (lm75, tmp102).
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", SYMLINK+="tape/by-path/", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add fan_amb %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm fan_amb %S %p"
-
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add port_amb %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm port_amb %S %p"
-
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add port_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm port_amb %S %p"
 
@@ -59,9 +51,6 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004a/
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add fan_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm fan_amb %S %p"
 
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add fan_amb %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm fan_amb %S %p"
-
 # Switch - FAN tachometers, ASIC and ports temperatures and faults (I2C).
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add switch %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm switch %S %p"
@@ -71,7 +60,7 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:*/0000:*/hwmon/hwmon*", A
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:*/0000:*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm switch %S %p"
 
 # Cooling device.
-SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="add", SYMLINK+="cool/my/", RUN+="/usr/bin/mellanox-system-event.sh add cooling_device %S %p %k"
+SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add cooling_device %S %p %k"
 SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm cooling_device %S %p %k"
 
 # Thermal zone.
@@ -80,44 +69,19 @@ SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="remove", RUN+="/usr/bin/
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_HIGHEST}!="", ACTION=="change", RUN+="/usr/bin/mellanox-system-event.sh change thermal_zone %S %p %k highest $env{TZ_HIGHEST}"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_DOWN}=="1", ACTION=="change", RUN+="/usr/bin/mellanox-system-event.sh change thermal_zone %S %p %k down"
 
+# PS units power cables when power source is connected
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh rm add psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh rm add psu2 %p %k %S %n"
+
 # Hotplug devices statuses.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add hotplug %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm hotplug %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="2" ACTION=="change", RUN+="/usr/bin/mellanox-system-event.sh change hotplug_asic up %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="0" ACTION=="change", RUN+="/usr/bin/mellanox-system-event.sh change hotplug_asic down %S %p"
 
-# PS units power cables when power source is connected
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh rm add psu1 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh rm add psu2 %p %k %S %n"
-
-
-# EEPROM system
-SUBSYSTEM=="i2c", KERNEL=="8-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_vpd %S %p"
-SUBSYSTEM=="i2c", KERNEL=="8-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_vpd %S %p"
-
-# EEPROM system
-SUBSYSTEM=="i2c", KERNEL=="16-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_cpu %S %p"
-SUBSYSTEM=="i2c", KERNEL=="16-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_cpu %S %p"
-
-# EEPROM PSU
-SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu1 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu1 %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_psu2 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_psu2 %S %p"
-
-# EEPROM FAN
-SUBSYSTEM=="i2c", KERNEL=="11-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_fan1 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="11-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_fan1 %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="12-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_fan2 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="12-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_fan2 %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="13-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_fan3 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="13-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_fan3 %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="14-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom_fan4 %S %p"
-SUBSYSTEM=="i2c", KERNEL=="14-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom_fan4 %S %p"
+# Register space attributes
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm regio %S %p"
 
 # LED
 SUBSYSTEM=="leds", KERNEL=="mlxreg:*:green", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add led %S %p %k"
@@ -152,27 +116,13 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0071/
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add a2d %S %p %k"
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm a2d %S %p %k"
 
-# ASIC - FAN and temperature
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-1/i2c-2/2-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add asic %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-1/i2c-2/2-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm asic %S %p"
+# EEPROM
+SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom %S %p"
 
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-1/i2c-2/2-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add fan %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-1/i2c-2/2-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm fan %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm eeprom %S %p"
 
 # ASIC - QSFP
 SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add qsfp %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm qsfp %S %p"
-
-# Hotplug devices statuses
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add hotplug %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm hotplug %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="2" ACTION=="change", RUN+="/usr/bin/mellanox-system-event.sh change hotplug_asic up %S %p
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="0" ACTION=="change", RUN+="/usr/bin/mellanox-system-event.sh change hotplug_asic down %S %p
-
-# Register space attributes
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add regio %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm regio %S %p"
-
-# CPLD FAN
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/mellanox-system-event.sh add fan %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/mellanox-system-event.sh rm fan %S %p"

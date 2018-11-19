@@ -339,6 +339,16 @@ load_module()
 			if [ $name = "at24" ]; then
 				param="io_limit=32"
 			fi
+			if [ $name = "mlxsw_minimal" ]; then
+				# Verify if mlxsw_pci module is loaded, if
+				# it's - don't load mlxsw_minimal. thermal
+				# algorithm will be performed by PCI based
+				# mlxsw module.
+				if [ -d /sys/module/mlxsw_pci ] ||
+				   [ -d /sys/module/mlxsw_spectrum ]; then
+					return
+				fi
+			fi
 			if modprobe $name $param 2>/dev/null; then
 				log_success_msg "$name module load passed"
 			else
