@@ -83,6 +83,7 @@ if [ "$1" == "add" ]; then
     ln -sf $5$3/temp1_max_alarm /bsp/thermal/$2_alarm
     ln -sf $5$3/in1_input /bsp/power/$2_volt_in
     ln -sf $5$3/in2_input /bsp/power/$2_volt
+    ln -sf $5$3/in3_input /bsp/power/$2_volt3
     ln -sf $5$3/power1_input /bsp/power/$2_power_in
     ln -sf $5$3/power2_input /bsp/power/$2_power
     ln -sf $5$3/curr1_input /bsp/power/$2_curr_in
