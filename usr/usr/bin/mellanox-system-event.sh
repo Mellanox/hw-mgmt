@@ -31,6 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+bsp_path=/var/run/mellanox
 fan_command=0x3b
 fan_psu_default=0x3c
 i2c_bus_max=10
@@ -93,55 +94,22 @@ find_eeprom_name()
 }
 
 if [ "$1" == "add" ]; then
-	if [ ! -d /bsp/thermal ]; then
-		mkdir -p /bsp/thermal/
-	fi
-	if [ ! -d /bsp/thermal_zone ]; then
-		mkdir -p /bsp/thermal_zone/
-	fi
-	if [ ! -d /bsp/environment ]; then
-		mkdir -p /bsp/environment/
-	fi
-	if [ ! -d /bsp/power ]; then
-		mkdir -p /bsp/power
-	fi
-	if [ ! -d /bsp/fan ]; then
-		mkdir -p /bsp/fan/
-	fi
-	if [ ! -d /bsp/eeprom ]; then
-		mkdir -p /bsp/eeprom/
-	fi
-	if [ ! -d /bsp/led ]; then
-		mkdir -p /bsp/led/
-	fi
-	if [ ! -d /bsp/qsfp ]; then
-		mkdir -p /bsp/qsfp
-	fi
-	if [ ! -d /bsp/module ]; then
-		mkdir -p /bsp/module
-	fi
-	if [ ! -d /bsp/system ]; then
-		mkdir -p /bsp/system
-	fi
-	if [ ! -d /bsp/cpld ]; then
-		mkdir -p /bsp/cpld
-	fi
 	if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
-		ln -sf $3$4/temp1_input /bsp/thermal/$2
-		ln -sf $3$4/temp1_max /bsp/thermal/$2_max
-		ln -sf $3$4/temp1_max_hyst /bsp/thermal/$2_hyst
+		ln -sf $3$4/temp1_input $bsp_path/thermal/$2
+		ln -sf $3$4/temp1_max $bsp_path/thermal/$2_max
+		ln -sf $3$4/temp1_max_hyst $bsp_path/thermal/$2_hyst
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
-		ln -sf $5$3/temp1_input /bsp/thermal/$2
-		ln -sf $5$3/temp1_max /bsp/thermal/$2_max
-		ln -sf $5$3/temp1_max_alarm /bsp/thermal/$2_alarm
-		ln -sf $5$3/in1_input /bsp/power/$2_volt_in
-		ln -sf $5$3/in2_input /bsp/power/$2_volt
-		ln -sf $5$3/power1_input /bsp/power/$2_power_in
-		ln -sf $5$3/power2_input /bsp/power/$2_power
-		ln -sf $5$3/curr1_input /bsp/power/$2_curr_in
-		ln -sf $5$3/curr2_input /bsp/power/$2_curr
-		ln -sf $5$3/fan1_input /bsp/fan/$2_fan1_speed_get
+		ln -sf $5$3/temp1_input $bsp_path/thermal/$2
+		ln -sf $5$3/temp1_max $bsp_path/thermal/$2_max
+		ln -sf $5$3/temp1_max_alarm $bsp_path/thermal/$2_alarm
+		ln -sf $5$3/in1_input $bsp_path/power/$2_volt_in
+		ln -sf $5$3/in2_input $bsp_path/power/$2_volt
+		ln -sf $5$3/power1_input $bsp_path/power/$2_power_in
+		ln -sf $5$3/power2_input $bsp_path/power/$2_power
+		ln -sf $5$3/curr1_input $bsp_path/power/$2_curr_in
+		ln -sf $5$3/curr2_input $bsp_path/power/$2_curr
+		ln -sf $5$3/fan1_input $bsp_path/fan/$2_fan1_speed_get
 
 		#FAN speed set
 		busdir=`echo $5$3 |xargs dirname |xargs dirname`
@@ -154,31 +122,31 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "a2d" ]; then
-		ln -sf $3$4/in_voltage-voltage_scale /bsp/environment/$2_$5_voltage_scale
+		ln -sf $3$4/in_voltage-voltage_scale $bsp_path/environment/$2_$5_voltage_scale
 		for i in {1..12}; do
 			if [ -f $3$4/in_voltage"$i"_raw ]; then
-				ln -sf $3$4/in_voltage"$i"_raw /bsp/environment/$2_$5_raw_"$i"
+				ln -sf $3$4/in_voltage"$i"_raw $bsp_path/environment/$2_$5_raw_"$i"
 			fi
 		done
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]; then
-		ln -sf $3$4/in1_input /bsp/environment/$2_in1_input
-		ln -sf $3$4/in2_input /bsp/environment/$2_in2_input
-		ln -sf $3$4/curr2_input /bsp/environment/$2_curr2_input
-		ln -sf $3$4/power2_input /bsp/environment/$2_power2_input
-		ln -sf $3$4/in3_input /bsp/environment/$2_in3_input
-		ln -sf $3$4/curr3_input /bsp/environment/$2_curr3_input
-		ln -sf $3$4/power3_input /bsp/environment/$2_power3_input
+		ln -sf $3$4/in1_input $bsp_path/environment/$2_in1_input
+		ln -sf $3$4/in2_input $bsp_path/environment/$2_in2_input
+		ln -sf $3$4/curr2_input $bsp_path/environment/$2_curr2_input
+		ln -sf $3$4/power2_input $bsp_path/environment/$2_power2_input
+		ln -sf $3$4/in3_input $bsp_path/environment/$2_in3_input
+		ln -sf $3$4/curr3_input $bsp_path/environment/$2_curr3_input
+		ln -sf $3$4/power3_input $bsp_path/environment/$2_power3_input
 	fi
 	if [ "$2" == "asic" ]; then
-		ln -sf $3$4/temp1_input /bsp/thermal/$2
-		ln -sf $3$4/temp1_highest /bsp/thermal/$2_highest
+		ln -sf $3$4/temp1_input $bsp_path/thermal/$2
+		ln -sf $3$4/temp1_highest $bsp_path/thermal/$2_highest
 	fi
 	if [ "$2" == "fan" ]; then
 		# Take time for adding infrastructure
 		sleep 3
-		if [ -f /bsp/config/fan_inversed ]; then
-			inv=`cat /bsp/config/fan_inversed`
+		if [ -f $bsp_path/config/fan_inversed ]; then
+			inv=`cat $bsp_path/config/fan_inversed`
 		fi
 		for i in {1..12}; do
 			if [ -f $3$4/fan"$i"_input ]; then
@@ -187,10 +155,10 @@ if [ "$1" == "add" ]; then
 				else
 					j=`echo $(($inv - $i))`
 				fi
-				ln -sf $3$4/fan"$i"_input /bsp/fan/fan"$j"_speed_get
-				ln -sf $3$4/pwm1 /bsp/fan/fan"$j"_speed_set
-				ln -sf /bsp/config/fan_min_speed /bsp/fan/fan"$j"_min
-				ln -sf /bsp/config/fan_max_speed /bsp/fan/fan"$j"_max
+				ln -sf $3$4/fan"$i"_input $bsp_path/fan/fan"$j"_speed_get
+				ln -sf $3$4/pwm1 $bsp_path/fan/fan"$j"_speed_set
+				ln -sf $bsp_path/config/fan_min_speed $bsp_path/fan/fan"$j"_min
+				ln -sf $bsp_path/config/fan_max_speed $bsp_path/fan/fan"$j"_max
 			fi
 		done
 	fi
@@ -199,31 +167,31 @@ if [ "$1" == "add" ]; then
 		sleep 5
 		for i in {1..64}; do
 			if [ -f $3$4/qsfp$i ]; then
-				ln -sf $3$4/qsfp$i /bsp/qsfp/qsfp"$i"
-				ln -sf $3$4/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
+				ln -sf $3$4/qsfp$i $bsp_path/qsfp/qsfp"$i"
+				ln -sf $3$4/qsfp"$i"_status $bsp_path/qsfp/qsfp"$i"_status
 			fi
 		done
 		if [ -f $3$4/cpld3_version ]; then
-			ln -sf $3$4/cpld3_version /bsp/cpld/cpld_port_version
+			ln -sf $3$4/cpld3_version $bsp_path/cpld/cpld_port_version
 		fi
 	fi
 	if [ "$2" == "led" ]; then
 		name=`echo $5 | cut -d':' -f2`
 		color=`echo $5 | cut -d':' -f3`
-		ln -sf $3$4/brightness /bsp/led/led_"$name"_"$color"
+		ln -sf $3$4/brightness $bsp_path/led/led_"$name"_"$color"
 		echo timer > $3$4/trigger
-		ln -sf $3$4/delay_on	/bsp/led/led_"$name"_"$color"_delay_on
-		ln -sf $3$4/delay_off /bsp/led/led_"$name"_"$color"_delay_off
-		ln -sf /usr/bin/led_state.sh /bsp/led/led_"$name"_state
+		ln -sf $3$4/delay_on	$bsp_path/led/led_"$name"_"$color"_delay_on
+		ln -sf $3$4/delay_off $bsp_path/led/led_"$name"_"$color"_delay_off
+		ln -sf /usr/bin/led_state.sh $bsp_path/led/led_"$name"_state
 
-		if [ ! -f /bsp/led/led_"$name"_capability ]; then
-			echo none ${color} ${color}_blink > /bsp/led/led_"$name"_capability
+		if [ ! -f $bsp_path/led/led_"$name"_capability ]; then
+			echo none ${color} ${color}_blink > $bsp_path/led/led_"$name"_capability
 		else
-			capability=`cat /bsp/led/led_"$name"_capability`
+			capability=`cat $bsp_path/led/led_"$name"_capability`
 			capability="${capability} ${color} ${color}_blink"
-			echo $capability > /bsp/led/led_"$name"_capability
+			echo $capability > $bsp_path/led/led_"$name"_capability
 		fi
-		/bsp/led/led_"$name"_state
+		$bsp_path/led/led_"$name"_state
 	fi
 	if [ "$2" == "thermal_zone" ]; then
 		busfolder=`basename $3$4`
@@ -238,14 +206,14 @@ if [ "$1" == "add" ]; then
 		else
 			 zone=$zonename-$zonetype
 		fi
-		mkdir -p /bsp/thermal_zone/$zone
-		ln -sf $3$4/mode /bsp/thermal_zone/$zone/mode
+		mkdir -p $bsp_path/thermal_zone/$zone
+		ln -sf $3$4/mode $bsp_path/thermal_zone/$zone/mode
 		for i in {0..11}; do
 			if [ -f $3$4/trip_point_"$i"_temp ]; then
-				ln -sf $3$4/trip_point_"$i"_temp /bsp/thermal_zone/$zone/trip_point_$i
+				ln -sf $3$4/trip_point_"$i"_temp $bsp_path/thermal_zone/$zone/trip_point_$i
 			fi
 			if [ -d $3$4/cdev"$i" ]; then
-				ln -sf $3$4/cdev"$i"/cur_state /bsp/thermal_zone/$zone/cooling"$i"_current_state
+				ln -sf $3$4/cdev"$i"/cur_state $bsp_path/thermal_zone/$zone/cooling"$i"_current_state
 			fi
 		done
 	fi
@@ -258,31 +226,31 @@ if [ "$1" == "add" ]; then
 					 id=$(($i-2))
 					 name="core$id"
 				fi
-				ln -sf $3$4/temp"$i"_input /bsp/thermal/cpu_$name
-				ln -sf $3$4/temp"$i"_crit /bsp/thermal/cpu_"$name"_crit
-				ln -sf $3$4/temp"$i"_crit_alarm /bsp/thermal/cpu_"$name"_crit_alarm
-				ln -sf $3$4/temp"$i"_max /bsp/thermal/cpu_"$name"_max
+				ln -sf $3$4/temp"$i"_input $bsp_path/thermal/cpu_$name
+				ln -sf $3$4/temp"$i"_crit $bsp_path/thermal/cpu_"$name"_crit
+				ln -sf $3$4/temp"$i"_crit_alarm $bsp_path/thermal/cpu_"$name"_crit_alarm
+				ln -sf $3$4/temp"$i"_max $bsp_path/thermal/cpu_"$name"_max
 			fi
 		done
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for i in {1..12}; do
 			if [ -f $3$4/fan$i ]; then
-				ln -sf $3$4/fan$i /bsp/module/fan"$i"_status
+				ln -sf $3$4/fan$i $bsp_path/module/fan"$i"_status
 			fi
 		done
 		for i in {1..2}; do
 			if [ -f $3$4/psu$i ]; then
-				ln -sf $3$4/psu$i /bsp/module/psu"$i"_status
+				ln -sf $3$4/psu$i $bsp_path/module/psu"$i"_status
 			fi
 			if [ -f $3$4/pwr$i ]; then
-				ln -sf $3$4/pwr$i /bsp/module/psu"$i"_pwr_status
+				ln -sf $3$4/pwr$i $bsp_path/module/psu"$i"_pwr_status
 			fi
 		done
 	fi
 	if [ "$2" == "regio" ]; then
 		if [ -d $3$4 ]; then
-			ln -sf $3$4 /bsp/system
+			ln -sf $3$4 $bsp_path/system
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
@@ -292,7 +260,7 @@ if [ "$1" == "add" ]; then
 		find_i2c_bus
 		bus=$(($bus-+$i2c_bus_offset))
 		find_eeprom_name $bus
-		ln -sf $3$4/eeprom /bsp/eeprom/$eeprom_name 2>/dev/null
+		ln -sf $3$4/eeprom $bsp_path/eeprom/$eeprom_name 2>/dev/null
 	fi
 	fi
 elif [ "$1" == "change" ]; then
@@ -321,148 +289,148 @@ elif [ "$1" == "change" ]; then
 	fi
 else
 	if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
-		unlink /bsp/thermal/$2
-		unlink /bsp/thermal/$2_max
-		unlink /bsp/thermal/$2_hyst
+		unlink $bsp_path/thermal/$2
+		unlink $bsp_path/thermal/$2_max
+		unlink $bsp_path/thermal/$2_hyst
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
-		unlink /bsp/thermal/$2
-		unlink /bsp/thermal/$2_max
-		unlink /bsp/thermal/$2_alarm
-		unlink /bsp/power/$2_volt_in
-		unlink /bsp/power/$2_volt
-		unlink /bsp/power/$2_power_in
-		unlink /bsp/power/$2_power
-		unlink /bsp/power/$2_curr_in
-		unlink /bsp/power/$2_curr
-		unlink /bsp/fan/$2_fan1_speed_get
+		unlink $bsp_path/thermal/$2
+		unlink $bsp_path/thermal/$2_max
+		unlink $bsp_path/thermal/$2_alarm
+		unlink $bsp_path/power/$2_volt_in
+		unlink $bsp_path/power/$2_volt
+		unlink $bsp_path/power/$2_power_in
+		unlink $bsp_path/power/$2_power
+		unlink $bsp_path/power/$2_curr_in
+		unlink $bsp_path/power/$2_curr
+		unlink $bsp_path/fan/$2_fan1_speed_get
 	fi
 	if [ "$2" == "a2d" ]; then
-		unlink /bsp/environment/$2_$5_voltage_scale
+		unlink $bsp_path/environment/$2_$5_voltage_scale
 		for i in {1..12}; do
-			if [ -L /bsp/environment/$2_$5_raw_"$i" ]; then
-				unlink /bsp/environment/$2_$5_raw_"$i"
+			if [ -L $bsp_path/environment/$2_$5_raw_"$i" ]; then
+				unlink $bsp_path/environment/$2_$5_raw_"$i"
 			fi
 		done
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ]; then
-		unlink /bsp/environment/$2_in1_input
-		unlink /bsp/environment/$2_in2_input
-		unlink /bsp/environment/$2_curr2_input
-		unlink /bsp/environment/$2_power2_input
-		unlink /bsp/environment/$2_in3_input
-		unlink /bsp/environment/$2_curr3_input
-		unlink /bsp/environment/$2_power3_input
+		unlink $bsp_path/environment/$2_in1_input
+		unlink $bsp_path/environment/$2_in2_input
+		unlink $bsp_path/environment/$2_curr2_input
+		unlink $bsp_path/environment/$2_power2_input
+		unlink $bsp_path/environment/$2_in3_input
+		unlink $bsp_path/environment/$2_curr3_input
+		unlink $bsp_path/environment/$2_power3_input
 	fi
 	if [ "$2" == "asic" ]; then
-		unlink /bsp/thermal/$2
-		unlink /bsp/thermal/$2_highest
+		unlink $bsp_path/thermal/$2
+		unlink $bsp_path/thermal/$2_highest
 	fi
 	if [ "$2" == "fan" ]; then
 		for i in {1..12}; do
-			if [ -L /bsp/fan/fan"$i"_speed_get ]; then
-				unlink /bsp/fan/fan"$i"_speed_get
+			if [ -L $bsp_path/fan/fan"$i"_speed_get ]; then
+				unlink $bsp_path/fan/fan"$i"_speed_get
 			fi
-			if [ -L /bsp/fan/fan"$i"_speed_set ]; then
-				unlink /bsp/fan/fan"$i"_speed_set
+			if [ -L $bsp_path/fan/fan"$i"_speed_set ]; then
+				unlink $bsp_path/fan/fan"$i"_speed_set
 			fi
-			if [ -L /bsp/fan/fan"$i"_min ]; then
-				unlink /bsp/fan/fan"$i"_min
+			if [ -L $bsp_path/fan/fan"$i"_min ]; then
+				unlink $bsp_path/fan/fan"$i"_min
 			fi
-			if [ -L /bsp/fan/fan"$i"_max ]; then
-				unlink /bsp/fan/fan"$i"_max
+			if [ -L $bsp_path/fan/fan"$i"_max ]; then
+				unlink $bsp_path/fan/fan"$i"_max
 			fi
  		done
 	fi
 	if [ "$2" == "qsfp" ]; then
 		for i in {1..64}; do
-			if [ -L /bsp/qsfp/qsfp$i ]; then
-				unlink /bsp/qsfp/qsfp"$i"
+			if [ -L $bsp_path/qsfp/qsfp$i ]; then
+				unlink $bsp_path/qsfp/qsfp"$i"
 			fi
-			if [ -L /bsp/qsfp/qsfp"$i"_status ]; then
-				unlink /bsp/qsfp/qsfp"$i"_status
+			if [ -L $bsp_path/qsfp/qsfp"$i"_status ]; then
+				unlink $bsp_path/qsfp/qsfp"$i"_status
 			fi
 		done
-		if [ -L /bsp/cpld/cpld_port_version ]; then
-			unlink /bsp/cpld/cpld_port_version
+		if [ -L $bsp_path/cpld/cpld_port_version ]; then
+			unlink $bsp_path/cpld/cpld_port_version
 		fi
 	fi
 	if [ "$2" == "led" ]; then
 		name=`echo $5 | cut -d':' -f2`
 		color=`echo $5 | cut -d':' -f3`
-		unlink /bsp/led/led_"$name"_"$color"
-		unlink /bsp/led/led_"$name"_"$color"_delay_on
-		unlink /bsp/led/led_"$name"_"$color"_delay_off
-		unlink /bsp/led/led_"$name"_state
-		if [ -f /bsp/led/led_"$name" ]; then
-			rm -f /bsp/led/led_"$name"
+		unlink $bsp_path/led/led_"$name"_"$color"
+		unlink $bsp_path/led/led_"$name"_"$color"_delay_on
+		unlink $bsp_path/led/led_"$name"_"$color"_delay_off
+		unlink $bsp_path/led/led_"$name"_state
+		if [ -f $bsp_path/led/led_"$name" ]; then
+			rm -f $bsp_path/led/led_"$name"
 		fi
-		if [ -f /bsp/led/led_"$name"_capability ]; then
-			rm -f /bsp/led/led_"$name"_capability
+		if [ -f $bsp_path/led/led_"$name"_capability ]; then
+			rm -f $bsp_path/led/led_"$name"_capability
 		fi
 	fi
 	if [ "$2" == "thermal_zone" ]; then
-		zonefolder=`basename /bsp/thermal_zone/$5*`
-		if [ ! -d /bsp/thermal_zone/$zonefolder ]; then
+		zonefolder=`basename $bsp_path/thermal_zone/$5*`
+		if [ ! -d $bsp_path/thermal_zone/$zonefolder ]; then
 				zonefolder=mlxsw
 		fi
-		if [ -d /bsp/thermal_zone/$zonefolder ]; then
-			unlink /bsp/thermal_zone/$zonefolder/mode
+		if [ -d $bsp_path/thermal_zone/$zonefolder ]; then
+			unlink $bsp_path/thermal_zone/$zonefolder/mode
 			for i in {0..11}; do
-				if [ -L /bsp/thermal_zone/$zonefolder/trip_point_$i ]; then
-					unlink /bsp/thermal_zone/$zonfoldere/trip_point_$i
+				if [ -L $bsp_path/thermal_zone/$zonefolder/trip_point_$i ]; then
+					unlink $bsp_path/thermal_zone/$zonfoldere/trip_point_$i
 				fi
-				if [ -L /bsp/thermal_zone/$zonefolder/cooling"$i"_current_state ]; then
-					unlink /bsp/thermal_zone/$zonefolder/cooling"$i"_current_state
+				if [ -L $bsp_path/thermal_zone/$zonefolder/cooling"$i"_current_state ]; then
+					unlink $bsp_path/thermal_zone/$zonefolder/cooling"$i"_current_state
 				fi
 			done
-			unlink /bsp/thermal_zone/$zonefolder/*
-			rm -rf /bsp/thermal_zone/$zonefolder
+			unlink $bsp_path/thermal_zone/$zonefolder/*
+			rm -rf $bsp_path/thermal_zone/$zonefolder
 		fi
 	fi
 	if [ "$2" == "cputemp" ]; then
-		unlink /bsp/thermal/cpu_pack
-		unlink /bsp/thermal/cpu_pack_crit
-		unlink /bsp/thermal/cpu_pack_crit_alarm
-		unlink /bsp/thermal/cpu_pack_max
+		unlink $bsp_path/thermal/cpu_pack
+		unlink $bsp_path/thermal/cpu_pack_crit
+		unlink $bsp_path/thermal/cpu_pack_crit_alarm
+		unlink $bsp_path/thermal/cpu_pack_max
 		for i in {1..8}; do
-			if [ -L /bsp/thermal/cpu_core"$i" ]; then
+			if [ -L $bsp_path/thermal/cpu_core"$i" ]; then
 				j=$((i+1))
-				unlink /bsp/thermal/cpu_core"$j"
-				unlink /bsp/thermal/cpu_core"$j"_crit
-				unlink /bsp/thermal/cpu_core"$j"_crit_alarm
-				unlink /bsp/thermal/cpu_core"$j"_max
+				unlink $bsp_path/thermal/cpu_core"$j"
+				unlink $bsp_path/thermal/cpu_core"$j"_crit
+				unlink $bsp_path/thermal/cpu_core"$j"_crit_alarm
+				unlink $bsp_path/thermal/cpu_core"$j"_max
 			fi
 		done
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for i in {1..12}; do
-			if [ -L /bsp/module/fan"$i"_status ]; then
-				unlink /bsp/module/fan"$i"_status
+			if [ -L $bsp_path/module/fan"$i"_status ]; then
+				unlink $bsp_path/module/fan"$i"_status
 			fi
 		done
 		for i in {1..2}; do
-			if [ -L /bsp/module/psu"$i"_status ]; then
-				unlink /bsp/module/psu"$i"_status
+			if [ -L $bsp_path/module/psu"$i"_status ]; then
+				unlink $bsp_path/module/psu"$i"_status
 			fi
-			if [ -L /bsp/module/psu"$i"_pwr_status ]; then
-				unlink /bsp/module/psu"$i"_pwr_status
+			if [ -L $bsp_path/module/psu"$i"_pwr_status ]; then
+				unlink $bsp_path/module/psu"$i"_pwr_status
 			fi
 		done
 	fi
 	if [ "$2" == "regio" ]; then
-		if [ -L /bsp/system ]; then
-			unlink /bsp/system
+		if [ -L $bsp_path/system ]; then
+			unlink $bsp_path/system
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
-		unlink /bsp/eeprom/psu1_info
+		unlink $bsp_path/eeprom/psu1_info
 		busdir=`echo $5$3 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$(($bus-+$i2c_bus_offset))
 		find_eeprom_name $bus
-		unlink /bsp/eeprom/$eeprom_name
+		unlink $bsp_path/eeprom/$eeprom_name
 	fi
 fi

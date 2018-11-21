@@ -56,6 +56,8 @@
 
 . /lib/lsb/init-functions
 
+bsp_path=/var/run/mellanox
+
 module_load_path=(	i2c/i2c-dev.ko \
 			hwmon/pmbus/pmbus.ko \
 			hwmon/pmbus/tps53679.ko \
@@ -185,8 +187,8 @@ msn274x_specific()
 	do
 		dis_table[i]=${msn2740_dis_table[i]}
 	done
-	echo 5 > /bsp/config/fan_inversed
-	echo 2 > /bsp/config/cpld_num
+	echo 5 > $bsp_path/config/fan_inversed
+	echo 2 > $bsp_path/config/cpld_num
 }
 
 msn21xx_specific()
@@ -201,8 +203,8 @@ msn21xx_specific()
 	do
 		dis_table[i]=${msn2100_dis_table[i]}
 	done
-	echo 5 > /bsp/config/fan_inversed
-	echo 2 > /bsp/config/cpld_num
+	echo 5 > $bsp_path/config/fan_inversed
+	echo 2 > $bsp_path/config/cpld_num
 }
 
 msn24xx_specific()
@@ -217,8 +219,8 @@ msn24xx_specific()
 	do
 		dis_table[i]=${msn2700_dis_table[i]}
 	done
-	echo 9 > /bsp/config/fan_inversed
-	echo 3 > /bsp/config/cpld_num
+	echo 9 > $bsp_path/config/fan_inversed
+	echo 3 > $bsp_path/config/cpld_num
 }
 
 msn27xx_msb_msx_specific()
@@ -233,8 +235,8 @@ msn27xx_msb_msx_specific()
 	do
 		dis_table[i]=${msn2700_dis_table[i]}
 	done
-	echo 9 > /bsp/config/fan_inversed
-	echo 3 > /bsp/config/cpld_num
+	echo 9 > $bsp_path/config/fan_inversed
+	echo 3 > $bsp_path/config/cpld_num
 }
 
 msn201x_specific()
@@ -249,8 +251,8 @@ msn201x_specific()
 	do
 		dis_table[i]=${msn2010_dis_table[i]}
 	done
-	echo 5 > /bsp/config/fan_inversed
-	echo 2 > /bsp/config/cpld_num
+	echo 5 > $bsp_path/config/fan_inversed
+	echo 2 > $bsp_path/config/cpld_num
 }
 
 mqm87xx_sn37x_sn34x_specific()
@@ -265,7 +267,7 @@ mqm87xx_sn37x_sn34x_specific()
 	do
 		dis_table[i]=${mqm8700_dis_table[i]}
 	done
-	echo 3 > /bsp/config/cpld_num
+	echo 3 > $bsp_path/config/cpld_num
 }
 
 
@@ -463,32 +465,17 @@ status()
 
 case $ACTION in
         start)
-		if [ ! -d /bsp ]; then
-			mkdir /bsp
-		fi
-		if [ ! -d /bsp/config ]; then
-			mkdir -p /bsp/config
-		fi
 		check_system
 		depmod -a 2>/dev/null
 		load_modules
 		sleep 1
-		echo $fan_max_speed > /bsp/config/fan_max_speed
-		echo $fan_min_speed > /bsp/config/fan_min_speed
-		if [ ! -d /bsp/cpld ]; then
-			mkdir /bsp/cpld
+		echo $fan_max_speed > $bsp_path/config/fan_max_speed
+		echo $fan_min_speed > $bsp_path/config/fan_min_speed
+		if [ ! -h $bsp_path/power/pwr_consum ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh $bsp_path/power/pwr_consum
 		fi
-		if [ ! -d /bsp/system ]; then
-			mkdir /bsp/system
-		fi
-		if [ ! -d /bsp/power ]; then
-			mkdir -p /bsp/power
-		fi
-		if [ ! -h /bsp/power/pwr_consum ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/power/pwr_consum
-		fi
-		if [ ! -h /bsp/power/pwr_sys ]; then
-			ln -sf /usr/bin/mellanox-system-helper.sh /bsp/power/pwr_sys
+		if [ ! -h $bsp_path/power/pwr_sys ]; then
+			ln -sf /usr/bin/mellanox-system-helper.sh $bsp_path/power/pwr_sys
 		fi
 		connect_platform
 	;;
@@ -497,9 +484,9 @@ case $ACTION in
 		disconnect_platform
 		unload_modules
 		# Clean bsp directory - remove folder if it's empty
-		if [ -d /bsp ]; then
+		if [ -d $bsp_path ]; then
 			sleep 3
-			for filename in /bsp/*; do
+			for filename in $bsp_path/*; do
 				if [ -d $filename ]; then
 					if [ -z "$(ls -A $filename)" ]; then
 						rm -rf $filename
@@ -508,9 +495,9 @@ case $ACTION in
 					unlink $filename
 				fi
 			done
-			rm -rf /bsp/config
-			if [ -z "$(ls -A /bsp)" ]; then
-				rm -rf /bsp
+			rm -rf $bsp_path/config
+			if [ -z "$(ls -A $bsp_path)" ]; then
+				rm -rf $bsp_path
 			fi
 		fi
 	;;
