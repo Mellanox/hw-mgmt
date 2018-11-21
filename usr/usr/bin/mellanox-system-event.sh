@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-bsp_path=/var/run/mellanox
+bsp_path=/var/run/hw-management
 fan_command=0x3b
 fan_psu_default=0x3c
 i2c_bus_max=10

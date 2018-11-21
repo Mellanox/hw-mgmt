@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-bsp_path=/var/run/mellanox
+bsp_path=/var/run/hw-management
 
 if echo "$0" | grep -q "/cpld" ; then
 	if [ "$1" == "mgmt" ]; then

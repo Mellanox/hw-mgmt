@@ -15,17 +15,17 @@ override_dh_auto_configure:
 override_dh_auto_build:
 
 override_dh_auto_install:
-	dh_installdirs -p$(pname) var/run/thermal
-	dh_installdirs -p$(pname) var/run/thermal_zone
-	dh_installdirs -p$(pname) var/run/environment
-	dh_installdirs -p$(pname) var/run/power
-	dh_installdirs -p$(pname) var/run/fan
-	dh_installdirs -p$(pname) var/run/eeprom
-	dh_installdirs -p$(pname) var/run/led
-	dh_installdirs -p$(pname) var/run/qsfp
-	dh_installdirs -p$(pname) var/run/module
-	dh_installdirs -p$(pname) var/run/system
-	dh_installdirs -p$(pname) var/run/cpld
+	dh_installdirs -p$(pname) var/run/hw-management/thermal
+	dh_installdirs -p$(pname) var/run/hw-management/thermal_zone
+	dh_installdirs -p$(pname) var/run/hw-management/environment
+	dh_installdirs -p$(pname) var/run/hw-management/power
+	dh_installdirs -p$(pname) var/run/hw-management/fan
+	dh_installdirs -p$(pname) var/run/hw-management/eeprom
+	dh_installdirs -p$(pname) var/run/hw-management/led
+	dh_installdirs -p$(pname) var/run/hw-management/qsfp
+	dh_installdirs -p$(pname) var/run/hw-management/module
+	dh_installdirs -p$(pname) var/run/hw-management/system
+	dh_installdirs -p$(pname) var/run/hw-management/cpld
 	dh_installdirs -p$(pname) etc/mlnx
 	cp usr/etc/mlnx/* debian/$(pname)/etc/mlnx
 	dh_installdirs -p$(pname) etc/modprobe.d
