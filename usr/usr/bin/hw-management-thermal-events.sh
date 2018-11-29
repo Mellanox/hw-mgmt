@@ -91,21 +91,21 @@ if [ "$1" == "add" ]; then
 				fi
 				if [ -f $3$4/fan"$i"_input ]; then
 					ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_input
-				fi
-				if [ -f $config_path/fan_min_speed ]; then
-					ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
-				fi
-				if [ -f $config_path/fan_max_speed ]; then
-					ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
+					if [ -f $config_path/fan_min_speed ]; then
+						ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
+					fi
+					if [ -f $config_path/fan_max_speed ]; then
+						ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
+					fi
 				fi
 			done
 			for ((i=2; i<=$max_modules_ind; i+=1)); do
 				if [ -f $3$4/temp"$i"_input ]; then
 					j=$(($i-1))
-					ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_port"$j"
-					ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_port"$j"
-					ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_port"$j"
-					ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_port"$j"
+					ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_module"$j"
+					ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_module"$j"
+					ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_module"$j"
+					ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_module"$j"
 				fi
 			done
 		fi
@@ -142,13 +142,14 @@ if [ "$1" == "add" ]; then
 		zonep2type="${zonetype:0:${#zonetype}-3}"
 		if [ "$zonetype" == "mlxsw" ] || [ "$zonep0type" == "mlxsw-module" ] ||
 		   [ "$zonep1type" == "mlxsw-module" ] || [ "$zonep2type" == "mlxsw-module" ]; then
-			ln -sf $3$4/mode $thermal_path/"$zonetype"_thermal_zone_mode
-			ln -sf $3$4/policy $thermal_path/"$zonetype"_thermal_zone_policy
-			ln -sf $3$4/trip_point_0_temp $thermal_path/"$zonetype"_temp_trip_norm
-			ln -sf $3$4/trip_point_1_temp $thermal_path/"$zonetype"_temp_trip_high
-			ln -sf $3$4/trip_point_2_temp $thermal_path/"$zonetype"_temp_trip_hot
-			ln -sf $3$4/trip_point_3_temp $thermal_path/"$zonetype"_temp_trip_crit
-			ln -sf $3$4/temp $thermal_path/"$zonetype"_thermal_zone_temp
+			mkdir -p $thermal_path/$zonetype
+			ln -sf $3$4/mode $thermal_path/$zonetype/thermal_zone_mode
+			ln -sf $3$4/policy $thermal_path/$zonetype/thermal_zone_policy
+			ln -sf $3$4/trip_point_0_temp $thermal_path/$zonetype/temp_trip_norm
+			ln -sf $3$4/trip_point_1_temp $thermal_path/$zonetype/temp_trip_high
+			ln -sf $3$4/trip_point_2_temp $thermal_path/$zonetype/temp_trip_hot
+			ln -sf $3$4/trip_point_3_temp $thermal_path/$zonetype/temp_trip_crit
+			ln -sf $3$4/temp $thermal_path/$zonetype/thermal_zone_temp
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
@@ -293,12 +294,12 @@ else
 			done
 			unlink $thermal_path/$pwm1
 			for ((i=2; i<=$max_modules_ind; i+=1)); do
-				if [ -L $thermal_path/temp_input_port"$j" ]; then
+				if [ -L $thermal_path/temp_input_module"$j" ]; then
 					j=$(($i-1))
-					unlink $thermal_path/temp_input_port"$j"
-					unlink $thermal_path/temp_fault_port"$j"
-					unlink $thermal_path/temp_crit_port"$j"
-					unlink $thermal_path/temp_emergency_port"$j"
+					unlink $thermal_path/temp_input_module"$j"
+					unlink $thermal_path/temp_fault_module"$j"
+					unlink $thermal_path/temp_crit_module"$j"
+					unlink $thermal_path/temp_emergency_module"$j"
 				fi
 			done
 		fi
@@ -312,11 +313,11 @@ else
 			if [ -f $3$4/fan"$i"_input ]; then
 				unlink $thermal_path/fan"$i"_input
 			fi
-			if [ -f $thermal_path/fan"$j"_min ]; then
-				unlink $thermal_path/fan"$j"_min
+			if [ -f $thermal_path/fan"$i"_min ]; then
+				unlink $thermal_path/fan"$i"_min
 			fi
-			if [ -f $thermal_path/fan"$j"_max ]; then
-				unlink $thermal_path/fan"$j"_max
+			if [ -f $thermal_path/fan"$i"_max ]; then
+				unlink $thermal_path/fan"$i"_max
 			fi
 		done
 	fi
@@ -327,17 +328,18 @@ else
 		zonep2type="${zonetype:0:${#zonetype}-3}"
 		if [ "$zonetype" == "mlxsw" ] || [ "$zonep0type" == "mlxsw-module" ] ||
 		   [ "$zonep1type" == "mlxsw-module" ] || [ "$zonep2type" == "mlxsw-module" ]; then
-			mode=`cat $thermal_path/"$zonetype"_thermal_zone_mode`
+			mode=`cat $thermal_path/$zonetype/thermal_zone_mode`
 			if [ $mode == "enabled" ]; then
-				echo disabled > $thermal_path/"$zonetype"_thermal_zone_mode
+				echo disabled > $thermal_path/$zonetype/thermal_zone_mode
 			fi
-			unlink $thermal_path/"$zonetype"_thermal_zone_mode
-			unlink $thermal_path/"$zonetype"_thermal_zone_policy
-			unlink $thermal_path/"$zonetype"_temp_trip_norm
-			unlink $thermal_path/"$zonetype"_temp_trip_high
-			unlink $thermal_path/"$zonetype"_temp_trip_hot
-			unlink $thermal_path/"$zonetype"_temp_trip_crit
-			unlink $thermal_path/"$zonetype"_thermal_zone_temp
+			unlink $thermal_path/$zonetype/thermal_zone_mode
+			unlink $thermal_path/$zonetype/thermal_zone_policy
+			unlink $thermal_path/$zonetype/temp_trip_norm
+			unlink $thermal_path/$zonetype/temp_trip_high
+			unlink $thermal_path/$zonetype/temp_trip_hot
+			unlink $thermal_path/$zonetype/temp_trip_crit
+			unlink $thermal_path/$zonetype/thermal_zone_temp
+			rm -rf $thermal_path/$zonetype
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then

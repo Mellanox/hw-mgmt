@@ -54,21 +54,19 @@
 
 # Paths to thermal sensors, device present states, thermal zone and cooling device
 thermal_path=/var/run/hw-management/thermal
-temp_port=$thermal_path/temp_input_port1
-temp_port_fault=$thermal_path/temp_fault_port1
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 temp_asic=$thermal_path/temp1_input_asic
 pwm=$thermal_path/pwm1
 psu1_status=$thermal_path/psu1_status
 psu2_status=$thermal_path/psu2_status
-tz_mode=$thermal_path/mlxsw_thermal_zone_mode
-tz_policy=$thermal_path/mlxsw_thermal_zone_policy
-tz_temp=$thermal_path/mlxsw_thermal_zone_temp
-temp_trip_norm=$thermal_path/mlxsw_temp_trip_norm
-temp_trip_high=$thermal_path/mlxsw_temp_trip_high
-temp_trip_hot=$thermal_path/mlxsw_temp_trip_hot
-temp_trip_crit=$thermal_path/mlxsw_temp_trip_crit
+tz_mode=$thermal_path/mlxsw/thermal_zone_mode
+tz_policy=$thermal_path/mlxsw/thermal_zone_policy
+tz_temp=$thermal_path/mlxsw/thermal_zone_temp
+temp_trip_norm=$thermal_path/mlxsw/temp_trip_norm
+temp_trip_high=$thermal_path/mlxsw/temp_trip_high
+temp_trip_hot=$thermal_path/mlxsw/temp_trip_hot
+temp_trip_crit=$thermal_path/mlxsw/temp_trip_crit
 cooling_cur_state=$thermal_path/cooling_cur_state
 thermal_sys=/sys/class/thermal
 highest_tz="none"
@@ -259,10 +257,14 @@ validate_thermal_configuration()
 		log_failure_msg "PWM control and ASIC attributes are not exist"
 		exit 1
 	fi
-	if [ ! -L $temp_port ] || [ ! -L $temp_port_fault ]; then
-		log_failure_msg "Port attributes are not exist"
-		exit 1
-	fi
+	for ((i=1; i<=$max_ports; i+=1)); do
+		if [ -L $thermal_path/temp_module"$i" ]; then
+			if [ ! -L $thermal_path/temp_module_fault"$i" ]; then
+				log_failure_msg "Port attributes are not exist"
+				exit 1
+			fi
+		fi
+	done
 	if [ ! -L $temp_fan_amb ] || [ ! -L $temp_port_amb ]; then
 		log_failure_msg "Ambient temperate sensors attributes are not exist"
 		exit 1
@@ -277,9 +279,9 @@ validate_thermal_configuration()
 
 check_untrested_port_sensor()
 {
-	for ((i=1; i<=$max_ports_def; i+=1)); do
-		if [ -f $thermal_path/temp_fault_port"$i" ]; then
-			temp_fault=`cat $thermal_path/temp_fault_port"$i"`
+	for ((i=1; i<=$max_ports; i+=1)); do
+		if [ -f $thermal_path/temp_fault_module"$i" ]; then
+			temp_fault=`cat $thermal_path/temp_fault_module"$i"`
 			if [ $temp_fault -eq 1 ]; then
 				untrusted_sensor=1
 			fi
@@ -310,31 +312,31 @@ thermal_periodic_report()
 		if [ -f $thermal_path/temp_input_port"$i" ]; then
 			t1=`cat $thermal_path/temp_input_port"$i"`
 			if [ $t1 -gt  0 ]; then
-				t2=`cat $thermal_path/temp_fault_port"$i"`
+				t2=`cat $thermal_path/temp_fault_module"$i"`
 				t3=`cat $thermal_path/temp_crit_port"$i"`
 				t4=`cat $thermal_path/temp_emergency_port"$i"`
 				log_success_msg "port$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 		fi
 	done
-	t1=`cat $thermal_path/mlxsw_thermal_zone_temp`
-	t2=`cat $thermal_path/mlxsw_temp_trip_norm`
-	t3=`cat $thermal_path/mlxsw_temp_trip_high`
-	t4=`cat $thermal_path/mlxsw_temp_trip_hot`
-	t5=`cat $thermal_path/mlxsw_temp_trip_crit`
-	t6=`cat $thermal_path/mlxsw_thermal_zone_policy`
-	t7=`cat $thermal_path/mlxsw_thermal_zone_mode`
+	t1=`cat $thermal_path/mlxsw/thermal_zone_temp`
+	t2=`cat $thermal_path/mlxsw/temp_trip_norm`
+	t3=`cat $thermal_path/mlxsw/temp_trip_high`
+	t4=`cat $thermal_path/mlxsw/temp_trip_hot`
+	t5=`cat $thermal_path/mlxsw/temp_trip_crit`
+	t6=`cat $thermal_path/mlxsw/thermal_zone_policy`
+	t7=`cat $thermal_path/mlxsw/thermal_zone_mode`
 	log_success_msg "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 	for ((i=1; i<=$max_ports; i+=1)); do
-		if [ -f $thermal_path/mlxsw-module"$i"_thermal_zone_temp ]; then
-			t7=`cat $thermal_path/mlxsw-module"$i"_thermal_zone_mode`
+		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
+			t7=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 			if [ $t7 == "enabled" ]; then
-				t1=`cat $thermal_path/mlxsw-module"$i"_thermal_zone_temp`
-				t2=`cat $thermal_path/mlxsw-module"$i"_temp_trip_norm`
-				t3=`cat $thermal_path/mlxsw-module"$i"_temp_trip_high`
-				t4=`cat $thermal_path/mlxsw-module"$i"_temp_trip_hot`
-				t5=`cat $thermal_path/mlxsw-module"$i"_temp_trip_crit`
-				t6=`cat $thermal_path/mlxsw-module"$i"_thermal_zone_policy`
+				t1=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_temp`
+				t2=`cat $thermal_path/mlxsw-module"$i"/temp_trip_norm`
+				t3=`cat $thermal_path/mlxsw-module"$i"/temp_trip_high`
+				t4=`cat $thermal_path/mlxsw-module"$i"/temp_trip_hot`
+				t5=`cat $thermal_path/mlxsw-module"$i"/temp_trip_crit`
+				t6=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
 				log_success_msg "tz port$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 			fi
 		fi
@@ -427,10 +429,10 @@ get_psu_presence()
 					log_action_msg "ASIC thermal zone is disabled due to PS absence"
 				fi
 				for ((i=1; i<=$max_ports; i+=1)); do
-					if [ -f $thermal_path/mlxsw-module"$i"_thermal_zone_mode ]; then
-						mode=`cat $thermal_path/mlxsw-module"$i"_thermal_zone_mode`
+					if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 						if [ $mode == "enabled" ]; then
-							echo disabled > $thermal_path/mlxsw-module"$i"_thermal_zone_mode
+							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
 							log_action_msg "Port $i thermal zone is disabled due to PS absence"
 						fi
 					fi
@@ -459,10 +461,10 @@ get_fan_faults()
 					log_action_msg "ASIC thermal zone is disabled due to FAN fault"
 				fi
 				for ((i=1; i<=$max_ports; i+=1)); do
-					if [ -f $thermal_path/mlxsw-module"$i"_thermal_zone_mode ]; then
-						mode=`cat $thermal_path/mlxsw-module"$i"_thermal_zone_mode`
+					if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 						if [ $mode == "enabled" ]; then
-							echo disabled > $thermal_path/mlxsw-module"$i"_thermal_zone_mode
+							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
 							log_action_msg "Port $i thermal zone is disabled due to FAN fault"
 						fi
 					fi
@@ -670,9 +672,9 @@ check_trip_min_vs_current_temp()
 {
 
 	for ((i=1; i<=$max_ports; i+=1)); do
-		if [ -f $thermal_path/mlxsw-module"$i"_thermal_zone_temp ]; then
-			trip_norm=`cat $thermal_path/mlxsw-module"$i"_temp_trip_norm`
-			temp_now=`cat $thermal_path/mlxsw-module"$i"_thermal_zone_temp`
+		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
+			trip_norm=`cat $thermal_path/mlxsw-module"$i"/temp_trip_norm`
+			temp_now=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_temp`
 			if [ $trip_norm -le  $temp_now ]; then
 				return
 			fi
@@ -702,7 +704,7 @@ check_trip_min_vs_current_temp()
 
 thermal_zone_iterate()
 {
-	attr=`echo $thermal_path/mlxsw_thermal_zone_"$1"`
+	attr=`echo $thermal_path/mlxsw/thermal_zone_"$1"`
 	lnname=`readlink -f $attr`
 	tzdir=`echo $lnname |xargs dirname`
 	tzname=`basename $tzdir`

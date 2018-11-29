@@ -82,15 +82,37 @@ per level speeds:
   thermal requirements.
 
 Package contains the following files, used within the workload:
+etc
+  modprobe.d
+    hw-management.conf
+  modules-load.d
+    hw-management-modules.conf
+lib
+  systemd
+    system
+      hw-management.service
+  udev
+    rules.d
+      50-hw-management-events.rules
+usr
+  bin
+    hw-management-chassis-events.sh
+    hw-management-led-state-conversion.sh
+    hw-management-power-helper.sh
+    hw-management.sh
+    hw-management-thermal-control.sh
+    hw-management-thermal-events.sh
+
 - /lib/systemd/system/hw-management.service
 -	system entries for thermal control activation and de-activation.
 - /lib/udev/rules.d/50-hw-management-events.rules
--	udev rules defining the triggers on which events should be handled.  
+-	udev rules defining the triggers on which events should be handled.
 	When trigger is matched, rule data is to be passed to the event handler
 	(see below file /usr/bin/hw-management-events.sh).
 - /usr/bin/hw-management-control.sh
 	contains thermal algorithm implementation.
-- /usr/bin/hw-management-events.sh
+- /usr/bin/hw-management-chassis-events.sh
+  /usr/bin/hw-management-thermal-events.sh
 -	handles udev triggers, according to the received data, it creates or
 	destroys symbolic links to sysfs entries. It allows to create system
 	independent entries and it allows thermal controls to work over this
@@ -104,15 +126,42 @@ Package contains the following files, used within the workload:
 -	performs initialization and de-initialization, detects the system type,
 	connects thermal drivers according to the system topology, activates
 	and deactivates thermal algorithm.
-- recipes-kernel/linux/linux-4.19/0001-mlxsw-thermal-monitoring-amendments.patch
--	kernel patch for v4.19
-- recipes-kernel/linux/linux-4.19/series
--	kernel patch series file
+- hw-management-led-state-conversion.sh
+  hw-management-power-helper.sh
+-	helper scripts
+- hw-management.conf
+  hw-management-modules.conf
+-	configuration for kernel modules loading.
 
 # SYSFS attributes:
 - The thermal control operates over sysfs attributes. These attributes are
-  exposed as symbolic links to /config/mellanox/thermal folder. These folder
-  contains the next files (which are symbolic links):
+  exposed as symbolic links to /var/run/hw-management folder at system boot
+  time. These folder contains the next structure:
+/var/run/hw-management
+  config
+    configuration related symbolic links
+  eeprom
+    eeprom related symbolic links
+  environment
+    environment (voltage, current, etcetera) related symbolic links
+  led
+    led related symbolic links
+  power
+    power related symbolic links
+  system
+    system related (health, reset, etcetera) related symbolic links
+  thermal
+    thermal related links
+    mlxsw
+      ASIC ambient temperature thermal zone related symbolic links
+    mlxsw-module1
+      QSFP module 1 temperature thermal zone related symbolic links
+    ...
+      ...
+    mlxsw-module64
+      QSFP module 64 temperature thermal zone related symbolic links
+
+Below some of the symbolic links examples:
 - cooling_cur_state:	Current cooling state, exposed by cooling level (1..10)
 - fan<i>_fault:		tachometer fault, <i> 1..max tachometers number
 - fan<i>_input:		tachometer input, <i> 1..max tachometers number

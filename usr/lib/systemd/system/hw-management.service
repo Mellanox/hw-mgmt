@@ -10,3 +10,5 @@ PIDFile=/var/run/hw-management.pid
 
 [Install]
 WantedBy=multi-user.target
+Wants=tmp.mount
+After=systemd-tmpfiles-setup.service
