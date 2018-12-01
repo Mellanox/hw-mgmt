@@ -38,11 +38,11 @@ hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 power_path=$hw_management_path/power
 config_path=$hw_management_path/config
+fan_command=$config_path/fan_command
+fan_psu_default=$config_path/fan_psu_default
 max_psus=2
 max_tachos=12
 max_modules_ind=65
-fan_command=0x3b
-fan_psu_default=0x3c
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
@@ -195,11 +195,13 @@ if [ "$1" == "add" ]; then
 		busdir=`echo $5$3 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
-		if [ "$2" == "psu1" ]; then
-			i2cset -f -y $bus 0x59 $fan_command $fan_psu_default wp
-		else
-			i2cset -f -y $bus 0x58 $fan_command $fan_psu_default wp
-		fi
+		# Set default fan speed
+		addr=`cat $config_path/psu"$i"_i2c_addr`
+		command=`cat $fan_command`
+		speed=`cat $fan_psu_default`
+		i2cset -f -y $bus $addr $command $speed wp
+		# Set I2C bus for psu
+		echo $bus > $config_path/"$2"_i2c_bus
 		# Add thermal attributes
 		ln -sf $5$3/temp1_input $thermal_path/$2_temp
 		ln -sf $5$3/temp1_max $thermal_path/$2_temp_max

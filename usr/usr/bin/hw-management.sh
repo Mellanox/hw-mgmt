@@ -61,6 +61,10 @@ max_psus=2
 max_tachos=12
 i2c_bus_max=10
 i2c_bus_offset=0
+psu1_i2c_addr=0x59
+psu2_i2c_addr=0x58
+fan_psu_default=0x3c
+fan_command=0x3b
 fan_max_speed=24000
 fan_min_speed=5000
 hw_management_path=/var/run/hw-management
@@ -488,6 +492,10 @@ case $ACTION in
 		depmod -a 2>/dev/null
 		echo $fan_max_speed > $config_path/fan_max_speed
 		echo $fan_min_speed > $config_path/fan_min_speed
+		echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
+		echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+		echo $fan_psu_default > $config_path/fan_psu_default
+		echo $fan_command > $config_path/fan_command
 		# Sleep to allow kernel modules initialization completion
 		sleep 3
 		find_i2c_bus

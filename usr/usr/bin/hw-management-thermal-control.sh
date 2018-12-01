@@ -40,12 +40,31 @@
 #  t6: QMB7*|SN37*|SN34*	Jaguar, Anaconda
 
 # The thermal algorithm considers the next rules for FAN speed setting:
-# This is because the absence of power supply has bad impact on air flow.
 # The minimal PWM setting is dynamic and depends on FAN direction and cable
 # type. For system with copper cables only or/and with trusted optic cable
 # minimum PWM setting could be decreased according to the system definition.
-# Thermal active monitoring is performed based on the values of the next three
-# sensors: CPU temperature, ASIC temperature and port cumulative temperature.
+# Power supply units PWM control policy:
+# If system`s power supplies are equipped with the controlled cooling device,
+# its cooling setting should follow the next rules
+# - Power supplies cooling devices should be set to the default value
+#  (usually 60% of PWM speed), defined per each system type;
+# - In case system`s main cooling device is set above this default value, power
+#   supply`s cooling device setting should follow main cooling device (for
+#   example if main cooling device is set to 80%, power supplies cooling devices
+#   should be set to 80%);
+# - In case system`s main cooling device is set down (to x%), power supplys'
+#   cooling devices should be set down, in case x% >= power supplies default
+#   speed value.
+# PWM full speed policy addresses the following features:
+# - Setting PWM to full speed if one of PS units is not present (in such case
+#   thermal monitoring in kernel is set to disabled state until the problem is
+#   not recovered). Such events will be reported to systemd journaling system.
+# - Setting PWM to full speed if one of FAN drawers is not present or one of
+#   tachometers is broken (in such case thermal monitoring in kernel is set to
+#   disabled state until the problem is not recovered). Such events will be
+#   reported to systemd journaling system.
+# Thermal active monitoring is performed based on the values of the next
+# sensors: CPU, ASIC ambient and QSFP modules temperatures.
 # The decision for PWM setting is taken based on the worst measure of them.
 # All the sensors and statuses are exposed through the sysfs interface for the
 # user space application access.
@@ -53,13 +72,22 @@
 . /lib/lsb/init-functions
 
 # Paths to thermal sensors, device present states, thermal zone and cooling device
-thermal_path=/var/run/hw-management/thermal
+hw_management_path=/var/run/hw-management
+thermal_path=$hw_management_path/thermal
+power_path=$hw_management_path/power
+config_path=$hw_management_path/config
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 temp_asic=$thermal_path/temp1_input_asic
 pwm=$thermal_path/pwm1
 psu1_status=$thermal_path/psu1_status
 psu2_status=$thermal_path/psu2_status
+psu1_fan1_speed=$thermal_path/psu1_fan1_speed_get
+psu2_fan1_speed=$thermal_path/psu2_fan1_speed_get
+psu1_pwr_status=$power_path/psu1_pwr_status
+psu2_pwr_status=$power_path/psu2_pwr_status
+fan_command=$config_path/fan_command
+fan_psu_default=$config_path/fan_psu_default
 tz_mode=$thermal_path/mlxsw/thermal_zone_mode
 tz_policy=$thermal_path/mlxsw/thermal_zone_policy
 tz_temp=$thermal_path/mlxsw/thermal_zone_temp
@@ -90,6 +118,9 @@ pwm_max=1
 pwm_max_rpm=255
 max_amb=120000
 untrusted_sensor=0
+
+# PSU fan speed vector
+psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 
 # Thermal tables for the minimum FAN setting per system time. It contains
 # entries with ambient temperature threshold values and relevant minimum
@@ -260,7 +291,7 @@ validate_thermal_configuration()
 	for ((i=1; i<=$max_ports; i+=1)); do
 		if [ -L $thermal_path/temp_module"$i" ]; then
 			if [ ! -L $thermal_path/temp_module_fault"$i" ]; then
-				log_failure_msg "Port attributes are not exist"
+				log_failure_msg "QSFP module attributes are not exist"
 				exit 1
 			fi
 		fi
@@ -277,7 +308,7 @@ validate_thermal_configuration()
 	fi
 }
 
-check_untrested_port_sensor()
+check_untrested_module_sensor()
 {
 	for ((i=1; i<=$max_ports; i+=1)); do
 		if [ -f $thermal_path/temp_fault_module"$i" ]; then
@@ -433,7 +464,7 @@ get_psu_presence()
 						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 						if [ $mode == "enabled" ]; then
 							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-							log_action_msg "Port $i thermal zone is disabled due to PS absence"
+							log_action_msg "QSFP module $i thermal zone is disabled due to PS absence"
 						fi
 					fi
 				done
@@ -447,6 +478,24 @@ get_psu_presence()
 	pwm_required_act=$pwm_noact
 }
 
+update_psu_fan_speed()
+{
+	for ((i=1; i<=$max_psus; i+=1)); do
+		if [ -f $power_path/psu"$i"_pwr_status ]; then
+			pwr=`cat $power_path/psu"$i"_pwr_status`
+			if [ $pwr -eq 1 ]; then
+				bus=`cat $config_path/psu"$i"_i2c_bus`
+				addr=`cat $config_path/psu"$i"_i2c_addr`
+				command=`cat $fan_command`
+				speed=`cat $fan_psu_default`
+				entry=`cat $thermal_path/cooling_cur_state`
+				speed=${psu_fan_speed[$entry]}
+				i2cset -f -y $bus $addr $command $speed wp
+			fi
+		fi
+	done
+}
+
 get_fan_faults()
 {
 	for ((i=1; i<=$max_tachos; i+=1)); do
@@ -455,7 +504,7 @@ get_fan_faults()
 			if [ $fault -eq 1 ]; then
 				pwm_required_act=$pwm_max
 				mode=`cat $tz_mode`
-				# Disable asic and ports thermal zones if were enabled.
+				# Disable asic and modules thermal zones if were enabled.
 				if [ $mode == "enabled" ]; then
 					echo disabled > $tz_mode
 					log_action_msg "ASIC thermal zone is disabled due to FAN fault"
@@ -465,7 +514,7 @@ get_fan_faults()
 						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 						if [ $mode == "enabled" ]; then
 							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-							log_action_msg "Port $i thermal zone is disabled due to FAN fault"
+							log_action_msg "QSFP module $i thermal zone is disabled due to FAN fault"
 						fi
 					fi
 				done
@@ -488,7 +537,7 @@ set_pwm_min_threshold()
 	unk_dir=0
 
 	# Check for untrusted modules
-	check_untrested_port_sensor
+	check_untrested_module_sensor
 
 	# Define FAN direction
 	temp_fan_ambient=`cat $temp_fan_amb`
@@ -618,7 +667,7 @@ set_pwm_min_speed()
 	untrusted_sensor=0
 
 	# Check for untrusted modules
-	check_untrested_port_sensor
+	check_untrested_module_sensor
 
 	# Set FAN minimum speed according to  presence of untrusted cabels.
 	if [ $untrusted_sensor -eq 0 ]; then
@@ -740,7 +789,7 @@ thermal_zone_iterate()
 thermal_down_event()
 {
 	# The received event notifies about fast temperature decreasing. It
-	# could happen in case one or few very hot port cables have been
+	# could happen in case one or few very hot QSFP module cables have been
 	# removed. In this situation temperature trend, handled by the kernel
 	# thermal algorithm could go down once, and then could stay in stable
 	# state, while PWM state will be decreased only once. As a side effect
@@ -826,6 +875,8 @@ count=0
 while true
 do
     	/bin/sleep $polling_time
+	# Update PS unit fan speed
+	update_psu_fan_speed
 	# If one of PS units is out disable thermal zone and set PWM to the
 	# maximum speed.
 	get_psu_presence
