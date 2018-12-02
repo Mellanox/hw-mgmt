@@ -268,6 +268,8 @@ ambient=0
 
 validate_thermal_configuration()
 {
+	# Wait for symbolic links creation.
+	sleep 3
 	# Validate FAN fault symbolic links.
 	for ((i=1; i<=$max_tachos; i+=1)); do
 		if [ ! -L $thermal_path/fan"$i"_fault ]; then
@@ -297,7 +299,7 @@ validate_thermal_configuration()
 		fi
 	done
 	if [ ! -L $temp_fan_amb ] || [ ! -L $temp_port_amb ]; then
-		log_failure_msg "Ambient temperate sensors attributes are not exist"
+		log_failure_msg "Ambient temperature sensors attributes are not exist"
 		exit 1
 	fi
 	if [ $max_psus -gt 0 ]; then
