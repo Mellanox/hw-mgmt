@@ -1,4 +1,4 @@
-# Mellanox thermal control and hardware management eference design                 
+# Mellanox thermal control and hardware management reference design
 
 This package supports thermal control and hardware management for Mellanox
 switches.
