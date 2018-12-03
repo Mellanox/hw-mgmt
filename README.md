@@ -279,7 +279,7 @@ dpkg --purge hw-management
 For rpm install with:
 - yum localinstall /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm
   or
-- rpm -ivh -r /tmp hw-management-1.mlnx.18.12.2018-2.x86_64.rpm
+- rpm -ivh /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm
   remove with:
 - yum remove hw-management
   or

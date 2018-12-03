@@ -120,7 +120,7 @@ max_amb=120000
 untrusted_sensor=0
 
 # PSU fan speed vector
-psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
+psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 
 # Thermal tables for the minimum FAN setting per system time. It contains
 # entries with ambient temperature threshold values and relevant minimum
@@ -503,27 +503,29 @@ get_fan_faults()
 	for ((i=1; i<=$max_tachos; i+=1)); do
 		if [ -f $thermal_path/fan"$i"_fault ]; then
 			fault=`cat $thermal_path/fan"$i"_fault`
-			if [ $fault -eq 1 ]; then
-				pwm_required_act=$pwm_max
-				mode=`cat $tz_mode`
-				# Disable asic and modules thermal zones if were enabled.
-				if [ $mode == "enabled" ]; then
-					echo disabled > $tz_mode
-					log_action_msg "ASIC thermal zone is disabled due to FAN fault"
-				fi
-				for ((i=1; i<=$max_ports; i+=1)); do
-					if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
-						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
-						if [ $mode == "enabled" ]; then
-							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-							log_action_msg "QSFP module $i thermal zone is disabled due to FAN fault"
-						fi
-					fi
-				done
-				echo $pwm_max_rpm > $pwm
+		fi
+		speed=`cat $thermal_path/fan"$i"_input`
 
-				return
+		if [ $fault -eq 1 ] || [ $speed -eq 0 ] ; then
+			pwm_required_act=$pwm_max
+			mode=`cat $tz_mode`
+			# Disable asic and modules thermal zones if were enabled.
+			if [ $mode == "enabled" ]; then
+				echo disabled > $tz_mode
+				log_action_msg "ASIC thermal zone is disabled due to FAN fault"
 			fi
+			for ((i=1; i<=$max_ports; i+=1)); do
+				if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+					mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
+					if [ $mode == "enabled" ]; then
+						echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
+						log_action_msg "QSFP module $i thermal zone is disabled due to FAN fault"
+					fi
+				fi
+			done
+			echo $pwm_max_rpm > $pwm
+
+			return
 		fi
 	done
 
@@ -726,7 +728,7 @@ check_trip_min_vs_current_temp()
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
 			trip_norm=`cat $thermal_path/mlxsw-module"$i"/temp_trip_norm`
 			temp_now=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_temp`
-			if [ $trip_norm -le  $temp_now ]; then
+			if [ $temp_now -gt 0 ] && [ $trip_norm -le  $temp_now ]; then
 				return
 			fi
 		fi
