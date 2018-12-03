@@ -173,6 +173,23 @@ if [ "$1" == "add" ]; then
 				ln -sf $3$4/pwr$i $power_path/psu"$i"_pwr_status
 			fi
 		done
+		if [ -d /sys/module/mlxsw_pci ]; then
+			return
+		fi
+		asic_health=`cat $3$4/asic1`
+		if [ $asic_health -ne 2 ]; then
+			return
+		fi
+		find_i2c_bus
+		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+		path=/sys/bus/i2c/devices/i2c-$bus
+		if [ ! -d /sys/module/mlxsw_minimal ]; then
+			modprobe mlxsw_minimal
+		fi
+		if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
+		   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
+			echo mlxsw_minimal 0x48 > $path/new_device
+		fi
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -365,6 +382,16 @@ else
 				unlink $power_path/psu"$i"_pwr_status
 			fi
 		done
+		if [ -d /sys/module/mlxsw_pci ]; then
+			return
+		fi
+		find_i2c_bus
+		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+		path=/sys/bus/i2c/devices/i2c-$bus
+		if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
+		   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
+			echo 0x48 > $path/delete_device
+		fi
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
