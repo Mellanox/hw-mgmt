@@ -11,6 +11,7 @@ Supported systems:
 - MSN27*|MSB*|MSX* Neptune, Tarantula, Scorpion, Scorpion2
 - MSN201* Boxer                                           
 - MQMB7*|MSN37*|MSN34* Jupiter, Jaguar, Anaconda
+- MSN38* Tigris
 
 # Introduction:
 Mellanox thermal monitoring is an open source package for better thermal

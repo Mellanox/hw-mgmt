@@ -40,6 +40,7 @@
 #  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2, Spider
 #  MSN201*		Boxer
 #  MQMB7*|MSN37*|MSN34*	Jupiter, Jaguar, Anaconda
+#  MSN38*		Tigris
 # Available options:
 # start	- load the kernel drivers required for the thermal control support,
 #	  connect drivers to devices, activate thermal control.
@@ -182,6 +183,26 @@ mqm8700_dis_table=(	0x64 5 \
 			0x6d 15 \
 			0x50 16)
 
+msn3800_connect_table=( max11603 0x64 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tps53679 0x72 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			24c32 0x50 16)
+
+msn3800_dis_table=(	0x64 5 \
+			0x70 5 \
+			0x71 5 \
+			0x72 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x50 16)
+
 ACTION=$1
 
 is_module()
@@ -295,6 +316,23 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+msn38xx_specific()
+{
+	connect_size=${#msn3800_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn3800_connect_table[i]}
+	done
+	disconnect_size=${#msn3800_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn3800_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t6
+	max_tachos=3
+	max_psus=2
+	echo 3 > $config_path/cpld_num
+}
+
 check_system()
 {
 	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
@@ -319,6 +357,9 @@ check_system()
 			MQM87*|MSN37*|MSN34*)
 				mqmxxx_msn37x_msn34x_specific
 				;;
+			MSN38*)
+				msn38xx_specific
+				;;
 			*)
 				log_failure_msg "$product is not supported"
 				exit 0
@@ -342,6 +383,9 @@ check_system()
 				;;
 			VMOD0005)
 				mqmxxx_msn37x_msn34x_specific
+				;;
+			VMOD0007)
+				msn38xx_specific
 				;;
 			*)
 				log_failure_msg "$manufacturer is not Mellanox"

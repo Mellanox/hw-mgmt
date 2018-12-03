@@ -227,6 +227,9 @@ if [ "$1" == "add" ]; then
 		# Add power attributes
 		ln -sf $5$3/in1_input $power_path/$2_volt_in
 		ln -sf $5$3/in2_input $power_path/$2_volt
+		if [ -f $5$3/in3_input ]; then
+			ln -sf $5$3/in3_input $power_path/$2_volt_out2
+		fi
 		ln -sf $5$3/power1_input $power_path/$2_power_in
 		ln -sf $5$3/power2_input $power_path/$2_power
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
@@ -428,6 +431,9 @@ else
 		fi
 		if [ -L $power_path/$2_volt ]; then
 			unlink $power_path/$2_volt
+		fi
+		if [ -f $power_path/$2_volt_out2 ]; then
+			unlink $power_path/$2_volt_out2
 		fi
 		if [ -L $power_path/$2_power_in ]; then
 			unlink $power_path/$2_power_in
