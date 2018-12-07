@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-hw_management_path=/var/run/hw-management
+hw_management_path=/bsp
 environment_path=$hw_management_path/environment
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
@@ -42,14 +42,14 @@ i2c_bus_max=10
 i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=16
-i2c_bus_def_off_eeprom_psu1=4
-i2c_bus_def_off_eeprom_psu2=4
-i2c_bus_alt_off_eeprom_psu1=10
-i2c_bus_alt_off_eeprom_psu2=10
+i2c_bus_def_off_eeprom_psu=4
+i2c_bus_alt_off_eeprom_psu=10
 i2c_bus_def_off_eeprom_fan1=11
 i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
+psu1_i2c_addr=0x51
+psu2_i2c_addr=0x50
 eeprom_name=''
 max_ports_def=64
 
@@ -76,24 +76,25 @@ find_i2c_bus()
 find_eeprom_name()
 {
 	bus=$1
+	addr=$2
 	if [ $bus -eq $i2c_bus_def_off_eeprom_vpd ]; then
-		eeprom_name=eeprom_vpd
+		eeprom_name=vpd_info
 	elif [ $bus -eq $i2c_bus_def_off_eeprom_cpu ]; then
-		eeprom_name=eeprom_cpu
-	elif [ $bus -eq $i2c_bus_def_off_eeprom_psu1 ] ||
-	     [ $bus -eq $bus -eq $i2c_bus_alt_off_eeprom_psu1 ]; then
-		eeprom_name=eeprom_psu1
-	elif [ $bus -eq bus -eq $i2c_bus_def_off_eeprom_psu2 ] ||
-	     [ $bus -eq $i2c_bus_alt_off_eeprom_psu2]; then
-		eeprom_name=eeprom_psu2
+		eeprom_name=cpu_info
+	elif [ $bus -eq $i2c_bus_def_off_eeprom_psu ] || [ $bus -eq $i2c_bus_alt_off_eeprom_psu ]; then
+		if [ $addr = $psu1_i2c_addr ]; then
+			eeprom_name=psu1_info
+		elif [ $addr = $psu2_i2c_addr ]; then
+			eeprom_name=psu2_info
+		fi
 	elif [ $bus -eq $i2c_bus_def_off_eeprom_fan1 ]; then
-		eeprom_name=eeprom_fan1
+		eeprom_name=fan1_info
 	elif [ $bus -eq $i2c_bus_def_off_eeprom_fan2 ]; then
-		eeprom_name=eeprom_fan2
+		eeprom_name=fan2_info
 	elif [ $bus -eq $i2c_bus_def_off_eeprom_fan3 ]; then
-		eeprom_name=eeprom_fan3
+		eeprom_name=fan3_info
 	elif [ $bus -eq $i2c_bus_def_off_eeprom_fan4 ]; then
-		eeprom_name=eeprom_fan4
+		eeprom_name=fan4_info
 	fi
 }
 
@@ -154,18 +155,14 @@ if [ "$1" == "add" ]; then
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$(($bus-$i2c_bus_offset))
-		find_eeprom_name $bus
+		addr="0x${busfolder: -2}"
+		find_eeprom_name $bus $addr
 		ln -sf $3$4/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 	fi
 	if [ "$2" == "qsfp" ]; then
 		# Wait for adding infrastructure
-		sleep 5
-		for i in {1..$max_ports_def}; do
-			if [ -f $3$4/qsfp$i ]; then
-				ln -sf $3$4/qsfp$i $qsfp_path/qsfp"$i"
-				ln -sf $3$4/qsfp"$i"_status $qsfp_path/qsfp/qsfp"$i"_status
-			fi
-		done
+		sleep 20
+		find $3$4/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
 	fi
 elif [ "$1" == "remove" ]; then
 	if [ "$2" == "a2d" ]; then
@@ -216,17 +213,13 @@ elif [ "$1" == "remove" ]; then
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$(($bus-$i2c_bus_offset))
-		find_eeprom_name $bus
+		addr="0x${busfolder: -2}"
+		find_eeprom_name $bus $addr
 		unlink $eeprom_path/$eeprom_name
 	fi
 	if [ "$2" == "qsfp" ]; then
-		for i in {1..$max_ports_def}; do
-			if [ -L $qsfp_path/qsfp$i ]; then
-				unlink $qsfp_path/qsfp"$i"
-			fi
-			if [ -L $qsfp_path/qsfp"$i"_status ]; then
-				unlink $qsfp_path/qsfp"$i"_status
-			fi
-		done
+		sleep 20
+		find $3$4/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
+
 	fi
 fi

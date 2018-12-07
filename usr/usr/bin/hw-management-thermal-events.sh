@@ -34,7 +34,7 @@
 . /lib/lsb/init-functions
 
 # Local variables
-hw_management_path=/var/run/hw-management
+hw_management_path=/bsp
 thermal_path=$hw_management_path/thermal
 power_path=$hw_management_path/power
 config_path=$hw_management_path/config
@@ -68,13 +68,13 @@ find_i2c_bus()
 }
 
 if [ "$1" == "add" ]; then
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
 		ln -sf $3$4/temp1_input $thermal_path/$2
 	fi
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
 		if [ "$name" == "mlxsw" ]; then
-			ln -sf $3$4/temp1_input $thermal_path/temp1_input_asic
+			ln -sf $3$4/temp1_input $thermal_path/asic
 			ln -sf $3$4/pwm1 $thermal_path/pwm1
 
 			if [ -f $config_path/fan_inversed ]; then
@@ -90,7 +90,7 @@ if [ "$1" == "add" ]; then
 					ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
 				fi
 				if [ -f $3$4/fan"$i"_input ]; then
-					ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_input
+					ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
 					if [ -f $config_path/fan_min_speed ]; then
 						ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
 					fi
@@ -125,7 +125,7 @@ if [ "$1" == "add" ]; then
 				ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
 			fi
 			if [ -f $3$4/fan"$i"_input ]; then
-				ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_input
+				ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
 			fi
 			if [ -f $config_path/fan_min_speed ]; then
 				ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
@@ -170,7 +170,7 @@ if [ "$1" == "add" ]; then
 				ln -sf $3$4/psu$i $thermal_path/psu"$i"_status
 			fi
 			if [ -f $3$4/pwr$i ]; then
-				ln -sf $3$4/pwr$i $power_path/psu"$i"_pwr_status
+				ln -sf $3$4/pwr$i $thermal_path/psu"$i"_pwr_status
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
@@ -220,9 +220,9 @@ if [ "$1" == "add" ]; then
 		# Set I2C bus for psu
 		echo $bus > $config_path/"$2"_i2c_bus
 		# Add thermal attributes
-		ln -sf $5$3/temp1_input $thermal_path/$2_temp
-		ln -sf $5$3/temp1_max $thermal_path/$2_temp_max
-		ln -sf $5$3/temp1_max_alarm $thermal_path/$2_temp_alarm
+		ln -sf $5$3/temp1_input $thermal_path/$2
+		ln -sf $5$3/temp1_max $thermal_path/$2_max
+		ln -sf $5$3/temp1_max_alarm $thermal_path/$2_alarm
 		ln -sf $5$3/fan1_input $thermal_path/$2_fan1_speed_get
 		# Add power attributes
 		ln -sf $5$3/in1_input $power_path/$2_volt_in
@@ -292,20 +292,20 @@ elif [ "$1" == "change" ]; then
 		fi
 	fi
 else
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
 		unlink $thermal_path/$2
 	fi
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
 		if [ "$name" == "mlxsw" ]; then
-			unlink $thermal_path/temp1_input_asic
+			unlink $thermal_path/asic
 			unlink $thermal_path/pwm1
 			for ((i=1; i<=$max_tachos; i+=1)); do
 				if [ -L $thermal_path/fan"$i"_fault ]; then
 					unlink $thermal_path/fan"$i"_fault
 				fi
-				if [ -L $thermal_path/fan"$i"_input ]; then
-					unlink $thermal_path/fan"$i"_input
+				if [ -L $thermal_path/fan"$i"_speed_get ]; then
+					unlink $thermal_path/fan"$i"_speed_get
 				fi
 				if [ -f $thermal_path/fan"$j"_min ]; then
 					unlink $thermal_path/fan"$j"_min
@@ -333,7 +333,7 @@ else
 				unlink $thermal_path/fan"$i"_fault
 			fi
 			if [ -f $3$4/fan"$i"_input ]; then
-				unlink $thermal_path/fan"$i"_input
+				unlink $thermal_path/fan"$i"_speed_get
 			fi
 			if [ -f $thermal_path/fan"$i"_min ]; then
 				unlink $thermal_path/fan"$i"_min
@@ -381,8 +381,8 @@ else
 			if [ -L $thermal_path/psu"$i"_status ]; then
 				unlink $thermal_path/psu"$i"_status
 			fi
-			if [ -L $power_path/psu"$i"_pwr_status ]; then
-				unlink $power_path/psu"$i"_pwr_status
+			if [ -L $thermal_path/psu"$i"_pwr_status ]; then
+				unlink $thermal_path/psu"$i"_pwr_status
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
@@ -413,14 +413,14 @@ else
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
 		# Remove thermal attributes
-		if [ -L $thermal_path/$2_temp ]; then
-			unlink $thermal_path/$2_temp
+		if [ -L $thermal_path/$2 ]; then
+			unlink $thermal_path/$2
 		fi
-		if [ -L $thermal_path/$2_temp_max ]; then
-			unlink $thermal_path/$2_temp_max
+		if [ -L $thermal_path/$2_max ]; then
+			unlink $thermal_path/$2_max
 		fi
-		if [ -L $thermal_path/$2_temp_alarm ]; then
-			unlink $thermal_path/$2_temp_alarm
+		if [ -L $thermal_path/$2_alarm ]; then
+			unlink $thermal_path/$2_alarm
 		fi
 		if [ -L $thermal_path/$2_fan1_speed_get ]; then
 			unlink $thermal_path/$2_fan1_speed_get

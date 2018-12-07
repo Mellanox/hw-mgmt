@@ -68,18 +68,18 @@ fan_psu_default=0x3c
 fan_command=0x3b
 fan_max_speed=24000
 fan_min_speed=5000
-hw_management_path=/var/run/hw-management
+hw_management_path=/bsp
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
-thermal_zone_path=$hw_management_path/thermal_zone
 environment_path=$hw_management_path/environment
 power_path=$hw_management_path/power
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
-module_path=$hw_management_path/module
 system_path=$hw_management_path/system
+module_path=$hw_management_path/module
 cpld_path=$hw_management_path/cpld
 qsfp_path=$hw_management_path/qsfp
+fan_path=$hw_management_path/fan
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 
@@ -473,9 +473,6 @@ create_symbolic_links()
 	if [ ! -d $config_path ]; then
 		mkdir $config_path
 	fi
-	if [ ! -d $thermal_zone_path  ]; then
-		mkdir -p $thermal_zone_path
-	fi
 	if [ ! -d $environment_path ]; then
 		mkdir $environment_path
 	fi
@@ -488,14 +485,8 @@ create_symbolic_links()
 	if [ ! -d $led_path ]; then
 		mkdir $led_path
 	fi
-	if [ ! -d $module_path ]; then
-		mkdir $module_path
-	fi
 	if [ ! -d $system_path ]; then
 		mkdir $system_path
-	fi
-	if [ ! -d $cpld_path ]; then
-		mkdir $cpld_path
 	fi
 	if [ ! -d $qsfp_path ]; then
 		mkdir $qsfp_path
@@ -512,21 +503,27 @@ remove_symbolic_links()
 {
 	# Clean hw-management directory - remove folder if it's empty
 	if [ -d $hw_management_path ]; then
-		sleep 3
-		for filename in $hw_management_path/*; do
-			if [ -d $filename ]; then
-				if [ -z "$(ls -A $filename)" ]; then
-					rm -rf $filename
-				fi
-			elif [ -L $filename ]; then
-				unlink $filename
-			fi
-		done
-		rm -rf $config_path
-		if [ -z "$(ls -A $hw_management_pat)" ]; then
-			rm -rf $hw_management_path
-		fi
+		find $hw_management_path -type l -exec unlink {} \;
+		rm -rf $hw_management_path
 	fi
+}
+
+backward_compatibility_link()
+{
+	if [ ! -d $module_path ]; then
+		ln -sf $thermal_path $module_path
+	fi
+	if [ ! -d $cpld_path ]; then
+		ln -sf $system_path $cpld_path
+	fi
+	if [ ! -d $fan_path ]; then
+		ln -sf $thermal_path $fan_path
+	fi
+
+	find $fan_path/ -name "fan*_input" -exec sh -c 'fan_path=`dirname {}`;fan_name=`basename {} | cut -d_ -f1;`; ln -sf ${thermal_path}/pwm1  ${fan_path}/${fan_name}_speed_set;' \;
+
+	ln -sf /bsp/cpld/cpld1_version /bsp/cpld/cpld_brd_version
+	ln -sf /bsp/cpld/cpld2_version /bsp/cpld/cpld_mgmt_version
 }
 
 case $ACTION in
@@ -540,11 +537,13 @@ case $ACTION in
 		echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
 		echo $fan_psu_default > $config_path/fan_psu_default
 		echo $fan_command > $config_path/fan_command
+		echo 25 > $config_path/thermal_delay
 		# Sleep to allow kernel modules initialization completion
 		sleep 3
 		find_i2c_bus
 		connect_platform
-		$THERMAL_CONTROL $thermal_type $max_tachos $max_psus &
+		$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
+		backward_compatibility_link
 	;;
 	stop)
 		# Kill thermal control if running.
