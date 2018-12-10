@@ -1,6 +1,6 @@
-From 599336bc03391541a1681f396bb436cc229ffa49 Mon Sep 17 00:00:00 2001
+From cde69027dae3f99322e84a5b5073daaca4f38b78 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Mon, 10 Dec 2018 14:17:51 +0000
+Date: Mon, 10 Dec 2018 17:38:24 +0000
 Subject: [PATCH mellanox 4.20-4.21 backport] mlxsw thermal monitoring
  amendments
 
@@ -364,14 +364,14 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 728 +++++++++++++++++++--
  drivers/net/ethernet/mellanox/mlxsw/i2c.c          |  43 +-
  drivers/net/ethernet/mellanox/mlxsw/i2c.h          |  35 +-
- drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 440 ++++++++++++-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 414 +++++++++++-
  drivers/net/ethernet/mellanox/mlxsw/reg.h          | 139 +++-
  drivers/platform/mellanox/mlxreg-hotplug.c         |  23 +-
  drivers/platform/mellanox/mlxreg-io.c              |   4 +-
  drivers/platform/x86/mlx-platform.c                | 138 +++-
  include/linux/platform_data/mlxreg.h               |   6 +-
  include/linux/sfp.h                                | 564 ++++++++++++++++
- 17 files changed, 2448 insertions(+), 285 deletions(-)
+ 17 files changed, 2422 insertions(+), 285 deletions(-)
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.c
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.h
  create mode 100644 include/linux/sfp.h
@@ -2275,10 +2275,10 @@ index daa24b2..17e059d 100644
  #ifndef _MLXSW_I2C_H
  #define _MLXSW_I2C_H
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 3dd1626..4b1f39a 100644
+index 3dd1626..ed03577 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-@@ -1,41 +1,14 @@
+@@ -1,37 +1,9 @@
 -/*
 - * drivers/net/ethernet/mellanox/mlxsw/minimal.c
 - * Copyright (c) 2016 Mellanox Technologies. All rights reserved.
@@ -2321,12 +2321,7 @@ index 3dd1626..4b1f39a 100644
  #include <linux/i2c.h>
  #include <linux/kernel.h>
  #include <linux/module.h>
- #include <linux/mod_devicetable.h>
-+#include <net/switchdev.h>
- #include <linux/types.h>
- 
- #include "core.h"
-@@ -43,11 +16,412 @@
+@@ -43,11 +15,387 @@
  
  static const char mlxsw_minimal_driver_name[] = "mlxsw_minimal";
  
@@ -2486,30 +2481,6 @@ index 3dd1626..4b1f39a 100644
 +	.get_module_eeprom	= mlxsw_minimal_get_module_eeprom,
 +};
 +
-+static int mlxsw_minimal_port_attr_get(struct net_device *dev,
-+				       struct switchdev_attr *attr)
-+{
-+	struct mlxsw_minimal_port *mlxsw_minimal_port = netdev_priv(dev);
-+	struct mlxsw_minimal *mlxsw_minimal =
-+					mlxsw_minimal_port->mlxsw_minimal;
-+
-+	switch (attr->id) {
-+	case SWITCHDEV_ATTR_ID_PORT_PARENT_ID:
-+		attr->u.ppid.id_len = sizeof(mlxsw_minimal->base_mac);
-+		memcpy(&attr->u.ppid.id, &mlxsw_minimal->base_mac,
-+		       attr->u.ppid.id_len);
-+		break;
-+	default:
-+		return -EOPNOTSUPP;
-+	}
-+
-+	return 0;
-+}
-+
-+static const struct switchdev_ops mlxsw_minimal_port_switchdev_ops = {
-+	.switchdev_port_attr_get	= mlxsw_minimal_port_attr_get,
-+};
-+
 +static int
 +mlxsw_minimal_port_module_info_get(struct mlxsw_minimal *mlxsw_minimal,
 +				   u8 local_port, u8 *p_module, u8 *p_width)
@@ -2572,7 +2543,6 @@ index 3dd1626..4b1f39a 100644
 +
 +	dev->netdev_ops = &mlxsw_minimal_port_netdev_ops;
 +	dev->ethtool_ops = &mlxsw_minimal_port_ethtool_ops;
-+	dev->switchdev_ops = &mlxsw_minimal_port_switchdev_ops;
 +
 +	err = mlxsw_core_port_init(mlxsw_minimal->core,
 +				   &mlxsw_minimal_port->core_port, local_port,
