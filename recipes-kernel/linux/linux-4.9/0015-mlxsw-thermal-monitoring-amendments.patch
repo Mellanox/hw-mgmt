@@ -1,6 +1,6 @@
-From 670dd8ba9c01340637966e02a57a7cb215c0685b Mon Sep 17 00:00:00 2001
+From 599336bc03391541a1681f396bb436cc229ffa49 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Thu, 22 Nov 2018 14:29:03 +0000
+Date: Mon, 10 Dec 2018 14:17:51 +0000
 Subject: [PATCH mellanox 4.20-4.21 backport] mlxsw thermal monitoring
  amendments
 
@@ -47,6 +47,11 @@ front panel 001:        +51.0C  (highest = +52.0C)
 front panel 002:        +62.0C  (crit = +70.0C, emerg = +80.0C)
 ...
 front panel 055:       +60.0C  (crit = +70.0C, emerg = +80.0C)
+
+Add definitions for new registers:
+- CPLD3 version - next generation systems are equipped with three CPLD;
+- Two reset cause registers, which store the system reset reason (like
+  system failures, upgrade failures and so on;
 
 The below are the list of the commits included in patchset.
 
@@ -267,8 +272,90 @@ The patch allows to obtain QSFP/SFP module info through ethtool.
 
 Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
 ---
+
+platform/x86: mlx-platform: Add support for fan direction register
+
+Provide support for the fan direction register.
+This register shows configuration for system fans direction, which could
+be forward or reversed.
+For forward direction - relevant bit is set 0;
+For reversed direction - relevant bit is set 1.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
 ---
- drivers/hwmon/mlxreg-fan.c                         |   2 +-
+
+platform_data/mlxreg: Document fixes for core platform data
+
+Remove "led" from the description, since the structure
+"mlxreg_core_platform_data" is used not only for led data.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+
+platform_data/mlxreg: Add capability field to core platform data
+
+Add capability field to "mlxreg_core_platform_data" structure.
+The purpose of this register is to provide additional info to platform
+driver through the atribute related capability register.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+
+platform/x86: mlx-platform: Add support for fan capability registers
+
+Provide support for the fan capability registers for next generation
+systems of types MQM87xx, MSN34xx, MSN37xx. These new registers
+provide configuration for tachometers connectivity, fan drawers
+connectvivity and tachometer speed divider.
+Use these registers for next generation led, fan and hotplug structures
+in order to distinct between the systems which have minor configuration
+differences. This reduces the amount of code used to describe such
+systems.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+
+platform/x86: mlx-platform: Add support for new VMOD0007 board name
+
+Add support for new Mellanox system type MSN3700C, which is
+a cost reduction flavor of MSN37 system?s class.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+
+hwmon: (mlxreg-fan) Add support for fan capability registers
+
+Add support for fan capability registers in order to distinct between
+the systems which have minor fan configuration differences. This
+reduces the amount of code used to describe such systems.
+The capability registers provides system specific information about the
+number of physically connected tachometers and system specific fan
+speed scale parameter.
+For example one system can be equipped with twelve fan tachometers,
+while the other with for example, eight or six. Or one system should
+use default fan speed divider value, while the other has a scale
+parameter defined in hardware, which should be used for divider
+setting.
+Reading this information from the capability registers allows to use the
+same fan structure for the systems with the such differences.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+
+leds: mlxreg: Add support for capability register
+
+Add support for capability register in order to distinct between the
+systems which have minor LED configuration differences. This reduces
+the amount of code used to describe such systems.
+For example one system can be equipped with six LED, while the other
+with only four. Reading this information from the capability registers
+allows to use the same LED structure for such systems.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+---
+ drivers/hwmon/mlxreg-fan.c                         |  78 ++-
+ drivers/leds/leds-mlxreg.c                         |  55 +-
  drivers/net/ethernet/mellanox/mlxsw/Makefile       |   2 +-
  drivers/net/ethernet/mellanox/mlxsw/core.h         |  14 +
  drivers/net/ethernet/mellanox/mlxsw/core_env.c     | 117 ++++
@@ -277,21 +364,35 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 728 +++++++++++++++++++--
  drivers/net/ethernet/mellanox/mlxsw/i2c.c          |  43 +-
  drivers/net/ethernet/mellanox/mlxsw/i2c.h          |  35 +-
- drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 439 ++++++++++++-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 440 ++++++++++++-
  drivers/net/ethernet/mellanox/mlxsw/reg.h          | 139 +++-
+ drivers/platform/mellanox/mlxreg-hotplug.c         |  23 +-
  drivers/platform/mellanox/mlxreg-io.c              |   4 +-
- drivers/platform/x86/mlx-platform.c                |  39 +-
+ drivers/platform/x86/mlx-platform.c                | 138 +++-
+ include/linux/platform_data/mlxreg.h               |   6 +-
  include/linux/sfp.h                                | 564 ++++++++++++++++
- 14 files changed, 2235 insertions(+), 238 deletions(-)
+ 17 files changed, 2448 insertions(+), 285 deletions(-)
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.c
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.h
  create mode 100644 include/linux/sfp.h
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index d8fa4be..db8c6de 100644
+index d8fa4be..11388c5 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
-@@ -51,7 +51,7 @@
+@@ -27,7 +27,10 @@
+ #define MLXREG_FAN_SPEED_MAX			(MLXREG_FAN_MAX_STATE * 2)
+ #define MLXREG_FAN_SPEED_MIN_LEVEL		2	/* 20 percent */
+ #define MLXREG_FAN_TACHO_SAMPLES_PER_PULSE_DEF	44
+-#define MLXREG_FAN_TACHO_DIVIDER_DEF		1132
++#define MLXREG_FAN_TACHO_DIVIDER_MIN		283
++#define MLXREG_FAN_TACHO_DIVIDER_DEF		(MLXREG_FAN_TACHO_DIVIDER_MIN \
++						 * 4)
++#define MLXREG_FAN_TACHO_DIVIDER_SCALE_MAX	32
+ /*
+  * FAN datasheet defines the formula for RPM calculations as RPM = 15/t-high.
+  * The logic in a programmable device measures the time t-high by sampling the
+@@ -51,7 +54,7 @@
   */
  #define MLXREG_FAN_GET_RPM(rval, d, s)	(DIV_ROUND_CLOSEST(15000000 * 100, \
  					 ((rval) + (s)) * (d)))
@@ -300,6 +401,194 @@ index d8fa4be..db8c6de 100644
  #define MLXREG_FAN_PWM_DUTY2STATE(duty)	(DIV_ROUND_CLOSEST((duty) *	\
  					 MLXREG_FAN_MAX_STATE,		\
  					 MLXREG_FAN_MAX_DUTY))
+@@ -360,12 +363,57 @@ static const struct thermal_cooling_device_ops mlxreg_fan_cooling_ops = {
+ 	.set_cur_state	= mlxreg_fan_set_cur_state,
+ };
+ 
++static int mlxreg_fan_connect_verify(struct mlxreg_fan *fan,
++				     struct mlxreg_core_data *data,
++				     bool *connected)
++{
++	u32 regval;
++	int err;
++
++	err = regmap_read(fan->regmap, data->capability, &regval);
++	if (err) {
++		dev_err(fan->dev, "Failed to query capability register 0x%08x\n",
++			data->capability);
++		return err;
++	}
++
++	*connected = (regval & data->bit) ? true : false;
++
++	return 0;
++}
++
++static int mlxreg_fan_speed_divider_get(struct mlxreg_fan *fan,
++					struct mlxreg_core_data *data)
++{
++	u32 regval;
++	int err;
++
++	err = regmap_read(fan->regmap, data->capability, &regval);
++	if (err) {
++		dev_err(fan->dev, "Failed to query capability register 0x%08x\n",
++			data->capability);
++		return err;
++	}
++
++	/*
++	 * Set divider value according to the capability register, in case it
++	 * contains valid value. Otherwise use default value. The purpose of
++	 * this validation is to protect against the old hardware, in which
++	 * this register can be un-initialized.
++	 */
++	if (regval > 0 && regval <= MLXREG_FAN_TACHO_DIVIDER_SCALE_MAX)
++		fan->divider = regval * MLXREG_FAN_TACHO_DIVIDER_MIN;
++
++	return 0;
++}
++
+ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 			     struct mlxreg_core_platform_data *pdata)
+ {
+ 	struct mlxreg_core_data *data = pdata->data;
+-	bool configured = false;
++	bool configured = false, connected = false;
+ 	int tacho_num = 0, i;
++	int err;
+ 
+ 	fan->samples = MLXREG_FAN_TACHO_SAMPLES_PER_PULSE_DEF;
+ 	fan->divider = MLXREG_FAN_TACHO_DIVIDER_DEF;
+@@ -376,6 +424,18 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 					data->label);
+ 				return -EINVAL;
+ 			}
++
++			if (data->capability) {
++				err = mlxreg_fan_connect_verify(fan, data,
++								&connected);
++				if (err)
++					return err;
++				if (!connected) {
++					tacho_num++;
++					continue;
++				}
++			}
++
+ 			fan->tacho[tacho_num].reg = data->reg;
+ 			fan->tacho[tacho_num].mask = data->mask;
+ 			fan->tacho[tacho_num++].connected = true;
+@@ -394,13 +454,19 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 				return -EINVAL;
+ 			}
+ 			/* Validate that conf parameters are not zeros. */
+-			if (!data->mask || !data->bit) {
++			if (!data->mask || !data->bit || !data->capability) {
+ 				dev_err(fan->dev, "invalid conf entry params: %s\n",
+ 					data->label);
+ 				return -EINVAL;
+ 			}
+-			fan->samples = data->mask;
+-			fan->divider = data->bit;
++			if (data->capability) {
++				err = mlxreg_fan_speed_divider_get(fan, data);
++				if (err)
++					return err;
++			} else {
++				fan->samples = data->mask;
++				fan->divider = data->bit;
++			}
+ 			configured = true;
+ 		} else {
+ 			dev_err(fan->dev, "invalid label: %s\n", data->label);
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 036c214..2db2000 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -1,35 +1,7 @@
+-/*
+- * Copyright (c) 2017 Mellanox Technologies. All rights reserved.
+- * Copyright (c) 2017 Vadim Pasternak <vadimp@mellanox.com>
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- * 3. Neither the names of the copyright holders nor the names of its
+- *    contributors may be used to endorse or promote products derived from
+- *    this software without specific prior written permission.
+- *
+- * Alternatively, this software may be distributed under the terms of the
+- * GNU General Public License ("GPL") version 2 as published by the Free
+- * Software Foundation.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+- * POSSIBILITY OF SUCH DAMAGE.
+- */
++// SPDX-License-Identifier: (GPL-2.0 OR BSD-3-Clause)
++//
++// Copyright (c) 2018 Mellanox Technologies. All rights reserved.
++// Copyright (c) 2018 Vadim Pasternak <vadimp@mellanox.com>
+ 
+ #include <linux/bitops.h>
+ #include <linux/device.h>
+@@ -217,6 +189,7 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 	struct mlxreg_led_data *led_data;
+ 	struct led_classdev *led_cdev;
+ 	int brightness;
++	u32 regval;
+ 	int i;
+ 	int err;
+ 
+@@ -226,6 +199,17 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 		if (!led_data)
+ 			return -ENOMEM;
+ 
++		if (data->capability) {
++			err = regmap_read(led_pdata->regmap, data->capability,
++					  &regval);
++			if (err) {
++				dev_err(&priv->pdev->dev, "Failed to query capability register\n");
++				return err;
++			}
++			if (!(regval & data->bit))
++				continue;
++		}
++
+ 		led_cdev = &led_data->led_cdev;
+ 		led_data->data_parent = priv;
+ 		if (strstr(data->label, "red") ||
+@@ -295,16 +279,9 @@ static int mlxreg_led_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
+-static const struct of_device_id mlxreg_led_dt_match[] = {
+-	{ .compatible = "mellanox,leds-mlxreg" },
+-	{ },
+-};
+-MODULE_DEVICE_TABLE(of, mlxreg_led_dt_match);
+-
+ static struct platform_driver mlxreg_led_driver = {
+ 	.driver = {
+ 	    .name = "leds-mlxreg",
+-	    .of_match_table = of_match_ptr(mlxreg_led_dt_match),
+ 	},
+ 	.probe = mlxreg_led_probe,
+ 	.remove = mlxreg_led_remove,
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/Makefile b/drivers/net/ethernet/mellanox/mlxsw/Makefile
 index b58ea1b..c62ba64 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/Makefile
@@ -1986,7 +2275,7 @@ index daa24b2..17e059d 100644
  #ifndef _MLXSW_I2C_H
  #define _MLXSW_I2C_H
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 3dd1626..81291d4 100644
+index 3dd1626..4b1f39a 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -1,41 +1,14 @@
@@ -2037,7 +2326,7 @@ index 3dd1626..81291d4 100644
  #include <linux/types.h>
  
  #include "core.h"
-@@ -43,11 +16,411 @@
+@@ -43,11 +16,412 @@
  
  static const char mlxsw_minimal_driver_name[] = "mlxsw_minimal";
  
@@ -2376,15 +2665,16 @@ index 3dd1626..81291d4 100644
 +		if (err)
 +			goto err_port_module_info_get;
 +
++		if (!width)
++			continue;
++
 +		/* Skip, if port belongs to the cluster */
 +		if (module == last_module)
 +			continue;
 +		last_module = module;
-+		if (!width)
-+			continue;
 +		mlxsw_minimal->module_to_port[module] = j++;
 +	}
-+	mlxsw_minimal->max_module = j;
++	mlxsw_minimal->max_module = j++;
 +
 +	/* Create port objects for each valid entry */
 +	for (i = 0; i < mlxsw_minimal->max_module - 1; i++) {
@@ -2632,6 +2922,47 @@ index 2c0c331..20f01bb 100644
  	case MLXSW_REG_MLCR_ID:
  		return "MLCR";
  	case MLXSW_REG_SBPR_ID:
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index b6d4455..991ec63 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -495,7 +495,9 @@ static int mlxreg_hotplug_set_irq(struct mlxreg_hotplug_priv_data *priv)
+ {
+ 	struct mlxreg_core_hotplug_platform_data *pdata;
+ 	struct mlxreg_core_item *item;
+-	int i, ret;
++	struct mlxreg_core_data *data;
++	u32 regval;
++	int i, j, ret;
+ 
+ 	pdata = dev_get_platdata(&priv->pdev->dev);
+ 	item = pdata->items;
+@@ -507,6 +509,25 @@ static int mlxreg_hotplug_set_irq(struct mlxreg_hotplug_priv_data *priv)
+ 		if (ret)
+ 			goto out;
+ 
++		/*
++		 * Verify if hardware configuration requires to disable
++		 * interrupt capability for some of components.
++		 */
++		data = item->data;
++		for (j = 0; j < item->count; j++, data++) {
++			/* Verify if the attribute has capability register. */
++			if (data->capability) {
++				/* Read capability register. */
++				ret = regmap_read(priv->regmap,
++						  data->capability, &regval);
++				if (ret)
++					goto out;
++
++				if (!(regval & data->bit))
++					item->mask &= BIT(j);
++			}
++		}
++
+ 		/* Set group initial status as mask and unmask group event. */
+ 		if (item->inversed) {
+ 			item->cache = item->mask;
 diff --git a/drivers/platform/mellanox/mlxreg-io.c b/drivers/platform/mellanox/mlxreg-io.c
 index c192dfe..acfaf64 100644
 --- a/drivers/platform/mellanox/mlxreg-io.c
@@ -2648,7 +2979,7 @@ index c192dfe..acfaf64 100644
  					 GFP_KERNEL);
  	if (!priv->group.attrs)
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index e8782f5..df3fcd3 100644
+index e8782f5..6e150b4 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -1,34 +1,9 @@
@@ -2699,7 +3030,26 @@ index e8782f5..df3fcd3 100644
  #define MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET	0x1d
  #define MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET	0x1e
  #define MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET	0x1f
-@@ -578,7 +553,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_msn201x_items[] = {
+@@ -58,6 +33,7 @@
+ #define MLXPLAT_CPLD_LPC_REG_LED3_OFFSET	0x22
+ #define MLXPLAT_CPLD_LPC_REG_LED4_OFFSET	0x23
+ #define MLXPLAT_CPLD_LPC_REG_LED5_OFFSET	0x24
++#define MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION	0x2a
+ #define MLXPLAT_CPLD_LPC_REG_GP1_OFFSET		0x30
+ #define MLXPLAT_CPLD_LPC_REG_WP1_OFFSET		0x31
+ #define MLXPLAT_CPLD_LPC_REG_GP2_OFFSET		0x32
+@@ -92,6 +68,10 @@
+ #define MLXPLAT_CPLD_LPC_REG_TACHO10_OFFSET	0xee
+ #define MLXPLAT_CPLD_LPC_REG_TACHO11_OFFSET	0xef
+ #define MLXPLAT_CPLD_LPC_REG_TACHO12_OFFSET	0xf0
++#define MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET	0xf5
++#define MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET	0xf6
++#define MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET	0xf7
++#define MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET	0xf8
+ #define MLXPLAT_CPLD_LPC_IO_RANGE		0x100
+ #define MLXPLAT_CPLD_LPC_I2C_CH1_OFF		0xdb
+ #define MLXPLAT_CPLD_LPC_I2C_CH2_OFF		0xda
+@@ -578,7 +558,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_msn201x_items[] = {
  
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_msn201x_data = {
@@ -2708,7 +3058,142 @@ index e8782f5..df3fcd3 100644
  	.counter = ARRAY_SIZE(mlxplat_mlxcpld_msn201x_items),
  	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
  	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
-@@ -1123,7 +1098,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -609,36 +589,48 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_fan_items_data[] = {
+ 		.label = "fan1",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(0),
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+ 		.label = "fan2",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(1),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(1),
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+ 		.label = "fan3",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(2),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(2),
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+ 		.label = "fan4",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(3),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(3),
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+ 		.label = "fan5",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(4),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(4),
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ 	{
+ 		.label = "fan6",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(5),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(5),
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+ 	},
+ };
+@@ -841,61 +833,85 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_led_data[] = {
+ 		.label = "fan1:green",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED2_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(0),
+ 	},
+ 	{
+ 		.label = "fan1:orange",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED2_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(0),
+ 	},
+ 	{
+ 		.label = "fan2:green",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED2_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(1),
+ 	},
+ 	{
+ 		.label = "fan2:orange",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED2_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(1),
+ 	},
+ 	{
+ 		.label = "fan3:green",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(2),
+ 	},
+ 	{
+ 		.label = "fan3:orange",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(2),
+ 	},
+ 	{
+ 		.label = "fan4:green",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(3),
+ 	},
+ 	{
+ 		.label = "fan4:orange",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(3),
+ 	},
+ 	{
+ 		.label = "fan5:green",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED4_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(4),
+ 	},
+ 	{
+ 		.label = "fan5:orange",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED4_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(4),
+ 	},
+ 	{
+ 		.label = "fan6:green",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED4_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(5),
+ 	},
+ 	{
+ 		.label = "fan6:orange",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LED4_OFFSET,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.bit = BIT(5),
+ 	},
+ };
+ 
+@@ -1123,7 +1139,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD3_VER_OFFSET,
  		.bit = GENMASK(7, 0),
  		.mode = 0444,
@@ -2717,6 +3202,207 @@ index e8782f5..df3fcd3 100644
  	{
  		.label = "reset_long_pb",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+@@ -1209,6 +1225,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.bit = 1,
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "fan_dir",
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION,
++		.bit = GENMASK(7, 0),
++		.mode = 0200,
++	},
+ };
+ 
+ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
+@@ -1226,61 +1248,90 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.label = "tacho1",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO1_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(0),
+ 	},
+ 	{
+ 		.label = "tacho2",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO2_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(1),
+ 	},
+ 	{
+ 		.label = "tacho3",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO3_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(2),
+ 	},
+ 	{
+ 		.label = "tacho4",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO4_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(3),
+ 	},
+ 	{
+ 		.label = "tacho5",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO5_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(4),
+ 	},
+ 	{
+ 		.label = "tacho6",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO6_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(5),
+ 	},
+ 	{
+ 		.label = "tacho7",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO7_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(6),
+ 	},
+ 	{
+ 		.label = "tacho8",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO8_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
++		.bit = BIT(7),
+ 	},
+ 	{
+ 		.label = "tacho9",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO9_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.bit = BIT(0),
+ 	},
+ 	{
+ 		.label = "tacho10",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO10_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.bit = BIT(1),
+ 	},
+ 	{
+ 		.label = "tacho11",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO11_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.bit = BIT(2),
+ 	},
+ 	{
+ 		.label = "tacho12",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_TACHO12_OFFSET,
+ 		.mask = GENMASK(7, 0),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.bit = BIT(3),
++	},
++	{
++		.label = "conf",
++		.reg = MLXPLAT_CPLD_LPC_REG_TACHO12_OFFSET,
++		.capability = MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET,
+ 	},
+ };
+ 
+@@ -1332,6 +1383,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_LED3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED5_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
+ 	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_WP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
+@@ -1366,6 +1418,10 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_TACHO11_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_TACHO12_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET:
+ 		return true;
+ 	}
+ 	return false;
+@@ -1385,6 +1441,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_LED3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED5_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
+ 	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
+@@ -1417,6 +1474,10 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_TACHO11_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_TACHO12_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET:
+ 		return true;
+ 	}
+ 	return false;
+@@ -1639,6 +1700,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 		},
+ 	},
+ 	{
++		.callback = mlxplat_dmi_qmb7xx_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "MSN38"),
++		},
++	},
++	{
+ 		.callback = mlxplat_dmi_default_matched,
+ 		.matches = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0001"),
+@@ -1668,6 +1736,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0005"),
+ 		},
+ 	},
++	{
++		.callback = mlxplat_dmi_qmb7xx_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0007"),
++		},
++	},
+ 	{ }
+ };
+ 
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index 19f5cb61..1b2f86f 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -61,6 +61,7 @@ struct mlxreg_hotplug_device {
+  * @reg: attribute register;
+  * @mask: attribute access mask;
+  * @bit: attribute effective bit;
++ * @capability: attribute capability register;
+  * @mode: access mode;
+  * @np - pointer to node platform associated with attribute;
+  * @hpdev - hotplug device data;
+@@ -72,6 +73,7 @@ struct mlxreg_core_data {
+ 	u32 reg;
+ 	u32 mask;
+ 	u32 bit;
++	u32 capability;
+ 	umode_t	mode;
+ 	struct device_node *np;
+ 	struct mlxreg_hotplug_device hpdev;
+@@ -107,9 +109,9 @@ struct mlxreg_core_item {
+ /**
+  * struct mlxreg_core_platform_data - platform data:
+  *
+- * @led_data: led private data;
++ * @data: instance private data;
+  * @regmap: register map of parent device;
+- * @counter: number of led instances;
++ * @counter: number of instances;
+  */
+ struct mlxreg_core_platform_data {
+ 	struct mlxreg_core_data *data;
 diff --git a/include/linux/sfp.h b/include/linux/sfp.h
 new file mode 100644
 index 0000000..d37518e
