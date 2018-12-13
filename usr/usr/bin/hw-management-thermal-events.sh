@@ -34,7 +34,7 @@
 . /lib/lsb/init-functions
 
 # Local variables
-hw_management_path=/bsp
+hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 power_path=$hw_management_path/power
 config_path=$hw_management_path/config

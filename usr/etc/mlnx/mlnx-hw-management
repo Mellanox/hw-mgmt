@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 #
 #
+#This is dummy script, its was used by ONL in the past.
+#Now it left empty for backport capability, to not do noise at boot.
+#it will be removed after call will be removed from ONL.
 
-set -x
-
-/usr/bin/hw-management.sh $1

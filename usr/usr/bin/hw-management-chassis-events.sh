@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-hw_management_path=/bsp
+hw_management_path=/var/run/hw-management
 environment_path=$hw_management_path/environment
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led

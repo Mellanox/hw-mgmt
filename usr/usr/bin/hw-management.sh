@@ -33,6 +33,13 @@
 
 ### BEGIN INIT INFO
 # Provides:		Thermal control for Mellanox systems
+# Required-Start: $local_fs $network $remote_fs $syslog
+# Required-Stop: $local_fs $network $remote_fs $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop:  0 1 6
+# Short-Description: <Thermal control for Mellanox systems>
+# Description: <Thermal control for Mellanox systems>
+### END INIT INFO
 # Supported systems:
 #  MSN274*		Panther SF
 #  MSN21*		Bulldog
@@ -46,7 +53,7 @@
 #	  connect drivers to devices, activate thermal control.
 # stop	- disconnect drivers from devices, unload kernel drivers, which has
 #	  been loaded, deactivate thermal control.
-### END INIT INFO
+#
 
 . /lib/lsb/init-functions
 
@@ -68,7 +75,7 @@ fan_psu_default=0x3c
 fan_command=0x3b
 fan_max_speed=24000
 fan_min_speed=5000
-hw_management_path=/bsp
+hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
 environment_path=$hw_management_path/environment
@@ -506,6 +513,8 @@ remove_symbolic_links()
 		find $hw_management_path -type l -exec unlink {} \;
 		rm -rf $hw_management_path
 	fi
+
+	rm -rf /bsp
 }
 
 backward_compatibility_link()
@@ -522,41 +531,63 @@ backward_compatibility_link()
 
 	find $fan_path/ -name "fan*_input" -exec sh -c 'fan_path=`dirname {}`;fan_name=`basename {} | cut -d_ -f1;`; ln -sf ${thermal_path}/pwm1  ${fan_path}/${fan_name}_speed_set;' \;
 
-	ln -sf /bsp/cpld/cpld1_version /bsp/cpld/cpld_brd_version
-	ln -sf /bsp/cpld/cpld2_version /bsp/cpld/cpld_mgmt_version
+	ln -sf $cpld_path/cpld1_version $cpld_path/cpld_brd_version
+	ln -sf $cpld_path/cpld2_version $cpld_path/cpld_mgmt_version
+
+	if [ -d /bsp ]; then
+		rm -rf /bsp
+	fi
+	ln -sf $hw_management_path /bsp
+}
+
+do_start()
+{
+	create_symbolic_links
+	check_system
+	depmod -a 2>/dev/null
+	udevadm trigger --action=add
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
+	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
+	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+	echo $fan_psu_default > $config_path/fan_psu_default
+	echo $fan_command > $config_path/fan_command
+	echo 35 > $config_path/thermal_delay
+	# Sleep to allow kernel modules initialization completion
+	sleep 3
+	find_i2c_bus
+	connect_platform
+	backward_compatibility_link
+
+	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
+}
+
+do_stop()
+{
+	# Kill thermal control if running.
+	if [ -f $PID ]; then
+		pid=`cat $PID`
+		if [ -d /proc/$pid ]; then
+			kill $pid
+		fi
+	fi
+
+	check_system
+	disconnect_platform
+	remove_symbolic_links
 }
 
 case $ACTION in
 	start)
-		create_symbolic_links
-		check_system
-		depmod -a 2>/dev/null
-		echo $fan_max_speed > $config_path/fan_max_speed
-		echo $fan_min_speed > $config_path/fan_min_speed
-		echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
-		echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
-		echo $fan_psu_default > $config_path/fan_psu_default
-		echo $fan_command > $config_path/fan_command
-		echo 25 > $config_path/thermal_delay
-		# Sleep to allow kernel modules initialization completion
-		sleep 3
-		find_i2c_bus
-		connect_platform
-		$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
-		backward_compatibility_link
+		do_start
 	;;
 	stop)
-		# Kill thermal control if running.
-		if [ -f $PID ]; then
-			pid=`cat $PID`
-			if [ -d /proc/$pid ]; then
-				kill $pid
-			fi
-		fi
-
-		check_system
-		disconnect_platform
-		remove_symbolic_links
+		do_stop
+	;;
+	restart|force-reload)
+		do_stop
+		sleep 3
+		do_start
 	;;
 	*)
 		echo "Usage: `basename $0` {start|stop}"

@@ -72,7 +72,7 @@
 . /lib/lsb/init-functions
 
 # Paths to thermal sensors, device present states, thermal zone and cooling device
-hw_management_path=/bsp
+hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 power_path=$hw_management_path/power
 config_path=$hw_management_path/config
@@ -865,6 +865,26 @@ fi
 
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
 
+disable_zones_max_pwm() {
+	mode=`cat $tz_mode`
+	# Disable asic and modules thermal zones if were enabled.
+	if [ $mode = "enabled" ]; then
+		echo disabled > $tz_mode
+		log_action_msg "ASIC thermal zone is disabled due to thermal algorithm is suspend"
+	fi
+	for ((i=1; i<=$max_ports; i+=1)); do
+		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+			mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
+			if [ $mode = "enabled" ]; then
+				echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
+				log_action_msg "QSFP module $i thermal zone is disabled due to thermal algorithm is suspend"
+			fi
+		fi
+	done
+	echo $pwm_max_rpm > $pwm
+	log_action_msg "Set fan speed to maximum"
+}
+
 # Validate thermal configuration.
 validate_thermal_configuration
 # Initialize system dynamic minimum speed data base.
@@ -877,10 +897,31 @@ log_action_msg "Mellanox thermal control is started"
 periodic_report=$(($polling_time*$report_counter))
 periodic_report=12	# For debug - remove after tsting
 count=0
+suspend_thermal=0;
 # Start thermal monitoring.
 while true
 do
-    	/bin/sleep $polling_time
+	/bin/sleep $polling_time
+
+	# Check if thermal is suspended
+	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
+	if [ $suspend ] && [ "$suspend" != "$suspend_thermal" ]; then
+		if [ "$suspend" = "1" ]; then
+			disable_zones_max_pwm
+			log_action_msg "Thermal algorithm is manually suspend."
+		else
+			log_action_msg "Thermal algorithm is manually restored."
+			sleep 1
+		fi
+		suspend_thermal=$suspend
+		sleep 1
+		continue
+	else
+		if [ "$suspend_thermal" = "1" ]; then
+			sleep 1
+			continue
+		fi
+	fi
 	# Update PS unit fan speed
 	update_psu_fan_speed
 	# If one of PS units is out disable thermal zone and set PWM to the

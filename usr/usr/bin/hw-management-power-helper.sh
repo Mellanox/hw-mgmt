@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-hw_management_path=/bsp
+hw_management_path=/var/run/hw-management
 system_path=$hw_management_path/system
 environment_path=hw_management_path/environment
 

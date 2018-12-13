@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 ########################################################################
 # Copyright (c) 2018 Mellanox Technologies. All rights reserved.
 #
