@@ -1,6 +1,6 @@
-From 864974ed7b27f312423e715af369d9e5865baf79 Mon Sep 17 00:00:00 2001
+From e663de0d7c184c605db27519e3f23e9ec835d845 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Thu, 13 Dec 2018 10:37:49 +0000
+Date: Fri, 14 Dec 2018 01:38:16 +0000
 Subject: [PATCH mellanox 4.20-4.21 backport] mlxsw thermal monitoring
  amendments
 
@@ -361,17 +361,17 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  drivers/net/ethernet/mellanox/mlxsw/core_env.c     | 238 +++++++
  drivers/net/ethernet/mellanox/mlxsw/core_env.h     |  17 +
  drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   | 337 +++++++--
- drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 757 +++++++++++++++++++--
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 761 +++++++++++++++++++--
  drivers/net/ethernet/mellanox/mlxsw/i2c.c          |  43 +-
  drivers/net/ethernet/mellanox/mlxsw/i2c.h          |  35 +-
- drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 321 ++++++++-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 356 ++++++++--
  drivers/net/ethernet/mellanox/mlxsw/reg.h          | 139 +++-
  drivers/platform/mellanox/mlxreg-hotplug.c         |  23 +-
  drivers/platform/mellanox/mlxreg-io.c              |   4 +-
  drivers/platform/x86/mlx-platform.c                | 138 +++-
  include/linux/platform_data/mlxreg.h               |   6 +-
  include/linux/sfp.h                                | 564 +++++++++++++++
- 17 files changed, 2486 insertions(+), 285 deletions(-)
+ 17 files changed, 2506 insertions(+), 304 deletions(-)
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.c
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.h
  create mode 100644 include/linux/sfp.h
@@ -1382,7 +1382,7 @@ index ab710e3..f1ada4cd 100644
 +	kfree(mlxsw_hwmon);
 +}
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 8047556..425d4f1 100644
+index 8047556..c047b61 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 @@ -1,34 +1,6 @@
@@ -1665,7 +1665,7 @@ index 8047556..425d4f1 100644
 +				temp = 0;
 +				break;
 +			default:
-+				tz = thermal->tz_module_arr + j;
++				tz = &thermal->tz_module_arr[j];
 +				if (!tz)
 +					break;
 +				/* Reset all trip point. */
@@ -1723,8 +1723,8 @@ index 8047556..425d4f1 100644
 +
 +	if (thermal->tz_highest != max_tz) {
 +		sprintf(env_record, "TZ_HIGHEST==%u", max_score);
-+		if (max_tz && (thermal->tz_module_arr + max_tz - 1)) {
-+			tz_module = thermal->tz_module_arr + max_tz - 1;
++		if (max_tz && (&thermal->tz_module_arr[max_tz - 1])) {
++			tz_module = &thermal->tz_module_arr[max_tz - 1];
 +			tz = tz_module->tzdev;
 +			err = kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE,
 +						 envp);
@@ -2120,7 +2120,7 @@ index 8047556..425d4f1 100644
  	mlxsw_reg_mfsc_pack(mfsc_pl, idx, mlxsw_state_to_duty(state));
  	err = mlxsw_reg_write(thermal->core, MLXSW_REG(mfsc), mfsc_pl);
  	if (err) {
-@@ -328,6 +857,118 @@ static const struct thermal_cooling_device_ops mlxsw_cooling_ops = {
+@@ -328,6 +857,122 @@ static const struct thermal_cooling_device_ops mlxsw_cooling_ops = {
  	.set_cur_state	= mlxsw_thermal_set_cur_state,
  };
  
@@ -2147,6 +2147,11 @@ index 8047556..425d4f1 100644
 +	return 0;
 +}
 +
++static void mlxsw_thermal_module_tz_fini(struct thermal_zone_device *tzdev)
++{
++	thermal_zone_device_unregister(tzdev);
++}
++
 +static int
 +mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
 +			  struct mlxsw_thermal *thermal, u8 local_port)
@@ -2164,7 +2169,7 @@ index 8047556..425d4f1 100644
 +	width = mlxsw_reg_pmlp_width_get(pmlp_pl);
 +	if (!width)
 +		return 0;
-+;
++
 +	module = mlxsw_reg_pmlp_module_get(pmlp_pl, 0);
 +	module_tz = &thermal->tz_module_arr[module];
 +	module_tz->module = module;
@@ -2186,7 +2191,7 @@ index 8047556..425d4f1 100644
 +static void mlxsw_thermal_module_fini(struct mlxsw_thermal_module *module_tz)
 +{
 +	if (module_tz && module_tz->tzdev) {
-+		thermal_zone_device_unregister(module_tz->tzdev);
++		mlxsw_thermal_module_tz_fini(module_tz->tzdev);
 +		module_tz->tzdev = NULL;
 +	}
 +}
@@ -2195,7 +2200,7 @@ index 8047556..425d4f1 100644
 +mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
 +			   struct mlxsw_thermal *thermal)
 +{
-+	unsigned int module_count = mlxsw_core_max_ports(core) - 1;
++	unsigned int module_count = mlxsw_core_max_ports(core);
 +	int i, err;
 +
 +	thermal->tz_module_arr = kcalloc(module_count,
@@ -2204,24 +2209,23 @@ index 8047556..425d4f1 100644
 +	if (!thermal->tz_module_arr)
 +		return -ENOMEM;
 +
-+	for (i = 1; i < module_count; i++) {
++	for (i = 1; i <= module_count; i++) {
 +		err = mlxsw_thermal_module_init(dev, core, thermal, i);
 +		if (err)
 +			goto err_unreg_tz_module_arr;
 +	}
 +
 +	for (i = 0; i < thermal->tz_module_num; i++) {
-+		err = mlxsw_thermal_module_tz_init(thermal->tz_module_arr + i);
++		err = mlxsw_thermal_module_tz_init(&thermal->tz_module_arr[i]);
 +		if (err)
 +			goto err_unreg_tz_module_arr;
 +	}
-+	thermal->tz_module_num++;
 +
 +	return 0;
 +
 +err_unreg_tz_module_arr:
 +	for (i = thermal->tz_module_num - 1; i >= 0; i--)
-+		mlxsw_thermal_module_fini(thermal->tz_module_arr + i);
++		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
 +	kfree(thermal->tz_module_arr);
 +	return err;
 +}
@@ -2232,14 +2236,14 @@ index 8047556..425d4f1 100644
 +	int i;
 +
 +	for (i = thermal->tz_module_num - 1; i >= 0; i--)
-+		mlxsw_thermal_module_fini(thermal->tz_module_arr + i);
++		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
 +	kfree(thermal->tz_module_arr);
 +}
 +
  int mlxsw_thermal_init(struct mlxsw_core *core,
  		       const struct mlxsw_bus_info *bus_info,
  		       struct mlxsw_thermal **p_thermal)
-@@ -347,6 +988,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -347,6 +992,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  
  	thermal->core = core;
  	thermal->bus_info = bus_info;
@@ -2247,7 +2251,7 @@ index 8047556..425d4f1 100644
  	memcpy(thermal->trips, default_thermal_trips, sizeof(thermal->trips));
  
  	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mfcr), mfcr_pl);
-@@ -380,7 +1022,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -380,7 +1026,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  		if (pwm_active & BIT(i)) {
  			struct thermal_cooling_device *cdev;
  
@@ -2257,7 +2261,7 @@ index 8047556..425d4f1 100644
  							&mlxsw_cooling_ops);
  			if (IS_ERR(cdev)) {
  				err = PTR_ERR(cdev);
-@@ -391,22 +1034,41 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -391,22 +1038,41 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  		}
  	}
  
@@ -2300,7 +2304,7 @@ index 8047556..425d4f1 100644
  err_unreg_cdevs:
  	for (i = 0; i < MLXSW_MFCR_PWMS_MAX; i++)
  		if (thermal->cdevs[i])
-@@ -420,6 +1082,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+@@ -420,6 +1086,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  
@@ -2424,7 +2428,7 @@ index daa24b2..17e059d 100644
  #ifndef _MLXSW_I2C_H
  #define _MLXSW_I2C_H
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 3dd1626..e95ea80 100644
+index 3dd1626..c47949c 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -1,37 +1,9 @@
@@ -2470,86 +2474,91 @@ index 3dd1626..e95ea80 100644
  #include <linux/i2c.h>
  #include <linux/kernel.h>
  #include <linux/module.h>
-@@ -39,15 +11,298 @@
+@@ -39,59 +11,339 @@
  #include <linux/types.h>
  
  #include "core.h"
 +#include "core_env.h"
  #include "i2c.h"
  
- static const char mlxsw_minimal_driver_name[] = "mlxsw_minimal";
+-static const char mlxsw_minimal_driver_name[] = "mlxsw_minimal";
++static const char mlxsw_m_driver_name[] = "mlxsw_minimal";
  
-+struct mlxsw_minimal_port;
-+
-+struct mlxsw_minimal {
-+	struct mlxsw_minimal_port **modules;
+-static const struct mlxsw_config_profile mlxsw_minimal_config_profile;
++struct mlxsw_m_port;
+ 
+-static struct mlxsw_driver mlxsw_minimal_driver = {
+-	.kind		= mlxsw_minimal_driver_name,
+-	.priv_size	= 1,
+-	.profile	= &mlxsw_minimal_config_profile,
++struct mlxsw_m {
++	struct mlxsw_m_port **modules;
 +	int *module_to_port;
 +	struct mlxsw_core *core;
 +	const struct mlxsw_bus_info *bus_info;
 +	u8 base_mac[ETH_ALEN];
-+	u8 max_module;
-+};
-+
-+struct mlxsw_minimal_port {
++	u8 max_modules;
+ };
+ 
+-static const struct i2c_device_id mlxsw_minimal_i2c_id[] = {
++struct mlxsw_m_port {
 +	struct mlxsw_core_port core_port; /* must be first */
 +	struct net_device *dev;
-+	struct mlxsw_minimal *mlxsw_minimal;
++	struct mlxsw_m *mlxsw_m;
 +	u8 local_port;
 +	u8 module;
 +};
 +
-+static int mlxsw_minimal_port_dummy_open_stop(struct net_device *dev)
++static int mlxsw_m_port_dummy_open_stop(struct net_device *dev)
 +{
 +	return 0;
 +}
 +
-+static const struct net_device_ops mlxsw_minimal_port_netdev_ops = {
-+	.ndo_open		= mlxsw_minimal_port_dummy_open_stop,
-+	.ndo_stop		= mlxsw_minimal_port_dummy_open_stop,
++static const struct net_device_ops mlxsw_m_port_netdev_ops = {
++	.ndo_open		= mlxsw_m_port_dummy_open_stop,
++	.ndo_stop		= mlxsw_m_port_dummy_open_stop,
 +};
 +
-+static int mlxsw_minimal_get_module_info(struct net_device *netdev,
-+					 struct ethtool_modinfo *modinfo)
++static int mlxsw_m_get_module_info(struct net_device *netdev,
++				   struct ethtool_modinfo *modinfo)
 +{
-+	struct mlxsw_minimal_port *mlxsw_minimal_port = netdev_priv(netdev);
-+	struct mlxsw_core *core = mlxsw_minimal_port->mlxsw_minimal->core;
++	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
++	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
 +	int err;
 +
-+	err = mlxsw_env_get_module_info(core, mlxsw_minimal_port->module,
-+					modinfo);
++	err = mlxsw_env_get_module_info(core, mlxsw_m_port->module, modinfo);
 +
 +	return err;
 +}
 +
 +static int
-+mlxsw_minimal_get_module_eeprom(struct net_device *netdev,
-+				struct ethtool_eeprom *ee, u8 *data)
++mlxsw_m_get_module_eeprom(struct net_device *netdev, struct ethtool_eeprom *ee,
++			  u8 *data)
 +{
-+	struct mlxsw_minimal_port *mlxsw_minimal_port = netdev_priv(netdev);
-+	struct mlxsw_core *core = mlxsw_minimal_port->mlxsw_minimal->core;
++	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
++	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
 +	int err;
 +
 +	err = mlxsw_env_get_module_eeprom(netdev, core,
-+					  mlxsw_minimal_port->module, ee,
-+					  data);
++					  mlxsw_m_port->module, ee, data);
 +
 +	return err;
 +}
 +
-+static const struct ethtool_ops mlxsw_minimal_port_ethtool_ops = {
-+	.get_module_info	= mlxsw_minimal_get_module_info,
-+	.get_module_eeprom	= mlxsw_minimal_get_module_eeprom,
++static const struct ethtool_ops mlxsw_m_port_ethtool_ops = {
++	.get_module_info	= mlxsw_m_get_module_info,
++	.get_module_eeprom	= mlxsw_m_get_module_eeprom,
 +};
 +
 +static int
-+mlxsw_minimal_port_module_info_get(struct mlxsw_minimal *mlxsw_minimal,
-+				   u8 local_port, u8 *p_module, u8 *p_width)
++mlxsw_m_port_module_info_get(struct mlxsw_m *mlxsw_m, u8 local_port,
++			     u8 *p_module, u8 *p_width)
 +{
 +	char pmlp_pl[MLXSW_REG_PMLP_LEN];
 +	int err;
 +
 +	mlxsw_reg_pmlp_pack(pmlp_pl, local_port);
-+	err = mlxsw_reg_query(mlxsw_minimal->core, MLXSW_REG(pmlp), pmlp_pl);
++	err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(pmlp), pmlp_pl);
 +	if (err)
 +		return err;
 +	*p_module = mlxsw_reg_pmlp_module_get(pmlp_pl, 0);
@@ -2559,15 +2568,15 @@ index 3dd1626..e95ea80 100644
 +}
 +
 +static int
-+mlxsw_minimal_port_dev_addr_get(struct mlxsw_minimal_port *mlxsw_minimal_port)
++mlxsw_m_port_dev_addr_get(struct mlxsw_m_port *mlxsw_m_port)
 +{
-+	struct mlxsw_minimal *mlxsw_minimal = mlxsw_minimal_port->mlxsw_minimal;
-+	struct net_device *dev = mlxsw_minimal_port->dev;
++	struct mlxsw_m *mlxsw_m = mlxsw_m_port->mlxsw_m;
++	struct net_device *dev = mlxsw_m_port->dev;
 +	char ppad_pl[MLXSW_REG_PPAD_LEN];
 +	int err;
 +
 +	mlxsw_reg_ppad_pack(ppad_pl, false, 0);
-+	err = mlxsw_reg_query(mlxsw_minimal->core, MLXSW_REG(ppad), ppad_pl);
++	err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(ppad), ppad_pl);
 +	if (err)
 +		return err;
 +	mlxsw_reg_ppad_mac_memcpy_from(ppad_pl, dev->dev_addr);
@@ -2575,48 +2584,48 @@ index 3dd1626..e95ea80 100644
 +	 * to be such it does not overflow when adding local_port
 +	 * value.
 +	 */
-+	dev->dev_addr[ETH_ALEN - 1] += mlxsw_minimal_port->module + 1;
++	dev->dev_addr[ETH_ALEN - 1] += mlxsw_m_port->module + 1;
 +	return 0;
 +}
 +
-+static int mlxsw_minimal_port_create(struct mlxsw_minimal *mlxsw_minimal,
-+				     u8 local_port, u8 module)
++static int
++mlxsw_m_port_create(struct mlxsw_m *mlxsw_m, u8 local_port, u8 module)
 +{
-+	struct mlxsw_minimal_port *mlxsw_minimal_port;
++	struct mlxsw_m_port *mlxsw_m_port;
 +	struct net_device *dev;
 +	int err;
 +
-+	dev = alloc_etherdev(sizeof(struct mlxsw_minimal_port));
++	dev = alloc_etherdev(sizeof(struct mlxsw_m_port));
 +	if (!dev) {
 +		err = -ENOMEM;
 +		goto err_alloc_etherdev;
 +	}
 +
-+	SET_NETDEV_DEV(dev, mlxsw_minimal->bus_info->dev);
-+	mlxsw_minimal_port = netdev_priv(dev);
-+	mlxsw_minimal_port->dev = dev;
-+	mlxsw_minimal_port->mlxsw_minimal = mlxsw_minimal;
-+	mlxsw_minimal_port->local_port = local_port;
-+	mlxsw_minimal_port->module = module;
++	SET_NETDEV_DEV(dev, mlxsw_m->bus_info->dev);
++	mlxsw_m_port = netdev_priv(dev);
++	mlxsw_m_port->dev = dev;
++	mlxsw_m_port->mlxsw_m = mlxsw_m;
++	mlxsw_m_port->local_port = local_port;
++	mlxsw_m_port->module = module;
 +
-+	mlxsw_minimal->modules[local_port] = mlxsw_minimal_port;
++	mlxsw_m->modules[local_port] = mlxsw_m_port;
 +
-+	dev->netdev_ops = &mlxsw_minimal_port_netdev_ops;
-+	dev->ethtool_ops = &mlxsw_minimal_port_ethtool_ops;
++	dev->netdev_ops = &mlxsw_m_port_netdev_ops;
++	dev->ethtool_ops = &mlxsw_m_port_ethtool_ops;
 +
-+	err = mlxsw_core_port_init(mlxsw_minimal->core,
-+				   &mlxsw_minimal_port->core_port, local_port,
++	err = mlxsw_core_port_init(mlxsw_m->core,
++				   &mlxsw_m_port->core_port, local_port,
 +				   dev, false, module);
 +	if (err) {
-+		dev_err(mlxsw_minimal->bus_info->dev, "Port %d: Failed to init core port\n",
++		dev_err(mlxsw_m->bus_info->dev, "Port %d: Failed to init core port\n",
 +			local_port);
 +		goto err_alloc_etherdev;
 +	}
 +
-+	err = mlxsw_minimal_port_dev_addr_get(mlxsw_minimal_port);
++	err = mlxsw_m_port_dev_addr_get(mlxsw_m_port);
 +	if (err) {
-+		dev_err(mlxsw_minimal->bus_info->dev, "Port %d: Unable to get port mac address\n",
-+			mlxsw_minimal_port->local_port);
++		dev_err(mlxsw_m->bus_info->dev, "Port %d: Unable to get port mac address\n",
++			mlxsw_m_port->local_port);
 +		goto err_dev_addr_get;
 +	}
 +
@@ -2624,8 +2633,8 @@ index 3dd1626..e95ea80 100644
 +
 +	err = register_netdev(dev);
 +	if (err) {
-+		dev_err(mlxsw_minimal->bus_info->dev, "Port %d: Failed to register netdev\n",
-+			mlxsw_minimal_port->local_port);
++		dev_err(mlxsw_m->bus_info->dev, "Port %d: Failed to register netdev\n",
++			mlxsw_m_port->local_port);
 +		goto err_register_netdev;
 +	}
 +
@@ -2635,82 +2644,92 @@ index 3dd1626..e95ea80 100644
 +	free_netdev(dev);
 +err_dev_addr_get:
 +err_alloc_etherdev:
-+	mlxsw_minimal->modules[local_port] = NULL;
++	mlxsw_m->modules[local_port] = NULL;
 +	return err;
 +}
 +
-+static void mlxsw_minimal_port_remove(struct mlxsw_minimal *mlxsw_minimal,
-+				      u8 local_port)
++static void mlxsw_m_port_remove(struct mlxsw_m *mlxsw_m, u8 local_port)
 +{
-+	struct mlxsw_minimal_port *mlxsw_minimal_port =
-+					mlxsw_minimal->modules[local_port];
++	struct mlxsw_m_port *mlxsw_m_port = mlxsw_m->modules[local_port];
 +
-+	unregister_netdev(mlxsw_minimal_port->dev); /* This calls ndo_stop */
-+	free_netdev(mlxsw_minimal_port->dev);
-+	mlxsw_core_port_fini(&mlxsw_minimal_port->core_port);
++	unregister_netdev(mlxsw_m_port->dev); /* This calls ndo_stop */
++	free_netdev(mlxsw_m_port->dev);
++	mlxsw_core_port_fini(&mlxsw_m_port->core_port);
 +}
 +
-+static void mlxsw_minimal_modules_remove(struct mlxsw_minimal *mlxsw_minimal)
++static void mlxsw_m_ports_remove(struct mlxsw_m *mlxsw_m)
 +{
 +	int i;
 +
-+	for (i = 0; i < mlxsw_minimal->max_module - 1; i++) {
-+		if (mlxsw_minimal->module_to_port[i] > 0)
-+			mlxsw_minimal_port_remove(mlxsw_minimal,
-+					mlxsw_minimal->module_to_port[i]);
++	for (i = 0; i < mlxsw_m->max_modules; i++) {
++		if (mlxsw_m->module_to_port[i] > 0)
++			mlxsw_m_port_remove(mlxsw_m,
++					    mlxsw_m->module_to_port[i]);
 +	}
 +
-+	kfree(mlxsw_minimal->module_to_port);
-+	kfree(mlxsw_minimal->modules);
++	kfree(mlxsw_m->module_to_port);
++	kfree(mlxsw_m->modules);
 +}
 +
-+static int mlxsw_minimal_modules_create(struct mlxsw_minimal *mlxsw_minimal)
++static int mlxsw_m_port_mapping_create(struct mlxsw_m *mlxsw_m, u8 local_port,
++				       u8 *last_module)
 +{
-+	unsigned int max_modules = mlxsw_core_max_ports(mlxsw_minimal->core);
-+	u8 module, width, last_module = max_modules + 1;
-+	size_t alloc_size;
-+	int i, j = 1;
++	u8 module, width;
 +	int err;
 +
-+	alloc_size = sizeof(struct mlxsw_minimal_port *) * max_modules;
-+	mlxsw_minimal->modules = kzalloc(alloc_size, GFP_KERNEL);
-+	if (!mlxsw_minimal->modules)
++	/* Fill out  to local port mapping array */
++	err = mlxsw_m_port_module_info_get(mlxsw_m, local_port, &module,
++					   &width);
++	if (err)
++		return err;
++
++	if (!width)
++		return 0;
++	/* Skip, if port belongs to the cluster */
++	if (module == *last_module)
++		return 0;
++	*last_module = module;
++	mlxsw_m->module_to_port[module] = ++mlxsw_m->max_modules;
++
++	return 0;
++}
++
++static int mlxsw_m_ports_create(struct mlxsw_m *mlxsw_m)
++{
++	unsigned int max_port = mlxsw_core_max_ports(mlxsw_m->core);
++	u8 last_module = max_port;
++	int i;
++	int err;
++
++	mlxsw_m->modules = kcalloc(max_port, sizeof(*mlxsw_m->modules),
++				   GFP_KERNEL);
++	if (!mlxsw_m->modules)
 +		return -ENOMEM;
 +
-+	mlxsw_minimal->module_to_port = kmalloc_array(max_modules, sizeof(int),
-+						      GFP_KERNEL);
-+	if (!mlxsw_minimal->module_to_port) {
++	mlxsw_m->module_to_port = kmalloc_array(max_port, sizeof(int),
++						GFP_KERNEL);
++	if (!mlxsw_m->module_to_port) {
 +		err = -ENOMEM;
-+		goto err_module_to_port_alloc;
++		goto err_port_create;
 +	}
 +
-+	/* Mark entries as invalid */
-+	for (i = 0; i < max_modules; i++)
-+		mlxsw_minimal->module_to_port[i] = -1;
++	/* Invalidate the entries of module to local port mapping array */
++	for (i = 0; i < max_port; i++)
++		mlxsw_m->module_to_port[i] = -1;
 +
-+	/* Fill out  to local port mapping array */
-+	for (i = 1; i < max_modules; i++) {
-+		err = mlxsw_minimal_port_module_info_get(mlxsw_minimal, i,
-+							 &module, &width);
++	/* Fill out module to local port mapping array */
++	for (i = 1; i <= max_port; i++) {
++		err = mlxsw_m_port_mapping_create(mlxsw_m, i, &last_module);
 +		if (err)
-+			goto err_port_module_info_get;
-+
-+		if (!width)
-+			continue;
-+
-+		/* Skip, if port belongs to the cluster */
-+		if (module == last_module)
-+			continue;
-+		last_module = module;
-+		mlxsw_minimal->module_to_port[module] = j++;
++			goto err_port_create;
 +	}
-+	mlxsw_minimal->max_module = j++;
 +
 +	/* Create port objects for each valid entry */
-+	for (i = 0; i < mlxsw_minimal->max_module - 1; i++) {
-+		if (mlxsw_minimal->module_to_port[i] > 0) {
-+			err = mlxsw_minimal_port_create(mlxsw_minimal,
-+					mlxsw_minimal->module_to_port[i], i);
++	for (i = 0; i < mlxsw_m->max_modules; i++) {
++		if (mlxsw_m->module_to_port[i] > 0) {
++			err = mlxsw_m_port_create(mlxsw_m,
++						  mlxsw_m->module_to_port[i],
++						  i);
 +			if (err)
 +				goto err_port_create;
 +		}
@@ -2719,56 +2738,101 @@ index 3dd1626..e95ea80 100644
 +	return 0;
 +
 +err_port_create:
-+	for (j = i - 1; i >= 0; i--) {
-+		if (mlxsw_minimal->module_to_port[j] > 0)
-+			mlxsw_minimal_port_remove(mlxsw_minimal,
-+					mlxsw_minimal->module_to_port[j]);
-+	}
-+err_port_module_info_get:
-+	kfree(mlxsw_minimal->module_to_port);
-+err_module_to_port_alloc:
-+	kfree(mlxsw_minimal->modules);
++	mlxsw_m_ports_remove(mlxsw_m);
 +	return err;
 +}
 +
-+static int
-+mlxsw_minimal_init(struct mlxsw_core *mlxsw_core,
-+		   const struct mlxsw_bus_info *mlxsw_bus_info)
++static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
++			const struct mlxsw_bus_info *mlxsw_bus_info)
 +{
-+	struct mlxsw_minimal *mlxsw_minimal =
-+					mlxsw_core_driver_priv(mlxsw_core);
++	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
 +	int err;
 +
-+	mlxsw_minimal->core = mlxsw_core;
-+	mlxsw_minimal->bus_info = mlxsw_bus_info;
++	mlxsw_m->core = mlxsw_core;
++	mlxsw_m->bus_info = mlxsw_bus_info;
 +
-+	err = mlxsw_minimal_modules_create(mlxsw_minimal);
++	err = mlxsw_m_ports_create(mlxsw_m);
 +	if (err) {
-+		dev_err(mlxsw_minimal->bus_info->dev, "Failed to create modules\n");
++		dev_err(mlxsw_m->bus_info->dev, "Failed to create modules\n");
 +		return err;
 +	}
 +
 +	return 0;
 +}
 +
-+static void mlxsw_minimal_fini(struct mlxsw_core *mlxsw_core)
++static void mlxsw_m_fini(struct mlxsw_core *mlxsw_core)
 +{
-+	struct mlxsw_minimal *mlxsw_minimal =
-+					mlxsw_core_driver_priv(mlxsw_core);
++	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
 +
-+	mlxsw_minimal_modules_remove(mlxsw_minimal);
++	mlxsw_m_ports_remove(mlxsw_m);
 +}
 +
- static const struct mlxsw_config_profile mlxsw_minimal_config_profile;
- 
- static struct mlxsw_driver mlxsw_minimal_driver = {
- 	.kind		= mlxsw_minimal_driver_name,
- 	.priv_size	= 1,
-+	.init		= mlxsw_minimal_init,
-+	.fini		= mlxsw_minimal_fini,
- 	.profile	= &mlxsw_minimal_config_profile,
++static const struct mlxsw_config_profile mlxsw_m_config_profile;
++
++static struct mlxsw_driver mlxsw_m_driver = {
++	.kind		= mlxsw_m_driver_name,
++	.priv_size	= sizeof(struct mlxsw_m),
++	.init		= mlxsw_m_init,
++	.fini		= mlxsw_m_fini,
++	.profile	= &mlxsw_m_config_profile,
++};
++
++static const struct i2c_device_id mlxsw_m_i2c_id[] = {
+ 	{ "mlxsw_minimal", 0},
+ 	{ },
  };
  
+-static struct i2c_driver mlxsw_minimal_i2c_driver = {
++static struct i2c_driver mlxsw_m_i2c_driver = {
+ 	.driver.name = "mlxsw_minimal",
+ 	.class = I2C_CLASS_HWMON,
+-	.id_table = mlxsw_minimal_i2c_id,
++	.id_table = mlxsw_m_i2c_id,
+ };
+ 
+-static int __init mlxsw_minimal_module_init(void)
++static int __init mlxsw_m_module_init(void)
+ {
+ 	int err;
+ 
+-	err = mlxsw_core_driver_register(&mlxsw_minimal_driver);
++	err = mlxsw_core_driver_register(&mlxsw_m_driver);
+ 	if (err)
+ 		return err;
+ 
+-	err = mlxsw_i2c_driver_register(&mlxsw_minimal_i2c_driver);
++	err = mlxsw_i2c_driver_register(&mlxsw_m_i2c_driver);
+ 	if (err)
+ 		goto err_i2c_driver_register;
+ 
+ 	return 0;
+ 
+ err_i2c_driver_register:
+-	mlxsw_core_driver_unregister(&mlxsw_minimal_driver);
++	mlxsw_core_driver_unregister(&mlxsw_m_driver);
+ 
+ 	return err;
+ }
+ 
+-static void __exit mlxsw_minimal_module_exit(void)
++static void __exit mlxsw_m_module_exit(void)
+ {
+-	mlxsw_i2c_driver_unregister(&mlxsw_minimal_i2c_driver);
+-	mlxsw_core_driver_unregister(&mlxsw_minimal_driver);
++	mlxsw_i2c_driver_unregister(&mlxsw_m_i2c_driver);
++	mlxsw_core_driver_unregister(&mlxsw_m_driver);
+ }
+ 
+-module_init(mlxsw_minimal_module_init);
+-module_exit(mlxsw_minimal_module_exit);
++module_init(mlxsw_m_module_init);
++module_exit(mlxsw_m_module_exit);
+ 
+ MODULE_LICENSE("Dual BSD/GPL");
+ MODULE_AUTHOR("Vadim Pasternak <vadimp@mellanox.com>");
+ MODULE_DESCRIPTION("Mellanox minimal driver");
+-MODULE_DEVICE_TABLE(i2c, mlxsw_minimal_i2c_id);
++MODULE_DEVICE_TABLE(i2c, mlxsw_m_i2c_id);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 index 2c0c331..20f01bb 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
