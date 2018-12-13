@@ -1,6 +1,6 @@
-From cde69027dae3f99322e84a5b5073daaca4f38b78 Mon Sep 17 00:00:00 2001
+From ebc6898e3154644411e0c137773f090d449f5375 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Mon, 10 Dec 2018 17:38:24 +0000
+Date: Thu, 13 Dec 2018 09:32:18 +0000
 Subject: [PATCH mellanox 4.20-4.21 backport] mlxsw thermal monitoring
  amendments
 
@@ -358,20 +358,20 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  drivers/leds/leds-mlxreg.c                         |  55 +-
  drivers/net/ethernet/mellanox/mlxsw/Makefile       |   2 +-
  drivers/net/ethernet/mellanox/mlxsw/core.h         |  14 +
- drivers/net/ethernet/mellanox/mlxsw/core_env.c     | 117 ++++
- drivers/net/ethernet/mellanox/mlxsw/core_env.h     |  10 +
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c     | 238 +++++++
+ drivers/net/ethernet/mellanox/mlxsw/core_env.h     |  17 +
  drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   | 337 ++++++++--
  drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 728 +++++++++++++++++++--
  drivers/net/ethernet/mellanox/mlxsw/i2c.c          |  43 +-
  drivers/net/ethernet/mellanox/mlxsw/i2c.h          |  35 +-
- drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 414 +++++++++++-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 321 ++++++++-
  drivers/net/ethernet/mellanox/mlxsw/reg.h          | 139 +++-
  drivers/platform/mellanox/mlxreg-hotplug.c         |  23 +-
  drivers/platform/mellanox/mlxreg-io.c              |   4 +-
  drivers/platform/x86/mlx-platform.c                | 138 +++-
  include/linux/platform_data/mlxreg.h               |   6 +-
  include/linux/sfp.h                                | 564 ++++++++++++++++
- 17 files changed, 2422 insertions(+), 285 deletions(-)
+ 17 files changed, 2457 insertions(+), 285 deletions(-)
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.c
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.h
  create mode 100644 include/linux/sfp.h
@@ -648,10 +648,10 @@ index ffaacc9..4fb104e 100644
  struct mlxsw_thermal;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 new file mode 100644
-index 0000000..160d6cd
+index 0000000..7a15e93
 --- /dev/null
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,238 @@
 +// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
 +/* Copyright (c) 2018 Mellanox Technologies. All rights reserved */
 +
@@ -691,6 +691,47 @@ index 0000000..160d6cd
 +	default:
 +		return -EINVAL;
 +	}
++
++	return 0;
++}
++
++static int
++mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
++			      u16 offset, u16 size, void *data,
++			      unsigned int *p_read_size)
++{
++	char eeprom_tmp[MLXSW_REG_MCIA_EEPROM_SIZE];
++	char mcia_pl[MLXSW_REG_MCIA_LEN];
++	u16 i2c_addr;
++	int status;
++	int err;
++
++	size = min_t(u16, size, MLXSW_REG_MCIA_EEPROM_SIZE);
++
++	if (offset < MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH &&
++	    offset + size > MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH)
++		/* Cross pages read, read until offset 256 in low page */
++		size = MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH - offset;
++
++	i2c_addr = MLXSW_REG_MCIA_I2C_ADDR_LOW;
++	if (offset >= MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH) {
++		i2c_addr = MLXSW_REG_MCIA_I2C_ADDR_HIGH;
++		offset -= MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH;
++	}
++
++	mlxsw_reg_mcia_pack(mcia_pl, module, 0, 0, offset, size, i2c_addr);
++
++	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
++	if (err)
++		return err;
++
++	status = mlxsw_reg_mcia_status_get(mcia_pl);
++	if (status)
++		return -EIO;
++
++	mlxsw_reg_mcia_eeprom_memcpy_from(mcia_pl, eeprom_tmp);
++	memcpy(data, eeprom_tmp, size);
++	*p_read_size = size;
 +
 +	return 0;
 +}
@@ -769,12 +810,92 @@ index 0000000..160d6cd
 +
 +	return 0;
 +}
++
++int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
++			      struct ethtool_modinfo *modinfo)
++{
++	u8 module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE];
++	u16 offset = MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE;
++	u8 module_rev_id, module_id;
++	unsigned int read_size;
++	int err;
++
++	err = mlxsw_env_query_module_eeprom(mlxsw_core, module, 0, offset,
++					    module_info, &read_size);
++	if (err)
++		return err;
++
++	if (read_size < offset)
++		return -EIO;
++
++	module_rev_id = module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_REV_ID];
++	module_id = module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID];
++
++	switch (module_id) {
++	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP:
++		modinfo->type       = ETH_MODULE_SFF_8436;
++		modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
++		break;
++	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP_PLUS: /* fall-through */
++	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP28:
++		if (module_id == MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP28 ||
++		    module_rev_id >=
++		    MLXSW_REG_MCIA_EEPROM_MODULE_INFO_REV_ID_8636) {
++			modinfo->type       = ETH_MODULE_SFF_8636;
++			modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
++		} else {
++			modinfo->type       = ETH_MODULE_SFF_8436;
++			modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
++		}
++		break;
++	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_SFP:
++		modinfo->type       = ETH_MODULE_SFF_8472;
++		modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(mlxsw_env_get_module_info);
++
++int mlxsw_env_get_module_eeprom(struct net_device *netdev,
++				struct mlxsw_core *mlxsw_core, int module,
++				struct ethtool_eeprom *ee, u8 *data)
++{
++	int offset = ee->offset;
++	unsigned int read_size;
++	int i = 0;
++	int err;
++
++	if (!ee->len)
++		return -EINVAL;
++
++	memset(data, 0, ee->len);
++
++	while (i < ee->len) {
++		err = mlxsw_env_query_module_eeprom(mlxsw_core, module, offset,
++						    ee->len - i, data + i,
++						    &read_size);
++		if (err) {
++			netdev_err(netdev, "Eeprom query failed\n");
++			return err;
++		}
++
++		i += read_size;
++		offset += read_size;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(mlxsw_env_get_module_eeprom);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.h b/drivers/net/ethernet/mellanox/mlxsw/core_env.h
 new file mode 100644
-index 0000000..6dbdf63
+index 0000000..064d0e7
 --- /dev/null
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.h
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,17 @@
 +/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
 +/* Copyright (c) 2018 Mellanox Technologies. All rights reserved */
 +
@@ -783,6 +904,13 @@ index 0000000..6dbdf63
 +
 +int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
 +					 int off, int *temp);
++
++int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
++			      struct ethtool_modinfo *modinfo);
++
++int mlxsw_env_get_module_eeprom(struct net_device *netdev,
++				struct mlxsw_core *mlxsw_core, int module,
++				struct ethtool_eeprom *ee, u8 *data);
 +
 +#endif
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
@@ -2275,7 +2403,7 @@ index daa24b2..17e059d 100644
  #ifndef _MLXSW_I2C_H
  #define _MLXSW_I2C_H
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 3dd1626..ed03577 100644
+index 3dd1626..e95ea80 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -1,37 +1,9 @@
@@ -2321,7 +2449,12 @@ index 3dd1626..ed03577 100644
  #include <linux/i2c.h>
  #include <linux/kernel.h>
  #include <linux/module.h>
-@@ -43,11 +15,387 @@
+@@ -39,15 +11,298 @@
+ #include <linux/types.h>
+ 
+ #include "core.h"
++#include "core_env.h"
+ #include "i2c.h"
  
  static const char mlxsw_minimal_driver_name[] = "mlxsw_minimal";
  
@@ -2354,95 +2487,17 @@ index 3dd1626..ed03577 100644
 +	.ndo_stop		= mlxsw_minimal_port_dummy_open_stop,
 +};
 +
-+static int
-+mlxsw_minimal_query_eeprom(struct mlxsw_minimal_port *mlxsw_minimal_port,
-+			   u16 offset, u16 size, void *data,
-+			   unsigned int *p_read_size)
-+{
-+	struct mlxsw_minimal *mlxsw_minimal = mlxsw_minimal_port->mlxsw_minimal;
-+	char eeprom_tmp[MLXSW_REG_MCIA_EEPROM_SIZE];
-+	char mcia_pl[MLXSW_REG_MCIA_LEN];
-+	u16 i2c_addr;
-+	int status;
-+	int err;
-+
-+	size = min_t(u16, size, MLXSW_REG_MCIA_EEPROM_SIZE);
-+	if (offset < MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH &&
-+	    offset + size > MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH)
-+		/* Cross pages read, read until offset 256 in low page */
-+		size = MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH - offset;
-+
-+	i2c_addr = MLXSW_REG_MCIA_I2C_ADDR_LOW;
-+	if (offset >= MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH) {
-+		i2c_addr = MLXSW_REG_MCIA_I2C_ADDR_LOW;
-+		offset -= MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH;
-+	}
-+
-+	mlxsw_reg_mcia_pack(mcia_pl, mlxsw_minimal_port->module, 0, 0, offset,
-+			    size, i2c_addr);
-+
-+	err = mlxsw_reg_query(mlxsw_minimal->core, MLXSW_REG(mcia), mcia_pl);
-+	if (err)
-+		return err;
-+
-+	status = mlxsw_reg_mcia_status_get(mcia_pl);
-+	if (status)
-+		return -EIO;
-+
-+	mlxsw_reg_mcia_eeprom_memcpy_from(mcia_pl, eeprom_tmp);
-+	memcpy(data, eeprom_tmp, size);
-+	*p_read_size = size;
-+
-+	return 0;
-+}
-+
 +static int mlxsw_minimal_get_module_info(struct net_device *netdev,
 +					 struct ethtool_modinfo *modinfo)
 +{
 +	struct mlxsw_minimal_port *mlxsw_minimal_port = netdev_priv(netdev);
-+	u8 module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE];
-+	unsigned int read_size;
-+	u8 rev_id, id;
++	struct mlxsw_core *core = mlxsw_minimal_port->mlxsw_minimal->core;
 +	int err;
 +
-+	err = mlxsw_minimal_query_eeprom(mlxsw_minimal_port, 0,
-+					 MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE,
-+					 module_info, &read_size);
-+	if (err)
-+		return err;
++	err = mlxsw_env_get_module_info(core, mlxsw_minimal_port->module,
++					modinfo);
 +
-+	if (read_size < MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE)
-+		return -EIO;
-+
-+	rev_id = module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_REV_ID];
-+	id = module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID];
-+
-+	switch (id) {
-+	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP:
-+		modinfo->type       = ETH_MODULE_SFF_8436;
-+		modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
-+		break;
-+	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP_PLUS: /* fall-through */
-+	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP28: /* fall-through */
-+	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP_DD:
-+		if (id == MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_QSFP28 ||
-+		    rev_id >= MLXSW_REG_MCIA_EEPROM_MODULE_INFO_REV_ID_8636) {
-+			modinfo->type       = ETH_MODULE_SFF_8636;
-+			modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
-+		} else {
-+			modinfo->type       = ETH_MODULE_SFF_8436;
-+			modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
-+		}
-+		break;
-+	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_SFP:
-+		modinfo->type       = ETH_MODULE_SFF_8472;
-+		modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN;
-+		break;
-+	default:
-+		return -EINVAL;
-+	}
-+
-+	return 0;
++	return err;
 +}
 +
 +static int
@@ -2450,30 +2505,14 @@ index 3dd1626..ed03577 100644
 +				struct ethtool_eeprom *ee, u8 *data)
 +{
 +	struct mlxsw_minimal_port *mlxsw_minimal_port = netdev_priv(netdev);
-+	int offset = ee->offset;
-+	unsigned int read_size;
-+	int i = 0;
++	struct mlxsw_core *core = mlxsw_minimal_port->mlxsw_minimal->core;
 +	int err;
 +
-+	if (!ee->len)
-+		return -EINVAL;
++	err = mlxsw_env_get_module_eeprom(netdev, core,
++					  mlxsw_minimal_port->module, ee,
++					  data);
 +
-+	memset(data, 0, ee->len);
-+
-+	while (i < ee->len) {
-+		err = mlxsw_minimal_query_eeprom(mlxsw_minimal_port, offset,
-+						 ee->len - i, data + i,
-+						 &read_size);
-+		if (err) {
-+			netdev_err(mlxsw_minimal_port->dev, "Eeprom query failed\n");
-+			return err;
-+		}
-+
-+		i += read_size;
-+		offset += read_size;
-+	}
-+
-+	return 0;
++	return err;
 +}
 +
 +static const struct ethtool_ops mlxsw_minimal_port_ethtool_ops = {
@@ -2893,7 +2932,7 @@ index 2c0c331..20f01bb 100644
  		return "MLCR";
  	case MLXSW_REG_SBPR_ID:
 diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
-index b6d4455..991ec63 100644
+index b6d4455..52314a1 100644
 --- a/drivers/platform/mellanox/mlxreg-hotplug.c
 +++ b/drivers/platform/mellanox/mlxreg-hotplug.c
 @@ -495,7 +495,9 @@ static int mlxreg_hotplug_set_irq(struct mlxreg_hotplug_priv_data *priv)
@@ -2926,7 +2965,7 @@ index b6d4455..991ec63 100644
 +					goto out;
 +
 +				if (!(regval & data->bit))
-+					item->mask &= BIT(j);
++					item->mask &= ~BIT(j);
 +			}
 +		}
 +
