@@ -1,6 +1,6 @@
-From ebc6898e3154644411e0c137773f090d449f5375 Mon Sep 17 00:00:00 2001
+From 864974ed7b27f312423e715af369d9e5865baf79 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Thu, 13 Dec 2018 09:32:18 +0000
+Date: Thu, 13 Dec 2018 10:37:49 +0000
 Subject: [PATCH mellanox 4.20-4.21 backport] mlxsw thermal monitoring
  amendments
 
@@ -360,8 +360,8 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  drivers/net/ethernet/mellanox/mlxsw/core.h         |  14 +
  drivers/net/ethernet/mellanox/mlxsw/core_env.c     | 238 +++++++
  drivers/net/ethernet/mellanox/mlxsw/core_env.h     |  17 +
- drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   | 337 ++++++++--
- drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 728 +++++++++++++++++++--
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   | 337 +++++++--
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 757 +++++++++++++++++++--
  drivers/net/ethernet/mellanox/mlxsw/i2c.c          |  43 +-
  drivers/net/ethernet/mellanox/mlxsw/i2c.h          |  35 +-
  drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 321 ++++++++-
@@ -370,8 +370,8 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  drivers/platform/mellanox/mlxreg-io.c              |   4 +-
  drivers/platform/x86/mlx-platform.c                | 138 +++-
  include/linux/platform_data/mlxreg.h               |   6 +-
- include/linux/sfp.h                                | 564 ++++++++++++++++
- 17 files changed, 2457 insertions(+), 285 deletions(-)
+ include/linux/sfp.h                                | 564 +++++++++++++++
+ 17 files changed, 2486 insertions(+), 285 deletions(-)
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.c
  create mode 100644 drivers/net/ethernet/mellanox/mlxsw/core_env.h
  create mode 100644 include/linux/sfp.h
@@ -1382,7 +1382,7 @@ index ab710e3..f1ada4cd 100644
 +	kfree(mlxsw_hwmon);
 +}
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 8047556..6d6762c 100644
+index 8047556..425d4f1 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 @@ -1,34 +1,6 @@
@@ -1455,7 +1455,7 @@ index 8047556..6d6762c 100644
 +#define MLXSW_THERMAL_SPEED_MIN_LEVEL	2		/* 20% */
 +
 +/* External cooling devices, allowed for binding to mlxsw thermal zones. */
-+static char * const mlxsw_thermal_extrenal_allowed_cdev[] = {
++static char * const mlxsw_thermal_external_allowed_cdev[] = {
 +	"mlxreg_fan",
 +};
 +
@@ -1523,7 +1523,7 @@ index 8047556..6d6762c 100644
 +	struct thermal_zone_device *tzdev;
 +	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
 +	enum thermal_device_mode mode;
-+	int id;
++	int module;
 +};
 +
  struct mlxsw_thermal {
@@ -1535,20 +1535,20 @@ index 8047556..6d6762c 100644
 +	u8 cooling_levels[MLXSW_THERMAL_MAX_STATE + 1];
  	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
  	enum thermal_device_mode mode;
-+	struct mutex tz_update_lock;
-+	struct mlxsw_thermal_module *tz_module_dev;
-+	int tz_module_num;
++	struct mlxsw_thermal_module *tz_module_arr;
++	unsigned int tz_module_num;
 +	int tz_highest;
++	struct mutex tz_update_lock;
  };
  
  static inline u8 mlxsw_state_to_duty(int state)
-@@ -115,9 +138,195 @@ static int mlxsw_get_cooling_device_idx(struct mlxsw_thermal *thermal,
+@@ -115,9 +138,201 @@ static int mlxsw_get_cooling_device_idx(struct mlxsw_thermal *thermal,
  		if (thermal->cdevs[i] == cdev)
  			return i;
  
 +	/* Allow mlxsw thermal zone binding to an external cooling device */
-+	for (i = 0; i < ARRAY_SIZE(mlxsw_thermal_extrenal_allowed_cdev); i++) {
-+		if (strnstr(cdev->type, mlxsw_thermal_extrenal_allowed_cdev[i],
++	for (i = 0; i < ARRAY_SIZE(mlxsw_thermal_external_allowed_cdev); i++) {
++		if (strnstr(cdev->type, mlxsw_thermal_external_allowed_cdev[i],
 +			    sizeof(cdev->type)))
 +			return 0;
 +	}
@@ -1572,18 +1572,25 @@ index 8047556..6d6762c 100644
 +	int crit_temp, emerg_temp;
 +	int err;
 +
-+	err = mlxsw_env_module_temp_thresholds_get(core, tz->id - 1,
++	err = mlxsw_env_module_temp_thresholds_get(core, tz->module,
 +						   SFP_TEMP_HIGH_WARN,
 +						   &crit_temp);
 +	if (err)
 +		return err;
 +
-+	err = mlxsw_env_module_temp_thresholds_get(core, tz->id - 1,
++	err = mlxsw_env_module_temp_thresholds_get(core, tz->module,
 +						   SFP_TEMP_HIGH_ALARM,
 +						   &emerg_temp);
 +	if (err)
 +		return err;
 +
++	/* According to the system thermal requirements, the thermal zones are
++	 * defined with four trip points. The critical and emergency
++	 * temperature thresholds, provided by QSFP module are set as "active"
++	 * and "hot" trip points, "normal" and "critical" trip points ar
++	 * derived from "active" and "hot" by subtracting or adding double
++	 * hysteresis value.
++	 */
 +	if (crit_temp >= MLXSW_THERMAL_MODULE_TEMP_SHIFT)
 +		tz->trips[MLXSW_THERMAL_TEMP_TRIP_NORM].temp = crit_temp -
 +					MLXSW_THERMAL_MODULE_TEMP_SHIFT;
@@ -1633,7 +1640,6 @@ index 8047556..6d6762c 100644
 +	int err;
 +
 +	mlxsw_thermal_tz_score_get(thermal->trips, seed_temp, max_score);
-+
 +	/* Read modules temperature. */
 +	index = 0;
 +	while (index < module_count) {
@@ -1659,7 +1665,7 @@ index 8047556..6d6762c 100644
 +				temp = 0;
 +				break;
 +			default:
-+				tz = thermal->tz_module_dev + j;
++				tz = thermal->tz_module_arr + j;
 +				if (!tz)
 +					break;
 +				/* Reset all trip point. */
@@ -1717,8 +1723,8 @@ index 8047556..6d6762c 100644
 +
 +	if (thermal->tz_highest != max_tz) {
 +		sprintf(env_record, "TZ_HIGHEST==%u", max_score);
-+		if (max_tz && (thermal->tz_module_dev + max_tz - 1)) {
-+			tz_module = thermal->tz_module_dev + max_tz - 1;
++		if (max_tz && (thermal->tz_module_arr + max_tz - 1)) {
++			tz_module = thermal->tz_module_arr + max_tz - 1;
 +			tz = tz_module->tzdev;
 +			err = kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE,
 +						 envp);
@@ -1738,7 +1744,7 @@ index 8047556..6d6762c 100644
  static int mlxsw_thermal_bind(struct thermal_zone_device *tzdev,
  			      struct thermal_cooling_device *cdev)
  {
-@@ -183,15 +392,20 @@ static int mlxsw_thermal_set_mode(struct thermal_zone_device *tzdev,
+@@ -183,15 +398,20 @@ static int mlxsw_thermal_set_mode(struct thermal_zone_device *tzdev,
  
  	mutex_lock(&tzdev->lock);
  
@@ -1762,11 +1768,11 @@ index 8047556..6d6762c 100644
  
  	return 0;
  }
-@@ -214,6 +428,14 @@ static int mlxsw_thermal_get_temp(struct thermal_zone_device *tzdev,
+@@ -214,6 +434,14 @@ static int mlxsw_thermal_get_temp(struct thermal_zone_device *tzdev,
  	}
  	mlxsw_reg_mtmp_unpack(mtmp_pl, &temp, NULL, NULL);
  
-+	if (thermal->tz_module_dev) {
++	if (thermal->tz_module_arr) {
 +		err = mlxsw_thermal_highest_tz_notify(dev, tzdev, thermal,
 +						      thermal->tz_module_num,
 +						      temp);
@@ -1777,7 +1783,7 @@ index 8047556..6d6762c 100644
  	*p_temp = (int) temp;
  	return 0;
  }
-@@ -249,13 +471,31 @@ static int mlxsw_thermal_set_trip_temp(struct thermal_zone_device *tzdev,
+@@ -249,13 +477,31 @@ static int mlxsw_thermal_set_trip_temp(struct thermal_zone_device *tzdev,
  	struct mlxsw_thermal *thermal = tzdev->devdata;
  
  	if (trip < 0 || trip >= MLXSW_THERMAL_NUM_TRIPS ||
@@ -1810,7 +1816,7 @@ index 8047556..6d6762c 100644
  static struct thermal_zone_device_ops mlxsw_thermal_ops = {
  	.bind = mlxsw_thermal_bind,
  	.unbind = mlxsw_thermal_unbind,
-@@ -265,6 +505,260 @@ static struct thermal_zone_device_ops mlxsw_thermal_ops = {
+@@ -265,6 +511,250 @@ static struct thermal_zone_device_ops mlxsw_thermal_ops = {
  	.get_trip_type	= mlxsw_thermal_get_trip_type,
  	.get_trip_temp	= mlxsw_thermal_get_trip_temp,
  	.set_trip_temp	= mlxsw_thermal_set_trip_temp,
@@ -1823,8 +1829,7 @@ index 8047556..6d6762c 100644
 +{
 +	struct mlxsw_thermal_module *tz = tzdev->devdata;
 +	struct mlxsw_thermal *thermal = tz->parent;
-+	struct device *dev = thermal->bus_info->dev;
-+	int i, err;
++	int i, j, err;
 +
 +	/* If the cooling device is one of ours bind it */
 +	if (mlxsw_get_cooling_device_idx(thermal, cdev) < 0)
@@ -1837,12 +1842,15 @@ index 8047556..6d6762c 100644
 +						       trip->max_state,
 +						       trip->min_state,
 +						       THERMAL_WEIGHT_DEFAULT);
-+		if (err < 0) {
-+			dev_err(dev, "Failed to bind cooling device to trip %d\n", i);
-+			return err;
-+		}
++		if (err < 0)
++			goto err_bind_cooling_device;
 +	}
 +	return 0;
++
++err_bind_cooling_device:
++	for (j = i - 1; j >= 0; j--)
++		thermal_zone_unbind_cooling_device(tzdev, j, cdev);
++	return err;
 +}
 +
 +static int mlxsw_thermal_module_unbind(struct thermal_zone_device *tzdev,
@@ -1850,22 +1858,18 @@ index 8047556..6d6762c 100644
 +{
 +	struct mlxsw_thermal_module *tz = tzdev->devdata;
 +	struct mlxsw_thermal *thermal = tz->parent;
-+	struct device *dev = thermal->bus_info->dev;
 +	int i;
 +	int err;
 +
-+	/* If the cooling device is our one unbind it */
++	/* If the cooling device is one of ours unbind it */
 +	if (mlxsw_get_cooling_device_idx(thermal, cdev) < 0)
 +		return 0;
 +
 +	for (i = 0; i < MLXSW_THERMAL_NUM_TRIPS; i++) {
 +		err = thermal_zone_unbind_cooling_device(tzdev, i, cdev);
-+		if (err < 0) {
-+			dev_err(dev, "Failed to unbind cooling device\n");
-+			return err;
-+		}
++		WARN_ON(err);
 +	}
-+	return 0;
++	return err;
 +}
 +
 +static int mlxsw_thermal_module_mode_get(struct thermal_zone_device *tzdev,
@@ -1886,8 +1890,10 @@ index 8047556..6d6762c 100644
 +
 +	mutex_lock(&tzdev->lock);
 +
-+	thermal->polling_delay = (mode == THERMAL_DEVICE_ENABLED) ?
-+				 thermal->polling_delay : 0;
++	if (mode == THERMAL_DEVICE_ENABLED)
++		tzdev->polling_delay = thermal->polling_delay;
++	else
++		tzdev->polling_delay = 0;
 +
 +	mutex_unlock(&tzdev->lock);
 +
@@ -1906,23 +1912,16 @@ index 8047556..6d6762c 100644
 +	struct mlxsw_thermal_module *tz = tzdev->devdata;
 +	struct mlxsw_thermal *thermal = tz->parent;
 +	struct device *dev = thermal->bus_info->dev;
-+	char mtbr_pl[MLXSW_REG_MTBR_LEN] = {0};
-+	u16 temp = 0;
++	char mtbr_pl[MLXSW_REG_MTBR_LEN];
++	u16 temp;
 +	int err;
-+
-+	/* Skip disabled thermal zone. */
-+	if (tz->mode == THERMAL_DEVICE_DISABLED)
-+		goto tz_disabled;
 +
 +	/* Read module temperature. */
 +	mlxsw_reg_mtbr_pack(mtbr_pl, MLXSW_REG_MTBR_BASE_MODULE_INDEX +
-+			    tz->id - 1, 1);
++			    tz->module, 1);
 +	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mtbr), mtbr_pl);
-+	if (err) {
-+		dev_err(dev, "Failed to query temp sensor from %s\n",
-+			tzdev->type);
++	if (err)
 +		return err;
-+	}
 +
 +	mlxsw_reg_mtbr_temp_unpack(mtbr_pl, 0, &temp, NULL);
 +	/* Update temperature. */
@@ -1931,6 +1930,7 @@ index 8047556..6d6762c 100644
 +	case MLXSW_REG_MTBR_NO_TEMP_SENS: /* fall-through */
 +	case MLXSW_REG_MTBR_INDEX_NA: /* fall-through */
 +	case MLXSW_REG_MTBR_BAD_SENS_INFO:
++		temp = 0;
 +		break;
 +	default:
 +		temp = MLXSW_REG_MTMP_TEMP_TO_MC(temp);
@@ -1939,15 +1939,12 @@ index 8047556..6d6762c 100644
 +		/* Update trip points. */
 +		err = mlxsw_thermal_module_trips_update(dev, thermal->core,
 +							tz);
-+		if (err) {
-+			dev_err(dev, "Failed to update trips for %s\n",
-+				tzdev->type);
++		if (err)
 +			return err;
-+		}
 +		break;
 +	}
-+tz_disabled:
-+	*p_temp = (int)temp;
++
++	*p_temp = (int) temp;
 +	return 0;
 +}
 +
@@ -2051,7 +2048,6 @@ index 8047556..6d6762c 100644
 +	return 0;
 +}
 +
-+/* Use user space thermal governor. */
 +static struct thermal_zone_params mlxsw_thermal_module_params = {
 +	.governor_name = "user_space",
 +};
@@ -2071,7 +2067,7 @@ index 8047556..6d6762c 100644
  };
  
  static int mlxsw_thermal_get_max_state(struct thermal_cooling_device *cdev,
-@@ -307,12 +801,51 @@ static int mlxsw_thermal_set_cur_state(struct thermal_cooling_device *cdev,
+@@ -307,12 +797,51 @@ static int mlxsw_thermal_set_cur_state(struct thermal_cooling_device *cdev,
  	struct mlxsw_thermal *thermal = cdev->devdata;
  	struct device *dev = thermal->bus_info->dev;
  	char mfsc_pl[MLXSW_REG_MFSC_LEN];
@@ -2124,84 +2120,126 @@ index 8047556..6d6762c 100644
  	mlxsw_reg_mfsc_pack(mfsc_pl, idx, mlxsw_state_to_duty(state));
  	err = mlxsw_reg_write(thermal->core, MLXSW_REG(mfsc), mfsc_pl);
  	if (err) {
-@@ -328,6 +861,76 @@ static const struct thermal_cooling_device_ops mlxsw_cooling_ops = {
+@@ -328,6 +857,118 @@ static const struct thermal_cooling_device_ops mlxsw_cooling_ops = {
  	.set_cur_state	= mlxsw_thermal_set_cur_state,
  };
  
 +static int
-+mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
-+			  struct mlxsw_thermal *thermal)
++mlxsw_thermal_module_tz_init(struct mlxsw_thermal_module *module_tz)
 +{
-+	unsigned int module_count = mlxsw_core_max_ports(core);
 +	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
-+	char pmlp_pl[MLXSW_REG_PMLP_LEN] = {0};
-+	struct mlxsw_thermal_module *tz;
-+	int i, index = 1;
-+	u8 width;
 +	int err;
 +
-+	thermal->tz_module_dev = kcalloc(module_count + 1,
-+					 sizeof(*thermal->tz_module_dev),
-+					 GFP_KERNEL);
-+	if (!thermal->tz_module_dev)
-+		return -ENOMEM;
-+
-+	tz = thermal->tz_module_dev;
-+	for (i = 1; i < module_count; i++) {
-+		mlxsw_reg_pmlp_pack(pmlp_pl, i);
-+		err = mlxsw_reg_query(core, MLXSW_REG(pmlp), pmlp_pl);
-+		if (err) {
-+			dev_err(dev, "Failed to read module index %d\n", i);
-+			goto err_unreg_tz_module_dev;
-+		}
-+		width = mlxsw_reg_pmlp_width_get(pmlp_pl);
-+		if (!width)
-+			continue;
-+
-+		tz->id = index;
-+		snprintf(tz_name, sizeof(tz_name), "mlxsw-module%d", index++);
-+		tz->parent = thermal;
-+		memcpy(tz->trips, default_thermal_trips,
-+		       sizeof(thermal->trips));
-+		/* Initialize all trip point. */
-+		mlxsw_thermal_module_trips_reset(tz);
-+		/* Update trip point according to the module data. */
-+		err = mlxsw_thermal_module_trips_update(dev, core, tz);
-+		if (err)
-+			goto err_unreg_tz_module_dev;
-+
-+		tz->tzdev = thermal_zone_device_register(tz_name,
++	snprintf(tz_name, sizeof(tz_name), "mlxsw-module%d",
++		 module_tz->module + 1);
++	module_tz->tzdev = thermal_zone_device_register(tz_name,
 +						  MLXSW_THERMAL_NUM_TRIPS,
 +						  MLXSW_THERMAL_TRIP_MASK,
-+						  tz,
++						  module_tz,
 +						  &mlxsw_thermal_module_ops,
 +						  &mlxsw_thermal_module_params,
 +						  0, 0);
-+		if (IS_ERR(tz->tzdev)) {
-+			err = PTR_ERR(tz);
-+			dev_err(dev, "Failed to register thermal zone\n");
-+			goto err_unreg_tz_module_dev;
-+		}
-+
-+		tz++;
++	if (IS_ERR(module_tz->tzdev)) {
++		err = PTR_ERR(module_tz);
++		return err;
 +	}
-+	thermal->tz_module_num = index;
 +
 +	return 0;
-+err_unreg_tz_module_dev:
-+	for (i = index - 1; i >= 0; i--, tz--) {
-+		if (tz && tz->tzdev)
-+			thermal_zone_device_unregister(tz->tzdev);
-+	}
-+	kfree(thermal->tz_module_dev);
++}
 +
++static int
++mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
++			  struct mlxsw_thermal *thermal, u8 local_port)
++{
++	struct mlxsw_thermal_module *module_tz;
++	char pmlp_pl[MLXSW_REG_PMLP_LEN];
++	u8 width, module;
++	int err;
++
++	mlxsw_reg_pmlp_pack(pmlp_pl, local_port);
++	err = mlxsw_reg_query(core, MLXSW_REG(pmlp), pmlp_pl);
++	if (err)
++		return err;
++
++	width = mlxsw_reg_pmlp_width_get(pmlp_pl);
++	if (!width)
++		return 0;
++;
++	module = mlxsw_reg_pmlp_module_get(pmlp_pl, 0);
++	module_tz = &thermal->tz_module_arr[module];
++	module_tz->module = module;
++	module_tz->parent = thermal;
++	memcpy(module_tz->trips, default_thermal_trips,
++	       sizeof(thermal->trips));
++	/* Initialize all trip point. */
++	mlxsw_thermal_module_trips_reset(module_tz);
++	/* Update trip point according to the module data. */
++	err = mlxsw_thermal_module_trips_update(dev, core, module_tz);
++	if (err)
++		return err;
++
++	thermal->tz_module_num++;
++
++	return 0;
++}
++
++static void mlxsw_thermal_module_fini(struct mlxsw_thermal_module *module_tz)
++{
++	if (module_tz && module_tz->tzdev) {
++		thermal_zone_device_unregister(module_tz->tzdev);
++		module_tz->tzdev = NULL;
++	}
++}
++
++static int
++mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
++			   struct mlxsw_thermal *thermal)
++{
++	unsigned int module_count = mlxsw_core_max_ports(core) - 1;
++	int i, err;
++
++	thermal->tz_module_arr = kcalloc(module_count,
++					 sizeof(*thermal->tz_module_arr),
++					 GFP_KERNEL);
++	if (!thermal->tz_module_arr)
++		return -ENOMEM;
++
++	for (i = 1; i < module_count; i++) {
++		err = mlxsw_thermal_module_init(dev, core, thermal, i);
++		if (err)
++			goto err_unreg_tz_module_arr;
++	}
++
++	for (i = 0; i < thermal->tz_module_num; i++) {
++		err = mlxsw_thermal_module_tz_init(thermal->tz_module_arr + i);
++		if (err)
++			goto err_unreg_tz_module_arr;
++	}
++	thermal->tz_module_num++;
++
++	return 0;
++
++err_unreg_tz_module_arr:
++	for (i = thermal->tz_module_num - 1; i >= 0; i--)
++		mlxsw_thermal_module_fini(thermal->tz_module_arr + i);
++	kfree(thermal->tz_module_arr);
 +	return err;
++}
++
++static void
++mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal)
++{
++	int i;
++
++	for (i = thermal->tz_module_num - 1; i >= 0; i--)
++		mlxsw_thermal_module_fini(thermal->tz_module_arr + i);
++	kfree(thermal->tz_module_arr);
 +}
 +
  int mlxsw_thermal_init(struct mlxsw_core *core,
  		       const struct mlxsw_bus_info *bus_info,
  		       struct mlxsw_thermal **p_thermal)
-@@ -347,6 +950,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -347,6 +988,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  
  	thermal->core = core;
  	thermal->bus_info = bus_info;
@@ -2209,7 +2247,7 @@ index 8047556..6d6762c 100644
  	memcpy(thermal->trips, default_thermal_trips, sizeof(thermal->trips));
  
  	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mfcr), mfcr_pl);
-@@ -380,7 +984,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -380,7 +1022,8 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  		if (pwm_active & BIT(i)) {
  			struct thermal_cooling_device *cdev;
  
@@ -2219,7 +2257,7 @@ index 8047556..6d6762c 100644
  							&mlxsw_cooling_ops);
  			if (IS_ERR(cdev)) {
  				err = PTR_ERR(cdev);
-@@ -391,22 +996,40 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+@@ -391,22 +1034,41 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
  		}
  	}
  
@@ -2246,13 +2284,14 @@ index 8047556..6d6762c 100644
  		goto err_unreg_cdevs;
  	}
  
-+	err = mlxsw_thermal_module_init(dev, core, thermal);
++	err = mlxsw_thermal_modules_init(dev, core, thermal);
 +	if (err)
 +		goto err_unreg_tzdev;
 +
  	thermal->mode = THERMAL_DEVICE_ENABLED;
  	*p_thermal = thermal;
  	return 0;
++
 +err_unreg_tzdev:
 +	if (thermal->tzdev) {
 +		thermal_zone_device_unregister(thermal->tzdev);
@@ -2261,32 +2300,14 @@ index 8047556..6d6762c 100644
  err_unreg_cdevs:
  	for (i = 0; i < MLXSW_MFCR_PWMS_MAX; i++)
  		if (thermal->cdevs[i])
-@@ -418,8 +1041,17 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
- 
- void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+@@ -420,6 +1082,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
  {
-+	struct mlxsw_thermal_module *tz;
  	int i;
  
-+	tz = thermal->tz_module_dev;
-+	for (i = 0; i <= thermal->tz_module_num - 1; i++, tz++) {
-+		if (tz && tz->tzdev) {
-+			thermal_zone_device_unregister(tz->tzdev);
-+			tz->tzdev = NULL;
-+		}
-+	}
-+
++	mlxsw_thermal_modules_fini(thermal);
  	if (thermal->tzdev) {
  		thermal_zone_device_unregister(thermal->tzdev);
  		thermal->tzdev = NULL;
-@@ -432,5 +1064,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
- 		}
- 	}
- 
-+	mutex_destroy(&thermal->tz_update_lock);
-+	kfree(thermal->tz_module_dev);
- 	devm_kfree(thermal->bus_info->dev, thermal);
- }
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 index 5c31665..f1b95d5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
