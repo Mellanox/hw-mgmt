@@ -298,7 +298,7 @@ validate_thermal_configuration()
 			fi
 		fi
 	done
-	if [ ! -L $board_amb ] || [ ! -L $port_amb ]; then
+	if [ ! -L $fan_amb ] || [ ! -L $port_amb ]; then
 		log_failure_msg "Ambient temperature sensors attributes are not exist"
 		exit 1
 	fi
@@ -325,7 +325,7 @@ check_untrested_module_sensor()
 thermal_periodic_report()
 {
 	f1=`cat $asic`
-	f2=`cat $board_amb`
+	f2=`cat $fan_amb`
 	f3=`cat $port_amb`
 	f4=`cat $pwm`
 	f5=$(($fan_dynamic_min-$fan_max_state))

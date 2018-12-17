@@ -84,9 +84,7 @@ eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
 module_path=$hw_management_path/module
-cpld_path=$hw_management_path/cpld
 qsfp_path=$hw_management_path/qsfp
-fan_path=$hw_management_path/fan
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 
@@ -519,21 +517,6 @@ remove_symbolic_links()
 
 backward_compatibility_link()
 {
-	if [ ! -d $module_path ]; then
-		ln -sf $thermal_path $module_path
-	fi
-	if [ ! -d $cpld_path ]; then
-		ln -sf $system_path $cpld_path
-	fi
-	if [ ! -d $fan_path ]; then
-		ln -sf $thermal_path $fan_path
-	fi
-
-	find $fan_path/ -name "fan*_input" -exec sh -c 'fan_path=`dirname {}`;fan_name=`basename {} | cut -d_ -f1;`; ln -sf ${thermal_path}/pwm1  ${fan_path}/${fan_name}_speed_set;' \;
-
-	ln -sf $cpld_path/cpld1_version $cpld_path/cpld_brd_version
-	ln -sf $cpld_path/cpld2_version $cpld_path/cpld_mgmt_version
-
 	if [ -d /bsp ]; then
 		rm -rf /bsp
 	fi

@@ -68,7 +68,7 @@ find_i2c_bus()
 }
 
 if [ "$1" == "add" ]; then
-	if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
 		ln -sf $3$4/temp1_input $thermal_path/$2
 	fi
 	if [ "$2" == "switch" ]; then
@@ -126,6 +126,9 @@ if [ "$1" == "add" ]; then
 			fi
 			if [ -f $3$4/fan"$i"_input ]; then
 				ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
+			fi
+			if [ -f $3$4/fan"$i"_input ]; then
+				ln -sf $3$4/pwm1 $thermal_path/fan"$j"_speed_set
 			fi
 			if [ -f $config_path/fan_min_speed ]; then
 				ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
@@ -292,7 +295,7 @@ elif [ "$1" == "change" ]; then
 		fi
 	fi
 else
-	if [ "$2" == "board_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
 		unlink $thermal_path/$2
 	fi
 	if [ "$2" == "switch" ]; then
