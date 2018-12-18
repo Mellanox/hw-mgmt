@@ -85,6 +85,7 @@ led_path=$hw_management_path/led
 system_path=$hw_management_path/system
 module_path=$hw_management_path/module
 qsfp_path=$hw_management_path/qsfp
+watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 
@@ -495,6 +496,9 @@ create_symbolic_links()
 	fi
 	if [ ! -d $qsfp_path ]; then
 		mkdir $qsfp_path
+	fi
+	if [ ! -d $watchdog_path ]; then
+		mkdir $watchdog_path
 	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum

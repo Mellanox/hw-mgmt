@@ -136,6 +136,10 @@ SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/hw-manageme
 SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
 
+#WATCHDOG
+SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add watchdog %S %p"
+SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm watchdog %S %p"
+
 # QSFP
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:01", KERNEL=="eth*", NAME="sfp1"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:02", KERNEL=="eth*", NAME="sfp2"

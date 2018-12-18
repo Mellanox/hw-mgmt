@@ -713,11 +713,12 @@ init_fan_dynamic_minimum_speed()
 
 thermal_control_exit()
 {
+	log_action_msg "Mellanox thermal control is terminated (PID=${thermal_control_pid})."
+
 	if [ -f /var/run/hw-management.pid ]; then
 		rm -rf /var/run/hw-management.pid
 	fi
-
-	log_end_msg "Mellanox thermal control is terminated (PID=$thermal_control_pid)."
+	log_end_msg 0
 	exit 1
 }
 
