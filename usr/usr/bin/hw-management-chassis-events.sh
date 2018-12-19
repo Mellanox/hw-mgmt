@@ -99,37 +99,7 @@ find_eeprom_name()
 	fi
 }
 
-
-
 if [ "$1" == "add" ]; then
-	if [ "$2" == "watchdog" ]; then
-		date >> /tmp/mykola.log
-		echo $1 $2 $3 $4 >> /tmp/mykola.log
-		wd_type=`cat $3$4/identity`
-		case $wd_type in
-			mlx-wdt-main)
-				wd_basename=`basename $4`
-				echo $wd_type $wd_basename >> /tmp/mykola.log
-				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_basename}_bootstatus
-				ln -sf $3$4/nowayout ${watchdog_path}/${wd_basename}_nowayout
-				ln -sf $3$4/status ${watchdog_path}/${wd_basename}_status
-				ln -sf $3$4/timeout ${watchdog_path}/${wd_basename}_timeout
-				ln -sf $3$4/identity ${watchdog_path}/${wd_basename}_identity
-				ln -sf $3$4/state ${watchdog_path}/${wd_basename}_state
-				;;
-			mlx-wdt-aux)
-				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_basename}_bootstatus
-				ln -sf $3$4/nowayout ${watchdog_path}/${wd_basename}_nowayout
-				ln -sf $3$4/status ${watchdog_path}/${wd_basename}_status
-				ln -sf $3$4/timeout ${watchdog_path}/${wd_basename}_timeout
-				ln -sf $3$4/identity ${watchdog_path}/${wd_basename}_identity
-				ln -sf $3$4/state ${watchdog_path}/${wd_basename}_state
-				ln -sf $3$4/timeleft ${watchdog_path}/${wd_basename}_timeleft
-				;;
-			*)
-				;;
-		esac
-	fi
 	if [ "$2" == "a2d" ]; then
 		ln -sf $3$4/in_voltage-voltage_scale $environment_path/$2_$5_voltage_scale
 		for i in {1..12}; do
@@ -195,6 +165,24 @@ if [ "$1" == "add" ]; then
 		sleep 20
 		find $3$4/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
 	fi
+	if [ "$2" == "watchdog" ]; then
+		wd_type=`cat $3$4/identity`
+		case $wd_type in
+			mlx-wdt-*)
+				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_type}_bootstatus
+				ln -sf $3$4/nowayout ${watchdog_path}/${wd_type}_nowayout
+				ln -sf $3$4/status ${watchdog_path}/${wd_type}_status
+				ln -sf $3$4/timeout ${watchdog_path}/${wd_type}_timeout
+				ln -sf $3$4/identity ${watchdog_path}/${wd_type}_identity
+				ln -sf $3$4/state ${watchdog_path}/${wd_type}_state
+				if [ -L $3$4/timeleft ]; then
+					ln -sf $3$4/timeleft ${watchdog_path}/${wd_type}_timeleft
+				fi
+				;;
+			*)
+				;;
+		esac
+	fi
 elif [ "$1" == "remove" ]; then
 	if [ "$2" == "a2d" ]; then
 		unlink $environment_path/$2_$5_voltage_scale
@@ -250,14 +238,12 @@ elif [ "$1" == "remove" ]; then
 	fi
 	if [ "$2" == "qsfp" ]; then
 		find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
-
 	fi
 	if [ "$2" == "watchdog" ]; then
 	wd_type=`cat $3$4/identity`
 		case $wd_type in
-			mlx-wdt-main|mlx-wdt-aux)
-				wd_basename=`basename $4`
-				find $watchdog_path/ -name $(wd_basename)"*" -type l -exec unlink {} \;
+			mlx-wdt-*)
+				find $watchdog_path/ -name $wd_type"*" -type l -exec unlink {} \;
 				;;
 			*)
 				;;
