@@ -1,0 +1,210 @@
+########################################################################
+# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+# The below rules contains sysfs attributes, related to Mellanox thermal
+# control. These rules are supposed to catch the following attributes,
+# related to the next components: ASIC and port thermal zone mode, cooling
+# device current state,  statues of hot-pluggable devices, FAN faults, port
+# temperature fault, system ambient temperatures.
+# When trigger is matched, rule related data is to be passed to the event
+# handler.
+
+# Ambient temperatures (lm75, tmp102).
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add port_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm port_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add fan_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm fan_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add port_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm port_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add fan_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm fan_amb %S %p"
+
+# CPU temperature
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/coretemp.0/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cputemp %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/coretemp.0/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cputemp %S %p"
+
+# Switch - FAN tachometers, ASIC and ports temperatures and faults (I2C).
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
+
+# Switch - FAN tachometers and ASIC and ports temperatures and faults (PCI).
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:*/0000:*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:*/0000:*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
+
+# Cooling device.
+SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cooling_device %S %p %k"
+SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cooling_device %S %p %k"
+
+# Thermal zone.
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add thermal_zone %S %p %k"
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm thermal_zone %S %p %k"
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_HIGHEST}!="", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k highest $env{TZ_HIGHEST}"
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_DOWN}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k down"
+
+# PS units power cables when power source is connected
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu2 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu2 %p %k %S %n"
+
+# Hotplug devices statuses.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm hotplug %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="2" ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="0" ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p"
+
+# mlxreg fan device.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add regfan %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm regfan %S %p"
+
+# Register space attributes
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
+
+# LED
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:green", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:red", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:red", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:orange", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:orange", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:amber", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:amber", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:blue", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:blue", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+# Voltage controllers ucd924, tps53679
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0027/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0027/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0041/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0041/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0070/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0070/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0071/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0071/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0072/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon3 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0072/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon3 %S %p"
+
+# IIO (max1363)
+SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add a2d %S %p %k"
+SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"
+
+# EEPROM
+SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+
+SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+
+#WATCHDOG
+SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add watchdog %S %p"
+SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm watchdog %S %p"
+
+# QSFP
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:01", KERNEL=="eth*", NAME="sfp1"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:02", KERNEL=="eth*", NAME="sfp2"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:03", KERNEL=="eth*", NAME="sfp3"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:04", KERNEL=="eth*", NAME="sfp4"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:05", KERNEL=="eth*", NAME="sfp5"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:06", KERNEL=="eth*", NAME="sfp6"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:07", KERNEL=="eth*", NAME="sfp7"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:08", KERNEL=="eth*", NAME="sfp8"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:09", KERNEL=="eth*", NAME="sfp9"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:0a", KERNEL=="eth*", NAME="sfp10"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:0b", KERNEL=="eth*", NAME="sfp11"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:0c", KERNEL=="eth*", NAME="sfp12"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:0d", KERNEL=="eth*", NAME="sfp13"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:0e", KERNEL=="eth*", NAME="sfp14"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:0f", KERNEL=="eth*", NAME="sfp15"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:10", KERNEL=="eth*", NAME="sfp16"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:11", KERNEL=="eth*", NAME="sfp17"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:12", KERNEL=="eth*", NAME="sfp18"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:13", KERNEL=="eth*", NAME="sfp19"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:14", KERNEL=="eth*", NAME="sfp20"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:15", KERNEL=="eth*", NAME="sfp21"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:16", KERNEL=="eth*", NAME="sfp22"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:17", KERNEL=="eth*", NAME="sfp23"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:18", KERNEL=="eth*", NAME="sfp24"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:19", KERNEL=="eth*", NAME="sfp25"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:1a", KERNEL=="eth*", NAME="sfp26"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:1b", KERNEL=="eth*", NAME="sfp27"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:1c", KERNEL=="eth*", NAME="sfp28"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:1d", KERNEL=="eth*", NAME="sfp29"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:1e", KERNEL=="eth*", NAME="sfp30"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:1f", KERNEL=="eth*", NAME="sfp31"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:20", KERNEL=="eth*", NAME="sfp32"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:21", KERNEL=="eth*", NAME="sfp33"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:22", KERNEL=="eth*", NAME="sfp34"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:23", KERNEL=="eth*", NAME="sfp35"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:24", KERNEL=="eth*", NAME="sfp36"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:25", KERNEL=="eth*", NAME="sfp37"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:26", KERNEL=="eth*", NAME="sfp38"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:27", KERNEL=="eth*", NAME="sfp39"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:28", KERNEL=="eth*", NAME="sfp40"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:29", KERNEL=="eth*", NAME="sfp41"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:2a", KERNEL=="eth*", NAME="sfp42"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:2b", KERNEL=="eth*", NAME="sfp43"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:2c", KERNEL=="eth*", NAME="sfp44"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:2d", KERNEL=="eth*", NAME="sfp45"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:2e", KERNEL=="eth*", NAME="sfp46"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:2f", KERNEL=="eth*", NAME="sfp47"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:30", KERNEL=="eth*", NAME="sfp48"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:31", KERNEL=="eth*", NAME="sfp49"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:32", KERNEL=="eth*", NAME="sfp50"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:33", KERNEL=="eth*", NAME="sfp51"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:34", KERNEL=="eth*", NAME="sfp52"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:35", KERNEL=="eth*", NAME="sfp53"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:36", KERNEL=="eth*", NAME="sfp54"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:37", KERNEL=="eth*", NAME="sfp55"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:38", KERNEL=="eth*", NAME="sfp56"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:39", KERNEL=="eth*", NAME="sfp57"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3a", KERNEL=="eth*", NAME="sfp58"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3b", KERNEL=="eth*", NAME="sfp59"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3c", KERNEL=="eth*", NAME="sfp60"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3d", KERNEL=="eth*", NAME="sfp61"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3e", KERNEL=="eth*", NAME="sfp62"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3f", KERNEL=="eth*", NAME="sfp63"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:40", KERNEL=="eth*", NAME="sfp64"
+# QSFP EEPROM
+SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add qsfp %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm qsfp %S %p"

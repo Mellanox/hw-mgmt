@@ -1,18 +1,14 @@
 Source: hw-management
-Priority: extra
+Section: utils
+Priority: optional
 Maintainer: MellanoxBSP <system-sw-low-level@mellanox.com>
-Build-Depends:
+Build-Depends: debhelper
 Standards-Version:
-Section: libs
 Homepage: http://www.mellanox.com
 
-Package: hw-management
+Package:hw-management
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
-Description: Hardware Management kernel drivers
-
-#Package: hw-management-dev
-#Section: libdevel
-#Architecture: any
-#Depends: ${misc:Depends}, hw-management (= ${binary:Version})
-#Description: Development files for the sx_complib libraries
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Thermal control and chassis management for Mellanox systems
+	     This package supports Mellanox switches family for chassis
+	     management and thermal control.
