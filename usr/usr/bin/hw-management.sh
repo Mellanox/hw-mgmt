@@ -473,9 +473,6 @@ create_symbolic_links()
 	if [ ! -d $thermal_path ]; then
 		mkdir $thermal_path
 	fi	
-	if [ ! -d $thermal_path ]; then
-		mkdir $thermal_path
-	fi
 	if [ ! -d $config_path ]; then
 		mkdir $config_path
 	fi
