@@ -714,6 +714,7 @@ init_fan_dynamic_minimum_speed()
 thermal_control_exit()
 {
 	log_action_msg "Mellanox thermal control is terminated (PID=${thermal_control_pid})."
+
 	if [ -f /var/run/hw-management.pid ]; then
 		rm -rf /var/run/hw-management.pid
 	fi
@@ -902,6 +903,7 @@ suspend_thermal=0;
 while true
 do
 	/bin/sleep $polling_time
+
 	# Check if thermal is suspended
 	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
 	if [ $suspend ] && [ "$suspend" != "$suspend_thermal" ]; then
