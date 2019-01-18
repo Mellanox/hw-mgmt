@@ -178,6 +178,9 @@ mqm8700_connect_table=(	max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8 \
 			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
 			24c32 0x50 16)
 
 mqm8700_dis_table=(	0x64 5 \
@@ -187,6 +190,9 @@ mqm8700_dis_table=(	0x64 5 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
 			0x50 16)
 
 msn3800_connect_table=( max11603 0x64 5 \
@@ -194,10 +200,14 @@ msn3800_connect_table=( max11603 0x64 5 \
 			tps53679 0x71 5 \
 			tps53679 0x72 5 \
 			tps53679 0x73 5 \
+			tps53679 0x74 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8 \
 			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
 			24c32 0x50 16)
 
 msn3800_dis_table=(	0x64 5 \
@@ -205,10 +215,14 @@ msn3800_dis_table=(	0x64 5 \
 			0x71 5 \
 			0x72 5 \
 			0x73 5 \
+			0x74 5 \
 			0x49 7 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
 			0x50 16)
 
 ACTION=$1
