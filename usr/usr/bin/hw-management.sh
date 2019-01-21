@@ -69,6 +69,8 @@ max_psus=2
 max_tachos=12
 i2c_bus_max=10
 i2c_bus_offset=0
+i2c_asic_bus_default=2
+i2c_asic_addr=0x48
 psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 fan_psu_default=0x3c
@@ -556,6 +558,8 @@ do_start()
 	# Sleep to allow kernel modules initialization completion
 	sleep 3
 	find_i2c_bus
+	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+	echo $asic_bus > $config_path/asic_bus
 	connect_platform
 	backward_compatibility_link
 
@@ -577,12 +581,44 @@ do_stop()
 	remove_symbolic_links
 }
 
+do_chip_up_down()
+{
+	# Add ASIC device.
+	bus=`cat $config_path/asic_bus`
+
+	case $1 in
+	0)
+		echo 1 > $config_path/suspend
+		echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		;;
+	1)
+		echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+		echo 0 > $config_path/suspend
+		;;
+	*)
+		exit 1
+		;;
+	esac
+}
+
+do_chip_down()
+{
+	# Delete ASIC device
+	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
+}
+
 case $ACTION in
 	start)
 		do_start
 	;;
 	stop)
 		do_stop
+	;;
+	chipup)
+		do_chip_up_down 1
+	;;
+	chipdown)
+		do_chip_up_down 0
 	;;
 	restart|force-reload)
 		do_stop
