@@ -71,6 +71,7 @@ i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
 i2c_asic_addr=0x48
+i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 fan_psu_default=0x3c
@@ -589,10 +590,14 @@ do_chip_up_down()
 	case $1 in
 	0)
 		echo 1 > $config_path/suspend
-		echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		fi
 		;;
 	1)
-		echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+		fi
 		echo 0 > $config_path/suspend
 		;;
 	*)
