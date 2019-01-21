@@ -1,0 +1,301 @@
+From ee7aa6e48fa725b2169d036bb961472046c6bc2a Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Mon, 21 Jan 2019 21:03:07 +0000
+Subject: [PATCH mlxsw] mlxsw: core: add support for Gear Box temperatures in
+ hwmon
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c |  86 +++++++++++++++++
+ drivers/net/ethernet/mellanox/mlxsw/reg.h        | 115 +++++++++++++++++++++++
+ 2 files changed, 201 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index f1ada4cd..6c82881 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -15,6 +15,7 @@
+ #define MLXSW_HWMON_TEMP_SENSOR_MAX_COUNT 127
+ #define MLXSW_HWMON_ATTR_COUNT (MLXSW_HWMON_TEMP_SENSOR_MAX_COUNT * 4 + \
+ 				MLXSW_MFCR_TACHOS_MAX + MLXSW_MFCR_PWMS_MAX)
++#define MLXSW_HWMON_GET_GBOX_ARRAY_SIZE(num)	((num / 32) * 32 + num % 32)
+ 
+ struct mlxsw_hwmon_attr {
+ 	struct device_attribute dev_attr;
+@@ -33,6 +34,7 @@ struct mlxsw_hwmon {
+ 	struct mlxsw_hwmon_attr hwmon_attrs[MLXSW_HWMON_ATTR_COUNT];
+ 	unsigned int attrs_count;
+ 	u8 sensor_count;
++	u8 module_sensor_count;
+ };
+ 
+ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
+@@ -333,6 +335,18 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
+ 		       mlwsw_hwmon_attr->type_index);
+ }
+ 
++static ssize_t
++mlxsw_hwmon_gbox_temp_label_show(struct device *dev,
++				 struct device_attribute *attr,
++				 char *buf)
++{
++	struct mlxsw_hwmon_attr *mlwsw_hwmon_attr =
++			container_of(attr, struct mlxsw_hwmon_attr, dev_attr);
++
++	return sprintf(buf, "gear box %03u\n",
++		       mlwsw_hwmon_attr->type_index);
++}
++
+ enum mlxsw_hwmon_attr_type {
+ 	MLXSW_HWMON_ATTR_TYPE_TEMP,
+ 	MLXSW_HWMON_ATTR_TYPE_TEMP_MAX,
+@@ -345,6 +359,7 @@ enum mlxsw_hwmon_attr_type {
+ 	MLXSW_HWMON_ATTR_TYPE_TEMP_MODULE_CRIT,
+ 	MLXSW_HWMON_ATTR_TYPE_TEMP_MODULE_EMERG,
+ 	MLXSW_HWMON_ATTR_TYPE_TEMP_MODULE_LABEL,
++	MLXSW_HWMON_ATTR_TYPE_TEMP_GBOX_LABEL,
+ };
+ 
+ static void mlxsw_hwmon_attr_add(struct mlxsw_hwmon *mlxsw_hwmon,
+@@ -428,6 +443,13 @@ static void mlxsw_hwmon_attr_add(struct mlxsw_hwmon *mlxsw_hwmon,
+ 		snprintf(mlxsw_hwmon_attr->name, sizeof(mlxsw_hwmon_attr->name),
+ 			 "temp%u_label", num + 1);
+ 		break;
++	case MLXSW_HWMON_ATTR_TYPE_TEMP_GBOX_LABEL:
++		mlxsw_hwmon_attr->dev_attr.show =
++			mlxsw_hwmon_gbox_temp_label_show;
++		mlxsw_hwmon_attr->dev_attr.attr.mode = 0444;
++		snprintf(mlxsw_hwmon_attr->name, sizeof(mlxsw_hwmon_attr->name),
++			 "temp%u_label", num + 1);
++		break;
+ 	default:
+ 		WARN_ON(1);
+ 	}
+@@ -553,6 +575,65 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 				     index, index);
+ 		index++;
+ 	}
++	mlxsw_hwmon->module_sensor_count = index;
++
++	return 0;
++}
++
++static int mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon *mlxsw_hwmon)
++{
++	unsigned long map[MLXSW_REG_MTECR_MAP_DWORD_LEN];
++	char mgpir_pl[MLXSW_REG_MGPIR_LEN] = {0};
++	char mtecr_pl[MLXSW_REG_MTECR_LEN] = {0};
++	u16 sensor_count, last_sensor, gbox_num;
++	int index, map_start;
++	unsigned long bit;
++	int err;
++
++	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
++	if (err) {
++		dev_err(mlxsw_hwmon->bus_info->dev, "Failed to get number of Gearbox devices\n");
++		return err;
++	}
++
++	gbox_num = mlxsw_reg_mgpir_num_of_devices_get(mgpir_pl);
++	if (!gbox_num)
++		return 0;
++
++	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtecr), mtecr_pl);
++	if (err) {
++		dev_err(mlxsw_hwmon->bus_info->dev, "Failed to get sensor mapping\n");
++		return err;
++	}
++
++	mlxsw_reg_mtecr_unpack(mtecr_pl, &sensor_count, &last_sensor, NULL,
++			       map, MLXSW_REG_MTECR_MAP_DWORD_LEN);
++
++	if (last_sensor < MLXSW_REG_MTMP_GBOX_INDEX_MIN)
++		return 0;
++
++	/* Add extra attributes for Gearbox temperatures. Sensor index is
++	 * assigned to sensor_count value, while all indexed before
++	 * sensor_count are already utilized by the sensors connected through
++	 * by mlxsw_hwmon_temp_init() and mlxsw_hwmon_module_init().
++	 */
++	index = mlxsw_hwmon->sensor_count + mlxsw_hwmon->module_sensor_count;
++	map_start = MLXSW_REG_MTMP_GBOX_INDEX_MIN / 32;
++	gbox_num = MLXSW_HWMON_GET_GBOX_ARRAY_SIZE(gbox_num);
++	for_each_set_bit(bit, &map[map_start], gbox_num) {
++		mlxsw_hwmon_attr_add(mlxsw_hwmon, MLXSW_HWMON_ATTR_TYPE_TEMP,
++				     index, index);
++		mlxsw_hwmon_attr_add(mlxsw_hwmon,
++				     MLXSW_HWMON_ATTR_TYPE_TEMP_MAX, index,
++				     index);
++		mlxsw_hwmon_attr_add(mlxsw_hwmon,
++				     MLXSW_HWMON_ATTR_TYPE_TEMP_RST, index,
++				     index);
++		mlxsw_hwmon_attr_add(mlxsw_hwmon,
++				     MLXSW_HWMON_ATTR_TYPE_TEMP_GBOX_LABEL,
++				     index, index);
++		index++;
++	}
+ 
+ 	return 0;
+ }
+@@ -583,6 +664,10 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 	if (err)
+ 		goto err_temp_module_init;
+ 
++	err = mlxsw_hwmon_gearbox_init(mlxsw_hwmon);
++	if (err)
++		goto err_temp_gearbox_init;
++
+ 	mlxsw_hwmon->groups[0] = &mlxsw_hwmon->group;
+ 	mlxsw_hwmon->group.attrs = mlxsw_hwmon->attrs;
+ 
+@@ -599,6 +684,7 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
+ 	return 0;
+ 
+ err_hwmon_register:
++err_temp_gearbox_init:
+ err_temp_module_init:
+ err_fans_init:
+ err_temp_init:
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 94407dc..035b9f1 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -7571,6 +7571,7 @@ static inline void mlxsw_reg_fore_unpack(char *payload, u8 tacho,
+  */
+ #define MLXSW_REG_MTCAP_ID 0x9009
+ #define MLXSW_REG_MTCAP_LEN 0x08
++#define MLXSW_REG_MTMP_GBOX_INDEX_MIN 256
+ 
+ MLXSW_REG_DEFINE(mtcap, MLXSW_REG_MTCAP_ID, MLXSW_REG_MTCAP_LEN);
+ 
+@@ -8579,6 +8580,118 @@ static inline void mlxsw_reg_mprs_pack(char *payload, u16 parsing_depth,
+ 	mlxsw_reg_mprs_vxlan_udp_dport_set(payload, vxlan_udp_dport);
+ }
+ 
++/* MGPIR - Management General Peripheral Information Register
++ * ----------------------------------------------------------
++ * MGPIR register allows software to query the hardware and
++ * firmware general information of peripheral entities.
++ */
++#define MLXSW_REG_MGPIR_ID 0x9100
++#define MLXSW_REG_MGPIR_LEN 0xA0
++
++MLXSW_REG_DEFINE(mgpir, MLXSW_REG_MGPIR_ID, MLXSW_REG_MGPIR_LEN);
++
++enum mlxsw_reg_mgpir_type {
++	MLXSW_REG_MGPIR_TYPE_NONE,
++	MLXSW_REG_MGPIR_TYPE_GEARBOX_DIE,
++};
++
++/* num_of_devices
++ * Number of devices of device_type..
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mgpir, num_of_devices, 0x00, 0, 8);
++
++/* devices_per_flash
++ * Number of devices of device_type per flash.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mgpir, devices_per_flash, 0x00, 16, 8);
++
++/* devices_type
++ * Device type:
++ *  0 - No devices on system of that type.
++ *  1 - Gearbox die.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mgpir, devices_type, 0x00, 24, 8);
++
++/* MTECR - Management Temperature Extended Capabilities Register
++ * -------------------------------------------------------------
++ * MTECR register exposes the capabilities of the device and
++ * system temperature sensing. This register is exposing all
++ * possible temperature sensors that are on the system.
++ */
++#define MLXSW_REG_MTECR_ID 0x9109
++#define MLXSW_REG_MTECR_LEN 0x60
++#define MLXSW_REG_MTECR_MAP_LEN 0x50
++#define MLXSW_REG_MTECR_MAP_DWORD_LEN (MLXSW_REG_MTECR_MAP_LEN / 4)
++
++MLXSW_REG_DEFINE(mtecr, MLXSW_REG_MTECR_ID, MLXSW_REG_MTECR_LEN);
++
++/* reg_mtecr_sensor_count
++ * Number of sensors supported by the device.
++ * This includes ASIC, ambient sensors, Gearboxes etc. QSFP module
++ * sensors are not included.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mtecr, sensor_count, 0x00, 0, 12);
++
++/* reg_mtecr_last_sensor
++ * Last sensor index that is available in the system to read from.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mtecr, last_sensor, 0x00, 16, 12);
++
++/* reg_mtecr_internal_sensor_count
++ * Number of sensors supported by the device that are in the ASIC.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mtecr, internal_sensor_count, 0x04, 0, 7);
++
++/* reg_mtecr_sensor_map
++ * Mapping of system sensors supported by the device.
++ * Each bit represents a sensor.
++ * This field is size variable based on the last_sensor field and
++ * in granularity of 32 bits:
++ *   0: Not connected or not supported
++ *   1: Supports temperature measurements
++ * Access: RO
++ */
++MLXSW_ITEM_BIT_ARRAY(reg, mtecr, sensor_map, 0x08, MLXSW_REG_MTECR_MAP_LEN, 1);
++
++static inline void
++mlxsw_reg_mtecr_unpack(char *payload, u16 *p_sensor_count, u16 *p_last_sensor,
++		       u8 *p_internal_sensor_count,
++		       unsigned long *p_sensor_map, int sensor_map_size)
++{
++	unsigned long *p_map = p_sensor_map;
++	u16 last_sensor;
++	int i, j, bit;
++
++	if (p_sensor_count)
++		*p_sensor_count = mlxsw_reg_mtecr_sensor_count_get(payload);
++
++	last_sensor = mlxsw_reg_mtecr_last_sensor_get(payload);
++	if (p_last_sensor)
++		*p_last_sensor = last_sensor;
++
++	if (p_internal_sensor_count)
++		*p_internal_sensor_count =
++			mlxsw_reg_mtecr_internal_sensor_count_get(payload);
++
++	for (i = 0; p_map && i < sensor_map_size; i++) {
++		*p_map = 0;
++		for (j = 0; j < sizeof(unsigned long); j++) {
++			bit = i * sizeof(unsigned long) + j;
++			if (bit == last_sensor - 1)
++				return;
++			if (mlxsw_reg_mtecr_sensor_map_get(payload, bit))
++				*p_map |= BIT(j);
++		}
++		p_map++;
++	}
++}
++
+ /* TNGCR - Tunneling NVE General Configuration Register
+  * ----------------------------------------------------
+  * The TNGCR register is used for setting up the NVE Tunneling configuration.
+@@ -9591,6 +9704,8 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+ 	MLXSW_REG(mcda),
+ 	MLXSW_REG(mgpc),
+ 	MLXSW_REG(mprs),
++	MLXSW_REG(mgpir),
++	MLXSW_REG(mtecr),
+ 	MLXSW_REG(tngcr),
+ 	MLXSW_REG(tnumt),
+ 	MLXSW_REG(tnqcr),
+-- 
+2.1.4
+
