@@ -266,7 +266,7 @@ msn21xx_specific()
 	done
 
 	thermal_type=$thermal_type_t2
-	max_tachos=8
+	max_tachos=4
 	max_psus=0
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
@@ -318,7 +318,7 @@ msn201x_specific()
 	done
 
 	thermal_type=$thermal_type_t4
-	max_tachos=8
+	max_tachos=4
 	max_psus=0
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
@@ -355,6 +355,8 @@ msn38xx_specific()
 	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
+	echo 13000 > $config_path/fan_max_speed
+	echo 4000 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
 
