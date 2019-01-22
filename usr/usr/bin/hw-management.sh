@@ -600,7 +600,13 @@ do_chip_up_down()
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
 		fi
-		echo 0 > $config_path/suspend
+		case $2 in
+		1)
+			echo 0 > $config_path/suspend
+			;;
+		*)
+			;;
+		esac
 		;;
 	*)
 		exit 1
@@ -622,7 +628,7 @@ case $ACTION in
 		do_stop
 	;;
 	chipup)
-		do_chip_up_down 1
+		do_chip_up_down 1 $2
 	;;
 	chipdown)
 		do_chip_up_down 0
