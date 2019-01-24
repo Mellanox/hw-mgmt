@@ -558,6 +558,8 @@ do_start()
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
+	echo 45 > $config_path/chipup_delay
+	echo 5 > $config_path/chipdown_delay
 	# Sleep to allow kernel modules initialization completion
 	sleep 3
 	find_i2c_bus
@@ -593,11 +595,15 @@ do_chip_up_down()
 	0)
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			delay=`cat $config_path/chipdown_delay`
+			sleep $delay
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
 		fi
 		;;
 	1)
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			delay=`cat $config_path/chipup_delay`
+			sleep $delay
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
 		fi
 		case $2 in
