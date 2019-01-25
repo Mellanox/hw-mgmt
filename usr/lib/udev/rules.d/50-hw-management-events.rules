@@ -128,6 +128,12 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0072/
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon4 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon4 %S %p"
 
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add comex_voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm comex_voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0061/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add comex_voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0061/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm comex_voltmon2 %S %p"
+
 # IIO (max1363)
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add a2d %S %p %k"
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"

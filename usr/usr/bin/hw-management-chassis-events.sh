@@ -109,7 +109,8 @@ if [ "$1" == "add" ]; then
 		done
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
-	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ]; then
+	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
+	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
 		ln -sf $3$4/in1_input $environment_path/$2_in1_input
 		ln -sf $3$4/in2_input $environment_path/$2_in2_input
 		ln -sf $3$4/curr2_input $environment_path/$2_curr2_input
@@ -193,7 +194,8 @@ elif [ "$1" == "remove" ]; then
 		done
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
-	   [ "$2" == "voltmon3" ]; then
+	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
+ 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
 		unlink $environment_path/$2_in1_input
 		unlink $environment_path/$2_in2_input
 		unlink $environment_path/$2_curr2_input

@@ -1,1 +1,3 @@
-0001-mlxsw-thermal-monitoring-amendments.patch
+0001-Mellanox-drivers-backport-patching-from-kernels-4.20.patch
+0002-Mellanox-drivers-backport-patching-from-next-kernels.patch
+0003-Mellanox-drivers-backport-patching-for-patches-for-n.patch

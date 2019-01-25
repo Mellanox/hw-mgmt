@@ -46,6 +46,7 @@ max_modules_ind=65
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
+i2c_comex_mon_bus_default=15
 
 find_i2c_bus()
 {
@@ -69,7 +70,17 @@ find_i2c_bus()
 
 if [ "$1" == "add" ]; then
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
-		ln -sf $3$4/temp1_input $thermal_path/$2
+		# Verify if this is COMEX sensor
+		find_i2c_bus
+		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		busdir=`echo $3$4 |xargs dirname |xargs dirname`
+		busfolder=`basename $busdir`
+		bus="${busfolder:0:${#busfolder}-5}"
+		if [ "$bus" == "$comex_bus" ]; then
+			ln -sf $3$4/temp1_input $thermal_path/comex_amb
+		else
+			ln -sf $3$4/temp1_input $thermal_path/$2
+		fi
 	fi
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
@@ -296,7 +307,17 @@ elif [ "$1" == "change" ]; then
 	fi
 else
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
-		unlink $thermal_path/$2
+		# Verify if this is COMEX sensor
+		find_i2c_bus
+		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		busdir=`echo $3$4 |xargs dirname |xargs dirname`
+		busfolder=`basename $busdir`
+		bus="${busfolder:0:${#busfolder}-5}"
+		if [ "$bus" == "$comex_bus" ]; then
+			unlink $thermal_path/comex_amb
+		else
+			unlink $thermal_path/$
+		fi
 	fi
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`

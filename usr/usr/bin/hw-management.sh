@@ -69,6 +69,9 @@ max_psus=2
 max_tachos=12
 i2c_bus_max=10
 i2c_bus_offset=0
+i2c_asic_bus_default=2
+i2c_asic_addr=0x48
+i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 fan_psu_default=0x3c
@@ -178,6 +181,9 @@ mqm8700_connect_table=(	max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8 \
 			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
 			24c32 0x50 16)
 
 mqm8700_dis_table=(	0x64 5 \
@@ -187,6 +193,9 @@ mqm8700_dis_table=(	0x64 5 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
 			0x50 16)
 
 msn3800_connect_table=( max11603 0x64 5 \
@@ -194,10 +203,14 @@ msn3800_connect_table=( max11603 0x64 5 \
 			tps53679 0x71 5 \
 			tps53679 0x72 5 \
 			tps53679 0x73 5 \
+			tps53679 0x74 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8 \
 			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
 			24c32 0x50 16)
 
 msn3800_dis_table=(	0x64 5 \
@@ -205,10 +218,14 @@ msn3800_dis_table=(	0x64 5 \
 			0x71 5 \
 			0x72 5 \
 			0x73 5 \
+			0x74 5 \
 			0x49 7 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
 			0x50 16)
 
 ACTION=$1
@@ -249,7 +266,7 @@ msn21xx_specific()
 	done
 
 	thermal_type=$thermal_type_t2
-	max_tachos=8
+	max_tachos=4
 	max_psus=0
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
@@ -301,7 +318,7 @@ msn201x_specific()
 	done
 
 	thermal_type=$thermal_type_t4
-	max_tachos=8
+	max_tachos=4
 	max_psus=0
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
@@ -338,6 +355,8 @@ msn38xx_specific()
 	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
+	echo 13000 > $config_path/fan_max_speed
+	echo 4000 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
 
@@ -539,9 +558,13 @@ do_start()
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
+	echo 45 > $config_path/chipup_delay
+	echo 5 > $config_path/chipdown_delay
 	# Sleep to allow kernel modules initialization completion
 	sleep 3
 	find_i2c_bus
+	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+	echo $asic_bus > $config_path/asic_bus
 	connect_platform
 	backward_compatibility_link
 
@@ -563,12 +586,58 @@ do_stop()
 	remove_symbolic_links
 }
 
+do_chip_up_down()
+{
+	# Add ASIC device.
+	bus=`cat $config_path/asic_bus`
+
+	case $1 in
+	0)
+		echo 1 > $config_path/suspend
+		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			delay=`cat $config_path/chipdown_delay`
+			sleep $delay
+			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		fi
+		;;
+	1)
+		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			delay=`cat $config_path/chipup_delay`
+			sleep $delay
+			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+		fi
+		case $2 in
+		1)
+			echo 0 > $config_path/suspend
+			;;
+		*)
+			;;
+		esac
+		;;
+	*)
+		exit 1
+		;;
+	esac
+}
+
+do_chip_down()
+{
+	# Delete ASIC device
+	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
+}
+
 case $ACTION in
 	start)
 		do_start
 	;;
 	stop)
 		do_stop
+	;;
+	chipup)
+		do_chip_up_down 1 $2
+	;;
+	chipdown)
+		do_chip_up_down 0
 	;;
 	restart|force-reload)
 		do_stop
