@@ -217,3 +217,8 @@ SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00
 # QSFP EEPROM
 SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add qsfp %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm qsfp %S %p"
+
+# PCI
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh change sxcore %S %p"
+SUBSYSTEM=="module", KERNEL=="sx_core", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add sxcore %S %p"
+SUBSYSTEM=="module", KERNEL=="sx_core", ACTION=="remove", RUN+="hw-management-chassis-events.sh rm sxcore %S %p"

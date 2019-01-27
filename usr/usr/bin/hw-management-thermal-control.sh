@@ -659,6 +659,15 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t4[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t4[@]}"
 		;;
+	5)
+		# Config FAN minimal speed setting for class t1
+		config_p2c_dir_trust "${p2c_dir_trust_t1[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t1[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t1[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t1[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t1[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t1[@]}"
+		;;
 	*)
 		echo thermal type $system_thermal_type is not supported
 		exit 0
