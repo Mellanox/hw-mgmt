@@ -251,7 +251,4 @@ else
 				;;
 		esac
 	fi
-	if [ "$2" == "sxcore" ]; then
-		/usr/bin/hw-management.sh chipdown
-	fi
 fi
