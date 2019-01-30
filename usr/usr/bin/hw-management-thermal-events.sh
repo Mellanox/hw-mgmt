@@ -296,12 +296,12 @@ elif [ "$1" == "change" ]; then
 			fi
 			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
 			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				echo mlxsw_minimal 0x48 > $path/new_device
+				/usr/bin/hw-management.sh chipup
 			fi
 		elif [ "$3" == "down" ]; then
 			if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
 			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				echo 0x48 > $path/delete_device
+				/usr/bin/hw-management.sh chipdown
 			fi
 		else
 			asic_health=`cat $4$5/asic1`
