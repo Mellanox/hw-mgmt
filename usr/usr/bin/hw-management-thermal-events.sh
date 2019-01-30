@@ -303,6 +303,13 @@ elif [ "$1" == "change" ]; then
 			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
 				/usr/bin/hw-management.sh chipdown
 			fi
+		else
+			asic_health=`cat $4$5/asic1`
+			if [ $asic_health -eq 2 ]; then
+				/usr/bin/hw-management.sh chipup
+			else
+				/usr/bin/hw-management.sh chipdown
+			fi
 		fi
 	fi
 else
