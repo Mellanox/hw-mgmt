@@ -184,11 +184,6 @@ if [ "$1" == "add" ]; then
 				;;
 		esac
 	fi
-elif [ "$1" == "change" ]; then
-	#if [ "$2" == "sxcore" ]; then
-		#/usr/bin/hw-management.sh chipdown
-		#/usr/bin/hw-management.sh chipup
-	#fi
 else
 	if [ "$2" == "a2d" ]; then
 		unlink $environment_path/$2_$5_voltage_scale
@@ -256,7 +251,4 @@ else
 				;;
 		esac
 	fi
-	#if [ "$2" == "sxcore" ]; then
-	#	/usr/bin/hw-management.sh chipdown
-	#fi
 fi
