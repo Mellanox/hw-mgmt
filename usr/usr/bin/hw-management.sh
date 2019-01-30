@@ -558,7 +558,7 @@ do_start()
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
-	echo 15 > $config_path/chipup_delay
+	echo 10 > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
 	# Sleep to allow kernel modules initialization completion
 	sleep 3
