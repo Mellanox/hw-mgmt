@@ -213,7 +213,7 @@ msn3800_connect_table=( max11603 0x64 5 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-msn3800_dis_table=(	0x64 5 \
+msn3800_dis_table=(	0x6d 5 \
 			0x70 5 \
 			0x71 5 \
 			0x72 5 \
