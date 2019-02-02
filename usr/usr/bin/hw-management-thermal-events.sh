@@ -86,8 +86,9 @@ if [ "$1" == "add" ]; then
 		name=`cat $3$4/name`
 		if [ "$name" == "mlxsw" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/asic
-			ln -sf $3$4/pwm1 $thermal_path/pwm1
-
+			if [ -f $3$4/pwm1 ]; then
+				ln -sf $3$4/pwm1 $thermal_path/pwm1
+			fi
 			if [ -f $config_path/fan_inversed ]; then
 				inv=`cat $config_path/fan_inversed`
 			fi
@@ -330,7 +331,9 @@ else
 		name=`cat $3$4/name`
 		if [ "$name" == "mlxsw" ]; then
 			unlink $thermal_path/asic
-			unlink $thermal_path/pwm1
+			if [ -L $thermal_path/pwm1 ]; then
+				unlink $thermal_path/pwm1
+			fi
 			for ((i=1; i<=$max_tachos; i+=1)); do
 				if [ -L $thermal_path/fan"$i"_fault ]; then
 					unlink $thermal_path/fan"$i"_fault
