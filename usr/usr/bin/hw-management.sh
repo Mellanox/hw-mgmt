@@ -584,6 +584,13 @@ do_stop()
 	remove_symbolic_links
 }
 
+check_chipupdownlock()
+{
+	while [ -f $config_path/chipupdownlock ]; do
+		sleep 1
+	done
+}
+
 do_chip_up_down()
 {
 	# Add ASIC device.
@@ -593,16 +600,22 @@ do_chip_up_down()
 	0)
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			check_chipupdownlock
+			touch $config_path/chipupdownlock
 			delay=`cat $config_path/chipdown_delay`
 			sleep $delay
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+			rm -f $config_path/chipupdownlock
 		fi
 		;;
 	1)
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+			check_chipupdownlock
+			touch $config_path/chipupdownlock
 			delay=`cat $config_path/chipup_delay`
 			sleep $delay
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+			rm -f $config_path/chipupdownlock
 		fi
 		case $2 in
 		1)

@@ -49,6 +49,7 @@ i2c_bus_def_off_eeprom_fan1=11
 i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
+i2c_comex_mon_bus_default=15
 psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 eeprom_name=''
@@ -111,6 +112,17 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+		if [ "$2" == "comex_voltmon1" ]; then
+			find_i2c_bus
+			comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+			busdir=`echo $3$4 |xargs dirname |xargs dirname`
+			busfolder=`basename $busdir`
+			bus="${busfolder:0:${#busfolder}-5}"
+			# Verify if this is not COMEX device
+			if [ "$bus" != "$comex_bus" ]; then
+				return
+			fi
+		fi
 		ln -sf $3$4/in1_input $environment_path/$2_in1_input
 		ln -sf $3$4/in2_input $environment_path/$2_in2_input
 		ln -sf $3$4/curr2_input $environment_path/$2_curr2_input
@@ -196,6 +208,17 @@ else
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
  	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+		if [ "$2" == "comex_voltmon1" ]; then
+			find_i2c_bus
+			comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+			busdir=`echo $3$4 |xargs dirname |xargs dirname`
+			busfolder=`basename $busdir`
+			bus="${busfolder:0:${#busfolder}-5}"
+			# Verify if this is not COMEX device
+			if [ "$bus" != "$comex_bus" ]; then
+				return
+			fi
+		fi
 		unlink $environment_path/$2_in1_input
 		unlink $environment_path/$2_in2_input
 		unlink $environment_path/$2_curr2_input
