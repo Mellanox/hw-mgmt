@@ -86,7 +86,7 @@ if [ "$1" == "add" ]; then
 		name=`cat $3$4/name`
 		if [ "$name" == "mlxsw" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/asic
-			if [ $3$4/pwm1 ]; then
+			if [ -f $3$4/pwm1 ]; then
 				ln -sf $3$4/pwm1 $thermal_path/pwm1
 			fi
 			if [ -f $config_path/fan_inversed ]; then
@@ -203,7 +203,7 @@ if [ "$1" == "add" ]; then
 		fi
 		if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			echo mlxsw_minimal 0x48 > $path/new_device
+			/usr/bin/hw-management.sh chipup
 		fi
   	fi
 	if [ "$2" == "cputemp" ]; then
@@ -223,10 +223,16 @@ if [ "$1" == "add" ]; then
 		done
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
+		find_i2c_bus
+		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
 		# PSU unit FAN speed set
 		busdir=`echo $5$3 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
+		# Verify if this is COMEX device
+		if [ "$bus" == "$comex_bus" ]; then
+			return
+		fi
 		# Set default fan speed
 		addr=`cat $config_path/psu"$i"_i2c_addr`
 		command=`cat $fan_command`
@@ -446,6 +452,16 @@ else
 		done
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
+		find_i2c_bus
+		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		# PSU unit FAN speed set
+		busdir=`echo $5$3 |xargs dirname |xargs dirname`
+		busfolder=`basename $busdir`
+		bus="${busfolder:0:${#busfolder}-5}"
+		# Verify if this is COMEX device
+		if [ "$bus" == "$comex_bus" ]; then
+			return
+		fi
 		# Remove thermal attributes
 		if [ -L $thermal_path/$2 ]; then
 			unlink $thermal_path/$2
