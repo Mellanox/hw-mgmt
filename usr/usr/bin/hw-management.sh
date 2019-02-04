@@ -558,8 +558,6 @@ do_start()
 	echo 35 > $config_path/thermal_delay
 	echo 10 > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
-	# Sleep to allow kernel modules initialization completion
-	sleep 3
 	find_i2c_bus
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
@@ -584,6 +582,13 @@ do_stop()
 	remove_symbolic_links
 }
 
+check_chipupdownlock()
+{
+	while [ -f $config_path/chipupdownlock ]; do
+		sleep 1
+	done
+}
+
 do_chip_up_down()
 {
 	# Add ASIC device.
@@ -592,17 +597,23 @@ do_chip_up_down()
 	case $1 in
 	0)
 		echo 1 > $config_path/suspend
-		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
+			check_chipupdownlock
+			touch $config_path/chipupdownlock
 			delay=`cat $config_path/chipdown_delay`
 			sleep $delay
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+			rm -f $config_path/chipupdownlock
 		fi
 		;;
 	1)
-		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name  ]; then
+		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
+			check_chipupdownlock
+			touch $config_path/chipupdownlock
 			delay=`cat $config_path/chipup_delay`
 			sleep $delay
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+			rm -f $config_path/chipupdownlock
 		fi
 		case $2 in
 		1)
