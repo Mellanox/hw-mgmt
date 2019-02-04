@@ -125,8 +125,10 @@ usr
 	connected to power source.
 - /usr/bin/hw-management.sh
 -	performs initialization and de-initialization, detects the system type,
-	connects thermal drivers according to the system topology, activates
+	connects kernel drivers according to the system topology, activates
 	and deactivates thermal algorithm.
+	Provide chipup and chipdown actions for connection and disconnection of
+	I2C ASIC driver.
 - hw-management-led-state-conversion.sh
   hw-management-power-helper.sh
 -	helper scripts
@@ -248,10 +250,10 @@ The package depends on the next packages:
 Package contains the folder debian, with the rules for Debian package build.
 
 Location:
-https://github.com/MellanoxBSP/thermal-control
+https://github.com/Mellanox/hw-mgmt
 
 To get package sources:
-git clone https://github.com/MellanoxBSP/thermal-control.git
+git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt
 
 For Debian package build:
 On a debian-based system, install the following programs:
