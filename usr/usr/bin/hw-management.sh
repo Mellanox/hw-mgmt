@@ -91,6 +91,7 @@ qsfp_path=$hw_management_path/qsfp
 watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
+LOCKFILE="/var/run/hw-management.lock"
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -474,7 +475,7 @@ connect_platform()
 	for ((i=0; i<$connect_size; i+=3)); do
 		connect_device 	${connect_table[i]} ${connect_table[i+1]} \
 				${connect_table[i+2]}
-        done
+	done
 }
 
 disconnect_platform()
@@ -556,7 +557,7 @@ do_start()
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
-	echo 10 > $config_path/chipup_delay
+	echo 0 > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
 	find_i2c_bus
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
@@ -582,11 +583,14 @@ do_stop()
 	remove_symbolic_links
 }
 
-check_chipupdownlock()
-{
-	while [ -f $config_path/chipupdownlock ]; do
-		sleep 1
-	done
+function lock_service_state_change() {
+	exec {LOCKFD}>${LOCKFILE}
+	/usr/bin/flock -x ${LOCKFD}
+	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+}
+
+function unlock_service_state_change() {
+	/usr/bin/flock -u ${LOCKFD}
 }
 
 do_chip_up_down()
@@ -596,24 +600,21 @@ do_chip_up_down()
 
 	case $1 in
 	0)
+		lock_service_state_change
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
-			check_chipupdownlock
-			touch $config_path/chipupdownlock
 			delay=`cat $config_path/chipdown_delay`
 			sleep $delay
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
-			rm -f $config_path/chipupdownlock
 		fi
+		unlock_service_state_change
 		;;
 	1)
+		lock_service_state_change
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
-			check_chipupdownlock
-			touch $config_path/chipupdownlock
 			delay=`cat $config_path/chipup_delay`
 			sleep $delay
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
-			rm -f $config_path/chipupdownlock
 		fi
 		case $2 in
 		1)
@@ -622,6 +623,7 @@ do_chip_up_down()
 		*)
 			;;
 		esac
+		unlock_service_state_change
 		;;
 	*)
 		exit 1

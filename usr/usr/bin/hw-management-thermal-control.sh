@@ -102,7 +102,7 @@ highest_tz="none"
 # Input parameters for the system thermal class, the number of tachometers, the
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
-polling_time_def=15
+polling_time_def=60
 max_tachos_def=12
 max_psus_def=2
 max_ports_def=64
@@ -895,6 +895,105 @@ disable_zones_max_pwm() {
 	log_action_msg "Set fan speed to maximum"
 }
 
+trip_points_num=4
+tz_asic_trips=(75 85 105 110)
+tz_module_trips=(60 70 80 90)
+
+init_tz_highest()
+{
+	if [ ! -L $thermal_path/highest_thermal_zone ]; then
+		ln -sf $thermal_path/mlxsw $thermal_path/highest_thermal_zone
+		tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
+		highest_tz=$tzname
+		echo 0 > $thermal_path/highest_tz_num
+		echo 0 > $thermal_path/highest_score
+	fi
+}
+
+tz_score_calculate()
+{
+	delta=`echo "(($2 - $1) / 2) / $2 + $1" | bc`
+	score=`expr $delta + $shift`
+}
+
+get_tz_asic_score()
+{
+	delta=0
+	shift=1
+	temp_curr=`cat $tz_temp`
+	v1=`echo $temp_curr`
+	v1=$(($v1/1000))
+	for ((t=0; t<$trip_points_num; t++)); do
+		v2=`echo ${tz_asic_trips[t]}`
+		if [ "$v1" -lt "$v2" ]; then
+			tz_score_calculate $v1 $v2
+			max_score=$score
+			break
+		fi
+		shift=$(($shift*256))
+	done
+}
+
+get_tz_module_score()
+{
+	delta=0
+	shift=1
+	temp_curr=`cat $thermal_path/mlxsw-module"$1"/thermal_zone_temp`
+	v1=`echo $temp_curr`
+	v1=$(($v1/1000))
+	for ((t=0; t<$trip_points_num; t++)); do
+		v2=`echo ${tz_module_trips[t]}`
+		if [ "$v1" -lt "$v2" ]; then
+			tz_score_calculate $v1 $v2
+			break
+		fi
+		shift=$(($shift*256))
+	done
+}
+
+get_tz_highest()
+{
+	score=0
+	mx_tz=0
+	max_score=`cat $thermal_path/highest_score`
+        get_tz_asic_score
+	for ((p=1; p<=$max_ports; p+=1)); do
+		if [ -L $thermal_path/mlxsw-module"$p"/thermal_zone_temp ]; then
+			get_tz_module_score $p
+			if [ "$score" -gt "$max_score" ]; then
+				max_score=$score
+				max_tz=$p
+				echo $max_score > $thermal_path/highest_score
+			fi
+		fi
+	done
+
+	highest_tz_num=`cat $thermal_path/highest_tz_num`
+	if [ $max_tz -ne $highest_tz_num ]; then
+		if [ -L $thermal_path/highest_thermal_zone ]; then
+			tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
+			echo user_space > $thermal_path/highest_thermal_zone/thermal_zone_policy
+			echo disabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
+			log_action_msg "Thermal zone $tzname: mode disabled, policy user_space"
+			unlink $thermal_path/highest_thermal_zone
+		fi
+		if [ "$max_tz" -gt "0" ]; then
+			ln -sf $thermal_path/mlxsw-module"$max_tz" $thermal_path/highest_thermal_zone
+		else
+			ln -sf $thermal_path/mlxsw $thermal_path/highest_thermal_zone
+		fi
+		echo $max_tz > $thermal_path/highest_tz_num
+		echo $max_score > $thermal_path/highest_score
+		echo step_wise > $thermal_path/highest_thermal_zone/thermal_zone_policy
+		echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
+		tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
+		highest_tz=$tzname
+		log_action_msg "Thermal zone $highest_tz: mode enabled, policy step_wise"
+	fi
+}
+
+# Wait for thermal configuration.
+/bin/sleep $polling_time
 # Validate thermal configuration.
 validate_thermal_configuration
 # Initialize system dynamic minimum speed data base.
@@ -908,6 +1007,7 @@ periodic_report=$(($polling_time*$report_counter))
 periodic_report=12	# For debug - remove after tsting
 count=0
 suspend_thermal=0;
+init_tz_highest
 # Start thermal monitoring.
 while true
 do
@@ -918,6 +1018,7 @@ do
 	if [ $suspend ] && [ "$suspend" != "$suspend_thermal" ]; then
 		if [ "$suspend" = "1" ]; then
 			disable_zones_max_pwm
+			init_tz_highest
 			log_action_msg "Thermal algorithm is manually suspend."
 		else
 			log_action_msg "Thermal algorithm is manually restored."
@@ -938,12 +1039,14 @@ do
 	# maximum speed.
 	get_psu_presence
 	if [ $pwm_required_act -eq $pwm_max ]; then
+		init_tz_highest
 		continue
 	fi
 	# If one of tachometers is faulty disable thermal zone and set PWM
 	# to the maximum speed.
 	get_fan_faults
 	if [ $pwm_required_act -eq $pwm_max ]; then
+		init_tz_highest
 		continue
 	fi
 	# Set dynamic FAN speed minimum, depending on ambient temperature,
@@ -963,7 +1066,8 @@ do
 	fi
 	# Enable ASIC thermal zone if it has been disabled before.
 	mode=`cat $tz_mode`
-	if [ $mode = "disabled" ]; then
+	highest_tz_num=`cat $thermal_path/highest_tz_num`
+	if [ $mode = "disabled" ] && [ $highest_tz_num = "0" ]; then
 		echo enabled > $tz_mode
 		log_action_msg "ASIC thermal zone is re-enabled"
 		# System health (PS units or FANs) has been recovered. Set PWM
@@ -976,4 +1080,6 @@ do
 		count=0
 		thermal_periodic_report
 	fi
+
+	get_tz_highest
 done

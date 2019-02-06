@@ -100,6 +100,35 @@ find_eeprom_name()
 	fi
 }
 
+function qsfp_add_handler() {
+	local -r QSFP_I2C_PATH="${1}"
+
+	local QSFP_STATUS="down"
+	local -r QSFP_UP="up"
+
+	local -i WDOG_CNT="1"
+	local -ir WDOG_MAX="120"
+
+	local -r TIMEOUT="1s"
+
+	while [[ "${QSFP_STATUS}" != "${QSFP_UP}" && "${WDOG_CNT}" -le "${WDOG_MAX}" ]]; do
+		for QSFP in ${QSFP_I2C_PATH}/qsfp*; do
+			if [[ -e "${QSFP}" ]]; then
+				QSFP_STATUS="${QSFP_UP}"
+				continue
+			fi
+		done
+		$((WDOG_CNT++))
+		sleep "${TIMEOUT}"
+	done
+
+	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
+}
+
+function qsfp_remove_handler() {
+	find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
+}
+
 if [ "$1" == "add" ]; then
 	if [ "$2" == "a2d" ]; then
 		ln -sf $3$4/in_voltage-voltage_scale $environment_path/$2_$5_voltage_scale
@@ -174,9 +203,7 @@ if [ "$1" == "add" ]; then
 		ln -sf $3$4/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 	fi
 	if [ "$2" == "qsfp" ]; then
-		# Wait for adding infrastructure
-		sleep 20
-		find $3$4/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
+		qsfp_add_handler "${3}${4}"
 	fi
 	if [ "$2" == "watchdog" ]; then
 		wd_type=`cat $3$4/identity`
@@ -262,7 +289,7 @@ else
 		unlink $eeprom_path/$eeprom_name
 	fi
 	if [ "$2" == "qsfp" ]; then
-		find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
+		qsfp_remove_handler
 	fi
 	if [ "$2" == "watchdog" ]; then
 	wd_type=`cat $3$4/identity`
