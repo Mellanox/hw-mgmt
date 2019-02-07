@@ -348,7 +348,7 @@ thermal_periodic_report()
 				t2=`cat $thermal_path/temp_fault_module"$i"`
 				t3=`cat $thermal_path/temp_crit_port"$i"`
 				t4=`cat $thermal_path/temp_emergency_port"$i"`
-				log_success_msg "port$i temp $t1 fault $t2 crit $t3 emerg $t4"
+				log_success_msg "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 		fi
 	done
@@ -370,7 +370,7 @@ thermal_periodic_report()
 				t4=`cat $thermal_path/mlxsw-module"$i"/temp_trip_hot`
 				t5=`cat $thermal_path/mlxsw-module"$i"/temp_trip_crit`
 				t6=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
-				log_success_msg "tz port$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+				log_success_msg "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 			fi
 		fi
 	done
@@ -910,6 +910,15 @@ init_tz_highest()
 	fi
 }
 
+tz_check_suspend()
+(
+	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
+	if [ $suspend ] &&  [ "$suspend" = "1" ]; then
+		exit 1
+	fi
+	exit 0
+)
+
 tz_score_calculate()
 {
 	delta=`echo "(($2 - $1) / 2) / $2 + $1" | bc`
@@ -920,6 +929,12 @@ get_tz_asic_score()
 {
 	delta=0
 	shift=1
+
+	tz_check_suspend
+	if [ "$?" -ne 0 ]; then
+		exit
+	fi
+
 	temp_curr=`cat $tz_temp`
 	v1=`echo $temp_curr`
 	v1=$(($v1/1000))
@@ -938,6 +953,12 @@ get_tz_module_score()
 {
 	delta=0
 	shift=1
+
+	tz_check_suspend
+	if [ "$?" -ne 0 ]; then
+		exit
+	fi
+
 	temp_curr=`cat $thermal_path/mlxsw-module"$1"/thermal_zone_temp`
 	v1=`echo $temp_curr`
 	v1=$(($v1/1000))
@@ -959,6 +980,12 @@ get_tz_highest()
         get_tz_asic_score
 	for ((p=1; p<=$max_ports; p+=1)); do
 		if [ -L $thermal_path/mlxsw-module"$p"/thermal_zone_temp ]; then
+
+			tz_check_suspend
+			if [ "$?" -ne 0 ]; then
+				exit
+			fi
+
 			get_tz_module_score $p
 			if [ "$score" -gt "$max_score" ]; then
 				max_score=$score
@@ -984,6 +1011,12 @@ get_tz_highest()
 		fi
 		echo $max_tz > $thermal_path/highest_tz_num
 		echo $max_score > $thermal_path/highest_score
+
+		tz_check_suspend
+		if [ "$?" -ne 0 ]; then
+			exit
+		fi
+
 		echo step_wise > $thermal_path/highest_thermal_zone/thermal_zone_policy
 		echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 		tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
