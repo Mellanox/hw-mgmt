@@ -78,7 +78,7 @@ power_path=$hw_management_path/power
 config_path=$hw_management_path/config
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
-temp_asic=$thermal_path/temp1_input_asic
+temp_asic=$thermal_path/asic
 pwm=$thermal_path/pwm1
 psu1_status=$thermal_path/psu1_status
 psu2_status=$thermal_path/psu2_status
@@ -98,6 +98,7 @@ temp_trip_crit=$thermal_path/mlxsw/temp_trip_crit
 cooling_cur_state=$thermal_path/cooling_cur_state
 thermal_sys=/sys/class/thermal
 highest_tz="none"
+wait_for_config=120
 
 # Input parameters for the system thermal class, the number of tachometers, the
 # number of replicable power supply units and for sensors polling time (seconds)
@@ -324,9 +325,9 @@ check_untrested_module_sensor()
 
 thermal_periodic_report()
 {
-	f1=`cat $asic`
-	f2=`cat $fan_amb`
-	f3=`cat $port_amb`
+	f1=`cat $temp_asic`
+	f2=`cat $temp_fan_amb`
+	f3=`cat $temp_port_amb`
 	f4=`cat $pwm`
 	f5=$(($fan_dynamic_min-$fan_max_state))
 	f5=$(($f5*10))
@@ -1026,7 +1027,7 @@ get_tz_highest()
 }
 
 # Wait for thermal configuration.
-/bin/sleep $polling_time
+/bin/sleep $wait_for_config
 # Validate thermal configuration.
 validate_thermal_configuration
 # Initialize system dynamic minimum speed data base.
