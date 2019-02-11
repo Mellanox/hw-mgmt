@@ -249,6 +249,8 @@ msn274x_specific()
 
 	thermal_type=$thermal_type_t3
 	max_tachos=4
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -267,6 +269,8 @@ msn21xx_specific()
 	thermal_type=$thermal_type_t2
 	max_tachos=4
 	max_psus=0
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -284,6 +288,8 @@ msn24xx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 }
@@ -301,6 +307,8 @@ msn27xx_msb_msx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 }
@@ -319,6 +327,8 @@ msn201x_specific()
 	thermal_type=$thermal_type_t4
 	max_tachos=4
 	max_psus=0
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -337,6 +347,8 @@ mqmxxx_msn37x_msn34x_specific()
 	thermal_type=$thermal_type_t5
 	max_tachos=12
 	max_psus=2
+	echo $fan_max_speed > $config_path/fan_max_speed
+	echo $fan_min_speed > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
 
@@ -550,8 +562,6 @@ do_start()
 	check_system
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
-	echo $fan_max_speed > $config_path/fan_max_speed
-	echo $fan_min_speed > $config_path/fan_min_speed
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
 	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
 	echo $fan_psu_default > $config_path/fan_psu_default
