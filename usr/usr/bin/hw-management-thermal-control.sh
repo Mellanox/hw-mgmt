@@ -922,7 +922,7 @@ tz_check_suspend()
 
 tz_score_calculate()
 {
-	delta=`echo "(($2 - $1) / 2) / $2 + $1" | bc`
+	delta=`expr '(' '(' $2 - $1 ')' / 2 ')' / $2 + $1`
 	score=`expr $delta + $shift`
 }
 
@@ -978,7 +978,7 @@ get_tz_highest()
 	score=0
 	mx_tz=0
 	max_score=`cat $thermal_path/highest_score`
-        get_tz_asic_score
+	get_tz_asic_score
 	for ((p=1; p<=$max_ports; p+=1)); do
 		if [ -L $thermal_path/mlxsw-module"$p"/thermal_zone_temp ]; then
 

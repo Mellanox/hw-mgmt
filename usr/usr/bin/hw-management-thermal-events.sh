@@ -189,11 +189,11 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
-			return
+			exit 0
 		fi
 		asic_health=`cat $3$4/asic1`
 		if [ $asic_health -ne 2 ]; then
-			return
+			exit 0
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
@@ -231,7 +231,7 @@ if [ "$1" == "add" ]; then
 		bus="${busfolder:0:${#busfolder}-5}"
 		# Verify if this is COMEX device
 		if [ "$bus" == "$comex_bus" ]; then
-			return
+			exit 0
 		fi
 		# Set default fan speed
 		addr=`cat $config_path/psu"$i"_i2c_addr`
@@ -292,7 +292,7 @@ elif [ "$1" == "change" ]; then
 	fi
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
-			return
+			exit 0
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
@@ -426,7 +426,7 @@ else
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
-			return
+			exit 0
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
@@ -460,7 +460,7 @@ else
 		bus="${busfolder:0:${#busfolder}-5}"
 		# Verify if this is COMEX device
 		if [ "$bus" == "$comex_bus" ]; then
-			return
+			exit 0
 		fi
 		# Remove thermal attributes
 		if [ -L $thermal_path/$2 ]; then
