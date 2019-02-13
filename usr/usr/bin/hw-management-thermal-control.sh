@@ -976,7 +976,7 @@ get_tz_module_score()
 get_tz_highest()
 {
 	score=0
-	mx_tz=0
+	max_tz=0
 	max_score=`cat $thermal_path/highest_score`
 	get_tz_asic_score
 	for ((p=1; p<=$max_ports; p+=1)); do
@@ -997,7 +997,7 @@ get_tz_highest()
 	done
 
 	highest_tz_num=`cat $thermal_path/highest_tz_num`
-	if [ $max_tz -ne $highest_tz_num ]; then
+	if [ "$max_tz" != "$highest_tz_num" ]; then
 		if [ -L $thermal_path/highest_thermal_zone ]; then
 			tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
 			echo user_space > $thermal_path/highest_thermal_zone/thermal_zone_policy
@@ -1005,7 +1005,7 @@ get_tz_highest()
 			log_action_msg "Thermal zone $tzname: mode disabled, policy user_space"
 			unlink $thermal_path/highest_thermal_zone
 		fi
-		if [ "$max_tz" -gt "0" ]; then
+		if [ "$max_tz" != "0" ]; then
 			ln -sf $thermal_path/mlxsw-module"$max_tz" $thermal_path/highest_thermal_zone
 		else
 			ln -sf $thermal_path/mlxsw $thermal_path/highest_thermal_zone
