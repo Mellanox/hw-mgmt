@@ -368,7 +368,7 @@ msn38xx_specific()
 	max_psus=2
 	echo 13000 > $config_path/fan_max_speed
 	echo 4000 > $config_path/fan_min_speed
-	echo 3 > $config_path/cpld_num
+	echo 4 > $config_path/cpld_num
 }
 
 check_system()
@@ -544,16 +544,6 @@ remove_symbolic_links()
 		find $hw_management_path -type l -exec unlink {} \;
 		rm -rf $hw_management_path
 	fi
-
-	rm -rf /bsp
-}
-
-backward_compatibility_link()
-{
-	if [ -d /bsp ]; then
-		rm -rf /bsp
-	fi
-	ln -sf $hw_management_path /bsp
 }
 
 do_start()
@@ -573,7 +563,6 @@ do_start()
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
-	backward_compatibility_link
 
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
