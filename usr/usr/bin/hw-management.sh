@@ -544,16 +544,6 @@ remove_symbolic_links()
 		find $hw_management_path -type l -exec unlink {} \;
 		rm -rf $hw_management_path
 	fi
-
-	rm -rf /bsp
-}
-
-backward_compatibility_link()
-{
-	if [ -d /bsp ]; then
-		rm -rf /bsp
-	fi
-	ln -sf $hw_management_path /bsp
 }
 
 do_start()
@@ -573,7 +563,6 @@ do_start()
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
-	backward_compatibility_link
 
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
