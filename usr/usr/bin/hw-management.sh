@@ -368,7 +368,7 @@ msn38xx_specific()
 	max_psus=2
 	echo 13000 > $config_path/fan_max_speed
 	echo 4000 > $config_path/fan_min_speed
-	echo 3 > $config_path/cpld_num
+	echo 4 > $config_path/cpld_num
 }
 
 check_system()
