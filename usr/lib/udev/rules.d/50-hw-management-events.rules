@@ -216,5 +216,6 @@ SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:3f", KERNEL=="eth*", NAME="sfp63"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="00:00:00:00:00:40", KERNEL=="eth*", NAME="sfp64"
 # QSFP EEPROM
-SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add qsfp %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0048", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm qsfp %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0048", DRIVERS=="mlxsw_minimal", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add qsfp %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0048", DRIVERS=="mlxsw_minimal", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm qsfp %S %p"
+
