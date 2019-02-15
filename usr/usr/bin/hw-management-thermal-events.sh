@@ -73,11 +73,15 @@ if [ "$1" == "add" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		# Verify if this is ASIC sensor
+		asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		busdir=`echo $3$4 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/comex_amb
+		elif [ "$bus" == "$asic_bus" ]; then
+			exit 0
 		else
 			ln -sf $3$4/temp1_input $thermal_path/$2
 		fi
@@ -324,11 +328,15 @@ else
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		# Verify if this is ASIC sensor
+		asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		busdir=`echo $3$4 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
 			unlink $thermal_path/comex_amb
+		elif [ "$bus" == "$asic_bus" ]; then
+			exit 0
 		else
 			unlink $thermal_path/$
 		fi
