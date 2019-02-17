@@ -65,6 +65,7 @@ thermal_type_t3=3
 thermal_type_t4=4
 thermal_type_t4=4
 thermal_type_t5=5
+thermal_type_t5=6
 max_psus=2
 max_tachos=12
 i2c_bus_max=10
@@ -344,7 +345,7 @@ mqmxxx_msn37x_msn34x_specific()
 		dis_table[i]=${mqm8700_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t5
+	thermal_type=$thermal_type_t1
 	max_tachos=12
 	max_psus=2
 	echo $fan_max_speed > $config_path/fan_max_speed
@@ -363,7 +364,7 @@ msn38xx_specific()
 		dis_table[i]=${msn3800_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t6
+	thermal_type=$thermal_type_t1
 	max_tachos=3
 	max_psus=2
 	echo 13000 > $config_path/fan_max_speed

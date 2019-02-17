@@ -502,7 +502,7 @@ update_psu_fan_speed()
 get_fan_faults()
 {
 	for ((i=1; i<=$max_tachos; i+=1)); do
-		if [ -f $thermal_path/fan"$i"_fault ]; then
+		if [ -L $thermal_path/fan"$i"_fault ]; then
 			fault=`cat $thermal_path/fan"$i"_fault`
 		fi
 		speed=`cat $thermal_path/fan"$i"_speed_get`
