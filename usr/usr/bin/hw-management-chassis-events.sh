@@ -211,14 +211,18 @@ if [ "$1" == "add" ]; then
 		wd_type=`cat $3$4/identity`
 		case $wd_type in
 			mlx-wdt-*)
-				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_type}_bootstatus
-				ln -sf $3$4/nowayout ${watchdog_path}/${wd_type}_nowayout
-				ln -sf $3$4/status ${watchdog_path}/${wd_type}_status
-				ln -sf $3$4/timeout ${watchdog_path}/${wd_type}_timeout
-				ln -sf $3$4/identity ${watchdog_path}/${wd_type}_identity
-				ln -sf $3$4/state ${watchdog_path}/${wd_type}_state
+				wd_sub="$(echo $wd_type | cut -c 9-)"
+				if [ ! -d ${watchdog_path}/${wd_sub} ]; then
+					mkdir ${watchdog_path}/${wd_sub}
+				fi
+				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_sub}/bootstatus
+				ln -sf $3$4/nowayout ${watchdog_path}/${wd_sub}/nowayout
+				ln -sf $3$4/status ${watchdog_path}/${wd_sub}/status
+				ln -sf $3$4/timeout ${watchdog_path}/${wd_sub}/timeout
+				ln -sf $3$4/identity ${watchdog_path}/${wd_sub}/identity
+				ln -sf $3$4/state ${watchdog_path}/${wd_sub}/state
 				if [ -L $3$4/timeleft ]; then
-					ln -sf $3$4/timeleft ${watchdog_path}/${wd_type}_timeleft
+					ln -sf $3$4/timeleft ${watchdog_path}/${wd_sub}/timeleft
 				fi
 				;;
 			*)
