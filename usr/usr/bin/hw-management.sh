@@ -308,7 +308,7 @@ msn27xx_msb_msx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
-	echo 250000 > $config_path/fan_max_speed
+	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
@@ -348,7 +348,7 @@ mqmxxx_msn37x_msn34x_specific()
 	thermal_type=$thermal_type_t1
 	max_tachos=12
 	max_psus=2
-	echo 250000 > $config_path/fan_max_speed
+	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
