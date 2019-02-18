@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if ps -p 1 | grep -w systemd; then
+	#systemd detected
+	rm -rf /etc/init.d/hw-management
+else
+	#initd detected
+	if [ -x "/etc/init.d/hw-management" ]; then
+		update-rc.d hw-management defaults >/dev/null
+		invoke-rc.d hw-management start || exit $?
+	fi
+fi
