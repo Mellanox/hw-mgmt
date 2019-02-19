@@ -441,7 +441,7 @@ else
 		path=/sys/bus/i2c/devices/i2c-$bus
 		if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			echo 0x48 > $path/delete_device
+			/usr/bin/hw-management.sh chipdown
 		fi
 	fi
 	if [ "$2" == "cputemp" ]; then
