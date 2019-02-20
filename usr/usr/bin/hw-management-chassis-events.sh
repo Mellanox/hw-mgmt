@@ -221,7 +221,7 @@ if [ "$1" == "add" ]; then
 				ln -sf $3$4/timeout ${watchdog_path}/${wd_sub}/timeout
 				ln -sf $3$4/identity ${watchdog_path}/${wd_sub}/identity
 				ln -sf $3$4/state ${watchdog_path}/${wd_sub}/state
-				if [ -L $3$4/timeleft ]; then
+				if [ -f $3$4/timeleft ]; then
 					ln -sf $3$4/timeleft ${watchdog_path}/${wd_sub}/timeleft
 				fi
 				;;
