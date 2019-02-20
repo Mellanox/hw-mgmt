@@ -142,27 +142,35 @@ usr
   time. These folder contains the next structure:
 /var/run/hw-management
   config
-    configuration related symbolic links
+    configuration related files.
+	It includes the information about FAN minimum, maximum allowed speed,
+	some default settings, configured delays for different purposes.
   eeprom
-    eeprom related symbolic links
+    eeprom related symbolic links to system, PSU, FAN eeproms.
   environment
-    environment (voltage, current, etcetera) related symbolic links
+    environment (voltage, current, etcetera) related symbolic links.
   led
-    led related symbolic links
+    led related symbolic links.
   power
-    power related symbolic links
+    power related symbolic links.
   system
-    system related (health, reset, etcetera) related symbolic links
+    system related (health, reset, etcetera) related symbolic links.
   thermal
-    thermal related links
+    thermal related links, including thermal zones related subfolders
     mlxsw
-      ASIC ambient temperature thermal zone related symbolic links
+      ASIC ambient temperature thermal zone related symbolic links.
     mlxsw-module1
-      QSFP module 1 temperature thermal zone related symbolic links
+      QSFP module 1 temperature thermal zone related symbolic links.
     ...
       ...
     mlxsw-module64
-      QSFP module 64 temperature thermal zone related symbolic links
+      ...
+      QSFP module 64 temperature thermal zone related symbolic links.
+  watchdog
+    aux
+      auxiliary watchdog related symbolic links.
+    main
+      main watchdog related symbolic links.
 
 Below some of the symbolic links examples:
 - cooling_cur_state:	Current cooling state, exposed by cooling level (1..10)
