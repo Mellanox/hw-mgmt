@@ -100,7 +100,8 @@ find_eeprom_name()
 	fi
 }
 
-function qsfp_add_handler() {
+function qsfp_add_handler()
+{
 	local -r QSFP_I2C_PATH="${1}"
 
 	local QSFP_STATUS="down"
@@ -125,7 +126,8 @@ function qsfp_add_handler() {
 	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
 }
 
-function qsfp_remove_handler() {
+function qsfp_remove_handler()
+{
 	find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
 }
 
@@ -149,7 +151,7 @@ if [ "$1" == "add" ]; then
 			bus="${busfolder:0:${#busfolder}-5}"
 			# Verify if this is not COMEX device
 			if [ "$bus" != "$comex_bus" ]; then
-				return
+				exit 0
 			fi
 		fi
 		ln -sf $3$4/in1_input $environment_path/$2_in1_input
@@ -209,14 +211,18 @@ if [ "$1" == "add" ]; then
 		wd_type=`cat $3$4/identity`
 		case $wd_type in
 			mlx-wdt-*)
-				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_type}_bootstatus
-				ln -sf $3$4/nowayout ${watchdog_path}/${wd_type}_nowayout
-				ln -sf $3$4/status ${watchdog_path}/${wd_type}_status
-				ln -sf $3$4/timeout ${watchdog_path}/${wd_type}_timeout
-				ln -sf $3$4/identity ${watchdog_path}/${wd_type}_identity
-				ln -sf $3$4/state ${watchdog_path}/${wd_type}_state
-				if [ -L $3$4/timeleft ]; then
-					ln -sf $3$4/timeleft ${watchdog_path}/${wd_type}_timeleft
+				wd_sub="$(echo $wd_type | cut -c 9-)"
+				if [ ! -d ${watchdog_path}/${wd_sub} ]; then
+					mkdir ${watchdog_path}/${wd_sub}
+				fi
+				ln -sf $3$4/bootstatus ${watchdog_path}/${wd_sub}/bootstatus
+				ln -sf $3$4/nowayout ${watchdog_path}/${wd_sub}/nowayout
+				ln -sf $3$4/status ${watchdog_path}/${wd_sub}/status
+				ln -sf $3$4/timeout ${watchdog_path}/${wd_sub}/timeout
+				ln -sf $3$4/identity ${watchdog_path}/${wd_sub}/identity
+				ln -sf $3$4/state ${watchdog_path}/${wd_sub}/state
+				if [ -f $3$4/timeleft ]; then
+					ln -sf $3$4/timeleft ${watchdog_path}/${wd_sub}/timeleft
 				fi
 				;;
 			*)
@@ -243,7 +249,7 @@ else
 			bus="${busfolder:0:${#busfolder}-5}"
 			# Verify if this is not COMEX device
 			if [ "$bus" != "$comex_bus" ]; then
-				return
+				exit 0
 			fi
 		fi
 		unlink $environment_path/$2_in1_input

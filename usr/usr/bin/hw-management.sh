@@ -65,6 +65,7 @@ thermal_type_t3=3
 thermal_type_t4=4
 thermal_type_t4=4
 thermal_type_t5=5
+thermal_type_t5=6
 max_psus=2
 max_tachos=12
 i2c_bus_max=10
@@ -249,6 +250,8 @@ msn274x_specific()
 
 	thermal_type=$thermal_type_t3
 	max_tachos=4
+	echo 25000 > $config_path/fan_max_speed
+	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -267,6 +270,8 @@ msn21xx_specific()
 	thermal_type=$thermal_type_t2
 	max_tachos=4
 	max_psus=0
+	echo 25000 > $config_path/fan_max_speed
+	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -284,6 +289,8 @@ msn24xx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	echo 21000 > $config_path/fan_max_speed
+	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 }
@@ -301,6 +308,8 @@ msn27xx_msb_msx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	echo 25000 > $config_path/fan_max_speed
+	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 }
@@ -319,6 +328,8 @@ msn201x_specific()
 	thermal_type=$thermal_type_t4
 	max_tachos=4
 	max_psus=0
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -334,9 +345,11 @@ mqmxxx_msn37x_msn34x_specific()
 		dis_table[i]=${mqm8700_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t5
+	thermal_type=$thermal_type_t1
 	max_tachos=12
 	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
 
@@ -351,12 +364,12 @@ msn38xx_specific()
 		dis_table[i]=${msn3800_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t6
+	thermal_type=$thermal_type_t1
 	max_tachos=3
 	max_psus=2
-	echo 13000 > $config_path/fan_max_speed
-	echo 4000 > $config_path/fan_min_speed
-	echo 3 > $config_path/cpld_num
+	echo 11000 > $config_path/fan_max_speed
+	echo 2235 > $config_path/fan_min_speed
+	echo 4 > $config_path/cpld_num
 }
 
 check_system()
@@ -532,16 +545,6 @@ remove_symbolic_links()
 		find $hw_management_path -type l -exec unlink {} \;
 		rm -rf $hw_management_path
 	fi
-
-	rm -rf /bsp
-}
-
-backward_compatibility_link()
-{
-	if [ -d /bsp ]; then
-		rm -rf /bsp
-	fi
-	ln -sf $hw_management_path /bsp
 }
 
 do_start()
@@ -550,8 +553,6 @@ do_start()
 	check_system
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
-	echo $fan_max_speed > $config_path/fan_max_speed
-	echo $fan_min_speed > $config_path/fan_min_speed
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
 	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
 	echo $fan_psu_default > $config_path/fan_psu_default
@@ -563,7 +564,6 @@ do_start()
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
-	backward_compatibility_link
 
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
@@ -583,13 +583,15 @@ do_stop()
 	remove_symbolic_links
 }
 
-function lock_service_state_change() {
+function lock_service_state_change()
+{
 	exec {LOCKFD}>${LOCKFILE}
 	/usr/bin/flock -x ${LOCKFD}
 	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
 }
 
-function unlock_service_state_change() {
+function unlock_service_state_change()
+{
 	/usr/bin/flock -u ${LOCKFD}
 }
 

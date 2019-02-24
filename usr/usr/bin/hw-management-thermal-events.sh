@@ -73,11 +73,15 @@ if [ "$1" == "add" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		# Verify if this is ASIC sensor
+		asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		busdir=`echo $3$4 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/comex_amb
+		elif [ "$bus" == "$asic_bus" ]; then
+			exit 0
 		else
 			ln -sf $3$4/temp1_input $thermal_path/$2
 		fi
@@ -189,11 +193,11 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
-			return
+			exit 0
 		fi
 		asic_health=`cat $3$4/asic1`
 		if [ $asic_health -ne 2 ]; then
-			return
+			exit 0
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
@@ -231,7 +235,7 @@ if [ "$1" == "add" ]; then
 		bus="${busfolder:0:${#busfolder}-5}"
 		# Verify if this is COMEX device
 		if [ "$bus" == "$comex_bus" ]; then
-			return
+			exit 0
 		fi
 		# Set default fan speed
 		addr=`cat $config_path/psu"$i"_i2c_addr`
@@ -292,7 +296,7 @@ elif [ "$1" == "change" ]; then
 	fi
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
-			return
+			exit 0
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
@@ -324,11 +328,15 @@ else
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))
+		# Verify if this is ASIC sensor
+		asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		busdir=`echo $3$4 |xargs dirname |xargs dirname`
 		busfolder=`basename $busdir`
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
 			unlink $thermal_path/comex_amb
+		elif [ "$bus" == "$asic_bus" ]; then
+			exit 0
 		else
 			unlink $thermal_path/$
 		fi
@@ -426,14 +434,14 @@ else
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
-			return
+			exit 0
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		path=/sys/bus/i2c/devices/i2c-$bus
 		if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			echo 0x48 > $path/delete_device
+			/usr/bin/hw-management.sh chipdown
 		fi
 	fi
 	if [ "$2" == "cputemp" ]; then
@@ -460,7 +468,7 @@ else
 		bus="${busfolder:0:${#busfolder}-5}"
 		# Verify if this is COMEX device
 		if [ "$bus" == "$comex_bus" ]; then
-			return
+			exit 0
 		fi
 		# Remove thermal attributes
 		if [ -L $thermal_path/$2 ]; then
