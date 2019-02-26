@@ -119,6 +119,7 @@ pwm_max=1
 pwm_max_rpm=255
 max_amb=120000
 untrusted_sensor=0
+hysteresis=5000
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
@@ -1023,6 +1024,21 @@ get_tz_highest()
 		tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
 		highest_tz=$tzname
 		log_action_msg "Thermal zone $highest_tz: mode enabled, policy step_wise"
+	fi
+
+	# Set PWM to dynamic minimum if highest zone temperature is below the
+	# high trip temperature minus hysteresis.
+	temp_now=`cat $thermal_path/highest_thermal_zone/thermal_zone_temp`
+	trip_high=`cat $thermal_path/highest_thermal_zone/temp_trip_high`
+	trip_high=$(($trip_high-$hysteresis))
+	if [ $trip_high -gt  $temp_now ]; then
+		cooling=`cat $thermal_path/cooling_cur_state`
+		set_cur_state=$(($fan_dynamic_min-$fan_max_state))
+		if [ $cooling -gt $set_cur_state ]; then
+			echo $set_cur_state > $cooling_cur_state
+			set_cur_state=$(($set_cur_state*10))
+			log_action_msg "FAN speed is set to $set_cur_state percent"
+		fi
 	fi
 }
 
