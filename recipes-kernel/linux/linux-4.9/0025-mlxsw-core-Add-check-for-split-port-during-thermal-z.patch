@@ -1,6 +1,6 @@
-From c81d0570b4a309bdf33d74db17dccc21b216e412 Mon Sep 17 00:00:00 2001
+From 273f76edc3417320e6db6b067a5b6946a4cf89e0 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Tue, 26 Feb 2019 12:34:50 +0000
+Date: Tue, 26 Feb 2019 19:06:22 +0000
 Subject: [PATCH backport 5.1] mlxsw: core: Add check for split port during
  thermal zone initialization
 
@@ -16,19 +16,19 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 002654918ee9..3097228c2c29 100644
+index 002654918ee9..6fe506c7c526 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -751,6 +751,9 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
- 		return 0;
+@@ -752,6 +752,9 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
  
  	module = mlxsw_reg_pmlp_module_get(pmlp_pl, 0);
+ 	module_tz = &thermal->tz_module_arr[module];
 +	/* Skip if parent is already set - could in in case of port split. */
 +	if (module_tz->parent)
 +		return 0;
- 	module_tz = &thermal->tz_module_arr[module];
  	module_tz->module = module;
  	module_tz->parent = thermal;
+ 	memcpy(module_tz->trips, default_thermal_trips,
 @@ -773,6 +776,7 @@ static void mlxsw_thermal_module_fini(struct mlxsw_thermal_module *module_tz)
  	if (module_tz && module_tz->tzdev) {
  		mlxsw_thermal_module_tz_fini(module_tz->tzdev);
