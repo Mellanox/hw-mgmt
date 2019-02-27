@@ -342,46 +342,52 @@ else
 		fi
 	fi
 	if [ "$2" == "switch" ]; then
-		name=`cat $3$4/name`
-		if [ "$name" == "mlxsw" ]; then
+		if [ -L $thermal_path/asic ]; then
 			unlink $thermal_path/asic
-			if [ -L $thermal_path/pwm1 ]; then
-				unlink $thermal_path/pwm1
-			fi
-			for ((i=1; i<=$max_tachos; i+=1)); do
-				if [ -L $thermal_path/fan"$i"_fault ]; then
-					unlink $thermal_path/fan"$i"_fault
-				fi
-				if [ -L $thermal_path/fan"$i"_speed_get ]; then
-					unlink $thermal_path/fan"$i"_speed_get
-				fi
-				if [ -f $thermal_path/fan"$j"_min ]; then
-					unlink $thermal_path/fan"$j"_min
-				fi
-				if [ -f $thermal_path/fan"$j"_max ]; then
-					unlink $thermal_path/fan"$j"_max
-				fi
-			done
-			unlink $thermal_path/$pwm1
-			for ((i=2; i<=$max_modules_ind; i+=1)); do
-				if [ -L $thermal_path/temp_input_module"$j" ]; then
-					j=$(($i-1))
-					unlink $thermal_path/temp_input_module"$j"
-					unlink $thermal_path/temp_fault_module"$j"
-					unlink $thermal_path/temp_crit_module"$j"
-					unlink $thermal_path/temp_emergency_module"$j"
-				fi
-			done
 		fi
-	fi
-	if [ "$2" == "regfan" ]; then
-		ln -sf $3$4/pwm1 $thermal_path/pwm1
+		if [ -L $thermal_path/pwm1 ]; then
+			unlink $thermal_path/pwm1
+		fi
 		for ((i=1; i<=$max_tachos; i+=1)); do
-			if [ -f $3$4/fan"$i"_fault ]; then
+			if [ -L $thermal_path/fan"$i"_fault ]; then
 				unlink $thermal_path/fan"$i"_fault
 			fi
-			if [ -f $3$4/fan"$i"_input ]; then
+			if [ -L $thermal_path/fan"$i"_speed_get ]; then
 				unlink $thermal_path/fan"$i"_speed_get
+			fi
+			if [ -f $thermal_path/fan"$j"_min ]; then
+					unlink $thermal_path/fan"$j"_min
+			fi
+			if [ -f $thermal_path/fan"$j"_max ]; then
+				unlink $thermal_path/fan"$j"_max
+			fi
+		done
+		if [ -L $thermal_path/$pwm1 ]; then
+			unlink $thermal_path/$pwm1
+		fi
+		for ((i=2; i<=$max_modules_ind; i+=1)); do
+			j=$(($i-1))
+			if [ -L $thermal_path/temp_input_module"$j" ]; then
+				unlink $thermal_path/temp_input_module"$j"
+				unlink $thermal_path/temp_fault_module"$j"
+				unlink $thermal_path/temp_crit_module"$j"
+				unlink $thermal_path/temp_emergency_module"$j"
+			fi
+		done
+	fi
+	if [ "$2" == "regfan" ]; then
+		if [ -L $thermal_path/pwm1]; then
+			unlink $thermal_path/pwm1
+		fi
+		for ((i=1; i<=$max_tachos; i+=1)); do
+			if [ -L $thermal_path/fan"$i"_fault ]; then
+				unlink $thermal_path/fan"$i"_fault
+			fi
+			if [ -L $thermal_path/fan"$i"_speed_get ]; then
+				unlink $thermal_path/fan"$i"_speed_get
+			fi
+			if [ -L $thermal_path/fan"$i"_speed_set ]; then
+				unlink $thermal_path/fan"$i"_speed_set
 			fi
 			if [ -f $thermal_path/fan"$i"_min ]; then
 				unlink $thermal_path/fan"$i"_min
@@ -392,30 +398,32 @@ else
 		done
 	fi
 	if [ "$2" == "thermal_zone" ]; then
-		zonetype=`cat $3$4/type`
-		zonep0type="${zonetype:0:${#zonetype}-1}"
-		zonep1type="${zonetype:0:${#zonetype}-2}"
-		zonep2type="${zonetype:0:${#zonetype}-3}"
-		if [ "$zonetype" == "mlxsw" ] || [ "$zonep0type" == "mlxsw-module" ] ||
-		   [ "$zonep1type" == "mlxsw-module" ] || [ "$zonep2type" == "mlxsw-module" ]; then
-			mode=`cat $thermal_path/$zonetype/thermal_zone_mode`
-			if [ $mode == "enabled" ]; then
-				echo disabled > $thermal_path/$zonetype/thermal_zone_mode
+		for ((i=1; i<$max_modules_ind; i+=1)); do
+			if [ -d $thermal_path/mlxsw-module"$i" ]; then
+				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_policy
+				unlink $thermal_path/mlxsw-module"$i"/temp_trip_norm
+				unlink $thermal_path/mlxsw-module"$i"/temp_trip_high
+				unlink $thermal_path/mlxsw-module"$i"/temp_trip_hot
+				unlink $thermal_path/mlxsw-module"$i"/temp_trip_crit
+				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp
+				rm -rf $thermal_path/mlxsw-module"$i"
 			fi
-			unlink $thermal_path/$zonetype/thermal_zone_mode
-			unlink $thermal_path/$zonetype/thermal_zone_policy
-			unlink $thermal_path/$zonetype/temp_trip_norm
-			unlink $thermal_path/$zonetype/temp_trip_high
-			unlink $thermal_path/$zonetype/temp_trip_hot
-			unlink $thermal_path/$zonetype/temp_trip_crit
-			unlink $thermal_path/$zonetype/thermal_zone_temp
-			rm -rf $thermal_path/$zonetype
+		done
+		if [ -d $thermal_path/mlxsw ]; then
+			unlink $thermal_path/mlxsw/thermal_zone_policy
+			unlink $thermal_path/mlxsw/temp_trip_norm
+			unlink $thermal_path/mlxsw/temp_trip_high
+			unlink $thermal_path/mlxsw/temp_trip_hot
+			unlink $thermal_path/mlxsw/temp_trip_crit
+			unlink $thermal_path/mlxsw/thermal_zone_temp
+			rm -rf $thermal_path/mlxsw
+		fi
+		if [ -L $thermal_path/highest_thermal_zone ]; then
+			unlink $thermal_path/highest_thermal_zone
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
-		coolingtype=`cat $3$4/type`
-		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ]; then
+		if [ -L $thermal_path/cooling_cur_state ]; then
 			unlink $thermal_path/cooling_cur_state
 		fi
 	fi
