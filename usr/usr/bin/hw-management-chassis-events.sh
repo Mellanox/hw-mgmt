@@ -116,10 +116,10 @@ function qsfp_add_handler()
 		for QSFP in ${QSFP_I2C_PATH}/qsfp*; do
 			if [[ -e "${QSFP}" ]]; then
 				QSFP_STATUS="${QSFP_UP}"
-				continue
+				break
 			fi
 		done
-		$((WDOG_CNT++))
+		let "WDOG_CNT++"
 		sleep "${TIMEOUT}"
 	done
 
