@@ -612,6 +612,10 @@ do_chip_up_down()
 		unlock_service_state_change
 		;;
 	1)
+		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
+		if [ $disable ] && [ "$disable" = "1" ]; then
+			exit 0
+		fi
 		lock_service_state_change
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
 			delay=`cat $config_path/chipup_delay`
@@ -651,6 +655,12 @@ case $ACTION in
 	;;
 	chipdown)
 		do_chip_up_down 0
+	;;
+	chipupen)
+		echo 0 > $config_path/chipup_dis
+	;;
+	chipupdis)
+		echo 1 > $config_path/chipup_dis
 	;;
 	restart|force-reload)
 		do_stop

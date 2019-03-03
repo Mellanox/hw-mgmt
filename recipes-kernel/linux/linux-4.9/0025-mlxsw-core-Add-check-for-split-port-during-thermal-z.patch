@@ -1,6 +1,6 @@
-From 273f76edc3417320e6db6b067a5b6946a4cf89e0 Mon Sep 17 00:00:00 2001
+From d0e273393dd610f552ffbe9a9d1cf3448c8c028e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Tue, 26 Feb 2019 19:06:22 +0000
+Date: Sun, 3 Mar 2019 08:50:49 +0000
 Subject: [PATCH backport 5.1] mlxsw: core: Add check for split port during
  thermal zone initialization
 
@@ -11,12 +11,12 @@ minimal driver.
 
 Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
 ---
- drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 4 ++++
- drivers/net/ethernet/mellanox/mlxsw/minimal.c      | 2 +-
- 2 files changed, 5 insertions(+), 1 deletion(-)
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 15 ++++++++++++---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c      |  2 +-
+ 2 files changed, 13 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 002654918ee9..6fe506c7c526 100644
+index 002654918ee9..1f7ef90b2270 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 @@ -752,6 +752,9 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
@@ -37,6 +37,38 @@ index 002654918ee9..6fe506c7c526 100644
  	}
  }
  
+@@ -781,6 +785,7 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+ 			   struct mlxsw_thermal *thermal)
+ {
+ 	unsigned int module_count = mlxsw_core_max_ports(core);
++	struct mlxsw_thermal_module *module_tz;
+ 	int i, err;
+ 
+ 	thermal->tz_module_arr = kcalloc(module_count,
+@@ -795,8 +800,12 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+ 			goto err_unreg_tz_module_arr;
+ 	}
+ 
+-	for (i = 0; i < thermal->tz_module_num; i++) {
+-		err = mlxsw_thermal_module_tz_init(&thermal->tz_module_arr[i]);
++	module_count -= 1;
++	for (i = 0; i < module_count; i++) {
++		module_tz = &thermal->tz_module_arr[i];
++		if (!module_tz->parent)
++			continue;
++		err = mlxsw_thermal_module_tz_init(module_tz);
+ 		if (err)
+ 			goto err_unreg_tz_module_arr;
+ 	}
+@@ -804,7 +813,7 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+ 	return 0;
+ 
+ err_unreg_tz_module_arr:
+-	for (i = module_count - 1; i >= 0; i--)
++	for (i = module_count; i >= 0; i--)
+ 		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
+ 	kfree(thermal->tz_module_arr);
+ 	return err;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 index 740b3753de44..cac36c231864 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
