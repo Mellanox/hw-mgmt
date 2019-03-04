@@ -1,6 +1,6 @@
-From 0d9ca93226924950e143a5b16cc9a2e65e62c3bd Mon Sep 17 00:00:00 2001
+From 83d2cf92f7fef5df0de2cf19f4235dc6c50f92a5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Mon, 4 Mar 2019 14:12:29 +0000
+Date: Mon, 4 Mar 2019 14:50:48 +0000
 Subject: [PATCH backport 5.1] mlxsw: core: add support for Gear Box
  temperatures in hwmon
 
@@ -62,41 +62,14 @@ These sensors are the subject of this patchset.
 
 Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
 ---
- drivers/hwmon/mlxreg-fan.c                         |   8 +-
  drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   |  85 ++++++++++-
  drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 165 ++++++++++++++++-----
  drivers/net/ethernet/mellanox/mlxsw/qsfp_sysfs.c   |   7 +
  drivers/net/ethernet/mellanox/mlxsw/reg.h          |  56 ++++++-
  drivers/platform/mellanox/mlxreg-hotplug.c         |   5 +-
  drivers/platform/x86/mlx-platform.c                |   6 +-
- 7 files changed, 280 insertions(+), 52 deletions(-)
+ 6 files changed, 276 insertions(+), 48 deletions(-)
 
-diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 11388c527983..563f794132e8 100644
---- a/drivers/hwmon/mlxreg-fan.c
-+++ b/drivers/hwmon/mlxreg-fan.c
-@@ -30,7 +30,7 @@
- #define MLXREG_FAN_TACHO_DIVIDER_MIN		283
- #define MLXREG_FAN_TACHO_DIVIDER_DEF		(MLXREG_FAN_TACHO_DIVIDER_MIN \
- 						 * 4)
--#define MLXREG_FAN_TACHO_DIVIDER_SCALE_MAX	32
-+#define MLXREG_FAN_TACHO_DIVIDER_SCALE_MAX	64
- /*
-  * FAN datasheet defines the formula for RPM calculations as RPM = 15/t-high.
-  * The logic in a programmable device measures the time t-high by sampling the
-@@ -454,9 +454,9 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
- 				return -EINVAL;
- 			}
- 			/* Validate that conf parameters are not zeros. */
--			if (!data->mask || !data->bit || !data->capability) {
--				dev_err(fan->dev, "invalid conf entry params: %s\n",
--					data->label);
-+			if (!data->mask && !data->bit && !data->capability) {
-+				dev_err(fan->dev, "invalid conf entry params: %s 0x%08x 0x%08x 0x%08x\n",
-+					data->label, data->mask, data->bit, data->capability);
- 				return -EINVAL;
- 			}
- 			if (data->capability) {
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 index 6956bbebe2f1..976f81a2bbba 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
