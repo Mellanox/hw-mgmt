@@ -613,7 +613,9 @@ do_chip_up_down()
 		;;
 	1)
 		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-		if [ $disable ] && [ "$disable" = "1" ]; then
+		if [ $disable ] && [ "$disable" -gt 0 ]; then
+			disable=$(($disable-1))
+			echo $disable > $config_path/chipup_dis
 			exit 0
 		fi
 		lock_service_state_change
@@ -660,7 +662,13 @@ case $ACTION in
 		echo 0 > $config_path/chipup_dis
 	;;
 	chipupdis)
-		echo 1 > $config_path/chipup_dis
+		echo $2 > $config_path/chipup_dis
+	;;
+	thermsuspend)
+		echo 1 > $config_path/suspend
+	;;
+	thermresume)
+		echo 0 > $config_path/suspend
 	;;
 	restart|force-reload)
 		do_stop
