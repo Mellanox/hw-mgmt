@@ -1035,7 +1035,9 @@ get_tz_highest()
 		cooling=`cat $thermal_path/cooling_cur_state`
 		set_cur_state=$(($fan_dynamic_min-$fan_max_state))
 		if [ $cooling -gt $set_cur_state ]; then
+			echo disabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 			echo $set_cur_state > $cooling_cur_state
+			echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 			set_cur_state=$(($set_cur_state*10))
 			log_action_msg "FAN speed is set to $set_cur_state percent"
 		fi
@@ -1044,8 +1046,6 @@ get_tz_highest()
 
 # Wait for thermal configuration.
 /bin/sleep $wait_for_config
-# Validate thermal configuration.
-validate_thermal_configuration
 # Initialize system dynamic minimum speed data base.
 init_fan_dynamic_minimum_speed
 
@@ -1082,6 +1082,11 @@ do
 			sleep 1
 			continue
 		fi
+	fi
+	# Validate thermal configuration.
+	validate_thermal_configuration
+	if [ $? -ne 0 ]; then
+		continue
 	fi
 	# Update PS unit fan speed
 	update_psu_fan_speed
