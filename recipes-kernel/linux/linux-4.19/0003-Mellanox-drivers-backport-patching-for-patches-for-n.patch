@@ -2,9 +2,9 @@ From 7a538895fe0fda2d4d18385d895e26974c00d5a0 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
 Date: Wed, 23 Jan 2019 16:03:34 +0000
 Subject: [PATCH backport 4.20-5.x to 4.19 3/3] Mellanox drivers backport
- patching for patches for next kernel 5.2
+ patching for patches for next kernel 5.0
 
-Backport from upstream kernels v4.20, v5.0.
+Backport from upstream kernels v5.0.
 Patches include:
 - Support capability registers for Mellanox platform driver.
 - Support capability registers for leds-mlxreg driver.
