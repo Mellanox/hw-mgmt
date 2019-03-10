@@ -2,9 +2,9 @@ From 3c80fd8b50af0f64509ee765619925098a4a0d70 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
 Date: Wed, 23 Jan 2019 13:40:30 +0000
 Subject: [PATCH backport 4.20-5.x to 4.19 2/3] Mellanox drivers backport
- patching from next kernels 5.1
+ patching from next kernels 5.0 and 5.1
 
-Backport from upstream kernels accpted for v5.1.
+Backport from upstream kernels accpted for v5.0 - v5.1.
 Patches include:
 - Amendment for thermal zone and hwmon for mlxsw module.
 - Support for new Mellanox platforms.
