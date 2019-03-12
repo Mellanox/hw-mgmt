@@ -92,6 +92,7 @@ if [ "$1" == "add" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/asic
 			if [ -f $3$4/pwm1 ]; then
 				ln -sf $3$4/pwm1 $thermal_path/pwm1
+				echo $name > $config_path/cooling_name
 			fi
 			if [ -f $config_path/fan_inversed ]; then
 				inv=`cat $config_path/fan_inversed`
@@ -127,6 +128,8 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "regfan" ]; then
+		name=`cat $3$4/name`
+		echo $name > $config_path/cooling_name
 		ln -sf $3$4/pwm1 $thermal_path/pwm1
 		if [ -f $config_path/fan_inversed ]; then
 			inv=`cat $config_path/fan_inversed`
@@ -345,25 +348,28 @@ else
 		if [ -L $thermal_path/asic ]; then
 			unlink $thermal_path/asic
 		fi
-		if [ -L $thermal_path/pwm1 ]; then
-			unlink $thermal_path/pwm1
-		fi
-		for ((i=1; i<=$max_tachos; i+=1)); do
-			if [ -L $thermal_path/fan"$i"_fault ]; then
-				unlink $thermal_path/fan"$i"_fault
+		name=`cat $$config_path/cooling_name`
+		if [ "$name" == "mlxsw" ]; then
+			if [ -L $thermal_path/pwm1 ]; then
+				unlink $thermal_path/pwm1
 			fi
-			if [ -L $thermal_path/fan"$i"_speed_get ]; then
-				unlink $thermal_path/fan"$i"_speed_get
+			for ((i=1; i<=$max_tachos; i+=1)); do
+				if [ -L $thermal_path/fan"$i"_fault ]; then
+					unlink $thermal_path/fan"$i"_fault
+				fi
+				if [ -L $thermal_path/fan"$i"_speed_get ]; then
+					unlink $thermal_path/fan"$i"_speed_get
+				fi
+				if [ -f $thermal_path/fan"$j"_min ]; then
+						unlink $thermal_path/fan"$j"_min
+				fi
+				if [ -f $thermal_path/fan"$j"_max ]; then
+					unlink $thermal_path/fan"$j"_max
+				fi
+			done
+			if [ -L $thermal_path/$pwm1 ]; then
+				unlink $thermal_path/$pwm1
 			fi
-			if [ -f $thermal_path/fan"$j"_min ]; then
-					unlink $thermal_path/fan"$j"_min
-			fi
-			if [ -f $thermal_path/fan"$j"_max ]; then
-				unlink $thermal_path/fan"$j"_max
-			fi
-		done
-		if [ -L $thermal_path/$pwm1 ]; then
-			unlink $thermal_path/$pwm1
 		fi
 		for ((i=2; i<=$max_modules_ind; i+=1)); do
 			j=$(($i-1))

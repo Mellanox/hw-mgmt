@@ -276,38 +276,38 @@ validate_thermal_configuration()
 	for ((i=1; i<=$max_tachos; i+=1)); do
 		if [ ! -L $thermal_path/fan"$i"_fault ]; then
 			log_failure_msg "FAN fault status attributes are not exist"
-			exit 1
+			return 1
 		fi
 		if [ ! -L $thermal_path/fan"$i"_speed_get ]; then
 			log_failure_msg "FAN input attributes are not exist"
-			exit 1
+			return 1
 		fi
 	done
 	if [ ! -L $cooling_cur_state ] || [ ! -L $tz_mode  ] ||
 	   [ ! -L $temp_trip_norm ] || [ ! -L $tz_temp ]; then
 		log_failure_msg "Thermal zone attributes are not exist"
-		exit 1
+		return 1
 	fi
 	if [ ! -L $pwm ] || [ ! -L $asic ]; then
 		log_failure_msg "PWM control and ASIC attributes are not exist"
-		exit 1
+		return 1
 	fi
 	for ((i=1; i<=$max_ports; i+=1)); do
 		if [ -L $thermal_path/temp_module"$i" ]; then
 			if [ ! -L $thermal_path/temp_module_fault"$i" ]; then
 				log_failure_msg "QSFP module attributes are not exist"
-				exit 1
+				return 1
 			fi
 		fi
 	done
 	if [ ! -L $fan_amb ] || [ ! -L $port_amb ]; then
 		log_failure_msg "Ambient temperature sensors attributes are not exist"
-		exit 1
+		return 1
 	fi
 	if [ $max_psus -gt 0 ]; then
 		if [ ! -L $psu1_status ] || [ ! -L $psu2_status ]; then
 			log_failure_msg "PS units status attributes are not exist"
-			exit 1
+			return 1
 		fi
 	fi
 }
@@ -315,7 +315,11 @@ validate_thermal_configuration()
 check_untrested_module_sensor()
 {
 	for ((i=1; i<=$max_ports; i+=1)); do
-		if [ -f $thermal_path/temp_fault_module"$i" ]; then
+		tz_check_suspend
+		if [ "$?" -ne 0 ]; then
+			exit
+		fi
+		if [ -L $thermal_path/temp_fault_module"$i" ]; then
 			temp_fault=`cat $thermal_path/temp_fault_module"$i"`
 			if [ $temp_fault -eq 1 ]; then
 				untrusted_sensor=1
@@ -457,14 +461,16 @@ get_psu_presence()
 			present=`cat $thermal_path/psu"$i"_status`
 			if [ $present -eq 0 ]; then
 				pwm_required_act=$pwm_max
-				mode=`cat $tz_mode`
-				# Disable asic and ports thermal zones if were enabled.
-				if [ $mode = "enabled" ]; then
-					echo disabled > $tz_mode
-					log_action_msg "ASIC thermal zone is disabled due to PS absence"
+				if [ -L $tz_mode ]; then
+					mode=`cat $tz_mode`
+					# Disable asic and ports thermal zones if were enabled.
+					if [ $mode = "enabled" ]; then
+						echo disabled > $tz_mode
+						log_action_msg "ASIC thermal zone is disabled due to PS absence"
+					fi
 				fi
 				for ((i=1; i<=$max_ports; i+=1)); do
-					if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+					if [ -L $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
 						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 						if [ $mode = "enabled" ]; then
 							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
@@ -763,7 +769,6 @@ check_trip_min_vs_current_temp()
 			return
 		;;
 		esac
-		log_action_msg "FAN speed is set to $set_cur_state percent due to thermal zone event"
 	fi
 }
 
@@ -877,12 +882,15 @@ fi
 
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
 
-disable_zones_max_pwm() {
-	mode=`cat $tz_mode`
-	# Disable asic and modules thermal zones if were enabled.
-	if [ $mode = "enabled" ]; then
-		echo disabled > $tz_mode
-		log_action_msg "ASIC thermal zone is disabled due to thermal algorithm is suspend"
+disable_zones_max_pwm()
+{
+	if [ -L $tz_mode ]; then
+		mode=`cat $tz_mode`
+		# Disable asic and modules thermal zones if were enabled.
+		if [ $mode = "enabled" ]; then
+			echo disabled > $tz_mode
+			log_action_msg "ASIC thermal zone is disabled due to thermal algorithm is suspend"
+		fi
 	fi
 	for ((i=1; i<=$max_ports; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
@@ -916,7 +924,7 @@ tz_check_suspend()
 (
 	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
 	if [ $suspend ] &&  [ "$suspend" = "1" ]; then
-		exit 1
+		return 1
 	fi
 	exit 0
 )
@@ -1028,6 +1036,9 @@ get_tz_highest()
 
 	# Set PWM to dynamic minimum if highest zone temperature is below the
 	# high trip temperature minus hysteresis.
+	if [ ! -L $thermal_path/highest_thermal_zone ]; then
+		init_tz_highest
+	fi
 	temp_now=`cat $thermal_path/highest_thermal_zone/thermal_zone_temp`
 	trip_high=`cat $thermal_path/highest_thermal_zone/temp_trip_high`
 	trip_high=$(($trip_high-$hysteresis))
@@ -1069,9 +1080,9 @@ do
 		if [ "$suspend" = "1" ]; then
 			disable_zones_max_pwm
 			init_tz_highest
-			log_action_msg "Thermal algorithm is manually suspend."
+			log_action_msg "Thermal algorithm is manually suspend"
 		else
-			log_action_msg "Thermal algorithm is manually restored."
+			log_action_msg "Thermal algorithm is manually resumed"
 			sleep 1
 		fi
 		suspend_thermal=$suspend
@@ -1118,6 +1129,7 @@ do
 		fan_to=$(($fan_to*10))
 		log_action_msg "FAN minimum speed is changed from $fan_from to $fan_to percent"
 		fan_dynamic_min_last=$fan_dynamic_min
+		echo $fan_to > $thermal_path/fan_dynamic_min
 	fi
 	# Enable ASIC thermal zone if it has been disabled before.
 	mode=`cat $tz_mode`
