@@ -108,6 +108,7 @@ if [ "$1" == "add" ]; then
 				fi
 				if [ -f $3$4/fan"$i"_input ]; then
 					ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
+					ln -sf $3$4/pwm1 $thermal_path/fan"$j"_speed_set
 					if [ -f $config_path/fan_min_speed ]; then
 						ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
 					fi
@@ -118,11 +119,16 @@ if [ "$1" == "add" ]; then
 			done
 			for ((i=2; i<=$max_modules_ind; i+=1)); do
 				if [ -f $3$4/temp"$i"_input ]; then
-					j=$(($i-1))
-					ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_module"$j"
-					ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_module"$j"
-					ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_module"$j"
-					ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_module"$j"
+					label=`cat $3$4/temp"$i"_label`
+					case $label in
+					*front*)
+						j=$(($i-1))
+						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_module"$j"
+						ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_module"$j"
+						ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_module"$j"
+						ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_module"$j"
+						;;
+					esac
 				fi
 			done
 		fi
@@ -145,8 +151,6 @@ if [ "$1" == "add" ]; then
 			fi
 			if [ -f $3$4/fan"$i"_input ]; then
 				ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
-			fi
-			if [ -f $3$4/fan"$i"_input ]; then
 				ln -sf $3$4/pwm1 $thermal_path/fan"$j"_speed_set
 			fi
 			if [ -f $config_path/fan_min_speed ]; then
@@ -361,7 +365,7 @@ else
 					unlink $thermal_path/fan"$i"_speed_get
 				fi
 				if [ -f $thermal_path/fan"$j"_min ]; then
-						unlink $thermal_path/fan"$j"_min
+					unlink $thermal_path/fan"$j"_min
 				fi
 				if [ -f $thermal_path/fan"$j"_max ]; then
 					unlink $thermal_path/fan"$j"_max
