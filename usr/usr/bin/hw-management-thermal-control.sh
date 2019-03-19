@@ -110,8 +110,8 @@ max_ports_def=64
 system_thermal_type=${1:-$system_thermal_type_def}
 max_tachos=${2:-$max_tachos_def}
 max_psus=${3:-$max_psus_def}
-polling_time=${4:-$polling_time_def}
-max_ports=${5:-$max_ports_def}
+max_ports=${4:-$max_ports_def}
+polling_time=${5:-$polling_time_def}
 
 # Local constants
 pwm_noact=0
