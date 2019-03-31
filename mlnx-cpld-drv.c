@@ -2516,10 +2516,12 @@ static void cpld_work_handler(struct work_struct *work)
 	unsigned long flags;
 	struct cpld_data *dev = container_of(work, struct cpld_data, dwork.work);
 	unsigned long delay;
-	u8  unmask_psu = 0x3,  unmask_fan = 0xf;
+	u8  unmask_psu = 0x3,  unmask_fan = 0xf, resched = 1;
 
 	if (mask_read(dev, unmask_psu, unmask_fan) == 0)
 		clear_unmask(dev, unmask_psu, unmask_fan);
+	else
+		resched = 0;
 
 	spin_lock_irqsave(&dev->lock, flags);
 	if (dev->int_disable_counter > 0) {
@@ -2527,11 +2529,11 @@ static void cpld_work_handler(struct work_struct *work)
 		enable_irq(dev->irq);
 	}
 
-	//if (resched_on_exit) {
+	if (resched) {
 		delay = msecs_to_jiffies(THREAD_IRQ_SLEEP_MSECS);
 		delay = round_jiffies_relative(delay);
 		cpld_reschedule_work(dev, 0);
-	//}
+	}
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 
