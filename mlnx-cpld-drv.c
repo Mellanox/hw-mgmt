@@ -262,8 +262,7 @@ typedef enum event_type {
 	no_event    = 0,
 	psu_event   = 1,
 	power_event = 2,
-	psu_alarm = 3,
-	fan_event   = 4,
+	fan_event   = 3,
 } event_type_t;
 
 /**
@@ -437,10 +436,6 @@ struct module_psu_config {
         struct module_params power_event;
         struct module_params power_mask;
         u8 power_status_cache;
-        struct module_params alarm_status;
-        struct module_params alarm_event;
-        struct module_params alarm_mask;
-        u8 alarm_status_cache;
         struct module_params pwr_off;
         struct topology_params topology;
         struct topology_params eeprom_topology;
@@ -455,7 +450,6 @@ struct module_psu_config_params {
 	u8 num_fixed_psu_modules;
 	u8 presence_status_cache;
 	u8 power_status_cache;
-	u8 alarm_status_cache;
 	u8 mask;
  	struct module_psu_config module[PSU_MODULE_NUM];
 };
@@ -623,16 +617,6 @@ module_param_array(psu_module_power_event_offset, ushort, NULL, 0644);
 MODULE_PARM_DESC(psu_module_power_event_offset, "Module power event offsets vector (default)");
 static unsigned short psu_module_power_mask_offset[PSU_MODULE_NUM] = { 0x66, 0x66 };
 module_param_array(psu_module_power_mask_offset, ushort, NULL, 0644);
-MODULE_PARM_DESC(psu_module_power_mask_offset, "Module power mask offsets vector (default)");
-static unsigned short psu_module_alarm_status_offset[PSU_MODULE_NUM] = { 0x6a, 0x6a };
-module_param_array(psu_module_alarm_status_offset, ushort, NULL, 0644);
-MODULE_PARM_DESC(psu_module_alarm_status_offset, "Module alarm status offsets vector (default)");
-static unsigned short psu_module_alarm_event_offset[PSU_MODULE_NUM] = { 0x6b, 0x6b };
-module_param_array(psu_module_alarm_event_offset, ushort, NULL, 0644);
-MODULE_PARM_DESC(psu_module_alarm_event_offset, "Module alarm event offsets vector (default)");
-static unsigned short psu_module_alarm_mask_offset[PSU_MODULE_NUM] = { 0x6c, 0x6c };
-module_param_array(psu_module_alarm_mask_offset, ushort, NULL, 0644);
-MODULE_PARM_DESC(psu_module_alarm_mask_offset, "Module alarm status offsets vector (default)");
 
 static unsigned short psu_module_pwr_off_offset[PSU_MODULE_NUM] = { 0x30, 0x30 };
 module_param_array(psu_module_pwr_off_offset, ushort, NULL, 0644);
@@ -876,7 +860,6 @@ static inline int handle_mask_read_entry_point(struct cpld_data     *cplddata,
                         case fan_event:
                                 err = cplddata->exec_tab.fan_exec_entry(cplddata, i, (bit_mask & data), 0, event);
                                 break;
-                        case psu_alarm:
                         case no_event:
                                 break;
                         }
@@ -918,10 +901,6 @@ static inline int clear_unmask(struct cpld_data *cplddata,
         handle_clear_unmask_entry_point(cplddata,
                                         &cplddata->cfg_psu_module.module[id].power_event,
                                         &cplddata->cfg_psu_module.module[id].power_mask,
-                                        &unmask_psu, &event_clear);
-        handle_clear_unmask_entry_point(cplddata,
-                                        &cplddata->cfg_psu_module.module[id].alarm_event,
-                                        &cplddata->cfg_psu_module.module[id].alarm_mask,
                                         &unmask_psu, &event_clear);
         handle_clear_unmask_entry_point(cplddata,
                                         &cplddata->cfg_psu_module.module[id].presence_event,
@@ -970,13 +949,6 @@ static inline int mask_read(struct cpld_data *cplddata,
                                      cplddata->cfg_psu_module.num_psu_modules,
                                      power_event);
         handle_mask_read_entry_point(cplddata,
-                                     &cplddata->cfg_psu_module.module[id].alarm_status,
-                                     &cplddata->cfg_psu_module.module[id].alarm_mask,
-                                     &cplddata->cfg_psu_module.alarm_status_cache,
-                                     &cplddata->cfg_psu_module.mask,
-                                     cplddata->cfg_psu_module.num_psu_modules,
-                                     psu_alarm);
-        handle_mask_read_entry_point(cplddata,
                                      &cplddata->cfg_psu_module.module[id].presence_status,
                                      &cplddata->cfg_psu_module.module[id].presence_mask,
                                      &cplddata->cfg_psu_module.presence_status_cache,
@@ -1009,9 +981,6 @@ typedef enum module_attr {
         pg_status,
         pg_event,
         pg_mask,
-        alarm_status,
-        alarm_event,
-        alarm_mask,
 } module_attr_t;
 
 typedef enum cpld_attr {
@@ -1719,21 +1688,6 @@ static ssize_t show_module_psu(struct device *dev,
                                   &cplddata->cfg_psu_module.module[index].power_mask,
                                   0, buf);
 		break;
-        case alarm_status:
-                res = show_module(cplddata,
-                                  &cplddata->cfg_psu_module.module[index].alarm_status,
-                                  0, buf);
-		break;
-        case alarm_event:
-                res = show_module(cplddata,
-                                  &cplddata->cfg_psu_module.module[index].alarm_event,
-                                  0, buf);
-		break;
-        case alarm_mask:
-                res = show_module(cplddata,
-                                  &cplddata->cfg_psu_module.module[index].alarm_mask,
-                                  0, buf);
-		break;
         case module_name:
 		err = psu_get_name(cplddata, index, buf);
 		return strlen(buf);
@@ -1771,9 +1725,6 @@ static ssize_t store_module_psu(struct device *dev,
         case pg_status:
         case pg_event:
         case pg_mask:
-        case alarm_status:
-        case alarm_event:
-        case alarm_mask:
 		break;
         case module_name:
 		err = psu_set_name(cplddata, index, buf);
@@ -1814,9 +1765,6 @@ static ssize_t show_module_fan(struct device *dev,
         case pg_status:
         case pg_event:
         case pg_mask:
-        case alarm_status:
-        case alarm_event:
-        case alarm_mask:
 		break;
         case module_name:
 		err = fan_get_name(cplddata, index, buf);
@@ -1848,9 +1796,6 @@ static ssize_t store_module_fan(struct device *dev,
         case pg_status:
         case pg_event:
         case pg_mask:
-        case alarm_status:
-        case alarm_event:
-        case alarm_mask:
 		break;
         case module_name:
 		err = fan_set_name(cplddata, index, buf);
@@ -1981,12 +1926,6 @@ static SENSOR_DEVICE_ATTR_2(psu##id##_pg_event, S_IRUGO | S_IWUSR,     \
         show_module_psu, store_module_psu, pg_event, id - 1);          \
 static SENSOR_DEVICE_ATTR_2(psu##id##_pg_mask, S_IRUGO | S_IWUSR,      \
         show_module_psu, store_module_psu, pg_mask, id - 1);           \
-static SENSOR_DEVICE_ATTR_2(psu##id##_alarm_status, S_IRUGO,           \
-        show_module_psu, NULL, alarm_status, id - 1);                  \
-static SENSOR_DEVICE_ATTR_2(psu##id##_alarm_event, S_IRUGO | S_IWUSR,  \
-        show_module_psu, store_module_psu, alarm_event, id - 1);       \
-static SENSOR_DEVICE_ATTR_2(psu##id##_alarm_mask, S_IRUGO | S_IWUSR,   \
-        show_module_psu, store_module_psu, alarm_mask, id - 1);        \
 static SENSOR_DEVICE_ATTR_2(psu##id##_name, S_IRUGO | S_IWUSR,         \
         show_module_psu, store_module_psu, module_name, id - 1);       \
 static SENSOR_DEVICE_ATTR_2(psu##id##_pwr_off, S_IWUSR,                \
@@ -2077,9 +2016,6 @@ static struct attribute *mlnx_cpld_attributes[] = {
         &sensor_dev_attr_psu1_pg_status.dev_attr.attr,
         &sensor_dev_attr_psu1_pg_event.dev_attr.attr,
         &sensor_dev_attr_psu1_pg_mask.dev_attr.attr,
-        &sensor_dev_attr_psu1_alarm_status.dev_attr.attr,
-        &sensor_dev_attr_psu1_alarm_event.dev_attr.attr,
-        &sensor_dev_attr_psu1_alarm_mask.dev_attr.attr,
         &sensor_dev_attr_psu1_pwr_off.dev_attr.attr,
         &sensor_dev_attr_psu1_name.dev_attr.attr,
         &sensor_dev_attr_psu2_status.dev_attr.attr,
@@ -2090,9 +2026,6 @@ static struct attribute *mlnx_cpld_attributes[] = {
         &sensor_dev_attr_psu2_pg_status.dev_attr.attr,
         &sensor_dev_attr_psu2_pg_event.dev_attr.attr,
         &sensor_dev_attr_psu2_pg_mask.dev_attr.attr,
-        &sensor_dev_attr_psu2_alarm_status.dev_attr.attr,
-        &sensor_dev_attr_psu2_alarm_event.dev_attr.attr,
-        &sensor_dev_attr_psu2_alarm_mask.dev_attr.attr,
         &sensor_dev_attr_cpld1_version.dev_attr.attr,
         &sensor_dev_attr_cpld1_name.dev_attr.attr,
         &sensor_dev_attr_cpld2_version.dev_attr.attr,
@@ -2128,16 +2061,10 @@ static struct attribute *mlnx_cpld_msn2100_attributes[] = {
         &sensor_dev_attr_psu1_pg_status.dev_attr.attr,
         &sensor_dev_attr_psu1_pg_event.dev_attr.attr,
         &sensor_dev_attr_psu1_pg_mask.dev_attr.attr,
-        &sensor_dev_attr_psu1_alarm_status.dev_attr.attr,
-        &sensor_dev_attr_psu1_alarm_event.dev_attr.attr,
-        &sensor_dev_attr_psu1_alarm_mask.dev_attr.attr,
         &sensor_dev_attr_psu2_name.dev_attr.attr,
         &sensor_dev_attr_psu2_pg_status.dev_attr.attr,
         &sensor_dev_attr_psu2_pg_event.dev_attr.attr,
         &sensor_dev_attr_psu2_pg_mask.dev_attr.attr,
-        &sensor_dev_attr_psu2_alarm_status.dev_attr.attr,
-        &sensor_dev_attr_psu2_alarm_event.dev_attr.attr,
-        &sensor_dev_attr_psu2_alarm_mask.dev_attr.attr,
         &sensor_dev_attr_cpld1_version.dev_attr.attr,
         &sensor_dev_attr_cpld1_name.dev_attr.attr,
         &sensor_dev_attr_cpld2_version.dev_attr.attr,
@@ -2341,13 +2268,7 @@ static int module_psu_config(struct cpld_data *cplddata)
                 	cplddata->cfg_psu_module.module[id].power_event.offset = psu_module_power_event_offset[id];
                 	cplddata->cfg_psu_module.module[id].power_event.bit = psu_module_bit[id];
                 	cplddata->cfg_psu_module.module[id].power_mask.offset = psu_module_power_mask_offset[id];
-                	cplddata->cfg_psu_module.module[id].alarm_status.offset = psu_module_alarm_status_offset[id];
                 	cplddata->cfg_psu_module.module[id].power_mask.bit = psu_module_bit[id];
-                	cplddata->cfg_psu_module.module[id].alarm_status.bit = psu_module_bit[id];
-                	cplddata->cfg_psu_module.module[id].alarm_event.offset = psu_module_alarm_event_offset[id];
-                	cplddata->cfg_psu_module.module[id].alarm_event.bit = psu_module_bit[id];
-                	cplddata->cfg_psu_module.module[id].alarm_mask.offset = psu_module_alarm_mask_offset[id];
-                	cplddata->cfg_psu_module.module[id].alarm_mask.bit = psu_module_bit[id];
                 	cplddata->cfg_psu_module.module[id].pwr_off.offset = psu_module_pwr_off_offset[id];
                 	cplddata->cfg_psu_module.module[id].pwr_off.bit = psu_module_pwr_off_bit[id];
 			sprintf(cplddata->cfg_psu_module.module[id].entry.name, "%s%d\n", "psu", id + 1);
@@ -2382,13 +2303,7 @@ static int module_psu_config(struct cpld_data *cplddata)
                 	cplddata->cfg_psu_module.module[id].power_event.offset = psu_module_power_event_offset[id];
                 	cplddata->cfg_psu_module.module[id].power_event.bit = psu_module_bit[id];
                 	cplddata->cfg_psu_module.module[id].power_mask.offset = psu_module_power_mask_offset[id];
-                	cplddata->cfg_psu_module.module[id].alarm_status.offset = psu_module_alarm_status_offset[id];
                 	cplddata->cfg_psu_module.module[id].power_mask.bit = psu_module_bit[id];
-                	cplddata->cfg_psu_module.module[id].alarm_status.bit = psu_module_bit[id];
-                	cplddata->cfg_psu_module.module[id].alarm_event.offset = psu_module_alarm_event_offset[id];
-                	cplddata->cfg_psu_module.module[id].alarm_event.bit = psu_module_bit[id];
-                	cplddata->cfg_psu_module.module[id].alarm_mask.offset = psu_module_alarm_mask_offset[id];
-                	cplddata->cfg_psu_module.module[id].alarm_mask.bit = psu_module_bit[id];
                 	cplddata->cfg_psu_module.module[id].topology.mux = psu_module_mux[id];
                 	cplddata->cfg_psu_module.module[id].topology.addr = psu_module_addr[id];
                 	cplddata->cfg_psu_module.module[id].pwr_off.offset = psu_module_pwr_off_offset[id];
@@ -2859,10 +2774,6 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
                         data->cfg_psu_module.module[0].power_status.offset,
                         1, &data->cfg_psu_module.power_status_cache, 1);
         bus_access_func(data,
-                        data->cfg_psu_module.module[0].alarm_status.offset,
-                        data->cfg_psu_module.module[0].alarm_status.offset,
-                        1, &data->cfg_psu_module.alarm_status_cache, 1);
-        bus_access_func(data,
                         data->cfg_fan_module.module[0].presence_status.offset,
                         data->cfg_fan_module.module[0].presence_status.offset,
                         1, &data->cfg_fan_module.presence_status_cache, 1);
@@ -2873,11 +2784,9 @@ static int cpld_probe(struct i2c_client *client, const struct i2c_device_id *dev
         	data->cfg_psu_module.mask |= BIT_MASK(psu_module_bit[id]);
         	data->cfg_psu_module.module[id].presence_status_cache = (~data->cfg_psu_module.presence_status_cache) & BIT_MASK(psu_module_bit[id]);
         	data->cfg_psu_module.module[id].power_status_cache = data->cfg_psu_module.power_status_cache & BIT_MASK(psu_module_bit[id]);
-        	data->cfg_psu_module.module[id].alarm_status_cache = (~data->cfg_psu_module.alarm_status_cache) & BIT_MASK(psu_module_bit[id]);
 	}
         data->cfg_psu_module.presence_status_cache = (~data->cfg_psu_module.presence_status_cache) & data->cfg_psu_module.mask;
         data->cfg_psu_module.power_status_cache = data->cfg_psu_module.power_status_cache & data->cfg_psu_module.mask;
-        data->cfg_psu_module.alarm_status_cache = (~data->cfg_psu_module.module[id].alarm_status_cache) & data->cfg_psu_module.mask;
 
 	data->cfg_fan_module.mask = 0;
 	for (id = 0; id < data->cfg_fan_module.num_fan_modules; id++) {
@@ -3028,10 +2937,6 @@ static int __init mlnx_cpld_init(void)
 		leds_profile.bp_led_offset = NOT_USED_LED_OFFSET;
 		irq_line = 0;
 		mux_driver =  "cpld_mux_mgmt";
-
-		for (i = 0; i < num_fixed_psu_modules; i++)
-			psu_module_alarm_status_offset[i] =
-					psu_module_power_event_offset[i];
 		break;
 
 	case msn2740_sys_type:
