@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if ps -p 1 | grep -w init >/dev/null; then
+if [ ! -L /sbin/init ]; then
 	#initd detected
 	cp -f /usr/bin/hw-management.sh /etc/init.d/hw-management
 	if [ -x "/etc/init.d/hw-management" ]; then
