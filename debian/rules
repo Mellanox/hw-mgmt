@@ -20,6 +20,6 @@ override_dh_auto_install:
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
 	dh_installdirs -p$(pname) lib/udev/rules.d/
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
+	dh_installsystemd
 
 override_dh_installinit:
-	dh_installinit
