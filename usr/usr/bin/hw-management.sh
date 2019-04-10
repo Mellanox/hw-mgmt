@@ -629,6 +629,7 @@ do_chip_up_down()
 			echo 0 > $config_path/suspend
 			;;
 		*)
+			echo 1 > $config_path/suspend
 			;;
 		esac
 		unlock_service_state_change
