@@ -117,6 +117,7 @@ polling_time=${5:-$polling_time_def}
 pwm_noact=0
 pwm_max=1
 pwm_max_rpm=255
+pwm_def_rpm=151
 max_amb=120000
 untrusted_sensor=0
 hysteresis=5000
@@ -882,7 +883,7 @@ fi
 
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
 
-disable_zones_max_pwm()
+disable_zones_def_pwm()
 {
 	if [ -L $tz_mode ]; then
 		mode=`cat $tz_mode`
@@ -901,8 +902,8 @@ disable_zones_max_pwm()
 			fi
 		fi
 	done
-	echo $pwm_max_rpm > $pwm
-	log_action_msg "Set fan speed to maximum"
+	echo $pwm_def_rpm > $pwm
+	log_action_msg "Set fan speed to default"
 }
 
 trip_points_num=4
@@ -1078,7 +1079,7 @@ do
 	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
 	if [ $suspend ] && [ "$suspend" != "$suspend_thermal" ]; then
 		if [ "$suspend" = "1" ]; then
-			disable_zones_max_pwm
+			disable_zones_def_pwm
 			init_tz_highest
 			log_action_msg "Thermal algorithm is manually suspend"
 		else
@@ -1090,6 +1091,13 @@ do
 		continue
 	else
 		if [ "$suspend_thermal" = "1" ]; then
+			# Validate there is no enabled thermal zones.
+			if [ -L $pwm ]; then
+				cur_pwm=`cat $pwm`
+				if [ "$cur_pwm" != "$pwm_def_rpm" ]; then
+					disable_zones_def_pwm
+				fi
+			fi
 			sleep 1
 			continue
 		fi
