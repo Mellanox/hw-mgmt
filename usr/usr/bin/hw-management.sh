@@ -663,7 +663,11 @@ case $ACTION in
 		echo 0 > $config_path/chipup_dis
 	;;
 	chipupdis)
-		echo $2 > $config_path/chipup_dis
+		if [ -z "$2" ]; then
+			echo 1 > $config_path/chipup_dis
+		else
+			echo $2 > $config_path/chipup_dis
+		fi
 	;;
 	thermsuspend)
 		echo 1 > $config_path/suspend
