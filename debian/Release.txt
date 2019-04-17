@@ -1,0 +1,33 @@
+================================================================================
+- V.2.0.0.0172
+- Wen, 17 Apr 2019
+--------------------------------------------------------------------------------
+- New Features:
+    o   WD 
+    o   Thermal control – disabled.
+- Backport patchset (kernel 4.9): 
+    o   Backport patch - mlxsw-Align-code-with-kernel-v-5.1.patch
+    o   mlxsw-core-Add-check-for-split-port-during-thermal-z.patch
+    o   watchdog-mlx-wdt-kernel-upstream-and-wd-type2-change.patch
+- Backport patchset (kernel 4.19): 
+    o   Mellanox-drivers-backport-patching-from-next-kernels.patch
+    o   Mellanox-drivers-backport-patching-for-patches-for-n.patch
+    o   Mellanox-drivers-backport-patching-from-kernels-v5.1.patch
+- Script updates:
+    o   Add symbolic link to WD
+    o   Chip-up/ down
+    o   Add Logic to differentiate diff temperature sensor provided by chip.
+    o   Set thermal control to "disabled" state as a default. …
+- Bug fixes (Thermal, events)
+    o    #1717836: Fan speed is set to 20% after config reload or restart 
+         swss/syncd
+    o    #1717839: symbolic links under /var/run/hw-management may be lost after
+         fast-reboot
+    o    #1717840: Thermal control is not suspended after warm-reboot
+    o   Fix PWM default value from 151 to 153
+    o   Fix systemD/systmV dependent post install
+- Known issues:
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+================================================================================
+
