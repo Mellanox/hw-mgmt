@@ -400,9 +400,22 @@ check_system()
 				msn38xx_specific
 				;;
 			*)
-				log_failure_msg "$product is not supported"
-				exit 0
-				;;
+				proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
+				case $proc_type in
+					Atom*)
+						msn21xx_specific
+					;;
+					Celeron*)
+						msn27xx_msb_msx_specific
+					;;
+					Xeon*)
+						mqmxxx_msn37x_msn34x_specific
+					;;
+					*)
+						log_failure_msg "$product is not supported"
+						exit 0
+						;;
+				esac
 		esac
 	else
 		# Check ODM
