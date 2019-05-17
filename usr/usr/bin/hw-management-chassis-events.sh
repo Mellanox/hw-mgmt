@@ -154,13 +154,17 @@ if [ "$1" == "add" ]; then
 				exit 0
 			fi
 		fi
-		ln -sf $3$4/in1_input $environment_path/$2_in1_input
-		ln -sf $3$4/in2_input $environment_path/$2_in2_input
-		ln -sf $3$4/curr2_input $environment_path/$2_curr2_input
-		ln -sf $3$4/power2_input $environment_path/$2_power2_input
-		ln -sf $3$4/in3_input $environment_path/$2_in3_input
-		ln -sf $3$4/curr3_input $environment_path/$2_curr3_input
-		ln -sf $3$4/power3_input $environment_path/$2_power3_input
+		for i in {1..3}; do
+			if [ -f $3$4/in"$i"_input ]; then
+				ln -sf $3$4/in"$i"_input $environment_path/$2_in"$i"_input
+			fi
+			if [ -f $3$4/curr"$i"_input ]; then
+				ln -sf $3$4/curr"$i"_input $environment_path/$2_curr"$i"_input
+			fi
+			if [ -f $3$4/power"$i"_input ]; then
+				ln -sf $3$4/power"$i"_input $environment_path/$2_power"$i"_input
+			fi
+		done
 	fi
 	if [ "$2" == "led" ]; then
 		name=`echo $5 | cut -d':' -f2`
@@ -252,13 +256,17 @@ else
 				exit 0
 			fi
 		fi
-		unlink $environment_path/$2_in1_input
-		unlink $environment_path/$2_in2_input
-		unlink $environment_path/$2_curr2_input
-		unlink $environment_path/$2_power2_input
-		unlink $environment_path/$2_in3_input
-		unlink $environment_path/$2_curr3_input
-		unlink $environment_path/$2_power3_input
+		for i in {1..3}; do
+			if [ -L $environment_path/$2_in"$i"_input ]; then
+				unlink $environment_path/$2_in"$i"_input
+			fi
+			if [ -L $environment_path/$2_curr"$i"_input ]; then
+				unlink $environment_path/$2_curr"$i"_input
+			fi
+			if [ -L $environment_path/$2_power"$i"_input ]; then
+				unlink $environment_path/$2_power"$i"_input
+			fi
+		done
 	fi
 	if [ "$2" == "led" ]; then
 		name=`echo $5 | cut -d':' -f2`
