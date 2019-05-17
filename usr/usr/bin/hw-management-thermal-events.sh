@@ -176,6 +176,9 @@ if [ "$1" == "add" ]; then
 			ln -sf $3$4/trip_point_2_temp $thermal_path/$zonetype/temp_trip_hot
 			ln -sf $3$4/trip_point_3_temp $thermal_path/$zonetype/temp_trip_crit
 			ln -sf $3$4/temp $thermal_path/$zonetype/thermal_zone_temp
+			if [ -f $3$4/emul_temp ]; then
+				ln -sf $3$4/emul_temp $thermal_path/$zonetype/thermal_zone_temp_emul
+			fi
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
@@ -416,6 +419,9 @@ else
 				unlink $thermal_path/mlxsw-module"$i"/temp_trip_hot
 				unlink $thermal_path/mlxsw-module"$i"/temp_trip_crit
 				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp
+				if [ -L $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul ]; then
+					unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul
+				fi
 				rm -rf $thermal_path/mlxsw-module"$i"
 			fi
 		done
@@ -426,6 +432,9 @@ else
 			unlink $thermal_path/mlxsw/temp_trip_hot
 			unlink $thermal_path/mlxsw/temp_trip_crit
 			unlink $thermal_path/mlxsw/thermal_zone_temp
+			if [ -L $thermal_path/thermal_zone_temp_emul ]; then
+				unlink $thermal_path/mlxsw/thermal_zone_temp_emul
+			fi
 			rm -rf $thermal_path/mlxsw
 		fi
 		if [ -L $thermal_path/highest_thermal_zone ]; then

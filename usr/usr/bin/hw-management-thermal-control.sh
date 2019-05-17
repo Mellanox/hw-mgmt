@@ -172,7 +172,7 @@ psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 
 p2c_dir_trust_t1=(45000 13 $max_amb 13)
 p2c_dir_untrust_t1=(25000 13 30000 14 30000 14 35000 15 40000 16 $max_amb 16)
-c2p_dir_trust_12=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
+c2p_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 c2p_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16  $max_amb 16)
@@ -336,13 +336,23 @@ thermal_periodic_report()
 	f3=`cat $temp_port_amb`
 	f4=`cat $pwm`
 	f5=$(($fan_dynamic_min-$fan_max_state))
+	dyn=$(($f5*10))
+	cooling=`cat $cooling_cur_state`
+	if [ "$cooling" -gt "$set_cur_state" ]; then
+		set_cur_state=$cooling
+		if [ "$cooling" -gt "$f5" ]; then
+			f5=$cooling
+		fi
+	fi
+	ps_fan_speed=${psu_fan_speed[$f5]}
 	f5=$(($f5*10))
+	f6=$(($set_cur_state*10))
 	log_success_msg "Thermal periodic report"
 	log_success_msg "======================="
-	log_success_msg "Temperature: asic $f1 fan amb $f2 port amb $f3"
-	log_success_msg "Cooling: pwm $f4 dynaimc_min $f5"
+	log_success_msg "Temperature(mC): asic $f1 fan amb $f2 port amb $f3"
+	log_success_msg "Cooling(%): pwm $f6 ps_fan_speed $((ps_fan_speed)) dynaimc_min $dyn"
 	for ((i=1; i<=$max_tachos; i+=1)); do
-		if [ -f $thermal_path/fan"$i"_input ]; then
+		if [ -f $thermal_path/fan"$i"_speed_get ]; then
 			tacho=`cat $thermal_path/fan"$i"_speed_get`
 			fault=`cat $thermal_path/fan"$i"_fault`
 			log_success_msg "tacho$i speed is $tacho fault is $fault"
@@ -366,7 +376,9 @@ thermal_periodic_report()
 	t5=`cat $thermal_path/mlxsw/temp_trip_crit`
 	t6=`cat $thermal_path/mlxsw/thermal_zone_policy`
 	t7=`cat $thermal_path/mlxsw/thermal_zone_mode`
-	log_success_msg "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+	if [ $t7 = "enabled" ]; then
+		log_success_msg "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+	fi
 	for ((i=1; i<=$max_ports; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
 			t7=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
@@ -492,13 +504,12 @@ get_psu_presence()
 update_psu_fan_speed()
 {
 	for ((i=1; i<=$max_psus; i+=1)); do
-		if [ -f $power_path/psu"$i"_pwr_status ]; then
-			pwr=`cat $power_path/psu"$i"_pwr_status`
+		if [ -L $thermal_path/psu"$i"_pwr_status ]; then
+			pwr=`cat $thermal_path/psu"$i"_pwr_status`
 			if [ $pwr -eq 1 ]; then
 				bus=`cat $config_path/psu"$i"_i2c_bus`
 				addr=`cat $config_path/psu"$i"_i2c_addr`
 				command=`cat $fan_command`
-				speed=`cat $fan_psu_default`
 				entry=`cat $thermal_path/cooling_cur_state`
 				speed=${psu_fan_speed[$entry]}
 				i2cset -f -y $bus $addr $command $speed wp
@@ -758,13 +769,13 @@ check_trip_min_vs_current_temp()
 	if [ $trip_norm -gt  $temp_now ]; then
 		set_cur_state=$(($fan_dynamic_min-$fan_max_state))
 		echo $set_cur_state > $cooling_cur_state
-		set_cur_state=$(($set_cur_state*10))
+		cur_state=$(($set_cur_state*10))
 		case $1 in
 		1)
-			log_action_msg "FAN speed is set to $set_cur_state percent due to thermal zone event"
+			log_action_msg "FAN speed is set to $cur_state percent due to thermal zone event"
 		;;
 		2)
-			log_action_msg "FAN speed is set to $set_cur_state percent due to system health recovery"
+			log_action_msg "FAN speed is set to $cur_state percent due to system health recovery"
 		;;
 		*)
 			return
@@ -1050,8 +1061,8 @@ get_tz_highest()
 			echo disabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 			echo $set_cur_state > $cooling_cur_state
 			echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
-			set_cur_state=$(($set_cur_state*10))
-			log_action_msg "FAN speed is set to $set_cur_state percent"
+			cur_state=$(($set_cur_state*10))
+			log_action_msg "FAN speed is set to $cur_state percent"
 		fi
 	fi
 }
@@ -1059,6 +1070,7 @@ get_tz_highest()
 # Wait for thermal configuration.
 /bin/sleep $wait_for_config
 # Initialize system dynamic minimum speed data base.
+init_system_dynamic_minimum_db
 init_fan_dynamic_minimum_speed
 
 echo $thermal_control_pid > /var/run/hw-management.pid
@@ -1107,6 +1119,11 @@ do
 	if [ $? -ne 0 ]; then
 		continue
 	fi
+	# Set PWM minimal limit.
+	# Set dynamic FAN speed minimum, depending on ambient temperature,
+	# presence of untrusted optical cables or presence of any cables
+	# with untrusted temperature sensing.
+	set_pwm_min_threshold
 	# Update PS unit fan speed
 	update_psu_fan_speed
 	# If one of PS units is out disable thermal zone and set PWM to the
@@ -1123,10 +1140,6 @@ do
 		init_tz_highest
 		continue
 	fi
-	# Set dynamic FAN speed minimum, depending on ambient temperature,
-	# presence of untrusted optical cables or presence of any cables
-	# with untrusted temperature sensing.
-	set_pwm_min_speed
 	# Update cooling levels of FAN If dynamic minimum has been changed
 	# since the last time.
 	if [ $fan_dynamic_min -ne $fan_dynamic_min_last ]; then
@@ -1150,11 +1163,12 @@ do
 		# thermal algorithm can stabilize PWM speed if necessary.
 		check_trip_min_vs_current_temp 2
 	fi
+
+	get_tz_highest
+
 	count=$(($count+1))
 	if [ $count -eq $periodic_report ]; then
 		count=0
 		thermal_periodic_report
 	fi
-
-	get_tz_highest
 done
