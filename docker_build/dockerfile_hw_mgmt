@@ -1,0 +1,15 @@
+FROM debian:stretch
+MAINTAINER Oleksandr Shamray <oleksandrs@mellanox.com>
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+               build-essential \
+               devscripts \
+               equivs \
+               fakeroot \
+               debhelper \
+               automake \
+               autotools-dev \
+               pkg-config \
+               ca-certificates \
+               && apt-get clean \
+    && rm -rf /tmp/* /var/tmp/*
