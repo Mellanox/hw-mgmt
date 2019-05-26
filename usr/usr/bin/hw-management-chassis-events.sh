@@ -38,6 +38,7 @@ led_path=$hw_management_path/led
 system_path=$hw_management_path/system
 qsfp_path=$hw_management_path/qsfp
 watchdog_path=$hw_management_path/watchdog
+config_path=$hw_management_path/config
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
 i2c_bus_offset=0
@@ -54,6 +55,8 @@ psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 eeprom_name=''
 max_ports_def=64
+sfp_counter=0
+LOCKFILE="/var/run/hw-management.lock"
 
 find_i2c_bus()
 {
@@ -98,6 +101,18 @@ find_eeprom_name()
 	elif [ $bus -eq $i2c_bus_def_off_eeprom_fan4 ]; then
 		eeprom_name=fan4_info
 	fi
+}
+
+lock_service_state_change()
+{
+	exec {LOCKFD}>${LOCKFILE}
+	/usr/bin/flock -x ${LOCKFD}
+	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+}
+
+unlock_service_state_change()
+{
+	/usr/bin/flock -u ${LOCKFD}
 }
 
 function qsfp_add_handler()
@@ -233,6 +248,14 @@ if [ "$1" == "add" ]; then
 				;;
 		esac
 	fi
+elif [ "$1" == "mv" ]; then
+	if [ "$2" == "sfp" ]; then
+		lock_service_state_change
+		[ -f "$config_path/sfp_counter" ] && sfp_counter=`cat $config_path/sfp_counter`
+		sfp_counter=$(($sfp_counter+1))
+		echo $sfp_counter > $config_path/sfp_counter
+		unlock_service_state_change
+	fi
 else
 	if [ "$2" == "a2d" ]; then
 		unlink $environment_path/$2_$5_voltage_scale
@@ -314,5 +337,12 @@ else
 			*)
 				;;
 		esac
+	fi
+	if [ "$2" == "sfp" ]; then
+		lock_service_state_change
+		[ -f "$config_path/sfp_counter" ] && sfp_counter=`cat $config_path/sfp_counter`
+		sfp_counter=$(($sfp_counter-1))
+		echo $sfp_counter > $config_path/sfp_counter
+		unlock_service_state_change
 	fi
 fi
