@@ -47,6 +47,8 @@ i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
 i2c_comex_mon_bus_default=15
+module_counter=0
+LOCKFILE="/var/run/hw-management.lock"
 
 find_i2c_bus()
 {
@@ -66,6 +68,18 @@ find_i2c_bus()
 
 	log_failure_msg "i2c-mlxcpld driver is not loaded"
 	exit 0
+}
+
+lock_service_state_change()
+{
+	exec {LOCKFD}>${LOCKFILE}
+	/usr/bin/flock -x ${LOCKFD}
+	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+}
+
+unlock_service_state_change()
+{
+	/usr/bin/flock -u ${LOCKFD}
 }
 
 if [ "$1" == "add" ]; then
@@ -127,6 +141,11 @@ if [ "$1" == "add" ]; then
 						ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_module"$j"
 						ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_module"$j"
 						ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_module"$j"
+						lock_service_state_change
+						[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
+						module_counter=$(($module_counter+1))
+						echo $module_counter > $config_path/module_counter
+						unlock_service_state_change
 						;;
 					esac
 				fi
@@ -385,6 +404,10 @@ else
 				unlink $thermal_path/temp_fault_module"$j"
 				unlink $thermal_path/temp_crit_module"$j"
 				unlink $thermal_path/temp_emergency_module"$j"
+				lock_service_state_change
+				module_counter=$(($module_counter-1))
+				echo $module_counter > $config_path/module_counter
+				unlock_service_state_change
 			fi
 		done
 	fi
