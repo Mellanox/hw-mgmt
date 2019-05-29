@@ -1,4 +1,24 @@
 ================================================================================
+- V.2.0.0180
+- Tues, 28 May 2019
+--------------------------------------------------------------------------------
+- New Features:
+    o   Tigris MSN3800 support.
+    o   Add build script with debian docker support.
+- Backport patchset (kernel 4.9): 
+    o   0028-mlxsw-core-add-support-for-Gear-Box-temperatures-in-.patch
+    o   0029-mlxsw-minimal-Provide-optimization-for-I2C-bus-acces.patch
+- Backport patchset (kernel 4.19): 
+    o   0005-mlxsw-support-for-inter-connect-temperature-hardware.patch
+    o   platform-x86-mlx-platform-DMI-match-for-marginal-sys.patch
+- Bug fixes (Thermal, events)
+    o   #1761499: Broken symbolic links under /var/run/hw-management/environment
+    o   #1762256: minimal driver failed to read ASIC temperature when port is 
+        connected with split cable
+- Known issues:
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+================================================================================
 - V.2.0.0.0172
 - Wen, 17 Apr 2019
 --------------------------------------------------------------------------------
