@@ -424,8 +424,8 @@ index 5f970798ab6a..e9451e447bf0 100644
  	int i;
  
  	for (i = thermal->tz_gearbox_num - 1; i >= 0; i--)
--		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
-+		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]);
+-		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]);
++		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]); /*Remove*/
  	kfree(thermal->tz_gearbox_arr);
  }
  
