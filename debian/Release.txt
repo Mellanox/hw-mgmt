@@ -1,4 +1,15 @@
 ================================================================================
+- V.2.0.0181
+- Tue, 4 Jun 2019
+--------------------------------------------------------------------------------
+- Bug fixes (Thermal, events)
+    o   Removed unnecessary file
+    o   Fix issue in -mlxsw-minimal-Provide-optimization-for-I2C-bus-acces.patch
+- Known issues:
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+
+================================================================================
 - V.2.0.0180
 - Tues, 28 May 2019
 --------------------------------------------------------------------------------
