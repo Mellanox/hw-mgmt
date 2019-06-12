@@ -40,7 +40,7 @@
 mux2=/sys/bus/i2c/devices/i2c-2
 mux5=/sys/bus/i2c/devices/i2c-5
 mux7=/sys/bus/i2c/devices/i2c-7
-mux7=/sys/bus/i2c/devices/i2c-8
+mux8=/sys/bus/i2c/devices/i2c-8
 mux10=/sys/bus/i2c/devices/i2c-10
 mux11=/sys/bus/i2c/devices/i2c-11
 mux12=/sys/bus/i2c/devices/i2c-12
@@ -61,7 +61,6 @@ a2d_mnb=/sys/bus/i2c/devices/15-006d
 eeprom_mnb=/sys/bus/i2c/devices/16-0051
 led=/sys/class/leds/
 sys_eeprom=/sys/bus/i2c/devices/8-0051
-
 
 ACTION=$1
 
@@ -281,7 +280,7 @@ unload_modules()
 
 	if is_module mlnx_asic_drv; then
 		if rmmod mlnx_asic_drv 2>/dev/null ; then
-			log_success_msg"mlnx_asic_drv module is unloaded"
+			log_success_msg "mlnx_asic_drv module is unloaded"
 		else
 			log_failure_msg "mlnx_asic_drv module unload failed"
 		fi
@@ -334,7 +333,7 @@ unload_modules()
 
 status()
 {
-    lsmod
+        lsmod
 }
 
 connect_platform()
@@ -390,7 +389,7 @@ connect_platform()
 disconnect_platform()
 {
         if [ -d $temp_mnb ]; then
-                echo 0x4b > /sys/bus/i2c/devices/i2c-7/delete_device
+            echo 0x4b > /sys/bus/i2c/devices/i2c-7/delete_device
         fi
         if [ -d /sys/bus/i2c/devices/16-0051 ]; then
             echo 0x51 > /sys/bus/i2c/devices/i2c-16/delete_device
@@ -399,7 +398,7 @@ disconnect_platform()
             echo 0x6d > /sys/bus/i2c/devices/i2c-15/delete_device
         fi
         if [ -d $temp_swb ]; then
-                echo 0x4a > /sys/bus/i2c/devices/i2c-7/delete_device
+            echo 0x4a > /sys/bus/i2c/devices/i2c-7/delete_device
         fi
         if [ -d /sys/bus/i2c/devices/6-006d ]; then
             echo 0x6d > /sys/bus/i2c/devices/i2c-5/delete_device
@@ -457,7 +456,7 @@ case $ACTION in
                     mkdir -p /bsp/thermal_zone1
                 fi
 
-		# Power
+                # Power
                 if [ -e $a2d_swb ]; then
                     for i in 1 2
                     do
@@ -502,21 +501,21 @@ case $ACTION in
                 # FAN
                 for i in 1 2 3 4
                 do
-                        if [ ! -L /bsp/fan/fan"$i"_speed_get ]; then
-                            ln -s $asic/fan"$i"_input /bsp/fan/fan"$i"_speed_get
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_speed_set ]; then
-                            ln -s $asic/pwm"$i" /bsp/fan/fan"$i"_speed_set
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_min ]; then
-                            ln -s $asic/fan"$i"_min /bsp/fan/fan"$i"_min
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_max ]; then
-                            ln -s $asic/fan"$i"_max /bsp/fan/fan"$i"_max
-                        fi
-                        if [ ! -L /bsp/fan/fan"$i"_enable ]; then
-                            ln -s $asic/fan"$i"_enable /bsp/fan/fan"$i"_enable
-                        fi
+                    if [ ! -L /bsp/fan/fan"$i"_speed_get ]; then
+                        ln -s $asic/fan"$i"_input /bsp/fan/fan"$i"_speed_get
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_speed_set ]; then
+                        ln -s $asic/pwm"$i" /bsp/fan/fan"$i"_speed_set
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_min ]; then
+                        ln -s $asic/fan"$i"_min /bsp/fan/fan"$i"_min
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_max ]; then
+                        ln -s $asic/fan"$i"_max /bsp/fan/fan"$i"_max
+                    fi
+                    if [ ! -L /bsp/fan/fan"$i"_enable ]; then
+                        ln -s $asic/fan"$i"_enable /bsp/fan/fan"$i"_enable
+                    fi
                 done
 
                 # LED
@@ -534,7 +533,7 @@ case $ACTION in
                         ln -s $cpld/led"$i" /bsp/led/led_psu"$idx"
                     fi
                     if [ ! -L /bsp/led/led_psu"$i"_capability ]; then
-                            ln -s $cpld/led"$i"_capability /bsp/led/led_psu"$idx"_capability
+                        ln -s $cpld/led"$i"_capability /bsp/led/led_psu"$idx"_capability
                     fi
                 done
 
@@ -565,23 +564,13 @@ case $ACTION in
                 for i in 1 2
                 do
                     if [ ! -L /bsp/module/psu"$i"_pwr_status ]; then
-                            ln -s $cpld/psu"$i"_pg_status /bsp/module/psu"$i"_pwr_status
+                        ln -s $cpld/psu"$i"_pg_status /bsp/module/psu"$i"_pwr_status
                     fi
                     if [ ! -L /bsp/module/psu"$i"_pwr_event ]; then
-                            ln -s $cpld/psu"$i"_pg_event /bsp/module/psu"$i"_pwr_event
+                        ln -s $cpld/psu"$i"_pg_event /bsp/module/psu"$i"_pwr_event
                     fi
                     if [ ! -L /bsp/module/psu"$i"_pwr_mask ]; then
-                            ln -s $cpld/psu"$i"_pg_mask /bsp/module/psu"$i"_pwr_mask
-                    fi
-
-                    if [ ! -L /bsp/module/psu"$i"_alarm_status ]; then
-                            ln -s $cpld/psu"$i"_alarm_status /bsp/module/psu"$i"_alarm_status
-                    fi
-                    if [ ! -L /bsp/module/psu"$i"_alarm_event ]; then
-                            ln -s $cpld/psu"$i"_alarm_event /bsp/module/psu"$i"_alarm_event
-                    fi
-                    if [ ! -L /bsp/module/psu"$i"_alarm_mask ]; then
-                            ln -s $cpld/psu"$i"_alarm_mask  /bsp/module/psu"$i"_alarm_mask
+                        ln -s $cpld/psu"$i"_pg_mask /bsp/module/psu"$i"_pwr_mask
                     fi
                 done
 
@@ -607,18 +596,18 @@ case $ACTION in
                     fi
                 fi
 
-               # QSFP
+                # QSFP
                 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
                 do
                     if [ ! -L /bsp/qsfp/qsfp"$i" ]; then
-                       ln -s $asic/qsfp"$i"_eeprom /bsp/qsfp/qsfp"$i"
+                        ln -s $asic/qsfp"$i"_eeprom /bsp/qsfp/qsfp"$i"
                     fi
                 done
 
                 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
                 do
                     if [ ! -L /bsp/qsfp/qsfp"$i"_status ]; then
-                       ln -s $asic/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
+                        ln -s $asic/qsfp"$i"_status /bsp/qsfp/qsfp"$i"_status
                     fi
                 done
 
@@ -653,12 +642,89 @@ case $ACTION in
                 fi
                 echo mlnx-asic-drv-16 0x48 > /sys/bus/i2c/devices/i2c-2/new_device
         ;;
+        start_eeprom)
+                # Load common drivers
+                if is_module lpci2c; then
+                    log_warning_msg "lpci2c module has already been loaded"
+                else
+                    # SN2100 comes with Intel Atom chip, for which kernel tries
+                    # to load i2c_ismt module if available, which uses same bus
+                    # as lpci2c
+                    if is_module i2c_ismt; then
+                        rmmod i2c_ismt 2>/dev/null;
+                    fi
+                    if modprobe lpci2c 2>/dev/null; then
+                        log_success_msg "lpci2c module load passed"
+                    else
+                        log_failure_msg "lpci2c module load failed"
+                    fi
+                fi
+
+                if is_module i2c_mux; then
+                    log_warning_msg "i2c_mux module has already been loaded"
+                else
+                    if modprobe i2c_mux 2>/dev/null; then
+                        log_success_msg "i2c_mux module load passed"
+                    else
+                        log_failure_msg "i2c_mux module load failed"
+                    fi
+                fi
+
+                if is_module mlnx_mux_drv; then
+                    log_warning_msg "mlnx_mux_drv module has already been loaded"
+                else
+                    if modprobe mlnx_mux_drv 2>/dev/null; then
+                        log_success_msg "mlnx_mux_drv module load passed"
+                    else
+                        log_failure_msg "mlnx_mux_drv module load failed"
+                    fi
+                fi
+
+                if is_module mlnx_cpld_drv; then
+                    log_warning_msg "mlnx_cpld_drv module has already been loaded"
+                else
+                    if modprobe mlnx_cpld_drv psu_control_driver=dps460 2>/dev/null; then
+                        log_success_msg "mlnx_cpld_drv module load passed"
+                    else
+                        log_failure_msg "mlnx_cpld_drv module load failed"
+                    fi
+                fi
+
+                # Load EEPROM driver
+                if is_module at24; then
+                    log_warning_msg "at24 module has already been loaded"
+                else
+                    if modprobe at24 io_limit=32 2>/dev/null; then
+                        log_success_msg "at24 module load passed"
+                    else
+                        log_failure_msg "at24 module load failed"
+                    fi
+                fi
+
+                # Create EEPROM device
+                if [ ! -d $sys_eeprom ]; then
+                    echo 24c32 0x51 > /sys/bus/i2c/devices/i2c-8/new_device
+                fi
+
+                # Create EEPROM root directory
+                if [ ! -d /bsp/eeprom ]; then
+                    mkdir -p /bsp/eeprom
+                fi
+
+                # Create EEPROM symlink
+                if [ ! -L /bsp/eeprom/sys_eeprom ]; then
+                    attr=`find $sys_eeprom/ -name eeprom`
+                    if [ -e $attr ]; then
+                        ln -s $attr /bsp/eeprom/sys_eeprom
+                    fi
+                fi
+        ;;
         status)
                 status
         ;;
         *)
                 echo
-                echo "Usage: `basename $0` {start|stop|restart|reprobe_asic}"
+                echo "Usage: `basename $0` {start|stop|restart|reprobe_asic|start_eeprom}"
                 echo
                 exit 1
         ;;
