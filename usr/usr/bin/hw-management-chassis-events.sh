@@ -33,6 +33,7 @@
 
 hw_management_path=/var/run/hw-management
 environment_path=$hw_management_path/environment
+alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
@@ -56,7 +57,7 @@ psu2_i2c_addr=0x50
 eeprom_name=''
 max_ports_def=64
 sfp_counter=0
-LOCKFILE="/var/run/hw-management.lock"
+LOCKFILE="/var/run/hw-management-chassis.lock"
 
 find_i2c_bus()
 {
@@ -179,6 +180,15 @@ if [ "$1" == "add" ]; then
 			if [ -f $3$4/power"$i"_input ]; then
 				ln -sf $3$4/power"$i"_input $environment_path/$2_power"$i"_input
 			fi
+			if [ -f $3$4/in"$i"_alarm ]; then
+				ln -sf $3$4/in"$i"_alarm $alarm_path/$2_in"$i"_alarm
+			fi
+			if [ -f $3$4/curr"$i"_alarm ]; then
+				ln -sf $3$4/curr"$i"_alarm $alarm_path/$2_curr"$i"_alarm
+			fi
+			if [ -f $3$4/power"$i"_alarm ]; then
+				ln -sf $3$4/power"$i"_alarm $alarm_path/$2_power"$i"_alarm
+			fi
 		done
 	fi
 	if [ "$2" == "led" ]; then
@@ -288,6 +298,15 @@ else
 			fi
 			if [ -L $environment_path/$2_power"$i"_input ]; then
 				unlink $environment_path/$2_power"$i"_input
+			fi
+			if [ -L $alarm_path/$2_in"$i"_alarm ]; then
+				unlink $alarm_path/$2_in"$i"_alarm
+			fi
+			if [ -L $alarm_path/$2_curr"$i"_alarm ]; then
+				unlink $alarm_path/$2_curr"$i"_alarm
+			fi
+			if [ -L $alarm_path/$2_power"$i"_alarm ]; then
+				unlink $alarm_path/$2_power"$i"_alarm
 			fi
 		done
 	fi

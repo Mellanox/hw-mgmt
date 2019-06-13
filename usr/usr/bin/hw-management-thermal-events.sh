@@ -37,18 +37,20 @@
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 power_path=$hw_management_path/power
+alarm_path=$hw_management_path/alarm
 config_path=$hw_management_path/config
 fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
 max_psus=2
 max_tachos=12
-max_modules_ind=65
+max_module_gbox_ind=160
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
 i2c_comex_mon_bus_default=15
 module_counter=0
-LOCKFILE="/var/run/hw-management.lock"
+gearbox_counter=0
+LOCKFILE="/var/run/hw-management-thermal.lock"
 
 find_i2c_bus()
 {
@@ -131,7 +133,7 @@ if [ "$1" == "add" ]; then
 					fi
 				fi
 			done
-			for ((i=2; i<=$max_modules_ind; i+=1)); do
+			for ((i=2; i<=$max_module_gbox_ind; i+=1)); do
 				if [ -f $3$4/temp"$i"_input ]; then
 					label=`cat $3$4/temp"$i"_label`
 					case $label in
@@ -147,6 +149,15 @@ if [ "$1" == "add" ]; then
 						echo $module_counter > $config_path/module_counter
 						unlock_service_state_change
 						;;
+					*gear*)
+						#label="${label:8}"
+						#ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$label"
+						lock_service_state_change
+						[ -f "$config_path/gearbox_counter" ] && gearbox_counter=`cat $config_path/gearbox_counter`
+						gearbox_counter=$(($gearbox_counter+1))
+						echo $gearbox_counter > $config_path/gearbox_counter
+						unlock_service_state_change
+						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$gearbox_counter"
 					esac
 				fi
 			done
@@ -185,8 +196,13 @@ if [ "$1" == "add" ]; then
 		zonep0type="${zonetype:0:${#zonetype}-1}"
 		zonep1type="${zonetype:0:${#zonetype}-2}"
 		zonep2type="${zonetype:0:${#zonetype}-3}"
-		if [ "$zonetype" == "mlxsw" ] || [ "$zonep0type" == "mlxsw-module" ] ||
-		   [ "$zonep1type" == "mlxsw-module" ] || [ "$zonep2type" == "mlxsw-module" ]; then
+		if [ "$zonetype" == "mlxsw" ] ||
+		   [ "$zonep0type" == "mlxsw-module" ] ||
+		   [ "$zonep1type" == "mlxsw-module" ] ||
+		   [ "$zonep2type" == "mlxsw-module" ] ||
+		   [ "$zonep0type" == "mlxsw-gearbox" ] ||
+		   [ "$zonep1type" == "mlxsw-gearbox" ] ||
+		   [ "$zonep2type" == "mlxsw-gearbox" ]; then
 			mkdir -p $thermal_path/$zonetype
 			ln -sf $3$4/mode $thermal_path/$zonetype/thermal_zone_mode
 			ln -sf $3$4/policy $thermal_path/$zonetype/thermal_zone_policy
@@ -250,8 +266,8 @@ if [ "$1" == "add" ]; then
 				fi
 				ln -sf $3$4/temp"$i"_input $thermal_path/cpu_$name
 				ln -sf $3$4/temp"$i"_crit $thermal_path/cpu_"$name"_crit
-				ln -sf $3$4/temp"$i"_crit_alarm $thermal_path/cpu_"$name"_crit_alarm
 				ln -sf $3$4/temp"$i"_max $thermal_path/cpu_"$name"_max
+				ln -sf $3$4/temp"$i"_crit_alarm $alarm_path/cpu_"$name"_crit_alarm
 			fi
 		done
 	fi
@@ -274,9 +290,24 @@ if [ "$1" == "add" ]; then
 		# Set I2C bus for psu
 		echo $bus > $config_path/"$2"_i2c_bus
 		# Add thermal attributes
-		ln -sf $5$3/temp1_input $thermal_path/$2
-		ln -sf $5$3/temp1_max $thermal_path/$2_max
-		ln -sf $5$3/temp1_max_alarm $thermal_path/$2_alarm
+		ln -sf $5$3/temp1_input $thermal_path/$2_temp
+		ln -sf $5$3/temp1_max $thermal_path/$2_temp_max
+		ln -sf $5$3/temp1_max_alarm $thermal_path/$2_temp_max_alarm
+		if [ -f $5$3/temp2_input ]; then
+			ln -sf $5$3/temp2_input $thermal_path/$2_temp2
+		fi
+		if [ -f $5$3/temp2_max ]; then
+			ln -sf $5$3/temp2_max $thermal_path/$2_temp2_max
+		fi
+		if [ -f $5$3/temp2_max_alarm ]; then
+			ln -sf $5$3/temp2_max_alarm $thermal_path/$2_temp2_max_alarm
+		fi
+		if [ -f $5$3/fan1_alarm ]; then
+			ln -sf $5$3/fan1_alarm $alarm_path/$2_fan1_alarm
+		fi
+		if [ -f $5$3/power1_alarm ]; then
+			ln -sf $5$3/power1_alarm $alarm_path/$2_power1_alarm
+		fi
 		ln -sf $5$3/fan1_input $thermal_path/$2_fan1_speed_get
 		# Add power attributes
 		ln -sf $5$3/in1_input $power_path/$2_volt_in
@@ -397,7 +428,7 @@ else
 				unlink $thermal_path/$pwm1
 			fi
 		fi
-		for ((i=2; i<=$max_modules_ind; i+=1)); do
+		for ((i=2; i<=$max_module_gbox_ind; i+=1)); do
 			j=$(($i-1))
 			if [ -L $thermal_path/temp_input_module"$j" ]; then
 				unlink $thermal_path/temp_input_module"$j"
@@ -405,11 +436,14 @@ else
 				unlink $thermal_path/temp_crit_module"$j"
 				unlink $thermal_path/temp_emergency_module"$j"
 				lock_service_state_change
+				[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 				module_counter=$(($module_counter-1))
 				echo $module_counter > $config_path/module_counter
 				unlock_service_state_change
 			fi
 		done
+		find /var/run/hw-management/thermal/ -type l -name 'temp_input_*' -exec rm {} +
+		echo 0 > $config_path/gearbox_counter
 	fi
 	if [ "$2" == "regfan" ]; then
 		if [ -L $thermal_path/pwm1]; then
@@ -434,7 +468,7 @@ else
 		done
 	fi
 	if [ "$2" == "thermal_zone" ]; then
-		for ((i=1; i<$max_modules_ind; i+=1)); do
+		for ((i=1; i<$max_module_gbox_ind; i+=1)); do
 			if [ -d $thermal_path/mlxsw-module"$i" ]; then
 				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_policy
 				unlink $thermal_path/mlxsw-module"$i"/temp_trip_norm
@@ -446,6 +480,17 @@ else
 					unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul
 				fi
 				rm -rf $thermal_path/mlxsw-module"$i"
+			elif [ -d $thermal_path/mlxsw-gearbox"$i" ]; then
+				unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
+				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm
+				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_high
+				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot
+				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit
+				unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp
+				if [ -L $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp_emul ]; then
+					unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp_emul
+				fi
+				rm -rf $thermal_path/mlxsw-gerabox"$i"
 			fi
 		done
 		if [ -d $thermal_path/mlxsw ]; then
@@ -497,15 +542,15 @@ else
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
 		unlink $thermal_path/cpu_pack_crit
-		unlink $thermal_path/cpu_pack_crit_alarm
 		unlink $thermal_path/cpu_pack_max
+		unlink $alarm_path/cpu_pack_crit_alarm
 		for i in {1..8}; do
 			if [ -L $thermal_path/cpu_core"$i" ]; then
 				j=$((i+1))
 				unlink $thermal_path/cpu_core"$j"
 				unlink $thermal_path/cpu_core"$j"_crit
-				unlink $thermal_path/cpu_core"$j"_crit_alarm
 				unlink $thermal_path/cpu_core"$j"_max
+				unlink $alarm_path/cpu_core"$j"_crit_alarm
 			fi
 		done
 	fi
@@ -521,14 +566,29 @@ else
 			exit 0
 		fi
 		# Remove thermal attributes
-		if [ -L $thermal_path/$2 ]; then
-			unlink $thermal_path/$2
+		if [ -L $thermal_path/$2_temp ]; then
+			unlink $thermal_path/$2_temp
 		fi
-		if [ -L $thermal_path/$2_max ]; then
-			unlink $thermal_path/$2_max
+		if [ -L $thermal_path/$2_temp_max ]; then
+			unlink $thermal_path/$2_temp_max
 		fi
-		if [ -L $thermal_path/$2_alarm ]; then
-			unlink $thermal_path/$2_alarm
+		if [ -L $thermal_path/$2_temp_alarm ]; then
+			unlink $thermal_path/$2_temp_alarm
+		fi
+		if [ -L $thermal_path/$2_temp2]; then
+			unlink $thermal_path/$2_temp2
+		fi
+		if [ -L $thermal_path/$2_temp2_max ]; then
+			unlink $thermal_path/$2_temp2_max
+		fi
+		if [ -L $thermal_path/$2_temp2_max_alarm ]; then
+			unlink $thermal_path/$2_temp2_max_alarm
+		fi
+		if [ -L $alarm_path/$2_fan1_alarm ]; then
+			unlink $alarm_path/$2_fan1_alarm
+		fi
+		if [ -L $alarm_path/$2_power1_alarm ]; then
+			unlink $alarm_path/$2_power1_alarm
 		fi
 		if [ -L $thermal_path/$2_fan1_speed_get ]; then
 			unlink $thermal_path/$2_fan1_speed_get
