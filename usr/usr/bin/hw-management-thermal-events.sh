@@ -84,6 +84,18 @@ unlock_service_state_change()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+kexec_reboot_helper()
+{
+	[ -f "$config_path/chipwarm" ] && warm=`cat $config_path/chipwarm`
+	if [ $warm ] && [ "$warm" -gt 0 ]; then
+		if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
+		   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
+			/usr/bin/hw-management.sh chipup
+		fi
+		echo 0 > $config_path/chipwarm
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
 		# Verify if this is COMEX sensor
@@ -257,6 +269,7 @@ if [ "$1" == "add" ]; then
 		nos=`cat $config_path/nos`
 		case $nos in
 		*SONiC*)
+			kexec_reboot_helper
 			;;
 		*)
 			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
@@ -379,6 +392,7 @@ elif [ "$1" == "change" ]; then
 			nos=`cat $config_path/nos`
 			case $nos in
 			*SONiC*)
+				kexec_reboot_helper
 				;;
 			*)
 				if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
@@ -398,6 +412,7 @@ elif [ "$1" == "change" ]; then
 				nos=`cat $config_path/nos`
 				case $nos in
 				*SONiC*)
+					kexec_reboot_helper
 					;;
 				*)
 					/usr/bin/hw-management.sh chipup

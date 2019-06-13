@@ -689,6 +689,9 @@ case $ACTION in
 			echo $2 > $config_path/chipup_dis
 		fi
 	;;
+	chipwarm)
+		echo 1 > $config_path/chipwarm
+	;;
 	thermsuspend)
 		echo 1 > $config_path/suspend
 	;;
