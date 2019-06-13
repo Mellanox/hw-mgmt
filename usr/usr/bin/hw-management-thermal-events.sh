@@ -158,6 +158,7 @@ if [ "$1" == "add" ]; then
 						echo $gearbox_counter > $config_path/gearbox_counter
 						unlock_service_state_change
 						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$gearbox_counter"
+						;;
 					esac
 				fi
 			done
@@ -240,6 +241,9 @@ if [ "$1" == "add" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
+		if [ -f $3$4/uevent ]; then
+			ln -sf $3$4/uevent $config_path/port_config_done
+		fi
 		asic_health=`cat $3$4/asic1`
 		if [ $asic_health -ne 2 ]; then
 			exit 0
@@ -250,10 +254,17 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-		   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			/usr/bin/hw-management.sh chipup
-		fi
+		nos=`cat $config_path/nos`
+		case $nos in
+		*SONiC*)
+			;;
+		*)
+			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
+			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
+				/usr/bin/hw-management.sh chipup
+			fi
+			;;
+		esac
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -365,10 +376,17 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				/usr/bin/hw-management.sh chipup
-			fi
+			nos=`cat $config_path/nos`
+			case $nos in
+			*SONiC*)
+				;;
+			*)
+				if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
+				   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
+					/usr/bin/hw-management.sh chipup
+				fi
+				;;
+			esac
 		elif [ "$3" == "down" ]; then
 			if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
 			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
@@ -377,11 +395,26 @@ elif [ "$1" == "change" ]; then
 		else
 			asic_health=`cat $4$5/asic1`
 			if [ $asic_health -eq 2 ]; then
-				/usr/bin/hw-management.sh chipup
+				nos=`cat $config_path/nos`
+				case $nos in
+				*SONiC*)
+					;;
+				*)
+					/usr/bin/hw-management.sh chipup
+					;;
+				esac
 			else
 				/usr/bin/hw-management.sh chipdown
 			fi
 		fi
+	fi
+elif [ "$1" == "online" ]; then
+	if [ "$2" == "hotplug" ]; then
+		/usr/bin/hw-management.sh chipup
+	fi
+elif [ "$1" == "offline" ]; then
+	if [ "$2" == "hotplug" ]; then
+		/usr/bin/hw-management.sh chipdown
 	fi
 else
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
@@ -530,6 +563,9 @@ else
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
+		fi
+		if [ -L $config_path/port_config_done ]; then
+			unlink $config_path/port_config_done
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))

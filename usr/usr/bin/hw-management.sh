@@ -580,6 +580,8 @@ do_start()
 	find_i2c_bus
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
+	nos=`show version  2>&1 | grep SONiC | awk '{print $1}'`
+	echo $nos > $config_path/nos
 	connect_platform
 
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&

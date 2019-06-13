@@ -85,6 +85,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="online", RUN+="/usr/bin/hw-management-thermal-events.sh online hotplug"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="offline", RUN+="/usr/bin/hw-management-thermal-events.sh offline hotplug"
 
 # mlxreg fan device.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add regfan %S %p"
