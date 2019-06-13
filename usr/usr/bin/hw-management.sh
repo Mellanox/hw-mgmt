@@ -65,7 +65,7 @@ thermal_type_t3=3
 thermal_type_t4=4
 thermal_type_t4=4
 thermal_type_t5=5
-thermal_type_t5=6
+thermal_type_t6=6
 max_psus=2
 max_tachos=12
 i2c_bus_max=10
@@ -84,6 +84,7 @@ thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
 environment_path=$hw_management_path/environment
 power_path=$hw_management_path/power
+alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
@@ -345,7 +346,7 @@ mqmxxx_msn37x_msn34x_specific()
 		dis_table[i]=${mqm8700_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t1
+	thermal_type=$thermal_type_t5
 	max_tachos=12
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
@@ -364,7 +365,7 @@ msn38xx_specific()
 		dis_table[i]=${msn3800_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t1
+	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
 	echo 11000 > $config_path/fan_max_speed
@@ -527,6 +528,9 @@ create_symbolic_links()
 	fi
 	if [ ! -d $power_path ]; then
 		mkdir $power_path
+	fi
+	if [ ! -d $alarm_path ]; then
+		mkdir $alarm_path
 	fi
 	if [ ! -d $eeprom_path ]; then
 		mkdir $eeprom_path
