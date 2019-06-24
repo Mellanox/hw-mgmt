@@ -1,4 +1,26 @@
 ================================================================================
+- V.2.0.0183
+- Tue, 24 Jun 2019
+--------------------------------------------------------------------------------
+- New Features:
+    o   Thermal:
+        - fix attributes name in periodic log report
+        - remove unused code
+        - add support for gearbox devices temperature and thermalzones
+        - add symbolic links for gearboxes
+        - add dynamic minimum table for MSN3700
+        - add module counter attribute
+    o   udev:
+        - add udev rules and handlers for sfp interfaces move and remove actions
+    o   chassis service: 
+        - improve lock robustness
+    o   Events:
+        - add alarm folder for PS and voltage monitor devices alarms.
+- Known issues:
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+
+================================================================================
 - V.2.0.0181
 - Tue, 4 Jun 2019
 --------------------------------------------------------------------------------
