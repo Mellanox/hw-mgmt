@@ -150,14 +150,14 @@ if [ "$1" == "add" ]; then
 						unlock_service_state_change
 						;;
 					*gear*)
-						#label="${label:8}"
-						#ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$label"
 						lock_service_state_change
 						[ -f "$config_path/gearbox_counter" ] && gearbox_counter=`cat $config_path/gearbox_counter`
 						gearbox_counter=$(($gearbox_counter+1))
 						echo $gearbox_counter > $config_path/gearbox_counter
 						unlock_service_state_change
 						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$gearbox_counter"
+						;;
+					*)
 						;;
 					esac
 				fi
@@ -259,10 +259,7 @@ if [ "$1" == "add" ]; then
 		*SONiC*)
 			;;
 		*)
-			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				/usr/bin/hw-management.sh chipup
-			fi
+			/usr/bin/hw-management.sh chipup
 			;;
 		esac
   	fi
@@ -381,17 +378,11 @@ elif [ "$1" == "change" ]; then
 			*SONiC*)
 				;;
 			*)
-				if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-				   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-					/usr/bin/hw-management.sh chipup
-				fi
+				/usr/bin/hw-management.sh chipup
 				;;
 			esac
 		elif [ "$3" == "down" ]; then
-			if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
-			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				/usr/bin/hw-management.sh chipdown
-			fi
+			/usr/bin/hw-management.sh chipdown
 		else
 			asic_health=`cat $4$5/asic1`
 			if [ $asic_health -eq 2 ]; then
@@ -570,10 +561,7 @@ else
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		path=/sys/bus/i2c/devices/i2c-$bus
-		if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
-		   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			/usr/bin/hw-management.sh chipdown
-		fi
+		/usr/bin/hw-management.sh chipdown
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack

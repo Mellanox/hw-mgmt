@@ -582,7 +582,7 @@ do_start()
 	echo $asic_bus > $config_path/asic_bus
 	if [ -d /etc/sonic ]; then
 		nos=SONiC
-	fi`
+	fi
 	echo $nos > $config_path/nos
 	connect_platform
 
@@ -634,13 +634,6 @@ do_chip_up_down()
 		;;
 	1)
 		lock_service_state_change
-		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-		if [ $disable ] && [ "$disable" -gt 0 ]; then
-			disable=$(($disable-1))
-			echo $disable > $config_path/chipup_dis
-			unlock_service_state_change
-			exit 0
-		fi
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
 			delay=`cat $config_path/chipup_delay`
 			sleep $delay
@@ -680,16 +673,6 @@ case $ACTION in
 	;;
 	chipdown)
 		do_chip_up_down 0
-	;;
-	chipupen)
-		echo 0 > $config_path/chipup_dis
-	;;
-	chipupdis)
-		if [ -z "$2" ]; then
-			echo 1 > $config_path/chipup_dis
-		else
-			echo $2 > $config_path/chipup_dis
-		fi
 	;;
 	thermsuspend)
 		echo 1 > $config_path/suspend
