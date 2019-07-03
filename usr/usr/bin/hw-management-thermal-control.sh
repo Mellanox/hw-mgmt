@@ -1110,7 +1110,9 @@ init_system_dynamic_minimum_db
 init_fan_dynamic_minimum_speed
 
 module_counter=`cat $config_path/module_counter`
-gearbox_counter=`cat $config_path/gearbox_counter`
+if [ -f $config_path/gearbox_counter ]; then
+	gearbox_counter=`cat $config_path/gearbox_counter`
+fi
 
 echo $thermal_control_pid > /var/run/hw-management.pid
 log_action_msg "Mellanox thermal control is started"
