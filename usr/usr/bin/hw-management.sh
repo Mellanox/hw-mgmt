@@ -662,19 +662,30 @@ case $ACTION in
 		do_start
 	;;
 	stop)
-		do_stop
+		if [ -d /var/run/hw-management ]; then
+			do_chip_up_down 0
+			do_stop
+		fi
 	;;
 	chipup)
-		do_chip_up_down 1 $2
+		if [ -d /var/run/hw-management ]; then
+			do_chip_up_down 1 $2
+		fi
 	;;
 	chipdown)
-		do_chip_up_down 0
+		if [ -d /var/run/hw-management ]; then
+			do_chip_up_down 0
+		fi
 	;;
 	thermsuspend)
-		echo 1 > $config_path/suspend
+		if [ -d /var/run/hw-management ]; then
+			echo 1 > $config_path/suspend
+		fi
 	;;
 	thermresume)
-		echo 0 > $config_path/suspend
+		if [ -d /var/run/hw-management ]; then
+			echo 0 > $config_path/suspend
+		fi
 	;;
 	restart|force-reload)
 		do_stop
