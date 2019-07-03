@@ -1,0 +1,55 @@
+From 8232c24562132967c79c2ff588abb6f6e697c6ad Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Wed, 3 Jul 2019 08:40:07 +0000
+Subject: [PATCH v1 backport] mlxsw: core: Skip port split entries in hwmon
+ subsystem
+
+Signed-of-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c   | 7 ++++++-
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 2 +-
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index a414a09efb5d..95b890298952 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -512,9 +512,9 @@ static int mlxsw_hwmon_fans_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
+ 	unsigned int module_count = mlxsw_core_max_ports(mlxsw_hwmon->core);
++	u8 width, module, last_module = module_count;
+ 	char pmlp_pl[MLXSW_REG_PMLP_LEN] = {0};
+ 	int i, index;
+-	u8 width;
+ 	int err;
+ 
+ 	if (!mlxsw_core_res_query_enabled(mlxsw_hwmon->core))
+@@ -538,6 +538,11 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ 		width = mlxsw_reg_pmlp_width_get(pmlp_pl);
+ 		if (!width)
+ 			continue;
++		module = mlxsw_reg_pmlp_module_get(pmlp_pl, 0);
++		/* Skip, if port belongs to the cluster */
++		if (module == last_module)
++			continue;
++		last_module = module;
+ 		mlxsw_hwmon_attr_add(mlxsw_hwmon,
+ 				     MLXSW_HWMON_ATTR_TYPE_TEMP_MODULE, index,
+ 				     index);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 499c82cea1cb..e9451e447bf0 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -906,7 +906,7 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal)
+ 	int i;
+ 
+ 	for (i = thermal->tz_gearbox_num - 1; i >= 0; i--)
+-		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]); /*Remove*/
++		mlxsw_thermal_gearbox_tz_fini(&thermal->tz_gearbox_arr[i]);
+ 	kfree(thermal->tz_gearbox_arr);
+ }
+ 
+-- 
+2.11.0
+
