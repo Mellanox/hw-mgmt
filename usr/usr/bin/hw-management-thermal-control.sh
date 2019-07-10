@@ -795,7 +795,7 @@ init_fan_dynamic_minimum_speed()
 
 thermal_control_exit()
 {
-	log_action_msg "Mellanox thermal control is terminated (PID=${thermal_control_pid})."
+	log_action_msg "Mellanox thermal control is terminated (PID=${thermal_control_pid})"
 
 	if [ -f /var/run/hw-management.pid ]; then
 		rm -rf /var/run/hw-management.pid
@@ -866,10 +866,10 @@ trap 'thermal_down_event' USR1
 # Initialization during start up.
 thermal_control_pid=$$
 if [ -f /var/run/hw-management.pid ]; then
-	zone1=`cat /var/run/hw-management.pid`
+	pid=`cat /var/run/hw-management.pid`
 	# Only one instance of thermal control could be activated
-	if [ -d /proc/$zone1 ]; then
-		log_warning_msg "Mellanox thermal control is already running."
+	if [ -d /proc/$pid ]; then
+		log_warning_msg "Mellanox thermal control is already running (PID=${thermal_control_pid})"
 		exit 0
 	fi
 fi
@@ -1104,6 +1104,8 @@ get_tz_highest()
 }
 
 # Wait for thermal configuration.
+echo $thermal_control_pid > /var/run/hw-management.pid
+log_action_msg "Mellanox thermal control is waiting for configuration (PID=${thermal_control_pid})"
 /bin/sleep $wait_for_config
 # Initialize system dynamic minimum speed data base.
 init_system_dynamic_minimum_db
@@ -1114,7 +1116,6 @@ if [ -f $config_path/gearbox_counter ]; then
 	gearbox_counter=`cat $config_path/gearbox_counter`
 fi
 
-echo $thermal_control_pid > /var/run/hw-management.pid
 log_action_msg "Mellanox thermal control is started"
 
 # Periodic report counter

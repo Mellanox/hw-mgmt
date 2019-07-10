@@ -591,13 +591,15 @@ do_stop()
 	if [ -f $PID ]; then
 		pid=`cat $PID`
 		if [ -d /proc/$pid ]; then
-			kill $pid
+			kill -9 $pid
 		fi
+		rm -rf $PID
 	fi
 
 	check_system
 	disconnect_platform
 	remove_symbolic_links
+	rm /var/run/hw-management*
 }
 
 function lock_service_state_change()
@@ -664,6 +666,7 @@ case $ACTION in
 	stop)
 		if [ -d /var/run/hw-management ]; then
 			do_chip_up_down 0
+			sleep 5
 			do_stop
 		fi
 	;;

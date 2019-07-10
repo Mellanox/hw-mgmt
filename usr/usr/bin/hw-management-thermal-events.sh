@@ -449,21 +449,31 @@ else
 				unlink $thermal_path/$pwm1
 			fi
 		fi
-		for ((i=2; i<=$max_module_gbox_ind; i+=1)); do
+		for ((i=$max_module_gbox_ind; i>=2; i-=1)); do
 			j=$(($i-1))
 			if [ -L $thermal_path/temp_input_module"$j" ]; then
 				unlink $thermal_path/temp_input_module"$j"
-				unlink $thermal_path/temp_fault_module"$j"
-				unlink $thermal_path/temp_crit_module"$j"
-				unlink $thermal_path/temp_emergency_module"$j"
 				lock_service_state_change
 				[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 				module_counter=$(($module_counter-1))
 				echo $module_counter > $config_path/module_counter
 				unlock_service_state_change
 			fi
+			if [ -L $thermal_path/temp_fault_module"$j" ]; then
+				unlink $thermal_path/temp_fault_module"$j"
+			fi
+			if [ -L $thermal_path/temp_crit_module"$j" ]; then
+				unlink $thermal_path/temp_crit_module"$j"
+			fi
+			if [ -L $thermal_path/temp_emergency_module"$j" ]; then
+				unlink $thermal_path/temp_emergency_module"$j"
+			fi
 		done
 		find /var/run/hw-management/thermal/ -type l -name 'temp_input_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name 'temp_fault_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name 'temp_crit_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name 'temp_emergency_*' -exec rm {} +
+		echo 0 > $config_path/module_counter
 		echo 0 > $config_path/gearbox_counter
 	fi
 	if [ "$2" == "regfan" ]; then
