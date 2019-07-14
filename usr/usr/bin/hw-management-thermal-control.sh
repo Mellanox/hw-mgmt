@@ -874,6 +874,9 @@ if [ -f /var/run/hw-management.pid ]; then
 	fi
 fi
 
+log_action_msg "Mellanox thermal control is started"
+echo $thermal_control_pid > /var/run/hw-management.pid
+
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
 
 disable_zones_def_pwm()
@@ -1104,7 +1107,6 @@ get_tz_highest()
 }
 
 # Wait for thermal configuration.
-echo $thermal_control_pid > /var/run/hw-management.pid
 log_action_msg "Mellanox thermal control is waiting for configuration (PID=${thermal_control_pid})"
 /bin/sleep $wait_for_config
 # Initialize system dynamic minimum speed data base.
@@ -1115,8 +1117,6 @@ module_counter=`cat $config_path/module_counter`
 if [ -f $config_path/gearbox_counter ]; then
 	gearbox_counter=`cat $config_path/gearbox_counter`
 fi
-
-log_action_msg "Mellanox thermal control is started"
 
 # Periodic report counter
 periodic_report=$(($polling_time*$report_counter))
