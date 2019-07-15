@@ -232,6 +232,7 @@ if [ "$1" == "add" ]; then
 		addr="0x${busfolder: -2}"
 		find_eeprom_name $bus $addr
 		ln -sf $3$4/eeprom $eeprom_path/$eeprom_name 2>/dev/null
+		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
 	fi
 	if [ "$2" == "qsfp" ]; then
 		qsfp_add_handler "${3}${4}"

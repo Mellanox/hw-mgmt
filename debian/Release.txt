@@ -1,4 +1,24 @@
 ================================================================================
+- V.2.0.0187
+- Mon, 17 Jul 2019
+--------------------------------------------------------------------------------
+- New Features:
+    o   Change eeprom defualt permission to read-only.
+    o   Add support to port_init_complete for SONIC 
+- Backport patchset (kernel 4.9): 
+    o   recipes-kernel/linux/linux-4.9/0030-mlxsw-core-Skip-port-split-entries-in-hwmon-subsyste.patch
+- Bug fixes (Thermal, events)
+    o   #1816776: Invalid values of module_counter/sfp_counter on SN3700
+    o   #1816774: HW-MGMT start/stop spawns thermal control zombie processes on SN2010
+    o   #1808797: Invalid values of module_counter/sfp_counter on SN2010
+    o   #1811475: SFP counter shows negative values on SN2010
+    o   #1811986: HW-MGMT thermal control fails on SN3700
+    o   #1816772: HW-MGMT thermal symlinks unlink fails on SN2010
+- Known issues:
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+
+================================================================================
 - V.2.0.0183
 - Tue, 24 Jun 2019
 --------------------------------------------------------------------------------
