@@ -85,7 +85,9 @@ asic_hotplug_helper()
 	*SONiC*)
 		;;
 	*)
-		/usr/bin/hw-management.sh chipup
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipup
+		fi
 		;;
 	esac
 }

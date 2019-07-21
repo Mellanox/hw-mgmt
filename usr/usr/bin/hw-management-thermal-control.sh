@@ -1113,7 +1113,9 @@ log_action_msg "Mellanox thermal control is waiting for configuration (PID=${the
 init_system_dynamic_minimum_db
 init_fan_dynamic_minimum_speed
 
-module_counter=`cat $config_path/module_counter`
+if [ -f $config_path/module_counter ]; then
+	module_counter=`cat $config_path/module_counter`
+fi
 if [ -f $config_path/gearbox_counter ]; then
 	gearbox_counter=`cat $config_path/gearbox_counter`
 fi
