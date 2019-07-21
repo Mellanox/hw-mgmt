@@ -72,6 +72,24 @@ find_i2c_bus()
 	exit 0
 }
 
+asic_hotplug_helper()
+{
+	if [ ! -f $config_path/nos ]; then
+		if [ -d /etc/sonic ]; then
+			nos=SONiC
+		fi
+		echo $nos > $config_path/nos
+	fi
+	nos=`cat $config_path/nos`
+	case $nos in
+	*SONiC*)
+		;;
+	*)
+		/usr/bin/hw-management.sh chipup
+		;;
+	esac
+}
+
 lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
@@ -150,14 +168,15 @@ if [ "$1" == "add" ]; then
 						unlock_service_state_change
 						;;
 					*gear*)
-						#label="${label:8}"
-						#ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$label"
 						lock_service_state_change
 						[ -f "$config_path/gearbox_counter" ] && gearbox_counter=`cat $config_path/gearbox_counter`
 						gearbox_counter=$(($gearbox_counter+1))
 						echo $gearbox_counter > $config_path/gearbox_counter
 						unlock_service_state_change
 						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$gearbox_counter"
+						;;
+					*)
+						;;
 					esac
 				fi
 			done
@@ -240,6 +259,9 @@ if [ "$1" == "add" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
+		if [ -f $3$4/uevent ]; then
+			ln -sf $3$4/uevent $config_path/port_config_done
+		fi
 		asic_health=`cat $3$4/asic1`
 		if [ $asic_health -ne 2 ]; then
 			exit 0
@@ -250,10 +272,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-		   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			/usr/bin/hw-management.sh chipup
-		fi
+		asic_hotplug_helper
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -365,23 +384,25 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				/usr/bin/hw-management.sh chipup
-			fi
+			asic_hotplug_helper
 		elif [ "$3" == "down" ]; then
-			if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
-			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				/usr/bin/hw-management.sh chipdown
-			fi
+			/usr/bin/hw-management.sh chipdown
 		else
 			asic_health=`cat $4$5/asic1`
 			if [ $asic_health -eq 2 ]; then
-				/usr/bin/hw-management.sh chipup
+				asic_hotplug_helper
 			else
 				/usr/bin/hw-management.sh chipdown
 			fi
 		fi
+	fi
+elif [ "$1" == "online" ]; then
+	if [ "$2" == "hotplug" ]; then
+		/usr/bin/hw-management.sh chipup
+	fi
+elif [ "$1" == "offline" ]; then
+	if [ "$2" == "hotplug" ]; then
+		/usr/bin/hw-management.sh chipdown
 	fi
 else
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
@@ -428,21 +449,31 @@ else
 				unlink $thermal_path/$pwm1
 			fi
 		fi
-		for ((i=2; i<=$max_module_gbox_ind; i+=1)); do
+		for ((i=$max_module_gbox_ind; i>=2; i-=1)); do
 			j=$(($i-1))
 			if [ -L $thermal_path/temp_input_module"$j" ]; then
 				unlink $thermal_path/temp_input_module"$j"
-				unlink $thermal_path/temp_fault_module"$j"
-				unlink $thermal_path/temp_crit_module"$j"
-				unlink $thermal_path/temp_emergency_module"$j"
 				lock_service_state_change
 				[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 				module_counter=$(($module_counter-1))
 				echo $module_counter > $config_path/module_counter
 				unlock_service_state_change
 			fi
+			if [ -L $thermal_path/temp_fault_module"$j" ]; then
+				unlink $thermal_path/temp_fault_module"$j"
+			fi
+			if [ -L $thermal_path/temp_crit_module"$j" ]; then
+				unlink $thermal_path/temp_crit_module"$j"
+			fi
+			if [ -L $thermal_path/temp_emergency_module"$j" ]; then
+				unlink $thermal_path/temp_emergency_module"$j"
+			fi
 		done
 		find /var/run/hw-management/thermal/ -type l -name 'temp_input_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name 'temp_fault_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name 'temp_crit_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name 'temp_emergency_*' -exec rm {} +
+		echo 0 > $config_path/module_counter
 		echo 0 > $config_path/gearbox_counter
 	fi
 	if [ "$2" == "regfan" ]; then
@@ -531,13 +562,13 @@ else
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
+		if [ -L $config_path/port_config_done ]; then
+			unlink $config_path/port_config_done
+		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 		path=/sys/bus/i2c/devices/i2c-$bus
-		if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
-		   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
-			/usr/bin/hw-management.sh chipdown
-		fi
+		/usr/bin/hw-management.sh chipdown
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
