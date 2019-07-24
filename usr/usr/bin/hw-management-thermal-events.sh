@@ -72,26 +72,6 @@ find_i2c_bus()
 	exit 0
 }
 
-asic_hotplug_helper()
-{
-	if [ ! -f $config_path/nos ]; then
-		if [ -d /etc/sonic ]; then
-			nos=SONiC
-		fi
-		echo $nos > $config_path/nos
-	fi
-	nos=`cat $config_path/nos`
-	case $nos in
-	*SONiC*)
-		;;
-	*)
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			/usr/bin/hw-management.sh chipup
-		fi
-		;;
-	esac
-}
-
 lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
@@ -274,7 +254,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		asic_hotplug_helper
+		/usr/bin/hw-management.sh chipup
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -386,13 +366,13 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			asic_hotplug_helper
+			/usr/bin/hw-management.sh chipup
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown
 		else
 			asic_health=`cat $4$5/asic1`
 			if [ $asic_health -eq 2 ]; then
-				asic_hotplug_helper
+				/usr/bin/hw-management.sh chipup
 			else
 				/usr/bin/hw-management.sh chipdown
 			fi
