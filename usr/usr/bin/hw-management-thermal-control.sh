@@ -71,6 +71,23 @@
 
 . /lib/lsb/init-functions
 
+# Check if this is Redhat based distribution (RH, CentOS, Fedora etc.)
+# log_action_msg exist in Debian LSB definitions
+# Define log_action_msg function in case of Redhat based distribution
+if [ -d /etc/redhat-lsb ]; then
+log_action_msg()
+{
+        echo "$@"
+        command -v systemd-cat > /dev/null 2>&1
+        rc=$?
+        if [ $rc -eq 0 ]; then
+                echo "$@" | systemd-cat -p info -t hw-management
+        else
+                logger -p info -t hw-management "$@"
+        fi
+}
+fi
+
 # Paths to thermal sensors, device present states, thermal zone and cooling device
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
