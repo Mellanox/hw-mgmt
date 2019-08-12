@@ -159,10 +159,10 @@ if [ "$1" == "add" ]; then
 					case $label in
 					*front*)
 						j=$(($i-1))
-						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_module"$j"
-						ln -sf $3$4/temp"$i"_fault $thermal_path/temp_fault_module"$j"
-						ln -sf $3$4/temp"$i"_crit $thermal_path/temp_crit_module"$j"
-						ln -sf $3$4/temp"$i"_emergency $thermal_path/temp_emergency_module"$j"
+						ln -sf $3$4/temp"$i"_input $thermal_path/module"$j"_temp_input
+						ln -sf $3$4/temp"$i"_fault $thermal_path/module"$j"_temp_fault
+						ln -sf $3$4/temp"$i"_crit $thermal_path/module"$j"_temp_crit
+						ln -sf $3$4/temp"$i"_emergency $thermal_path/module"$j"_temp_emergency
 						lock_service_state_change
 						[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 						module_counter=$(($module_counter+1))
@@ -175,7 +175,7 @@ if [ "$1" == "add" ]; then
 						gearbox_counter=$(($gearbox_counter+1))
 						echo $gearbox_counter > $config_path/gearbox_counter
 						unlock_service_state_change
-						ln -sf $3$4/temp"$i"_input $thermal_path/temp_input_gearbox"$gearbox_counter"
+						ln -sf $3$4/temp"$i"_input $thermal_path/gearbox"$gearbox_counter"_temp_input
 						;;
 					*)
 						;;
@@ -453,28 +453,28 @@ else
 		fi
 		for ((i=$max_module_gbox_ind; i>=2; i-=1)); do
 			j=$(($i-1))
-			if [ -L $thermal_path/temp_input_module"$j" ]; then
-				unlink $thermal_path/temp_input_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_input ]; then
+				unlink $thermal_path/module"$j"_temp_input
 				lock_service_state_change
 				[ -f "$config_path/module_counter" ] && module_counter=`cat $config_path/module_counter`
 				module_counter=$(($module_counter-1))
 				echo $module_counter > $config_path/module_counter
 				unlock_service_state_change
 			fi
-			if [ -L $thermal_path/temp_fault_module"$j" ]; then
-				unlink $thermal_path/temp_fault_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_fault ]; then
+				unlink $thermal_path/module"$j"_temp_fault
 			fi
-			if [ -L $thermal_path/temp_crit_module"$j" ]; then
-				unlink $thermal_path/temp_crit_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_crit ]; then
+				unlink $thermal_path/module"$j"_temp_crit
 			fi
-			if [ -L $thermal_path/temp_emergency_module"$j" ]; then
-				unlink $thermal_path/temp_emergency_module"$j"
+			if [ -L $thermal_path/module"$j"_temp_emergency ]; then
+				unlink $thermal_path/module"$j"_temp_emergency
 			fi
 		done
-		find /var/run/hw-management/thermal/ -type l -name 'temp_input_*' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name 'temp_fault_*' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name 'temp_crit_*' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name 'temp_emergency_*' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_input' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_fault' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_crit' -exec rm {} +
+		find /var/run/hw-management/thermal/ -type l -name '*_temp_emergency' -exec rm {} +
 		echo 0 > $config_path/module_counter
 		echo 0 > $config_path/gearbox_counter
 	fi

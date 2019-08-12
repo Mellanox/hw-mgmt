@@ -340,8 +340,8 @@ validate_thermal_configuration()
 		return 1
 	fi
 	for ((i=1; i<=$module_counter; i+=1)); do
-		if [ -L $thermal_path/temp_module"$i" ]; then
-			if [ ! -L $thermal_path/temp_module_fault"$i" ]; then
+		if [ -L $thermal_path/module"$i"_temp ]; then
+			if [ ! -L $thermal_path/module"$i"_temp_fault ]; then
 				log_failure_msg "QSFP module attributes are not exist"
 				return 1
 			fi
@@ -366,8 +366,8 @@ check_untrested_module_sensor()
 		if [ "$?" -ne 0 ]; then
 			exit
 		fi
-		if [ -L $thermal_path/temp_fault_module"$i" ]; then
-			temp_fault=`cat $thermal_path/temp_fault_module"$i"`
+		if [ -L $thermal_path/module"$i"_temp_fault ]; then
+			temp_fault=`cat $thermal_path/module"$i"_temp_fault`
 			if [ $temp_fault -eq 1 ]; then
 				untrusted_sensor=1
 			fi
@@ -410,12 +410,12 @@ thermal_periodic_report()
 		fi
 	done
 	for ((i=1; i<=$module_counter; i+=1)); do
-		if [ -f $thermal_path/temp_input_module"$i" ]; then
-			t1=`cat $thermal_path/temp_input_module"$i"`
+		if [ -f $thermal_path/module"$i"_temp_input ]; then
+			t1=`cat $thermal_path/module"$i"_temp_input`
 			if [ "$t1" -gt  "0" ]; then
-				t2=`cat $thermal_path/temp_fault_module"$i"`
-				t3=`cat $thermal_path/temp_crit_module"$i"`
-				t4=`cat $thermal_path/temp_emergency_module"$i"`
+				t2=`cat $thermal_path/module"$i"_temp_fault`
+				t3=`cat $thermal_path/module"$i"_temp_crit`
+				t4=`cat $thermal_path/module"$i"_temp_emergency`
 				log_success_msg "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 			if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
@@ -433,8 +433,8 @@ thermal_periodic_report()
 		fi
 	done
 	for ((i=1; i<=$gearbox_counter; i+=1)); do
-		if [ -f $thermal_path/temp_input_gearbox"$i" ]; then
-			t1=`cat $thermal_path/temp_input_gearbox"$i"`
+		if [ -f $thermal_path/gearbox"$i"_temp_input ]; then
+			t1=`cat $thermal_path/gearbox"$i"_temp_input`
 			if [ "$t1" -gt  "0" ]; then
 				log_success_msg "gearbox$i temp $t1"
 			fi
