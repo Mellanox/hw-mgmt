@@ -642,6 +642,7 @@ do_chip_up_down()
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
 			delay=`cat $config_path/chipup_delay`
 			sleep $delay
+			echo 0 > $config_path/sfp_counter
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
 		fi
 		case $2 in

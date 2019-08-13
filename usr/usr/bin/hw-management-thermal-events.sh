@@ -321,6 +321,9 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
 	fi
+	if [ "$2" == "sxcore" ]; then
+		echo 1 > $config_path/sxcore
+	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "thermal_zone" ]; then
 		zonetype=`cat $3$4/type`
@@ -628,5 +631,8 @@ else
 		if [ -L $power_path/$2_curr ]; then
 			unlink $power_path/$2_curr
 		fi
+	fi
+	if [ "$2" == "sxcore" ]; then
+		echo 0 > $config_path/sxcore
 	fi
 fi
