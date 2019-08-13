@@ -361,8 +361,10 @@ else
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
 		[ -f "$config_path/sfp_counter" ] && sfp_counter=`cat $config_path/sfp_counter`
-		sfp_counter=$(($sfp_counter-1))
-		echo $sfp_counter > $config_path/sfp_counter
+		if [ $sfp_counter > 0]; then
+			sfp_counter=$(($sfp_counter-1))
+			echo $sfp_counter > $config_path/sfp_counter
+		fi
 		unlock_service_state_change
 	fi
 fi

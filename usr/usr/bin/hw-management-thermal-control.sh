@@ -299,8 +299,8 @@ c2p_dir_trust_t5=(20000 12 30000 13 40000 14 $max_amb 14)
 c2p_dir_untrust_t5=(20000 12 35000 13 40000 14 $max_amb 14)
 unk_dir_trust_t5=(20000 12  $max_amb 14)
 unk_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-trust4=12
-untrust4=16
+trust5=12
+untrust5=16
 
 # Local variables
 report_counter=120
@@ -653,7 +653,7 @@ set_pwm_min_threshold()
 			size=${#unk_dir_trust[@]}
 			for ((i=0; i<$size; i+=2)); do
 				tresh=${unk_dir_trust[i]}
-				if [ $ambient -lt $tresh]; then
+				if [ $ambient -lt $tresh ]; then
 					fan_dynamic_min=${unk_dir_trust[$(($i+1))]}
 					break
 				fi
@@ -732,12 +732,12 @@ init_system_dynamic_minimum_db()
 		;;
 	5)
 		# Config FAN minimal speed setting for class t5
-		config_p2c_dir_trust "${p2c_dir_trust_t1[@]}"
-		config_p2c_dir_untrust "${p2c_dir_untrust_t1[@]}"
-		config_c2p_dir_trust "${c2p_dir_trust_t1[@]}"
-		config_c2p_dir_untrust "${c2p_dir_untrust_t1[@]}"
-		config_unk_dir_trust "${unk_dir_trust_t1[@]}"
-		config_unk_dir_untrust "${unk_dir_untrust_t1[@]}"
+		config_p2c_dir_trust "${p2c_dir_trust_t5[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t5[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t5[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t5[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t5[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t5[@]}"
 		;;
 	6)
 		# Config FAN minimal speed setting for class t6

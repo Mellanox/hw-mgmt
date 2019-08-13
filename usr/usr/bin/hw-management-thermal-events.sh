@@ -72,26 +72,6 @@ find_i2c_bus()
 	exit 0
 }
 
-asic_hotplug_helper()
-{
-	if [ ! -f $config_path/nos ]; then
-		if [ -d /etc/sonic ]; then
-			nos=SONiC
-		fi
-		echo $nos > $config_path/nos
-	fi
-	nos=`cat $config_path/nos`
-	case $nos in
-	*SONiC*)
-		;;
-	*)
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			/usr/bin/hw-management.sh chipup
-		fi
-		;;
-	esac
-}
-
 lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
@@ -274,7 +254,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		asic_hotplug_helper
+		/usr/bin/hw-management.sh chipup
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -304,9 +284,11 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Set default fan speed
-		addr=`cat $config_path/psu"$i"_i2c_addr`
+		addr=`cat $config_path/"$2"_i2c_addr`
 		command=`cat $fan_command`
 		speed=`cat $fan_psu_default`
+		# Allow PS controller to stabilize
+		sleep 2
 		i2cset -f -y $bus $addr $command $speed wp
 		# Set I2C bus for psu
 		echo $bus > $config_path/"$2"_i2c_bus
@@ -340,6 +322,9 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/power2_input $power_path/$2_power
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
+	fi
+	if [ "$2" == "sxcore" ]; then
+		echo 1 > $config_path/sxcore
 	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "thermal_zone" ]; then
@@ -386,13 +371,13 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			asic_hotplug_helper
+			/usr/bin/hw-management.sh chipup
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown
 		else
 			asic_health=`cat $4$5/asic1`
 			if [ $asic_health -eq 2 ]; then
-				asic_hotplug_helper
+				/usr/bin/hw-management.sh chipup
 			else
 				/usr/bin/hw-management.sh chipdown
 			fi
@@ -648,5 +633,8 @@ else
 		if [ -L $power_path/$2_curr ]; then
 			unlink $power_path/$2_curr
 		fi
+	fi
+	if [ "$2" == "sxcore" ]; then
+		echo 0 > $config_path/sxcore
 	fi
 fi
