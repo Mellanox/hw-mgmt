@@ -1,4 +1,31 @@
 ================================================================================
+- V.2.0.0191
+- Tue, 13 Aug 2019
+--------------------------------------------------------------------------------
+- New Features:
+    o   Support new field in MGPIR register for module number.
+    o   FW version validation for compatibility.
+- Backport patchset (kernel 4.9): 
+    o   mellanox-platform-Backporting-Melanox-drivers-from-v.patch
+    o   mlxsw-minimal-Provide-optimization-for-module-number.patch
+    o   mlxsw-minimal-Add-validation-for-FW-version.patch
+- Script updates:
+    o   Add support for SX_Core add/remove events.
+    o   Chip-up/ down
+    o   Add Logic to differentiate diff temperature sensor provided by chip.
+    o   Set thermal control to "disabled" state as a default. …
+- Bug fixes (Thermal, events)
+    o   Fix - PS FAN setting.
+    o   Fix - modules(qsfps) and gearbox thermal links.
+    o   Fix - define log_action_msg function for Redhat based distributions.
+    o   Fix - sfp event counter and adding new trigger.
+    o   Fix - minor fix for dynamic minimum in thermal control.
+- Known issues:
+    o   This version require FW ver 29.2000.1886 (SPC2) / 13.2000.1886 (SPC1)
+        or higher.
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+================================================================================
 - V.2.0.0188
 - Wed, 17 Jul 2019
 --------------------------------------------------------------------------------
