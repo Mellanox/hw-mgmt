@@ -284,9 +284,11 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Set default fan speed
-		addr=`cat $config_path/psu"$i"_i2c_addr`
+		addr=`cat $config_path/"$2"_i2c_addr`
 		command=`cat $fan_command`
 		speed=`cat $fan_psu_default`
+		# Allow PS controller to stabilize
+		sleep 2
 		i2cset -f -y $bus $addr $command $speed wp
 		# Set I2C bus for psu
 		echo $bus > $config_path/"$2"_i2c_bus
