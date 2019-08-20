@@ -71,6 +71,23 @@
 
 . /lib/lsb/init-functions
 
+# Check if this is Redhat based distribution (RH, CentOS, Fedora etc.)
+# log_action_msg exist in Debian LSB definitions
+# Define log_action_msg function in case of Redhat based distribution
+if [ -d /etc/redhat-lsb ]; then
+log_action_msg()
+{
+        echo "$@"
+        command -v systemd-cat > /dev/null 2>&1
+        rc=$?
+        if [ $rc -eq 0 ]; then
+                echo "$@" | systemd-cat -p info -t hw-management
+        else
+                logger -p info -t hw-management "$@"
+        fi
+}
+fi
+
 # Paths to thermal sensors, device present states, thermal zone and cooling device
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
@@ -282,8 +299,8 @@ c2p_dir_trust_t5=(20000 12 30000 13 40000 14 $max_amb 14)
 c2p_dir_untrust_t5=(20000 12 35000 13 40000 14 $max_amb 14)
 unk_dir_trust_t5=(20000 12  $max_amb 14)
 unk_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-trust4=12
-untrust4=16
+trust5=12
+untrust5=16
 
 # Local variables
 report_counter=120
@@ -323,8 +340,8 @@ validate_thermal_configuration()
 		return 1
 	fi
 	for ((i=1; i<=$module_counter; i+=1)); do
-		if [ -L $thermal_path/temp_module"$i" ]; then
-			if [ ! -L $thermal_path/temp_module_fault"$i" ]; then
+		if [ -L $thermal_path/module"$i"_temp ]; then
+			if [ ! -L $thermal_path/module"$i"_temp_fault ]; then
 				log_failure_msg "QSFP module attributes are not exist"
 				return 1
 			fi
@@ -349,8 +366,8 @@ check_untrested_module_sensor()
 		if [ "$?" -ne 0 ]; then
 			exit
 		fi
-		if [ -L $thermal_path/temp_fault_module"$i" ]; then
-			temp_fault=`cat $thermal_path/temp_fault_module"$i"`
+		if [ -L $thermal_path/module"$i"_temp_fault ]; then
+			temp_fault=`cat $thermal_path/module"$i"_temp_fault`
 			if [ $temp_fault -eq 1 ]; then
 				untrusted_sensor=1
 			fi
@@ -393,12 +410,12 @@ thermal_periodic_report()
 		fi
 	done
 	for ((i=1; i<=$module_counter; i+=1)); do
-		if [ -f $thermal_path/temp_input_module"$i" ]; then
-			t1=`cat $thermal_path/temp_input_module"$i"`
+		if [ -f $thermal_path/module"$i"_temp_input ]; then
+			t1=`cat $thermal_path/module"$i"_temp_input`
 			if [ "$t1" -gt  "0" ]; then
-				t2=`cat $thermal_path/temp_fault_module"$i"`
-				t3=`cat $thermal_path/temp_crit_module"$i"`
-				t4=`cat $thermal_path/temp_emergency_module"$i"`
+				t2=`cat $thermal_path/module"$i"_temp_fault`
+				t3=`cat $thermal_path/module"$i"_temp_crit`
+				t4=`cat $thermal_path/module"$i"_temp_emergency`
 				log_success_msg "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 			if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
@@ -416,8 +433,8 @@ thermal_periodic_report()
 		fi
 	done
 	for ((i=1; i<=$gearbox_counter; i+=1)); do
-		if [ -f $thermal_path/temp_input_gearbox"$i" ]; then
-			t1=`cat $thermal_path/temp_input_gearbox"$i"`
+		if [ -f $thermal_path/gearbox"$i"_temp_input ]; then
+			t1=`cat $thermal_path/gearbox"$i"_temp_input`
 			if [ "$t1" -gt  "0" ]; then
 				log_success_msg "gearbox$i temp $t1"
 			fi
@@ -636,7 +653,7 @@ set_pwm_min_threshold()
 			size=${#unk_dir_trust[@]}
 			for ((i=0; i<$size; i+=2)); do
 				tresh=${unk_dir_trust[i]}
-				if [ $ambient -lt $tresh]; then
+				if [ $ambient -lt $tresh ]; then
 					fan_dynamic_min=${unk_dir_trust[$(($i+1))]}
 					break
 				fi
@@ -715,12 +732,12 @@ init_system_dynamic_minimum_db()
 		;;
 	5)
 		# Config FAN minimal speed setting for class t5
-		config_p2c_dir_trust "${p2c_dir_trust_t1[@]}"
-		config_p2c_dir_untrust "${p2c_dir_untrust_t1[@]}"
-		config_c2p_dir_trust "${c2p_dir_trust_t1[@]}"
-		config_c2p_dir_untrust "${c2p_dir_untrust_t1[@]}"
-		config_unk_dir_trust "${unk_dir_trust_t1[@]}"
-		config_unk_dir_untrust "${unk_dir_untrust_t1[@]}"
+		config_p2c_dir_trust "${p2c_dir_trust_t5[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t5[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t5[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t5[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t5[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t5[@]}"
 		;;
 	6)
 		# Config FAN minimal speed setting for class t6
@@ -1113,7 +1130,9 @@ log_action_msg "Mellanox thermal control is waiting for configuration (PID=${the
 init_system_dynamic_minimum_db
 init_fan_dynamic_minimum_speed
 
-module_counter=`cat $config_path/module_counter`
+if [ -f $config_path/module_counter ]; then
+	module_counter=`cat $config_path/module_counter`
+fi
 if [ -f $config_path/gearbox_counter ]; then
 	gearbox_counter=`cat $config_path/gearbox_counter`
 fi
