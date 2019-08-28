@@ -631,6 +631,12 @@ do_chip_up_down()
 		unlock_service_state_change
 		;;
 	1)
+		if [ -f /etc/init.d/sxdkernel ]; then
+			[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+			if [ $sxcore ] && [ "$sxcore" -eq 0 ]; then
+				return
+			fi
+		fi
 		lock_service_state_change
 		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
 		if [ $disable ] && [ "$disable" -gt 0 ]; then

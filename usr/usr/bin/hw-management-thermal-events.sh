@@ -324,7 +324,11 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/curr2_input $power_path/$2_curr
 	fi
 	if [ "$2" == "sxcore" ]; then
+		if [ ! -d /sys/module/mlxsw_minimal ]; then
+			modprobe mlxsw_minimal
+		fi
 		echo 1 > $config_path/sxcore
+		/usr/bin/hw-management.sh chipup
 	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "thermal_zone" ]; then
@@ -635,6 +639,7 @@ else
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
+		/usr/bin/hw-management.sh chipdown
 		echo 0 > $config_path/sxcore
 	fi
 fi
