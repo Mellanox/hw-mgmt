@@ -1,4 +1,17 @@
 ================================================================================
+- V.7.0000.2000
+- Wed, 28 Aug 2019
+--------------------------------------------------------------------------------
+- New Features:
+    o   Aligning HW-Mgmt Versioning to follow Mellanox guidelines.
+- Bug fixes (Thermal, events)
+    o   Fix - Customize init of GPIO base in favor of CPLD update via GPIO..
+- Known issues:
+    o   This version requires FW ver 29.2000.1886 (SPC2) / 13.2000.1886 (SPC1)
+        or higher.
+    o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
+        ethtool.
+================================================================================
 - V.2.0.0191
 - Tue, 13 Aug 2019
 --------------------------------------------------------------------------------
