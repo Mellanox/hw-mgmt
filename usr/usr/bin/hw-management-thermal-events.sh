@@ -254,7 +254,9 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		/usr/bin/hw-management.sh chipup
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipup
+		fi
   	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
@@ -327,7 +329,6 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		echo 1 > $config_path/sxcore
 		/usr/bin/hw-management.sh chipup
 	fi
 elif [ "$1" == "change" ]; then
@@ -368,32 +369,36 @@ elif [ "$1" == "change" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
-		find_i2c_bus
-		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
-		path=/sys/bus/i2c/devices/i2c-$bus
-		if [ "$3" == "up" ]; then
-			if [ ! -d /sys/module/mlxsw_minimal ]; then
-				modprobe mlxsw_minimal
-			fi
-			/usr/bin/hw-management.sh chipup
-		elif [ "$3" == "down" ]; then
-			/usr/bin/hw-management.sh chipdown
-		else
-			asic_health=`cat $4$5/asic1`
-			if [ $asic_health -eq 2 ]; then
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			find_i2c_bus
+			if [ "$3" == "up" ]; then
+				if [ ! -d /sys/module/mlxsw_minimal ]; then
+					modprobe mlxsw_minimal
+				fi
 				/usr/bin/hw-management.sh chipup
-			else
+			elif [ "$3" == "down" ]; then
 				/usr/bin/hw-management.sh chipdown
+			else
+				asic_health=`cat $4$5/asic1`
+				if [ $asic_health -eq 2 ]; then
+					/usr/bin/hw-management.sh chipup
+				else
+					/usr/bin/hw-management.sh chipdown
+				fi
 			fi
 		fi
 	fi
 elif [ "$1" == "online" ]; then
 	if [ "$2" == "hotplug" ]; then
-		/usr/bin/hw-management.sh chipup
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipup
+		fi
 	fi
 elif [ "$1" == "offline" ]; then
 	if [ "$2" == "hotplug" ]; then
-		/usr/bin/hw-management.sh chipdown
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipdown
+		fi
 	fi
 else
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
@@ -556,10 +561,9 @@ else
 		if [ -L $config_path/port_config_done ]; then
 			unlink $config_path/port_config_done
 		fi
-		find_i2c_bus
-		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
-		path=/sys/bus/i2c/devices/i2c-$bus
-		/usr/bin/hw-management.sh chipdown
+		if [ ! -f /etc/init.d/sxdkernel ]; then
+			/usr/bin/hw-management.sh chipdown
+		fi
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
@@ -640,6 +644,5 @@ else
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown
-		echo 0 > $config_path/sxcore
 	fi
 fi

@@ -79,6 +79,10 @@ fan_psu_default=0x3c
 fan_command=0x3b
 fan_max_speed=24000
 fan_min_speed=5000
+chip_reset_time=20
+sxcore_down=0
+sxcore_wait=1
+sxcore_up=2
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
@@ -624,6 +628,15 @@ do_chip_up_down()
 		lock_service_state_change
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
+			if [ -f /etc/init.d/sxdkernel ]; then
+				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_up" ]; then
+					echo $sxcore_down > $config_path/sxcore
+				else
+					unlock_service_state_change
+					return
+				fi
+			fi
 			delay=`cat $config_path/chipdown_delay`
 			sleep $delay
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
@@ -631,20 +644,33 @@ do_chip_up_down()
 		unlock_service_state_change
 		;;
 	1)
-		if [ -f /etc/init.d/sxdkernel ]; then
-			[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-			if [ $sxcore ] && [ "$sxcore" -eq 0 ]; then
-				return
-			fi
-		fi
 		lock_service_state_change
-		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
 		if [ $disable ] && [ "$disable" -gt 0 ]; then
 			disable=$(($disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
 			exit 0
 		fi
+		if [ -f /etc/init.d/sxdkernel ]; then
+			# Set delay in order to avoid impact of chip reset,
+			# performed by sxcore driver.
+			# In case sxcore driver does not reset chip, for example
+			# for reboot through kexec - just sleep 'chipup_delay'
+			# seconds.
+			echo $chip_reset_time > $config_path/chipup_delay
+			[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+			if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_down" ]; then
+				echo $sxcore_wait > $config_path/sxcore
+				unlock_service_state_change
+				return
+			elif [ $sxcore ] && [ "$sxcore" -eq "$sxcore_wait" ]; then
+				echo $sxcore_up > $config_path/sxcore
+			else
+				unlock_service_state_change
+				return
+			fi
+		fi
+		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
 			delay=`cat $config_path/chipup_delay`
 			sleep $delay
