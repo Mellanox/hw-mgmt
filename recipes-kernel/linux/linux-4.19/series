@@ -1,5 +1,5 @@
-0001-Mellanox-drivers-backport-patching-from-kernels-4.20.patch
-0002-Mellanox-drivers-backport-patching-from-next-kernels.patch
-0003-Mellanox-drivers-backport-patching-for-patches-for-n.patch
-0004-Mellanox-drivers-backport-patching-from-kernels-v5.1.patch
-0005-mlxsw-support-for-inter-connect-temperature-hardware.patch
+0001-mlx-amendments-fixes-new-kernel-alignmnet.patch
+0002-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch
+0003-mlxsw-new-features-amendments-new-kernel-alignment.patch
+0004-mlxsw-minimal-Provide-optimization-for-module-number.patch
+0005-platform-x86-mlx-platform-DMI-match-for-marginal-sys.patch
