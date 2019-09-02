@@ -1,6 +1,6 @@
-From 25076caf2e20b2eee71f0708aaaa9e3446261507 Mon Sep 17 00:00:00 2001
+From 7f4cedc718f415cf7aa0c09bcc9ffdbb5f43b093 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Sun, 10 Mar 2019 13:50:26 +0000
+Date: Mon, 2 Sep 2019 09:11:02 +0300
 Subject: [PATCH not for upstream] platform/x86: mlx-platform: DMI match for
  marginal systems
 
@@ -12,7 +12,7 @@ Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
  1 file changed, 26 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 0f60b7887928..e64bcf959aac 100644
+index c3e75b26fe0b..62c880b56f58 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -6,6 +6,7 @@
@@ -23,7 +23,7 @@ index 0f60b7887928..e64bcf959aac 100644
  #include <linux/device.h>
  #include <linux/dmi.h>
  #include <linux/i2c.h>
-@@ -1838,6 +1839,24 @@ static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
+@@ -2009,6 +2010,24 @@ static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
  	return 1;
  };
  
@@ -33,7 +33,7 @@ index 0f60b7887928..e64bcf959aac 100644
 +	case INTEL_FAM6_IVYBRIDGE:
 +			return mlxplat_dmi_default_matched(dmi);
 +
-+	case INTEL_FAM6_ATOM_SILVERMONT2:
++	case INTEL_FAM6_ATOM_SILVERMONT_X:
 +			return mlxplat_dmi_msn21xx_matched(dmi);
 +
 +	case INTEL_FAM6_BROADWELL_XEON_D: /* fall through */
@@ -45,11 +45,11 @@ index 0f60b7887928..e64bcf959aac 100644
 +	}
 +}
 +
- static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
- 	{
- 		.callback = mlxplat_dmi_msn274x_matched,
-@@ -1952,6 +1971,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0007"),
+ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
+ {
+ 	int i;
+@@ -2149,6 +2168,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_MATCH(DMI_PRODUCT_NAME, "MSN38"),
  		},
  	},
 +	/* This tuple must be last */
@@ -63,5 +63,5 @@ index 0f60b7887928..e64bcf959aac 100644
  };
  
 -- 
-2.11.0
+2.20.1
 
