@@ -369,22 +369,23 @@ elif [ "$1" == "change" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			find_i2c_bus
-			if [ "$3" == "up" ]; then
-				if [ ! -d /sys/module/mlxsw_minimal ]; then
-					modprobe mlxsw_minimal
-				fi
+		if [ "$3" == "up" ]; then
+			if [ ! -d /sys/module/mlxsw_minimal ]; then
+				modprobe mlxsw_minimal
+			fi
+			if [ ! -f /etc/init.d/sxdkernel ]; then
 				/usr/bin/hw-management.sh chipup
-			elif [ "$3" == "down" ]; then
-				/usr/bin/hw-management.sh chipdown
-			else
-				asic_health=`cat $4$5/asic1`
-				if [ $asic_health -eq 2 ]; then
+			fi
+		elif [ "$3" == "down" ]; then
+			/usr/bin/hw-management.sh chipdown
+		else
+			asic_health=`cat $4$5/asic1`
+			if [ $asic_health -eq 2 ]; then
+				if [ ! -f /etc/init.d/sxdkernel ]; then
 					/usr/bin/hw-management.sh chipup
-				else
-					/usr/bin/hw-management.sh chipdown
 				fi
+			else
+				/usr/bin/hw-management.sh chipdown
 			fi
 		fi
 	fi
@@ -396,9 +397,7 @@ elif [ "$1" == "online" ]; then
 	fi
 elif [ "$1" == "offline" ]; then
 	if [ "$2" == "hotplug" ]; then
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			/usr/bin/hw-management.sh chipdown
-		fi
+		/usr/bin/hw-management.sh chipdown
 	fi
 else
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
@@ -561,9 +560,7 @@ else
 		if [ -L $config_path/port_config_done ]; then
 			unlink $config_path/port_config_done
 		fi
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			/usr/bin/hw-management.sh chipdown
-		fi
+		/usr/bin/hw-management.sh chipdown
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
