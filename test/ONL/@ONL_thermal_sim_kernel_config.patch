@@ -1,0 +1,25 @@
+From f5006f4303a05df548724f8664e77d8165b59d88 Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@mellanox.com>
+Date: Tue, 10 Sep 2019 14:34:35 +0300
+Subject: [PATCH] Add thermal sim patch
+
+---
+ packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
+index f3fa5176..266e3ba2 100644
+--- a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
++++ b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
+@@ -2681,7 +2681,7 @@ CONFIG_THERMAL_GOV_STEP_WISE=y
+ # CONFIG_THERMAL_GOV_BANG_BANG is not set
+ CONFIG_THERMAL_GOV_USER_SPACE=y
+ # CONFIG_THERMAL_GOV_POWER_ALLOCATOR is not set
+-# CONFIG_THERMAL_EMULATION is not set
++CONFIG_THERMAL_EMULATION=y
+ # CONFIG_INTEL_POWERCLAMP is not set
+ CONFIG_X86_PKG_TEMP_THERMAL=m
+ # CONFIG_INTEL_SOC_DTS_THERMAL is not set
+-- 
+2.11.0
+
