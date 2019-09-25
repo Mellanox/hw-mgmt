@@ -293,13 +293,23 @@ untrust4=16
 # 35-40		30	50	30	30	30	50
 # 40-45		40	60	40	40	40	60
 
-p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-p2c_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-c2p_dir_trust_t5=(20000 12 30000 13 40000 14 $max_amb 14)
-c2p_dir_untrust_t5=(20000 12 35000 13 40000 14 $max_amb 14)
-unk_dir_trust_t5=(20000 12  $max_amb 14)
-unk_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-trust5=12
+#p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+#p2c_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
+#c2p_dir_trust_t5=(20000 12 30000 13 40000 14 $max_amb 14)
+#c2p_dir_untrust_t5=(20000 12 35000 13 40000 14 $max_amb 14)
+#unk_dir_trust_t5=(20000 12  $max_amb 14)
+#unk_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
+#trust5=12
+#untrust5=16
+# Temporary comment out the above table and put 60% as common default.
+# Uncomment it back after extra testing in chamber and remove the below.
+p2c_dir_trust_t5=(45000 16  $max_amb 16)
+p2c_dir_untrust_t5=(45000 16  $max_amb 16)
+c2p_dir_trust_t5=(45000 16  $max_amb 16)
+c2p_dir_untrust_t5=(45000 16  $max_amb 16)
+unk_dir_trust_t5=(45000 16  $max_amb 16)
+unk_dir_untrust_t5=(45000 16  $max_amb 16)
+trust5=16
 untrust5=16
 
 # Local variables
