@@ -12,6 +12,9 @@
     o   Extend QSFP eeprom read buffer size.
     o   Documentation: Fan dir, reset cause.
 - Known issues:
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 platforms (and their 
+        "-B" variants) require the following ACPI flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
     o   Few bug fixes introduced in recent upstream kernel 4.19, whoever use
         older 4.19 kernel then 68, should cherry pick the following commits:
         - d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
