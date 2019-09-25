@@ -3,3 +3,4 @@
 0003-mlxsw-new-features-amendments-new-kernel-alignment.patch
 0004-mlxsw-minimal-Provide-optimization-for-module-number.patch
 0005-platform-x86-mlx-platform-DMI-match-for-marginal-sys.patch
+0006-mlxsw-core-Extend-QSFP-EEPROM-size-and-add-support-f.patch
