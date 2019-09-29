@@ -3,22 +3,23 @@
 - Wed, 25 Sep 2019
 --------------------------------------------------------------------------------
 - New Features:
-    o   Add state machine for synchronization with SDK ADD/REMOVE events.
+    o   Add state machine for synchronization with ADD/REMOVE events.
     o   Set fan dynamic minimum speed to 60% for SPC2 systems.
 - Backport patchset (kernel 4.19):
     o   Align patchset to kernel 4.19.68
 - Bug fixes (Thermal, events)
     o   CPLD update via GPIO.
     o   Extend QSFP eeprom read buffer size.
-    o   Documentation: Fan dir, reset cause.
 - Known issues:
     o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 platforms (and their 
         "-B" variants) require the following ACPI flag in kernel cmdline:
         "acpi_enforce_resources=lax acpi=noirq".
     o   Few bug fixes introduced in recent upstream kernel 4.19, whoever use
         older 4.19 kernel then 68, should cherry pick the following commits:
-        - d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
-        - c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
     o   This version requires FW ver 29.2000.1886 (SPC2) / 13.2000.1886 (SPC1)
         or higher.
 ================================================================================
