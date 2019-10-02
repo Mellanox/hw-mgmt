@@ -104,6 +104,13 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
+		if [ ! -f "$config_path/gearbox_counter" ]; then
+		    echo 0 > $config_path/gearbox_counter
+		fi
+		if [ ! -f "$config_path/module_counter" ]; then
+		    echo 0 > $config_path/module_counter
+		fi
+
 		if [ "$name" == "mlxsw" ]; then
 			ln -sf $3$4/temp1_input $thermal_path/asic
 			if [ -f $3$4/pwm1 ]; then
