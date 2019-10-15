@@ -58,7 +58,7 @@
     o   Fix - sfp event counter and adding new trigger.
     o   Fix - minor fix for dynamic minimum in thermal control.
 - Known issues:
-    o   This version require FW ver 29.2000.1886 (SPC2) / 13.2000.1886 (SPC1)
+    o   This version require FW ver 29.2000.1886 (Spectrum-2) / 13.2000.1886 (Spectrum-1)
         or higher.
     o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
         ethtool.
@@ -67,7 +67,7 @@
 - Wed, 17 Jul 2019
 --------------------------------------------------------------------------------
 - Bug fixes (Thermal, events)
-    o   #1829052: HW-MGMT fails to create symlinks under /var/run/hw-management/qsfp/
+    o   HW-MGMT fails to create symlinks under /var/run/hw-management/qsfp/
 - Known issues:
     o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
         ethtool.
@@ -82,12 +82,12 @@
 - Backport patchset (kernel 4.9): 
     o   recipes-kernel/linux/linux-4.9/0030-mlxsw-core-Skip-port-split-entries-in-hwmon-subsyste.patch
 - Bug fixes (Thermal, events)
-    o   #1816776: Invalid values of module_counter/sfp_counter on SN3700
-    o   #1816774: HW-MGMT start/stop spawns thermal control zombie processes on SN2010
-    o   #1808797: Invalid values of module_counter/sfp_counter on SN2010
-    o   #1811475: SFP counter shows negative values on SN2010
-    o   #1811986: HW-MGMT thermal control fails on SN3700
-    o   #1816772: HW-MGMT thermal symlinks unlink fails on SN2010
+    o   Invalid values of module_counter/sfp_counter on SN3700
+    o   HW-MGMT start/stop spawns thermal control zombie processes on SN2010
+    o   Invalid values of module_counter/sfp_counter on SN2010
+    o   SFP counter shows negative values on SN2010
+    o   HW-MGMT thermal control fails on SN3700
+    o   HW-MGMT thermal symlinks unlink fails on SN2010
 - Known issues:
     o   SFP cables MCP2M00-A001 & MCP7F00-00000030 don't support diagnostic via 
         ethtool.
@@ -130,7 +130,7 @@
 - Tues, 28 May 2019
 --------------------------------------------------------------------------------
 - New Features:
-    o   Tigris MSN3800 support.
+    o   MSN3800 support.
     o   Add build script with debian docker support.
 - Backport patchset (kernel 4.9): 
     o   0028-mlxsw-core-add-support-for-Gear-Box-temperatures-in-.patch
@@ -166,11 +166,11 @@
     o   Add Logic to differentiate diff temperature sensor provided by chip.
     o   Set thermal control to "disabled" state as a default. …
 - Bug fixes (Thermal, events)
-    o    #1717836: Fan speed is set to 20% after config reload or restart 
+    o    Fan speed is set to 20% after config reload or restart 
          swss/syncd
-    o    #1717839: symbolic links under /var/run/hw-management may be lost after
+    o    symbolic links under /var/run/hw-management may be lost after
          fast-reboot
-    o    #1717840: Thermal control is not suspended after warm-reboot
+    o    Thermal control is not suspended after warm-reboot
     o   Fix PWM default value from 151 to 153
     o   Fix systemD/systmV dependent post install
 - Known issues:
