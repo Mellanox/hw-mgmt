@@ -206,7 +206,7 @@ mqm8700_dis_table=(	0x64 5 \
 			0x61 15 \
 			0x50 16)
 
-msn3800_connect_table=( max11603 0x64 5 \
+msn3800_connect_table=( max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tps53679 0x72 5 \
