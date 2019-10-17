@@ -150,7 +150,7 @@ function qsfp_remove_handler()
 if [ "$1" == "add" ]; then
 	if [ "$2" == "a2d" ]; then
 		ln -sf $3$4/in_voltage-voltage_scale $environment_path/$2_$5_voltage_scale
-		for i in {1..12}; do
+		for i in {0..7}; do
 			if [ -f $3$4/in_voltage"$i"_raw ]; then
 				ln -sf $3$4/in_voltage"$i"_raw $environment_path/$2_$5_raw_"$i"
 			fi
@@ -270,7 +270,7 @@ elif [ "$1" == "mv" ]; then
 else
 	if [ "$2" == "a2d" ]; then
 		unlink $environment_path/$2_$5_voltage_scale
-		for i in {1..12}; do
+		for i in {0..7}; do
 			if [ -L $environment_path/$2_$5_raw_"$i" ]; then
 				unlink $environment_path/$2_$5_raw_"$i"
 			fi
