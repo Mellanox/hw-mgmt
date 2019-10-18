@@ -14,9 +14,13 @@ cd /build/source
 mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
 
 # Build packages
+#1. build deb package
 debuild -b -uc -us
 
 # Copy packages to output dir with user's permissions
 chown -R $USER:$GROUP /build
 cp -a /build/*.deb /output/
 
+#2. convert to rpm
+alien -r -c -v /build/*.deb 
+cp -a *.rpm /output/

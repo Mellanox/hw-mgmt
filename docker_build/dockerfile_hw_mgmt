@@ -11,5 +11,6 @@ RUN apt-get update \
                autotools-dev \
                pkg-config \
                ca-certificates \
+               alien \
                && apt-get clean \
     && rm -rf /tmp/* /var/tmp/*
