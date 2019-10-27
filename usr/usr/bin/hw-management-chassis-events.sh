@@ -140,11 +140,32 @@ function qsfp_add_handler()
 	done
 
 	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
+
+        # Verify if CPLD attributes are exist
+        [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
+        if [ "$cpld" == "cpld1" ]; then
+                if [ -f ${QSFP_I2C_PATH}/cpld1_version ]; then
+                        ln -sf ${QSFP_I2C_PATH}/cpld1_version $system_path/cpld3_version
+                fi
+        fi
+        if [ "$cpld" == "cpld3" ]; then
+                if [ -f ${QSFP_I2C_PATH}/cpld3_version ]; then
+                        ln -sf ${QSFP_I2C_PATH}/cpld3_version $system_path/cpld3_version
+                fi
+        fi
 }
 
 function qsfp_remove_handler()
 {
 	find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
+
+        if [ -f "$config_path/cpld_port" ]; then
+                if [ -L $system_path/cpld3_version]; then
+                        unlink $system_path/cpld3_version
+                else
+                        rm -rf $system_path/cpld3_version
+                fi
+        fi
 }
 
 if [ "$1" == "add" ]; then
