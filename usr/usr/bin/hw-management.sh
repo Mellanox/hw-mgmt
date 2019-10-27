@@ -280,6 +280,7 @@ msn21xx_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	echo cpld1 > $config_path/cpld_port
 }
 
 msn24xx_specific()
@@ -318,6 +319,7 @@ msn27xx_msb_msx_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
+	echo cpld3 > $config_path/cpld_port
 }
 
 msn201x_specific()
