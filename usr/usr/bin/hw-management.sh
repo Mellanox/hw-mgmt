@@ -700,6 +700,9 @@ do_chip_up_down()
 			if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 				echo $sxcore_up > $config_path/sxcore
 			fi
+		else
+			unlock_service_state_change
+			return
 		fi
 		case $2 in
 		1)
