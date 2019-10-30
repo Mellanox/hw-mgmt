@@ -634,23 +634,27 @@ do_chip_up_down()
 	case $1 in
 	0)
 		if [ -f /etc/init.d/sxdkernel ]; then
-			# Decline chipup if in wait state.
-			[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-			if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-				echo $sxcore_withdraw > $config_path/sxcore
-				return
+			if [ "$chip_reset_time" != "0" ]; then
+				# Decline chipup if in wait state.
+				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
+					echo $sxcore_withdraw > $config_path/sxcore
+					return
+				fi
 			fi
 		fi
 		lock_service_state_change
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
 			if [ -f /etc/init.d/sxdkernel ]; then
-				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_up" ]; then
-					echo $sxcore_down > $config_path/sxcore
-				else
-					unlock_service_state_change
-					return
+				if [ "$chip_reset_time" != "0" ]; then
+					[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+					if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_up" ]; then
+						echo $sxcore_down > $config_path/sxcore
+					else
+						unlock_service_state_change
+						return
+					fi
 				fi
 			fi
 			delay=`cat $config_path/chipdown_delay`
@@ -669,20 +673,22 @@ do_chip_up_down()
 			exit 0
 		fi
 		if [ -f /etc/init.d/sxdkernel ]; then
-			# Set delay in order to avoid impact of chip reset,
-			# performed by sxcore driver.
-			# In case sxcore driver does not reset chip, for example
-			# for reboot through kexec - just sleep 'chipup_delay'
-			# seconds.
-			echo $chip_reset_time > $config_path/chipup_delay
-			[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-			if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_down" ]; then
-				echo $sxcore_deferred > $config_path/sxcore
-			elif [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-				echo $sxcore_up > $config_path/sxcore
-			else
-				unlock_service_state_change
-				return
+			if [ "$chip_reset_time" != "0" ]; then
+				# Set delay in order to avoid impact of chip reset,
+				# performed by sxcore driver.
+				# In case sxcore driver does not reset chip, for example
+				# for reboot through kexec - just sleep 'chipup_delay'
+				# seconds.
+				echo $chip_reset_time > $config_path/chipup_delay
+				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_down" ]; then
+					echo $sxcore_deferred > $config_path/sxcore
+				elif [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
+					echo $sxcore_up > $config_path/sxcore
+				else
+					unlock_service_state_change
+					return
+				fi
 			fi
 		fi
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
@@ -690,17 +696,21 @@ do_chip_up_down()
 			sleep $delay
 			echo 0 > $config_path/sfp_counter
 			if [ -f /etc/init.d/sxdkernel ]; then
-				# Skip if chipup has been dropped.
-				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
-					echo $sxcore_down > $config_path/sxcore
-					unlock_service_state_change
-					return
+				if [ "$chip_reset_time" != "0" ]; then
+					# Skip if chipup has been dropped.
+					[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
+					if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
+						echo $sxcore_down > $config_path/sxcore
+						unlock_service_state_change
+						return
+					fi
 				fi
 			fi
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
-			if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-				echo $sxcore_up > $config_path/sxcore
+			if [ "$chip_reset_time" != "0" ]; then
+				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
+					echo $sxcore_up > $config_path/sxcore
+				fi
 			fi
 		else
 			unlock_service_state_change
