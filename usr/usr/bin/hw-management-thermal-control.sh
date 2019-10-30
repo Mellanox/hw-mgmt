@@ -77,14 +77,14 @@
 if [ -d /etc/redhat-lsb ]; then
 log_action_msg()
 {
-        echo "$@"
-        command -v systemd-cat > /dev/null 2>&1
-        rc=$?
-        if [ $rc -eq 0 ]; then
-                echo "$@" | systemd-cat -p info -t hw-management
+	echo "$@"
+	command -v systemd-cat > /dev/null 2>&1
+	rc=$?
+	if [ $rc -eq 0 ]; then
+		echo "$@" | systemd-cat -p info -t hw-management
         else
-                logger -p info -t hw-management "$@"
-        fi
+		logger -p info -t hw-management "$@"
+	fi
 }
 fi
 
