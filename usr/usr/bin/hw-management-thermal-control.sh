@@ -134,7 +134,9 @@ polling_time=${5:-$polling_time_def}
 pwm_noact=0
 pwm_max=1
 pwm_max_rpm=255
+cooling_set_max_state=20
 pwm_def_rpm=153
+cooling_set_def_state=16
 max_amb=120000
 untrusted_sensor=0
 hysteresis=5000
@@ -576,7 +578,8 @@ get_psu_presence()
 						fi
 					fi
 				done
-				echo $pwm_max_rpm > $pwm
+				set_cur_state=$(($cooling_set_max_state-$fan_max_state))
+				echo $cooling_set_max_state > $cooling_cur_state
 
 				return
 			fi
@@ -652,7 +655,8 @@ get_fan_faults()
 					fi
 				fi
 			done
-			echo $pwm_max_rpm > $pwm
+			set_cur_state=$(($cooling_set_max_state-$fan_max_state))
+			echo $cooling_set_max_state > $cooling_cur_state
 
 			return
 		fi
@@ -896,6 +900,7 @@ check_trip_min_vs_current_temp()
 	temp_now=`cat $tz_temp`
 	if [ $trip_norm -gt  $temp_now ]; then
 		set_cur_state=$(($fan_dynamic_min-$fan_max_state))
+		echo $fan_dynamic_min > $cooling_cur_state
 		echo $set_cur_state > $cooling_cur_state
 		cur_state=$(($set_cur_state*10))
 		case $1 in
@@ -998,6 +1003,9 @@ disable_zones_def_pwm()
 		fi
 	done
 	echo $pwm_def_rpm > $pwm
+	set_cur_state=$(($cooling_set_def_state-$fan_max_state))
+	echo $cooling_set_def_state > $cooling_cur_state
+
 	log_action_msg "Set fan speed to default"
 }
 
@@ -1188,6 +1196,7 @@ get_tz_highest()
 		set_cur_state=$(($fan_dynamic_min-$fan_max_state))
 		if [ $cooling -gt $set_cur_state ]; then
 			echo disabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
+			echo $fan_dynamic_min > $cooling_cur_state
 			echo $set_cur_state > $cooling_cur_state
 			echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 			cur_state=$(($set_cur_state*10))
@@ -1278,6 +1287,7 @@ do
 	# since the last time.
 	if [ $fan_dynamic_min -ne $fan_dynamic_min_last ]; then
 		echo $fan_dynamic_min > $cooling_cur_state
+		echo $set_cur_state > $cooling_cur_state
 		fan_from=$(($fan_dynamic_min_last-$fan_max_state))
 		fan_from=$(($fan_from*10))
 		fan_to=$(($fan_dynamic_min-$fan_max_state))
