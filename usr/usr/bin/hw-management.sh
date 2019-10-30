@@ -573,6 +573,10 @@ remove_symbolic_links()
 
 do_start()
 {
+	# Custom chipup reset time
+	if [ -d /etc/sonic ]; then
+		chip_reset_time=0
+	fi
 	create_symbolic_links
 	check_system
 	depmod -a 2>/dev/null
