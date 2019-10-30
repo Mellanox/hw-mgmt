@@ -6,12 +6,12 @@ switches.
 Supported systems:
 
 - MSN2740
-- MSN210    
-- MSN2410     
+- MSN2100
+- MSN2410
 - MSN2700
-- MSN2010                                           
+- MSN2010
 - MQMB7800
-- MSN3700 
+- MSN3700
 - MSN3800
 
 # Introduction:
