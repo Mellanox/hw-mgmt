@@ -503,39 +503,12 @@ else
 	if [ "$2" == "thermal_zone" ]; then
 		for ((i=1; i<$max_module_gbox_ind; i+=1)); do
 			if [ -d $thermal_path/mlxsw-module"$i" ]; then
-				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_policy
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_norm
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_high
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_hot
-				unlink $thermal_path/mlxsw-module"$i"/temp_trip_crit
-				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp
-				if [ -L $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul ]; then
-					unlink $thermal_path/mlxsw-module"$i"/thermal_zone_temp_emul
-				fi
 				rm -rf $thermal_path/mlxsw-module"$i"
 			elif [ -d $thermal_path/mlxsw-gearbox"$i" ]; then
-				unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_high
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot
-				unlink $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit
-				unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp
-				if [ -L $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp_emul ]; then
-					unlink $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp_emul
-				fi
 				rm -rf $thermal_path/mlxsw-gerabox"$i"
 			fi
 		done
 		if [ -d $thermal_path/mlxsw ]; then
-			unlink $thermal_path/mlxsw/thermal_zone_policy
-			unlink $thermal_path/mlxsw/temp_trip_norm
-			unlink $thermal_path/mlxsw/temp_trip_high
-			unlink $thermal_path/mlxsw/temp_trip_hot
-			unlink $thermal_path/mlxsw/temp_trip_crit
-			unlink $thermal_path/mlxsw/thermal_zone_temp
-			if [ -L $thermal_path/thermal_zone_temp_emul ]; then
-				unlink $thermal_path/mlxsw/thermal_zone_temp_emul
-			fi
 			rm -rf $thermal_path/mlxsw
 		fi
 		if [ -L $thermal_path/highest_thermal_zone ]; then
