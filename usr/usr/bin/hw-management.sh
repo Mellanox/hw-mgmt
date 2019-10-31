@@ -79,7 +79,7 @@ fan_psu_default=0x3c
 fan_command=0x3b
 fan_max_speed=24000
 fan_min_speed=5000
-chip_reset_time=20
+chipup_delay_default=0
 sxcore_down=0
 sxcore_deferred=1
 sxcore_withdraw=2
@@ -571,10 +571,6 @@ remove_symbolic_links()
 
 do_start()
 {
-	# Custom chipup reset time
-	if [ -d /etc/sonic ]; then
-		chip_reset_time=0
-	fi
 	create_symbolic_links
 	check_system
 	depmod -a 2>/dev/null
@@ -584,7 +580,7 @@ do_start()
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
-	echo 0 > $config_path/chipup_delay
+	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
 	if [ -f /etc/init.d/sxdkernel ]; then
 		echo $sxcore_down > $config_path/sxcore
@@ -634,7 +630,8 @@ do_chip_up_down()
 	case $1 in
 	0)
 		if [ -f /etc/init.d/sxdkernel ]; then
-			if [ "$chip_reset_time" != "0" ]; then
+			delay=`cat $config_path/chipup_delay`
+			if [ "$delay" != "0" ]; then
 				# Decline chipup if in wait state.
 				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
 				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
@@ -644,10 +641,11 @@ do_chip_up_down()
 			fi
 		fi
 		lock_service_state_change
+		delay=`cat $config_path/chipup_delay`
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
 			if [ -f /etc/init.d/sxdkernel ]; then
-				if [ "$chip_reset_time" != "0" ]; then
+				if [ "$delay" != "0" ]; then
 					[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
 					if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_up" ]; then
 						echo $sxcore_down > $config_path/sxcore
@@ -672,14 +670,14 @@ do_chip_up_down()
 			unlock_service_state_change
 			exit 0
 		fi
+		delay=`cat $config_path/chipup_delay`
 		if [ -f /etc/init.d/sxdkernel ]; then
-			if [ "$chip_reset_time" != "0" ]; then
-				# Set delay in order to avoid impact of chip reset,
+			if [ "$delay" != "0" ]; then
+				# Have delay in order to avoid impact of chip reset,
 				# performed by sxcore driver.
 				# In case sxcore driver does not reset chip, for example
 				# for reboot through kexec - just sleep 'chipup_delay'
 				# seconds.
-				echo $chip_reset_time > $config_path/chipup_delay
 				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
 				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_down" ]; then
 					echo $sxcore_deferred > $config_path/sxcore
@@ -692,11 +690,10 @@ do_chip_up_down()
 			fi
 		fi
 		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
-			delay=`cat $config_path/chipup_delay`
 			sleep $delay
 			echo 0 > $config_path/sfp_counter
 			if [ -f /etc/init.d/sxdkernel ]; then
-				if [ "$chip_reset_time" != "0" ]; then
+				if [ "$delay" != "0" ]; then
 					# Skip if chipup has been dropped.
 					[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
 					if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
@@ -707,7 +704,7 @@ do_chip_up_down()
 				fi
 			fi
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
-			if [ "$chip_reset_time" != "0" ]; then
+			if [ "$delay" != "0" ]; then
 				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_up > $config_path/sxcore
 				fi
