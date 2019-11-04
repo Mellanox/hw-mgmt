@@ -5,13 +5,14 @@ switches.
 
 Supported systems:
 
-- MSN274* Panther SF
-- MSN21* Bulldog    
-- MSN24* Spider     
-- MSN27*|MSB*|MSX* Neptune, Tarantula, Scorpion, Scorpion2
-- MSN201* Boxer                                           
-- MQMB7*|MSN37*|MSN34* Jupiter, Jaguar, Anaconda
-- MSN38* Tigris
+- MSN2740
+- MSN2100
+- MSN2410
+- MSN2700
+- MSN2010
+- MQMB7800
+- MSN3700
+- MSN3800
 
 # Introduction:
 Mellanox thermal monitoring is an open source package for better thermal
