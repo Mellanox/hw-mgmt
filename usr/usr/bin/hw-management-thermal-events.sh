@@ -425,6 +425,10 @@ else
 		fi
 	fi
 	if [ "$2" == "switch" ]; then
+		[ -f "$config_path/stopping" ] && stopping=`cat $config_path/stopping`
+		if [ $stopping ] &&  [ "$stopping" = "1" ]; then
+			exit 0
+		fi
 		if [ -L $thermal_path/asic ]; then
 			unlink $thermal_path/asic
 		fi
@@ -501,6 +505,10 @@ else
 		done
 	fi
 	if [ "$2" == "thermal_zone" ]; then
+		[ -f "$config_path/stopping" ] && stopping=`cat $config_path/stopping`
+		if [ $stopping ] &&  [ "$stopping" = "1" ]; then
+			exit 0
+		fi
 		for ((i=1; i<$max_module_gbox_ind; i+=1)); do
 			if [ -d $thermal_path/mlxsw-module"$i" ]; then
 				unlink $thermal_path/mlxsw-module"$i"/thermal_zone_policy
