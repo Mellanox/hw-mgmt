@@ -741,8 +741,8 @@ case $ACTION in
 	;;
 	stop)
 		if [ -d /var/run/hw-management ]; then
+			echo 1 > $config_path/stopping
 			do_chip_up_down 0
-			sleep 5
 			do_stop
 		fi
 	;;
