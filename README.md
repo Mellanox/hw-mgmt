@@ -14,10 +14,74 @@ Supported systems:
 - MSN3700
 - MSN3800
 
-Supported Kerenls version 
+# Supported Kerenls version 
 
 - 4.9.xx
 - 4.19.xx
+
+# SYSFS attributes:
+The thermal control operates over sysfs attributes. These attributes are exposed as symbolic links to /var/run/hw-management folder at system boot time. These folder contains the next structure: /var/run/hw-management config configuration related files. It includes the information about FAN minimum, maximum allowed speed, some default settings, configured delays for different purposes. eeprom eeprom related symbolic links to system, PSU, FAN eeproms. environment environment (voltage, current, etcetera) related symbolic links. led led related symbolic links. power power related symbolic links. system system related (health, reset, etcetera) related symbolic links. thermal thermal related links, including thermal zones related subfolders mlxsw ASIC ambient temperature thermal zone related symbolic links. mlxsw-module1 QSFP module 1 temperature thermal zone related symbolic links. ... ... mlxsw-module64 ... QSFP module 64 temperature thermal zone related symbolic links. watchdog aux auxiliary watchdog related symbolic links. main main watchdog related symbolic links.
+Below some of the symbolic links examples:
+
+cooling_cur_state: Current cooling state, exposed by cooling level (1..10)
+fan_fault: tachometer fault, 1..max tachometers number
+fan_input: tachometer input, 1..max tachometers number
+psu1_status: PS unit 1 presence status (1 - present, 0 - removed)
+psu2_status: PS unit 2 presence status (1 - present, 0 - removed)
+pwm: PWM speed exposed in RPM
+temp_asic: ASIC ambient temperature value
+temp_fan_amb: FAN side ambient temperature value
+temp_port_amb: port side ambient temperature value
+temp_port: port temperature value
+temp_port_fault: port temperature fault
+temp_trip_norm: thermal zone minimum temperature trip
+tz_mode: thermal zone mode (enabled or disabled)
+tz_temp: thermal zone temperature
+
+# Kernel configuration
+Kernel configuration required the next setting (kernel version should be v4.19 or later):
+
+CONFIG_NET_VENDOR_MELLANOX
+CONFIG_MELLANOX_PLATFORM
+CONFIG_NET_DEVLINK
+CONFIG_MAY_USE_DEVLINK
+CONFIG_I2C
+CONFIG_I2C_BOARDINFO
+CONFIG_I2C_CHARDEV
+CONFIG_I2C_MUX
+CONFIG_I2C_MUX_REG
+CONFIG_REGMAP
+CONFIG_SYSFS
+CONFIG_MLXSW_CORE
+CONFIG_MLXSW_CORE_HWMON
+CONFIG_MLXSW_CORE_THERMAL
+CONFIG_MLXSW_PCI or/and CONFIG_MLXSW_I2C *
+CONFIG_MLXSW_SPECTRUM or/and CONFIG_MLXSW_MINIMAL *
+CONFIG_I2C_MLXCPLD
+CONFIG_LEDS_MLXREG
+CONFIG_MLX_PLATFORM
+CONFIG_MLXREG_HOTPLUG
+CONFIG_THERMAL
+CONFIG_THERMAL_HWMON
+CONFIG_THERMAL_WRITABLE_TRIPS
+CONFIG_THERMAL_DEFAULT_GOV_STEP_WISE=y
+CONFIG_THERMAL_GOV_STEP_WISE
+CONFIG_PMBUS
+CONFIG_SENSORS_PMBUS
+CONFIG_HWMON
+CONFIG_THERMAL_HWMON
+CONFIG_SENSORS_LM75
+CONFIG_SENSORS_TMP102
+CONFIG_LEDS_MLXREG
+CONFIG_LEDS_TRIGGERS
+CONFIG_LEDS_TRIGGER_TIMER
+CONFIG_NEW_LEDS
+CONFIG_LEDS_CLASS
+Note In case kernel is configured with CONFIG_MLXSW_PCI and CONFIG_MLXSW_SPECTRUM, mlxsw kernel hwmon and thermal modules will work over PCI bus. In this case mlxsw_i2c and mlxsw_minimal drivers will not be activated. In other case hwmon and thermal modules will work over I2C bus. If user wants to have both PCI and I2C option configured and want enforce thermal control to work over I2C, for example user which wants to be able to switch between workloads running Mellanox legacy SDK code and running Mellanox switch-dev driver, the next steps should be performed:
+Create blacklist file with next wo lines, f.e. /etc/modprobe.d/mellanox-sdk-blacklist.conf blacklist mlxsw_spectrum blacklist mlxsw_pci
+And then run: update-initramfs -u (in case initramfs is used) For returning back to PCI option:
+Remove /etc/modprobe.d/mellanox-sdk-blacklist.conf
+And then run: update-initramfs -u (in case initramfs is used)
 
 
 # Packaging:
