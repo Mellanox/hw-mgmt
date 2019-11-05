@@ -14,7 +14,7 @@ Supported systems:
 - MSN3700
 - MSN3800
 
-# Supported Kerenls version 
+# Supported Kerenl versions 
 
 - 4.9.xx
 - 4.19.xx
