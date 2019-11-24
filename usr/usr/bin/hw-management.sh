@@ -665,8 +665,8 @@ do_chip_up_down()
 		;;
 	1)
 		lock_service_state_change
-		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-		if [ $disable ] && [ "$disable" -gt 0 ]; then
+                [ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
+                if [ $disable ] && [ "$disable" -gt 0 ]; then
 			disable=$(($disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
