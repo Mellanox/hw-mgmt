@@ -37,7 +37,7 @@ alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
-qsfp_path=$hw_management_path/qsfp
+sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 config_path=$hw_management_path/config
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
@@ -116,56 +116,42 @@ unlock_service_state_change()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
-function qsfp_add_handler()
+function create_sfp_symbolic_links()
 {
-	local -r QSFP_I2C_PATH="${1}"
+	local event_path="${1}"
+	local sfp_name=${event_path##*/net/}
+	local i2c_path=${event_path%/net/*}
+	local sfp_num=`echo $sfp_name | cut -b 4-`
 
-	local QSFP_STATUS="down"
-	local -r QSFP_UP="up"
-
-	local -i WDOG_CNT="1"
-	local -ir WDOG_MAX="120"
-
-	local -r TIMEOUT="1s"
-
-	while [[ "${QSFP_STATUS}" != "${QSFP_UP}" && "${WDOG_CNT}" -le "${WDOG_MAX}" ]]; do
-		for QSFP in ${QSFP_I2C_PATH}/qsfp*; do
-			if [[ -e "${QSFP}" ]]; then
-				QSFP_STATUS="${QSFP_UP}"
-				break
-			fi
-		done
-		let "WDOG_CNT++"
-		sleep "${TIMEOUT}"
-	done
-
-	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
-
-        # Verify if CPLD attributes are exist
-        [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
-        if [ "$cpld" == "cpld1" ]; then
-                if [ -f ${QSFP_I2C_PATH}/cpld1_version ]; then
-                        ln -sf ${QSFP_I2C_PATH}/cpld1_version $system_path/cpld3_version
-                fi
-        fi
-        if [ "$cpld" == "cpld3" ]; then
-                if [ -f ${QSFP_I2C_PATH}/cpld3_version ]; then
-                        ln -sf ${QSFP_I2C_PATH}/cpld3_version $system_path/cpld3_version
-                fi
-        fi
+	ln -sf ${i2c_path}/qsfp${sfp_num}_status ${sfp_path}/${sfp_name}_status
 }
 
-function qsfp_remove_handler()
+# ASIC CPLD event
+function asic_cpld_add_handler()
 {
-	find $qsfp_path/ -name "qsfp*" -type l -exec unlink {} \;
+        local -r ASIC_I2C_PATH="${1}"
 
         if [ -f "$config_path/cpld_port" ]; then
-                if [ -L $system_path/cpld3_version]; then
-                        unlink $system_path/cpld3_version
-                else
-                        rm -rf $system_path/cpld3_version
+                local -r cpld=`cat $config_path/cpld_port`
+                if [ "$cpld" == "cpld1" ]; then
+			ln -sf ${ASIC_I2C_PATH}/cpld1_version $system_path/cpld3_version
+                fi
+                if [ "$cpld" == "cpld3" ]; then
+			ln -sf ${ASIC_I2C_PATH}/cpld3_version $system_path/cpld3_version
                 fi
         fi
+
+}
+
+function asic_cpld_remove_handler()
+{
+    if [ -f "$config_path/cpld_port" ]; then
+            if [ -L $system_path/cpld3_version]; then
+                    unlink $system_path/cpld3_version
+            else
+                    rm -rf $system_path/cpld3_version
+            fi
+    fi
 }
 
 if [ "$1" == "add" ]; then
@@ -255,8 +241,8 @@ if [ "$1" == "add" ]; then
 		ln -sf $3$4/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
 	fi
-	if [ "$2" == "qsfp" ]; then
-		qsfp_add_handler "${3}${4}"
+	if [ "$2" == "cpld" ]; then
+		asic_cpld_add_handler "${3}${4}"
 	fi
 	if [ "$2" == "watchdog" ]; then
 		wd_type=`cat $3$4/identity`
@@ -287,6 +273,7 @@ elif [ "$1" == "mv" ]; then
 		sfp_counter=$(($sfp_counter+1))
 		echo $sfp_counter > $config_path/sfp_counter
 		unlock_service_state_change
+		create_sfp_symbolic_links "${3}${4}"
 	fi
 else
 	if [ "$2" == "a2d" ]; then
@@ -366,8 +353,8 @@ else
 		find_eeprom_name $bus $addr
 		unlink $eeprom_path/$eeprom_name
 	fi
-	if [ "$2" == "qsfp" ]; then
-		qsfp_remove_handler
+	if [ "$2" == "cpld" ]; then
+		asic_cpld_remove_handler
 	fi
 	if [ "$2" == "watchdog" ]; then
 	wd_type=`cat $3$4/identity`

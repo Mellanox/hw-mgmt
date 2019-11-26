@@ -94,7 +94,7 @@ eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
 module_path=$hw_management_path/module
-qsfp_path=$hw_management_path/qsfp
+sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
@@ -300,6 +300,7 @@ msn24xx_specific()
 	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
+	echo cpld3 > $config_path/cpld_port
 }
 
 msn27xx_msb_msx_specific()
@@ -383,7 +384,7 @@ msn38xx_specific()
 check_system()
 {
 	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
-	if [ "$manufacturer" = "Mellanox" ]; then
+	if [ "$manufacturer" == "Mellanox" ]; then
 		product=`cat /sys/devices/virtual/dmi/id/product_name`
 		case $product in
 			MSN274*)
@@ -548,8 +549,8 @@ create_symbolic_links()
 	if [ ! -d $system_path ]; then
 		mkdir $system_path
 	fi
-	if [ ! -d $qsfp_path ]; then
-		mkdir $qsfp_path
+	if [ ! -d $sfp_path ]; then
+		mkdir $sfp_path
 	fi
 	if [ ! -d $watchdog_path ]; then
 		mkdir $watchdog_path
@@ -608,8 +609,7 @@ do_stop()
 
 	check_system
 	disconnect_platform
-	remove_symbolic_links
-	rm /var/run/hw-management*
+	rm -fR /var/run/hw-management
 }
 
 function lock_service_state_change()
