@@ -300,6 +300,7 @@ msn24xx_specific()
 	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
+	echo cpld3 > $config_path/cpld_port
 }
 
 msn27xx_msb_msx_specific()
@@ -383,7 +384,7 @@ msn38xx_specific()
 check_system()
 {
 	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
-	if [ "$manufacturer" = "Mellanox" ]; then
+	if [ "$manufacturer" == "Mellanox" ]; then
 		product=`cat /sys/devices/virtual/dmi/id/product_name`
 		case $product in
 			MSN274*)
@@ -608,8 +609,7 @@ do_stop()
 
 	check_system
 	disconnect_platform
-	remove_symbolic_links
-	rm /var/run/hw-management*
+	rm -fR /var/run/hw-management
 }
 
 function lock_service_state_change()
