@@ -94,7 +94,7 @@ eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
 module_path=$hw_management_path/module
-qsfp_path=$hw_management_path/qsfp
+sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
@@ -549,8 +549,8 @@ create_symbolic_links()
 	if [ ! -d $system_path ]; then
 		mkdir $system_path
 	fi
-	if [ ! -d $qsfp_path ]; then
-		mkdir $qsfp_path
+	if [ ! -d $sfp_path ]; then
+		mkdir $sfp_path
 	fi
 	if [ ! -d $watchdog_path ]; then
 		mkdir $watchdog_path
