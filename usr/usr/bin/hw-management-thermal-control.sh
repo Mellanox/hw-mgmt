@@ -966,12 +966,10 @@ disable_zones_def_pwm()
 		# Disable asic and modules thermal zones if were enabled.
 		if [ $mode = "enabled" ]; then
 			echo disabled > $tz_mode
-			log_action_msg "ASIC thermal zone is disabled due to thermal algorithm is suspended"
 		fi
 		policy=`cat $tz_policy`
 		if [ $policy = "step_wise" ]; then
 			echo user_space > $tz_policy
-			log_action_msg "ASIC thermal zone policy is set to user_space due to thermal algorithm is suspended"
 		fi
 	fi
 	for ((i=1; i<=$module_counter; i+=1)); do
@@ -979,12 +977,10 @@ disable_zones_def_pwm()
 			mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 			if [ $mode = "enabled" ]; then
 				echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-				log_action_msg "QSFP module $i thermal zone is disabled due to thermal algorithm is suspended"
 			fi
 			policy=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
 			if [ $policy = "step_wise" ]; then
 				echo user_space > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
-				log_action_msg "QSFP module $i thermal zone policy is set to user_space due to thermal algorithm is suspended"
 			fi
 		fi
 	done
@@ -993,12 +989,10 @@ disable_zones_def_pwm()
 			mode=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode`
 			if [ $mode = "enabled" ]; then
 				echo disabled > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
-				log_action_msg "Gearbox $i thermal zone is disabled due to thermal algorithm is suspended"
 			fi
 			policy=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy`
 			if [ $policy = "step_wise" ]; then
 				echo user_space > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
-				log_action_msg "Gearbox $i thermal zone policy is set to user_space due to thermal algorithm is suspended"
 			fi
 		fi
 	done
