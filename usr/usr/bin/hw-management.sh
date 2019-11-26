@@ -739,6 +739,10 @@ do_chip_down()
 
 case $ACTION in
 	start)
+		if [ -d /var/run/hw-management ]; then
+			log_failure_msg "hw-management is already started"
+			exit
+		fi
 		do_start
 	;;
 	stop)
