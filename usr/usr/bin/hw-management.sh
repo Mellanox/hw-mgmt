@@ -741,7 +741,7 @@ case $ACTION in
 	start)
 		if [ -d /var/run/hw-management ]; then
 			log_failure_msg "hw-management is already started"
-			exit
+			exit 1
 		fi
 		do_start
 	;;
