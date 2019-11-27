@@ -1,35 +1,34 @@
-########################################################################
-# Copyright (c) 2019 Mellanox Technologies. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#######################################################################
-
+/*
+ * Copyright (c) 2019 Mellanox Technologies. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * Alternatively, this software may be distributed under the terms of the
+ * GNU General Public License ("GPL") version 2 as published by the Free
+ * Software Foundation.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,76 +51,6 @@ static int io_open_access(void)
     }
 }
 
-#if DYNAMIC_REGION_FIND
-static int io_get_regions(struct iorw_region** regions)
-{
-    int                 i, fd, reg_num, rc = 1;
-    char                buf[512], *tmp;
-    char                str[128];
-    FILE               *fp;
-    unsigned short      start, end;
-    struct iorw_region* region;
-
-    /* Check that file exist */
-    fd = open(LPC_IO_REGION_FILE, O_RDONLY, 0444);
-    if (fd < 0) {
-        fprintf(stderr, "Failed to open LPC region info file %s, %s\n", \
-                LPC_IO_REGION_FILE, strerror(errno));
-        return -1;
-    }
-
-    if (read(fd, buf, sizeof(buf)) > 0) {
-        /* Find number of IO regions */
-        snprintf(str, "IO regions num:");
-        tmp = strstr(buf, str);
-        if (tmp) {
-            tmp += (strlen(str) + 1);
-            reg_num = atoi(tmp);
-        } else {
-            fprintf(stderr, "Failed to find lpc region numbers\n");
-            goto fail_parsing;
-        }
-        *regions = calloc(sizeof(struct iorw_region), reg_num);
-        if (!(*regions)) {
-            fprintf(stderr, "Failed to allocate io regions data\n");
-            goto fail_parsing;
-        }
-        for (i = 0; i < reg_num; i++) {
-            snprintf(str, 128, "IO region%d:", i);
-            tmp = strstr(buf, str);
-            if (!tmp) {
-                fprintf(stderr, "Failed to find %s\n", str);
-                goto fail_parsing;
-            }
-            tmp += strlen(str) + 1;
-            start = strtol(tmp, (char**)NULL, 16);
-            tmp = strchr(tmp, '-');
-            if (!tmp) {
-                fprintf(stderr, "Failed to find end of %s\n", str);
-                goto fail_parsing;
-            }
-            tmp += 1;
-            end = strtol(tmp, (char**)NULL, 16);
-            region = *regions + i;
-            region->start = start;
-            region->end = end;
-        }
-        rc = reg_num;
-    } else {
-        fprintf(stderr, "Failed read %s\n", LPC_IO_REGION_FILE);
-    }
-    close(fd);
-    return rc;
-
-fail_parsing:
-    close(fd);
-    if (*regions) {
-        free(*regions);
-    }
-    return rc;
-}
-#endif /* if DYNAMIC_REGION_FIND */
-
 static int io_check_region_range(unsigned short base_adrr, unsigned short offs, unsigned short len)
 {
     int i, rc = 0;
@@ -130,16 +59,6 @@ static int io_check_region_range(unsigned short base_adrr, unsigned short offs, 
     low_lim = base_adrr + offs;
     high_lim = base_adrr + offs + len;
 
-#if DYNAMIC_REGION_FIND
-    for (i = 0; i < lpc_reg_num; i++) {
-        if ((low_lim < lpc_regions[i].start) ||
-            (high_lim > lpc_regions[i].end)) {
-            rc = -1;
-        } else {
-            return 0;
-        }
-    }
-#else
     for (i = 0; i < LPC_REGION_NUM; i++) {
         if ((low_lim < lpc_regions[i].start) ||
             (high_lim > lpc_regions[i].end)) {
@@ -148,7 +67,6 @@ static int io_check_region_range(unsigned short base_adrr, unsigned short offs, 
             return 0;
         }
     }
-#endif
 
     return rc;
 }
@@ -348,20 +266,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-#if DYNAMIC_REGION_FIND
-    lpc_reg_num = io_get_regions(&lpc_regions);
-    if (lpc_reg_num <= 0) {
-        fprintf(stderr, "Failed to find io regions\n");
-        rc = -1;
-        goto fail;
-    } else {
-        for (i = 0; i < lpc_reg_num; i++) {
-            printf("Found LPC region %d: start 0x%x - end 0x%x\n", \
-                   i, lpc_regions[i].start, lpc_regions[i].end);
-        }
-    }
-#endif
-
     if (!force) {
         if (offs >= LPC_CPLD_IO_LEN) {
             fprintf(stderr, "Incorrect offset %d, should be <= %d\n", \
@@ -425,10 +329,5 @@ int main(int argc, char *argv[])
     }
 
 fail:
-#if DYNAMIC_REGION_FIND
-    if (lpc_regions) {
-        free(lpc_regions);
-    }
-#endif
     exit(rc);
 }
