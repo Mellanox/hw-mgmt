@@ -84,6 +84,8 @@ sxcore_down=0
 sxcore_deferred=1
 sxcore_withdraw=2
 sxcore_up=3
+i2c_bus_def_off_eeprom_cpu=16
+i2c_comex_mon_bus_default=15
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
@@ -234,6 +236,30 @@ msn3800_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn27002_msn24102_msb78002_connect_table=( pmbus 0x27 5 \
+			pmbus 0x41 5 \
+			max11603 0x6d 5 \
+			lm75 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 23 \
+			tmp102 0x49 23 \
+			tps53679 0x58 23 \
+			tps53679 0x61 23 \
+			24c32 0x50 24 \
+			lm75 0x49 17)
+
+msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
+			0x41 5 \
+			0x6d 5 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 23 \
+			0x49 23 \
+			0x58 23 \
+			0x61 23 \
+			0x50 24 \
+			0x49 17)
+
 ACTION=$1
 
 is_module()
@@ -381,12 +407,60 @@ msn38xx_specific()
 	echo 4 > $config_path/cpld_num
 }
 
+msn24102_specific()
+{
+	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
+	done
+	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t1
+	max_tachos=8
+	echo 21000 > $config_path/fan_max_speed
+	echo 5400 > $config_path/fan_min_speed
+	echo 9 > $config_path/fan_inversed
+	echo 3 > $config_path/cpld_num
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+}
+
+msn27002_msb78002_specific()
+{
+	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
+	done
+	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t1
+	max_tachos=8
+	echo 25000 > $config_path/fan_max_speed
+	echo 1500 > $config_path/fan_min_speed
+	echo 9 > $config_path/fan_inversed
+	echo 3 > $config_path/cpld_num
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+}
+
 check_system()
 {
 	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
 	if [ "$manufacturer" == "Mellanox" ]; then
 		product=`cat /sys/devices/virtual/dmi/id/product_name`
 		case $product in
+			MSN27002|MSB78002)
+				msn27002_msb78002_specific
+				;;
+			MSN24102)
+				msn24102_specific
+				;;
 			MSN274*)
 				msn274x_specific
 				;;
@@ -576,6 +650,8 @@ do_start()
 {
 	create_symbolic_links
 	check_system
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
@@ -665,8 +741,8 @@ do_chip_up_down()
 		;;
 	1)
 		lock_service_state_change
-		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-		if [ $disable ] && [ "$disable" -gt 0 ]; then
+                [ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
+                if [ $disable ] && [ "$disable" -gt 0 ]; then
 			disable=$(($disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
