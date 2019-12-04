@@ -7,11 +7,15 @@
     o   I2C performance optimization.
     o   Add support to read port CPLD version 
     o   Reduce minimal driver init time during probing 
-        - see backport patch kernel 4.9  #36
+        - see backport patch kernel 4.9  #36 & #39
         - see backport patch kernel 4.19 #09
 - Bug fixes
     HW Mgmt core:
     o   Fix - Prevent start action for hw-mangment service while already runs.
+    o   Fix - Anaconda, Tigris reset cause for power cycle.
+        - see backport patch kernel 4.9  #40
+        - see backport patch kernel 4.19 #10
+
     Thermal:
     o   Fix - Remove redundant logging from thermal control in suspend mode.
     o   Fix - Thermal register is being used after free 
