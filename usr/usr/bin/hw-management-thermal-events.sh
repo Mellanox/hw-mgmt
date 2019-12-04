@@ -444,10 +444,10 @@ else
 				if [ -L $thermal_path/fan"$i"_speed_get ]; then
 					unlink $thermal_path/fan"$i"_speed_get
 				fi
-				if [ -f $thermal_path/fan"$j"_min ]; then
+				if [ -L $thermal_path/fan"$j"_min ]; then
 					unlink $thermal_path/fan"$j"_min
 				fi
-				if [ -f $thermal_path/fan"$j"_max ]; then
+				if [ -L $thermal_path/fan"$j"_max ]; then
 					unlink $thermal_path/fan"$j"_max
 				fi
 			done
@@ -496,10 +496,10 @@ else
 			if [ -L $thermal_path/fan"$i"_speed_set ]; then
 				unlink $thermal_path/fan"$i"_speed_set
 			fi
-			if [ -f $thermal_path/fan"$i"_min ]; then
+			if [ -L $thermal_path/fan"$i"_min ]; then
 				unlink $thermal_path/fan"$i"_min
 			fi
-			if [ -f $thermal_path/fan"$i"_max ]; then
+			if [ -L $thermal_path/fan"$i"_max ]; then
 				unlink $thermal_path/fan"$i"_max
 			fi
 		done
@@ -611,7 +611,7 @@ else
 		if [ -L $power_path/$2_volt ]; then
 			unlink $power_path/$2_volt
 		fi
-		if [ -f $power_path/$2_volt_out2 ]; then
+		if [ -L $power_path/$2_volt_out2 ]; then
 			unlink $power_path/$2_volt_out2
 		fi
 		if [ -L $power_path/$2_power_in ]; then
