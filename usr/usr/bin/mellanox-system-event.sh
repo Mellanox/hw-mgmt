@@ -316,6 +316,9 @@ if [ "$1" == "add" ]; then
 	if [ ! -d /sys/module/mlxsw_minimal ]; then
 		modprobe mlxsw_minimal
 	fi
+	find_i2c_bus
+	bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+	path=/sys/bus/i2c/devices/i2c-$bus
 	if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
 	   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
 		echo mlxsw_minimal 0x48 > $path/new_device
@@ -543,6 +546,9 @@ else
     fi
   fi
   if [ "$2" == "sxcore" ]; then
+	find_i2c_bus
+	bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+	path=/sys/bus/i2c/devices/i2c-$bus
 	if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
 	   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
 		echo 0x48 > $path/delete_device
