@@ -62,7 +62,6 @@ module_unload_list=(	at24 tmp102 lm75 coretemp max1363 tps53679 pmbus \
 			ledtrig_timer i2c_dev)
 
 msn2700_connect_table=(	24c32 0x51 8 \
-			mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
@@ -78,11 +77,9 @@ msn2700_dis_table=(	0x27 5 \
 			0x51 8 \
 			0x6d 15 \
 			0x51 16 \
-			0x49 17 \
-			0x48 2)
+			0x49 17)
 
 msn2100_connect_table=(	24c32 0x51 8 \
-			mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
@@ -98,11 +95,9 @@ msn2100_dis_table=(	0x27 5 \
 			0x4b 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x51 16 \
-			0x48 2)
+			0x51 16)
 
 msn2740_connect_table=(	24c32 0x51 8 \
-			mlxsw_minimal 0x48 2 \
 			pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x64 5 \
@@ -118,11 +113,9 @@ msn2740_dis_table=(	0x27 5 \
 			0x48 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x51 16 \
-			0x48 2)
+			0x51 16)
 
 msn2010_connect_table=(	24c32 0x51 8 \
-			mlxsw_minimal 0x48 2 \
 			max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
@@ -138,11 +131,9 @@ msn2010_dis_table=(	0x71 5 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x51 16 \
-			0x48 2)
+			0x51 16)
 
 mqm8700_connect_table=(	24c32 0x51 8 \
-			mlxsw_minimal 0x48 2 \
 			max11603 0x64 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
@@ -158,8 +149,7 @@ mm8700_dis_table=(	0x64 5 \
 			0x4a 7 \
 			0x51 8 \
 			0x6d 15 \
-			0x50 16 \
-			0x48 2)
+			0x50 16)
 
 
 fan_max_speed=23000

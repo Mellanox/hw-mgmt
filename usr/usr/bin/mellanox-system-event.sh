@@ -312,25 +312,25 @@ if [ "$1" == "add" ]; then
       ln -sf $3$4/cause_asic_thermal /bsp/system/cause_asic_thermal
     fi
   fi
+  if [ "$2" == "sxcore" ]; then
+	if [ ! -d /sys/module/mlxsw_minimal ]; then
+		modprobe mlxsw_minimal
+	fi
+	if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
+	   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
+		echo mlxsw_minimal 0x48 > $path/new_device
+	fi
+  fi
 elif [ "$1" == "change" ]; then
-    echo "Do nothing on change"
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			return
 		fi
-		find_i2c_bus
-		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
-		path=/sys/bus/i2c/devices/i2c-$bus
-		echo $2 $3 $4 $5 $6 $7 $8 $9 $path >> /tmp/trace
-		if [ "$3" == "up" ]; then
-			if [ ! -d /sys/module/mlxsw_minimal ]; then
-				modprobe mlxsw_minimal
-			fi
-			if [ ! -d /sys/bus/i2c/devices/$bus-0048 ] &&
-			   [ ! -d /sys/bus/i2c/devices/$bus-00048 ]; then
-				echo mlxsw_minimal 0x48 > $path/new_device
-			fi
-		elif [ "$3" == "down" ]; then
+		# Do nothing for up
+		if [ "$3" == "down" ]; then
+			find_i2c_bus
+			bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+			path=/sys/bus/i2c/devices/i2c-$bus
 			if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
 			   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
 				echo 0x48 > $path/delete_device
@@ -541,5 +541,11 @@ else
     if [ -L /bsp/cpld/cause_asic_thermal ]; then
       unlink /bsp/cpld/cause_asic_thermal
     fi
+  fi
+  if [ "$2" == "sxcore" ]; then
+	if [ -d /sys/bus/i2c/devices/$bus-0048 ] ||
+	   [ -d /sys/bus/i2c/devices/$bus-00048 ]; then
+		echo 0x48 > $path/delete_device
+	fi
   fi
 fi
