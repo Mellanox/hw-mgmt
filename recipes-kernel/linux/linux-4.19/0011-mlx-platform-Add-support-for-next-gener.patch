@@ -1,6 +1,6 @@
-From ddc9d15eca654ec5cd7f8a7195be781706c9a4e5 Mon Sep 17 00:00:00 2001
+From ccd2e0d5df9c7ad67f27f3a293561e4cfc562f7f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@mellanox.com>
-Date: Tue, 17 Dec 2019 18:41:55 +0200
+Date: Wed, 18 Dec 2019 12:21:21 +0200
 Subject: [PATCH platform backport 2/2] platform/x86: mlx-platform: Add support
  for next generation systems
 
@@ -15,11 +15,11 @@ with four PS units for 4U systems.
 
 Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
 ---
- drivers/platform/x86/mlx-platform.c | 231 ++++++++++++++++++++++++++++
- 1 file changed, 231 insertions(+)
+ drivers/platform/x86/mlx-platform.c | 233 ++++++++++++++++++++++++++++
+ 1 file changed, 233 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 8ddda8498241..6738fbafc140 100644
+index 8ddda8498241..588505bbad06 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -36,6 +36,8 @@
@@ -306,24 +306,7 @@ index 8ddda8498241..6738fbafc140 100644
  	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
-@@ -1868,6 +2061,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
- 	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET:
-+	case MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET:
- 		return true;
- 	}
- 	return false;
-@@ -1889,6 +2083,8 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
- 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_LED5_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
-+	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
-+	case MLXPLAT_CPLD_LPC_REG_GP0_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
- 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
-@@ -1933,6 +2129,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -1868,6 +2061,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET:
@@ -333,7 +316,26 @@ index 8ddda8498241..6738fbafc140 100644
  		return true;
  	}
  	return false;
-@@ -2192,6 +2391,32 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
+@@ -1889,6 +2085,8 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED5_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
++	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_GP0_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
+@@ -1933,6 +2131,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
+ 		return true;
+ 	}
+ 	return false;
+@@ -2192,6 +2393,32 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
  	return 1;
  }
  
@@ -366,7 +368,7 @@ index 8ddda8498241..6738fbafc140 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_matched,
-@@ -2235,6 +2460,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -2235,6 +2462,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0009"),
  		},
  	},
