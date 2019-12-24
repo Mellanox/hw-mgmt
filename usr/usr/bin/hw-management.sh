@@ -260,6 +260,40 @@ msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
 			0x50 24 \
 			0x49 17)
 
+msn4700_connect_table=(	max11603 0x64 5 \
+			tps53679 0x62 5 \
+			tps53679 0x64 5 \
+			tps53679 0x66 5 \
+			tps53679 0x68 5 \
+			tps53679 0x6a 5 \
+			tps53679 0x6c 5 \
+			tps53679 0x6e 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn4700_dis_table=(	0x64 5 \
+			0x62 5 \
+			0x64 5 \
+			0x66 5 \
+			0x68 5 \
+			0x6a 5 \
+			0x6c 5 \
+			0x6e 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 ACTION=$1
 
 is_module()
@@ -449,6 +483,36 @@ msn27002_msb78002_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 }
 
+msn47xx_specific()
+{
+	connect_size=${#msn4700_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn4700_connect_table[i]}
+	done
+	disconnect_size=${#msn4700_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn4700_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
+msn_spc3_common()
+{
+	config1=`cat /var/run/hw-management/system/config1`
+	case $config1 in
+		*)
+		msn47xx_specific
+		;;
+	esac
+}
+
+
 check_system()
 {
 	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
@@ -521,6 +585,9 @@ check_system()
 				;;
 			VMOD0007)
 				msn38xx_specific
+				;;
+			VMOD0010)
+				msn_spc3_common
 				;;
 			*)
 				log_failure_msg "$manufacturer is not Mellanox"
