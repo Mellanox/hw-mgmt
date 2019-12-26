@@ -260,7 +260,7 @@ msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
 			0x50 24 \
 			0x49 17)
 
-msn4700_connect_table=(	max11603 0x64 5 \
+msn4700_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x62 5 \
 			tps53679 0x64 5 \
 			tps53679 0x66 5 \
@@ -277,7 +277,7 @@ msn4700_connect_table=(	max11603 0x64 5 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-msn4700_dis_table=(	0x64 5 \
+msn4700_dis_table=(	0x6d 5 \
 			0x62 5 \
 			0x64 5 \
 			0x66 5 \
@@ -515,85 +515,81 @@ msn_spc3_common()
 
 check_system()
 {
-	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
-	if [ "$manufacturer" == "Mellanox" ]; then
-		product=`cat /sys/devices/virtual/dmi/id/product_name`
-		case $product in
-			MSN27002|MSB78002)
-				msn27002_msb78002_specific
-				;;
-			MSN24102)
-				msn24102_specific
-				;;
-			MSN274*)
-				msn274x_specific
-				;;
-			MSN21*)
-				msn21xx_specific
-				;;
-			MSN24*)
-				msn24xx_specific
-				;;
-			MSN27*|MSB*|MSX*)
-				msn27xx_msb_msx_specific
-				;;
-			MSN201*)
-				msn201x_specific
-				;;
-			MQM87*|MSN37*|MSN34*)
-				mqmxxx_msn37x_msn34x_specific
-				;;
-			MSN38*)
-				msn38xx_specific
-				;;
-			*)
-				proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
-				case $proc_type in
-					Atom*)
-						msn21xx_specific
+	# Check ODM
+	board=`cat /sys/devices/virtual/dmi/id/board_name`
+	case $board in
+		VMOD0001)
+			msn27xx_msb_msx_specific
+			;;
+		VMOD0002)
+			msn21xx_specific
+			;;
+		VMOD0003)
+			msn274x_specific
+			;;
+		VMOD0004)
+			msn201x_specific
+			;;
+		VMOD0005)
+			mqmxxx_msn37x_msn34x_specific
+			;;
+		VMOD0007)
+			msn38xx_specific
+			;;
+		VMOD0010)
+			msn_spc3_common
+			;;
+		*)
+			product=`cat /sys/devices/virtual/dmi/id/product_name`
+			case $product in
+				MSN27002|MSB78002)
+					msn27002_msb78002_specific
 					;;
-					Celeron*)
-						msn27xx_msb_msx_specific
+				MSN24102)
+					msn24102_specific
 					;;
-					Xeon*)
-						mqmxxx_msn37x_msn34x_specific
+				MSN274*)
+					msn274x_specific
 					;;
-					*)
-						log_failure_msg "$product is not supported"
-						exit 0
+				MSN21*)
+					msn21xx_specific
+					;;
+				MSN24*)
+					msn24xx_specific
+					;;
+				MSN27*|MSB*|MSX*)
+					msn27xx_msb_msx_specific
+					;;
+				MSN201*)
+					msn201x_specific
+					;;
+				MQM87*|MSN37*|MSN34*)
+					mqmxxx_msn37x_msn34x_specific
+					;;
+				MSN38*)
+					msn38xx_specific
+					;;
+				*)
+					proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
+					case $proc_type in
+						Atom*)
+							msn21xx_specific
 						;;
-				esac
-		esac
-	else
-		# Check ODM
-		board=`cat /sys/devices/virtual/dmi/id/board_name`
-		case $board in
-			VMOD0001)
-				msn27xx_msb_msx_specific
-				;;
-			VMOD0002)
-				msn21xx_specific
-				;;
-			VMOD0003)
-				msn274x_specific
-				;;
-			VMOD0004)
-				msn201x_specific
-				;;
-			VMOD0005)
-				mqmxxx_msn37x_msn34x_specific
-				;;
-			VMOD0007)
-				msn38xx_specific
-				;;
-			VMOD0010)
-				msn_spc3_common
-				;;
-			*)
-				log_failure_msg "$manufacturer is not Mellanox"
-				exit 0
-		esac
-	fi
+						Celeron*)
+							msn27xx_msb_msx_specific
+						;;
+						Xeon*)
+							mqmxxx_msn37x_msn34x_specific
+						;;
+						*)
+							log_failure_msg "$product is not supported"
+							exit 0
+							;;
+					esac
+					;;
+			esac
+			;;
+	esac
 
 	kernel_release=`uname -r`
 }
