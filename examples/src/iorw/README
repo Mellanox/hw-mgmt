@@ -1,0 +1,60 @@
+########################################################################
+# Copyright (c) 2019 Mellanox Technologies. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#######################################################################
+
+
+- Description: 
+    iorw utility provides command access to IO memory CPLD registers.
+
+- Usage:
+    iorw -r/w [-b <base_addr>] [-o <offset>] [-l <len>] [-v <value>] [-f <filename>] [-F] [-q] [-h]
+    r - read or w -write option should be provided
+    b - base_addr, can be omitted, default: 0x2500o - offset, can be omitted, default: 0
+    l - length, can be omitted only in read - full dump in this case
+    v - value for write operation
+    f - file to store output values
+    F - force, don't check region ranges
+    q - quiet, can be used only with f option, store in file without print
+    h - this help
+
+- Examples:
+    iorw -r -b 0x2500 -l 300      - prints free first bytes of CPLD version.
+    iorw -w -b 0x25db -l 1 -v 8    - open I2C mux leg 8.
+
+- Supported system:
+    o MSN2740
+    o MSN2100
+    o MSN2410
+    o MSN2700
+    o MSN2010
+    o MQMB7800
+    o MSN3700
+    o MSN3800

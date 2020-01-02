@@ -141,6 +141,20 @@ function asic_cpld_add_handler()
                 fi
         fi
 
+	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
+
+        # Verify if CPLD attributes are exist
+        [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
+        if [ "$cpld" == "cpld1" ]; then
+                if [ -f ${QSFP_I2C_PATH}/cpld1_version ]; then
+                        ln -sf ${QSFP_I2C_PATH}/cpld1_version $system_path/cpld3_version
+                fi
+        fi
+        if [ "$cpld" == "cpld3" ]; then
+                if [ -f ${QSFP_I2C_PATH}/cpld3_version ]; then
+                        ln -sf ${QSFP_I2C_PATH}/cpld3_version $system_path/cpld3_version
+                fi
+        fi
 }
 
 function asic_cpld_remove_handler()

@@ -665,8 +665,8 @@ do_chip_up_down()
 		;;
 	1)
 		lock_service_state_change
-                [ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-                if [ $disable ] && [ "$disable" -gt 0 ]; then
+		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
+		if [ $disable ] && [ "$disable" -gt 0 ]; then
 			disable=$(($disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
@@ -739,6 +739,10 @@ do_chip_down()
 
 case $ACTION in
 	start)
+		if [ -d /var/run/hw-management ]; then
+			log_failure_msg "hw-management is already started"
+			exit 1
+		fi
 		do_start
 	;;
 	stop)
