@@ -101,6 +101,7 @@ watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 LOCKFILE="/var/run/hw-management.lock"
+REGIO=/sys/devices/platform/mlxplat/mlxreg-io
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -504,7 +505,9 @@ msn47xx_specific()
 
 msn_spc3_common()
 {
-	config1=`cat /var/run/hw-management/system/config1`
+	config1=`find $REGIO -name config1`
+	config1=`cat $config1`
+
 	case $config1 in
 		*)
 		msn47xx_specific
