@@ -1,0 +1,234 @@
+From 7e493edf235666521923d185c37ea5723f63550b Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Thu, 2 Jan 2020 10:00:05 +0200
+Subject: [PATCH hwmon backport] hwmon: (pmbus/core) Add support for vid mode
+ detection per page bases
+
+Add support for VID protocol detection per page bases, instead of
+detecting it based on PMBU_VOUT readout from page 0.
+The reason that some devices allows to configure different VID modes
+per page within the same device.
+
+Extend tps53679 driver to allow support for TI tps53688 device and for
+Infineon Multi-phase Digital VR Controller Sierra family devices, which
+includes XDPE12286C, XDPE12284C, XDPE12283C, XDPE12254C and XDPE12250C.
+
+Add support for IMVP9 mode for tps53679 driver.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/hwmon/pmbus/max20751.c   |  2 +-
+ drivers/hwmon/pmbus/pmbus.c      |  5 +-
+ drivers/hwmon/pmbus/pmbus.h      |  4 +-
+ drivers/hwmon/pmbus/pmbus_core.c |  6 ++-
+ drivers/hwmon/pmbus/tps53679.c   | 78 ++++++++++++++++++--------------
+ 5 files changed, 54 insertions(+), 41 deletions(-)
+
+diff --git a/drivers/hwmon/pmbus/max20751.c b/drivers/hwmon/pmbus/max20751.c
+index ab74aeae8cf2..394c662c811b 100644
+--- a/drivers/hwmon/pmbus/max20751.c
++++ b/drivers/hwmon/pmbus/max20751.c
+@@ -25,7 +25,7 @@ static struct pmbus_driver_info max20751_info = {
+ 	.pages = 1,
+ 	.format[PSC_VOLTAGE_IN] = linear,
+ 	.format[PSC_VOLTAGE_OUT] = vid,
+-	.vrm_version = vr12,
++	.vrm_version[0] = vr12,
+ 	.format[PSC_TEMPERATURE] = linear,
+ 	.format[PSC_CURRENT_OUT] = linear,
+ 	.format[PSC_POWER] = linear,
+diff --git a/drivers/hwmon/pmbus/pmbus.c b/drivers/hwmon/pmbus/pmbus.c
+index 7688dab32f6e..4db0400b7b46 100644
+--- a/drivers/hwmon/pmbus/pmbus.c
++++ b/drivers/hwmon/pmbus/pmbus.c
+@@ -123,7 +123,7 @@ static int pmbus_identify(struct i2c_client *client,
+ 	}
+ 
+ 	if (pmbus_check_byte_register(client, 0, PMBUS_VOUT_MODE)) {
+-		int vout_mode;
++		int vout_mode, i;
+ 
+ 		vout_mode = pmbus_read_byte_data(client, 0, PMBUS_VOUT_MODE);
+ 		if (vout_mode >= 0 && vout_mode != 0xff) {
+@@ -132,7 +132,8 @@ static int pmbus_identify(struct i2c_client *client,
+ 				break;
+ 			case 1:
+ 				info->format[PSC_VOLTAGE_OUT] = vid;
+-				info->vrm_version = vr11;
++				for (i = 0; i < info->pages; i++)
++					info->vrm_version[i] = vr11;
+ 				break;
+ 			case 2:
+ 				info->format[PSC_VOLTAGE_OUT] = direct;
+diff --git a/drivers/hwmon/pmbus/pmbus.h b/drivers/hwmon/pmbus/pmbus.h
+index 1d24397d36ec..7199cfa2679c 100644
+--- a/drivers/hwmon/pmbus/pmbus.h
++++ b/drivers/hwmon/pmbus/pmbus.h
+@@ -375,12 +375,12 @@ enum pmbus_sensor_classes {
+ #define PMBUS_PAGE_VIRTUAL	BIT(31)
+ 
+ enum pmbus_data_format { linear = 0, direct, vid };
+-enum vrm_version { vr11 = 0, vr12, vr13 };
++enum vrm_version { vr11 = 0, vr12, vr13, imvp9 };
+ 
+ struct pmbus_driver_info {
+ 	int pages;		/* Total number of pages */
+ 	enum pmbus_data_format format[PSC_NUM_CLASSES];
+-	enum vrm_version vrm_version;
++	enum vrm_version vrm_version[PMBUS_PAGES]; /* vrm version per page */
+ 	/*
+ 	 * Support one set of coefficients for each sensor type
+ 	 * Used for chips providing data in direct mode.
+diff --git a/drivers/hwmon/pmbus/pmbus_core.c b/drivers/hwmon/pmbus/pmbus_core.c
+index cd24b375df1e..347234a4c0bf 100644
+--- a/drivers/hwmon/pmbus/pmbus_core.c
++++ b/drivers/hwmon/pmbus/pmbus_core.c
+@@ -709,7 +709,7 @@ static long pmbus_reg2data_vid(struct pmbus_data *data,
+ 	long val = sensor->data;
+ 	long rv = 0;
+ 
+-	switch (data->info->vrm_version) {
++	switch (data->info->vrm_version[sensor->page]) {
+ 	case vr11:
+ 		if (val >= 0x02 && val <= 0xb2)
+ 			rv = DIV_ROUND_CLOSEST(160000 - (val - 2) * 625, 100);
+@@ -722,6 +722,10 @@ static long pmbus_reg2data_vid(struct pmbus_data *data,
+ 		if (val >= 0x01)
+ 			rv = 500 + (val - 1) * 10;
+ 		break;
++	case imvp9:
++		if (val >= 0x01)
++			rv = 200 + (val - 1) * 10;
++		break;
+ 	}
+ 	return rv;
+ }
+diff --git a/drivers/hwmon/pmbus/tps53679.c b/drivers/hwmon/pmbus/tps53679.c
+index 45eacc504e2f..3585111ace2d 100644
+--- a/drivers/hwmon/pmbus/tps53679.c
++++ b/drivers/hwmon/pmbus/tps53679.c
+@@ -1,18 +1,9 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
+ /*
+  * Hardware monitoring driver for Texas Instruments TPS53679
+  *
+  * Copyright (c) 2017 Mellanox Technologies. All rights reserved.
+  * Copyright (c) 2017 Vadim Pasternak <vadimp@mellanox.com>
+- *
+- * This program is free software; you can redistribute it and/or modify
+- * it under the terms of the GNU General Public License as published by
+- * the Free Software Foundation; either version 2 of the License, or
+- * (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+- * GNU General Public License for more details.
+  */
+ 
+ #include <linux/err.h>
+@@ -24,6 +15,7 @@
+ 
+ #define TPS53679_PROT_VR12_5MV		0x01 /* VR12.0 mode, 5-mV DAC */
+ #define TPS53679_PROT_VR12_5_10MV	0x02 /* VR12.5 mode, 10-mV DAC */
++#define TPS53679_PROT_IMVP9_10MV	0x03 /* IMVP9 mode, 10-mV DAC */
+ #define TPS53679_PROT_VR13_10MV		0x04 /* VR13.0 mode, 10-mV DAC */
+ #define TPS53679_PROT_IMVP8_5MV		0x05 /* IMVP8 mode, 5-mV DAC */
+ #define TPS53679_PROT_VR13_5MV		0x07 /* VR13.0 mode, 5-mV DAC */
+@@ -33,27 +25,32 @@ static int tps53679_identify(struct i2c_client *client,
+ 			     struct pmbus_driver_info *info)
+ {
+ 	u8 vout_params;
+-	int ret;
+-
+-	/* Read the register with VOUT scaling value.*/
+-	ret = pmbus_read_byte_data(client, 0, PMBUS_VOUT_MODE);
+-	if (ret < 0)
+-		return ret;
+-
+-	vout_params = ret & GENMASK(4, 0);
+-
+-	switch (vout_params) {
+-	case TPS53679_PROT_VR13_10MV:
+-	case TPS53679_PROT_VR12_5_10MV:
+-		info->vrm_version = vr13;
+-		break;
+-	case TPS53679_PROT_VR13_5MV:
+-	case TPS53679_PROT_VR12_5MV:
+-	case TPS53679_PROT_IMVP8_5MV:
+-		info->vrm_version = vr12;
+-		break;
+-	default:
+-		return -EINVAL;
++	int i, ret;
++
++	for (i = 0; i < TPS53679_PAGE_NUM; i++) {
++		/* Read the register with VOUT scaling value.*/
++		ret = pmbus_read_byte_data(client, i, PMBUS_VOUT_MODE);
++		if (ret < 0)
++			return ret;
++
++		vout_params = ret & GENMASK(4, 0);
++
++		switch (vout_params) {
++		case TPS53679_PROT_VR13_10MV:
++		case TPS53679_PROT_VR12_5_10MV:
++			info->vrm_version[i] = vr13;
++			break;
++		case TPS53679_PROT_VR13_5MV:
++		case TPS53679_PROT_VR12_5MV:
++		case TPS53679_PROT_IMVP8_5MV:
++			info->vrm_version[i] = vr12;
++			break;
++		case TPS53679_PROT_IMVP9_10MV:
++			info->vrm_version[i] = imvp9;
++			break;
++		default:
++			return -EINVAL;
++		}
+ 	}
+ 
+ 	return 0;
+@@ -82,24 +79,35 @@ static int tps53679_probe(struct i2c_client *client,
+ {
+ 	struct pmbus_driver_info *info;
+ 
+-	info = devm_kzalloc(&client->dev, sizeof(*info), GFP_KERNEL);
++	info = devm_kmemdup(&client->dev, &tps53679_info, sizeof(*info),
++			    GFP_KERNEL);
+ 	if (!info)
+ 		return -ENOMEM;
+ 
+-	memcpy(info, &tps53679_info, sizeof(*info));
+-
+ 	return pmbus_do_probe(client, id, info);
+ }
+ 
+ static const struct i2c_device_id tps53679_id[] = {
+ 	{"tps53679", 0},
++	{"tps53688", 0},
++	{"xdpe12283c", 0},
++	{"xdpe12250c", 0},
++	{"xdpe12254c", 0},
++	{"xdpe12284c", 0},
++	{"xdpe12286c", 0},
+ 	{}
+ };
+ 
+ MODULE_DEVICE_TABLE(i2c, tps53679_id);
+ 
+-static const struct of_device_id tps53679_of_match[] = {
++static const struct of_device_id __maybe_unused tps53679_of_match[] = {
+ 	{.compatible = "ti,tps53679"},
++	{.compatible = "ti,tps53688"},
++	{.compatible = "infineon, xdpe12283c"},
++	{.compatible = "infineon, xdpe12250c"},
++	{.compatible = "infineon, xdpe12254c"},
++	{.compatible = "infineon, xdpe12284c"},
++	{.compatible = "infineon, xdpe12286c"},
+ 	{}
+ };
+ MODULE_DEVICE_TABLE(of, tps53679_of_match);
+-- 
+2.20.1
+
