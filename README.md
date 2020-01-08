@@ -1,10 +1,19 @@
-# Mellanox hardware management reference design
+# Mellanox Hardware Management package
+This package supports thermal control and hardware management for Mellanox switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
 
-This package supports thermal control and hardware management for Mellanox
-switches.
+The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.  
+For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
 
-Supported systems:
+##### Table of Contents  
+- [Supported systems](#supported_systems)
+- [Supported Kernel versions](#supported-kernel-versions)
+- [Sysfs attributes](#sysfs-attributes)
+- [Kernel configuration](#kernel-configuration)
+- [Packaging](#packaging)
+- [Installation from local file and de-installation](#installation-from-local-file-and-de-installation)
+- [Activation, de-activation and reading status](#activation-de-activation-and-reading-status)
 
+## Supported systems:
 - MSN2740
 - MSN2100
 - MSN2410
@@ -14,151 +23,179 @@ Supported systems:
 - MSN3700
 - MSN3800
 
-# Supported Kerenl versions 
-
+## Supported Kernel versions:
 - 4.9.xx
 - 4.19.xx
 
-# SYSFS attributes:
-The thermal control operates over sysfs attributes. These attributes are exposed as symbolic links to /var/run/hw-management folder at system boot time. These folder contains the next structure: /var/run/hw-management config configuration related files. It includes the information about FAN minimum, maximum allowed speed, some default settings, configured delays for different purposes. eeprom eeprom related symbolic links to system, PSU, FAN eeproms. environment environment (voltage, current, etcetera) related symbolic links. led led related symbolic links. power power related symbolic links. system system related (health, reset, etcetera) related symbolic links. thermal thermal related links, including thermal zones related subfolders mlxsw ASIC ambient temperature thermal zone related symbolic links. mlxsw-module1 QSFP module 1 temperature thermal zone related symbolic links. ... ... mlxsw-module64 ... QSFP module 64 temperature thermal zone related symbolic links. watchdog aux auxiliary watchdog related symbolic links. main main watchdog related symbolic links.
-Below some of the symbolic links examples:
+## Sysfs attributes:
+The thermal control operates over sysfs attributes.  
+These attributes are exposed as symbolic links to `/var/run/hw-management` folder at system boot time.  
+Let's call this location as a `$bsp_path`. This folder contains the next structure:
 
-cooling_cur_state: Current cooling state, exposed by cooling level (1..10)
-fan_fault: tachometer fault, 1..max tachometers number
-fan_input: tachometer input, 1..max tachometers number
-psu1_status: PS unit 1 presence status (1 - present, 0 - removed)
-psu2_status: PS unit 2 presence status (1 - present, 0 - removed)
-pwm: PWM speed exposed in RPM
-temp_asic: ASIC ambient temperature value
-temp_fan_amb: FAN side ambient temperature value
-temp_port_amb: port side ambient temperature value
-temp_port: port temperature value
-temp_port_fault: port temperature fault
-temp_trip_norm: thermal zone minimum temperature trip
-tz_mode: thermal zone mode (enabled or disabled)
-tz_temp: thermal zone temperature
+| Node Path | Purpose |
+| :--- | :--- |
+| /config | Configuration related files. It includes the information about FAN minimum, maximum allowed speed, some default settings, configured delays for different purposes |
+| /eeprom | EEPROM related symbolic links to System, PSU, FAN, CPU |
+| /environment | Environment (voltage, current, A2D) related symbolic links |
+| /led | LED related symbolic links |
+| /power | Power related symbolic links |
+| /system | System related (health, reset, CPLD version. etc.) related symbolic links |
+| /thermal | Thermal related links, including thermal zones related subfolders.<br>`/mlxsw` - ASIC ambient temperature thermal zone related symbolic links.<br>`/mlxsw-moduleX` - QSFP module `X` temperature thermal zone related symbolic links |
+| /watchdog | Standard watchdog sysfs attributes |
 
-# Kernel configuration
-Kernel configuration required the next setting (kernel version should be v4.19 or later):
+**Symbolic links examples:**
 
-CONFIG_NET_VENDOR_MELLANOX
-CONFIG_MELLANOX_PLATFORM
-CONFIG_NET_DEVLINK
-CONFIG_MAY_USE_DEVLINK
-CONFIG_I2C
-CONFIG_I2C_BOARDINFO
-CONFIG_I2C_CHARDEV
-CONFIG_I2C_MUX
-CONFIG_I2C_MUX_REG
-CONFIG_REGMAP
-CONFIG_SYSFS
-CONFIG_MLXSW_CORE
-CONFIG_MLXSW_CORE_HWMON
-CONFIG_MLXSW_CORE_THERMAL
-CONFIG_MLXSW_PCI or/and CONFIG_MLXSW_I2C *
-CONFIG_MLXSW_SPECTRUM or/and CONFIG_MLXSW_MINIMAL *
-CONFIG_I2C_MLXCPLD
-CONFIG_LEDS_MLXREG
-CONFIG_MLX_PLATFORM
-CONFIG_MLXREG_HOTPLUG
-CONFIG_THERMAL
-CONFIG_THERMAL_HWMON
-CONFIG_THERMAL_WRITABLE_TRIPS
+To get current cooling state, exposed by cooling level (1..10), run:
+```
+$ cat $bsp_path/thermal/cooling_cur_state
+2
+```
+To get power supply unit `X` power status, where 1 - good and 0 - unplugged/unfunctional, run: 
+```
+$ cat $bsp_path/thermal/psu1_pwr_status 
+0
+$ cat $bsp_path/thermal/psu2_pwr_status  
+1
+```
+To get the switch module ASIC temperature, in millidegrees Celsius, run:
+```
+$ cat $bsp_path/thermal/asic 
+39000
+```
+Detailed information about all available nodes can be found in the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
+
+## Kernel configuration
+At a minimum, the following configuration options should be set:
+```
+CONFIG_NET_VENDOR_MELLANOX=y
+CONFIG_MELLANOX_PLATFORM=y
+CONFIG_NET_DEVLINK=y
+CONFIG_I2C=m
+CONFIG_I2C_BOARDINFO=y
+CONFIG_I2C_CHARDEV=m
+CONFIG_I2C_MUX=m
+CONFIG_I2C_MUX_REG=m
+CONFIG_I2C_MUX_MLXCPLD=m
+CONFIG_REGMAP=y
+CONFIG_REGMAP_I2C=m
+CONFIG_SYSFS=y
+CONFIG_DMI_SYSFS=y
+CONFIG_GPIO_SYSFS=y
+CONFIG_WATCHDOG_SYSFS=y
+CONFIG_IIO_SYSFS_TRIGGER=m
+CONFIG_NVMEM_SYSFS=y
+CONFIG_MLXSW_CORE=m
+CONFIG_MLXSW_CORE_HWMON=m
+CONFIG_MLXSW_CORE_THERMAL=m
+CONFIG_MLXSW_PCI or/and CONFIG_MLXSW_I2C *=m
+CONFIG_MLXSW_SPECTRUM or/and CONFIG_MLXSW_MINIMAL *=m
+CONFIG_I2C_MLXCPLD=m
+CONFIG_LEDS_MLXREG=m
+CONFIG_MLX_PLATFORM=m
+CONFIG_MLXREG_HOTPLUG=m
+CONFIG_MLXREG_IO=m
+CONFIG_MLX_WDT=m
+CONFIG_THERMAL=y
+CONFIG_THERMAL_HWMON=y
+CONFIG_THERMAL_WRITABLE_TRIPS=y
 CONFIG_THERMAL_DEFAULT_GOV_STEP_WISE=y
-CONFIG_THERMAL_GOV_STEP_WISE
-CONFIG_PMBUS
-CONFIG_SENSORS_PMBUS
-CONFIG_HWMON
-CONFIG_THERMAL_HWMON
-CONFIG_SENSORS_LM75
-CONFIG_SENSORS_TMP102
-CONFIG_LEDS_MLXREG
-CONFIG_LEDS_TRIGGERS
-CONFIG_LEDS_TRIGGER_TIMER
-CONFIG_NEW_LEDS
-CONFIG_LEDS_CLASS
-Note In case kernel is configured with CONFIG_MLXSW_PCI and CONFIG_MLXSW_SPECTRUM, mlxsw kernel hwmon and thermal modules will work over PCI bus. In this case mlxsw_i2c and mlxsw_minimal drivers will not be activated. In other case hwmon and thermal modules will work over I2C bus. If user wants to have both PCI and I2C option configured and want enforce thermal control to work over I2C, for example user which wants to be able to switch between workloads running Mellanox legacy SDK code and running Mellanox switch-dev driver, the next steps should be performed:
-Create blacklist file with next wo lines, f.e. /etc/modprobe.d/mellanox-sdk-blacklist.conf blacklist mlxsw_spectrum blacklist mlxsw_pci
-And then run: update-initramfs -u (in case initramfs is used) For returning back to PCI option:
-Remove /etc/modprobe.d/mellanox-sdk-blacklist.conf
-And then run: update-initramfs -u (in case initramfs is used)
+CONFIG_THERMAL_GOV_STEP_WISE=y
+CONFIG_PMBUS=m
+CONFIG_SENSORS_PMBUS=m
+CONFIG_HWMON=y
+CONFIG_SENSORS_LM75=m
+CONFIG_SENSORS_TMP102=m
+CONFIG_LEDS_MLXREG=m
+CONFIG_LEDS_TRIGGERS=y
+CONFIG_LEDS_TRIGGER_TIMER=m
+CONFIG_NEW_LEDS=y
+CONFIG_LEDS_CLASS=y
+```
+**Note:**
+- Kernel version should be v4.19 or later.
+- In case the Kernel is configured with `CONFIG_MLXSW_PCI` and `CONFIG_MLXSW_SPECTRUM`, mlxsw kernel hwmon and thermal modules will work over PCI bus.
+- In case the Kernel is configured with `CONFIG_MLXSW_I2C` and `CONFIG_MLXSW_MINIMAL`, mlxsw kernel hwmon and thermal modules will work over I2C bus.
+- If both Kernel configuration options options have been specified, work over the PCI bus will be selected by default.<br>`mlxsw_i2c` and `mlxsw_minimal` drivers will not be activated.
+<br><br>If the user wants to enforce work over I2C (for example, to be able to switch between workloads running Mellanox legacy SDK code and running Mellanox switch-dev driver), the next steps should be performed:
+   1. Create a blacklist file with next two lines. For example:
+      ```
+      $ vi /etc/modprobe.d/mellanox-sdk-blacklist.conf
+      blacklist mlxsw_spectrum
+      blacklist mlxsw_pci
+      ```
+   2. And then run: `update-initramfs -u` (in case initramfs is used)
+   3. In order to returning back to PCI option, remove `/etc/modprobe.d/mellanox-sdk-blacklist.conf` file and re-run `update-initramfs -u` (in case initramfs is used).
 
-
-# Packaging:
+## Packaging:
 The package depends on the next packages:
-- init-system-helpers:	helper tools for all init systems
-- lsb-base:		Linux Standard Base init script functionality
+- init-system-helpers: helper tools for all init systems
+- lsb-base:	Linux Standard Base init script functionality.<br>
+  It is possible to check whether it is installed or to install by the following command:  
+  `sudo apt install lsb-core` for the Debian-based distributions.  
+  `sudo yum install redhat-lsb-core` for the Red Hat Linux based distros.   
 - udev:			/dev/ and hotplug management daemon
 - i2c-tools:		heterogeneous set of I2C tools for Linux
 
-Package contains the folder debian, with the rules for Debian package build.
+Package contains the folder Debian, with the rules for Debian package build.  
+Location: `https://github.com/Mellanox/hw-mgmt`  
+To get package sources: `git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt`
 
-Location:
-https://github.com/Mellanox/hw-mgmt
-
-To get package sources:
-git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt
-
-For Debian package build:
+**For Debian package build:**  
 On a debian-based system, install the following programs:
 sudo apt-get install devscripts build-essential lintian
 
-- Go into thermal-control base folder and build Debian package.
-- Run:
-  debuild -us -uc
-- Find in upper folder f.e. hw-management_1.mlnx.18.12.2018_amd64.deb
+- Go into the thermal-control base folder and build the Debian package.
+- Run: `debuild -us -uc`
+- Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
-For converting deb package to rpm package:
-On a debian-based system, install the following program:
-sudo apt-get install alien
-
-- alien --to-rpm hw-management_1.mlnx.18.12.2018_amd64.deb
-- Find hw-management-1.mlnx.18.12.2018-2.x86_64.rpm
+**For converting .deb package to .rpm package:**  
+- On a Debian-based system, install the `alien` program: `sudo apt-get install alien`
+- `alien --to-rpm hw-management_1.mlnx.18.12.2018_amd64.deb`
+- Find `hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
 
 ## Installation from local file and de-installation
-Copy deb or rpm package to the system, for example to /tmp.
-
-For deb package install with:
-dpkg -i /tmp/ hw-management_1.mlnx.18.12.2018_amd64.deb
-remove with:
-dpkg --purge hw-management
-
-For rpm install with:
-- yum localinstall /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm
-  or
-- rpm -ivh /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm
-  remove with:
-- yum remove hw-management
-  or
-- rpm -e hw-management
-
+1. Copy deb or rpm package to the system, for example to `/tmp`.
+2. For deb package:
+   * install with: `dpkg -i /tmp/ hw-management_1.mlnx.18.12.2018_amd64.deb`
+   * remove with: `dpkg --purge hw-management`
+3. For rpm package:
+   * install with: `yum localinstall /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
+     <br>or `rpm -ivh --force /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
+   * remove with: `yum remove hw-management` or `rpm -e hw-management`
 
 ## Activation, de-activation and reading status
-hw-management can be initialized and de-initialized by systemd service.
-The next command could be used in order to configure persistent initialization
-and de-initialization of hw-management:
-- systemctl enable hw-management
-- systemctl disable hw-management
-- Running status of hw-management unit can be obtained by the following
-  command:
-- systemctl status hw-management
-- Logging records of the thermal control written by systemd-journald.service
-  can be queried by the following commands:
-- journalctl --unit=hw-management
-- journalctl -f -u hw-management
-- Once "systemctl enable hw-management" is invoked, the thermal control will
-  be automatically activated after the next and the following system reboots,
-  until "systemctl disable hw-management" is not invoked.
-  Application could be stopped by the following commands:
-- systemctl stop hw-management.service
+hw-management can be initialized and de-initialized by systemd service.  
+The next command could be used in order to configure persistent initialization and de-initialization of hw-management:
+- `systemctl enable hw-management`
+- `systemctl disable hw-management`
+
+The running status of hw-management unit can be obtained by the following command:
+- `systemctl status hw-management`
+
+Logging records of the thermal control written by systemd-journald.service can be queried by the following commands:
+- `journalctl --unit=hw-management`
+- `journalctl -f -u hw-management`
+
+Once `systemctl enable hw-management` is invoked, the thermal control will be automatically activated after the next and the following system reboots, until `systemctl disable hw-management` is not invoked.  
+
+The application could be stopped by the `systemctl stop hw-management` command.
 
 ## Authors
+* **Michael Shych**
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+`michaelsh [at] mellanox [dot] com`
+* **Mykola Kostenok**
+&nbsp;&nbsp;&nbsp;
+`c_mykolak [at] mellanox [dot] com`
+* **Ohad Oz**
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+`ohado [at] mellanox [dot] com`
+* **Oleksandr Shamray**
+`oleksandrs [at] mellanox [dot] com`
+* **Vadim Pasternak**
+&nbsp;&nbsp;&nbsp;&nbsp;
+`vadimp [at] mellanox [dot] com`
 
-* **Michael Shych** <michaelsh@mellanox.com>
-* **Mykola Kostenok** <c_mykolak@mellanox.com>
-* **Ohad Oz** <ohado@mellanox.com>
-* **Oleksandr Shamray** <oleksandrs@mellanox.com>
-* **Vadim Pasternak** <vadimp@mellanox.com>
 
 ## License
 
