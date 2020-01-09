@@ -788,6 +788,9 @@ do_start()
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
 
+	#disabled for leopard chipless bringup.
+	echo 1 > $config_path/suspend
+
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
 
