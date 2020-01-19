@@ -31,8 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-. /lib/lsb/init-functions
-
 # Local variables
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
@@ -52,6 +50,16 @@ module_counter=0
 gearbox_counter=0
 LOCKFILE="/var/run/hw-management-thermal.lock"
 
+log_err()
+{
+	logger -t hw-management -p daemon.err "$@"
+}
+
+log_info()
+{
+	logger -t hw-management -p daemon.info "$@"
+}
+
 find_i2c_bus()
 {
 	# Find physical bus number of Mellanox I2C controller. The default
@@ -68,7 +76,7 @@ find_i2c_bus()
 		fi
 	done
 
-	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
 }
 
