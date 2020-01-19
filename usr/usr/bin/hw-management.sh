@@ -209,6 +209,30 @@ mqm8700_dis_table=(	0x64 5 \
 			0x61 15 \
 			0x50 16)
 
+msn2420_connect_table=(	max11603 0x6d 5 \
+			tps53679 0x62 5 \
+			tps53679 0x64 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn2420_dis_table=(	0x6d 5 \
+			0x62 5 \
+			0x64 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 msn3800_connect_table=( max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
@@ -423,6 +447,25 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+msn3420_specific()
+{
+	connect_size=${#msn2420_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn3420_connect_table[i]}
+	done
+	disconnect_size=${#msn2420_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn3420_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=10
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
 msn38xx_specific()
 {
 	connect_size=${#msn3800_connect_table[@]}
@@ -503,18 +546,28 @@ msn47xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+msn_spc2_common()
+{
+	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+	case $sku in
+		*)
+			mqmxxx_msn37x_msn34x_specific
+		;;
+		HI120)
+			msn3420_specific
+		;;
+	esac
+}
+
 msn_spc3_common()
 {
-	config1=`find $REGIO -name config1`
-	config1=`cat $config1`
-
-	case $config1 in
+	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+	case $sku in
 		*)
 		msn47xx_specific
 		;;
 	esac
 }
-
 
 check_system()
 {
@@ -534,7 +587,7 @@ check_system()
 			msn201x_specific
 			;;
 		VMOD0005)
-			mqmxxx_msn37x_msn34x_specific
+			msn_spc2_common
 			;;
 		VMOD0007)
 			msn38xx_specific
