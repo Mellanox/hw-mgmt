@@ -384,12 +384,12 @@ case $command in
 This is PMBUS PS VPD tool. Version ${VERSION}" '
 
 Usage:
-    pmbus_ps_vpd_tool.sh --BUS_ID <bus_num> --I2C_ADDR <addr value> <command> <field> <value> .. <field> <value>
+    pmbus_ps_vpd_tool_onl.sh --BUS_ID <bus_num> --I2C_ADDR <addr value> <command> <field> <value> .. <field> <value>
 Commands:
     --dump: dump vpd info to screen.
 
     --pmbus_delay: there can be added delay between transactions.
-        example: pmbus_ps_vpd_tool.sh --pmbus_delay 0.1
+        example: pmbus_ps_vpd_tool_onl.sh --pmbus_delay 0.1
 
     --BUS_ID: PSU i2c bus number. allowed value decimal. default value 10.
     --I2C_ADDR: PSU i2c address. allowed value hex. default value 0x59.
@@ -398,14 +398,14 @@ Commands:
                By default(if this option NOT set) and VPD tool working over
                 i2c-tools(ver 4.1-1+) using i2ctransfer.
 
-        example: pmbus_ps_vpd_tool.sh --mst_dev /dev/mst/dev-i2c-1
+        example: pmbus_ps_vpd_tool_onl.sh --mst_dev /dev/mst/dev-i2c-1
 
     --pmbus_bin: path to pmbus binary. Used only with --mst_dev.
 
     --help: this help.
     --version: show version.
 
-Usage example: pmbus_ps_vpd_tool.sh --BUS_ID 10 --I2C_ADDR 0x59 --burn --PN_VPD_FIELD "MTEF-PSF-AC-B" --SN_VPD_FIELD "MT1630X10538" --REV_VPD_FIELD "A1" --MFG_DATE_FIELD "02/09/19" --CAP_VPD_FIELD "460 1 12000 AC"
+Usage example: pmbus_ps_vpd_tool_onl.sh --BUS_ID 4 --I2C_ADDR 0x59 --dump
 
 Author: Mykola Kostenok <c_mykolak@mellanox.com>'
         exit 0
@@ -417,6 +417,10 @@ Author: Mykola Kostenok <c_mykolak@mellanox.com>'
     dump)
         read_pmbus_ps_vpd
         echo CALC_CRC: "${crc16_arr[*]}" >> "$VPD_OUTPUT_FILE"
+        if [ "${crc16_str}" != "${read_crc16_str}" ];
+        then
+            exit 1
+        fi
         exit 0
         ;;
 esac
