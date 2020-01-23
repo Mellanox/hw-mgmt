@@ -36,6 +36,7 @@
 # Local variables
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
+eeprom_path=$hw_management_path/eeprom
 power_path=$hw_management_path/power
 alarm_path=$hw_management_path/alarm
 config_path=$hw_management_path/config
@@ -331,6 +332,15 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/power2_input $power_path/$2_power
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
+
+		#PSU VPD
+		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
+		pmbus_ps_vpd_tool_onl.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
+		if [ $? -ne 0 ]; then
+			#PBUS VPD failed
+			echo "Failed to read PSU PMBUS VPD" > $eeprom_path/$2_vpd
+		fi
+
 	fi
 	if [ "$2" == "sxcore" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
@@ -483,7 +493,7 @@ else
 		echo 0 > $config_path/gearbox_counter
 	fi
 	if [ "$2" == "regfan" ]; then
-		if [ -L $thermal_path/pwm1]; then
+		if [ -L $thermal_path/pwm1 ]; then
 			unlink $thermal_path/pwm1
 		fi
 		for ((i=1; i<=$max_tachos; i+=1)); do
@@ -586,7 +596,7 @@ else
 		if [ -L $thermal_path/$2_temp_alarm ]; then
 			unlink $thermal_path/$2_temp_alarm
 		fi
-		if [ -L $thermal_path/$2_temp2]; then
+		if [ -L $thermal_path/$2_temp2 ]; then
 			unlink $thermal_path/$2_temp2
 		fi
 		if [ -L $thermal_path/$2_temp2_max ]; then
@@ -626,6 +636,7 @@ else
 		if [ -L $power_path/$2_curr ]; then
 			unlink $power_path/$2_curr
 		fi
+		rm -f $eeprom_path/$2_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown
