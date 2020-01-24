@@ -335,7 +335,7 @@ if [ "$1" == "add" ]; then
 
 		#PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
-		pmbus_ps_vpd_tool_onl.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
+		pmbus_ps_vpd_util.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
 		if [ $? -ne 0 ]; then
 			#PBUS VPD failed
 			echo "Failed to read PSU PMBUS VPD" > $eeprom_path/$2_vpd
