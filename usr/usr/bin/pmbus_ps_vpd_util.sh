@@ -384,12 +384,12 @@ case $command in
 This is PMBUS PS VPD tool. Version ${VERSION}" '
 
 Usage:
-    pmbus_ps_vpd_tool_onl.sh --BUS_ID <bus_num> --I2C_ADDR <addr value> <command> <field> <value> .. <field> <value>
+    pmbus_ps_vpd_util.sh --BUS_ID <bus_num> --I2C_ADDR <addr value> <command> <field> <value> .. <field> <value>
 Commands:
     --dump: dump vpd info to screen.
 
     --pmbus_delay: there can be added delay between transactions.
-        example: pmbus_ps_vpd_tool_onl.sh --pmbus_delay 0.1
+        example: pmbus_ps_vpd_util.sh --pmbus_delay 0.1
 
     --BUS_ID: PSU i2c bus number. allowed value decimal. default value 10.
     --I2C_ADDR: PSU i2c address. allowed value hex. default value 0x59.
@@ -398,14 +398,14 @@ Commands:
                By default(if this option NOT set) and VPD tool working over
                 i2c-tools(ver 4.1-1+) using i2ctransfer.
 
-        example: pmbus_ps_vpd_tool_onl.sh --mst_dev /dev/mst/dev-i2c-1
+        example: pmbus_ps_vpd_util.sh --mst_dev /dev/mst/dev-i2c-1
 
     --pmbus_bin: path to pmbus binary. Used only with --mst_dev.
 
     --help: this help.
     --version: show version.
 
-Usage example: pmbus_ps_vpd_tool_onl.sh --BUS_ID 4 --I2C_ADDR 0x59 --dump
+Usage example: pmbus_ps_vpd_util.sh --BUS_ID 4 --I2C_ADDR 0x59 --dump
 
 Author: Mykola Kostenok <c_mykolak@mellanox.com>'
         exit 0
@@ -422,6 +422,9 @@ Author: Mykola Kostenok <c_mykolak@mellanox.com>'
             exit 1
         fi
         exit 0
+        ;;
+    *)
+        echo "No command specified, use pmbus_ps_vpd_util.sh --help to print usage example."
         ;;
 esac
 
