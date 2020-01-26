@@ -209,7 +209,7 @@ mqm8700_dis_table=(	0x64 5 \
 			0x61 15 \
 			0x50 16)
 
-msn2420_connect_table=(	max11603 0x6d 5 \
+msn3420_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x62 5 \
 			tps53679 0x64 5 \
 			tmp102 0x49 7 \
@@ -221,7 +221,7 @@ msn2420_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-msn2420_dis_table=(	0x6d 5 \
+msn3420_dis_table=(	0x6d 5 \
 			0x62 5 \
 			0x64 5 \
 			0x49 7 \
@@ -449,11 +449,11 @@ mqmxxx_msn37x_msn34x_specific()
 
 msn3420_specific()
 {
-	connect_size=${#msn2420_connect_table[@]}
+	connect_size=${#msn3420_connect_table[@]}
 	for ((i=0; i<$connect_size; i++)); do
 		connect_table[i]=${msn3420_connect_table[i]}
 	done
-	disconnect_size=${#msn2420_dis_table[@]}
+	disconnect_size=${#msn3420_dis_table[@]}
 	for ((i=0; i<$disconnect_size; i++)); do
 		dis_table[i]=${msn3420_dis_table[i]}
 	done
@@ -550,11 +550,11 @@ msn_spc2_common()
 {
 	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
 	case $sku in
+                HI120)
+                        msn3420_specific
+                ;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
-		;;
-		HI120)
-			msn3420_specific
 		;;
 	esac
 }
