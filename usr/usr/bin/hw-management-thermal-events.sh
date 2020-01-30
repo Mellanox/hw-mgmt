@@ -106,10 +106,10 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
 		if [ ! -f "$config_path/gearbox_counter" ]; then
-		    echo 0 > $config_path/gearbox_counter
+			echo 0 > $config_path/gearbox_counter
 		fi
 		if [ ! -f "$config_path/module_counter" ]; then
-		    echo 0 > $config_path/module_counter
+			echo 0 > $config_path/module_counter
 		fi
 
 		if [ "$name" == "mlxsw" ]; then
@@ -265,7 +265,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -f /etc/init.d/sxdkernel ]; then
 			/usr/bin/hw-management.sh chipup
 		fi
-  	fi
+	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
 			if [ -f $3$4/temp"$i"_input ]; then
@@ -335,7 +335,7 @@ if [ "$1" == "add" ]; then
 
 		#PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
-		pmbus_ps_vpd_util.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
+		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
 		if [ $? -ne 0 ]; then
 			#PBUS VPD failed
 			echo "Failed to read PSU PMBUS VPD" > $eeprom_path/$2_vpd
