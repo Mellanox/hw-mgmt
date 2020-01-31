@@ -46,7 +46,7 @@
 #  MSN24*		Spider
 #  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2, Spider
 #  MSN201*		Boxer
-#  MQMB7*|MSN37*|MSN34*	Jupiter, Jaguar, Anaconda
+#  MQMB7*|MSN37*|MSN34*|MSN35* Jupiter, Jaguar, Anaconda, Octopus
 #  MSN38*		Tigris
 # Available options:
 # start	- load the kernel drivers required for the thermal control support,
@@ -619,7 +619,7 @@ check_system()
 				MSN201*)
 					msn201x_specific
 					;;
-				MQM87*|MSN37*|MSN34*)
+				MQM87*|MSN37*|MSN34*|MSN35*)
 					mqmxxx_msn37x_msn34x_specific
 					;;
 				MSN38*)
