@@ -91,6 +91,7 @@ lock_service_state_change()
 unlock_service_state_change()
 {
 	/usr/bin/flock -u ${LOCKFD}
+	rm -f ${LOCKFILE}
 }
 
 if [ "$1" == "add" ]; then
