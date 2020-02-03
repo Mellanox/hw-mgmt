@@ -69,25 +69,6 @@
 # All the sensors and statuses are exposed through the sysfs interface for the
 # user space application access.
 
-. /lib/lsb/init-functions
-
-# Check if this is Redhat based distribution (RH, CentOS, Fedora etc.)
-# log_action_msg exist in Debian LSB definitions
-# Define log_action_msg function in case of Redhat based distribution
-if [ -d /etc/redhat-lsb ]; then
-log_action_msg()
-{
-	echo "$@"
-	command -v systemd-cat > /dev/null 2>&1
-	rc=$?
-	if [ $rc -eq 0 ]; then
-		echo "$@" | systemd-cat -p info -t hw-management
-        else
-		logger -p info -t hw-management "$@"
-	fi
-}
-fi
-
 # Paths to thermal sensors, device present states, thermal zone and cooling device
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
@@ -327,6 +308,26 @@ unk_dir=0
 ambient=0
 set_cur_state=0
 
+log_err()
+{
+	logger -t thermal-control -p daemon.err "$@"
+}
+
+log_warning()
+{
+	logger -t thermal-control -p daemon.warning "$@"
+}
+
+log_notice()
+{
+	logger -t thermal-control -p daemon.notice "$@"
+}
+
+log_info()
+{
+	logger -t thermal-control -p daemon.info "$@"
+}
+
 validate_thermal_configuration()
 {
 	# Wait for symbolic links creation.
@@ -334,38 +335,38 @@ validate_thermal_configuration()
 	# Validate FAN fault symbolic links.
 	for ((i=1; i<=$max_tachos; i+=1)); do
 		if [ ! -L $thermal_path/fan"$i"_fault ]; then
-			log_failure_msg "FAN fault status attributes are not exist"
+			log_err "FAN fault status attributes are not exist"
 			return 1
 		fi
 		if [ ! -L $thermal_path/fan"$i"_speed_get ]; then
-			log_failure_msg "FAN input attributes are not exist"
+			log_err "FAN input attributes are not exist"
 			return 1
 		fi
 	done
 	if [ ! -L $cooling_cur_state ] || [ ! -L $tz_mode  ] ||
 	   [ ! -L $temp_trip_norm ] || [ ! -L $tz_temp ]; then
-		log_failure_msg "Thermal zone attributes are not exist"
+		log_err "Thermal zone attributes are not exist"
 		return 1
 	fi
 	if [ ! -L $pwm ] || [ ! -L $asic ]; then
-		log_failure_msg "PWM control and ASIC attributes are not exist"
+		log_err "PWM control and ASIC attributes are not exist"
 		return 1
 	fi
 	for ((i=1; i<=$module_counter; i+=1)); do
 		if [ -L $thermal_path/module"$i"_temp ]; then
 			if [ ! -L $thermal_path/module"$i"_temp_fault ]; then
-				log_failure_msg "QSFP module attributes are not exist"
+				log_err "QSFP module attributes are not exist"
 				return 1
 			fi
 		fi
 	done
 	if [ ! -L $fan_amb ] || [ ! -L $port_amb ]; then
-		log_failure_msg "Ambient temperature sensors attributes are not exist"
+		log_err "Ambient temperature sensors attributes are not exist"
 		return 1
 	fi
 	if [ $max_psus -gt 0 ]; then
 		if [ ! -L $psu1_status ] || [ ! -L $psu2_status ]; then
-			log_failure_msg "PS units status attributes are not exist"
+			log_err "PS units status attributes are not exist"
 			return 1
 		fi
 	fi
@@ -410,15 +411,15 @@ thermal_periodic_report()
 	ps_fan_speed=${psu_fan_speed[$f5]}
 	f5=$(($f5*10))
 	f6=$(($set_cur_state*10))
-	log_success_msg "Thermal periodic report"
-	log_success_msg "======================="
-	log_success_msg "Temperature(mC): asic $f1 fan amb $f2 port amb $f3"
-	log_success_msg "Cooling(%): pwm $f6 ps_fan_speed $((ps_fan_speed)) dynaimc_min $dyn"
+	log_info "Thermal periodic report"
+	log_info "======================="
+	log_info "Temperature(mC): asic $f1 fan amb $f2 port amb $f3"
+	log_info "Cooling(%): pwm $f6 ps_fan_speed $((ps_fan_speed)) dynaimc_min $dyn"
 	for ((i=1; i<=$max_tachos; i+=1)); do
 		if [ -f $thermal_path/fan"$i"_speed_get ]; then
 			tacho=`cat $thermal_path/fan"$i"_speed_get`
 			fault=`cat $thermal_path/fan"$i"_fault`
-			log_success_msg "tacho$i speed is $tacho fault is $fault"
+			log_info "tacho$i speed is $tacho fault is $fault"
 		fi
 	done
 	for ((i=1; i<=$module_counter; i+=1)); do
@@ -428,7 +429,7 @@ thermal_periodic_report()
 				t2=`cat $thermal_path/module"$i"_temp_fault`
 				t3=`cat $thermal_path/module"$i"_temp_crit`
 				t4=`cat $thermal_path/module"$i"_temp_emergency`
-				log_success_msg "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
+				log_info "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 			if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
 				t7=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
@@ -439,7 +440,7 @@ thermal_periodic_report()
 					t4=`cat $thermal_path/mlxsw-module"$i"/temp_trip_hot`
 					t5=`cat $thermal_path/mlxsw-module"$i"/temp_trip_crit`
 					t6=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
-					log_success_msg "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 				fi
 			fi
 		fi
@@ -448,7 +449,7 @@ thermal_periodic_report()
 		if [ -f $thermal_path/gearbox"$i"_temp_input ]; then
 			t1=`cat $thermal_path/gearbox"$i"_temp_input`
 			if [ "$t1" -gt  "0" ]; then
-				log_success_msg "gearbox$i temp $t1"
+				log_info "gearbox$i temp $t1"
 			fi
 			if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp ]; then
 				t7=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode`
@@ -459,7 +460,7 @@ thermal_periodic_report()
 					t4=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot`
 					t5=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit`
 					t6=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy`
-					log_success_msg "tz gearbox$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+					log_info "tz gearbox$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 				fi
 			fi
 		fi
@@ -472,7 +473,7 @@ thermal_periodic_report()
 	t6=`cat $thermal_path/mlxsw/thermal_zone_policy`
 	t7=`cat $thermal_path/mlxsw/thermal_zone_mode`
 	if [ $t7 = "enabled" ]; then
-		log_success_msg "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+		log_info "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 	fi
 }
 
@@ -542,12 +543,12 @@ get_psu_presence()
 					# Disable asic thermal zone if were enabled.
 					if [ $mode = "enabled" ]; then
 						echo disabled > $tz_mode
-						log_action_msg "ASIC thermal zone is disabled due to PS absence"
+						log_info "ASIC thermal zone is disabled due to PS absence"
 					fi
 					policy=`cat $tz_policy`
 					if [ $policy = "step_wise" ]; then
 						echo user_space > $tz_policy
-						log_action_msg "ASIC thermal zone policy is set to user_space due to PS absence"
+						log_info "ASIC thermal zone policy is set to user_space due to PS absence"
 					fi
 				fi
 				for ((i=1; i<=$module_counter; i+=1)); do
@@ -555,12 +556,12 @@ get_psu_presence()
 						mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 						if [ $mode = "enabled" ]; then
 							echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-							log_action_msg "QSFP module $i thermal zone is disabled due to PS absence"
+							log_info "QSFP module $i thermal zone is disabled due to PS absence"
 						fi
 						policy=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
 						if [ $policy = "step_wise" ]; then
 							echo user_space > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
-							log_action_msg "QSFP module $i thermal zone policy is set to user_space due to PS absence"
+							log_info "QSFP module $i thermal zone policy is set to user_space due to PS absence"
 						fi
 					fi
 				done
@@ -569,12 +570,12 @@ get_psu_presence()
 						mode=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode`
 						if [ $mode = "enabled" ]; then
 							echo disabled > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
-							log_action_msg "Gearbox $i thermal zone is disabled due to PS absence"
+							log_info "Gearbox $i thermal zone is disabled due to PS absence"
 						fi
 						policy=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy`
 						if [ $policy = "step_wise" ]; then
 							echo user_space > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
-							log_action_msg "Gearbox $i thermal zone policy is set to user_space due to PS absence"
+							log_info "Gearbox $i thermal zone policy is set to user_space due to PS absence"
 						fi
 					fi
 				done
@@ -620,24 +621,24 @@ get_fan_faults()
 			# Disable asic and modules thermal zones if were enabled.
 			if [ $mode = "enabled" ]; then
 				echo disabled > $tz_mode
-				log_action_msg "ASIC thermal zone is disabled due to FAN fault"
+				log_info "ASIC thermal zone is disabled due to FAN fault"
 			fi
 			policy=`cat $tz_policy`
 			if [ $policy = "step_wise" ]; then
 				echo user_space > $tz_policy
-				log_action_msg "ASIC thermal zone policy is set to user_space due to FAN fault"
+				log_info "ASIC thermal zone policy is set to user_space due to FAN fault"
 			fi
 			for ((i=1; i<=$module_counter; i+=1)); do
 				if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
 					mode=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
 					if [ $mode = "enabled" ]; then
 						echo disabled > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-						log_action_msg "QSFP module $i thermal zone is disabled due to FAN fault"
+						log_info "QSFP module $i thermal zone is disabled due to FAN fault"
 					fi
 					policy=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
 					if [ $policy = "step_wise" ]; then
 						echo user_space > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
-						log_action_msg "QSFP module $i thermal zone policy is set to user_space due to FAN fault"
+						log_info "QSFP module $i thermal zone policy is set to user_space due to FAN fault"
 					fi
 				fi
 			done
@@ -646,12 +647,12 @@ get_fan_faults()
 					mode=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode`
 					if [ $mode = "enabled" ]; then
 						echo disabled > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
-						log_action_msg "Gearbox $i thermal zone is disabled due to FAN fault"
+						log_info "Gearbox $i thermal zone is disabled due to FAN fault"
 					fi
 					policy=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy`
 					if [ $policy = "step_wise" ]; then
 						echo user_space > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
-						log_action_msg "Gearbox $i thermal zone policy is set to user_space due to FAN fault"
+						log_info "Gearbox $i thermal zone policy is set to user_space due to FAN fault"
 					fi
 				fi
 			done
@@ -874,7 +875,8 @@ init_fan_dynamic_minimum_speed()
 
 thermal_control_exit()
 {
-	log_action_msg "Mellanox thermal control is terminated (PID=${thermal_control_pid})"
+	
+	log_notice "Mellanox thermal control is terminated (PID=${thermal_control_pid})"
 
 	if [ -f /var/run/hw-management.pid ]; then
 		rm -rf /var/run/hw-management.pid
@@ -905,10 +907,10 @@ check_trip_min_vs_current_temp()
 		cur_state=$(($set_cur_state*10))
 		case $1 in
 		1)
-			log_action_msg "FAN speed is set to $cur_state percent due to thermal zone event"
+			log_info "FAN speed is set to $cur_state percent due to thermal zone event"
 		;;
 		2)
-			log_action_msg "FAN speed is set to $cur_state percent due to system health recovery"
+			log_info "FAN speed is set to $cur_state percent due to system health recovery"
 		;;
 		*)
 			return
@@ -949,12 +951,12 @@ if [ -f /var/run/hw-management.pid ]; then
 	pid=`cat /var/run/hw-management.pid`
 	# Only one instance of thermal control could be activated
 	if [ -d /proc/$pid ]; then
-		log_warning_msg "Mellanox thermal control is already running (PID=${thermal_control_pid})"
+		log_warning "Mellanox thermal control is already running (PID=${thermal_control_pid})"
 		exit 0
 	fi
 fi
 
-log_action_msg "Mellanox thermal control is started"
+log_notice "Mellanox thermal control is started"
 echo $thermal_control_pid > /var/run/hw-management.pid
 
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
@@ -1000,7 +1002,7 @@ disable_zones_def_pwm()
 	set_cur_state=$(($cooling_set_def_state-$fan_max_state))
 	echo $cooling_set_def_state > $cooling_cur_state
 
-	log_action_msg "Set fan speed to default"
+	log_info "Set fan speed to default"
 }
 
 trip_points_num=4
@@ -1149,7 +1151,7 @@ get_tz_highest()
 			tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
 			echo user_space > $thermal_path/highest_thermal_zone/thermal_zone_policy
 			echo disabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
-			log_action_msg "Thermal zone $tzname: mode disabled, policy user_space"
+			log_info "Thermal zone $tzname: mode disabled, policy user_space"
 			unlink $thermal_path/highest_thermal_zone
 		fi
 		if [ "$max_tz" != "0" ]; then
@@ -1174,7 +1176,7 @@ get_tz_highest()
 		echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 		tzname=`basename "$(readlink -f $thermal_path/highest_thermal_zone)"`
 		highest_tz=$tzname
-		log_action_msg "Thermal zone $highest_tz: mode enabled, policy step_wise"
+		log_info "Thermal zone $highest_tz: mode enabled, policy step_wise"
 	fi
 
 	# Set PWM to dynamic minimum if highest zone temperature is below the
@@ -1194,13 +1196,13 @@ get_tz_highest()
 			echo $set_cur_state > $cooling_cur_state
 			echo enabled > $thermal_path/highest_thermal_zone/thermal_zone_mode
 			cur_state=$(($set_cur_state*10))
-			log_action_msg "FAN speed is set to $cur_state percent"
+			log_info "FAN speed is set to $cur_state percent"
 		fi
 	fi
 }
 
 # Wait for thermal configuration.
-log_action_msg "Mellanox thermal control is waiting for configuration (PID=${thermal_control_pid})"
+log_notice "Mellanox thermal control is waiting for configuration (PID=${thermal_control_pid})"
 /bin/sleep $wait_for_config
 # Initialize system dynamic minimum speed data base.
 init_system_dynamic_minimum_db
@@ -1230,9 +1232,9 @@ do
 		if [ "$suspend" = "1" ]; then
 			disable_zones_def_pwm
 			init_tz_highest
-			log_action_msg "Thermal algorithm is manually suspend"
+			log_info "Thermal algorithm is manually suspend"
 		else
-			log_action_msg "Thermal algorithm is manually resumed"
+			log_info "Thermal algorithm is manually resumed"
 			sleep 1
 		fi
 		suspend_thermal=$suspend
@@ -1286,7 +1288,7 @@ do
 		fan_from=$(($fan_from*10))
 		fan_to=$(($fan_dynamic_min-$fan_max_state))
 		fan_to=$(($fan_to*10))
-		log_action_msg "FAN minimum speed is changed from $fan_from to $fan_to percent"
+		log_info "FAN minimum speed is changed from $fan_from to $fan_to percent"
 		fan_dynamic_min_last=$fan_dynamic_min
 		echo $fan_to > $thermal_path/fan_dynamic_min
 	fi
@@ -1296,7 +1298,7 @@ do
 	if [ $mode = "disabled" ] && [ $highest_tz_num = "0" ]; then
 		echo enabled > $tz_mode
 		echo step_wise > $tz_policy
-		log_action_msg "ASIC thermal zone is re-enabled"
+		log_info "ASIC thermal zone is re-enabled"
 		# System health (PS units or FANs) has been recovered. Set PWM
 		# speed to dynamic speed minimum value and give to kernel
 		# thermal algorithm can stabilize PWM speed if necessary.
