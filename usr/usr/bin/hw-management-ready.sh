@@ -33,8 +33,11 @@
 
 # Description: hw-management pre execution script.
 #              Waits in loop until hw-management service can be started.
+#              Report start of hw-management service to console and logger.
 
-while [ ! -d /sys/devices/platform/mlxplat/i2c_mlxcpld.1 ]
+while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
 do
 	sleep 1
 done
+echo "Start Chassis HW management service."
+logger -t hw-management -p daemon.notice "Start Chassis HW management service."
