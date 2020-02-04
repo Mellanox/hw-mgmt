@@ -1,6 +1,6 @@
 #!/bin/bash
 ########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+# Copyright (c) 2020 Mellanox Technologies. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -387,8 +387,7 @@ function read_pmbus_ps_vpd ( )
 }
 
 while [ $# -gt 0 ]; do
-
-   if [[ $1 == *"--"* ]]; then
+	if [[ $1 == *"--"* ]]; then
 		param="${1/--/}"
 		case $param in
 			help)
@@ -404,10 +403,9 @@ while [ $# -gt 0 ]; do
 				declare "$param=$2"
 				#echo $1 $2 #// Optional to see the parameter:value result
 				;;
-			esac
-   fi
-
-  shift
+		esac
+	fi
+	shift
 done
 
 case $command in
