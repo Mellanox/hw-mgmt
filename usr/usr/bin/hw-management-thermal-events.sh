@@ -337,8 +337,12 @@ if [ "$1" == "add" ]; then
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
 		if [ $? -ne 0 ]; then
-			#PBUS VPD failed
-			echo "Failed to read PSU PMBUS VPD" > $eeprom_path/$2_vpd
+			#eeprom PSU VPD
+			hw-management-read-ps-eeprom.sh --conv --psu_eeprom $eeprom_path/$2_info > $eeprom_path/$2_vpd
+			if [ $? -ne 0 ]; then
+				#VPD failed
+				echo "Failed to read PSU VPD" > $eeprom_path/$2_vpd
+			fi
 		fi
 
 	fi
