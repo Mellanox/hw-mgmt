@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if [ -L /sbin/init ] || (command -v systemctl &> /dev/null); then
+if [ -L /sbin/init ] || !(command -v systemctl &> /dev/null); then
 	# systemd detected
 	systemctl daemon-reload
 	systemctl enable hw-management
