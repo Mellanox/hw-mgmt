@@ -34,14 +34,13 @@
 set -e
 
 MLNX_CUSTOM_CHECKER=MLNX
-f_length_layout1=(4 24 20 4 1 3)
-f_names_layout1=("SANITY" "SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD" "RSRVD" "MFG_DATE_FIELD")
+f_length_layout0=(4 24 20 4 1 3)
+f_names_layout0=("SANITY" "SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD" "RSRVD" "MFG_DATE_FIELD")
 
-f_length_layout2=(4 24 1 1 20 4 3 11 5 4)
-f_names_layout2=("SANITY" "SN_VPD_FIELD" "RSRVD" "EFT_REV" "PN_VPD_FIELD" "REV_VPD_FIELD" "MFG_DATE_FIELD" "MFR_NAME" "FEED" "CAPACITY")
+f_length_layout1=(4 24 1 1 20 4 3 11 5 4)
+f_names_layout1=("SANITY" "SN_VPD_FIELD" "RSRVD" "EFT_REV" "PN_VPD_FIELD" "REV_VPD_FIELD" "MFG_DATE_FIELD" "MFR_NAME" "FEED" "CAPACITY")
 
-layout_1_base_offset=137
-layout_2_base_offset=160
+base_offsets=(137 160)
 
 dependecies=("awk" "xxd")
 
@@ -51,17 +50,30 @@ function cleanup {
 
 trap cleanup EXIT
 
-function find_mlx_sanity ( )
+function find_base_offset ( )
 {
-	sanity_offset=$(strings -a -t d "$psu_eeprom" | grep "$MLNX_CUSTOM_CHECKER" | awk '{print $1}')
-	retval=$?
-	if [ "$retval" -eq 0 ];
-	then
-		base_offset="$sanity_offset"
-	else
-		echo Mellanox sanity checker MLNX is not found.
+	for i in "${!base_offsets[@]}"
+	do
+		cur_val=$(xxd -u -p -l 4 -s "${base_offsets[i]}" "$psu_eeprom")
+
+		#check sanity
+		sanity_ascii=$(echo -ne "${cur_val}" | xxd -r -p)
+		if [ "${sanity_ascii}" == "$MLNX_CUSTOM_CHECKER" ]; then
+			#echo sanity ok
+			base_offset="${base_offsets[i]}"
+			l_arr=f_length_layout$i[@]
+			n_arr=f_names_layout$i[@]
+			f_length=( "${!l_arr}" )
+			f_names=( "${!n_arr}" )
+			break;
+		fi
+	done
+
+	if [ ! -v "base_offset" ]; then
+		echo No base offset.
 		exit 1
 	fi
+
 }
 
 function do_conv ( )
@@ -85,27 +97,7 @@ function do_conv ( )
 	cp "$psu_eeprom" "${tmp_psu_eeprom}"
 	psu_eeprom="${tmp_psu_eeprom}"
 
-	find_mlx_sanity
-
-	if [ ! -v "base_offset" ]; then
-		echo No base offset.
-		exit 1
-	fi
-
-	case "$base_offset" in
-		$layout_1_base_offset)
-			f_length=( "${f_length_layout1[@]}" )
-			f_names=( "${f_names_layout1[@]}" )
-			;;
-		$layout_2_base_offset)
-			f_length=( "${f_length_layout2[@]}" )
-			f_names=( "${f_names_layout2[@]}" )
-			;;
-		*)
-			f_length=( "${f_length_layout1[@]}" )
-			f_names=( "${f_names_layout1[@]}" )
-			;;
-	esac
+	find_base_offset
 
 	prev_len=0
 	cur_offset="${base_offset}"
