@@ -55,8 +55,6 @@
 #	  been loaded, deactivate thermal control.
 #
 
-. /lib/lsb/init-functions
-
 # Local constants and variables
 thermal_type=0
 thermal_type_t1=1
@@ -84,6 +82,8 @@ sxcore_down=0
 sxcore_deferred=1
 sxcore_withdraw=2
 sxcore_up=3
+i2c_bus_def_off_eeprom_cpu=16
+i2c_comex_mon_bus_default=15
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
@@ -99,6 +99,7 @@ watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 LOCKFILE="/var/run/hw-management.lock"
+REGIO=/sys/devices/platform/mlxplat/mlxreg-io
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -206,6 +207,30 @@ mqm8700_dis_table=(	0x64 5 \
 			0x61 15 \
 			0x50 16)
 
+msn3420_connect_table=(	max11603 0x6d 5 \
+			tps53679 0x62 5 \
+			tps53679 0x64 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn3420_dis_table=(	0x6d 5 \
+			0x62 5 \
+			0x64 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 msn3800_connect_table=( max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
@@ -234,7 +259,75 @@ msn3800_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn27002_msn24102_msb78002_connect_table=( pmbus 0x27 5 \
+			pmbus 0x41 5 \
+			max11603 0x6d 5 \
+			lm75 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 23 \
+			tmp102 0x49 23 \
+			tps53679 0x58 23 \
+			tps53679 0x61 23 \
+			24c32 0x50 24 \
+			lm75 0x49 17)
+
+msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
+			0x41 5 \
+			0x6d 5 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 23 \
+			0x49 23 \
+			0x58 23 \
+			0x61 23 \
+			0x50 24 \
+			0x49 17)
+
+msn4700_connect_table=(	max11603 0x6d 5 \
+			tps53679 0x62 5 \
+			tps53679 0x64 5 \
+			tps53679 0x66 5 \
+			tps53679 0x68 5 \
+			tps53679 0x6a 5 \
+			tps53679 0x6c 5 \
+			tps53679 0x6e 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn4700_dis_table=(	0x6d 5 \
+			0x62 5 \
+			0x64 5 \
+			0x66 5 \
+			0x68 5 \
+			0x6a 5 \
+			0x6c 5 \
+			0x6e 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 ACTION=$1
+
+log_err()
+{
+	logger -t hw-management -p daemon.err "$@"
+}
+
+log_info()
+{
+	logger -t hw-management -p daemon.info "$@"
+}
 
 is_module()
 {
@@ -362,6 +455,25 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+msn3420_specific()
+{
+	connect_size=${#msn3420_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn3420_connect_table[i]}
+	done
+	disconnect_size=${#msn3420_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn3420_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=10
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
 msn38xx_specific()
 {
 	connect_size=${#msn3800_connect_table[@]}
@@ -381,78 +493,167 @@ msn38xx_specific()
 	echo 4 > $config_path/cpld_num
 }
 
+msn24102_specific()
+{
+	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
+	done
+	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t1
+	max_tachos=8
+	echo 21000 > $config_path/fan_max_speed
+	echo 5400 > $config_path/fan_min_speed
+	echo 9 > $config_path/fan_inversed
+	echo 3 > $config_path/cpld_num
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+}
+
+msn27002_msb78002_specific()
+{
+	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
+	done
+	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t1
+	max_tachos=8
+	echo 25000 > $config_path/fan_max_speed
+	echo 1500 > $config_path/fan_min_speed
+	echo 9 > $config_path/fan_inversed
+	echo 3 > $config_path/cpld_num
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+}
+
+msn47xx_specific()
+{
+	connect_size=${#msn4700_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn4700_connect_table[i]}
+	done
+	disconnect_size=${#msn4700_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn4700_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
+msn_spc2_common()
+{
+	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+	case $sku in
+                HI120)
+                        msn3420_specific
+                ;;
+		*)
+			mqmxxx_msn37x_msn34x_specific
+		;;
+	esac
+}
+
+msn_spc3_common()
+{
+	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+	case $sku in
+		*)
+		msn47xx_specific
+		;;
+	esac
+}
+
 check_system()
 {
-	manufacturer=`cat /sys/devices/virtual/dmi/id/sys_vendor | awk '{print $1}'`
-	if [ "$manufacturer" == "Mellanox" ]; then
-		product=`cat /sys/devices/virtual/dmi/id/product_name`
-		case $product in
-			MSN274*)
-				msn274x_specific
-				;;
-			MSN21*)
-				msn21xx_specific
-				;;
-			MSN24*)
-				msn24xx_specific
-				;;
-			MSN27*|MSB*|MSX*)
-				msn27xx_msb_msx_specific
-				;;
-			MSN201*)
-				msn201x_specific
-				;;
-			MQM87*|MSN37*|MSN34*)
-				mqmxxx_msn37x_msn34x_specific
-				;;
-			MSN38*)
-				msn38xx_specific
-				;;
-			*)
-				proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
-				case $proc_type in
-					Atom*)
-						msn21xx_specific
+	# Check ODM
+	board=`cat /sys/devices/virtual/dmi/id/board_name`
+	case $board in
+		VMOD0001)
+			msn27xx_msb_msx_specific
+			;;
+		VMOD0002)
+			msn21xx_specific
+			;;
+		VMOD0003)
+			msn274x_specific
+			;;
+		VMOD0004)
+			msn201x_specific
+			;;
+		VMOD0005)
+			msn_spc2_common
+			;;
+		VMOD0007)
+			msn38xx_specific
+			;;
+		VMOD0010)
+			msn_spc3_common
+			;;
+		*)
+			product=`cat /sys/devices/virtual/dmi/id/product_name`
+			case $product in
+				MSN27002|MSB78002)
+					msn27002_msb78002_specific
 					;;
-					Celeron*)
-						msn27xx_msb_msx_specific
+				MSN24102)
+					msn24102_specific
 					;;
-					Xeon*)
-						mqmxxx_msn37x_msn34x_specific
+				MSN274*)
+					msn274x_specific
 					;;
-					*)
-						log_failure_msg "$product is not supported"
-						exit 0
+				MSN21*)
+					msn21xx_specific
+					;;
+				MSN24*)
+					msn24xx_specific
+					;;
+				MSN27*|MSB*|MSX*)
+					msn27xx_msb_msx_specific
+					;;
+				MSN201*)
+					msn201x_specific
+					;;
+				MQM87*|MSN37*|MSN34*)
+					mqmxxx_msn37x_msn34x_specific
+					;;
+				MSN38*)
+					msn38xx_specific
+					;;
+				*)
+					proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
+					case $proc_type in
+						Atom*)
+							msn21xx_specific
 						;;
-				esac
-		esac
-	else
-		# Check ODM
-		board=`cat /sys/devices/virtual/dmi/id/board_name`
-		case $board in
-			VMOD0001)
-				msn27xx_msb_msx_specific
-				;;
-			VMOD0002)
-				msn21xx_specific
-				;;
-			VMOD0003)
-				msn274x_specific
-				;;
-			VMOD0004)
-				msn201x_specific
-				;;
-			VMOD0005)
-				mqmxxx_msn37x_msn34x_specific
-				;;
-			VMOD0007)
-				msn38xx_specific
-				;;
-			*)
-				log_failure_msg "$manufacturer is not Mellanox"
-				exit 0
-		esac
-	fi
+						Celeron*)
+							msn27xx_msb_msx_specific
+						;;
+						Xeon*)
+							mqmxxx_msn37x_msn34x_specific
+						;;
+						*)
+						log_err "$product is not supported"
+							exit 0
+							;;
+					esac
+					;;
+			esac
+			;;
+	esac
 
 	kernel_release=`uname -r`
 }
@@ -473,7 +674,7 @@ find_i2c_bus()
 		fi
 	done
 
-	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
 }
 
@@ -576,6 +777,8 @@ do_start()
 {
 	create_symbolic_links
 	check_system
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
@@ -592,6 +795,9 @@ do_start()
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
+
+	#disabled for leopard chipless bringup.
+	echo 1 > $config_path/suspend
 
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
@@ -622,6 +828,7 @@ function lock_service_state_change()
 function unlock_service_state_change()
 {
 	/usr/bin/flock -u ${LOCKFD}
+	rm -f ${LOCKFILE}
 }
 
 do_chip_up_down()
@@ -665,8 +872,8 @@ do_chip_up_down()
 		;;
 	1)
 		lock_service_state_change
-		[ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-		if [ $disable ] && [ "$disable" -gt 0 ]; then
+                [ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
+                if [ $disable ] && [ "$disable" -gt 0 ]; then
 			disable=$(($disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
@@ -740,7 +947,7 @@ do_chip_down()
 case $ACTION in
 	start)
 		if [ -d /var/run/hw-management ]; then
-			log_failure_msg "hw-management is already started"
+			log_err "hw-management is already started"
 			exit 1
 		fi
 		do_start

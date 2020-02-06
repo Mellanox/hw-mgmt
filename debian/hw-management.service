@@ -1,9 +1,10 @@
 [Unit]
-Description=Thermal control and chassis management for Mellanox systems
+Description=Chassis HW management service of Mellanox systems
 
 [Service]
 Type=oneshot
 RemainAfterExit=true
+ExecStartPre=/bin/sh -c "/usr/bin/hw-management-ready.sh"
 ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
 PIDFile=/var/run/hw-management.pid

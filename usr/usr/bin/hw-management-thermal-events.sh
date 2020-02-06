@@ -31,8 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-. /lib/lsb/init-functions
-
 # Local variables
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
@@ -48,10 +46,20 @@ max_module_gbox_ind=160
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
-i2c_comex_mon_bus_default=15
+i2c_comex_mon_bus_default=`cat $config_path/i2c_comex_mon_bus_default`
 module_counter=0
 gearbox_counter=0
 LOCKFILE="/var/run/hw-management-thermal.lock"
+
+log_err()
+{
+	logger -t hw-management -p daemon.err "$@"
+}
+
+log_info()
+{
+	logger -t hw-management -p daemon.info "$@"
+}
 
 find_i2c_bus()
 {
@@ -69,7 +77,7 @@ find_i2c_bus()
 		fi
 	done
 
-	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
 }
 
@@ -83,6 +91,7 @@ lock_service_state_change()
 unlock_service_state_change()
 {
 	/usr/bin/flock -u ${LOCKFD}
+	rm -f ${LOCKFILE}
 }
 
 if [ "$1" == "add" ]; then

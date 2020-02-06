@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 ########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+# Copyright (c) 2020 Mellanox Technologies. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,73 +31,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-PATH=/usr/bin:/bin:/usr/sbin:/sbin
-export PATH
+# Description: hw-management pre execution script.
+#              Waits in loop until hw-management service can be started.
+#              Report start of hw-management service to console and logger.
 
-tmp=$0
-LED_STATE=none
-FNAME=$(basename "$tmp")
-DNAME=$(dirname "$tmp")
-LED_NAME=`echo $FNAME | cut -d_ -f1-2`
-FNAMES=(`ls "$DNAME"/"$LED_NAME"*`)
-
-check_led_blink()
-{
-	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on ]; then
-		val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on`
-	else
-		val1=0
-	fi
-	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off ]; then
-		val2=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off`
-	else
-		val2=0
-	fi
-	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then
-		val3=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
-	else
-		val3=0
-	fi
-	if [ "${val1}" != "0" ] && [ "${val2}" != "0" ] && [ "${val3}" != "0" ] ; then
-		LED_STATE="$COLOR"_blink
-		return 1
-	fi
-	return 0		
-}
-
-for CURR_FILE in "${FNAMES[@]}"
+while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
 do
-	if echo "$CURR_FILE" | (grep -q '_state\|_capability') ; then
-		continue
-	fi
-	COLOR=`echo $CURR_FILE | cut -d_ -f3`
-	if [ -z "${COLOR}" ] ; then
-		continue
-	fi
-	if echo "$CURR_FILE" | grep -q "_delay" ; then	
-		check_led_blink $COLOR
-		if [ $? -eq 1 ]; then
-			break;
-		fi
-	fi
-	if [ "${CURR_FILE}" == "$DNAME"/"${LED_NAME}_${COLOR}" ] ; then
-		if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then 
-			val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
-		else
-			val1=0
-		fi
-		if [ "${val1}" != "0" ]; then
-			check_led_blink $COLOR
-			if [ $? -eq 1 ]; then
-				break;
-			else
-				LED_STATE="$COLOR"
-				break;
-			fi
-		fi
-	fi
+	sleep 1
 done
-
-echo ${LED_STATE} > "$DNAME"/"$LED_NAME"
-exit 0
-
+echo "Start Chassis HW management service."
+logger -t hw-management -p daemon.notice "Start Chassis HW management service."
