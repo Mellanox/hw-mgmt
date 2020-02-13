@@ -32,8 +32,22 @@
 #
 
 # Description: hw-management pre execution script.
+#              Checks if service is already running. Just in case, it should
+#              be done internally by systemd.
+#              Check if by some reason /var/run/hw-management exist.
+#              If yes, remove it.
 #              Waits in loop until hw-management service can be started.
 #              Report start of hw-management service to console and logger.
+
+if systemctl is-active --quiet hw-management; then
+        echo "Error: HW management service is already active."
+        logger -t hw-management -p daemon.error "HW management service is already active."
+        exit 1
+fi
+
+if [ -d /var/run/hw-management ]; then
+	rm -fr /var/run/hw-management
+fi
 
 while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
 do
