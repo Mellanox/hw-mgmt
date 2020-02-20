@@ -124,7 +124,6 @@ lock_service_state_change()
 unlock_service_state_change()
 {
 	/usr/bin/flock -u ${LOCKFD}
-	rm -f ${LOCKFILE}
 }
 
 function create_sfp_symbolic_links()
