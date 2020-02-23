@@ -828,7 +828,6 @@ function lock_service_state_change()
 function unlock_service_state_change()
 {
 	/usr/bin/flock -u ${LOCKFD}
-	rm -f ${LOCKFILE}
 }
 
 do_chip_up_down()
