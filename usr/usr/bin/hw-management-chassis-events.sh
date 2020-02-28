@@ -59,6 +59,16 @@ max_ports_def=64
 sfp_counter=0
 LOCKFILE="/var/run/hw-management-chassis.lock"
 
+log_err()
+{
+	logger -t hw-management -p daemon.err "$@"
+}
+
+log_info()
+{
+	logger -t hw-management -p daemon.info "$@"
+}
+
 find_i2c_bus()
 {
 	# Find physical bus number of Mellanox I2C controller. The default
@@ -75,7 +85,7 @@ find_i2c_bus()
 		fi
 	done
 
-	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
 }
 

@@ -55,8 +55,6 @@
 #	  been loaded, deactivate thermal control.
 #
 
-. /lib/lsb/init-functions
-
 # Local constants and variables
 thermal_type=0
 thermal_type_t1=1
@@ -320,6 +318,16 @@ msn4700_dis_table=(	0x6d 5 \
 			0x50 16)
 
 ACTION=$1
+
+log_err()
+{
+	logger -t hw-management -p daemon.err "$@"
+}
+
+log_info()
+{
+	logger -t hw-management -p daemon.info "$@"
+}
 
 is_module()
 {
@@ -638,7 +646,7 @@ check_system()
 							mqmxxx_msn37x_msn34x_specific
 						;;
 						*)
-							log_failure_msg "$product is not supported"
+						log_err "$product is not supported"
 							exit 0
 							;;
 					esac
@@ -666,7 +674,7 @@ find_i2c_bus()
 		fi
 	done
 
-	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
 }
 
@@ -938,7 +946,7 @@ do_chip_down()
 case $ACTION in
 	start)
 		if [ -d /var/run/hw-management ]; then
-			log_failure_msg "hw-management is already started"
+			log_err "hw-management is already started"
 			exit 1
 		fi
 		do_start

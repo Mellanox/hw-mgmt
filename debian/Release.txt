@@ -1,4 +1,98 @@
 ================================================================================
+- V.7.0000.3012
+- Sun, 23 Feb 2020
+--------------------------------------------------------------------------------
+- Bug fixes
+    HW Mgmt core:
+        Fix - false sfp_counter, impact interface usage.
+- Known issues and limitations:
+    o   Same as V.7.0000.3010, please see below.
+================================================================================
+- V.7.0000.3010
+- Sun, 16 Feb 2020
+--------------------------------------------------------------------------------
+- New Features
+    o   Add support to SN4700 system.
+        - see backport patch kernel 4.9  #41/42/43/44 
+        - see backport patch kernel 4.19 #11/12/13
+    o   Add support to SN3420 system.
+    o   Add legacy PSU eeprom decoder.
+- Bug fixes
+    HW Mgmt core:
+    o   Fix - validation for FW minor version.
+        - see backport patch kernel 4.9  #45
+        - see backport patch kernel 4.19 #14
+        Fix - check if HW mgmt service already active.
+        Fix - clean *.lock files in unlock action.
+        Fix - init hw mgmt service once HW ready.
+        Fix - post install rule for SystemV (init.d)
+    HW Mgmt doc:
+    o   Fix - README.ME file - add/remove dependencies.
+- Known issues and limitations:
+    o  SN4700 PSU (Murata) sensors might be not available after insertion/removal.
+    o  SN4700 "PMIC-1" sensor exhabit our of range values.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and 
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+
+================================================================================
+- V.7.0000.3000
+- Wed, 22 Jan 2020
+--------------------------------------------------------------------------------
+- New Features:
+    o   HW Mgmt README.md file updated.
+    o   Add support to PSUs without eeprom using MLNX PMBUs solution.
+    o   Add support to Kernel 4.19.0~6.
+    o   Add access to dmitables - SKU ID string. This is used in some systems 
+        from user space for determining the identity of the device.
+        - see backport patch kernel 4.9 #41
+- Bug fixes
+    HW Mgmt core:
+    o   Fix - remove duplication prints on fedora OS (shell & messages).
+    HW Mgmt doc:
+    o   Fix - updating Kernel reference config file 
+- Known issues and limitations:
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and 
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+
+================================================================================
 - V.7.0000.2308
 - Wed, 27 Nov 2019
 --------------------------------------------------------------------------------

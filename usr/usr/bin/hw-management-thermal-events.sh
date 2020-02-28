@@ -31,8 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-. /lib/lsb/init-functions
-
 # Local variables
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
@@ -53,6 +51,16 @@ module_counter=0
 gearbox_counter=0
 LOCKFILE="/var/run/hw-management-thermal.lock"
 
+log_err()
+{
+	logger -t hw-management -p daemon.err "$@"
+}
+
+log_info()
+{
+	logger -t hw-management -p daemon.info "$@"
+}
+
 find_i2c_bus()
 {
 	# Find physical bus number of Mellanox I2C controller. The default
@@ -69,7 +77,7 @@ find_i2c_bus()
 		fi
 	done
 
-	log_failure_msg "i2c-mlxcpld driver is not loaded"
+	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
 }
 
@@ -337,8 +345,12 @@ if [ "$1" == "add" ]; then
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
 		if [ $? -ne 0 ]; then
-			#PBUS VPD failed
-			echo "Failed to read PSU PMBUS VPD" > $eeprom_path/$2_vpd
+			#eeprom PSU VPD
+			hw-management-read-ps-eeprom.sh --conv --psu_eeprom $eeprom_path/$2_info > $eeprom_path/$2_vpd
+			if [ $? -ne 0 ]; then
+				#VPD failed
+				echo "Failed to read PSU VPD" > $eeprom_path/$2_vpd
+			fi
 		fi
 
 	fi
