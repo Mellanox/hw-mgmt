@@ -377,7 +377,7 @@ check_untrested_module_sensor()
 	for ((i=1; i<=$module_counter; i+=1)); do
 		tz_check_suspend
 		if [ "$?" -ne 0 ]; then
-			exit
+			return
 		fi
 		if [ -L $thermal_path/module"$i"_temp_fault ]; then
 			temp_fault=`cat $thermal_path/module"$i"_temp_fault`
@@ -1027,7 +1027,7 @@ tz_check_suspend()
 	if [ $suspend ] &&  [ "$suspend" = "1" ]; then
 		return 1
 	fi
-	exit 0
+	return 0
 )
 
 tz_score_calculate()
@@ -1043,7 +1043,7 @@ get_tz_asic_score()
 
 	tz_check_suspend
 	if [ "$?" -ne 0 ]; then
-		exit
+		return
 	fi
 
 	temp_curr=`cat $tz_temp`
@@ -1067,7 +1067,7 @@ get_tz_module_score()
 
 	tz_check_suspend
 	if [ "$?" -ne 0 ]; then
-		exit
+		return
 	fi
 
 	temp_curr=`cat $thermal_path/mlxsw-module"$1"/thermal_zone_temp`
@@ -1090,7 +1090,7 @@ get_tz_gearbox_score()
 
 	tz_check_suspend
 	if [ "$?" -ne 0 ]; then
-		exit
+		return
 	fi
 
 	temp_curr=`cat $thermal_path/mlxsw-gearbox"$1"/thermal_zone_temp`
@@ -1117,7 +1117,7 @@ get_tz_highest()
 
 			tz_check_suspend
 			if [ "$?" -ne 0 ]; then
-				exit
+				return
 			fi
 
 			get_tz_module_score $p
@@ -1133,7 +1133,7 @@ get_tz_highest()
 
 			tz_check_suspend
 			if [ "$?" -ne 0 ]; then
-				exit
+				return
 			fi
 
 			get_tz_gearbox_score $p
@@ -1169,7 +1169,7 @@ get_tz_highest()
 
 		tz_check_suspend
 		if [ "$?" -ne 0 ]; then
-			exit
+			return
 		fi
 
 		echo step_wise > $thermal_path/highest_thermal_zone/thermal_zone_policy
