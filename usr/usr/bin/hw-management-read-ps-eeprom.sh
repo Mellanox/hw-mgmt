@@ -107,7 +107,6 @@ function do_conv ( )
 		cur_offset=$((cur_offset+prev_len))
 		prev_len="${f_length[i]}"
 		cur_val=$(xxd -u -p -l "${f_length[i]}" -s "$cur_offset" "$psu_eeprom")
-
 		#check sanity
 		if [ "${f_names[$i]}" == "SANITY" ]; then
 				sanity_ascii=$(echo -ne "${cur_val}" | xxd -r -p)
@@ -133,7 +132,7 @@ function do_conv ( )
 			[ "${f_names[$i]}" == "FEED" ] || \
 			[ "${f_names[$i]}" == "EFT_REV" ]; then
 				#print as ASCII
-				echo -ne "${cur_val}" | xxd -r -p
+				echo -ne "${cur_val}" | xxd -r -p | tr -d '\0'
 		elif [ "${f_names[$i]}" == "CAPACITY" ]; then
 			#print in DEC
 			echo -ne "$((0x$cur_val))"
