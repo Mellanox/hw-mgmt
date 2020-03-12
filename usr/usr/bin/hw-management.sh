@@ -208,8 +208,8 @@ mqm8700_dis_table=(	0x64 5 \
 			0x50 16)
 
 msn3420_connect_table=(	max11603 0x6d 5 \
-			tps53679 0x62 5 \
-			tps53679 0x64 5 \
+			xdpe12284 0x62 5 \
+			xdpe12284 0x64 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8 \
@@ -286,13 +286,13 @@ msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
 			0x49 17)
 
 msn4700_connect_table=(	max11603 0x6d 5 \
-			tps53679 0x62 5 \
-			tps53679 0x64 5 \
-			tps53679 0x66 5 \
-			tps53679 0x68 5 \
-			tps53679 0x6a 5 \
-			tps53679 0x6c 5 \
-			tps53679 0x6e 5 \
+			xdpe12284 0x62 5 \
+			xdpe12284 0x64 5 \
+			xdpe12284 0x66 5 \
+			xdpe12284 0x68 5 \
+			xdpe12284 0x6a 5 \
+			xdpe12284 0x6c 5 \
+			xdpe12284 0x6e 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8 \
