@@ -264,6 +264,7 @@ msn27002_msn24102_msb78002_connect_table=( pmbus 0x27 5 \
 			max11603 0x6d 5 \
 			lm75 0x4a 7 \
 			24c32 0x51 8 \
+			max11603 0x6d 15 \
 			max11603 0x6d 23 \
 			tmp102 0x49 23 \
 			tps53679 0x58 23 \
@@ -276,6 +277,7 @@ msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
 			0x6d 5 \
 			0x4a 7 \
 			0x51 8 \
+			0x6d 15 \
 			0x6d 23 \
 			0x49 23 \
 			0x58 23 \
