@@ -602,6 +602,9 @@ check_system()
 		VMOD0007)
 			msn38xx_specific
 			;;
+		VMOD0009)
+			msn27002_msb78002_specific
+			;;
 		VMOD0010)
 			msn_spc3_common
 			;;
