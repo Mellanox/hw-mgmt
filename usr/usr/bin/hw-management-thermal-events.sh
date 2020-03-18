@@ -145,7 +145,7 @@ if [ "$1" == "add" ]; then
 					if [ -f $config_path/fan_max_speed ]; then
 						ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
 					fi
-					#save max_tachos to config
+					# Save max_tachos to config
 					echo $i > $config_path/max_tachos
 				fi
 			done
