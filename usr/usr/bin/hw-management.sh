@@ -804,6 +804,9 @@ do_start()
 	#disabled for leopard chipless bringup.
 	echo 1 > $config_path/suspend
 
+	if [ -f $config_path/max_tachos ]; then
+		max_tachos=$(<$config_path/max_tachos)
+	fi
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
 
