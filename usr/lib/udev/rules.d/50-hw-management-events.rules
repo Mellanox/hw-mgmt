@@ -79,7 +79,7 @@ SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="add", RUN+="/usr/bin/h
 SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cooling_device %S %p %k"
 
 # Thermal zone.
-SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add thermal_zone %S %p %k"
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add thermal_zone %S %p %k || true"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm thermal_zone %S %p %k"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_HIGHEST}!="", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k highest $env{TZ_HIGHEST}"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_DOWN}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k down"
