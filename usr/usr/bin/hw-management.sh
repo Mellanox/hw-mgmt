@@ -100,7 +100,6 @@ THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 LOCKFILE="/var/run/hw-management.lock"
 REGIO=/sys/devices/platform/mlxplat/mlxreg-io
-max_cpld_num=4
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -802,23 +801,12 @@ do_start()
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
 
+	#disabled for leopard chipless bringup.
+	echo 1 > $config_path/suspend
+
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
 	fi
-
-	#Remove redundant CPLD symbolic link
-	if [ -f "$config_path"/cpld_num ]; then
-	cpld_num=$(cat $config_path/cpld_num)
-	for i in $(seq 1 "$max_cpld_num")
-	do
-		if [ "$i" -gt "$cpld_num" ]; then
-			if [ -L "$system_path"/cpld"$i"_version ]; then
-					unlink "$system_path"/cpld"$i"_version
-			fi
-		fi
-	done
-	fi
-
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
 }
 
