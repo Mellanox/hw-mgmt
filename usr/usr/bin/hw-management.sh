@@ -801,9 +801,6 @@ do_start()
 	echo $asic_bus > $config_path/asic_bus
 	connect_platform
 
-	#disabled for leopard chipless bringup.
-	echo 1 > $config_path/suspend
-
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
 	fi
