@@ -82,6 +82,9 @@ sxcore_down=0
 sxcore_deferred=1
 sxcore_withdraw=2
 sxcore_up=3
+hotplug_psus=2
+hotplug_fans=6
+hotplug_pwrs=2
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
@@ -94,6 +97,7 @@ system_path=$hw_management_path/system
 module_path=$hw_management_path/module
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
+events_path=$hw_management_path/events
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 LOCKFILE="/var/run/hw-management.lock"
@@ -264,6 +268,7 @@ msn274x_specific()
 
 	thermal_type=$thermal_type_t3
 	max_tachos=4
+	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
@@ -284,6 +289,8 @@ msn21xx_specific()
 	thermal_type=$thermal_type_t2
 	max_tachos=4
 	max_psus=0
+	hotplug_psus=0
+	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
@@ -304,6 +311,7 @@ msn24xx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -324,6 +332,7 @@ msn27xx_msb_msx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -345,6 +354,8 @@ msn201x_specific()
 	thermal_type=$thermal_type_t4
 	max_tachos=4
 	max_psus=0
+	hotplug_psus=0
+	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
@@ -384,6 +395,7 @@ msn38xx_specific()
 	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
+	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
 	echo 4 > $config_path/cpld_num
@@ -513,6 +525,42 @@ disconnect_device()
 	return 0
 }
 
+create_event_files()
+{
+	if [ $hotplug_psus -ne 0 ]; then
+		for ((i=1; i<=$hotplug_psus; i+=1)); do
+			touch $events_path/psu$i
+		done
+	fi
+	if [ $hotplug_pwrs -ne 0 ]; then
+		for ((i=1; i<=$hotplug_pwrs; i+=1)); do
+			touch $events_path/pwr$i
+		done
+	fi
+	if [ $hotplug_fans -ne 0 ]; then
+		for ((i=1; i<=$hotplug_fans; i+=1)); do
+			touch $events_path/fan$i
+		done
+	fi
+}
+
+set_config_data()
+{
+	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
+	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+	echo $fan_psu_default > $config_path/fan_psu_default
+	echo $fan_command > $config_path/fan_command
+	echo 35 > $config_path/thermal_delay
+	echo $chipup_delay_default > $config_path/chipup_delay
+	echo 0 > $config_path/chipdown_delay
+	if [ -f /etc/init.d/sxdkernel ]; then
+		echo $sxcore_down > $config_path/sxcore
+	fi
+	echo $hotplug_psus > $config_path/hotplug_psus
+	echo $hotplug_pwrs > $config_path/hotplug_pwrs
+	echo $hotplug_fans > $config_path/hotplug_fans
+}
+
 connect_platform()
 {
 	for ((i=0; i<$connect_size; i+=3)); do
@@ -563,6 +611,9 @@ create_symbolic_links()
 	if [ ! -d $watchdog_path ]; then
 		mkdir $watchdog_path
 	fi
+	if [ ! -d $events_path ]; then
+		mkdir $events_path
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
@@ -586,19 +637,11 @@ do_start()
 	check_system
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
-	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
-	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
-	echo $fan_psu_default > $config_path/fan_psu_default
-	echo $fan_command > $config_path/fan_command
-	echo 35 > $config_path/thermal_delay
-	echo $chipup_delay_default > $config_path/chipup_delay
-	echo 0 > $config_path/chipdown_delay
-	if [ -f /etc/init.d/sxdkernel ]; then
-		echo $sxcore_down > $config_path/sxcore
-	fi
+	set_config_data
 	find_i2c_bus
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
+	create_event_files
 	connect_platform
 
 	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
