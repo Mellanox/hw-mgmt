@@ -151,8 +151,6 @@ function asic_cpld_add_handler()
                 fi
         fi
 
-	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
-
         # Verify if CPLD attributes are exist
         [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
         if [ "$cpld" == "cpld1" ]; then
