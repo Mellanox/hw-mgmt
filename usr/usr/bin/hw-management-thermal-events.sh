@@ -34,6 +34,7 @@
 # Local variables
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
+eeprom_path=$hw_management_path/eeprom
 power_path=$hw_management_path/power
 alarm_path=$hw_management_path/alarm
 config_path=$hw_management_path/config
@@ -45,7 +46,7 @@ max_module_gbox_ind=160
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
-i2c_comex_mon_bus_default=15
+i2c_comex_mon_bus_default=`cat $config_path/i2c_comex_mon_bus_default`
 module_counter=0
 gearbox_counter=0
 LOCKFILE="/var/run/hw-management-thermal.lock"
@@ -113,10 +114,10 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "switch" ]; then
 		name=`cat $3$4/name`
 		if [ ! -f "$config_path/gearbox_counter" ]; then
-		    echo 0 > $config_path/gearbox_counter
+			echo 0 > $config_path/gearbox_counter
 		fi
 		if [ ! -f "$config_path/module_counter" ]; then
-		    echo 0 > $config_path/module_counter
+			echo 0 > $config_path/module_counter
 		fi
 
 		if [ "$name" == "mlxsw" ]; then
@@ -192,18 +193,18 @@ if [ "$1" == "add" ]; then
 			else
 				j=`echo $(($inv - $i))`
 			fi
-			if [ -f $3$4/fan"$i"_fault ]; then
-				ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
-			fi
 			if [ -f $3$4/fan"$i"_input ]; then
 				ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
 				ln -sf $3$4/pwm1 $thermal_path/fan"$j"_speed_set
-			fi
-			if [ -f $config_path/fan_min_speed ]; then
-				ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
-			fi
-			if [ -f $config_path/fan_max_speed ]; then
-				ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
+				ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
+				if [ -f $config_path/fan_min_speed ]; then
+					ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
+				fi
+				if [ -f $config_path/fan_max_speed ]; then
+					ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
+				fi
+				#save max_tachos to config
+				echo $i > $config_path/max_tachos
 			fi
 		done
 	fi
@@ -272,7 +273,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -f /etc/init.d/sxdkernel ]; then
 			/usr/bin/hw-management.sh chipup
 		fi
-  	fi
+	fi
 	if [ "$2" == "cputemp" ]; then
 		for i in {1..9}; do
 			if [ -f $3$4/temp"$i"_input ]; then
@@ -339,6 +340,19 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/power2_input $power_path/$2_power
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
+
+		#PSU VPD
+		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
+		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
+		if [ $? -ne 0 ]; then
+			#eeprom PSU VPD
+			hw-management-read-ps-eeprom.sh --conv --psu_eeprom $eeprom_path/$2_info > $eeprom_path/$2_vpd
+			if [ $? -ne 0 ]; then
+				#VPD failed
+				echo "Failed to read PSU VPD" > $eeprom_path/$2_vpd
+			fi
+		fi
+
 	fi
 	if [ "$2" == "sxcore" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
@@ -491,7 +505,7 @@ else
 		echo 0 > $config_path/gearbox_counter
 	fi
 	if [ "$2" == "regfan" ]; then
-		if [ -L $thermal_path/pwm1]; then
+		if [ -L $thermal_path/pwm1 ]; then
 			unlink $thermal_path/pwm1
 		fi
 		for ((i=1; i<=$max_tachos; i+=1)); do
@@ -594,7 +608,7 @@ else
 		if [ -L $thermal_path/$2_temp_alarm ]; then
 			unlink $thermal_path/$2_temp_alarm
 		fi
-		if [ -L $thermal_path/$2_temp2]; then
+		if [ -L $thermal_path/$2_temp2 ]; then
 			unlink $thermal_path/$2_temp2
 		fi
 		if [ -L $thermal_path/$2_temp2_max ]; then
@@ -634,6 +648,7 @@ else
 		if [ -L $power_path/$2_curr ]; then
 			unlink $power_path/$2_curr
 		fi
+		rm -f $eeprom_path/$2_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown

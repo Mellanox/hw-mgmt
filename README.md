@@ -30,7 +30,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 ## Sysfs attributes:
 The thermal control operates over sysfs attributes.  
 These attributes are exposed as symbolic links to `/var/run/hw-management` folder at system boot time.  
-Let's call this location as a `$bsp_path`. This folder contains the next structure:
+This folder contains the next structure:
 
 | Node Path | Purpose |
 | :--- | :--- |
@@ -47,19 +47,19 @@ Let's call this location as a `$bsp_path`. This folder contains the next structu
 
 To get current cooling state, exposed by cooling level (1..10), run:
 ```
-$ cat $bsp_path/thermal/cooling_cur_state
+$ cat /var/run/hw-management/thermal/cooling_cur_state
 2
 ```
 To get power supply unit `X` power status, where 1 - good and 0 - unplugged/unfunctional, run: 
 ```
-$ cat $bsp_path/thermal/psu1_pwr_status 
+$ cat /var/run/hw-management/thermal/psu1_pwr_status 
 0
-$ cat $bsp_path/thermal/psu2_pwr_status  
+$ cat /var/run/hw-management/thermal/psu2_pwr_status  
 1
 ```
 To get the switch module ASIC temperature, in millidegrees Celsius, run:
 ```
-$ cat $bsp_path/thermal/asic 
+$ cat /var/run/hw-management/thermal/asic 
 39000
 ```
 Detailed information about all available nodes can be found in the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
@@ -115,6 +115,8 @@ CONFIG_GPIOLIB=y
 CONFIG_GPIO_GENERIC=m
 CONFIG_MAX1363=m
 CONFIG_SENSORS_TPS53679=m
+CONFIG_SENSORS_XDPE122=m
+CONFIG_GPIO_ICH=m
 CONFIG_LPC_ICH=m
 CONFIG_CPU_THERMAL=y
 CONFIG_X86_PKG_TEMP_THERMAL=m
@@ -130,7 +132,7 @@ CONFIG_MFD_CORE=m
 <br><br>If the user wants to enforce work over I2C (for example, to be able to switch between workloads running Mellanox legacy SDK code and running Mellanox switch-dev driver), the next steps should be performed:
    1. Create a blacklist file with next two lines. For example:
       ```
-      $ vi /etc/modprobe.d/mellanox-sdk-blacklist.conf
+      $ vi /etc/modprobe.d/hw-management.conf
       blacklist mlxsw_spectrum
       blacklist mlxsw_pci
       ```
@@ -140,12 +142,10 @@ CONFIG_MFD_CORE=m
 ## Packaging:
 The package depends on the next packages:
 - init-system-helpers: helper tools for all init systems
-- lsb-base:	Linux Standard Base init script functionality.<br>
-  It is possible to check whether it is installed or to install by the following command:  
-  `sudo apt install lsb-core` for the Debian-based distributions.  
-  `sudo yum install redhat-lsb-core` for the Red Hat Linux based distros.   
+- bsdutils/util-linux-ng: system logger in debian or Fedora and RHEL.
 - udev:			/dev/ and hotplug management daemon
-- i2c-tools:		heterogeneous set of I2C tools for Linux
+- i2c-tools:		heterogeneous set of I2C tools for Linux<br>
+  `i2c-tools_4.1-1` & `libi2c0_4.1-1` or higher
 
 Package contains the folder Debian, with the rules for Debian package build.  
 Location: `https://github.com/Mellanox/hw-mgmt`  
@@ -190,23 +190,6 @@ Logging records of the thermal control written by systemd-journald.service can b
 Once `systemctl enable hw-management` is invoked, the thermal control will be automatically activated after the next and the following system reboots, until `systemctl disable hw-management` is not invoked.  
 
 The application could be stopped by the `systemctl stop hw-management` command.
-
-## Authors
-* **Michael Shych**
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-`michaelsh [at] mellanox [dot] com`
-* **Mykola Kostenok**
-&nbsp;&nbsp;&nbsp;
-`c_mykolak [at] mellanox [dot] com`
-* **Ohad Oz**
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-`ohado [at] mellanox [dot] com`
-* **Oleksandr Shamray**
-`oleksandrs [at] mellanox [dot] com`
-* **Vadim Pasternak**
-&nbsp;&nbsp;&nbsp;&nbsp;
-`vadimp [at] mellanox [dot] com`
-
 
 ## License
 

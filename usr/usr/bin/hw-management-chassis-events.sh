@@ -45,14 +45,14 @@ LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
-i2c_bus_def_off_eeprom_cpu=16
+i2c_bus_def_off_eeprom_cpu=`cat $config_path/i2c_bus_def_off_eeprom_cpu`
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
 i2c_bus_def_off_eeprom_fan1=11
 i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
-i2c_comex_mon_bus_default=15
+i2c_comex_mon_bus_default=`cat $config_path/i2c_comex_mon_bus_default`
 psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 eeprom_name=''
@@ -152,8 +152,6 @@ function asic_cpld_add_handler()
                 fi
         fi
 
-	find ${QSFP_I2C_PATH}/ -name "qsfp*" -exec ln -sf {} $qsfp_path/ \;
-
         # Verify if CPLD attributes are exist
         [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
         if [ "$cpld" == "cpld1" ]; then
@@ -203,6 +201,8 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
+	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
+	   [ "$2" == "voltmon7" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
@@ -326,7 +326,9 @@ else
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
- 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
+	   [ "$2" == "voltmon7" ] ||
+	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$(($i2c_comex_mon_bus_default+$i2c_bus_offset))

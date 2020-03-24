@@ -79,7 +79,7 @@ SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="add", RUN+="/usr/bin/h
 SUBSYSTEM=="thermal", KERNEL=="cooling_device*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cooling_device %S %p %k"
 
 # Thermal zone.
-SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add thermal_zone %S %p %k"
+SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add thermal_zone %S %p %k || true"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm thermal_zone %S %p %k"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_HIGHEST}!="", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k highest $env{TZ_HIGHEST}"
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_DOWN}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k down"
@@ -182,6 +182,41 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0073/
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon4 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon4 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon4 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0066/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon3 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0066/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon3 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0066/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon3 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0066/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon3 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0068/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon4 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0068/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon4 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0068/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon4 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0068/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon4 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-006a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon5 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-006a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon5 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon5 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon5 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-006c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon6 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-006c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon6 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon6 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon6 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-006e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon7 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-006e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon7 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon7 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon7 %S %p"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add comex_voltmon1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm comex_voltmon1 %S %p"
