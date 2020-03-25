@@ -126,7 +126,7 @@ static int ev_hndl_add_event(struct ev_hndl_priv_data *data,
 		return -1;
 	}
 
-	wd = inotify_add_watch(data->ifd, fname, IN_MODIFY | IN_DELETE);
+	wd = inotify_add_watch(data->ifd, fname, IN_CLOSE_WRITE);
 	if (wd < 0) {
 		syslog(LOG_ERR, "Failed to add file %s to watch, %s",
 			fname, strerror(errno));
