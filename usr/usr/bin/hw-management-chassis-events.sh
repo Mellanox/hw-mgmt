@@ -163,17 +163,23 @@ function asic_cpld_add_handler()
                         ln -sf ${QSFP_I2C_PATH}/cpld3_version $system_path/cpld3_version
                 fi
         fi
+
+	# Append port CPLD version only at the first init.
+	str=`cat $system_path/cpld`
+	cpld3=`cat $system_path/cpld3_version`
+	str=$str$(printf "_CPLD000000_REV%02d00" $cpld)
+	echo $str > $system_path/cpld
 }
 
 function asic_cpld_remove_handler()
 {
-    if [ -f "$config_path/cpld_port" ]; then
-            if [ -L $system_path/cpld3_version]; then
-                    unlink $system_path/cpld3_version
-            else
-                    rm -rf $system_path/cpld3_version
-            fi
-    fi
+	if [ -f "$config_path/cpld_port" ]; then
+		if [ -L $system_path/cpld3_version]; then
+			unlink $system_path/cpld3_version
+		else
+			rm -rf $system_path/cpld3_version
+		fi
+	fi
 }
 
 if [ "$1" == "add" ]; then
