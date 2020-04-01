@@ -220,7 +220,7 @@ if [ "$1" == "add" ]; then
 		   [ "$zonep0type" == "mlxsw-gearbox" ] ||
 		   [ "$zonep1type" == "mlxsw-gearbox" ] ||
 		   [ "$zonep2type" == "mlxsw-gearbox" ]; then
-			mkdir -p $thermal_path/$zonetype
+			mkdir $thermal_path/$zonetype
 			ln -sf $3$4/mode $thermal_path/$zonetype/thermal_zone_mode
 			ln -sf $3$4/policy $thermal_path/$zonetype/thermal_zone_policy
 			ln -sf $3$4/trip_point_0_temp $thermal_path/$zonetype/temp_trip_norm
