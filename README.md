@@ -1,7 +1,7 @@
 # Mellanox Hardware Management package
 This package supports thermal control and hardware management for Mellanox switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
 
-The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.  
+The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.
 For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
 
 ##### Table of Contents  
@@ -28,9 +28,9 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - 4.19.xx
 
 ## Sysfs attributes:
-The thermal control operates over sysfs attributes.  
-These attributes are exposed as symbolic links to `/var/run/hw-management` folder at system boot time.  
-Let's call this location as a `$bsp_path`. This folder contains the next structure:
+The thermal control operates over sysfs attributes.
+These attributes are exposed as symbolic links to `/var/run/hw-management` folder at system boot time.
+This folder contains the next structure:
 
 | Node Path | Purpose |
 | :--- | :--- |
@@ -47,19 +47,19 @@ Let's call this location as a `$bsp_path`. This folder contains the next structu
 
 To get current cooling state, exposed by cooling level (1..10), run:
 ```
-$ cat $bsp_path/thermal/cooling_cur_state
+$ cat /var/run/hw-management/thermal/cooling_cur_state
 2
 ```
 To get power supply unit `X` power status, where 1 - good and 0 - unplugged/unfunctional, run: 
 ```
-$ cat $bsp_path/thermal/psu1_pwr_status 
+$ cat /var/run/hw-management/thermal/psu1_pwr_status
 0
-$ cat $bsp_path/thermal/psu2_pwr_status  
+$ cat /var/run/hw-management/thermal/psu2_pwr_status
 1
 ```
 To get the switch module ASIC temperature, in millidegrees Celsius, run:
 ```
-$ cat $bsp_path/thermal/asic 
+$ cat /var/run/hw-management/thermal/asic
 39000
 ```
 Detailed information about all available nodes can be found in the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
@@ -132,7 +132,7 @@ CONFIG_MFD_CORE=m
 <br><br>If the user wants to enforce work over I2C (for example, to be able to switch between workloads running Mellanox legacy SDK code and running Mellanox switch-dev driver), the next steps should be performed:
    1. Create a blacklist file with next two lines. For example:
       ```
-      $ vi /etc/modprobe.d/mellanox-sdk-blacklist.conf
+      $ vi /etc/modprobe.d/hw-management.conf
       blacklist mlxsw_spectrum
       blacklist mlxsw_pci
       ```
@@ -142,18 +142,16 @@ CONFIG_MFD_CORE=m
 ## Packaging:
 The package depends on the next packages:
 - init-system-helpers: helper tools for all init systems
-- lsb-base:	Linux Standard Base init script functionality.<br>
-  It is possible to check whether it is installed or to install by the following command:  
-  `sudo apt install lsb-core` for the Debian-based distributions.  
-  `sudo yum install redhat-lsb-core` for the Red Hat Linux based distros.   
+- bsdutils/util-linux-ng: system logger in debian or Fedora and RHEL.
 - udev:			/dev/ and hotplug management daemon
-- i2c-tools:		heterogeneous set of I2C tools for Linux
+- i2c-tools:		heterogeneous set of I2C tools for Linux<br>
+  `i2c-tools_4.1-1` & `libi2c0_4.1-1` or higher
 
-Package contains the folder Debian, with the rules for Debian package build.  
-Location: `https://github.com/Mellanox/hw-mgmt`  
+Package contains the folder Debian, with the rules for Debian package build.
+Location: `https://github.com/Mellanox/hw-mgmt`
 To get package sources: `git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt`
 
-**For Debian package build:**  
+**For Debian package build:**
 On a debian-based system, install the following programs:
 sudo apt-get install devscripts build-essential lintian
 
@@ -161,7 +159,7 @@ sudo apt-get install devscripts build-essential lintian
 - Run: `debuild -us -uc`
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
-**For converting .deb package to .rpm package:**  
+**For converting .deb package to .rpm package:**
 - On a Debian-based system, install the `alien` program: `sudo apt-get install alien`
 - `alien --to-rpm hw-management_1.mlnx.18.12.2018_amd64.deb`
 - Find `hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
@@ -177,7 +175,7 @@ sudo apt-get install devscripts build-essential lintian
    * remove with: `yum remove hw-management` or `rpm -e hw-management`
 
 ## Activation, de-activation and reading status
-hw-management can be initialized and de-initialized by systemd service.  
+hw-management can be initialized and de-initialized by systemd service.
 The next command could be used in order to configure persistent initialization and de-initialization of hw-management:
 - `systemctl enable hw-management`
 - `systemctl disable hw-management`
@@ -189,25 +187,9 @@ Logging records of the thermal control written by systemd-journald.service can b
 - `journalctl --unit=hw-management`
 - `journalctl -f -u hw-management`
 
-Once `systemctl enable hw-management` is invoked, the thermal control will be automatically activated after the next and the following system reboots, until `systemctl disable hw-management` is not invoked.  
+Once `systemctl enable hw-management` is invoked, the thermal control will be automatically activated after the next and the following system reboots, until `systemctl disable hw-management` is not invoked.
 
 The application could be stopped by the `systemctl stop hw-management` command.
-
-## Authors
-* **Michael Shych**
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-`michaelsh [at] mellanox [dot] com`
-* **Mykola Kostenok**
-&nbsp;&nbsp;&nbsp;
-`c_mykolak [at] mellanox [dot] com`
-* **Ohad Oz**
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-`ohado [at] mellanox [dot] com`
-* **Oleksandr Shamray**
-`oleksandrs [at] mellanox [dot] com`
-* **Vadim Pasternak**
-&nbsp;&nbsp;&nbsp;&nbsp;
-`vadimp [at] mellanox [dot] com`
 
 
 ## License
