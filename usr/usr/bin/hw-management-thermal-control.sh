@@ -172,7 +172,7 @@ psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 # 35-40		30	60	60	60	60	60
 # 40-45		50	60	60	60	60	60
 
-p2c_dir_trust_t1=(45000 13 $max_amb 13)
+p2c_dir_trust_t1=(40000 13 45000 15 $max_amb 15)
 p2c_dir_untrust_t1=(25000 13 30000 14 30000 14 35000 15 40000 16 $max_amb 16)
 c2p_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 c2p_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
