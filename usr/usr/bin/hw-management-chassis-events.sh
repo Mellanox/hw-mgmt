@@ -164,9 +164,9 @@ function asic_cpld_add_handler()
                 fi
         fi
 
-	# Append port CPLD version only at the first init.
-	str=`cat $system_path/cpld`
-	cpld3=`cat $system_path/cpld3_version`
+	# Append port CPLD version.
+	str=`cat $system_path/cpld_base`
+	cpld=`cat $system_path/cpld3_version`
 	str=$str$(printf "_CPLD000000_REV%02d00" $cpld)
 	echo $str > $system_path/cpld
 }
