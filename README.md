@@ -1,7 +1,7 @@
 # Mellanox Hardware Management package
 This package supports thermal control and hardware management for Mellanox switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
 
-The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.  
+The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.
 For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
 
 ##### Table of Contents  
@@ -28,8 +28,8 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - 4.19.xx
 
 ## Sysfs attributes:
-The thermal control operates over sysfs attributes.  
-These attributes are exposed as symbolic links to `/var/run/hw-management` folder at system boot time.  
+The thermal control operates over sysfs attributes.
+These attributes are exposed as symbolic links to `/var/run/hw-management` folder at system boot time.
 This folder contains the next structure:
 
 | Node Path | Purpose |
@@ -52,14 +52,14 @@ $ cat /var/run/hw-management/thermal/cooling_cur_state
 ```
 To get power supply unit `X` power status, where 1 - good and 0 - unplugged/unfunctional, run: 
 ```
-$ cat /var/run/hw-management/thermal/psu1_pwr_status 
+$ cat /var/run/hw-management/thermal/psu1_pwr_status
 0
-$ cat /var/run/hw-management/thermal/psu2_pwr_status  
+$ cat /var/run/hw-management/thermal/psu2_pwr_status
 1
 ```
 To get the switch module ASIC temperature, in millidegrees Celsius, run:
 ```
-$ cat /var/run/hw-management/thermal/asic 
+$ cat /var/run/hw-management/thermal/asic
 39000
 ```
 Detailed information about all available nodes can be found in the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
@@ -147,11 +147,11 @@ The package depends on the next packages:
 - i2c-tools:		heterogeneous set of I2C tools for Linux<br>
   `i2c-tools_4.1-1` & `libi2c0_4.1-1` or higher
 
-Package contains the folder Debian, with the rules for Debian package build.  
-Location: `https://github.com/Mellanox/hw-mgmt`  
+Package contains the folder Debian, with the rules for Debian package build.
+Location: `https://github.com/Mellanox/hw-mgmt`
 To get package sources: `git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt`
 
-**For Debian package build:**  
+**For Debian package build:**
 On a debian-based system, install the following programs:
 sudo apt-get install devscripts build-essential lintian
 
@@ -159,7 +159,7 @@ sudo apt-get install devscripts build-essential lintian
 - Run: `debuild -us -uc`
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
-**For converting .deb package to .rpm package:**  
+**For converting .deb package to .rpm package:**
 - On a Debian-based system, install the `alien` program: `sudo apt-get install alien`
 - `alien --to-rpm hw-management_1.mlnx.18.12.2018_amd64.deb`
 - Find `hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
@@ -175,7 +175,7 @@ sudo apt-get install devscripts build-essential lintian
    * remove with: `yum remove hw-management` or `rpm -e hw-management`
 
 ## Activation, de-activation and reading status
-hw-management can be initialized and de-initialized by systemd service.  
+hw-management can be initialized and de-initialized by systemd service.
 The next command could be used in order to configure persistent initialization and de-initialization of hw-management:
 - `systemctl enable hw-management`
 - `systemctl disable hw-management`
@@ -187,9 +187,10 @@ Logging records of the thermal control written by systemd-journald.service can b
 - `journalctl --unit=hw-management`
 - `journalctl -f -u hw-management`
 
-Once `systemctl enable hw-management` is invoked, the thermal control will be automatically activated after the next and the following system reboots, until `systemctl disable hw-management` is not invoked.  
+Once `systemctl enable hw-management` is invoked, the thermal control will be automatically activated after the next and the following system reboots, until `systemctl disable hw-management` is not invoked.
 
 The application could be stopped by the `systemctl stop hw-management` command.
+
 
 ## License
 
