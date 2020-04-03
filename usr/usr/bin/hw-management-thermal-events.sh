@@ -135,18 +135,18 @@ if [ "$1" == "add" ]; then
 				else
 					j=`echo $(($inv - $i))`
 				fi
-				if [ -f $3$4/fan"$i"_fault ]; then
-					ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
-				fi
 				if [ -f $3$4/fan"$i"_input ]; then
 					ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
 					ln -sf $3$4/pwm1 $thermal_path/fan"$j"_speed_set
+					ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
 					if [ -f $config_path/fan_min_speed ]; then
 						ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
 					fi
 					if [ -f $config_path/fan_max_speed ]; then
 						ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
 					fi
+					#save max_tachos to config
+					echo $i > $config_path/max_tachos
 				fi
 			done
 			for ((i=2; i<=$max_module_gbox_ind; i+=1)); do
