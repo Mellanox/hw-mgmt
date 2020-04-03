@@ -591,10 +591,13 @@ msn_spc3_common()
 {
 	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
 	case $sku in
-		HI123|124)
+		HI123|HI124)
 		msn46xx_specific
 		;;
 		HI122)
+		msn47xx_specific
+		;;
+		*)
 		msn47xx_specific
 		;;
 	esac
