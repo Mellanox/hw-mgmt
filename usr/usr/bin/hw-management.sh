@@ -918,6 +918,13 @@ do_chip_up_down()
 				fi
 			fi
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
+				# Append port CPLD version.
+				str=`cat $system_path/cpld_base`
+				cpld_port=`cat $system_path/cpld3_version`
+				str=$str$(printf "_CPLD000000_REV%02d00" $cpld_port)
+				echo $str > $system_path/cpld
+			fi
 			if [ "$chipup_delay" != "0" ]; then
 				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_up > $config_path/sxcore
@@ -950,9 +957,7 @@ do_chip_down()
 }
 
 compose_cpld_vme()
-{
-	#cpld_num=`cat $config_path/cpld_num`
-logger $1 $2
+{ 
 	for ((i=1; i<=$1; i+=1)); do
 		if [ -L $system_path/cpld"$i"_version ]; then
 			cpld_pn=`cat $system_path/cpld"$i"_pn`
@@ -991,7 +996,7 @@ do_start_post()
 	cpld_num=`cat $config_path/cpld_num`
 	case $board in
 		VMOD0001|VMOD0002|VMOD0003|VMOD004)
-			compose_cpld_vme $($cpld_num-1)
+			compose_cpld_vme $(($cpld_num-1))
 			;;
 		VMOD0005|VMOD0008|VMOD0009|VMOD0010)
 			compose_cpld_vme $cpld_num
