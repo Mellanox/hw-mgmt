@@ -6,6 +6,7 @@ Type=oneshot
 RemainAfterExit=true
 ExecStartPre=/bin/sh -c "/usr/bin/hw-management-ready.sh"
 ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
+ExecStartPost=/bin/sh -c "hw-management-start-post.sh"
 ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
 PIDFile=/var/run/hw-management.pid
 

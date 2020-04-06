@@ -93,7 +93,6 @@ alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
-module_path=$hw_management_path/module
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh

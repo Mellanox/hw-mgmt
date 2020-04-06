@@ -167,13 +167,13 @@ function asic_cpld_add_handler()
 
 function asic_cpld_remove_handler()
 {
-    if [ -f "$config_path/cpld_port" ]; then
-            if [ -L $system_path/cpld3_version]; then
-                    unlink $system_path/cpld3_version
-            else
-                    rm -rf $system_path/cpld3_version
-            fi
-    fi
+	if [ -f "$config_path/cpld_port" ]; then
+		if [ -L $system_path/cpld3_version]; then
+			unlink $system_path/cpld3_version
+		else
+			rm -rf $system_path/cpld3_version
+		fi
+	fi
 }
 
 if [ "$1" == "add" ]; then
