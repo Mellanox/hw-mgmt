@@ -66,7 +66,6 @@ set_fan_drwr_num()
 	drwr_num=0
 	for ((i=1; i<=$max_fan_drwr; i+=1)); do
 		if [ -L $thermal_path/fan"$i"_status ]; then
-logger hw-management i $i
 			drwr_num=$(($drwr_num+1))
 		fi
 	done
