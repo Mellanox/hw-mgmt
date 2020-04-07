@@ -66,7 +66,6 @@ thermal_type_t5=5
 thermal_type_t6=6
 max_psus=2
 max_tachos=12
-max_cpld=4
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
@@ -94,7 +93,6 @@ alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
-module_path=$hw_management_path/module
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
@@ -956,56 +954,6 @@ do_chip_down()
 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
 }
 
-compose_cpld_vme()
-{ 
-	for ((i=1; i<=$1; i+=1)); do
-		if [ -L $system_path/cpld"$i"_version ]; then
-			cpld_pn=`cat $system_path/cpld"$i"_pn`
-		fi
-		if [ -L $system_path/cpld"$i"_pn ]; then
-			cpld_ver=`cat $system_path/cpld"$i"_version`
-		fi
-		if [ -L $system_path/cpld"$i"_version_min ]; then
-			cpld_ver_min=`cat $system_path/cpld"$i"_version_min`
-		fi
-		if [ -z "$str" ]; then
-			str=$(printf "CPLD%06d_REV%02d%02d" $cpld_pn $cpld_ver $cpld_ver_min)
-		else
-			str=$str$(printf "_CPLD%06d_REV%02d%02d" $cpld_pn $cpld_ver $cpld_ver_min)
-		fi
-	done
-	echo $str > $system_path/cpld_base
-	echo $str > $system_path/cpld
-
-	if [ $cpld_num -lt $max_cpld ]; then
-		if [ -L $system_path/cpld"$max_cpld"_ver ]; then
-			unlink $system_path/cpld"$max_cpld"_version
-		fi
-		if [ -L $system_path/cpld"$max_cpld"_pn ]; then
-			unlink $system_path/cpld"$max_cpld"_pn
-		fi
-		if [ -L $system_path/cpld"$i"_version_min ]; then
-			unlink $system_path/cpld"$max_cpld"_version_min
-		fi
-	fi
-}
-
-do_start_post()
-{
-	board=`cat /sys/devices/virtual/dmi/id/board_name`
-	cpld_num=`cat $config_path/cpld_num`
-	case $board in
-		VMOD0001|VMOD0002|VMOD0003|VMOD004)
-			compose_cpld_vme $(($cpld_num-1))
-			;;
-		VMOD0005|VMOD0008|VMOD0009|VMOD0010)
-			compose_cpld_vme $cpld_num
-			;;
-		*)
-			;;
-	esac
-}
-
 case $ACTION in
 	start)
 		if [ -d /var/run/hw-management ]; then
@@ -1019,11 +967,6 @@ case $ACTION in
 			echo 1 > $config_path/stopping
 			do_chip_up_down 0
 			do_stop
-		fi
-	;;
-	post)
-		if [ -d /var/run/hw-management ]; then
-			do_start_post
 		fi
 	;;
 	chipup)
