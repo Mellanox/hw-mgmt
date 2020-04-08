@@ -130,10 +130,8 @@ function create_sfp_symbolic_links()
 {
 	local event_path="${1}"
 	local sfp_name=${event_path##*/net/}
-	local i2c_path=${event_path%/net/*}
-	local sfp_num=`echo $sfp_name | cut -b 4-`
 
-	ln -sf ${i2c_path}/qsfp${sfp_num}_status ${sfp_path}/${sfp_name}_status
+	ln -sf /usr/bin/hw-management-sfp-helper.sh ${sfp_path}/${sfp_name}_status
 }
 
 # ASIC CPLD event
@@ -400,5 +398,6 @@ else
 			echo $sfp_counter > $config_path/sfp_counter
 		fi
 		unlock_service_state_change
+		rm -rf ${sfp_path}/*_status
 	fi
 fi
