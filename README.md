@@ -123,6 +123,7 @@ CONFIG_X86_PKG_TEMP_THERMAL=m
 CONFIG_IGB=y
 CONFIG_IGB_HWMON=y
 CONFIG_MFD_CORE=m
+CONFIG_INOTIFY_USER=y
 ```
 **Note:**
 - Kernel version should be v4.19 or later.
