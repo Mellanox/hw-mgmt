@@ -1217,7 +1217,7 @@ fi
 
 # Periodic report counter
 periodic_report=$(($polling_time*$report_counter))
-periodic_report=12	# For debug - remove after tsting
+#periodic_report=12	# For debug - uncomment for tsting
 count=0
 suspend_thermal=0;
 init_tz_highest
