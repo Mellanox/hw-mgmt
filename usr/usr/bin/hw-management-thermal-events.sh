@@ -135,18 +135,18 @@ if [ "$1" == "add" ]; then
 				else
 					j=`echo $(($inv - $i))`
 				fi
-				if [ -f $3$4/fan"$i"_fault ]; then
-					ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
-				fi
 				if [ -f $3$4/fan"$i"_input ]; then
 					ln -sf $3$4/fan"$i"_input $thermal_path/fan"$j"_speed_get
 					ln -sf $3$4/pwm1 $thermal_path/fan"$j"_speed_set
+					ln -sf $3$4/fan"$i"_fault $thermal_path/fan"$j"_fault
 					if [ -f $config_path/fan_min_speed ]; then
 						ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
 					fi
 					if [ -f $config_path/fan_max_speed ]; then
 						ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
 					fi
+					# Save max_tachos to config
+					echo $i > $config_path/max_tachos
 				fi
 			done
 			for ((i=2; i<=$max_module_gbox_ind; i+=1)); do
@@ -341,7 +341,7 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
 
-		#PSU VPD
+		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
 		if [ $? -ne 0 ]; then
