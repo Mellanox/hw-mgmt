@@ -341,6 +341,22 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
 
+		# Corona workaround
+		sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+		case $sku in
+			HI123|HI124)
+			psu_addr=`cat $config_path/"$2"_i2c_addr`
+			psu_eeprom_addr=$((${psu_addr:2:2}-8))
+			eeprom_name=$2_info
+
+			echo 24c32 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/new_device
+			ln -sf /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom $eeprom_path/$eeprom_name 2>/dev/null
+			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+			;;
+			*)
+			;;
+		esac
+
 		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
@@ -598,6 +614,22 @@ else
 		if [ "$bus" == "$comex_bus" ]; then
 			exit 0
 		fi
+		# Corona workaround
+		sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+		case $sku in
+			HI123|HI124)
+
+			psu_addr=`cat $config_path/"$2"_i2c_addr`
+			psu_eeprom_addr=$((${psu_addr:2:2}-8))
+			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/delete_device
+
+			if [ -L $eeprom_path/$2_info ]; then
+				unlink $eeprom_path/$2_info
+			fi
+			;;
+			*)
+			;;	
+		esac
 		# Remove thermal attributes
 		if [ -L $thermal_path/$2_temp ]; then
 			unlink $thermal_path/$2_temp
