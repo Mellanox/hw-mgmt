@@ -59,6 +59,25 @@ handle_cpld_versions()
 			unlink $system_path/cpld"$max_cpld"_version_min
 		fi
 	fi
+
+	for ((i=1; i<=$cpld_num; i+=1)); do
+		if [ -L $system_path/cpld"$i"_version ]; then
+			cpld_pn=`cat $system_path/cpld"$i"_pn`
+		fi
+		if [ -L $system_path/cpld"$i"_pn ]; then
+			cpld_ver=`cat $system_path/cpld"$i"_version`
+		fi
+		if [ -L $system_path/cpld"$i"_version_min ]; then
+			cpld_ver_min=`cat $system_path/cpld"$i"_version_min`
+		fi
+		if [ -z "$str" ]; then
+			str=$(printf "CPLD%06d_REV%02d%02d" $cpld_pn $cpld_ver $cpld_ver_min)
+		else
+			str=$str$(printf "_CPLD%06d_REV%02d%02d" $cpld_pn $cpld_ver $cpld_ver_min)
+		fi
+	done
+	echo $str > $system_path/cpld_base
+	echo $str > $system_path/cpld
 }
 
 set_fan_drwr_num()

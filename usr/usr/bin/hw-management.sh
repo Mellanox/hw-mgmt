@@ -943,6 +943,13 @@ do_chip_up_down()
 				fi
 			fi
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
+				# Append port CPLD version.
+				str=`cat $system_path/cpld_base`
+				cpld_port=`cat $system_path/cpld3_version`
+				str=$str$(printf "_CPLD000000_REV%02d00" $cpld_port)
+				echo $str > $system_path/cpld
+			fi
 			if [ "$chipup_delay" != "0" ]; then
 				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_up > $config_path/sxcore
