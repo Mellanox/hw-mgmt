@@ -96,7 +96,6 @@ alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
-module_path=$hw_management_path/module
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
@@ -289,7 +288,7 @@ msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
 			0x50 24 \
 			0x49 17)
 
-msn4700_connect_table=(	max11603 0x6d 5 \
+msn4700_msn4600_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
 			xdpe12284 0x66 5 \
@@ -306,7 +305,7 @@ msn4700_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-msn4700_dis_table=(	0x6d 5 \
+msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x62 5 \
 			0x64 5 \
 			0x66 5 \
@@ -553,11 +552,11 @@ msn47xx_specific()
 {
 	connect_size=${#msn4700_connect_table[@]}
 	for ((i=0; i<$connect_size; i++)); do
-		connect_table[i]=${msn4700_connect_table[i]}
+		connect_table[i]=${msn4700_msn4600_connect_table[i]}
 	done
-	disconnect_size=${#msn4700_dis_table[@]}
+	disconnect_size=${#msn4700_msn4600_dis_table[@]}
 	for ((i=0; i<$disconnect_size; i++)); do
-		dis_table[i]=${msn4700_dis_table[i]}
+		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_t5
@@ -565,6 +564,24 @@ msn47xx_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
+msn46xx_specific()
+{
+	connect_size=${#msn4700_msn4600_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn4700_msn4600_connect_table[i]}
+	done
+	disconnect_size=${#msn4700_msn4600_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn4700_msn4600_dis_table[i]}
+	done
+	thermal_type=$thermal_type_t6
+	max_tachos=3
+	max_psus=2
+	echo 11000 > $config_path/fan_max_speed
+	echo 2235 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
 
@@ -585,6 +602,12 @@ msn_spc3_common()
 {
 	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
 	case $sku in
+		HI123|HI124)
+		msn46xx_specific
+		;;
+		HI122)
+		msn47xx_specific
+		;;
 		*)
 		msn47xx_specific
 		;;
@@ -649,6 +672,9 @@ check_system()
 					;;
 				MSN38*)
 					msn38xx_specific
+					;;
+				MSN46*)
+					msn46xx_specific
 					;;
 				*)
 					proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
@@ -960,6 +986,13 @@ do_chip_up_down()
 				fi
 			fi
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
+				# Append port CPLD version.
+				str=`cat $system_path/cpld_base`
+				cpld_port=`cat $system_path/cpld3_version`
+				str=$str$(printf "_CPLD000000_REV%02d00" $cpld_port)
+				echo $str > $system_path/cpld
+			fi
 			if [ "$chipup_delay" != "0" ]; then
 				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_up > $config_path/sxcore

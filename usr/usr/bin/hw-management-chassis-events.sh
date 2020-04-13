@@ -131,10 +131,8 @@ function create_sfp_symbolic_links()
 {
 	local event_path="${1}"
 	local sfp_name=${event_path##*/net/}
-	local i2c_path=${event_path%/net/*}
-	local sfp_num=`echo $sfp_name | cut -b 4-`
 
-	ln -sf ${i2c_path}/qsfp${sfp_num}_status ${sfp_path}/${sfp_name}_status
+	ln -sf /usr/bin/hw-management-sfp-helper.sh ${sfp_path}/${sfp_name}_status
 }
 
 # ASIC CPLD event
@@ -168,13 +166,13 @@ function asic_cpld_add_handler()
 
 function asic_cpld_remove_handler()
 {
-    if [ -f "$config_path/cpld_port" ]; then
-            if [ -L $system_path/cpld3_version]; then
-                    unlink $system_path/cpld3_version
-            else
-                    rm -rf $system_path/cpld3_version
-            fi
-    fi
+	if [ -f "$config_path/cpld_port" ]; then
+		if [ -L $system_path/cpld3_version]; then
+			unlink $system_path/cpld3_version
+		else
+			rm -rf $system_path/cpld3_version
+		fi
+	fi
 }
 
 function handle_hotplug_event()
@@ -416,5 +414,6 @@ else
 			echo $sfp_counter > $config_path/sfp_counter
 		fi
 		unlock_service_state_change
+		rm -rf ${sfp_path}/*_status
 	fi
 fi
