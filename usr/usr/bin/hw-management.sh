@@ -982,6 +982,31 @@ do_chip_down()
 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
 }
 
+__usage="
+Usage: $(basename $0) [Options]
+
+Options:
+	start		Start hw-management service, supposed to be
+			activated at initialization by system service
+			control.
+	stop		Stop hw-management service, supposed to be
+			activated at system shutdown by system service
+			control.
+	chipup		Manual activation of ASIC I2C driver.
+	chipdown	Manual de-activation of ASIC I2C driver.
+	chipupen	Set 'chipup_dis' attribute to zero.
+	chipupdis <n>	Set 'chipup_dis' attribute to <n>, when <n>
+	thermsuspend	Suspend thermal control (if thermal control is
+			activated by hw-management package.
+			Not relevant for users who disable hw-management
+			thermal control.
+	thermresume	Resume thermal control.
+			Not relevant for users who disable hw-management
+			thermal control.
+	restart
+	force-reload	Performs hw-management 'stop' and the 'start.
+"
+
 case $ACTION in
 	start)
 		if [ -d /var/run/hw-management ]; then
@@ -1033,7 +1058,7 @@ case $ACTION in
 		do_start
 	;;
 	*)
-		echo "Usage: `basename $0` {start|stop}"
+		echo "$__usage"
 		exit 1
 	;;
 esac
