@@ -341,12 +341,16 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
 
+		if [ ! -f $config_path/"$2"_i2c_addr ]; then
+			exit 0
+		fi
+
 		psu_addr=`cat $config_path/"$2"_i2c_addr`
 		psu_eeprom_addr=$((${psu_addr:2:2}-8))
 		eeprom_name=$2_info
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y $bus 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
-		if [ $? -eq 0 ] && [ ! -L $eeprom_path/$2_info]; then
+		if [ $? -eq 0 ] && [ ! -L $eeprom_path/$2_info ]; then
 			echo 24c32 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/new_device
 			ln -sf /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
