@@ -45,13 +45,13 @@ handle_cpld_versions()
 {
 	local -r cpld_num="${1}"
 	if [ $cpld_num -lt $max_cpld ]; then
-		if [ -L $system_path/cpld"$max_cpld"_ver ]; then
+		if [ -L $system_path/cpld"$max_cpld"_version ]; then
 			unlink $system_path/cpld"$max_cpld"_version
 		fi
 		if [ -L $system_path/cpld"$max_cpld"_pn ]; then
 			unlink $system_path/cpld"$max_cpld"_pn
 		fi
-		if [ -L $system_path/cpld"$i"_version_min ]; then
+		if [ -L $system_path/cpld"max_cpld"_version_min ]; then
 			unlink $system_path/cpld"$max_cpld"_version_min
 		fi
 	fi
