@@ -51,7 +51,7 @@ handle_cpld_versions()
 		if [ -L $system_path/cpld"$max_cpld"_pn ]; then
 			unlink $system_path/cpld"$max_cpld"_pn
 		fi
-		if [ -L $system_path/cpld"max_cpld"_version_min ]; then
+		if [ -L $system_path/cpld"$max_cpld"_version_min ]; then
 			unlink $system_path/cpld"$max_cpld"_version_min
 		fi
 	fi
