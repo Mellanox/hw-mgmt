@@ -22,6 +22,8 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MQMB7800
 - MSN3700
 - MSN3800
+- MSN4700
+- MSN4600C
 
 ## Supported Kernel versions:
 - 4.9.xx
