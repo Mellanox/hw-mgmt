@@ -341,30 +341,29 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/curr1_input $power_path/$2_curr_in
 		ln -sf $5$3/curr2_input $power_path/$2_curr
 
-		# Corona workaround
-		sku=`cat /sys/devices/virtual/dmi/id/product_sku`
-		case $sku in
-			HI123|HI124)
-			psu_addr=`cat $config_path/"$2"_i2c_addr`
-			psu_eeprom_addr=$((${psu_addr:2:2}-8))
-			eeprom_name=$2_info
+		if [ ! -f $config_path/"$2"_i2c_addr ]; then
+			exit 0
+		fi
 
+		psu_addr=`cat $config_path/"$2"_i2c_addr`
+		psu_eeprom_addr=$((${psu_addr:2:2}-8))
+		eeprom_name=$2_info
+		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
+		i2cget -f -y $bus 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
+		if [ $? -eq 0 ] && [ ! -L $eeprom_path/$2_info ]; then
 			echo 24c32 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/new_device
 			ln -sf /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
-			;;
-			*)
-			;;
-		esac
+		fi
 
 		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID $bus --I2C_ADDR 0x$ps_ctrl_addr --dump --VPD_OUTPUT_FILE $eeprom_path/$2_vpd
 		if [ $? -ne 0 ]; then
-			#eeprom PSU VPD
+			#EEPROM VPD
 			hw-management-read-ps-eeprom.sh --conv --psu_eeprom $eeprom_path/$2_info > $eeprom_path/$2_vpd
 			if [ $? -ne 0 ]; then
-				#VPD failed
+				#EEPROM failed
 				echo "Failed to read PSU VPD" > $eeprom_path/$2_vpd
 			fi
 		fi
@@ -614,22 +613,14 @@ else
 		if [ "$bus" == "$comex_bus" ]; then
 			exit 0
 		fi
-		# Corona workaround
-		sku=`cat /sys/devices/virtual/dmi/id/product_sku`
-		case $sku in
-			HI123|HI124)
 
+		if [ -L $eeprom_path/$2_info ]; then
 			psu_addr=`cat $config_path/"$2"_i2c_addr`
 			psu_eeprom_addr=$((${psu_addr:2:2}-8))
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/delete_device
+			unlink $eeprom_path/$2_info
 
-			if [ -L $eeprom_path/$2_info ]; then
-				unlink $eeprom_path/$2_info
-			fi
-			;;
-			*)
-			;;	
-		esac
+		fi
 		# Remove thermal attributes
 		if [ -L $thermal_path/$2_temp ]; then
 			unlink $thermal_path/$2_temp

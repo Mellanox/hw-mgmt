@@ -31,31 +31,27 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-
-# ww-management command that is executed after hw-management start.
-# Activated by systemd.
+# hw-management script that is executed at the end of hw-management start.
 
 # Local constants and paths.
-wait_pid_cntr=3
 max_cpld=4
 max_fan_drwr=8
 hw_management_path=/var/run/hw-management
 config_path=$hw_management_path/config
 system_path=$hw_management_path/system
 thermal_path=/var/run/hw-management/thermal
-PID=/var/run/hw-management.pid
  
 handle_cpld_versions()
 {
 	local -r cpld_num="${1}"
 	if [ $cpld_num -lt $max_cpld ]; then
-		if [ -L $system_path/cpld"$max_cpld"_ver ]; then
+		if [ -L $system_path/cpld"$max_cpld"_version ]; then
 			unlink $system_path/cpld"$max_cpld"_version
 		fi
 		if [ -L $system_path/cpld"$max_cpld"_pn ]; then
 			unlink $system_path/cpld"$max_cpld"_pn
 		fi
-		if [ -L $system_path/cpld"$i"_version_min ]; then
+		if [ -L $system_path/cpld"$max_cpld"_version_min ]; then
 			unlink $system_path/cpld"$max_cpld"_version_min
 		fi
 	fi
@@ -90,12 +86,6 @@ set_fan_drwr_num()
 	done
 	echo $drwr_num > $config_path/fan_drwr_num
 }
-
-# Wait for PID.
-while [ ! -f $PID ] && [ "$wait_pid_cntr" -gt  "0" ]; do
-	sleep 1
-	wait_pid_cntr=$(($wait_pid_cntr-11))
-done
 
 board=`cat /sys/devices/virtual/dmi/id/board_name`
 cpld_num=`cat $config_path/cpld_num`
