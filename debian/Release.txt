@@ -45,6 +45,9 @@
         - see backport patch kernel 4.9  #53
         - see backport patch kernel 4.19 #21
     o   Fix - number of fans for MSN3700C
+    o   Fix - In rare cases mlxmsw minimal may suffer segmentation fault  in driver  shutdown 
+        - see backport patch kernel 4.9  #51
+        - see backport patch kernel 4.19 #19 
     Thermal:
     o   Fix - Remove option of thermal event, might cause failure of hw-management 
               service start in case thermal event received before service start.
