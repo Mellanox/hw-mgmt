@@ -335,6 +335,11 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/in2_input $power_path/$2_volt
 		if [ -f $5$3/in3_input ]; then
 			ln -sf $5$3/in3_input $power_path/$2_volt_out2
+		else
+			in2_label=`cat $5$3/in2_label`
+			if [ "$in2_label" == "vout1" ]; then
+				ln -sf $5$3/in2_input $power_path/$2_volt_out
+			fi
 		fi
 		ln -sf $5$3/power1_input $power_path/$2_power_in
 		ln -sf $5$3/power2_input $power_path/$2_power
