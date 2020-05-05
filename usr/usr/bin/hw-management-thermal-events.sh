@@ -335,6 +335,11 @@ if [ "$1" == "add" ]; then
 		ln -sf $5$3/in2_input $power_path/$2_volt
 		if [ -f $5$3/in3_input ]; then
 			ln -sf $5$3/in3_input $power_path/$2_volt_out2
+		else
+			in2_label=`cat $5$3/in2_label`
+			if [ "$in2_label" == "vout1" ]; then
+				ln -sf $5$3/in2_input $power_path/$2_volt_out
+			fi
 		fi
 		ln -sf $5$3/power1_input $power_path/$2_power_in
 		ln -sf $5$3/power2_input $power_path/$2_power
@@ -348,12 +353,14 @@ if [ "$1" == "add" ]; then
 		psu_addr=`cat $config_path/"$2"_i2c_addr`
 		psu_eeprom_addr=$((${psu_addr:2:2}-8))
 		eeprom_name=$2_info
+		eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y $bus 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
-		if [ $? -eq 0 ] && [ ! -L $eeprom_path/$2_info ]; then
+		if [ $? -eq 0 ] && [ ! -L $eeprom_path/$2_info ] && [ ! -f $eeprom_file ]; then
 			echo 24c32 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/new_device
-			ln -sf /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom $eeprom_path/$eeprom_name 2>/dev/null
+			ln -sf $eeprom_file $eeprom_path/$eeprom_name 2>/dev/null
 			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+			echo 1 > $config_path/"$2"_eeprom_us
 		fi
 
 		# PSU VPD
@@ -614,11 +621,12 @@ else
 			exit 0
 		fi
 
-		if [ -L $eeprom_path/$2_info ]; then
+		if [ -L $eeprom_path/$2_info ] && [ -f $config_path/"$2"_eeprom_us]; then
 			psu_addr=`cat $config_path/"$2"_i2c_addr`
 			psu_eeprom_addr=$((${psu_addr:2:2}-8))
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/delete_device
 			unlink $eeprom_path/$2_info
+			rm -rf $config_path/"$2"_eeprom_us
 
 		fi
 		# Remove thermal attributes
@@ -630,6 +638,9 @@ else
 		fi
 		if [ -L $thermal_path/$2_temp_alarm ]; then
 			unlink $thermal_path/$2_temp_alarm
+		fi
+		if [ -L $thermal_path/$2_temp_max_alarm ]; then
+			unlink $thermal_path/$2_temp_max_alarm
 		fi
 		if [ -L $thermal_path/$2_temp2 ]; then
 			unlink $thermal_path/$2_temp2
