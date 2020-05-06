@@ -55,33 +55,51 @@ static inline int ev_hndl_check_file_exist(char *fname)
 	return (stat(fname, &tmp) == 0);
 }
 
-static int ev_hndl_read_file(char *fname, int fd, int silent)
+static int ev_hndl_read_config_file(char *fname)
 {
-	int rc = -1;
+	int fd, rc = -1;
 	char buff[5];
 	char *tmp;
 
-	if (!fd) {
-		if (!ev_hndl_check_file_exist(fname)) {
-			if (!silent)
-				syslog(LOG_ERR, "File %s doesn't exist",
-					fname);
-			return -1;
-		}
-		fd = open(fname, O_RDONLY, 0444);
-		if (fd < 0) {
-			syslog(LOG_ERR, "Failed to open file %s, %s",
-				fname, strerror(errno));
-			return -1;
-		}
+	if (!ev_hndl_check_file_exist(fname))
+		return -1;
+
+	fd = open(fname, O_RDONLY, 0444);
+	if (fd < 0) {
+		syslog(LOG_ERR, "Failed to open file %s, %s",
+			fname, strerror(errno));
+		return -1;
 	}
 	if (read(fd, buff, 4) < 0)
 		syslog(LOG_ERR, "Failed to read file %s, %s",
-			(fname ? fname : ""), strerror(errno));
+			fname, strerror(errno));
 	else
 		rc = strtol(buff, &tmp, 0);
 
 	close(fd);
+	return rc;
+}
+
+static int ev_hndl_read_event_file(struct ev_hndl_ev_info *ev_info)
+{
+	int fd, rc = -1;
+	char buff[5];
+	char *tmp;
+
+	fd = open(ev_info->fname, O_RDONLY, 0444);
+	if (fd < 0) {
+		syslog(LOG_ERR, "Failed to open file %s, %s",
+			ev_info->fname, strerror(errno));
+		return -1;
+	}
+	if (read(fd, buff, 4) < 0)
+		syslog(LOG_ERR, "Failed to read file %s, %s",
+			ev_info->fname, strerror(errno));
+	else
+		rc = strtol(buff, &tmp, 0);
+
+	close(fd);
+	
 	return rc;
 }
 
@@ -91,21 +109,21 @@ static int ev_hndl_check_ev_num(struct ev_hndl_priv_data *data)
 	int rc, ev_num = 0;
 
 	sprintf(fname, "%s/%s", CONFIG_PATH, PSU_NUM_FILE);
-	rc = ev_hndl_read_file(fname, 0, 1);
+	rc = ev_hndl_read_config_file(fname);
 	if (rc > 0) {
 		data->psu_num = rc;
 		ev_num += rc;
 	}
 
 	sprintf(fname, "%s/%s", CONFIG_PATH, PWR_NUM_FILE);
-	rc = ev_hndl_read_file(fname, 0, 1);
+	rc = ev_hndl_read_config_file(fname);
 	if (rc > 0) {
 		data->pwr_num = rc;
 		ev_num += rc;
 	}
 
 	sprintf(fname, "%s/%s", CONFIG_PATH, FAN_NUM_FILE);
-	rc = ev_hndl_read_file(fname, 0, 1);
+	rc = ev_hndl_read_config_file(fname);
 	if (rc > 0) {
 		data->fan_num = rc;
 		ev_num += rc;
@@ -115,11 +133,12 @@ static int ev_hndl_check_ev_num(struct ev_hndl_priv_data *data)
 }
 
 static int ev_hndl_add_event(struct ev_hndl_priv_data *data,
-			     char *name, int idx)
+			     char *name, int idx, int ev_idx)
 {
-	int wd, rc;
+	int wd;
 	char fname[FPATH_MAX_LEN];
-
+	struct ev_hndl_ev_info *ev_info;
+	
 	sprintf(fname, "%s/%s%d", EVENTS_PATH, name, idx);
 	if (!ev_hndl_check_file_exist(fname)) {
 		syslog(LOG_ERR, "File %s doesn't exist.", fname);
@@ -131,15 +150,18 @@ static int ev_hndl_add_event(struct ev_hndl_priv_data *data,
 		syslog(LOG_ERR, "Failed to add file %s to watch, %s",
 			fname, strerror(errno));
 		return -1;
+	} else {
+		ev_info = data->ev_info + ev_idx;
+		ev_info->wd = wd;
+		sprintf(ev_info->name, "%s%d", name, idx);
+		strncpy(ev_info->fname, fname, FPATH_MAX_LEN-1);		
+		return 0;
 	}
-	else
-		return wd;
 }
 
 static int ev_hndl_init(struct ev_hndl_priv_data *data)
 {
-	int ev_num, fd, wd, i, rc = -1, ev_idx = 0;
-	struct ev_hndl_ev_info *ev_info;
+	int ev_num, fd, i, rc, ev_idx = 0;
 
 	ev_num = ev_hndl_check_ev_num(data);
 	if (!ev_num) {
@@ -163,35 +185,23 @@ static int ev_hndl_init(struct ev_hndl_priv_data *data)
 
 	/* Add PSU hotplug events */
 	for (i = 1; i <= data->psu_num; i++) {
-		wd = ev_hndl_add_event(data, "psu", i);
-		if (fd > 0) {
-			ev_info = data->ev_info + ev_idx;
-			ev_info->wd = wd;
-			sprintf(ev_info->name, "psu%d", i);
+		rc = ev_hndl_add_event(data, "psu", i, ev_idx);
+		if (rc == 0)
 			ev_idx++;
-		}
 	}
 
 	/* Add PWR cable hotplug events */
 	for (i = 1; i <= data->pwr_num; i++) {
-		wd = ev_hndl_add_event(data, "pwr", i);
-		if (wd > 0) {
-			ev_info = data->ev_info + ev_idx;
-			ev_info->wd = wd;
-			sprintf(ev_info->name, "pwr%d", i);
+		rc = ev_hndl_add_event(data, "pwr", i, ev_idx);
+		if (rc == 0)
 			ev_idx++;
-		}
 	}
 
 	/* Add FAN hotplug events */
 	for (i = 1; i <= data->fan_num; i++) {
-		wd = ev_hndl_add_event(data, "fan", i);
-		if (fd > 0) {
-			ev_info = data->ev_info + ev_idx;
-			ev_info->wd = wd;
-			sprintf(ev_info->name, "fan%d", i);
+		rc = ev_hndl_add_event(data, "fan", i, ev_idx);
+		if (rc == 0)
 			ev_idx++;
-		}
 	}
 	/* TBD Check if not equal, fail / continue */
 
@@ -210,10 +220,10 @@ fail:
 
 static void ev_hndl_close(struct ev_hndl_priv_data *data)
 {
-	int i = 0;
+	int i;
 	struct ev_hndl_ev_info *ev_info;
 
-	for (i; i < data->ev_num; i++) {
+	for (i = 0; i < data->ev_num; i++) {
 		ev_info = data->ev_info + i;
 		inotify_rm_watch(data->ifd, ev_info->wd);
 	}
@@ -225,10 +235,10 @@ static void ev_hndl_close(struct ev_hndl_priv_data *data)
 static struct ev_hndl_ev_info*
 	ev_hndl_find_ev(struct ev_hndl_priv_data *data, int wd)
 {
-	int i = 0;
+	int i;
 	struct ev_hndl_ev_info *ev_info;
 
-	for (i; i < data->ev_num; i++) {
+	for (i = 0; i < data->ev_num; i++) {
 		ev_info = data->ev_info + i;
 		if (ev_info->wd == wd)
 			return ev_info;
@@ -244,15 +254,13 @@ static struct ev_hndl_ev_info*
 static int ev_hndl_ev_handler(struct ev_hndl_priv_data *data,
 			      struct ev_hndl_ev_info *ev_info)
 {
-	char fname[FPATH_MAX_LEN];
 	int ev;
 
-	sprintf(fname, "%s/%s", EVENTS_PATH, ev_info->name);
-	ev = ev_hndl_read_file(fname, 0, 0);
+	ev = ev_hndl_read_event_file(ev_info);
 
 	if (ev < 0) {
 		syslog(LOG_ERR, "Failed to read file %s, %s",
-			fname, strerror(errno));
+			ev_info->fname, strerror(errno));
 		return ev;
 	}
 
@@ -265,11 +273,11 @@ static int ev_hndl_ev_handler(struct ev_hndl_priv_data *data,
 static int ev_hndl_process_events(struct ev_hndl_priv_data *data, int ev_cnt,
 				  struct inotify_event *events)
 {
-	int cnt, i = 0, rc = 0;
+	int i, rc = 0;
 	struct inotify_event *curr_ev = events;
 	struct ev_hndl_ev_info *ev_info;
 
-	for (i; i < ev_cnt; i++) {
+	for (i = 0; i < ev_cnt; i++) {
 		ev_info = ev_hndl_find_ev(data, curr_ev->wd);
 		if (!ev_info) {
 			/* Should not happen. */
@@ -288,7 +296,7 @@ static int ev_hndl_wait_event(struct ev_hndl_priv_data *data)
 {
 	struct inotify_event *events;
 	struct pollfd pfd;
-	int ev_cnt, i, len, max_len, rc = 0, run = 1;
+	int ev_cnt, len, max_len, rc = 0, run = 1;
 
 	events = calloc(data->ev_num, sizeof(struct inotify_event));
 	if (!events) {
@@ -310,7 +318,7 @@ static int ev_hndl_wait_event(struct ev_hndl_priv_data *data)
 			goto fail;
 		}
 		if ((rc == 0) && (data->to != -1)) {
-			syslog(LOG_NOTICE, "No events received, exit by timeout %d (sec).\n",
+			syslog(LOG_NOTICE, "No events received, exit by timeout %ld (sec).\n",
 			       data->to/1000);
 			goto fail;
 		}

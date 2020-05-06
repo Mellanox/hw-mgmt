@@ -48,6 +48,7 @@
 
 struct ev_hndl_ev_info {
 	int wd;
+	char fname[FPATH_MAX_LEN];
 	char name[EV_NAME_MAX_LEN];
 };
 
