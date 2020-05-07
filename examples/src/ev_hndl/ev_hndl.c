@@ -32,6 +32,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,25 +81,41 @@ static int ev_hndl_read_config_file(char *fname)
 	return rc;
 }
 
-static int ev_hndl_read_event_file(struct ev_hndl_ev_info *ev_info)
+/*
+ * Success return number of read bytes, failure: -1
+ * Passed val is -1 in case of failure or empty file. 
+ */
+static int ev_hndl_read_event_file(struct ev_hndl_ev_info *ev_info, int *val)
 {
-	int fd, rc = -1;
+	int fd, rc;
 	char buff[5];
 	char *tmp;
-
+	
+	*val = -1;
 	fd = open(ev_info->fname, O_RDONLY, 0444);
 	if (fd < 0) {
 		syslog(LOG_ERR, "Failed to open file %s, %s",
 			ev_info->fname, strerror(errno));
 		return -1;
 	}
-	if (read(fd, buff, 4) < 0)
+	rc = read(fd, buff, 4);
+	close(fd);
+
+	/* 0 is valid rc, nothing still written to event file */
+	if (rc < 0) {
 		syslog(LOG_ERR, "Failed to read file %s, %s",
 			ev_info->fname, strerror(errno));
-	else
-		rc = strtol(buff, &tmp, 0);
-
-	close(fd);
+	} else if (rc > 0) {
+		errno = 0;
+		*val = strtol(buff, &tmp, 0);
+		if ((errno == ERANGE && (*val == LONG_MAX || *val == LONG_MIN))
+                   || (errno != 0 && *val == 0)) {
+               		rc = -1;
+			*val = -1;
+		}			
+	} else { /* rc == 0 */
+		*val = -1;
+	}
 	
 	return rc;
 }
@@ -249,25 +266,23 @@ static struct ev_hndl_ev_info*
 
 /*
  * This is example of event handler: just report to system log.
- * Could be replaced to more useful handler faunction.
+ * Could be replaced to more useful handler function.
  */
 static int ev_hndl_ev_handler(struct ev_hndl_priv_data *data,
 			      struct ev_hndl_ev_info *ev_info)
 {
-	int ev;
+	int rc, event;
 
-	ev = ev_hndl_read_event_file(ev_info);
+	rc = ev_hndl_read_event_file(ev_info, &event);
 
-	if (ev < 0) {
+	if (rc < 0)
 		syslog(LOG_ERR, "Failed to read file %s, %s",
 			ev_info->fname, strerror(errno));
-		return ev;
-	}
+	else if (event >= 0)
+		syslog(LOG_NOTICE, "Received event: %s %s", ev_info->name,
+		       (event == EVENT_OUT ? "out" : "in"));
 
-	syslog(LOG_NOTICE, "Received event: %s %s", ev_info->name,
-	       (ev == EVENT_OUT ? "out" : "in"));
-
-	return 0;
+	return rc;
 }
 
 static int ev_hndl_process_events(struct ev_hndl_priv_data *data, int ev_cnt,
@@ -287,6 +302,21 @@ static int ev_hndl_process_events(struct ev_hndl_priv_data *data, int ev_cnt,
 		}
 		/* TBD Process other events or fail */
 		rc = ev_hndl_ev_handler(data, ev_info);
+	}
+
+	return rc;
+}
+
+static int ev_hndl_check_events_init_state(struct ev_hndl_priv_data *data)
+{
+	struct ev_hndl_ev_info *ev_info;
+	int i, rc;
+	
+	for (i = 0; i < data->ev_num; i++) {
+		ev_info = data->ev_info + i;
+		rc = ev_hndl_ev_handler(data, ev_info);
+		if (rc < 0)
+			break;
 	}
 
 	return rc;
@@ -384,19 +414,26 @@ int main(int argc, char *argv[])
 	rc = ev_hndl_init(ev_hndl_data);
 	if (rc < 0) {
 		syslog(LOG_ERR, "Failed init.\n");
-		goto fail;
+		goto fail_init;
+	}
+	
+	syslog(LOG_NOTICE, "Check events initial state.");
+	rc = ev_hndl_check_events_init_state(ev_hndl_data);
+	if (rc < 0) {
+		syslog(LOG_ERR, "Failed check event initial state.\n");
+		goto fail_init_check;
 	}
 
 	syslog(LOG_NOTICE, "Starting wait for events.");
 
 	rc = ev_hndl_wait_event(ev_hndl_data);
 
+fail_init_check:
 	ev_hndl_close(ev_hndl_data);
-
 	syslog(LOG_NOTICE, "Event handling finished.");
 	closelog();
 
-fail:
+fail_init:
 	if (ev_hndl_data)
 		free(ev_hndl_data);
 
