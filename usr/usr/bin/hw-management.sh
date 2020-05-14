@@ -481,6 +481,7 @@ msn3420_specific()
 	thermal_type=$thermal_type_t5
 	max_tachos=10
 	max_psus=2
+	hotplug_fans=5
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
@@ -519,6 +520,7 @@ msn24102_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -540,6 +542,7 @@ msn27002_msb78002_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -580,6 +583,7 @@ msn46xx_specific()
 	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
+	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
