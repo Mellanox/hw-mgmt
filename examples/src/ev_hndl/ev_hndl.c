@@ -289,10 +289,11 @@ static int ev_hndl_process_events(struct ev_hndl_priv_data *data, int ev_cnt,
 				  struct inotify_event *events)
 {
 	int i, rc = 0;
-	struct inotify_event *curr_ev = events;
+	struct inotify_event *curr_ev;
 	struct ev_hndl_ev_info *ev_info;
 
 	for (i = 0; i < ev_cnt; i++) {
+		curr_ev = events + i;
 		ev_info = ev_hndl_find_ev(data, curr_ev->wd);
 		if (!ev_info) {
 			/* Should not happen. */
