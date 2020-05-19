@@ -46,7 +46,7 @@
 #  MSN24*		Spider
 #  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2, Spider
 #  MSN201*		Boxer
-#  MQMB7*|MSN37*|MSN34*	Jupiter, Jaguar, Anaconda
+#  MQMB7*|MSN37*|MSN34*|MSN35* Jupiter, Jaguar, Anaconda, Octopus
 #  MSN38*		Tigris
 # Available options:
 # start	- load the kernel drivers required for the thermal control support,
@@ -313,6 +313,30 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x6a 5 \
 			0x6c 5 \
 			0x6e 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
+msn3510_connect_table=(	max11603 0x6d 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn3510_dis_table=(	0x6d 5 \
+			0x70 5 \
+			0x71 5 \
 			0x49 7 \
 			0x4a 7 \
 			0x51 8 \
@@ -589,12 +613,34 @@ msn46xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+msn3510_specific()
+{
+	connect_size=${#msn3510_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn3510_connect_table[i]}
+	done
+	disconnect_size=${#msn3510_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn3510_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
 msn_spc2_common()
 {
 	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
 	case $sku in
                 HI120)
                         msn3420_specific
+                ;;
+                HI121)
+                        msn3510_specific
                 ;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
@@ -673,6 +719,9 @@ check_system()
 					;;
 				MQM87*|MSN37*|MSN34*)
 					mqmxxx_msn37x_msn34x_specific
+					;;
+				MSN35*)
+					msn3510_specific
 					;;
 				MSN38*)
 					msn38xx_specific

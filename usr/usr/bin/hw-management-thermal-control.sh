@@ -37,7 +37,7 @@
 #  t3: MSN274*			Panther SF
 #  t4: MSN201*			Boxer
 #  t5: MSN27*|MSB*|MSX*		Neptune, Tarantula, Scorpion, Scorpion2
-#  t6: QMB7*|SN37*|SN34*	Jaguar, Anaconda
+#  t6: QMB7*|SN37*|SN34*|SN35*	Jaguar, Anaconda, Octopus
 
 # The thermal algorithm considers the next rules for FAN speed setting:
 # The minimal PWM setting is dynamic and depends on FAN direction and cable
@@ -259,7 +259,7 @@ unk_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
 trust4=12
 untrust4=16
 
-# Class t5 for MSN370* (Anaconda)
+# Class t5 for MSN370*|MSN35*  (Anaconda, Octopus)
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
