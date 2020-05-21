@@ -41,13 +41,14 @@
 # Description: <Thermal control for Mellanox systems>
 ### END INIT INFO
 # Supported systems:
-#  MSN274*		Panther SF
-#  MSN21*		Bulldog
-#  MSN24*		Spider
-#  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2, Spider
-#  MSN201*		Boxer
-#  MQMB7*|MSN37*|MSN34*	Jupiter, Jaguar, Anaconda
-#  MSN38*		Tigris
+#  SN274*
+#  SN21*
+#  SN24*
+#  SN27*|SB*|SX*
+#  SN201*
+#  QMB7*|SN37*|SN34*
+#  SN38*|SN37*|SN34*|SN35*
+#  SN47*
 # Available options:
 # start	- load the kernel drivers required for the thermal control support,
 #	  connect drivers to devices, activate thermal control.
