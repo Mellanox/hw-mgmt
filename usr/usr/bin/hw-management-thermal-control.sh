@@ -875,7 +875,7 @@ tz_check_suspend()
 
 thermal_control_exit()
 {	log_notice "Mellanox thermal control is terminated (PID=${thermal_control_pid})"
-
+	rm -rf $config_path/periodic_report
 	if [ -f /var/run/hw-management.pid ]; then
 		rm -rf /var/run/hw-management.pid
 	fi
@@ -919,6 +919,7 @@ fi
 
 # Periodic report counter
 periodic_report=$(($polling_time*$report_counter))
+echo $periodic_report > $config_path/periodic_report
 #periodic_report=12	# For debug - uncomment for tsting
 count=0
 suspend_thermal=0;
@@ -992,6 +993,7 @@ do
 	fi
 
 	count=$(($count+1))
+	[ -f "$config_pathperiodic_/report" ] && periodic_report=`cat $config_path/periodic_report`
 	if [ $count -eq $periodic_report ]; then
 		count=0
 		thermal_periodic_report
