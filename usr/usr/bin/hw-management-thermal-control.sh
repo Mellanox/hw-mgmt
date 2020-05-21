@@ -32,12 +32,12 @@
 #
 
 # Thermal configuration per system type. The next types are supported:
-#  t1: MSN27*|MSN24*		Panther, Spider
-#  t2: MSN21*			Bulldog
-#  t3: MSN274*			Panther SF
-#  t4: MSN201*			Boxer
-#  t5: MSN27*|MSB*|MSX*		Neptune, Tarantula, Scorpion, Scorpion2
-#  t6: QMB7*|SN37*|SN34*|SN35*	Jaguar, Anaconda, Octopus
+#  t1: MSN27*|MSN24*
+#  t2: MSN21*
+#  t3: MSN274*
+#  t4: MSN201*
+#  t5: MSN27*|MSB*|MSX*
+#  t6: QMB7*|SN37*|SN34*|SN35*|SN47
 
 # The thermal algorithm considers the next rules for FAN speed setting:
 # The minimal PWM setting is dynamic and depends on FAN direction and cable
@@ -155,7 +155,7 @@ psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 # minimal FAN speed is coded as following: 12 for 20%, 13 for 30%, ..., 19 for
 # 90%, 20 for 100%.
 
-# Class t1 for MSN27*|MSN24* (Panther, Spider)
+# Class t1 for MSN27*|MSN24*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
@@ -181,7 +181,7 @@ unk_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16  $max_amb 16)
 trust1=16
 untrust1=16
 
-# Class t2 for MSN21* (Bulldog)
+# Class t2 for MSN21*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------	
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
@@ -207,7 +207,7 @@ unk_dir_untrust_t2=(15000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
 trust2=13
 untrust2=16
 
-# Class t3 for MSN274* (Panther SF)
+# Class t3 for MSN274*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
@@ -233,7 +233,7 @@ unk_dir_untrust_t3=(15000 13 30000 14 35000 15 40000 17 $max_amb 17)
 trust3=13
 untrust3=17
 
-# Class t4 for MSN201* (Boxer)
+# Class t4 for MSN201*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
@@ -259,7 +259,7 @@ unk_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
 trust4=12
 untrust4=16
 
-# Class t5 for MSN370*|MSN35*  (Anaconda, Octopus)
+# Class t5 for MSN370*|MSN35*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
