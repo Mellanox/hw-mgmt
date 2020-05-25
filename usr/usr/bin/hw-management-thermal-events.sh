@@ -372,6 +372,16 @@ if [ "$1" == "add" ]; then
 			if [ $? -ne 0 ]; then
 				#EEPROM failed
 				echo "Failed to read PSU VPD" > $eeprom_path/$2_vpd
+			else
+				#Add PSU FAN speed info
+				if [ -f $config_path/psu_fan_max ]; then
+					echo -ne MAX_RPM: >> $eeprom_path/$2_vpd
+					cat $config_path/psu_fan_max >> $eeprom_path/$2_vpd
+				fi
+				if [ -f $config_path/psu_fan_min ]; then
+					echo -ne MIN_RPM: >> $eeprom_path/$2_vpd
+					cat $config_path/psu_fan_min >> $eeprom_path/$2_vpd
+				fi
 			fi
 		fi
 
