@@ -49,6 +49,7 @@ i2c_asic_bus_default=2
 i2c_comex_mon_bus_default=`cat $config_path/i2c_comex_mon_bus_default`
 module_counter=0
 gearbox_counter=0
+fan_full_speed_code=20
 LOCKFILE="/var/run/hw-management-thermal.lock"
 
 log_err()
@@ -238,6 +239,9 @@ if [ "$1" == "add" ]; then
 		if [ "$coolingtype" == "mlxsw_fan" ] ||
 		   [ "$coolingtype" == "mlxreg_fan" ]; then
 			ln -sf $3$4/cur_state $thermal_path/cooling_cur_state
+			# Set FAN to full speed until thermal control is started.
+			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
+			log_info "FAN speed is set to full speed"
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
