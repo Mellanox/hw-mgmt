@@ -14,6 +14,7 @@
         mode and policies for the thermal zones from user space script.
         Algorithm provided by kernel will be used instead.
     o   Representation of PSU FAN speed capabilities.
+    o   Setting FAN to full speed until thermal control is started.
 
 - Bug fixes
     HW Mgmt core:
