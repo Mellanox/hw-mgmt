@@ -19,6 +19,7 @@
 - Bug fixes
     HW Mgmt core:
     o  Clean internal system names usage.
+    o  shellcheck warinings cleaning
 
 - Known issues and limitations:
     o  ethtool for QSFP-DD is working only in raw mode.
