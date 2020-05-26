@@ -931,7 +931,7 @@ function lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
 	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+	trap '/usr/bin/flock -u ${LOCKFD}' EXIT SIGINT SIGQUIT SIGTERM
 }
 
 function unlock_service_state_change()
