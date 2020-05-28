@@ -828,19 +828,29 @@ enable_disable_zones_set_pwm()
 	esac
 
 	if [ -L $tz_mode ]; then
-		echo $mode > $tz_mode
 		echo $policy > $tz_policy
 	fi
 	for ((i=1; i<=$module_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
-			echo $mode > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
 			echo $policy > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
 		fi
 	done
 	for ((i=1; i<=$gearbox_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
-			echo $mode > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
 			echo $policy > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
+		fi
+	done
+	if [ -L $tz_mode ]; then
+		echo $mode > $tz_mode
+	fi
+	for ((i=1; i<=$module_counter; i+=1)); do
+		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+			echo $mode > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
+		fi
+	done
+	for ((i=1; i<=$gearbox_counter; i+=1)); do
+		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
+			echo $mode > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
 		fi
 	done
 
