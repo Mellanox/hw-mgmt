@@ -1,6 +1,6 @@
 ================================================================================
 - V.7.0010.1000
-- Thu, 28 May 2020
+- Sun, 31 May 2020
 --------------------------------------------------------------------------------
 - New Features
     o   Add support for QSFP-DD cabel info 
@@ -25,7 +25,7 @@
 
 - Known issues and limitations:
     o  ethtool for QSFP-DD is working only in raw mode.
-    o  SN4700 PSU (Murata) sensors might be not available after insertion/removal.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
     o  PSUs inventory read via PMBus require the following packages:
         - i2c-tools_4.1-1_amd64.deb
         - libi2c0_4.1-1_amd64.deb
