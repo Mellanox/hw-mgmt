@@ -49,6 +49,7 @@ i2c_asic_bus_default=2
 i2c_comex_mon_bus_default=`cat $config_path/i2c_comex_mon_bus_default`
 module_counter=0
 gearbox_counter=0
+fan_full_speed_code=20
 LOCKFILE="/var/run/hw-management-thermal.lock"
 
 log_err()
@@ -238,6 +239,9 @@ if [ "$1" == "add" ]; then
 		if [ "$coolingtype" == "mlxsw_fan" ] ||
 		   [ "$coolingtype" == "mlxreg_fan" ]; then
 			ln -sf $3$4/cur_state $thermal_path/cooling_cur_state
+			# Set FAN to full speed until thermal control is started.
+			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
+			log_info "FAN speed is set to full speed"
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
@@ -266,7 +270,6 @@ if [ "$1" == "add" ]; then
 		fi
 		find_i2c_bus
 		bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
-		path=/sys/bus/i2c/devices/i2c-$bus
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
@@ -372,6 +375,16 @@ if [ "$1" == "add" ]; then
 			if [ $? -ne 0 ]; then
 				#EEPROM failed
 				echo "Failed to read PSU VPD" > $eeprom_path/$2_vpd
+			else
+				#Add PSU FAN speed info
+				if [ -f $config_path/psu_fan_max ]; then
+					echo -ne MAX_RPM: >> $eeprom_path/$2_vpd
+					cat $config_path/psu_fan_max >> $eeprom_path/$2_vpd
+				fi
+				if [ -f $config_path/psu_fan_min ]; then
+					echo -ne MIN_RPM: >> $eeprom_path/$2_vpd
+					cat $config_path/psu_fan_min >> $eeprom_path/$2_vpd
+				fi
 			fi
 		fi
 
@@ -495,8 +508,8 @@ else
 					unlink $thermal_path/fan"$j"_max
 				fi
 			done
-			if [ -L $thermal_path/$pwm1 ]; then
-				unlink $thermal_path/$pwm1
+			if [ -L $thermal_path/pwm1 ]; then
+				unlink $thermal_path/pwm1
 			fi
 		fi
 		for ((i=$max_module_gbox_ind; i>=2; i-=1)); do
@@ -621,7 +634,7 @@ else
 			exit 0
 		fi
 
-		if [ -L $eeprom_path/$2_info ] && [ -f $config_path/"$2"_eeprom_us]; then
+		if [ -L $eeprom_path/$2_info ] && [ -f $config_path/"$2"_eeprom_us ]; then
 			psu_addr=`cat $config_path/"$2"_i2c_addr`
 			psu_eeprom_addr=$((${psu_addr:2:2}-8))
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/delete_device

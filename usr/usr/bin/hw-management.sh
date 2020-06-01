@@ -319,6 +319,30 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn3510_connect_table=(	max11603 0x6d 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn3510_dis_table=(	0x6d 5 \
+			0x70 5 \
+			0x71 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 ACTION=$1
 
 log_err()
@@ -353,6 +377,8 @@ msn274x_specific()
 	max_tachos=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -373,6 +399,8 @@ msn21xx_specific()
 	max_psus=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 13000 > $config_path/psu_fan_max
+	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	echo cpld1 > $config_path/cpld_port
@@ -393,6 +421,8 @@ msn24xx_specific()
 	max_tachos=8
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
@@ -413,6 +443,8 @@ msn27xx_msb_msx_specific()
 	max_tachos=8
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
@@ -434,6 +466,8 @@ msn201x_specific()
 	max_psus=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 13000 > $config_path/psu_fan_max
+	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -454,6 +488,8 @@ mqmxxx_msn37x_msn34x_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -473,6 +509,8 @@ msn3420_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -492,6 +530,8 @@ msn38xx_specific()
 	max_psus=2
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
 }
 
@@ -510,6 +550,8 @@ msn24102_specific()
 	max_tachos=8
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
@@ -531,6 +573,8 @@ msn27002_msb78002_specific()
 	max_tachos=8
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
@@ -553,6 +597,8 @@ msn47xx_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -571,6 +617,29 @@ msn46xx_specific()
 	max_psus=2
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+}
+
+msn3510_specific()
+{
+	connect_size=${#msn3510_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn3510_connect_table[i]}
+	done
+	disconnect_size=${#msn3510_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn3510_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -580,6 +649,9 @@ msn_spc2_common()
 	case $sku in
                 HI120)
                         msn3420_specific
+                ;;
+                HI121)
+                        msn3510_specific
                 ;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
@@ -658,6 +730,9 @@ check_system()
 					;;
 				MQM87*|MSN37*|MSN34*)
 					mqmxxx_msn37x_msn34x_specific
+					;;
+				MSN35*)
+					msn3510_specific
 					;;
 				MSN38*)
 					msn38xx_specific
@@ -856,7 +931,7 @@ function lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
 	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+	trap '/usr/bin/flock -u ${LOCKFD}' EXIT SIGINT SIGQUIT SIGTERM
 }
 
 function unlock_service_state_change()

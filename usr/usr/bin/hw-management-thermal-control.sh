@@ -72,29 +72,18 @@
 # Paths to thermal sensors, device present states, thermal zone and cooling device
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
-power_path=$hw_management_path/power
 config_path=$hw_management_path/config
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
-temp_asic=$thermal_path/asic
 pwm=$thermal_path/pwm1
 psu1_status=$thermal_path/psu1_status
 psu2_status=$thermal_path/psu2_status
-psu1_fan1_speed=$thermal_path/psu1_fan1_speed_get
-psu2_fan1_speed=$thermal_path/psu2_fan1_speed_get
-psu1_pwr_status=$power_path/psu1_pwr_status
-psu2_pwr_status=$power_path/psu2_pwr_status
 fan_command=$config_path/fan_command
-fan_psu_default=$config_path/fan_psu_default
 tz_mode=$thermal_path/mlxsw/thermal_zone_mode
 tz_policy=$thermal_path/mlxsw/thermal_zone_policy
 tz_temp=$thermal_path/mlxsw/thermal_zone_temp
 temp_trip_norm=$thermal_path/mlxsw/temp_trip_norm
-temp_trip_high=$thermal_path/mlxsw/temp_trip_high
-temp_trip_hot=$thermal_path/mlxsw/temp_trip_hot
-temp_trip_crit=$thermal_path/mlxsw/temp_trip_crit
 cooling_cur_state=$thermal_path/cooling_cur_state
-thermal_sys=/sys/class/thermal
 wait_for_config=120
 
 # Input parameters for the system thermal class, the number of tachometers, the
@@ -839,19 +828,29 @@ enable_disable_zones_set_pwm()
 	esac
 
 	if [ -L $tz_mode ]; then
-		echo $mode > $tz_mode
 		echo $policy > $tz_policy
 	fi
 	for ((i=1; i<=$module_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
-			echo $mode > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
 			echo $policy > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
 		fi
 	done
 	for ((i=1; i<=$gearbox_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
-			echo $mode > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
 			echo $policy > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
+		fi
+	done
+	if [ -L $tz_mode ]; then
+		echo $mode > $tz_mode
+	fi
+	for ((i=1; i<=$module_counter; i+=1)); do
+		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
+			echo $mode > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
+		fi
+	done
+	for ((i=1; i<=$gearbox_counter; i+=1)); do
+		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
+			echo $mode > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
 		fi
 	done
 
@@ -887,9 +886,8 @@ thermal_control_exit()
 
 # Handle the next POSIX signals by thermal_control_exit:
 # SIGINT	2	Terminal interrupt signal.
-# SIGKILL	9	Kill (cannot be caught or ignored).
 # SIGTERM	15	Termination signal.
-trap 'thermal_control_exit' INT KILL TERM
+trap 'thermal_control_exit' INT TERM
 
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
 

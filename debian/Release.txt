@@ -1,4 +1,53 @@
 ================================================================================
+- V.7.0010.1000
+- Sun, 31 May 2020
+--------------------------------------------------------------------------------
+- New Features
+    o   Add support for QSFP-DD cabel info 
+    	*Kernel 4.9  - 0054-Add-support-for-new-transceivers-types-QSFP-DD-and-Q.patch
+	*Kernel 4.19 - 0022-Add-support-for-new-transceivers-types-QSFP-DD-and-Q.patch
+  
+    o   Thermal zone detection for thermal algorithm had move from user space to
+        kernel driver.
+	*Kernel 4.9  - 0055-mlxsw-core-Add-the-hottest-thermal-zone-detection.patch
+		     - 0056-mlxsw-core-thermal-Separate-temperature-trend-read-c.patch	
+	*Kernel 4.19 - 0023-mlxsw-core-Add-the-hottest-thermal-zone-detection.patch
+		     - 0024-mlxsw-core-thermal-Separate-temperature-trend-read-c.patch
+		     
+    o   Support of watchdog  long timeout period in kernel
+        New watchdog type is discovered by CPLD watchdog capability.
+        Timeout period can be set to more the 32/255 sec and up to 24 hours.
+	*Kernel 4.9  - 0057-watchdog-mlx-wdt-support-new-watchdog-type-with-long.patch
+	*Kernel 4.19 - 0025-watchdog-mlx-wdt-support-new-watchdog-type-with-long.patch
+	
+    o   Add support for reporting PSU FAN speed capabilities psu vpd data file.
+    o   Setting initial FAN to 100% speed until thermal control is started.
+
+- Known issues and limitations:
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0000.3034
 - Sun, 26 Apr 2020
 --------------------------------------------------------------------------------
