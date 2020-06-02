@@ -453,16 +453,6 @@ elif [ "$1" == "change" ]; then
 			fi
 		fi
 	fi
-elif [ "$1" == "online" ]; then
-	if [ "$2" == "hotplug" ]; then
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			/usr/bin/hw-management.sh chipup
-		fi
-	fi
-elif [ "$1" == "offline" ]; then
-	if [ "$2" == "hotplug" ]; then
-		/usr/bin/hw-management.sh chipdown
-	fi
 else
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
 		# Verify if this is COMEX sensor
