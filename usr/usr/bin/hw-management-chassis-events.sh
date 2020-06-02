@@ -40,6 +40,7 @@ system_path=$hw_management_path/system
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 config_path=$hw_management_path/config
+events_path=$hw_management_path/events
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
 i2c_bus_offset=0
@@ -174,6 +175,19 @@ function asic_cpld_remove_handler()
 	fi
 }
 
+function handle_hotplug_event()
+{
+	local unit=$(echo "$1" | awk '{print tolower($0)}')
+	local event=$2
+	
+	if [ -f $events_path/$unit ]; then
+		echo $event > $events_path/$unit
+	else
+		# ToDo check if leave this error maessage
+		log_err "Path ${events_path}/${unit} doesn't exist"
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	if [ "$2" == "a2d" ]; then
 		ln -sf $3$4/in_voltage-voltage_scale $environment_path/$2_$5_voltage_scale
@@ -297,6 +311,8 @@ elif [ "$1" == "mv" ]; then
 		unlock_service_state_change
 		create_sfp_symbolic_links "${3}${4}"
 	fi
+elif [ "$1" == "hotplug-event" ]; then
+	handle_hotplug_event ${2} ${3}
 else
 	if [ "$2" == "a2d" ]; then
 		unlink $environment_path/$2_$5_voltage_scale

@@ -40,6 +40,7 @@ alarm_path=$hw_management_path/alarm
 config_path=$hw_management_path/config
 fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
+events_path=$hw_management_path/events
 max_psus=2
 max_tachos=12
 max_module_gbox_ind=160
@@ -244,14 +245,26 @@ if [ "$1" == "add" ]; then
 		for ((i=1; i<=$max_tachos; i+=1)); do
 			if [ -f $3$4/fan$i ]; then
 				ln -sf $3$4/fan$i $thermal_path/fan"$i"_status
+				event=`cat $thermal_path/fan"$i"_status`
+				if [ $event -eq 1 ]; then
+					echo 1 > $events_path/fan"$i"
+				fi
 			fi
 		done
 		for ((i=1; i<=$max_psus; i+=1)); do
 			if [ -f $3$4/psu$i ]; then
 				ln -sf $3$4/psu$i $thermal_path/psu"$i"_status
+				event=`cat $thermal_path/psu"$i"_status`
+				if [ $event -eq 1 ]; then
+					echo 1 > $events_path/psu"$i"
+				fi
 			fi
 			if [ -f $3$4/pwr$i ]; then
 				ln -sf $3$4/pwr$i $thermal_path/psu"$i"_pwr_status
+				event=`cat $thermal_path/psu"$i"_pwr_status`
+				if [ $event -eq 1 ]; then
+					echo 1 > $events_path/pwr"$i"
+				fi
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then

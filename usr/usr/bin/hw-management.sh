@@ -41,14 +41,13 @@
 # Description: <Thermal control for Mellanox systems>
 ### END INIT INFO
 # Supported systems:
-#  SN274*
-#  SN21*
-#  SN24*
-#  SN27*|SB*|SX*
-#  SN201*
-#  QMB7*|SN37*|SN34*
-#  SN38*|SN37*|SN34*|SN35*
-#  SN47*
+#  MSN274*		Panther SF
+#  MSN21*		Bulldog
+#  MSN24*		Spider
+#  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2, Spider
+#  MSN201*		Boxer
+#  MQMB7*|MSN37*|MSN34*|MSN35* Jupiter, Jaguar, Anaconda, Octopus
+#  MSN38*		Tigris
 # Available options:
 # start	- load the kernel drivers required for the thermal control support,
 #	  connect drivers to devices, activate thermal control.
@@ -83,6 +82,9 @@ sxcore_down=0
 sxcore_deferred=1
 sxcore_withdraw=2
 sxcore_up=3
+hotplug_psus=2
+hotplug_fans=6
+hotplug_pwrs=2
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 hw_management_path=/var/run/hw-management
@@ -96,6 +98,7 @@ led_path=$hw_management_path/led
 system_path=$hw_management_path/system
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
+events_path=$hw_management_path/events
 THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
 PID=/var/run/hw-management.pid
 LOCKFILE="/var/run/hw-management.lock"
@@ -319,6 +322,30 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn3510_connect_table=(	max11603 0x6d 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn3510_dis_table=(	0x6d 5 \
+			0x70 5 \
+			0x71 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 ACTION=$1
 
 log_err()
@@ -351,6 +378,7 @@ msn274x_specific()
 
 	thermal_type=$thermal_type_t3
 	max_tachos=4
+	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
@@ -371,6 +399,8 @@ msn21xx_specific()
 	thermal_type=$thermal_type_t2
 	max_tachos=4
 	max_psus=0
+	hotplug_psus=0
+	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
@@ -391,6 +421,7 @@ msn24xx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -411,6 +442,7 @@ msn27xx_msb_msx_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -432,6 +464,8 @@ msn201x_specific()
 	thermal_type=$thermal_type_t4
 	max_tachos=4
 	max_psus=0
+	hotplug_psus=0
+	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 5 > $config_path/fan_inversed
@@ -471,6 +505,7 @@ msn3420_specific()
 	thermal_type=$thermal_type_t5
 	max_tachos=10
 	max_psus=2
+	hotplug_fans=5
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
@@ -490,6 +525,7 @@ msn38xx_specific()
 	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
+	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
 	echo 4 > $config_path/cpld_num
@@ -508,6 +544,7 @@ msn24102_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -529,6 +566,7 @@ msn27002_msb78002_specific()
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
+	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
 	echo 9 > $config_path/fan_inversed
@@ -569,8 +607,28 @@ msn46xx_specific()
 	thermal_type=$thermal_type_t6
 	max_tachos=3
 	max_psus=2
+	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 3 > $config_path/cpld_num
+}
+
+msn3510_specific()
+{
+	connect_size=${#msn3510_connect_table[@]}
+	for ((i=0; i<$connect_size; i++)); do
+		connect_table[i]=${msn3510_connect_table[i]}
+	done
+	disconnect_size=${#msn3510_dis_table[@]}
+	for ((i=0; i<$disconnect_size; i++)); do
+		dis_table[i]=${msn3510_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	max_psus=2
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
 	echo 3 > $config_path/cpld_num
 }
 
@@ -580,6 +638,9 @@ msn_spc2_common()
 	case $sku in
                 HI120)
                         msn3420_specific
+                ;;
+                HI121)
+                        msn3510_specific
                 ;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
@@ -658,6 +719,9 @@ check_system()
 					;;
 				MQM87*|MSN37*|MSN34*)
 					mqmxxx_msn37x_msn34x_specific
+					;;
+				MSN35*)
+					msn3510_specific
 					;;
 				MSN38*)
 					msn38xx_specific
@@ -738,6 +802,42 @@ disconnect_device()
 	return 0
 }
 
+create_event_files()
+{
+	if [ $hotplug_psus -ne 0 ]; then
+		for ((i=1; i<=$hotplug_psus; i+=1)); do
+			touch $events_path/psu$i
+		done
+	fi
+	if [ $hotplug_pwrs -ne 0 ]; then
+		for ((i=1; i<=$hotplug_pwrs; i+=1)); do
+			touch $events_path/pwr$i
+		done
+	fi
+	if [ $hotplug_fans -ne 0 ]; then
+		for ((i=1; i<=$hotplug_fans; i+=1)); do
+			touch $events_path/fan$i
+		done
+	fi
+}
+
+set_config_data()
+{
+	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
+	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+	echo $fan_psu_default > $config_path/fan_psu_default
+	echo $fan_command > $config_path/fan_command
+	echo 35 > $config_path/thermal_delay
+	echo $chipup_delay_default > $config_path/chipup_delay
+	echo 0 > $config_path/chipdown_delay
+	if [ -f /etc/init.d/sxdkernel ]; then
+		echo $sxcore_down > $config_path/sxcore
+	fi
+	echo $hotplug_psus > $config_path/hotplug_psus
+	echo $hotplug_pwrs > $config_path/hotplug_pwrs
+	echo $hotplug_fans > $config_path/hotplug_fans
+}
+
 connect_platform()
 {
 	for ((i=0; i<$connect_size; i+=3)); do
@@ -788,6 +888,9 @@ create_symbolic_links()
 	if [ ! -d $watchdog_path ]; then
 		mkdir $watchdog_path
 	fi
+	if [ ! -d $events_path ]; then
+		mkdir $events_path
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
@@ -813,19 +916,11 @@ do_start()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
-	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
-	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
-	echo $fan_psu_default > $config_path/fan_psu_default
-	echo $fan_command > $config_path/fan_command
-	echo 35 > $config_path/thermal_delay
-	echo $chipup_delay_default > $config_path/chipup_delay
-	echo 0 > $config_path/chipdown_delay
-	if [ -f /etc/init.d/sxdkernel ]; then
-		echo $sxcore_down > $config_path/sxcore
-	fi
+	set_config_data
 	find_i2c_bus
 	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
+	create_event_files
 	connect_platform
 	sleep 1
 	/usr/bin/hw-management-start-post.sh
