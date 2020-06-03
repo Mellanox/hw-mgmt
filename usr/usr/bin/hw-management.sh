@@ -41,13 +41,14 @@
 # Description: <Thermal control for Mellanox systems>
 ### END INIT INFO
 # Supported systems:
-#  MSN274*		Panther SF
-#  MSN21*		Bulldog
-#  MSN24*		Spider
-#  MSN27*|MSB*|MSX*	Neptune, Tarantula, Scorpion, Scorpion2, Spider
-#  MSN201*		Boxer
-#  MQMB7*|MSN37*|MSN34*|MSN35* Jupiter, Jaguar, Anaconda, Octopus
-#  MSN38*		Tigris
+#  SN274*
+#  SN21*
+#  SN24*
+#  SN27*|SB*|SX*
+#  SN201*
+#  QMB7*|SN37*|SN34*
+#  SN38*|SN37*|SN34*|SN35*
+#  SN47*
 # Available options:
 # start	- load the kernel drivers required for the thermal control support,
 #	  connect drivers to devices, activate thermal control.
@@ -381,6 +382,8 @@ msn274x_specific()
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -403,6 +406,8 @@ msn21xx_specific()
 	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 13000 > $config_path/psu_fan_max
+	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	echo cpld1 > $config_path/cpld_port
@@ -424,6 +429,8 @@ msn24xx_specific()
 	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
@@ -445,6 +452,8 @@ msn27xx_msb_msx_specific()
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
@@ -468,6 +477,8 @@ msn201x_specific()
 	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 13000 > $config_path/psu_fan_max
+	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 }
@@ -488,6 +499,8 @@ mqmxxx_msn37x_msn34x_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -508,6 +521,8 @@ msn3420_specific()
 	hotplug_fans=5
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -528,6 +543,8 @@ msn38xx_specific()
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
 }
 
@@ -547,6 +564,8 @@ msn24102_specific()
 	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
 	echo 5400 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
@@ -569,6 +588,8 @@ msn27002_msb78002_specific()
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 1500 > $config_path/fan_min_speed
+	echo 18000 > $config_path/psu_fan_max
+	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
@@ -591,6 +612,8 @@ msn47xx_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -610,6 +633,8 @@ msn46xx_specific()
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -629,6 +654,8 @@ msn3510_specific()
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 }
 
@@ -951,7 +978,7 @@ function lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
 	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
+	trap '/usr/bin/flock -u ${LOCKFD}' EXIT SIGINT SIGQUIT SIGTERM
 }
 
 function unlock_service_state_change()
