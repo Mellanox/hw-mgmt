@@ -524,6 +524,7 @@ msn3420_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	echo 24c02 > $config_path/psu_eeprom_type
 }
 
 msn38xx_specific()
@@ -570,6 +571,7 @@ msn24102_specific()
 	echo 3 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
+	echo 24c02 > $config_path/psu_eeprom_type
 }
 
 msn27002_msb78002_specific()
@@ -594,6 +596,7 @@ msn27002_msb78002_specific()
 	echo 3 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
+	echo 24c02 > $config_path/psu_eeprom_type
 }
 
 msn47xx_specific()

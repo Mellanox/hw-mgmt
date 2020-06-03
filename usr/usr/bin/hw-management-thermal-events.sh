@@ -373,7 +373,11 @@ if [ "$1" == "add" ]; then
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y $bus 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
 		if [ $? -eq 0 ] && [ ! -L $eeprom_path/$2_info ] && [ ! -f $eeprom_file ]; then
-			echo 24c32 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/new_device
+			psu_eeprom_type="24c32"
+			if [ -f $config_path/psu_eeprom_type ]; then
+				psu_eeprom_type=$(< $config_path/psu_eeprom_type)
+			fi
+			echo $psu_eeprom_type 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-$bus/device/new_device
 			ln -sf $eeprom_file $eeprom_path/$eeprom_name 2>/dev/null
 			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
 			echo 1 > $config_path/"$2"_eeprom_us
