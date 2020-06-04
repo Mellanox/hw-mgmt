@@ -568,7 +568,7 @@ msn24102_specific()
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
-	echo 3 > $config_path/cpld_num
+	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
@@ -593,7 +593,7 @@ msn27002_msb78002_specific()
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
-	echo 3 > $config_path/cpld_num
+	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
