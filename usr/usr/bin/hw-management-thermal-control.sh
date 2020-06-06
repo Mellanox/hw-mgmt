@@ -76,6 +76,7 @@ config_path=$hw_management_path/config
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
+asic=$thermal_path/asic
 psu1_status=$thermal_path/psu1_status
 psu2_status=$thermal_path/psu2_status
 fan_command=$config_path/fan_command
@@ -92,22 +93,18 @@ system_thermal_type_def=1
 polling_time_def=60
 max_tachos_def=12
 max_psus_def=2
-max_ports_def=64
 system_thermal_type=${1:-$system_thermal_type_def}
 max_tachos=${2:-$max_tachos_def}
 max_psus=${3:-$max_psus_def}
-max_ports=${4:-$max_ports_def}
 polling_time=${5:-$polling_time_def}
 
 # Local constants
 pwm_noact=0
 pwm_max=1
-pwm_max_rpm=255
 cooling_set_max_state=20
 cooling_set_def_state=16
 max_amb=120000
 untrusted_sensor=0
-hysteresis=5000
 module_counter=0
 gearbox_counter=0
 
@@ -284,7 +281,6 @@ untrust5=16
 
 # Local variables
 report_counter=120
-pwm_required=$pwm_noact
 fan_max_state=10
 fan_dynamic_min=12
 fan_dynamic_min_last=12
@@ -324,7 +320,7 @@ validate_thermal_configuration()
 	# Validate FAN fault symbolic links.
 	for ((i=1; i<=$max_tachos; i+=1)); do
 		if [ ! -L $thermal_path/fan"$i"_fault ]; then
-			log_err "FAN fault status attributes are not exist"
+			log_err "FAN fault attributes are not exist"
 			return 1
 		fi
 		if [ ! -L $thermal_path/fan"$i"_speed_get ]; then
@@ -349,7 +345,7 @@ validate_thermal_configuration()
 			fi
 		fi
 	done
-	if [ ! -L $fan_amb ] || [ ! -L $port_amb ]; then
+	if [ ! -L $temp_fan_amb ] || [ ! -L $temp_port_amb ]; then
 		log_err "Ambient temperature sensors attributes are not exist"
 		return 1
 	fi
@@ -520,6 +516,12 @@ config_unk_dir_untrust()
 	done
 }
 
+set_fan_to_full_speed()
+{
+	set_cur_state=$(($cooling_set_max_state-$fan_max_state))
+	echo $cooling_set_max_state > $cooling_cur_state
+}
+
 get_psu_presence()
 {
 	for ((i=1; i<=$max_psus; i+=1)); do
@@ -527,9 +529,10 @@ get_psu_presence()
 			present=`cat $thermal_path/psu"$i"_status`
 			if [ $present -eq 0 ]; then
 				pwm_required_act=$pwm_max
-				set_cur_state=$(($cooling_set_max_state-$fan_max_state))
-				echo $cooling_set_max_state > $cooling_cur_state
-
+				if [ $full_speed -ne $pwm_max ]; then
+					set_fan_to_full_speed
+					log_info "FAN speed is set to full speed due to PSU fault"
+				fi
 				return
 			fi
 		fi
@@ -562,12 +565,12 @@ get_fan_faults()
 			fault=`cat $thermal_path/fan"$i"_fault`
 		fi
 		speed=`cat $thermal_path/fan"$i"_speed_get`
-
 		if [ $fault -eq 1 ] || [ $speed -eq 0 ] ; then
 			pwm_required_act=$pwm_max
-			mode=`cat $tz_mode`
-			set_cur_state=$(($cooling_set_max_state-$fan_max_state))
-			echo $cooling_set_max_state > $cooling_cur_state
+			if [ $full_speed -ne $pwm_max ]; then
+				set_fan_to_full_speed
+				log_info "FAN speed is set to full speed due to FAN fault"
+			fi
 			return
 		fi
 	done
@@ -966,8 +969,7 @@ do
 		full_speed=$pwm_max
 		continue
 	fi
-	# If one of tachometers is faulty disable thermal zone and set PWM
-	# to the maximum speed.
+	# If one of tachometers is faulty set PWM to the maximum speed.
 	get_fan_faults
 	if [ $pwm_required_act -eq $pwm_max ]; then
 		full_speed=$pwm_max
