@@ -32,13 +32,13 @@
 #
 
 ### BEGIN INIT INFO
-# Provides:		Thermal control for Mellanox systems
+# Provides: hw-management
 # Required-Start: $local_fs $network $remote_fs $syslog
 # Required-Stop: $local_fs $network $remote_fs $syslog
 # Default-Start: 2 3 4 5
 # Default-Stop:  0 1 6
-# Short-Description: <Thermal control for Mellanox systems>
-# Description: <Thermal control for Mellanox systems>
+# Short-Description: <Chassis Hardware management of Mellanox systems>
+# Description: <Chassis Hardware management of Mellanox systems>
 ### END INIT INFO
 # Supported systems:
 #  SN274*
@@ -50,10 +50,10 @@
 #  SN38*|SN37*|SN34*|SN35*
 #  SN47*
 # Available options:
-# start	- load the kernel drivers required for the thermal control support,
-#	  connect drivers to devices, activate thermal control.
+# start	- load the kernel drivers required for chassis hardware management,
+#	  connect drivers to devices.
 # stop	- disconnect drivers from devices, unload kernel drivers, which has
-#	  been loaded, deactivate thermal control.
+#	  been loaded.
 #
 
 # Local constants and variables
@@ -100,8 +100,6 @@ system_path=$hw_management_path/system
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
-THERMAL_CONTROL=/usr/bin/hw-management-thermal-control.sh
-PID=/var/run/hw-management.pid
 LOCKFILE="/var/run/hw-management.lock"
 REGIO=/sys/devices/platform/mlxplat/mlxreg-io
 
@@ -955,23 +953,12 @@ do_start()
 	sleep 1
 	/usr/bin/hw-management-start-post.sh
 
-	if [ -f $config_path/max_tachos ]; then
-		max_tachos=$(<$config_path/max_tachos)
-	fi
-	$THERMAL_CONTROL $thermal_type $max_tachos $max_psus&
+	# Information for thermal control service
+	echo $thermal_type > $config_path/thermal_type
 }
 
 do_stop()
 {
-	# Kill thermal control if running.
-	if [ -f $PID ]; then
-		pid=`cat $PID`
-		if [ -d /proc/$pid ]; then
-			kill -9 $pid
-		fi
-		rm -rf $PID
-	fi
-
 	check_system
 	disconnect_platform
 	rm -fR /var/run/hw-management

@@ -1,0 +1,11 @@
+[Unit]
+Description=Thermal control service of Mellanox systems
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+
+[Service]
+ExecStart="/usr/bin/hw-management-thermal-control.sh"
+
+[Install]
+WantedBy=multi-user.target

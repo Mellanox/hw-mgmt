@@ -7,7 +7,6 @@ RemainAfterExit=true
 ExecStartPre=/bin/sh -c "/usr/bin/hw-management-ready.sh"
 ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
-PIDFile=/var/run/hw-management.pid
 
 [Install]
 WantedBy=multi-user.target

@@ -91,12 +91,6 @@ wait_for_config=120
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
 polling_time_def=60
-max_tachos_def=12
-max_psus_def=2
-system_thermal_type=${1:-$system_thermal_type_def}
-max_tachos=${2:-$max_tachos_def}
-max_psus=${3:-$max_psus_def}
-polling_time=${5:-$polling_time_def}
 
 # Local constants
 pwm_noact=0
@@ -295,22 +289,22 @@ handle_dynamic_trend=0
 
 log_err()
 {
-	logger -t thermal-control -p daemon.err "$@"
+	logger -t hw-management-tc -p daemon.err "$@"
 }
 
 log_warning()
 {
-	logger -t thermal-control -p daemon.warning "$@"
+	logger -t hw-management-tc -p daemon.warning "$@"
 }
 
 log_notice()
 {
-	logger -t thermal-control -p daemon.notice "$@"
+	logger -t hw-management-tc -p daemon.notice "$@"
 }
 
 log_info()
 {
-	logger -t thermal-control -p daemon.info "$@"
+	logger -t hw-management-tc -p daemon.info "$@"
 }
 
 validate_thermal_configuration()
@@ -870,56 +864,58 @@ enable_disable_zones_set_pwm()
 }
 
 tz_check_suspend()
-(
+{
 	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
 	if [ $suspend ] &&  [ "$suspend" = "1" ]; then
 		return 1
 	fi
 	return 0
-)
-
-thermal_control_exit()
-{	log_notice "Mellanox thermal control is terminated (PID=${thermal_control_pid})"
-	rm -rf $config_path/periodic_report
-	if [ -f /var/run/hw-management.pid ]; then
-		rm -rf /var/run/hw-management.pid
-	fi
-	exit 1
 }
-
-# Handle the next POSIX signals by thermal_control_exit:
-# SIGINT	2	Terminal interrupt signal.
-# SIGTERM	15	Termination signal.
-trap 'thermal_control_exit' INT TERM
 
 [ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
 
-# Initialization during start up.
-thermal_control_pid=$$
-if [ -f /var/run/hw-management.pid ]; then
-	pid=`cat /var/run/hw-management.pid`
-	# Only one instance of thermal control could be activated
-	if [ -d /proc/$pid ]; then
-		log_warning "Mellanox thermal control is already running (PID=${thermal_control_pid})"
-		exit 0
+init_service_params()
+{
+	if [ -f $config_path/thermal_type ]; then
+		system_thermal_type=$(< $config_path/thermal_type)
+	else
+		system_thermal_type=$system_thermal_type_def
 	fi
-fi
+	if [ -f $config_path/max_tachos ]; then
+		max_tachos=$(< $config_path/max_tachos)
+	else
+		log_err "Mellanox thermal control start fail. Missing max tachos config."
+		exit 1
+	fi
+	if [ -f $config_path/hotplug_psus ]; then
+		max_psus=$(< $config_path/hotplug_psus)
+	else
+		log_err "Mellanox thermal control start fail. Missing hotplug_psus config."
+		exit 1
+	fi
+	if [ -f $config_path/polling_time ]; then
+		polling_time=$(< $config_path/polling_time)
+	else
+		polling_time=$polling_time_def
+	fi
+	if [ -f $config_path/module_counter ]; then
+		module_counter=$(< $config_path/module_counter)
+	fi
+	if [ -f $config_path/gearbox_counter ]; then
+		gearbox_counter=$(< $config_path/gearbox_counter)
+	fi
+}
 
 log_notice "Mellanox thermal control is started"
-echo $thermal_control_pid > /var/run/hw-management.pid
 # Wait for thermal configuration.
-log_notice "Mellanox thermal control is waiting for configuration (PID=${thermal_control_pid})"
-/bin/sleep $wait_for_config
+log_notice "Mellanox thermal control is waiting for configuration."
+/bin/sleep $wait_for_config &
+wait $!
+
+init_service_params
 # Initialize system dynamic minimum speed data base.
 init_system_dynamic_minimum_db
 init_fan_dynamic_minimum_speed
-
-if [ -f $config_path/module_counter ]; then
-	module_counter=`cat $config_path/module_counter`
-fi
-if [ -f $config_path/gearbox_counter ]; then
-	gearbox_counter=`cat $config_path/gearbox_counter`
-fi
 
 # Periodic report counter
 periodic_report=$(($polling_time*$report_counter))
@@ -929,7 +925,8 @@ suspend_thermal=0
 # Start thermal monitoring.
 while true
 do
-	/bin/sleep $polling_time
+	/bin/sleep $polling_time &
+	wait $!
 
 	# Check if thermal algorithm is suspended.
 	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
