@@ -2,7 +2,7 @@ Source: hw-management
 Section: utils
 Priority: optional
 Maintainer: MellanoxBSP <system-sw-low-level@mellanox.com>
-Build-Depends: debhelper
+Build-Depends: debhelper (>= 10.0.0)
 Standards-Version: 3.9.8
 Homepage: http://www.mellanox.com
 
