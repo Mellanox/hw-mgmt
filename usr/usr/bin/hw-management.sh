@@ -57,7 +57,8 @@
 #
 
 # Local constants and variables
-thermal_type=0
+
+# Thermal type constants
 thermal_type_t1=1
 thermal_type_t2=2
 thermal_type_t3=3
@@ -65,6 +66,10 @@ thermal_type_t4=4
 thermal_type_t4=4
 thermal_type_t5=5
 thermal_type_t6=6
+thermal_type_t7=7
+thermal_type_def=0
+
+thermal_type=$thermal_type_def
 max_psus=2
 max_tachos=12
 i2c_bus_max=10
@@ -102,6 +107,8 @@ watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
 LOCKFILE="/var/run/hw-management.lock"
 REGIO=/sys/devices/platform/mlxplat/mlxreg-io
+
+tune_thermal_type=0
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -492,6 +499,7 @@ mqmxxx_msn37x_msn34x_specific()
 		dis_table[i]=${mqm8700_dis_table[i]}
 	done
 
+	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
 	max_tachos=12
 	max_psus=2
@@ -513,7 +521,7 @@ msn3420_specific()
 		dis_table[i]=${msn3420_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t5
+	thermal_type=$thermal_type_def
 	max_tachos=10
 	max_psus=2
 	hotplug_fans=5
@@ -536,7 +544,7 @@ msn38xx_specific()
 		dis_table[i]=${msn3800_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t6
+	thermal_type=$thermal_type_t7
 	max_tachos=3
 	max_psus=2
 	hotplug_fans=3
@@ -608,7 +616,7 @@ msn47xx_specific()
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t5
+	thermal_type=$thermal_type_def
 	max_tachos=12
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
@@ -628,7 +636,7 @@ msn46xx_specific()
 	for ((i=0; i<$disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
-	thermal_type=$thermal_type_t6
+	thermal_type=$thermal_type_def
 	max_tachos=3
 	max_psus=2
 	hotplug_fans=3
@@ -650,7 +658,7 @@ msn3510_specific()
 		dis_table[i]=${msn3510_dis_table[i]}
 	done
 
-	thermal_type=$thermal_type_t5
+	thermal_type=$thermal_type_def
 	max_tachos=12
 	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
@@ -953,6 +961,14 @@ do_start()
 	sleep 1
 	/usr/bin/hw-management-start-post.sh
 
+	if [ -f $config_path/max_tachos ]; then
+		max_tachos=$(<$config_path/max_tachos)
+	fi
+
+	# check for MSN3700C exeption
+	if [ "$max_tachos" == 8 ] && [ "$tune_thermal_type" == 1 ]; then
+		thermal_type=$thermal_type_t6
+	fi
 	# Information for thermal control service
 	echo $thermal_type > $config_path/thermal_type
 }

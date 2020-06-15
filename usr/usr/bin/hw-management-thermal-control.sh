@@ -98,7 +98,6 @@ pwm_max=1
 cooling_set_max_state=20
 cooling_set_def_state=16
 max_amb=120000
-untrusted_sensor=0
 module_counter=0
 gearbox_counter=0
 
@@ -133,6 +132,16 @@ psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 # minimal FAN speed is coded as following: 12 for 20%, 13 for 30%, ..., 19 for
 # 90%, 20 for 100%.
 
+
+# Default thermal class. Put 60% as common default.
+p2c_dir_trust_def=(45000 16  $max_amb 16)
+p2c_dir_untrust_def=(45000 16  $max_amb 16)
+c2p_dir_trust_def=(45000 16  $max_amb 16)
+c2p_dir_untrust_def=(45000 16  $max_amb 16)
+unk_dir_trust_def=(45000 16  $max_amb 16)
+unk_dir_untrust_def=(45000 16  $max_amb 16)
+
+
 # Class t1 for MSN27*|MSN24*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
@@ -156,8 +165,6 @@ c2p_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 c2p_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16  $max_amb 16)
-trust1=16
-untrust1=16
 
 # Class t2 for MSN21*
 # Direction	P2C		C2P		Unknown
@@ -182,8 +189,6 @@ c2p_dir_trust_t2=(40000 12 45000 13 $max_amb 13)
 c2p_dir_untrust_t2=(40000 12 45000 13 $max_amb 13)
 unk_dir_trust_t2=(40000 12 45000 13 $max_amb 13)
 unk_dir_untrust_t2=(15000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-trust2=13
-untrust2=16
 
 # Class t3 for MSN274*
 # Direction	P2C		C2P		Unknown
@@ -208,8 +213,6 @@ c2p_dir_trust_t3=(45000 13  $max_amb 13)
 c2p_dir_untrust_t3=(15000 13 30000 14 35000 15 40000 17 $max_amb 17)
 unk_dir_trust_t3=(45000 13 $max_amb 13)
 unk_dir_untrust_t3=(15000 13 30000 14 35000 15 40000 17 $max_amb 17)
-trust3=13
-untrust3=17
 
 # Class t4 for MSN201*
 # Direction	P2C		C2P		Unknown
@@ -234,10 +237,8 @@ c2p_dir_trust_t4=(45000 12 $max_amb 12)
 c2p_dir_untrust_t4=(15000 12 20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_trust_t4=(45000 12  $max_amb 12)
 unk_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
-trust4=12
-untrust4=16
 
-# Class t5 for MSN370*|MSN35*
+# Class t5 for MSN3700|MQM8700
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
@@ -254,24 +255,60 @@ untrust4=16
 # 35-40		30	50	30	30	30	50
 # 40-45		40	60	40	40	40	60
 
-#p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-#p2c_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-#c2p_dir_trust_t5=(20000 12 30000 13 40000 14 $max_amb 14)
-#c2p_dir_untrust_t5=(20000 12 35000 13 40000 14 $max_amb 14)
-#unk_dir_trust_t5=(20000 12  $max_amb 14)
-#unk_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-#trust5=12
-#untrust5=16
-# Temporary comment out the above table and put 60% as common default.
-# Uncomment it back after extra testing in chamber and remove the below.
-p2c_dir_trust_t5=(45000 16  $max_amb 16)
-p2c_dir_untrust_t5=(45000 16  $max_amb 16)
-c2p_dir_trust_t5=(45000 16  $max_amb 16)
-c2p_dir_untrust_t5=(45000 16  $max_amb 16)
-unk_dir_trust_t5=(45000 16  $max_amb 16)
-unk_dir_untrust_t5=(45000 16  $max_amb 16)
-trust5=16
-untrust5=16
+p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+p2c_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
+c2p_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+c2p_dir_untrust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+unk_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+unk_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
+
+# Class t6 for MSN3700C
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	20	20	20	20	20
+#  5-10		20	20	20	20	20	20
+# 10-15		20	30	20	20	20	30
+# 15-20		20	30	20	20	20	30
+# 20-25		20	40	20	20	20	40
+# 25-30		20	40	20	20	20	40
+# 30-35		20	50	20	20	20	50
+# 35-40		20	60	20	30	20	60
+# 40-45		30	60	20	40	30	60
+
+p2c_dir_trust_t6=(35000 12 40000 13 $max_amb 13)
+p2c_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
+c2p_dir_trust_t6=(20000 12 $max_amb 12)
+c2p_dir_untrust_t6=(30000 12 35000 13 40000 14 $max_amb 14)
+unk_dir_trust_t6=(35000 12 40000 13 $max_amb 13)
+unk_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
+
+# Class t7 for MSN3800
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	30	20	20	20	30
+#  5-10		20	30	20	20	20	30
+# 10-15		20	40	20	20	20	40
+# 15-20		20	50	20	20	20	50
+# 20-25		20	60	20	30	20	60
+# 25-30		20	60	20	30	20	60
+# 30-35		20	60	30	40	30	60
+# 35-40		30	70	30	50	30	70
+# 40-45		30	70	40	60	40	70
+
+p2c_dir_trust_t7=(30000 12 35000 13 $max_amb 13)
+p2c_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
+c2p_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
+c2p_dir_untrust_t7=(15000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
+unk_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
+unk_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
 
 # Local variables
 report_counter=120
@@ -281,7 +318,6 @@ fan_dynamic_min_last=12
 untrusted_sensor=0
 p2c_dir=0
 c2p_dir=0
-unk_dir=0
 ambient=0
 set_cur_state=0
 full_speed=$pwm_noact
@@ -578,7 +614,6 @@ set_pwm_min_threshold()
 	ambient=0
 	p2c_dir=0
 	c2p_dir=0
-	unk_dir=0
 
 	# Check for untrusted modules
 	check_untrested_module_sensor
@@ -594,7 +629,6 @@ set_pwm_min_threshold()
 		c2p_dir=1
 	else
 		ambient=$temp_fan_ambient
-		unk_dir=1
 	fi
 
 	# Set FAN minimum speed according to FAN direction, cable type and
@@ -710,56 +744,30 @@ init_system_dynamic_minimum_db()
 		;;
 	6)
 		# Config FAN minimal speed setting for class t6
-		config_p2c_dir_trust "${p2c_dir_trust_t5[@]}"
-		config_p2c_dir_untrust "${p2c_dir_untrust_t5[@]}"
-		config_c2p_dir_trust "${c2p_dir_trust_t5[@]}"
-		config_c2p_dir_untrust "${c2p_dir_untrust_t5[@]}"
-		config_unk_dir_trust "${unk_dir_trust_t5[@]}"
-		config_unk_dir_untrust "${unk_dir_untrust_t5[@]}"
+		config_p2c_dir_trust "${p2c_dir_trust_t6[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t6[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t6[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t6[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t6[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t6[@]}"
+		;;
+	7)
+		# Config FAN minimal speed setting for class t7
+		config_p2c_dir_trust "${p2c_dir_trust_t7[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t7[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t7[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t7[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t7@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t7[@]}"
 		;;
 	*)
-		echo thermal type "$system_thermal_type" is not supported
-		exit 0
-		;;
-	esac
-}
-
-init_fan_dynamic_minimum_speed()
-{
-	case $system_thermal_type in
-	1)
-		# Config FAN minimal speed setting for class t1
-		config_trust=$trust1
-		config_untrust=$untrust1
-		;;
-	2)
-		# Config FAN minimal speed setting for class t2
-		config_trust=$trust2
-		config_untrust=$untrust2
-		;;
-	3)
-		# Config FAN minimal speed setting for class t3
-		config_trust=$trust3
-		config_untrust=$untrust3
-		;;
-	4)
-		# Config FAN minimal speed setting for class t4
-		config_trust=$trust4
-		config_untrust=$untrust4
-		;;
-	5)
-		# Config FAN minimal speed setting for class t5
-		config_trust=$trust5
-		config_untrust=$untrust5
-		;;
-	6)
-		# Config FAN minimal speed setting for class t6
-		config_trust=$trust5
-		config_untrust=$untrust5
-		;;
-	*)
-		echo thermal type "$system_thermal_type" is not supported
-		exit 0
+		# Config FAN default minimal speed setting
+		config_p2c_dir_trust "${p2c_dir_trust_def[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_def[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_def[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_def[@]}"
+		config_unk_dir_trust "${unk_dir_trust_def[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_def[@]}"
 		;;
 	esac
 }
@@ -919,7 +927,6 @@ wait $!
 init_service_params
 # Initialize system dynamic minimum speed data base.
 init_system_dynamic_minimum_db
-init_fan_dynamic_minimum_speed
 
 # Periodic report counter
 periodic_report=$((polling_time*report_counter))
