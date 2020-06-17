@@ -54,7 +54,7 @@ pid=/var/run/$SERVICE.pid
 
 case $ACTION in
 	start)
-		start-stop-daemon --start --background --pidfile "$pid" --make-pidfile --exec $EXECUTABLE
+		start-stop-daemon --start --background --pidfile "$pid" --make-pidfile --startas $EXECUTABLE
 	;;
 	stop)
 		start-stop-daemon --stop -s KILL --oknodo --pidfile "$pid" --remove-pidfile
