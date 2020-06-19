@@ -1,0 +1,20 @@
+.TH HW-MANAGEMENT-TC "8" "June 2020" "hw-management-tc " "hw-management"
+.SH NAME
+hw-management-tc.service \- service used to run hw-management-thermal-control.sh
+.SH SYNOPSIS
+Thermal control for Mellanox systems.
+A method for performing switch or router system thermal control monitoring, such as that employed
+for complex system's configuration with a single FAN control and with multi points of temperature
+measure, is disclosed. The technique, referred as the Optimized Thermal Monitoring Algorithm
+(OTMA) approach, periodically re-calculates the highest temperature score of the all thermal zones
+and enforce thermal control to following the thermal zone with the highest score.
+.SH OPTIONS
+.TP
+start
+Start hw\-management-tc service.
+.TP
+stop
+Stop hw\-management-tc service.
+.SH SEE ALSO
+\fBhw-management\fR(1)
+\fBhw-management.service\fR(8)
