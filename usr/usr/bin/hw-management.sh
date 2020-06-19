@@ -70,7 +70,6 @@ thermal_type_t7=7
 thermal_type_def=0
 
 thermal_type=$thermal_type_def
-max_psus=2
 max_tachos=12
 i2c_bus_max=10
 i2c_bus_offset=0
@@ -81,8 +80,6 @@ psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 fan_psu_default=0x3c
 fan_command=0x3b
-fan_max_speed=24000
-fan_min_speed=5000
 chipup_delay_default=0
 sxcore_down=0
 sxcore_deferred=1
@@ -106,7 +103,6 @@ sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
 LOCKFILE="/var/run/hw-management.lock"
-REGIO=/sys/devices/platform/mlxplat/mlxreg-io
 
 tune_thermal_type=0
 
@@ -374,11 +370,11 @@ is_module()
 msn274x_specific()
 {
 	connect_size=${#msn2740_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn2740_connect_table[i]}
 	done
 	disconnect_size=${#msn2740_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn2740_dis_table[i]}
 	done
 
@@ -396,17 +392,16 @@ msn274x_specific()
 msn21xx_specific()
 {
 	connect_size=${#msn2100_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn2100_connect_table[i]}
 	done
 	disconnect_size=${#msn2100_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn2100_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_t2
 	max_tachos=4
-	max_psus=0
 	hotplug_psus=0
 	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
@@ -421,11 +416,11 @@ msn21xx_specific()
 msn24xx_specific()
 {
 	connect_size=${#msn2700_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn2700_connect_table[i]}
 	done
 	disconnect_size=${#msn2700_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn2700_dis_table[i]}
 	done
 
@@ -444,11 +439,11 @@ msn24xx_specific()
 msn27xx_msb_msx_specific()
 {
 	connect_size=${#msn2700_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn2700_connect_table[i]}
 	done
 	disconnect_size=${#msn2700_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn2700_dis_table[i]}
 	done
 
@@ -467,17 +462,16 @@ msn27xx_msb_msx_specific()
 msn201x_specific()
 {
 	connect_size=${#msn2010_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn2010_connect_table[i]}
 	done
 	disconnect_size=${#msn2010_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn2010_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_t4
 	max_tachos=4
-	max_psus=0
 	hotplug_psus=0
 	hotplug_fans=0
 	echo 25000 > $config_path/fan_max_speed
@@ -491,18 +485,17 @@ msn201x_specific()
 mqmxxx_msn37x_msn34x_specific()
 {
 	connect_size=${#mqm8700_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${mqm8700_connect_table[i]}
 	done
 	disconnect_size=${#mqm8700_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${mqm8700_dis_table[i]}
 	done
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
 	max_tachos=12
-	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -513,17 +506,16 @@ mqmxxx_msn37x_msn34x_specific()
 msn3420_specific()
 {
 	connect_size=${#msn3420_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn3420_connect_table[i]}
 	done
 	disconnect_size=${#msn3420_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn3420_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_def
 	max_tachos=10
-	max_psus=2
 	hotplug_fans=5
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -536,17 +528,16 @@ msn3420_specific()
 msn38xx_specific()
 {
 	connect_size=${#msn3800_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn3800_connect_table[i]}
 	done
 	disconnect_size=${#msn3800_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn3800_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_t7
 	max_tachos=3
-	max_psus=2
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
@@ -608,17 +599,16 @@ msn27002_msb78002_specific()
 msn47xx_specific()
 {
 	connect_size=${#msn4700_msn4600_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn4700_msn4600_connect_table[i]}
 	done
 	disconnect_size=${#msn4700_msn4600_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_def
 	max_tachos=12
-	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -629,16 +619,15 @@ msn47xx_specific()
 msn46xx_specific()
 {
 	connect_size=${#msn4700_msn4600_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn4700_msn4600_connect_table[i]}
 	done
 	disconnect_size=${#msn4700_msn4600_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
 	thermal_type=$thermal_type_def
 	max_tachos=3
-	max_psus=2
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
@@ -650,17 +639,16 @@ msn46xx_specific()
 msn3510_specific()
 {
 	connect_size=${#msn3510_connect_table[@]}
-	for ((i=0; i<$connect_size; i++)); do
+	for ((i=0; i<connect_size; i++)); do
 		connect_table[i]=${msn3510_connect_table[i]}
 	done
 	disconnect_size=${#msn3510_dis_table[@]}
-	for ((i=0; i<$disconnect_size; i++)); do
+	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn3510_dis_table[i]}
 	done
 
 	thermal_type=$thermal_type_def
 	max_tachos=12
-	max_psus=2
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -670,32 +658,32 @@ msn3510_specific()
 
 msn_spc2_common()
 {
-	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
-                HI120)
-                        msn3420_specific
-                ;;
-                HI121)
-                        msn3510_specific
-                ;;
+		HI120)
+			msn3420_specific
+			;;
+		HI121)
+			msn3510_specific
+			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
-		;;
+			;;
 	esac
 }
 
 msn_spc3_common()
 {
-	sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI123|HI124)
-		msn46xx_specific
+			msn46xx_specific
 		;;
 		HI122)
-		msn47xx_specific
+			msn47xx_specific
 		;;
 		*)
-		msn47xx_specific
+			msn47xx_specific
 		;;
 	esac
 }
@@ -703,7 +691,7 @@ msn_spc3_common()
 check_system()
 {
 	# Check ODM
-	board=`cat /sys/devices/virtual/dmi/id/board_name`
+	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 		VMOD0001)
 			msn27xx_msb_msx_specific
@@ -730,7 +718,7 @@ check_system()
 			msn_spc3_common
 			;;
 		*)
-			product=`cat /sys/devices/virtual/dmi/id/product_name`
+			product=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $product in
 				MSN27002|MSB78002)
 					msn27002_msb78002_specific
@@ -766,7 +754,7 @@ check_system()
 					msn46xx_specific
 					;;
 				*)
-					proc_type=`cat /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}'`
+					proc_type=$(< /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}')
 					case $proc_type in
 						Atom*)
 							msn21xx_specific
@@ -787,7 +775,6 @@ check_system()
 			;;
 	esac
 
-	kernel_release=`uname -r`
 }
 
 find_i2c_bus()
@@ -795,12 +782,12 @@ find_i2c_bus()
 	# Find physical bus number of Mellanox I2C controller. The default
 	# number is 1, but it could be assigned to others id numbers on
 	# systems with different CPU types.
-	for ((i=1; i<$i2c_bus_max; i++)); do
+	for ((i=1; i<i2c_bus_max; i++)); do
 		folder=/sys/bus/i2c/devices/i2c-$i
 		if [ -d $folder ]; then
-			name=`cat $folder/name | cut -d' ' -f 1`
+			name=$(cut $folder/name -d' ' -f 1)
 			if [ "$name" == "i2c-mlxcpld" ]; then
-				i2c_bus_offset=$(($i-1))
+				i2c_bus_offset=$((i-1))
 				return
 			fi
 		fi
@@ -812,12 +799,12 @@ find_i2c_bus()
 
 connect_device()
 {
-	if [ -f /sys/bus/i2c/devices/i2c-$3/new_device ]; then
-		addr=`echo $2 | tail -c +3`
-		bus=$(($3+$i2c_bus_offset))
-		if [ ! -d /sys/bus/i2c/devices/$bus-00$addr ] &&
-		   [ ! -d /sys/bus/i2c/devices/$bus-000$addr ]; then
-			echo $1 $2 > /sys/bus/i2c/devices/i2c-$bus/new_device
+	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
+		addr=$(echo "$2" | tail -c +3)
+		bus=$(($3+i2c_bus_offset))
+		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
+		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
 		fi
 	fi
 
@@ -826,12 +813,12 @@ connect_device()
 
 disconnect_device()
 {
-	if [ -f /sys/bus/i2c/devices/i2c-$2/delete_device ]; then
-		addr=`echo $1 | tail -c +3`
-		bus=$(($2+$i2c_bus_offset))
-		if [ -d /sys/bus/i2c/devices/$bus-00$addr ] ||
-		   [ -d /sys/bus/i2c/devices/$bus-000$addr ]; then
-			echo $1 > /sys/bus/i2c/devices/i2c-$bus/delete_device
+	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
+		addr=$(echo "$1" | tail -c +3)
+		bus=$(($2+i2c_bus_offset))
+		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
+		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
 		fi
 	fi
 
@@ -841,17 +828,17 @@ disconnect_device()
 create_event_files()
 {
 	if [ $hotplug_psus -ne 0 ]; then
-		for ((i=1; i<=$hotplug_psus; i+=1)); do
+		for ((i=1; i<=hotplug_psus; i+=1)); do
 			touch $events_path/psu$i
 		done
 	fi
 	if [ $hotplug_pwrs -ne 0 ]; then
-		for ((i=1; i<=$hotplug_pwrs; i+=1)); do
+		for ((i=1; i<=hotplug_pwrs; i+=1)); do
 			touch $events_path/pwr$i
 		done
 	fi
 	if [ $hotplug_fans -ne 0 ]; then
-		for ((i=1; i<=$hotplug_fans; i+=1)); do
+		for ((i=1; i<=hotplug_fans; i+=1)); do
 			touch $events_path/fan$i
 		done
 	fi
@@ -876,16 +863,16 @@ set_config_data()
 
 connect_platform()
 {
-	for ((i=0; i<$connect_size; i+=3)); do
-		connect_device 	${connect_table[i]} ${connect_table[i+1]} \
-				${connect_table[i+2]}
+	for ((i=0; i<connect_size; i+=3)); do
+		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
+				"${connect_table[i+2]}"
 	done
 }
 
 disconnect_platform()
 {
-	for ((i=0; i<$disconnect_size; i+=2)); do
-		disconnect_device ${dis_table[i]} ${dis_table[i+1]}
+	for ((i=0; i<disconnect_size; i+=2)); do
+		disconnect_device "${dis_table[i]}" "${dis_table[i+1]}"
 	done
 }
 
@@ -954,7 +941,7 @@ do_start()
 	udevadm trigger --action=add
 	set_config_data
 	find_i2c_bus
-	asic_bus=$(($i2c_asic_bus_default+$i2c_bus_offset))
+	asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
 	echo $asic_bus > $config_path/asic_bus
 	create_event_files
 	connect_platform
@@ -995,29 +982,29 @@ function unlock_service_state_change()
 do_chip_up_down()
 {
 	# Add ASIC device.
-	bus=`cat $config_path/asic_bus`
+	bus=$(< $config_path/asic_bus)
 
 	case $1 in
 	0)
 		if [ -f /etc/init.d/sxdkernel ]; then
-			chipup_delay=`cat $config_path/chipup_delay`
+			chipup_delay=$(< $config_path/chipup_delay)
 			if [ "$chipup_delay" != "0" ]; then
 				# Decline chipup if in wait state.
-				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
+				[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
+				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_withdraw > $config_path/sxcore
 					return
 				fi
 			fi
 		fi
 		lock_service_state_change
-		chipup_delay=`cat $config_path/chipup_delay`
+		chipup_delay=$(< $config_path/chipup_delay)
 		echo 1 > $config_path/suspend
-		if [ -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
+		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			if [ -f /etc/init.d/sxdkernel ]; then
 				if [ "$chipup_delay" != "0" ]; then
-					[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-					if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_up" ]; then
+					[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
+					if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_up" ]; then
 						echo $sxcore_down > $config_path/sxcore
 					else
 						unlock_service_state_change
@@ -1025,22 +1012,22 @@ do_chip_up_down()
 					fi
 				fi
 			fi
-			chipdown_delay=`cat $config_path/chipdown_delay`
-			sleep $chipdown_delay
-			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/delete_device
+			chipdown_delay=$(< $config_path/chipdown_delay)
+			sleep "$chipdown_delay"
+			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
 		fi
 		unlock_service_state_change
 		;;
 	1)
 		lock_service_state_change
-                [ -f "$config_path/chipup_dis" ] && disable=`cat $config_path/chipup_dis`
-                if [ $disable ] && [ "$disable" -gt 0 ]; then
-			disable=$(($disable-1))
+		[ -f "$config_path/chipup_dis" ] && disable=$(< $config_path/chipup_dis)
+		if [ "$disable" ] && [ "$disable" -gt 0 ]; then
+			disable=$((disable-1))
 			echo $disable > $config_path/chipup_dis
 			unlock_service_state_change
 			exit 0
 		fi
-		chipup_delay=`cat $config_path/chipup_delay`
+		chipup_delay=$(< $config_path/chipup_delay)
 		if [ -f /etc/init.d/sxdkernel ]; then
 			if [ "$chipup_delay" != "0" ]; then
 				# Have delay in order to avoid impact of chip reset,
@@ -1048,10 +1035,10 @@ do_chip_up_down()
 				# In case sxcore driver does not reset chip, for example
 				# for reboot through kexec - just sleep 'chipup_delay'
 				# seconds.
-				[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_down" ]; then
+				[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
+				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_down" ]; then
 					echo $sxcore_deferred > $config_path/sxcore
-				elif [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
+				elif [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_up > $config_path/sxcore
 				else
 					unlock_service_state_change
@@ -1059,30 +1046,30 @@ do_chip_up_down()
 				fi
 			fi
 		fi
-		if [ ! -d /sys/bus/i2c/devices/$bus-$i2c_asic_addr_name ]; then
-			sleep $chipup_delay
+		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
+			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
 			if [ -f /etc/init.d/sxdkernel ]; then
 				if [ "$chipup_delay" != "0" ]; then
 					# Skip if chipup has been dropped.
-					[ -f "$config_path/sxcore" ] && sxcore=`cat $config_path/sxcore`
-					if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
+					[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
+					if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
 						echo $sxcore_down > $config_path/sxcore
 						unlock_service_state_change
 						return
 					fi
 				fi
 			fi
-			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-$bus/new_device
+			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
-				str=`cat $system_path/cpld_base`
-				cpld_port=`cat $system_path/cpld3_version`
-				str=$str$(printf "_CPLD000000_REV%02d00" $cpld_port)
-				echo $str > $system_path/cpld
+				str=$(< $system_path/cpld_base)
+				cpld_port=$(< $system_path/cpld3_version)
+				str=$str$(printf "_CPLD000000_REV%02d00" "$cpld_port")
+				echo "$str" > $system_path/cpld
 			fi
 			if [ "$chipup_delay" != "0" ]; then
-				if [ $sxcore ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
+				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
 					echo $sxcore_up > $config_path/sxcore
 				fi
 			fi
@@ -1154,7 +1141,7 @@ case $ACTION in
 	;;
 	chipup)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 1 $2
+			do_chip_up_down 1 "$2"
 		fi
 	;;
 	chipdown)
@@ -1169,7 +1156,7 @@ case $ACTION in
 		if [ -z "$2" ]; then
 			echo 1 > $config_path/chipup_dis
 		else
-			echo $2 > $config_path/chipup_dis
+			echo "$2" > $config_path/chipup_dis
 		fi
 	;;
 	thermsuspend)
