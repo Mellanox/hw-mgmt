@@ -2,13 +2,13 @@ Source: hw-management
 Section: utils
 Priority: optional
 Maintainer: MellanoxBSP <system-sw-low-level@mellanox.com>
-Build-Depends: debhelper
-Standards-Version:
+Build-Depends: debhelper (>= 10.0.0)
+Standards-Version: 3.9.8
 Homepage: http://www.mellanox.com
 
 Package:hw-management
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, lsb-base (>= 3.0-6)
 Description: Thermal control and chassis management for Mellanox systems
-	     This package supports Mellanox switches family for chassis
-	     management and thermal control.
+ This package supports Mellanox switches family for chassis
+ management and thermal control.

@@ -1,6 +1,6 @@
 #!/bin/bash
 ########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+# Copyright (c) 2020 Mellanox Technologies. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -91,12 +91,6 @@ wait_for_config=120
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
 polling_time_def=60
-max_tachos_def=12
-max_psus_def=2
-system_thermal_type=${1:-$system_thermal_type_def}
-max_tachos=${2:-$max_tachos_def}
-max_psus=${3:-$max_psus_def}
-polling_time=${5:-$polling_time_def}
 
 # Local constants
 pwm_noact=0
@@ -104,7 +98,6 @@ pwm_max=1
 cooling_set_max_state=20
 cooling_set_def_state=16
 max_amb=120000
-untrusted_sensor=0
 module_counter=0
 gearbox_counter=0
 
@@ -139,6 +132,16 @@ psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 # minimal FAN speed is coded as following: 12 for 20%, 13 for 30%, ..., 19 for
 # 90%, 20 for 100%.
 
+
+# Default thermal class. Put 60% as common default.
+p2c_dir_trust_def=(45000 16  $max_amb 16)
+p2c_dir_untrust_def=(45000 16  $max_amb 16)
+c2p_dir_trust_def=(45000 16  $max_amb 16)
+c2p_dir_untrust_def=(45000 16  $max_amb 16)
+unk_dir_trust_def=(45000 16  $max_amb 16)
+unk_dir_untrust_def=(45000 16  $max_amb 16)
+
+
 # Class t1 for MSN27*|MSN24*
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
@@ -162,8 +165,6 @@ c2p_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 c2p_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_trust_t1=(20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_untrust_t1=(20000 13 25000 14 30000 15 35000 16  $max_amb 16)
-trust1=16
-untrust1=16
 
 # Class t2 for MSN21*
 # Direction	P2C		C2P		Unknown
@@ -188,8 +189,6 @@ c2p_dir_trust_t2=(40000 12 45000 13 $max_amb 13)
 c2p_dir_untrust_t2=(40000 12 45000 13 $max_amb 13)
 unk_dir_trust_t2=(40000 12 45000 13 $max_amb 13)
 unk_dir_untrust_t2=(15000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-trust2=13
-untrust2=16
 
 # Class t3 for MSN274*
 # Direction	P2C		C2P		Unknown
@@ -214,8 +213,6 @@ c2p_dir_trust_t3=(45000 13  $max_amb 13)
 c2p_dir_untrust_t3=(15000 13 30000 14 35000 15 40000 17 $max_amb 17)
 unk_dir_trust_t3=(45000 13 $max_amb 13)
 unk_dir_untrust_t3=(15000 13 30000 14 35000 15 40000 17 $max_amb 17)
-trust3=13
-untrust3=17
 
 # Class t4 for MSN201*
 # Direction	P2C		C2P		Unknown
@@ -240,10 +237,8 @@ c2p_dir_trust_t4=(45000 12 $max_amb 12)
 c2p_dir_untrust_t4=(15000 12 20000 13 25000 14 30000 15 35000 16 $max_amb 16)
 unk_dir_trust_t4=(45000 12  $max_amb 12)
 unk_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
-trust4=12
-untrust4=16
 
-# Class t5 for MSN370*|MSN35*
+# Class t5 for MSN3700|MQM8700
 # Direction	P2C		C2P		Unknown
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
@@ -260,24 +255,60 @@ untrust4=16
 # 35-40		30	50	30	30	30	50
 # 40-45		40	60	40	40	40	60
 
-#p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-#p2c_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-#c2p_dir_trust_t5=(20000 12 30000 13 40000 14 $max_amb 14)
-#c2p_dir_untrust_t5=(20000 12 35000 13 40000 14 $max_amb 14)
-#unk_dir_trust_t5=(20000 12  $max_amb 14)
-#unk_dir_untrust_t5=(10000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
-#trust5=12
-#untrust5=16
-# Temporary comment out the above table and put 60% as common default.
-# Uncomment it back after extra testing in chamber and remove the below.
-p2c_dir_trust_t5=(45000 16  $max_amb 16)
-p2c_dir_untrust_t5=(45000 16  $max_amb 16)
-c2p_dir_trust_t5=(45000 16  $max_amb 16)
-c2p_dir_untrust_t5=(45000 16  $max_amb 16)
-unk_dir_trust_t5=(45000 16  $max_amb 16)
-unk_dir_untrust_t5=(45000 16  $max_amb 16)
-trust5=16
-untrust5=16
+p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+p2c_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
+c2p_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+c2p_dir_untrust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+unk_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
+unk_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
+
+# Class t6 for MSN3700C
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	20	20	20	20	20
+#  5-10		20	20	20	20	20	20
+# 10-15		20	30	20	20	20	30
+# 15-20		20	30	20	20	20	30
+# 20-25		20	40	20	20	20	40
+# 25-30		20	40	20	20	20	40
+# 30-35		20	50	20	20	20	50
+# 35-40		20	60	20	30	20	60
+# 40-45		30	60	20	40	30	60
+
+p2c_dir_trust_t6=(35000 12 40000 13 $max_amb 13)
+p2c_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
+c2p_dir_trust_t6=(20000 12 $max_amb 12)
+c2p_dir_untrust_t6=(30000 12 35000 13 40000 14 $max_amb 14)
+unk_dir_trust_t6=(35000 12 40000 13 $max_amb 13)
+unk_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
+
+# Class t7 for MSN3800
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	30	20	20	20	30
+#  5-10		20	30	20	20	20	30
+# 10-15		20	40	20	20	20	40
+# 15-20		20	50	20	20	20	50
+# 20-25		20	60	20	30	20	60
+# 25-30		20	60	20	30	20	60
+# 30-35		20	60	30	40	30	60
+# 35-40		30	70	30	50	30	70
+# 40-45		30	70	40	60	40	70
+
+p2c_dir_trust_t7=(30000 12 35000 13 $max_amb 13)
+p2c_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
+c2p_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
+c2p_dir_untrust_t7=(15000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
+unk_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
+unk_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
 
 # Local variables
 report_counter=120
@@ -287,7 +318,6 @@ fan_dynamic_min_last=12
 untrusted_sensor=0
 p2c_dir=0
 c2p_dir=0
-unk_dir=0
 ambient=0
 set_cur_state=0
 full_speed=$pwm_noact
@@ -295,22 +325,22 @@ handle_dynamic_trend=0
 
 log_err()
 {
-	logger -t thermal-control -p daemon.err "$@"
+	logger -t hw-management-tc -p daemon.err "$@"
 }
 
 log_warning()
 {
-	logger -t thermal-control -p daemon.warning "$@"
+	logger -t hw-management-tc -p daemon.warning "$@"
 }
 
 log_notice()
 {
-	logger -t thermal-control -p daemon.notice "$@"
+	logger -t hw-management-tc -p daemon.notice "$@"
 }
 
 log_info()
 {
-	logger -t thermal-control -p daemon.info "$@"
+	logger -t hw-management-tc -p daemon.info "$@"
 }
 
 validate_thermal_configuration()
@@ -318,7 +348,7 @@ validate_thermal_configuration()
 	# Wait for symbolic links creation.
 	sleep 3
 	# Validate FAN fault symbolic links.
-	for ((i=1; i<=$max_tachos; i+=1)); do
+	for ((i=1; i<=max_tachos; i+=1)); do
 		if [ ! -L $thermal_path/fan"$i"_fault ]; then
 			log_err "FAN fault attributes are not exist"
 			return 1
@@ -337,7 +367,7 @@ validate_thermal_configuration()
 		log_err "PWM control and ASIC attributes are not exist"
 		return 1
 	fi
-	for ((i=1; i<=$module_counter; i+=1)); do
+	for ((i=1; i<=module_counter; i+=1)); do
 		if [ -L $thermal_path/module"$i"_temp ]; then
 			if [ ! -L $thermal_path/module"$i"_temp_fault ]; then
 				log_err "QSFP module attributes are not exist"
@@ -349,7 +379,7 @@ validate_thermal_configuration()
 		log_err "Ambient temperature sensors attributes are not exist"
 		return 1
 	fi
-	if [ $max_psus -gt 0 ]; then
+	if [ "$max_psus" -gt 0 ]; then
 		if [ ! -L $psu1_status ] || [ ! -L $psu2_status ]; then
 			log_err "PS units status attributes are not exist"
 			return 1
@@ -359,14 +389,14 @@ validate_thermal_configuration()
 
 check_untrested_module_sensor()
 {
-	for ((i=1; i<=$module_counter; i+=1)); do
+	for ((i=1; i<=module_counter; i+=1)); do
 		tz_check_suspend
 		if [ "$?" -ne 0 ]; then
 			return
 		fi
 		if [ -L $thermal_path/module"$i"_temp_fault ]; then
-			temp_fault=`cat $thermal_path/module"$i"_temp_fault`
-			if [ $temp_fault -eq 1 ]; then
+			temp_fault=$(<$thermal_path/module"$i"_temp_fault)
+			if [ "$temp_fault" -eq 1 ]; then
 				untrusted_sensor=1
 			fi
 		fi
@@ -375,13 +405,13 @@ check_untrested_module_sensor()
 
 thermal_periodic_report()
 {
-	f1=`cat $thermal_path/mlxsw/thermal_zone_temp`
-	f2=`cat $temp_fan_amb`
-	f3=`cat $temp_port_amb`
-	f4=`cat $pwm`
-	f5=$(($fan_dynamic_min-$fan_max_state))
-	dyn=$(($f5*10))
-	cooling=`cat $cooling_cur_state` # entry=`cat $thermal_path/cooling_cur_state`
+	f1=$(< $thermal_path/mlxsw/thermal_zone_temp)
+	f2=$(< $temp_fan_amb)
+	f3=$(< $temp_port_amb)
+	f4=$(< $pwm)
+	f5=$((fan_dynamic_min-fan_max_state))
+	dyn=$((f5*10))
+	cooling=$(< $cooling_cur_state)
 	if [ "$cooling" -gt "$set_cur_state" ]; then
 		set_cur_state=$cooling
 		if [ "$cooling" -gt "$f5" ]; then
@@ -394,70 +424,70 @@ thermal_periodic_report()
                 fi
 	fi
 	ps_fan_speed=${psu_fan_speed[$f5]}
-	f5=$(($f5*10))
-	f6=$(($set_cur_state*10))
+	f5=$((f5*10))
+	f6=$((set_cur_state*10))
 	log_info "Thermal periodic report"
 	log_info "======================="
 	log_info "Temperature(mC): asic $f1 fan amb $f2 port amb $f3"
 	log_info "Cooling(%): pwm $f6 ps_fan_speed $((ps_fan_speed)) dynaimc_min $dyn"
-	for ((i=1; i<=$max_tachos; i+=1)); do
+	for ((i=1; i<=max_tachos; i+=1)); do
 		if [ -f $thermal_path/fan"$i"_speed_get ]; then
-			tacho=`cat $thermal_path/fan"$i"_speed_get`
-			fault=`cat $thermal_path/fan"$i"_fault`
+			tacho=$(< $thermal_path/fan"$i"_speed_get)
+			fault=$(< $thermal_path/fan"$i"_fault)
 			log_info "tacho$i speed is $tacho fault is $fault"
 		fi
 	done
-	for ((i=1; i<=$module_counter; i+=1)); do
+	for ((i=1; i<=module_counter; i+=1)); do
 		if [ -f $thermal_path/module"$i"_temp_input ]; then
-			t1=`cat $thermal_path/module"$i"_temp_input`
+			t1=$(< $thermal_path/module"$i"_temp_input)
 			if [ "$t1" -gt  "0" ]; then
-				t2=`cat $thermal_path/module"$i"_temp_fault`
-				t3=`cat $thermal_path/module"$i"_temp_crit`
-				t4=`cat $thermal_path/module"$i"_temp_emergency`
+				t2=$(< $thermal_path/module"$i"_temp_fault)
+				t3=$(< $thermal_path/module"$i"_temp_crit)
+				t4=$(< $thermal_path/module"$i"_temp_emergency)
 				log_info "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 			if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
-				t7=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_mode`
-				if [ $t7 = "enabled" ]; then
-					t1=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_temp`
-					t2=`cat $thermal_path/mlxsw-module"$i"/temp_trip_norm`
-					t3=`cat $thermal_path/mlxsw-module"$i"/temp_trip_high`
-					t4=`cat $thermal_path/mlxsw-module"$i"/temp_trip_hot`
-					t5=`cat $thermal_path/mlxsw-module"$i"/temp_trip_crit`
-					t6=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
+				t7=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_mode)
+				if [ "$t7" = "enabled" ]; then
+					t1=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_temp)
+					t2=$(< $thermal_path/mlxsw-module"$i"/temp_trip_norm)
+					t3=$(< $thermal_path/mlxsw-module"$i"/temp_trip_high)
+					t4=$(< $thermal_path/mlxsw-module"$i"/temp_trip_hot)
+					t5=$(< $thermal_path/mlxsw-module"$i"/temp_trip_crit)
+					t6=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_policy)
 					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 				fi
 			fi
 		fi
 	done
-	for ((i=1; i<=$gearbox_counter; i+=1)); do
+	for ((i=1; i<=gearbox_counter; i+=1)); do
 		if [ -f $thermal_path/gearbox"$i"_temp_input ]; then
-			t1=`cat $thermal_path/gearbox"$i"_temp_input`
+			t1=$(< $thermal_path/gearbox"$i"_temp_input)
 			if [ "$t1" -gt  "0" ]; then
 				log_info "gearbox$i temp $t1"
 			fi
 			if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp ]; then
-				t7=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode`
-				if [ $t7 = "enabled" ]; then
-					t1=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp`
-					t2=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm`
-					t3=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_high`
-					t4=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot`
-					t5=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit`
-					t6=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy`
+				t7=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode)
+				if [ "$t7" = "enabled" ]; then
+					t1=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp)
+					t2=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm)
+					t3=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_high)
+					t4=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot)
+					t5=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit)
+					t6=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy)
 					log_info "tz gearbox$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 				fi
 			fi
 		fi
 	done
-	t1=`cat $thermal_path/mlxsw/thermal_zone_temp`
-	t2=`cat $thermal_path/mlxsw/temp_trip_norm`
-	t3=`cat $thermal_path/mlxsw/temp_trip_high`
-	t4=`cat $thermal_path/mlxsw/temp_trip_hot`
-	t5=`cat $thermal_path/mlxsw/temp_trip_crit`
-	t6=`cat $thermal_path/mlxsw/thermal_zone_policy`
-	t7=`cat $thermal_path/mlxsw/thermal_zone_mode`
-	if [ $t7 = "enabled" ]; then
+	t1=$(< $thermal_path/mlxsw/thermal_zone_temp)
+	t2=$(< $thermal_path/mlxsw/temp_trip_norm)
+	t3=$(< $thermal_path/mlxsw/temp_trip_high)
+	t4=$(< $thermal_path/mlxsw/temp_trip_hot)
+	t5=$(< $thermal_path/mlxsw/temp_trip_crit)
+	t6=$(< $thermal_path/mlxsw/thermal_zone_policy)
+	t7=$(< $thermal_path/mlxsw/thermal_zone_mode)
+	if [ "$t7" = "enabled" ]; then
 		log_info "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
 	fi
 }
@@ -466,7 +496,7 @@ config_p2c_dir_trust()
 {
 	array=("$@")
 	size=${#array[@]}
-	for ((i=0; i<$size; i++)); do
+	for ((i=0; i<size; i++)); do
 		p2c_dir_trust[i]=${array[i]}
 	done
 }
@@ -475,7 +505,7 @@ config_p2c_dir_untrust()
 {
 	array=("$@")
 	size=${#array[@]}
-	for ((i=0; i<$size; i++)); do
+	for ((i=0; i<size; i++)); do
 		p2c_dir_untrust[i]=${array[i]}
 	done
 }
@@ -484,7 +514,7 @@ config_c2p_dir_trust()
 {
 	array=("$@")
 	size=${#array[@]}
-	for ((i=0; i<$size; i++)); do
+	for ((i=0; i<size; i++)); do
 		c2p_dir_trust[i]=${array[i]}
 	done
 }
@@ -493,7 +523,7 @@ config_c2p_dir_untrust()
 {
 	array=("$@")
 	size=${#array[@]}
-	for ((i=0; i<$size; i++)); do
+	for ((i=0; i<size; i++)); do
 		c2p_dir_untrust[i]=${array[i]}
 	done
 }
@@ -502,7 +532,7 @@ config_unk_dir_trust()
 {
 	array=("$@")
 	size=${#array[@]}
-	for ((i=0; i<$size; i++)); do
+	for ((i=0; i<size; i++)); do
 		unk_dir_trust[i]=${array[i]}
 	done
 }
@@ -511,25 +541,25 @@ config_unk_dir_untrust()
 {
 	array=("$@")
 	size=${#array[@]}
-	for ((i=0; i<$size; i++)); do
+	for ((i=0; i<size; i++)); do
 		unk_dir_untrust[i]=${array[i]}
 	done
 }
 
 set_fan_to_full_speed()
 {
-	set_cur_state=$(($cooling_set_max_state-$fan_max_state))
+	set_cur_state=$((cooling_set_max_state-fan_max_state))
 	echo $cooling_set_max_state > $cooling_cur_state
 }
 
 get_psu_presence()
 {
-	for ((i=1; i<=$max_psus; i+=1)); do
+	for ((i=1; i<=max_psus; i+=1)); do
 		if [ -f $thermal_path/psu"$i"_status ]; then
-			present=`cat $thermal_path/psu"$i"_status`
-			if [ $present -eq 0 ]; then
+			present=$(< $thermal_path/psu"$i"_status)
+			if [ "$present" -eq 0 ]; then
 				pwm_required_act=$pwm_max
-				if [ $full_speed -ne $pwm_max ]; then
+				if [ "$full_speed" -ne $pwm_max ]; then
 					set_fan_to_full_speed
 					log_info "FAN speed is set to full speed due to PSU fault"
 				fi
@@ -543,16 +573,16 @@ get_psu_presence()
 
 update_psu_fan_speed()
 {
-	for ((i=1; i<=$max_psus; i+=1)); do
+	for ((i=1; i<=max_psus; i+=1)); do
 		if [ -L $thermal_path/psu"$i"_pwr_status ]; then
-			pwr=`cat $thermal_path/psu"$i"_pwr_status`
-			if [ $pwr -eq 1 ]; then
-				bus=`cat $config_path/psu"$i"_i2c_bus`
-				addr=`cat $config_path/psu"$i"_i2c_addr`
-				command=`cat $fan_command`
-				entry=`cat $thermal_path/cooling_cur_state`
+			pwr=$(< $thermal_path/psu"$i"_pwr_status)
+			if [ "$pwr" -eq 1 ]; then
+				bus=$(< $config_path/psu"$i"_i2c_bus)
+				addr=$(< $config_path/psu"$i"_i2c_addr)
+				command=$(< $fan_command)
+				entry=$(< $thermal_path/cooling_cur_state)
 				speed=${psu_fan_speed[$entry]}
-				i2cset -f -y $bus $addr $command $speed wp
+				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
 			fi
 		fi
 	done
@@ -560,14 +590,14 @@ update_psu_fan_speed()
 
 get_fan_faults()
 {
-	for ((i=1; i<=$max_tachos; i+=1)); do
+	for ((i=1; i<=max_tachos; i+=1)); do
 		if [ -L $thermal_path/fan"$i"_fault ]; then
-			fault=`cat $thermal_path/fan"$i"_fault`
+			fault=$(< $thermal_path/fan"$i"_fault)
 		fi
-		speed=`cat $thermal_path/fan"$i"_speed_get`
-		if [ $fault -eq 1 ] || [ $speed -eq 0 ] ; then
+		speed=$(< $thermal_path/fan"$i"_speed_get)
+		if [ "$fault" -eq 1 ] || [ "$speed" -eq 0 ] ; then
 			pwm_required_act=$pwm_max
-			if [ $full_speed -ne $pwm_max ]; then
+			if [ "$full_speed" -ne $pwm_max ]; then
 				set_fan_to_full_speed
 				log_info "FAN speed is set to full speed due to FAN fault"
 			fi
@@ -584,81 +614,79 @@ set_pwm_min_threshold()
 	ambient=0
 	p2c_dir=0
 	c2p_dir=0
-	unk_dir=0
 
 	# Check for untrusted modules
 	check_untrested_module_sensor
 
 	# Define FAN direction
-	temp_fan_ambient=`cat $temp_fan_amb`
-	temp_port_ambient=`cat $temp_port_amb`
-	if [ $temp_fan_ambient -gt  $temp_port_ambient ]; then
+	temp_fan_ambient=$(< $temp_fan_amb)
+	temp_port_ambient=$(< $temp_port_amb)
+	if [ "$temp_fan_ambient" -gt  "$temp_port_ambient" ]; then
 		ambient=$temp_port_ambient
 		p2c_dir=1
-	elif [ $temp_fan_ambient -lt  $temp_port_ambient ]; then
+	elif [ "$temp_fan_ambient" -lt "$temp_port_ambient" ]; then
 		ambient=$temp_fan_ambient
 		c2p_dir=1
 	else
 		ambient=$temp_fan_ambient
-		unk_dir=1
 	fi
 
 	# Set FAN minimum speed according to FAN direction, cable type and
 	# presence of untrusted cabels.
-	if [ $untrusted_sensor -eq 0 ]; then
-		if [ $p2c_dir -eq 1 ]; then
+	if [ "$untrusted_sensor" -eq 0 ]; then
+		if [ "$p2c_dir" -eq 1 ]; then
 			size=${#p2c_dir_trust[@]}
-			for ((i=0; i<$size; i+=2)); do
+			for ((i=0; i<size; i+=2)); do
 				tresh=${p2c_dir_trust[i]}
-				if [ $ambient -lt $tresh ]; then
-					fan_dynamic_min=${p2c_dir_trust[$(($i+1))]}
+				if [ "$ambient" -lt "$tresh" ]; then
+					fan_dynamic_min=${p2c_dir_trust[$((i+1))]}
 					break
 				fi
 			done
-		elif [ $c2p_dir -eq 1 ]; then
+		elif [ "$c2p_dir" -eq 1 ]; then
 			size=${#c2p_dir_trust[@]}
-			for ((i=0; i<$size; i+=2)); do
+			for ((i=0; i<size; i+=2)); do
 				tresh=${c2p_dir_trust[i]}
-				if [ $ambient -lt $tresh ]; then
-					fan_dynamic_min=${c2p_dir_trust[$(($i+1))]}
+				if [ "$ambient" -lt "$tresh" ]; then
+					fan_dynamic_min=${c2p_dir_trust[$((i+1))]}
 					break
 				fi
 			done
 		else
 			size=${#unk_dir_trust[@]}
-			for ((i=0; i<$size; i+=2)); do
+			for ((i=0; i<size; i+=2)); do
 				tresh=${unk_dir_trust[i]}
-				if [ $ambient -lt $tresh ]; then
-					fan_dynamic_min=${unk_dir_trust[$(($i+1))]}
+				if [ "$ambient" -lt "$tresh" ]; then
+					fan_dynamic_min=${unk_dir_trust[$((i+1))]}
 					break
 				fi
 			done
 		fi
 	else
-		if [ $p2c_dir -eq 1 ]; then
+		if [ "$p2c_dir" -eq 1 ]; then
 			size=${#p2c_dir_untrust[@]}
-			for ((i=0; i<$size; i+=2)); do
+			for ((i=0; i<size; i+=2)); do
 				tresh=${unk_dir_untrust[i]}
-				if [ $ambient -lt $tresh ]; then
-					fan_dynamic_min=${unk_dir_untrust[$(($i+1))]}
+				if [ "$ambient" -lt "$tresh" ]; then
+					fan_dynamic_min=${unk_dir_untrust[$((i+1))]}
 					break
 				fi
 			done
-		elif [ $c2p_dir -eq 1 ]; then
+		elif [ "$c2p_dir" -eq 1 ]; then
 			size=${#c2p_dir_untrust[@]}
-			for ((i=0; i<$size; i+=2)); do
+			for ((i=0; i<size; i+=2)); do
 				tresh=${c2p_dir_untrust[i]}
-				if [ $ambient -lt $tresh ]; then
-					fan_dynamic_min=${c2p_dir_untrust[$(($i+1))]}
+				if [ "$ambient" -lt "$tresh" ]; then
+					fan_dynamic_min=${c2p_dir_untrust[$((i+1))]}
 					break
 				fi
 			done
 		else
 			size=${#unk_dir_untrust[@]}
-			for ((i=0; i<$size; i+=2)); do
+			for ((i=0; i<size; i+=2)); do
 				tresh=${unk_dir_untrust[i]}
-				if [ $ambient -lt $tresh ]; then
-					fan_dynamic_min=${unk_dir_untrust[$(($i+1))]}
+				if [ "$ambient" -lt "$tresh" ]; then
+					fan_dynamic_min=${unk_dir_untrust[$((i+1))]}
 					break
 				fi
 			done
@@ -716,103 +744,77 @@ init_system_dynamic_minimum_db()
 		;;
 	6)
 		# Config FAN minimal speed setting for class t6
-		config_p2c_dir_trust "${p2c_dir_trust_t5[@]}"
-		config_p2c_dir_untrust "${p2c_dir_untrust_t5[@]}"
-		config_c2p_dir_trust "${c2p_dir_trust_t5[@]}"
-		config_c2p_dir_untrust "${c2p_dir_untrust_t5[@]}"
-		config_unk_dir_trust "${unk_dir_trust_t5[@]}"
-		config_unk_dir_untrust "${unk_dir_untrust_t5[@]}"
+		config_p2c_dir_trust "${p2c_dir_trust_t6[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t6[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t6[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t6[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t6[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t6[@]}"
+		;;
+	7)
+		# Config FAN minimal speed setting for class t7
+		config_p2c_dir_trust "${p2c_dir_trust_t7[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t7[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t7[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t7[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t7@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t7[@]}"
 		;;
 	*)
-		echo thermal type $system_thermal_type is not supported
-		exit 0
-		;;
-	esac
-}
-
-init_fan_dynamic_minimum_speed()
-{
-	case $system_thermal_type in
-	1)
-		# Config FAN minimal speed setting for class t1
-		config_trust=$trust1
-		config_untrust=$untrust1
-		;;
-	2)
-		# Config FAN minimal speed setting for class t2
-		config_trust=$trust2
-		config_untrust=$untrust2
-		;;
-	3)
-		# Config FAN minimal speed setting for class t3
-		config_trust=$trust3
-		config_untrust=$untrust3
-		;;
-	4)
-		# Config FAN minimal speed setting for class t4
-		config_trust=$trust4
-		config_untrust=$untrust4
-		;;
-	5)
-		# Config FAN minimal speed setting for class t5
-		config_trust=$trust5
-		config_untrust=$untrust5
-		;;
-	6)
-		# Config FAN minimal speed setting for class t6
-		config_trust=$trust5
-		config_untrust=$untrust5
-		;;
-	*)
-		echo thermal type $system_thermal_type is not supported
-		exit 0
+		# Config FAN default minimal speed setting
+		config_p2c_dir_trust "${p2c_dir_trust_def[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_def[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_def[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_def[@]}"
+		config_unk_dir_trust "${unk_dir_trust_def[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_def[@]}"
 		;;
 	esac
 }
 
 set_default_pwm()
 {
-	set_cur_state=$(($cooling_set_def_state-$fan_max_state))
+	set_cur_state=$((cooling_set_def_state-fan_max_state))
 	echo $cooling_set_def_state > $cooling_cur_state
 	echo $set_cur_state > $cooling_cur_state
-	cur_state=$(($set_cur_state*10))
+	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
 	log_info "FAN speed is set to $cur_state percent up to default speed"
 }
 
 set_dynamic_min_pwm()
 {
-	set_cur_state=$(($fan_dynamic_min-$fan_max_state))
-	echo $fan_dynamic_min > $cooling_cur_state
-	echo $set_cur_state > $cooling_cur_state
-	cur_state=$(($set_cur_state*10))
+	set_cur_state=$((fan_dynamic_min-fan_max_state))
+	echo "$fan_dynamic_min" > $cooling_cur_state
+	echo "$set_cur_state" > $cooling_cur_state
+	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
 	log_info "FAN speed is set to $cur_state percent up to dynamic minimum"
 }
 
 check_trip_min_vs_current_temp()
 {
-	for ((i=1; i<=$gearbox_counter; i+=1)); do
+	for ((i=1; i<=gearbox_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp ]; then
-			trip_norm=`cat $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm`
-			temp_now=`cat $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp`
-			if [ $temp_now -gt 0 ] && [ $trip_norm -le  $temp_now ]; then
+			trip_norm=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm)
+			temp_now=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp)
+			if [ "$temp_now" -gt 0 ] && [ "$trip_norm" -le  "$temp_now" ]; then
 				return
 			fi
 		fi
 	done
-	for ((i=1; i<=$module_counter; i+=1)); do
+	for ((i=1; i<=module_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
-			trip_norm=`cat $thermal_path/mlxsw-module"$i"/temp_trip_norm`
-			temp_now=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_temp`
-			if [ $temp_now -gt 0 ] && [ $trip_norm -le  $temp_now ]; then
+			trip_norm=$(< $thermal_path/mlxsw-module"$i"/temp_trip_norm)
+			temp_now=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_temp)
+			if [ "$temp_now" -gt 0 ] && [ "$trip_norm" -le  "$temp_now" ]; then
 				return
 			fi
 		fi
 	done
-	trip_norm=`cat $temp_trip_norm`
-	temp_now=`cat $tz_temp`
-	if [ $trip_norm -gt  $temp_now ]; then
+	trip_norm=$(< $temp_trip_norm)
+	temp_now=$(< $tz_temp)
+	if [ "$trip_norm" -gt  "$temp_now" ]; then
 		set_dynamic_min_pwm
 	fi
 }
@@ -833,12 +835,12 @@ enable_disable_zones_set_pwm()
 	if [ -L $tz_mode ]; then
 		echo $policy > $tz_policy
 	fi
-	for ((i=1; i<=$module_counter; i+=1)); do
+	for ((i=1; i<=module_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
 			echo $policy > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
 		fi
 	done
-	for ((i=1; i<=$gearbox_counter; i+=1)); do
+	for ((i=1; i<=gearbox_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
 			echo $policy > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
 		fi
@@ -846,12 +848,12 @@ enable_disable_zones_set_pwm()
 	if [ -L $tz_mode ]; then
 		echo $mode > $tz_mode
 	fi
-	for ((i=1; i<=$module_counter; i+=1)); do
+	for ((i=1; i<=module_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
 			echo $mode > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
 		fi
 	done
-	for ((i=1; i<=$gearbox_counter; i+=1)); do
+	for ((i=1; i<=gearbox_counter; i+=1)); do
 		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
 			echo $mode > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
 		fi
@@ -870,59 +872,64 @@ enable_disable_zones_set_pwm()
 }
 
 tz_check_suspend()
-(
-	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
-	if [ $suspend ] &&  [ "$suspend" = "1" ]; then
+{
+	[ -f "$config_path/suspend" ] && suspend=$(< $config_path/suspend)
+	if [ "$suspend" ] &&  [ "$suspend" = "1" ]; then
 		return 1
 	fi
 	return 0
-)
-
-thermal_control_exit()
-{	log_notice "Mellanox thermal control is terminated (PID=${thermal_control_pid})"
-	rm -rf $config_path/periodic_report
-	if [ -f /var/run/hw-management.pid ]; then
-		rm -rf /var/run/hw-management.pid
-	fi
-	exit 1
 }
 
-# Handle the next POSIX signals by thermal_control_exit:
-# SIGINT	2	Terminal interrupt signal.
-# SIGTERM	15	Termination signal.
-trap 'thermal_control_exit' INT TERM
-
-[ -f $config_path/thermal_delay ] && thermal_delay=`cat $config_path/thermal_delay`; [ $thermal_delay ] && sleep $thermal_delay;
-
-# Initialization during start up.
-thermal_control_pid=$$
-if [ -f /var/run/hw-management.pid ]; then
-	pid=`cat /var/run/hw-management.pid`
-	# Only one instance of thermal control could be activated
-	if [ -d /proc/$pid ]; then
-		log_warning "Mellanox thermal control is already running (PID=${thermal_control_pid})"
-		exit 0
-	fi
+[ -f $config_path/thermal_delay ] && thermal_delay=$(< $config_path/thermal_delay);
+if [ -z "$thermal_delay" ]; then
+	sleep "$thermal_delay" &
+	wait $!
 fi
+
+init_service_params()
+{
+	if [ -f $config_path/thermal_type ]; then
+		system_thermal_type=$(< $config_path/thermal_type)
+	else
+		system_thermal_type=$system_thermal_type_def
+	fi
+	if [ -f $config_path/max_tachos ]; then
+		max_tachos=$(< $config_path/max_tachos)
+	else
+		log_err "Mellanox thermal control start fail. Missing max tachos config."
+		exit 1
+	fi
+	if [ -f $config_path/hotplug_psus ]; then
+		max_psus=$(< $config_path/hotplug_psus)
+	else
+		log_err "Mellanox thermal control start fail. Missing hotplug_psus config."
+		exit 1
+	fi
+	if [ -f $config_path/polling_time ]; then
+		polling_time=$(< $config_path/polling_time)
+	else
+		polling_time=$polling_time_def
+	fi
+	if [ -f $config_path/module_counter ]; then
+		module_counter=$(< $config_path/module_counter)
+	fi
+	if [ -f $config_path/gearbox_counter ]; then
+		gearbox_counter=$(< $config_path/gearbox_counter)
+	fi
+}
 
 log_notice "Mellanox thermal control is started"
-echo $thermal_control_pid > /var/run/hw-management.pid
 # Wait for thermal configuration.
-log_notice "Mellanox thermal control is waiting for configuration (PID=${thermal_control_pid})"
-/bin/sleep $wait_for_config
+log_notice "Mellanox thermal control is waiting for configuration."
+/bin/sleep $wait_for_config &
+wait $!
+
+init_service_params
 # Initialize system dynamic minimum speed data base.
 init_system_dynamic_minimum_db
-init_fan_dynamic_minimum_speed
-
-if [ -f $config_path/module_counter ]; then
-	module_counter=`cat $config_path/module_counter`
-fi
-if [ -f $config_path/gearbox_counter ]; then
-	gearbox_counter=`cat $config_path/gearbox_counter`
-fi
 
 # Periodic report counter
-periodic_report=$(($polling_time*$report_counter))
+periodic_report=$((polling_time*report_counter))
 echo $periodic_report > $config_path/periodic_report
 count=0
 suspend_thermal=0
@@ -932,8 +939,8 @@ do
 	/bin/sleep $polling_time
 
 	# Check if thermal algorithm is suspended.
-	[ -f "$config_path/suspend" ] && suspend=`cat $config_path/suspend`
-	if [ $suspend ] && [ "$suspend" != "$suspend_thermal" ]; then
+	[ -f "$config_path/suspend" ] && suspend=$(< $config_path/suspend)
+	if [ "$suspend" ] && [ "$suspend" != "$suspend_thermal" ]; then
 		# Attribute 'suspend' has been changed since last cycle.
 		if [ "$suspend" = "1" ]; then
 			log_info "Thermal algorithm is manually suspended"
@@ -965,42 +972,42 @@ do
 	# If one of PS units is out disable thermal zone and set PWM to the
 	# maximum speed.
 	get_psu_presence
-	if [ $pwm_required_act -eq $pwm_max ]; then
+	if [ "$pwm_required_act" -eq $pwm_max ]; then
 		full_speed=$pwm_max
 		continue
 	fi
 	# If one of tachometers is faulty set PWM to the maximum speed.
 	get_fan_faults
-	if [ $pwm_required_act -eq $pwm_max ]; then
+	if [ "$pwm_required_act" -eq $pwm_max ]; then
 		full_speed=$pwm_max
 		continue
 	fi
 	# Update cooling levels of FAN If dynamic minimum has been changed
 	# since the last time.
-	if [ $fan_dynamic_min -ne $fan_dynamic_min_last ]; then
-		echo $fan_dynamic_min > $cooling_cur_state
+	if [ "$fan_dynamic_min" -ne "$fan_dynamic_min_last" ]; then
+		echo "$fan_dynamic_min" > $cooling_cur_state
 		echo $set_cur_state > $cooling_cur_state
-		fan_from=$(($fan_dynamic_min_last-$fan_max_state))
-		fan_from=$(($fan_from*10))
-		fan_to=$(($fan_dynamic_min-$fan_max_state))
-		fan_to=$(($fan_to*10))
+		fan_from=$((fan_dynamic_min_last-fan_max_state))
+		fan_from=$((fan_from*10))
+		fan_to=$((fan_dynamic_min-fan_max_state))
+		fan_to=$((fan_to*10))
 		log_info "FAN minimum speed is changed from $fan_from to $fan_to percent"
-		if [ $fan_dynamic_min -lt $fan_dynamic_min_last ]; then
+		if [ "$fan_dynamic_min" -lt "$fan_dynamic_min_last" ]; then
 			handle_dynamic_trend=1
 		fi
 		fan_dynamic_min_last=$fan_dynamic_min
 		echo $fan_to > $thermal_path/fan_dynamic_min
 	fi
 	# Arrange FAN and update if necessary (f.e. in case when some unit is inserted back).
-	if [ $full_speed -eq $pwm_max ] || [ $handle_dynamic_trend -eq 1 ]; then
+	if [ "$full_speed" -eq "$pwm_max" ] || [ "$handle_dynamic_trend" -eq 1 ]; then
 		check_trip_min_vs_current_temp
 		full_speed=$pwm_noact
 		handle_dynamic_trend=0
 	fi
 
-	count=$(($count+1))
-	[ -f "$config_path/periodic_report" ] && periodic_report=`cat $config_path/periodic_report`
-	if [ $count -ge $periodic_report ]; then
+	count=$((count+1))
+	[ -f "$config_path/periodic_report" ] && periodic_report=$(< $config_path/periodic_report)
+	if [ "$count" -ge "$periodic_report" ]; then
 		count=0
 		thermal_periodic_report
 	fi
