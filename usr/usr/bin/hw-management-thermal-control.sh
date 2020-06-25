@@ -757,7 +757,7 @@ init_system_dynamic_minimum_db()
 		config_p2c_dir_untrust "${p2c_dir_untrust_t7[@]}"
 		config_c2p_dir_trust "${c2p_dir_trust_t7[@]}"
 		config_c2p_dir_untrust "${c2p_dir_untrust_t7[@]}"
-		config_unk_dir_trust "${unk_dir_trust_t7@]}"
+		config_unk_dir_trust "${unk_dir_trust_t7[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t7[@]}"
 		;;
 	*)
