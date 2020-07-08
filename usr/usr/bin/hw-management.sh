@@ -67,6 +67,7 @@ thermal_type_t4=4
 thermal_type_t5=5
 thermal_type_t6=6
 thermal_type_t7=7
+thermal_type_t8=8
 thermal_type_def=0
 
 thermal_type=$thermal_type_def
@@ -626,7 +627,14 @@ msn46xx_specific()
 	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
-	thermal_type=$thermal_type_def
+
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	if [ "$sku" == "HI124" ]; then
+		thermal_type=$thermal_type_t8
+	else
+		thermal_type=$thermal_type_def
+	fi
+
 	max_tachos=3
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed

@@ -38,6 +38,8 @@
 #  t4: MSN201*
 #  t5: MSN27*|MSB*|MSX*
 #  t6: QMB7*|SN37*|SN34*|SN35*|SN47
+#  t7: SN38*
+#  t8: SN46*
 
 # The thermal algorithm considers the next rules for FAN speed setting:
 # The minimal PWM setting is dynamic and depends on FAN direction and cable
@@ -308,7 +310,32 @@ p2c_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
 c2p_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
 c2p_dir_untrust_t7=(15000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
 unk_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
-unk_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
+unk_dir_untrust_t7=(5000 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
+
+# Class t8 for MSN4600
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	20	20	20	20	20
+#  5-10		20	30	20	20	20	30
+# 10-15		20	30	20	20	20	30
+# 15-20		20	30	20	20	20	30
+# 20-25		20	40	20	20	20	40
+# 25-30		20	40	20	20	20	40
+# 30-35		20	50	20	30	20	50
+# 35-40		20	60	20	30	20	60
+# 40-45		20	70	30	40	30	70
+
+p2c_dir_trust_t8=(45000 12  $max_amb 12)
+p2c_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17)
+c2p_dir_trust_t8=(35000 12 40000 13 $max_amb 13)
+c2p_dir_untrust_t8=(25000 12 30000 13 40000 14 $max_amb 14)
+unk_dir_trust_t8=(25000 12 30000 13 40000 14 $max_amb 13)
+unk_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17)
+
 
 # Local variables
 report_counter=120
@@ -350,11 +377,11 @@ validate_thermal_configuration()
 	# Validate FAN fault symbolic links.
 	for ((i=1; i<=max_tachos; i+=1)); do
 		if [ ! -L $thermal_path/fan"$i"_fault ]; then
-			log_err "FAN fault attributes are not exist"
+			log_err "FAN $i fault attribute ( fan_fault ) not exist"
 			return 1
 		fi
 		if [ ! -L $thermal_path/fan"$i"_speed_get ]; then
-			log_err "FAN input attributes are not exist"
+			log_err "FAN $i input attribute ( fan_speed_get ) not exist"
 			return 1
 		fi
 	done
@@ -370,7 +397,7 @@ validate_thermal_configuration()
 	for ((i=1; i<=module_counter; i+=1)); do
 		if [ -L $thermal_path/module"$i"_temp ]; then
 			if [ ! -L $thermal_path/module"$i"_temp_fault ]; then
-				log_err "QSFP module attributes are not exist"
+				log_err "QSFP module ($i) module_temp_fault attribute not exist"
 				return 1
 			fi
 		fi
@@ -599,7 +626,7 @@ get_fan_faults()
 			pwm_required_act=$pwm_max
 			if [ "$full_speed" -ne $pwm_max ]; then
 				set_fan_to_full_speed
-				log_info "FAN speed is set to full speed due to FAN fault"
+				log_info "FAN speed is set to full speed due to FAN$i fault"
 			fi
 			return
 		fi
@@ -759,6 +786,15 @@ init_system_dynamic_minimum_db()
 		config_c2p_dir_untrust "${c2p_dir_untrust_t7[@]}"
 		config_unk_dir_trust "${unk_dir_trust_t7[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t7[@]}"
+		;;
+	8)
+		# Config FAN minimal speed setting for class t8
+		config_p2c_dir_trust "${p2c_dir_trust_t8[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t8[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t8[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t8[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t8[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t8[@]}"
 		;;
 	*)
 		# Config FAN default minimal speed setting

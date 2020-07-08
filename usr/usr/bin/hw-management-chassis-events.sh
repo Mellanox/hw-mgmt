@@ -241,7 +241,6 @@ if [ "$1" == "add" ]; then
 		ln -sf "$3""$4"/delay_on  $led_path/led_"$name"_"$color"_delay_on
 		ln -sf "$3""$4"/delay_off $led_path/led_"$name"_"$color"_delay_off
 		ln -sf $LED_STATE $led_path/led_"$name"_state
-
 		if [ ! -f $led_path/led_"$name"_capability ]; then
 			echo none "${color}" "${color}"_blink > $led_path/led_"$name"_capability
 		else
