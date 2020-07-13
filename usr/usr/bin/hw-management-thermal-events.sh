@@ -52,6 +52,7 @@ module_counter=0
 gearbox_counter=0
 fan_full_speed_code=20
 LOCKFILE="/var/run/hw-management-thermal.lock"
+udev_ready=$hw_management_path/.udev_ready
 
 log_err()
 {
@@ -96,6 +97,10 @@ unlock_service_state_change()
 }
 
 if [ "$1" == "add" ]; then
+	# Don't process udev events until service is started and directories are created
+	if [ ! -f ${udev_ready} ]; then
+		exit 0
+	fi
 	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus

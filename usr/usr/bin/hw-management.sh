@@ -104,7 +104,7 @@ sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
 LOCKFILE="/var/run/hw-management.lock"
-
+udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
 
 # Topology description and driver specification for ambient sensors and for
@@ -928,6 +928,7 @@ create_symbolic_links()
 	if [ ! -h $power_path/pwr_sys ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
+	touch $udev_ready
 }
 
 remove_symbolic_links()

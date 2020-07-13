@@ -58,6 +58,7 @@ psu2_i2c_addr=0x50
 eeprom_name=''
 sfp_counter=0
 LOCKFILE="/var/run/hw-management-chassis.lock"
+udev_ready=$hw_management_path/.udev_ready
 
 log_err()
 {
@@ -188,6 +189,10 @@ function handle_hotplug_event()
 }
 
 if [ "$1" == "add" ]; then
+	# Don't process udev events until service is started and directories are created
+	if [ ! -f ${udev_ready} ]; then
+		exit 0
+	fi
 	if [ "$2" == "a2d" ]; then
 		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$5"_voltage_scale
 		for i in {0..7}; do
