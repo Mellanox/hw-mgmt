@@ -810,12 +810,12 @@ init_system_dynamic_minimum_db()
 
 set_default_pwm()
 {
-	set_cur_state=$((cooling_set_def_state-fan_max_state))
-	echo $cooling_set_def_state > $cooling_cur_state
+	set_cur_state=$((cooling_set_max_state-fan_max_state))
+	echo $cooling_set_max_state > $cooling_cur_state
 	echo $set_cur_state > $cooling_cur_state
 	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
-	log_info "FAN speed is set to $cur_state percent up to default speed"
+	log_info "FAN speed is set to $cur_state percent up to full speed"
 }
 
 set_dynamic_min_pwm()
@@ -954,21 +954,28 @@ init_service_params()
 	fi
 }
 
+thermal_control_preinit()
+{
+	init_service_params
+	# Initialize system dynamic minimum speed data base.
+	init_system_dynamic_minimum_db
+
+	# Periodic report counter
+	periodic_report=$((polling_time*report_counter))
+	echo $periodic_report > $config_path/periodic_report
+	echo 0 > $thermal_path/fan_dynamic_min
+	count=0
+	suspend_thermal=0
+}
+
 log_notice "Mellanox thermal control is started"
 # Wait for thermal configuration.
 log_notice "Mellanox thermal control is waiting for configuration."
 /bin/sleep $wait_for_config &
 wait $!
 
-init_service_params
-# Initialize system dynamic minimum speed data base.
-init_system_dynamic_minimum_db
+thermal_control_preinit
 
-# Periodic report counter
-periodic_report=$((polling_time*report_counter))
-echo $periodic_report > $config_path/periodic_report
-count=0
-suspend_thermal=0
 # Start thermal monitoring.
 while true
 do
