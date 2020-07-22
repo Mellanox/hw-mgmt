@@ -1,4 +1,22 @@
 ================================================================================
+- V.7.0010.1300
+- 
+--------------------------------------------------------------------------------
+- New Features
+
+- Bug fixes
+    HW Mgmt core:
+    o   Fix - Fix deadlock in thermal thermal_zone_device_check. Thermal zone was stuck on mode change 
+        - see backport patch kernel 4.9  #60
+        - see backport patch kernel 4.19 #28
+
+- Known issues and limitations:
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+
+================================================================================
 - V.7.0010.1000
 - Sun, 31 May 2020
 --------------------------------------------------------------------------------
