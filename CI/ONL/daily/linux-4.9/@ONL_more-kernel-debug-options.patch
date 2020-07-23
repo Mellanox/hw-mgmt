@@ -1,14 +1,14 @@
-From bb6814e947a9e1682f27fc9dbb6de82d898efff7 Mon Sep 17 00:00:00 2001
+From c519916b2629a9e66e06fcd55c0cfe8c353221cf Mon Sep 17 00:00:00 2001
 From: root <root@fit74.mtl.labs.mlnx>
-Date: Tue, 21 Jul 2020 21:43:59 +0300
+Date: Thu, 23 Jul 2020 16:34:33 +0300
 Subject: [PATCH] [PATCH] Add more kernel debug options
 
 ---
- .../4.9-lts/configs/x86_64-all/x86_64-all.config   | 58 +++++++++++++++-------
- 1 file changed, 41 insertions(+), 17 deletions(-)
+ .../4.9-lts/configs/x86_64-all/x86_64-all.config   | 56 +++++++++++++++-------
+ 1 file changed, 39 insertions(+), 17 deletions(-)
 
 diff --git a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
-index e81ebd3..8daa844 100755
+index e81ebd3..9dda559 100755
 --- a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
 +++ b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
 @@ -44,6 +44,7 @@ CONFIG_FIX_EARLYCON_MEM=y
@@ -94,11 +94,16 @@ index e81ebd3..8daa844 100755
  CONFIG_ARCH_HAS_KCOV=y
  # CONFIG_KCOV is not set
  # CONFIG_DEBUG_SHIRQ is not set
-@@ -4344,30 +4359,33 @@ CONFIG_ARCH_HAS_KCOV=y
+@@ -4343,31 +4358,37 @@ CONFIG_ARCH_HAS_KCOV=y
+ # Debug Lockups and Hangs
  #
  # CONFIG_LOCKUP_DETECTOR is not set
- # CONFIG_DETECT_HUNG_TASK is not set
+-# CONFIG_DETECT_HUNG_TASK is not set
 -# CONFIG_WQ_WATCHDOG is not set
++CONFIG_DETECT_HUNG_TASK=y
++CONFIG_DEFAULT_HUNG_TASK_TIMEOUT=120
++# CONFIG_BOOTPARAM_HUNG_TASK_PANIC is not set
++# CONFIG_BOOTPARAM_HUNG_TASK_PANIC_VALUE=0
 +CONFIG_WQ_WATCHDOG=y
  # CONFIG_PANIC_ON_OOPS is not set
  CONFIG_PANIC_ON_OOPS_VALUE=0
@@ -138,7 +143,7 @@ index e81ebd3..8daa844 100755
  CONFIG_STACKTRACE=y
  # CONFIG_DEBUG_KOBJECT is not set
  CONFIG_DEBUG_BUGVERBOSE=y
-@@ -4381,6 +4399,7 @@ CONFIG_DEBUG_BUGVERBOSE=y
+@@ -4381,6 +4402,7 @@ CONFIG_DEBUG_BUGVERBOSE=y
  # RCU Debugging
  #
  # CONFIG_PROVE_RCU is not set
