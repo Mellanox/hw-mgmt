@@ -6,6 +6,7 @@ pwd=$(shell pwd)
 
 %:
 	dh $@
+	dh $@ --with=systemd
 
 override_dh_auto_configure:
 
