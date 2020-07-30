@@ -1,13 +1,15 @@
 [Unit]
 Description=Chassis HW management service of Mellanox systems
+Before=update-ports.service ledmgrd.service
+After=systemd-sysctl.service cumulus-platform.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStartPre=/bin/sh -c "/usr/bin/hw-management-ready.sh"
-ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
-ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
-PIDFile=/var/run/hw-management.pid
+ExecStartPre=/usr/bin/hw-management-ready.sh
+ExecStart=/usr/bin/hw-management.sh start
+ExecStop=/usr/bin/hw-management.sh stop
+PIDFile=/run/hw-management.pid
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=basic.target
