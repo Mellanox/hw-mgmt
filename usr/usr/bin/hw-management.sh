@@ -381,6 +381,10 @@ msn274x_specific()
 	echo 2000 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	echo 1 > $thermal_path/fan1_status
+	echo 1 > $thermal_path/fan2_status
+	echo 1 > $thermal_path/fan3_status
+	echo 1 > $thermal_path/fan4_status
 }
 
 msn21xx_specific()
@@ -470,6 +474,10 @@ msn201x_specific()
 	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	echo 1 > $thermal_path/fan1_status
+	echo 1 > $thermal_path/fan2_status
+	echo 1 > $thermal_path/fan3_status
+	echo 1 > $thermal_path/fan4_status
 }
 
 mqmxxx_msn37x_msn34x_specific()
