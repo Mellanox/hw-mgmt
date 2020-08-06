@@ -181,13 +181,23 @@ sudo apt-get install devscripts build-essential lintian
    * remove with: `yum remove hw-management` or `rpm -e hw-management`
 
 ## Activation, de-activation and reading status
-hw-management can be initialized and de-initialized by systemd service.
-The next command could be used in order to configure persistent initialization and de-initialization of hw-management:
-- `systemctl enable hw-management`
-- `systemctl disable hw-management`
+hw-management package from release 7.0010.1300 contains 2 separate services:
+one-shot hw-management and hw-management-tc thermal control service.
 
-The running status of hw-management unit can be obtained by the following command:
+hw-management services can be initialized and de-initialized by systemd commands.          
+The next command could be used in order to configure persistent initialization and 
+de-initialization of hw-management service:
+- `systemctl enable hw-management`                                               
+- `systemctl disable hw-management` 
+
+The next command could be used in order to configure persistent initialization and de-initialization of 
+thermal control hw-management-tc service:
+- `systemctl enable hw-management-tc`                                               
+- `systemctl disable hw-management-tc`                                             
+                                                                                 
+The running status of hw-management units can be obtained by the following command:
 - `systemctl status hw-management`
+- `systemctl status hw-management-tc`
 
 Logging records of the thermal control written by systemd-journald.service can be queried by the following commands:
 - `journalctl --unit=hw-management`
