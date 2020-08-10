@@ -182,7 +182,11 @@ sudo apt-get install devscripts build-essential lintian
 
 ## Activation, de-activation and reading status
 hw-management package from release 7.0010.1300 contains 2 separate services:
-one-shot hw-management and hw-management-tc thermal control service.
+one-shot hw-management and hw-management-tc thermal control service. hw-management-tc 
+is new service starting from 7.0010.1300. In older version TC was part of hw-management service.
+
+If you had TC disabled in previouse release (by commeting out TC activation in hw-management.sh)
+Please reffer to the below in order to disable TC using systemctl command 
 
 hw-management services can be initialized and de-initialized by systemd commands.          
 The next command could be used in order to configure persistent initialization and 
