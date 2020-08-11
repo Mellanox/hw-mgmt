@@ -32,9 +32,9 @@
 #
 
 # Helper to read SFP/QSFP present status through ethtool.
-sfp=$(basename ${0})
+sfp=$(basename "${0}")
 sfp="${sfp:0:${#sfp}-7}"
-ethtool -m $sfp hex on offset 0 length 1 > /dev/null 2>&1
+ethtool -m "$sfp" hex on offset 0 length 1 > /dev/null 2>&1
 if [ $? -ne 0 ]; then
 	echo 0
 else

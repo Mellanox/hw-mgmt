@@ -1,13 +1,13 @@
 [Unit]
 Description=Chassis HW management service of Mellanox systems
+Documentation=man:hw-management.service(8)
 
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStartPre=/bin/sh -c "/usr/bin/hw-management-ready.sh"
+ExecStartPre=-/bin/sh -c "/usr/bin/hw-management-ready.sh"
 ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
-PIDFile=/var/run/hw-management.pid
 
 [Install]
 WantedBy=multi-user.target

@@ -38,23 +38,23 @@ tmp=$0
 LED_STATE=none
 FNAME=$(basename "$tmp")
 DNAME=$(dirname "$tmp")
-LED_NAME=`echo $FNAME | cut -d_ -f1-2`
-FNAMES=(`ls "$DNAME"/"$LED_NAME"*`)
+LED_NAME=$(echo "$FNAME" | cut -d_ -f1-2)
+FNAMES=($(ls "$DNAME"/"$LED_NAME"*))
 
 check_led_blink()
 {
 	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on ]; then
-		val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on`
+		val1=$(< "$DNAME"/"$LED_NAME"_"$COLOR"_delay_on)
 	else
 		val1=0
 	fi
 	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off ]; then
-		val2=`cat "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off`
+		val2=$(< "$DNAME"/"$LED_NAME"_"$COLOR"_delay_off)
 	else
 		val2=0
 	fi
 	if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then
-		val3=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
+		val3=$(< "$DNAME"/"$LED_NAME"_"$COLOR")
 	else
 		val3=0
 	fi
@@ -62,7 +62,7 @@ check_led_blink()
 		LED_STATE="$COLOR"_blink
 		return 1
 	fi
-	return 0		
+	return 0
 }
 
 for CURR_FILE in "${FNAMES[@]}"
@@ -70,24 +70,24 @@ do
 	if echo "$CURR_FILE" | (grep -q '_state\|_capability') ; then
 		continue
 	fi
-	COLOR=`echo $CURR_FILE | cut -d_ -f3`
+	COLOR=$(echo "$CURR_FILE" | cut -d_ -f3)
 	if [ -z "${COLOR}" ] ; then
 		continue
 	fi
-	if echo "$CURR_FILE" | grep -q "_delay" ; then	
-		check_led_blink $COLOR
+	if echo "$CURR_FILE" | grep -q "_delay" ; then
+		check_led_blink "$COLOR"
 		if [ $? -eq 1 ]; then
 			break;
 		fi
 	fi
 	if [ "${CURR_FILE}" == "$DNAME"/"${LED_NAME}_${COLOR}" ] ; then
 		if [ -e "$DNAME"/"$LED_NAME"_"$COLOR" ]; then 
-			val1=`cat "$DNAME"/"$LED_NAME"_"$COLOR"`
+			val1=$(< "$DNAME"/"$LED_NAME"_"$COLOR")
 		else
 			val1=0
 		fi
 		if [ "${val1}" != "0" ]; then
-			check_led_blink $COLOR
+			check_led_blink "$COLOR"
 			if [ $? -eq 1 ]; then
 				break;
 			else
@@ -98,6 +98,6 @@ do
 	fi
 done
 
-echo ${LED_STATE} > "$DNAME"/"$LED_NAME"
+echo "${LED_STATE}" > "$DNAME"/"$LED_NAME"
 exit 0
 

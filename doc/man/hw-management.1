@@ -1,0 +1,52 @@
+.TH HW-MANAGEMENT.SH "1" "June 2020" "hw-management.sh " "User Commands"
+.SH NAME
+hw-management.sh \- Chassis management for Mellanox systems
+.SH SYNOPSIS
+Mellanox hw-management package uses a virtual file system provided by the Linux kernel
+called sysfs.
+The sysfs file system enumerates the devices and buses attached to the system in a file
+system hierarchy that can be accessed from the user space.
+The major advantage of working with sysfs is that it makes HW hierarchy easy to understand
+and control without having to learn about HW component location and the buses through
+which they are connected.
+.TP
+Usage:
+.B hw-management.sh
+[\fI\,Options\/\fR]
+.SH OPTIONS
+.TP
+start
+Start hw\-management service, supposed to be
+activated at initialization by system service
+control.
+.TP
+stop
+Stop hw\-management service, supposed to be
+activated at system shutdown by system service
+control.
+.TP
+chipup
+Manual activation of ASIC I2C driver.
+.TP
+chipdown
+Manual de\-activation of ASIC I2C driver.
+.TP
+chipupen
+Set 'chipup_dis' attribute to zero.
+.TP
+chipupdis <n>
+Set 'chipup_dis' attribute to <n>, when <n>
+.TP
+thermsuspend
+Suspend thermal control (if thermal control is
+activated by hw\-management package.
+Not relevant for users who disable hw\-management
+thermal control.
+.TP
+thermresume
+Resume thermal control.
+Not relevant for users who disable hw\-management
+thermal control.
+.IP
+restart
+force\-reload    Performs hw\-management 'stop' and the 'start.

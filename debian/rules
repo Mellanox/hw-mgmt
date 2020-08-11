@@ -22,4 +22,12 @@ override_dh_auto_install:
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
 
 override_dh_installinit:
-	dh_installinit
+	dh_installinit --name=hw-management
+	dh_installinit --name=hw-management-tc
+
+override_dh_systemd_enable:
+	dh_systemd_enable --name=hw-management
+
+override_dh_systemd_start:
+	dh_systemd_start --name=hw-management
+	dh_systemd_start --name=hw-management-tc

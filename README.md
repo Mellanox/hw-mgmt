@@ -105,6 +105,7 @@ CONFIG_THERMAL_GOV_STEP_WISE=y
 CONFIG_PMBUS=m
 CONFIG_SENSORS_PMBUS=m
 CONFIG_HWMON=y
+CONFIG_SENSORS_JC42=m
 CONFIG_SENSORS_LM75=m
 CONFIG_SENSORS_TMP102=m
 CONFIG_LEDS_MLXREG=m
@@ -123,6 +124,7 @@ CONFIG_LPC_ICH=m
 CONFIG_CPU_THERMAL=y
 CONFIG_X86_PKG_TEMP_THERMAL=m
 CONFIG_SENSORS_CORETEMP=m
+CONFIG_INTEL_PCH_THERMAL=m
 CONFIG_IGB=y
 CONFIG_IGB_HWMON=y
 CONFIG_MFD_CORE=m
@@ -179,13 +181,27 @@ sudo apt-get install devscripts build-essential lintian
    * remove with: `yum remove hw-management` or `rpm -e hw-management`
 
 ## Activation, de-activation and reading status
-hw-management can be initialized and de-initialized by systemd service.
-The next command could be used in order to configure persistent initialization and de-initialization of hw-management:
-- `systemctl enable hw-management`
-- `systemctl disable hw-management`
+hw-management package from release 7.0010.1300 contains 2 separate services:
+one-shot hw-management and hw-management-tc thermal control service. hw-management-tc 
+is new service starting from 7.0010.1300. In older version TC was part of hw-management service.
 
-The running status of hw-management unit can be obtained by the following command:
+If you had TC disabled in previouse release (by commeting out TC activation in hw-management.sh)
+Please reffer to the below in order to disable TC using systemctl command 
+
+hw-management services can be initialized and de-initialized by systemd commands.          
+The next command could be used in order to configure persistent initialization and 
+de-initialization of hw-management service:
+- `systemctl enable hw-management`                                               
+- `systemctl disable hw-management` 
+
+The next command could be used in order to configure persistent initialization and de-initialization of 
+thermal control hw-management-tc service:
+- `systemctl enable hw-management-tc`                                               
+- `systemctl disable hw-management-tc`                                             
+                                                                                 
+The running status of hw-management units can be obtained by the following command:
 - `systemctl status hw-management`
+- `systemctl status hw-management-tc`
 
 Logging records of the thermal control written by systemd-journald.service can be queried by the following commands:
 - `journalctl --unit=hw-management`
