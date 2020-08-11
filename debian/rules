@@ -20,6 +20,8 @@ override_dh_auto_install:
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
 	dh_installdirs -p$(pname) lib/udev/rules.d/
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
+	dh_installdirs -p$(pname) etc/hw-management-sensors
+	cp usr/etc/hw-management-sensors/* debian/$(pname)/etc/hw-management-sensors
 
 override_dh_installinit:
 	dh_installinit --name=hw-management

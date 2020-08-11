@@ -105,6 +105,7 @@ system_path=$hw_management_path/system
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
+lm_sensors_configs_path="/etc/hw-management-sensors"
 LOCKFILE="/var/run/hw-management.lock"
 udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
@@ -390,6 +391,7 @@ msn274x_specific()
 	echo 2000 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
 }
 
 msn21xx_specific()
@@ -414,6 +416,7 @@ msn21xx_specific()
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	echo cpld1 > $config_path/cpld_port
+	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
 }
 
 msn24xx_specific()
@@ -437,6 +440,7 @@ msn24xx_specific()
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
+	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 }
 
 msn27xx_msb_msx_specific()
@@ -460,6 +464,7 @@ msn27xx_msb_msx_specific()
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
+	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 }
 
 msn201x_specific()
@@ -483,6 +488,7 @@ msn201x_specific()
 	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
 }
 
 mqmxxx_msn37x_msn34x_specific()
@@ -504,6 +510,7 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
 msn3420_specific()
@@ -526,6 +533,7 @@ msn3420_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
 msn38xx_specific()
@@ -547,6 +555,7 @@ msn38xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3800_sensors.conf"
 }
 
 msn24102_specific()
@@ -617,6 +626,7 @@ msn47xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 msn46xx_specific()
@@ -680,6 +690,7 @@ msn_spc2_common()
 			mqmxxx_msn37x_msn34x_specific
 			;;
 	esac
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
 msn_spc3_common()
@@ -696,6 +707,7 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 check_system()
@@ -969,6 +981,12 @@ do_start()
 	fi
 	# Information for thermal control service
 	echo $thermal_type > $config_path/thermal_type
+
+	if [ -v "lm_sensors_config" ] && [ -f $lm_sensors_config ]; then
+		ln -sf $lm_sensors_config $config_path/lm_sensors_config
+	else
+		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+	fi
 }
 
 do_stop()
