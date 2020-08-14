@@ -1032,7 +1032,9 @@ thermal_control_preinit()
 	# Periodic report counter
 	periodic_report=$((polling_time*report_counter))
 	echo $periodic_report > $config_path/periodic_report
-	echo 0 > $thermal_path/fan_dynamic_min
+	fan_dynamic_min_init=$((fan_dynamic_min -fan_max_state))
+	fan_dynamic_min_init=$((fan_dynamic_min_init*10))
+	echo $fan_dynamic_min_init > $thermal_path/fan_dynamic_min
 	count=0
 	suspend_thermal=0
 }
