@@ -1,0 +1,272 @@
+From afe1b7571b148e9c1da233143880304597fed04f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Mon, 17 Aug 2020 12:31:33 +0300
+Subject: [PATCH backport v4.19 7/7] hw-mgmt: kernel patches: 4.19: i2c: mux:
+ mlxcpld: Extend driver functionality and update licenses
+
+The patchset adds new features for the existing Mellanox systems.
+
+Patches #1-#2 update license to SPDX-License.
+Patch #3  moves header file out of x86 realm.
+Patch #4 adds support for word address space devices.
+Patch #5 extends mux number supported by driver.
+
+i2c: mux: mlxcpld: Update module license
+
+Update license to SPDX-License.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+
+platform/x86: mlxcpld: Update module license
+
+Update license to SPDX-License.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+
+i2c: mux: mlxcpld: Move header file out of x86 realm
+
+Move out header file from include/linux/platform_data/x86/ to
+include/linux/platform_data/, since it does not depend on x86
+architecture.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+
+i2c: mux: mlxcpld: Extend driver to support word address space devices
+
+Extend driver to allow I2C routing control through CPLD devices with
+word address space. Till now only CPLD devices with byte address space
+have been supported.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+Reviewed-by: Michael Shych <michaelsh@mellanox.com>
+
+i2c: mux: mlxcpld: Allow to extend mux number
+
+Allow to extend mux number supported by driver.
+Currently it is limited by eight, which is not enough for new coming
+Mellanox modular system with line cards, which require up to 64 mux
+support.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+Reviewed-by: Michael Shych <michaelsh@mellanox.com>
+---
+ drivers/i2c/muxes/i2c-mux-mlxcpld.c       | 68 ++++++++++++-------------------
+ include/linux/platform_data/x86/mlxcpld.h | 52 -----------------------
+ include/linux/platform_data/xmlxcpld.h    | 24 +++++++++++
+ 3 files changed, 49 insertions(+), 95 deletions(-)
+ delete mode 100644 include/linux/platform_data/x86/mlxcpld.h
+ create mode 100644 include/linux/platform_data/xmlxcpld.h
+
+diff --git a/drivers/i2c/muxes/i2c-mux-mlxcpld.c b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+index f2bf3e57e..1c3680256 100644
+--- a/drivers/i2c/muxes/i2c-mux-mlxcpld.c
++++ b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+@@ -1,35 +1,8 @@
++// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
+ /*
+- * drivers/i2c/muxes/i2c-mux-mlxcpld.c
+- * Copyright (c) 2016 Mellanox Technologies. All rights reserved.
+- * Copyright (c) 2016 Michael Shych <michaels@mellanox.com>
++ * Mellanox i2c mux driver
+  *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- * 3. Neither the names of the copyright holders nor the names of its
+- *    contributors may be used to endorse or promote products derived from
+- *    this software without specific prior written permission.
+- *
+- * Alternatively, this software may be distributed under the terms of the
+- * GNU General Public License ("GPL") version 2 as published by the Free
+- * Software Foundation.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+- * POSSIBILITY OF SUCH DAMAGE.
++ * Copyright (C) 2016-2020 Mellanox Technologies
+  */
+ 
+ #include <linux/device.h>
+@@ -38,12 +11,10 @@
+ #include <linux/io.h>
+ #include <linux/init.h>
+ #include <linux/module.h>
+-#include <linux/platform_data/x86/mlxcpld.h>
++#include <linux/platform_data/mlxcpld.h>
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
+ 
+-#define CPLD_MUX_MAX_NCHANS	8
+-
+ /* mlxcpld_mux - mux control structure:
+  * @last_chan - last register value
+  * @client - I2C device client
+@@ -98,14 +69,15 @@ static int mlxcpld_mux_reg_write(struct i2c_adapter *adap,
+ 
+ 	return __i2c_smbus_xfer(adap, client->addr, client->flags,
+ 				I2C_SMBUS_WRITE, pdata->sel_reg_addr,
+-				I2C_SMBUS_BYTE_DATA, &data);
++				pdata->reg_size, &data);
+ }
+ 
+ static int mlxcpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
+ {
+ 	struct mlxcpld_mux *data = i2c_mux_priv(muxc);
+ 	struct i2c_client *client = data->client;
+-	u8 regval = chan + 1;
++	struct mlxcpld_mux_plat_data *pdata = dev_get_platdata(&client->dev);
++	u8 regval = pdata->base_nr ? chan - pdata->base_nr : chan + 1;
+ 	int err = 0;
+ 
+ 	/* Only select the channel if its different from the last channel */
+@@ -137,15 +109,28 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
+ 	struct i2c_mux_core *muxc;
+ 	int num, force;
+ 	struct mlxcpld_mux *data;
++	u32 func;
+ 	int err;
+ 
+ 	if (!pdata)
+ 		return -EINVAL;
+ 
+-	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_WRITE_BYTE_DATA))
++	pdata->reg_size = pdata->reg_size ? pdata->reg_size : I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
++	switch (pdata->reg_size) {
++	case I2C_SMBUS_WORD_DATA:
++		func = I2C_FUNC_SMBUS_WRITE_WORD_DATA;
++		break;
++	case I2C_SMBUS_BYTE_DATA:
++		func = I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	if (!i2c_check_functionality(adap, func))
+ 		return -ENODEV;
+ 
+-	muxc = i2c_mux_alloc(adap, &client->dev, CPLD_MUX_MAX_NCHANS,
++	muxc = i2c_mux_alloc(adap, &client->dev, pdata->num_adaps,
+ 			     sizeof(*data), 0, mlxcpld_mux_select_chan,
+ 			     mlxcpld_mux_deselect);
+ 	if (!muxc)
+@@ -157,12 +142,9 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
+ 	data->last_chan = 0; /* force the first selection */
+ 
+ 	/* Create an adapter for each channel. */
+-	for (num = 0; num < CPLD_MUX_MAX_NCHANS; num++) {
+-		if (num >= pdata->num_adaps)
+-			/* discard unconfigured channels */
+-			break;
+-
+-		force = pdata->adap_ids[num];
++	for (num = 0; num < pdata->num_adaps; num++) {
++		force = pdata->base_nr ? (pdata->base_nr +
++			pdata->adap_ids[num]) : pdata->adap_ids[num];
+ 
+ 		err = i2c_mux_add_adapter(muxc, force, num, 0);
+ 		if (err)
+diff --git a/include/linux/platform_data/x86/mlxcpld.h b/include/linux/platform_data/x86/mlxcpld.h
+deleted file mode 100644
+index b08dcb183..000000000
+--- a/include/linux/platform_data/x86/mlxcpld.h
++++ /dev/null
+@@ -1,52 +0,0 @@
+-/*
+- * mlxcpld.h - Mellanox I2C multiplexer support in CPLD
+- *
+- * Copyright (c) 2016 Mellanox Technologies. All rights reserved.
+- * Copyright (c) 2016 Michael Shych <michaels@mellanox.com>
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- * 3. Neither the names of the copyright holders nor the names of its
+- *    contributors may be used to endorse or promote products derived from
+- *    this software without specific prior written permission.
+- *
+- * Alternatively, this software may be distributed under the terms of the
+- * GNU General Public License ("GPL") version 2 as published by the Free
+- * Software Foundation.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+- * POSSIBILITY OF SUCH DAMAGE.
+- */
+-
+-#ifndef _LINUX_I2C_MLXCPLD_H
+-#define _LINUX_I2C_MLXCPLD_H
+-
+-/* Platform data for the CPLD I2C multiplexers */
+-
+-/* mlxcpld_mux_plat_data - per mux data, used with i2c_register_board_info
+- * @adap_ids - adapter array
+- * @num_adaps - number of adapters
+- * @sel_reg_addr - mux select register offset in CPLD space
+- */
+-struct mlxcpld_mux_plat_data {
+-	int *adap_ids;
+-	int num_adaps;
+-	int sel_reg_addr;
+-};
+-
+-#endif /* _LINUX_I2C_MLXCPLD_H */
+diff --git a/include/linux/platform_data/xmlxcpld.h b/include/linux/platform_data/xmlxcpld.h
+new file mode 100644
+index 000000000..e6c18bf01
+--- /dev/null
++++ b/include/linux/platform_data/xmlxcpld.h
+@@ -0,0 +1,24 @@
++/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
++/*
++ * Mellanox I2C multiplexer support in CPLD
++ *
++ * Copyright (C) 2016-2020 Mellanox Technologies
++ */
++
++#ifndef _LINUX_I2C_MLXCPLD_H
++#define _LINUX_I2C_MLXCPLD_H
++
++/* Platform data for the CPLD I2C multiplexers */
++
++/* mlxcpld_mux_plat_data - per mux data, used with i2c_register_board_info
++ * @adap_ids - adapter array
++ * @num_adaps - number of adapters
++ * @sel_reg_addr - mux select register offset in CPLD space
++ */
++struct mlxcpld_mux_plat_data {
++	int *adap_ids;
++	int num_adaps;
++	int sel_reg_addr;
++};
++
++#endif /* _LINUX_I2C_MLXCPLD_H */
+-- 
+2.11.0
+
