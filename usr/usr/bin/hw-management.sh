@@ -352,6 +352,10 @@ msn3510_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn4800_connect_table=(	24c32 0x51 8 )
+
+msn4800_dis_table=(	0x51 8 )
+
 ACTION=$1
 
 log_err()
@@ -710,6 +714,18 @@ msn_spc3_common()
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
+msn48xx_specific()
+{
+	connect_size=${#msn4800_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn4800_connect_table[i]}
+	done
+	disconnect_size=${#msn4800_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn4800_dis_table[i]}
+	done
+}
+
 check_system()
 {
 	# Check ODM
@@ -738,6 +754,9 @@ check_system()
 			;;
 		VMOD0010)
 			msn_spc3_common
+			;;
+		VMOD0011)
+			msn48xx_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
