@@ -1,0 +1,314 @@
+From 3894ec876bbbbec5b909473ac3c269260868080a Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Mon, 17 Aug 2020 22:38:16 +0300
+Subject: [PATCH backport v4.19 7/7] hwmon: (mlxreg-fan) Add support for fan
+ drawers capability and present registers
+
+Add support for fan drawer capability and present registers.
+The motivation is to setup the correct mapping between the FAN drawers
+and tachometer. Some systems are equipped with FAN drawers with one
+tachometer inside, Others with FAN drawers with several tachometers
+inside. Using present register along with 'tachometer to drawer'
+mapping allows to skip reading missed tachometers and expose input for
+them as zero.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/hwmon/mlxreg-fan.c           | 50 ++++++++++++++++++++++++++++++++++--
+ drivers/platform/x86/mlx-platform.c  | 14 ++++++++++
+ include/linux/platform_data/mlxreg.h | 34 ++++--------------------
+ 3 files changed, 67 insertions(+), 31 deletions(-)
+
+diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
+index 7028a4f49..e0c216e31 100644
+--- a/drivers/hwmon/mlxreg-fan.c
++++ b/drivers/hwmon/mlxreg-fan.c
+@@ -67,11 +67,13 @@
+  * @connected: indicates if tachometer is connected;
+  * @reg: register offset;
+  * @mask: fault mask;
++ * @reg_prsnt: present register offset;
+  */
+ struct mlxreg_fan_tacho {
+ 	bool connected;
+ 	u32 reg;
+ 	u32 mask;
++	u32 reg_prsnt;
+ };
+ 
+ /*
+@@ -92,6 +94,7 @@ struct mlxreg_fan_pwm {
+  * @regmap: register map of parent device;
+  * @tacho: tachometer data;
+  * @pwm: PWM data;
++ * @tacho_in_drwr - number of tacho in one drawer;
+  * @samples: minimum allowed samples per pulse;
+  * @divider: divider value for tachometer RPM calculation;
+  * @cooling: cooling device levels;
+@@ -103,6 +106,7 @@ struct mlxreg_fan {
+ 	struct mlxreg_core_platform_data *pdata;
+ 	struct mlxreg_fan_tacho tacho[MLXREG_FAN_MAX_TACHO];
+ 	struct mlxreg_fan_pwm pwm;
++	int tacho_in_drwr;
+ 	int samples;
+ 	int divider;
+ 	u8 cooling_levels[MLXREG_FAN_MAX_STATE + 1];
+@@ -116,13 +120,37 @@ mlxreg_fan_read(struct device *dev, enum hwmon_sensor_types type, u32 attr,
+ 	struct mlxreg_fan *fan = dev_get_drvdata(dev);
+ 	struct mlxreg_fan_tacho *tacho;
+ 	u32 regval;
+-	int err;
++	int bit, err;
+ 
+ 	switch (type) {
+ 	case hwmon_fan:
+ 		tacho = &fan->tacho[channel];
+ 		switch (attr) {
+ 		case hwmon_fan_input:
++			/*
++			 * Check FAN presence: FAN related bit in presence
++			 * register is one, if FAN is not physically present,
++			 * zero - otherwise.
++			 */
++			if (tacho->reg_prsnt) {
++				err = regmap_read(fan->regmap, tacho->reg_prsnt,
++						  &regval);
++				if (err)
++					return err;
++
++				/*
++				 * Map channel to presence bit - drawer can be
++				 * equipped with one or few FANs, while
++				 * presence is indicated for drawer.
++				 */
++				bit = channel / fan->tacho_in_drwr;
++				if ((BIT(bit) & regval)) {
++					/* FAN is not physically present. */
++					*val = 0;
++					return 0;
++				}
++			}
++
+ 			err = regmap_read(fan->regmap, tacho->reg, &regval);
+ 			if (err)
+ 				return err;
+@@ -406,9 +434,11 @@ static int mlxreg_fan_speed_divider_get(struct mlxreg_fan *fan,
+ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 			     struct mlxreg_core_platform_data *pdata)
+ {
++	int tacho_num = 0, regval, regsize, drwr_num = 0, i;
+ 	struct mlxreg_core_data *data = pdata->data;
+ 	bool configured = false;
+-	int tacho_num = 0, i;
++	unsigned long drwrs;
++	u32 bit;
+ 	int err;
+ 
+ 	fan->samples = MLXREG_FAN_TACHO_SAMPLES_PER_PULSE_DEF;
+@@ -433,6 +463,7 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 
+ 			fan->tacho[tacho_num].reg = data->reg;
+ 			fan->tacho[tacho_num].mask = data->mask;
++			fan->tacho[tacho_num].reg_prsnt = data->reg_prsnt;
+ 			fan->tacho[tacho_num++].connected = true;
+ 		} else if (strnstr(data->label, "pwm", sizeof(data->label))) {
+ 			if (fan->pwm.connected) {
+@@ -471,6 +502,21 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
+ 		}
+ 	}
+ 
++	if (pdata->capability) {
++		/* Obtain the number of FAN drawers. */
++		err = regmap_read(fan->regmap, pdata->capability, &regval);
++		if (err) {
++			dev_err(fan->dev, "Failed to query capability register 0x%08x\n",
++				pdata->capability);
++			return err;
++		}
++		regsize = regmap_get_val_bytes(fan->regmap);
++		drwrs = regval;
++		for_each_set_bit(bit, &drwrs, 8 * regsize)
++			drwr_num++;
++		fan->tacho_in_drwr = tacho_num / drwr_num;
++	}
++
+ 	/* Init cooling levels per PWM state. */
+ 	for (i = 0; i < MLXREG_FAN_SPEED_MIN_LEVEL; i++)
+ 		fan->cooling_levels[i] = MLXREG_FAN_SPEED_MIN_LEVEL;
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index d6c87fb88..7d12bf4b0 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -1831,6 +1831,8 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(0),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
++
+ 	},
+ 	{
+ 		.label = "tacho2",
+@@ -1838,6 +1840,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(1),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho3",
+@@ -1845,6 +1848,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(2),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho4",
+@@ -1852,6 +1856,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(3),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho5",
+@@ -1859,6 +1864,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(4),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho6",
+@@ -1866,6 +1872,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(5),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho7",
+@@ -1873,6 +1880,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(6),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho8",
+@@ -1880,6 +1888,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
+ 		.bit = BIT(7),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho9",
+@@ -1887,6 +1896,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
+ 		.bit = BIT(0),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho10",
+@@ -1894,6 +1904,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
+ 		.bit = BIT(1),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho11",
+@@ -1901,6 +1912,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
+ 		.bit = BIT(2),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho12",
+@@ -1908,6 +1920,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
+ 		.bit = BIT(3),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "conf",
+@@ -1918,6 +1931,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ static struct mlxreg_core_platform_data mlxplat_default_fan_data = {
+ 		.data = mlxplat_mlxcpld_default_fan_data,
+ 		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_fan_data),
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
+ };
+ 
+ /* Watchdog type1: hardware implementation version1
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index 03d768d73..69d8b6866 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -1,34 +1,7 @@
++// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
+ /*
+- * Copyright (c) 2017 Mellanox Technologies. All rights reserved.
+- * Copyright (c) 2017 Vadim Pasternak <vadimp@mellanox.com>
+  *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- * 3. Neither the names of the copyright holders nor the names of its
+- *    contributors may be used to endorse or promote products derived from
+- *    this software without specific prior written permission.
+- *
+- * Alternatively, this software may be distributed under the terms of the
+- * GNU General Public License ("GPL") version 2 as published by the Free
+- * Software Foundation.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+- * POSSIBILITY OF SUCH DAMAGE.
++ * Copyright (C) 2016-2020 Mellanox Technologies
+  */
+ 
+ #ifndef __LINUX_PLATFORM_DATA_MLXREG_H
+@@ -78,6 +51,7 @@ struct mlxreg_hotplug_device {
+  * @mask: attribute access mask;
+  * @bit: attribute effective bit;
+  * @capability: attribute capability register;
++ * @reg_prsnt: attribute presence register;
+  * @mode: access mode;
+  * @np - pointer to node platform associated with attribute;
+  * @hpdev - hotplug device data;
+@@ -91,6 +65,7 @@ struct mlxreg_core_data {
+ 	u32 mask;
+ 	u32 bit;
+ 	u32 capability;
++	u32 reg_prsnt;
+ 	umode_t	mode;
+ 	struct device_node *np;
+ 	struct mlxreg_hotplug_device hpdev;
+@@ -143,6 +118,7 @@ struct mlxreg_core_platform_data {
+ 	u32 features;
+ 	u32 version;
+ 	char identity[MLXREG_CORE_LABEL_MAX_SIZE];
++	u32 capability;
+ };
+ 
+ /**
+-- 
+2.11.0
+
