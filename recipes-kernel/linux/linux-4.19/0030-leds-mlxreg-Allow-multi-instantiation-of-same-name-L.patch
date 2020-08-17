@@ -1,0 +1,57 @@
+From bc1b0962fc76ad42bbdb63b9a45d7247f34cdf9c Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Wed, 3 Jun 2020 07:53:57 +0300
+Subject: [PATCH backport v4.19 4/6] leds: mlxreg: Allow multi-instantiation of
+ same name LED for modular systems
+
+It could be more than one instance of LED with the same name in the
+modular systems. For example, "status" or "uid" LED can be located
+on chassis and on each line card of modular system.
+In order to avoid conflicts with duplicated names, append platform
+device Id, which is unique, to LED name after driver name.
+Thus, for example, "status" LED on chassis is to be named
+"mlxreg:status:green". As it is named now on non-modular systems, on
+which platform device Id is not specified. While for the line cards
+LEDs it will be called like: "mlxreg48:status:green",
+"mlxreg66:status:green", etcetera.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/leds/leds-mlxreg.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 0c14a7406..53130a865 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -187,7 +187,7 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 	struct mlxreg_core_data *data = led_pdata->data;
+ 	struct mlxreg_led_data *led_data;
+ 	struct led_classdev *led_cdev;
+-	int brightness;
++	enum led_brightness brightness;
+ 	u32 regval;
+ 	int i;
+ 	int err;
+@@ -228,11 +228,15 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_GREEN_SOLID;
+ 		}
+-		sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",
+-			data->label);
++		if (priv->pdev->id > 0)
++			sprintf(led_data->led_cdev_name, "%s%d:%s", "mlxreg",
++				priv->pdev->id, data->label);
++		else
++			sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",
++				data->label);
+ 		led_cdev->name = led_data->led_cdev_name;
+ 		led_cdev->brightness = brightness;
+-		led_cdev->max_brightness = 1;
++		led_cdev->max_brightness = LED_ON;
+ 		led_cdev->brightness_set_blocking =
+ 						mlxreg_led_brightness_set;
+ 		led_cdev->brightness_get = mlxreg_led_brightness_get;
+-- 
+2.11.0
+
