@@ -1,0 +1,39 @@
+From 43a2ee1b52d4b1e1b42a9a7314b4cefadce4d7af Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Thu, 20 Aug 2020 19:20:23 +0300
+Subject: [PATCH backport v4.19 13/14] platform_data/mlxreg: Extend hotplug
+ device structure
+
+Extend the structure 'mlxreg_hotplug_device" with platform device field
+to allow transition of the register map and system interrupt line number
+to underlying hotplug devices, sharing the same register map and
+same interrupt line with 'mlxreg-hotplug' driver.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ include/linux/platform_data/mlxreg.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index 729f14efe..12751289b 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -71,6 +71,7 @@ enum mlxreg_hotplug_device_action {
+  * @client: I2C device client;
+  * @brdinfo: device board information;
+  * @nr: I2C device adapter number, to which device is to be attached;
++ * @pdev: platform device, if device is instantiated as a platform device;
+  * @action: action to be performed upon event receiving;
+  *
+  * Structure represents I2C hotplug device static data (board topology) and
+@@ -81,6 +82,7 @@ struct mlxreg_hotplug_device {
+ 	struct i2c_client *client;
+ 	struct i2c_board_info *brdinfo;
+ 	int nr;
++	struct platform_device *pdev;
+ 	enum mlxreg_hotplug_device_action action;
+ };
+ 
+-- 
+2.11.0
+
