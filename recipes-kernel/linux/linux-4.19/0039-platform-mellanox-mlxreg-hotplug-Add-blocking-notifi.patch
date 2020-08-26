@@ -1,0 +1,109 @@
+From 3a3f3777346227dfea7e1cc1dd92b61128a8d1b0 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Wed, 26 Aug 2020 08:48:54 +0300
+Subject: [PATCH backport v4.19 16/16] platform/mellanox: mlxreg-hotplug: Add
+ blocking notifier support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add blocking notifier support. Motivation is to allow distribution of
+hotplug events between the platform drivers, sharing the common
+register map space.
+‘mlxre-hotplug’ upon receiving these events by the interrupt handler
+will advertise them through mlxplat_blk_notifiers_call_chain() API.
+It will allow to any Mellanox platform drivers, which is registered
+by mlxplat_blk_notifier_register() API to receives the notification
+and handle it accordingly.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c | 44 ++++++++++++++++++++++++++++++
+ 1 file changed, 44 insertions(+)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index 95cc1caf6..bd8a10a09 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -30,6 +30,7 @@
+ 
+ #define MLXREG_HOTPLUG_ATTRS_MAX	24
+ #define MLXREG_HOTPLUG_NOT_ASSERT	3
++#define MLXREG_HOTPLUG_SHIFT_NR		16
+ 
+ /**
+  * struct mlxreg_hotplug_priv_data - platform private data:
+@@ -105,6 +106,24 @@ mlxreg_hotplug_pdata_export(void *pdata, void *regmap, int irq)
+ 	dev_pdata->irq = irq;
+ }
+ 
++static void
++mlxreg_hotplug_notify(struct mlxreg_hotplug_priv_data *priv,
++		      struct mlxreg_core_hotplug_platform_data *pdata,
++		      struct mlxreg_core_data *data,
++		      enum mlxreg_hotplug_kind kind, int id, bool act)
++{
++	struct mlxplat_notifier_info info;
++
++	info.handle = data->hpdev.client;
++	info.slot = id;
++	info.action = act;
++	strncpy(info.label, data->label, sizeof(data->label));
++	info.topo_id = rol32(data->hpdev.nr + pdata->shift_nr,
++			     MLXREG_HOTPLUG_SHIFT_NR) |
++			     data->hpdev.brdinfo->addr;
++	mlxplat_blk_notifiers_call_chain(kind, &info);
++}
++
+ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 					struct mlxreg_core_data *data,
+ 					enum mlxreg_hotplug_kind kind, int id)
+@@ -167,6 +186,16 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 		break;
+ 	}
+ 
++	switch (kind) {
++	case MLXREG_HOTPLUG_LC_POWERED:
++	case MLXREG_HOTPLUG_LC_SYNCED:
++	case MLXREG_HOTPLUG_LC_READY:
++		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 1);
++		break;
++	default:
++		break;
++	}
++
+ 	return 0;
+ }
+ 
+@@ -175,6 +204,8 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
+ 			      struct mlxreg_core_data *data,
+ 			      enum mlxreg_hotplug_kind kind, int id)
+ {
++	struct mlxreg_core_hotplug_platform_data *pdata;
++
+ 	/* Notify user by sending hwmon uevent. */
+ 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, false);
+ 
+@@ -197,6 +228,19 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
+ 	default:
+ 		break;
+ 	}
++
++	switch (kind) {
++	case MLXREG_HOTPLUG_LC_PRESENT:
++	case MLXREG_HOTPLUG_LC_VERIFIED:
++	case MLXREG_HOTPLUG_LC_POWERED:
++	case MLXREG_HOTPLUG_LC_SYNCED:
++	case MLXREG_HOTPLUG_LC_READY:
++		pdata = dev_get_platdata(&priv->pdev->dev);
++		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 0);
++		break;
++	default:
++		break;
++	}
+ }
+ 
+ static ssize_t mlxreg_hotplug_attr_show(struct device *dev,
+-- 
+2.11.0
+

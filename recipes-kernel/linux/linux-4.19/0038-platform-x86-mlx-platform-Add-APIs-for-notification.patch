@@ -1,0 +1,116 @@
+From 090bd24f959c41d1bd0e53390c9574b8e8a7d269 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Wed, 26 Aug 2020 08:22:04 +0300
+Subject: [PATCH backport v4.19 15/16] platform/x86: mlx-platform:: Add APIs
+ for notification
+
+Add APIs for blocking notifier support including register, unregister
+and blocking notifies call chain callback and notifier info block
+structure.
+Motivation is to provide an interface between Mellanox platform
+drivers, sharing the common register map space, for the new modular
+systems.
+This interface allows handling of hardware signals, indicating line
+card state changes, where signals report presence state, power state,
+ready state of line card.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/x86/mlx-platform.c  | 45 ++++++++++++++++++++++++++++++++++++
+ include/linux/platform_data/mlxreg.h | 26 +++++++++++++++++++++
+ 2 files changed, 71 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 6672a1b30..61868e060 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -265,6 +265,51 @@ struct mlxplat_priv {
+ 	void *regmap;
+ };
+ 
++static BLOCKING_NOTIFIER_HEAD(mlxplat_blk_notif_chain);
++
++/**
++ *	mlx_plat_blk_notifiers_call_chain - Call blocking notifiers
++ *	@val: value passed unmodified to notifier function
++ *	@info: notifier information data
++ *
++ *	Call platform blocking notifier blocks.
++ */
++int mlxplat_blk_notifiers_call_chain(unsigned long val,
++				     struct mlxplat_notifier_info *info)
++{
++	return blocking_notifier_call_chain(&mlxplat_blk_notif_chain,
++					    val, info);
++}
++EXPORT_SYMBOL_GPL(mlxplat_blk_notifiers_call_chain);
++
++/**
++ *	mlx_plat_blk_notifier_register - Register blk notifier
++ *	@nb: notifier_block
++ *
++ *	Register platfrorm events notifier.
++ */
++int mlxplat_blk_notifier_register(struct notifier_block *nb)
++{
++	struct blocking_notifier_head *chain = &mlxplat_blk_notif_chain;
++
++	return blocking_notifier_chain_register(chain, nb);
++}
++EXPORT_SYMBOL_GPL(mlxplat_blk_notifier_register);
++
++/**
++ *	mlxplat_blk_notifier_unregister - Unregister blocking notifier
++ *	@nb: notifier_block
++ *
++ *	Unregister platfrorm events blocking notifier.
++ */
++int mlxplat_blk_notifier_unregister(struct notifier_block *nb)
++{
++	struct blocking_notifier_head *chain = &mlxplat_blk_notif_chain;
++
++	return blocking_notifier_chain_unregister(chain, nb);
++}
++EXPORT_SYMBOL_GPL(mlxplat_blk_notifier_unregister);
++
+ /* Regions for LPC I2C controller and LPC base register space */
+ static const struct resource mlxplat_lpc_resources[] = {
+ 	[0] = DEFINE_RES_NAMED(MLXPLAT_CPLD_LPC_I2C_BASE_ADRR,
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index 12751289b..2e3faaae4 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -195,4 +195,30 @@ struct mlxreg_core_hotplug_platform_data {
+ 	int shift_nr;
+ };
+ 
++/**
++ * struct mlxplat_notifier_info - platform data notifier info:
++ *
++ * @handle: handle of device, for which event has been generated;
++ * @label: label of attribute, associated with event;
++ * @slot: device location;
++ * @topo_id: device topology id;
++ * @event_data: event user data;
++ * @action: true - non zero - action is on, zero - is off;
++ */
++struct mlxplat_notifier_info {
++	void *handle;
++	char label[MLXREG_CORE_LABEL_MAX_SIZE];
++	int slot;
++	u32 topo_id;
++	u32 event_data;
++	u8 action;
++};
++
++int mlxplat_blk_notifiers_call_chain(unsigned long val,
++				     struct mlxplat_notifier_info *info);
++
++int mlxplat_blk_notifier_register(struct notifier_block *nb);
++
++int mlxplat_blk_notifier_unregister(struct notifier_block *nb);
++
+ #endif /* __LINUX_PLATFORM_DATA_MLXREG_H */
+-- 
+2.11.0
+
