@@ -332,12 +332,13 @@ p2c_dir_trust_t8=(45000 12  $max_amb 12)
 p2c_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17)
 c2p_dir_trust_t8=(35000 12 40000 13 $max_amb 13)
 c2p_dir_untrust_t8=(25000 12 30000 13 40000 14 $max_amb 14)
-unk_dir_trust_t8=(25000 12 30000 13 40000 14 $max_amb 13)
+unk_dir_trust_t8=(35000 12 40000 13 $max_amb 13)
 unk_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17)
 
 
 # Class t9 for MSN3420
 # Direction	P2C		C2P		Unknown
+
 #--------------------------------------------------------------
 # Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
 #		sensors	sensor	sensor	sensor	sensor	sensor
@@ -1031,7 +1032,9 @@ thermal_control_preinit()
 	# Periodic report counter
 	periodic_report=$((polling_time*report_counter))
 	echo $periodic_report > $config_path/periodic_report
-	echo 0 > $thermal_path/fan_dynamic_min
+	fan_dynamic_min_init=$((fan_dynamic_min -fan_max_state))
+	fan_dynamic_min_init=$((fan_dynamic_min_init*10))
+	echo $fan_dynamic_min_init > $thermal_path/fan_dynamic_min
 	count=0
 	suspend_thermal=0
 }
