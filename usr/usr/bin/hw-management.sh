@@ -776,7 +776,7 @@ check_system()
 					msn46xx_specific
 					;;
 				*)
-					proc_type=$(< /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}')
+					proc_type=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $5}')
 					case $proc_type in
 						Atom*)
 							msn21xx_specific
