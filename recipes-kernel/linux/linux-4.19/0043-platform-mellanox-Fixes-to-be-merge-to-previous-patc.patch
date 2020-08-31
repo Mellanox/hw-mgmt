@@ -1,0 +1,186 @@
+From bf9554a0546512b3a4964e908eb955dec29d419f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 31 Aug 2020 13:21:22 +0300
+Subject: [PATCH backport v4.19 20/21] platform/mellanox: Fixes to be merge to
+ previous patches
+
+Fixes, found during preliminary bring-up.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c |  4 ++--
+ drivers/platform/mellanox/mlxreg-lc.c      | 27 ++++++++++------------
+ drivers/platform/x86/mlx-platform.c        | 36 ++++++++++++++++++++++++++++--
+ 3 files changed, 48 insertions(+), 19 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index bd8a10a09..a4a762493 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -28,7 +28,7 @@
+ /* ASIC good health mask. */
+ #define MLXREG_HOTPLUG_GOOD_HEALTH_MASK	0x02
+ 
+-#define MLXREG_HOTPLUG_ATTRS_MAX	24
++#define MLXREG_HOTPLUG_ATTRS_MAX	64
+ #define MLXREG_HOTPLUG_NOT_ASSERT	3
+ #define MLXREG_HOTPLUG_SHIFT_NR		16
+ 
+@@ -173,7 +173,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 		break;
+ 	case MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION:
+ 		data->hpdev.pdev =
+-			platform_device_register_resndata(priv->dev,
++			platform_device_register_resndata(&priv->pdev->dev,
+ 							  brdinfo->type,
+ 							  data->hpdev.nr,
+ 							  NULL, 0, data,
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 842fe250c..153a229ca 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -630,22 +630,20 @@ static void mlxreg_lc_config_exit(struct mlxreg_lc *mlxreg_lc)
+ 
+ static int mlxreg_lc_probe(struct platform_device *pdev)
+ {
+-	struct mlxreg_core_hotplug_platform_data *pdata;
+ 	struct i2c_adapter *deferred_adap;
+ 	struct mlxreg_core_data *data;
+ 	struct mlxreg_lc *mlxreg_lc;
+ 	void *regmap;
+-	int i, err;
++	int deferred_nr, i, err;
+ 
+-	pdata = dev_get_platdata(&pdev->dev);
+-	if (!pdata)
++	data = dev_get_platdata(&pdev->dev);
++	if (!data)
+ 		return -EINVAL;
+ 
+ 	mlxreg_lc = devm_kzalloc(&pdev->dev, sizeof(*mlxreg_lc), GFP_KERNEL);
+ 	if (!mlxreg_lc)
+ 		return -ENOMEM;
+ 
+-	data = pdata->items->data;
+ 	data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr);
+ 	if (!data->hpdev.adapter) {
+ 		dev_err(&pdev->dev, "Failed to get adapter for bus %d\n",
+@@ -653,6 +651,7 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 		return -EFAULT;
+ 	}
+ 
++	/* Create device at the head of line card I2C tree.*/
+ 	data->hpdev.client = i2c_new_device(data->hpdev.adapter,
+ 					    data->hpdev.brdinfo);
+ 	if (IS_ERR(data->hpdev.client)) {
+@@ -691,12 +690,17 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	if (err)
+ 		goto mlxreg_lc_probe_fail;
+ 
+-	/* Defer probing if the necessary adapter is not configured yet. */
+-	deferred_adap = i2c_get_adapter(pdata->deferred_nr);
++	/*
++	 * Set line card higher adapter number. Defer probing if the higher
++	 * adapter is not configured yet.
++	 */
++	deferred_nr = mlxreg_lc_channels[ARRAY_SIZE(mlxreg_lc_channels) - 1] +
++		      data->hpdev.nr;
++
++	deferred_adap = i2c_get_adapter(deferred_nr);
+ 	if (!deferred_adap)
+ 		return -EPROBE_DEFER;
+ 	i2c_put_adapter(deferred_adap);
+-
+ 	/* Create static I2C device feeding by auxiliary power. */
+ 	err = mlxreg_lc_create_static_devices(mlxreg_lc, mlxreg_lc->aux_devs,
+ 					      mlxreg_lc->aux_devs_num);
+@@ -747,18 +751,11 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
+-static const struct of_device_id mlxreg_lc_of_match[] = {
+-	{ .compatible = "mellanox,lc_sn4800_c16", },
+-	{},
+-};
+-MODULE_DEVICE_TABLE(of, mlxreg_lc_of_match);
+-
+ static struct platform_driver mlxreg_lc_driver = {
+ 	.probe = mlxreg_lc_probe,
+ 	.remove = mlxreg_lc_remove,
+ 	.driver = {
+ 		.name = "mlxreg-lc",
+-		.of_match_table = of_match_ptr(mlxreg_lc_of_match),
+ 	},
+ };
+ 
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 3292d6ab6..70e8b6ca6 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -220,6 +220,7 @@
+ #define MLXPLAT_CPLD_NR_NONE			-1
+ #define MLXPLAT_CPLD_PSU_DEFAULT_NR		10
+ #define MLXPLAT_CPLD_PSU_MSNXXXX_NR		4
++#define MLXPLAT_CPLD_PSU_MODULAR_NR		5
+ #define MLXPLAT_CPLD_FAN1_DEFAULT_NR		11
+ #define MLXPLAT_CPLD_FAN2_DEFAULT_NR		12
+ #define MLXPLAT_CPLD_FAN3_DEFAULT_NR		13
+@@ -1134,6 +1135,37 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
+ 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
+ };
+ 
++static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
++	{
++		.label = "pwr1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = BIT(0),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[0],
++		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
++	},
++	{
++		.label = "pwr2",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = BIT(1),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[1],
++		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
++	},
++	{
++		.label = "pwr3",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = BIT(2),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_ext_pwr[0],
++		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
++	},
++	{
++		.label = "pwr4",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = BIT(3),
++		.hpdev.brdinfo = &mlxplat_mlxcpld_ext_pwr[1],
++		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
++	},
++};
++
+ /* Platform hotplug modular system family data */
+ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_act_data[] = {
+ 	{
+@@ -1231,7 +1263,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_asic_items_data[] = {
+ 
+ static struct i2c_board_info mlxplat_mlxcpld_lc_i2c_dev[] = {
+ 	{
+-		I2C_BOARD_INFO("mlxreg_lc", MLXPLAT_CPLD_LC_ADDR),
++		I2C_BOARD_INFO("mlxreg-lc", MLXPLAT_CPLD_LC_ADDR),
+ 	},
+ };
+ 
+@@ -1622,7 +1654,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_modular_items[] = {
+ 		.health = false,
+ 	},
+ 	{
+-		.data = mlxplat_mlxcpld_ext_pwr_items_data,
++		.data = mlxplat_mlxcpld_modular_pwr_items_data,
+ 		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
+ 		.mask = MLXPLAT_CPLD_PWR_EXT_MASK,
+-- 
+2.11.0
+

@@ -1,0 +1,30 @@
+From 16ee633ecf2e8bc9840725a119a5ba0b73b40bf4 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 31 Aug 2020 13:24:20 +0300
+Subject: [PATCH backport v4.19 21/21] platform/mellanox: mlx-platform:
+ Standalone line card bring-up
+
+Temporary modification for standalone line card bring-up.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/mellanox/mlxreg-lc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 153a229ca..f83d08bb2 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -695,7 +695,8 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	 * adapter is not configured yet.
+ 	 */
+ 	deferred_nr = mlxreg_lc_channels[ARRAY_SIZE(mlxreg_lc_channels) - 1] +
+-		      data->hpdev.nr;
++		      /*data->hpdev.nr;*/
++		      data->slot * 100;
+ 
+ 	deferred_adap = i2c_get_adapter(deferred_nr);
+ 	if (!deferred_adap)
+-- 
+2.11.0
+
