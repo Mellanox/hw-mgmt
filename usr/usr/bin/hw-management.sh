@@ -352,9 +352,9 @@ msn3510_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
-msn4800_connect_table=(	24c32 0x51 8 )
+msn4800_connect_table=(	24c32 0x51 9 )
 
-msn4800_dis_table=(	0x51 8 )
+msn4800_dis_table=(	0x51 9 )
 
 ACTION=$1
 
