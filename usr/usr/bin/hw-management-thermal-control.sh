@@ -333,11 +333,11 @@ unk_dir_untrust_t7=(0 12 10000 13 15000 14 20000 15 35000 16 40000 17 $max_amb 1
 # 40-45		20	70	30	40	30	70
 
 p2c_dir_trust_t8=(45000 12  $max_amb 12)
-p2c_dir_untrust_t8=(5 12 20000 13 30000 14 35000 15 40000 16 45000 17 $max_amb 17)
+p2c_dir_untrust_t8=(5000 12 20000 13 30000 14 35000 15 40000 16 45000 17 $max_amb 17)
 c2p_dir_trust_t8=(40000 12 45000 13 $max_amb 13)
 c2p_dir_untrust_t8=(30000 12 40000 13 45000 14 $max_amb 14)
 unk_dir_trust_t8=(40000 12 45000 13 $max_amb 13)
-unk_dir_untrust_t8=(5 12 20000 13 30000 14 35000 15 40000 16 45000 17 $max_amb 17)
+unk_dir_untrust_t8=(5000 12 20000 13 30000 14 35000 15 40000 16 45000 17 $max_amb 17)
 
 
 # Class t9 for MSN3420
