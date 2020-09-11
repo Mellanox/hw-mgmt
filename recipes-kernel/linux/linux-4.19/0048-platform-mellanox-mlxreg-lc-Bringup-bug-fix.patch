@@ -1,18 +1,18 @@
-From fd2d53a22716d14a9ac64529fcc5cfac70a598e8 Mon Sep 17 00:00:00 2001
+From 806e00f8d3be421d12da60b19aaceeae318b1df5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Fri, 11 Sep 2020 15:46:12 +0300
-Subject: [PATCH backport v4.19 26/26] platform/mellanox: mlxreg-lc: Bringup
- bug fix
+Date: Fri, 11 Sep 2020 16:30:20 +0300
+Subject: [PATCH backport v4.19 26/26] Brungup fixes: Add kernel patches for
+ v.4.19 for Buffalo line card support
 
-Bugfix during line card bringup.
+Add new v4.19 kernel patches for Buffalo line card bring-up fixes.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlxreg-lc.c | 188 +++++++++++++++++++++-------------
- 1 file changed, 114 insertions(+), 74 deletions(-)
+ drivers/platform/mellanox/mlxreg-lc.c | 181 +++++++++++++++++++---------------
+ 1 file changed, 103 insertions(+), 78 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
-index f83d08bb2..486f56e4b 100644
+index f83d08bb2..9b152f89c 100644
 --- a/drivers/platform/mellanox/mlxreg-lc.c
 +++ b/drivers/platform/mellanox/mlxreg-lc.c
 @@ -1,8 +1,8 @@
@@ -286,10 +286,14 @@ index f83d08bb2..486f56e4b 100644
  
  	data = dev_get_platdata(&pdev->dev);
  	if (!data)
-@@ -694,24 +753,28 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
- 	 * Set line card higher adapter number. Defer probing if the higher
- 	 * adapter is not configured yet.
- 	 */
+@@ -690,28 +749,17 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	if (err)
+ 		goto mlxreg_lc_probe_fail;
+ 
+-	/*
+-	 * Set line card higher adapter number. Defer probing if the higher
+-	 * adapter is not configured yet.
+-	 */
 -	deferred_nr = mlxreg_lc_channels[ARRAY_SIZE(mlxreg_lc_channels) - 1] +
 -		      /*data->hpdev.nr;*/
 -		      data->slot * 100;
@@ -304,17 +308,6 @@ index f83d08bb2..486f56e4b 100644
 -	if (err)
 -		goto mlxreg_lc_probe_fail;
 -
-+	mlxreg_lc->defer_nr = mlxreg_lc_chan[ARRAY_SIZE(mlxreg_lc_chan) - 1] +
-+			      data->slot * 100;
-+	/*
-+	 * Initialize delayed work queues for handling attachment of line card
-+	 * on-board devices. These devices can not be attached immediately, but
-+	 * only when deferred adapter is getting available.
-+	 */
-+	INIT_DELAYED_WORK(&mlxreg_lc->dwork_aux, mlxreg_lc_work_aux);
-+	INIT_DELAYED_WORK(&mlxreg_lc->dwork_main, mlxreg_lc_work_main);
-+	schedule_delayed_work(&mlxreg_lc->dwork_aux, msecs_to_jiffies(10));
-+	schedule_delayed_work(&mlxreg_lc->dwork_main, msecs_to_jiffies(10));
  	platform_set_drvdata(pdev, mlxreg_lc);
  	mlxreg_lc->topo_id = rol32(data->hpdev.nr, 16) |
  			     data->hpdev.brdinfo->addr;
@@ -330,7 +323,7 @@ index f83d08bb2..486f56e4b 100644
  
  	return err;
  
-@@ -730,8 +793,11 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
+@@ -730,8 +778,11 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
  	if (!pdata)
  		return -EINVAL;
  
@@ -343,7 +336,7 @@ index f83d08bb2..486f56e4b 100644
  
  	/* Destroy static I2C device feeding by main power. */
  	mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->aux_devs,
-@@ -760,35 +826,9 @@ static struct platform_driver mlxreg_lc_driver = {
+@@ -760,35 +811,9 @@ static struct platform_driver mlxreg_lc_driver = {
  	},
  };
  
