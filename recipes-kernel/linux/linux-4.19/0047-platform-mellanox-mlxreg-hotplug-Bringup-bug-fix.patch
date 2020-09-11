@@ -1,0 +1,29 @@
+From e79d9787982cedd98feaf3d27e32085d3d40a885 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 11 Sep 2020 14:31:55 +0300
+Subject: [PATCH backport v4.19 25/25] platform/mellanox: mlxreg-hotplug:
+ Bringup bug fix
+
+Bugfix during line card bringup.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index a4a762493..311cd852a 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -731,7 +731,7 @@ static void mlxreg_hotplug_unset_irq(struct mlxreg_hotplug_priv_data *priv)
+ 		count = item->count;
+ 		for (j = 0; j < count; j++, data++)
+ 			mlxreg_hotplug_device_destroy(priv, data, item->kind,
+-						      i);
++						      j);
+ 	}
+ }
+ 
+-- 
+2.11.0
+
