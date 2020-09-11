@@ -1054,7 +1054,8 @@ thermal_control_preinit
 # Start thermal monitoring.
 while true
 do
-	/bin/sleep $polling_time
+	/bin/sleep $polling_time &
+	wait $!
 
 	# Check if thermal algorithm is suspended.
 	[ -f "$config_path/suspend" ] && suspend=$(< $config_path/suspend)
