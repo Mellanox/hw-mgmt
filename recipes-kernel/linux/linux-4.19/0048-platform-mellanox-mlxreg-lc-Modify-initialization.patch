@@ -1,0 +1,386 @@
+From 092065111338056898afcc330f6908767cc10823 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 11 Sep 2020 19:20:20 +0300
+Subject: [PATCH backport v4.19] platform: mellanox: mlxreg-lc: Modify
+ initialization
+
+Fixes during bring-up.
+
+Signed-of-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-lc.c | 187 +++++++++++++++++++++-------------
+ 1 file changed, 114 insertions(+), 73 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 153a229ca..486f56e4b 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -1,8 +1,8 @@
+ // SPDX-License-Identifier: GPL-2.0+
+ /*
+- * Mellanox line card driver
++ * Nvidia line card driver
+  *
+- * Copyright (C) 2020 Mellanox Technologies Ltd.
++ * Copyright (C) 2020 Nvidia Technologies Ltd.
+  */
+ 
+ #include <linux/device.h>
+@@ -27,9 +27,10 @@
+ #define MLXREG_LC_REG_CPLD2_MVER_OFFSET		0x25df
+ #define MLXREG_LC_REG_MAX_POWER_OFFSET		0x25f1
+ #define MLXREG_LC_REG_CONFIG_OFFSET		0x25fb
++#define MLXREG_LC_REG_MAX			0x2600
+ 
+ #define MLXREG_LC_BASE_NR		100
+-#define MLXREG_LC_SET_BASE_NR(slot)	(MLXREG_LC_BASE_NR * ((slot) - 1))
++#define MLXREG_LC_SET_BASE_NR(slot)	(MLXREG_LC_BASE_NR * (slot))
+ 
+ /**
+  * enum mlxreg_lc_type - line cards types
+@@ -37,7 +38,7 @@
+  * MLXREG_LC_SN4800_C16 - 100GbE line card with 16 QSFP28 ports;
+  */
+ enum mlxreg_lc_type {
+-	MLXREG_LC_SN4800_C16 = 0x00f3,
++	MLXREG_LC_SN4800_C16 = 0x0000,
+ };
+ 
+ /* mlxreg_lc - device private data
+@@ -54,6 +55,8 @@ enum mlxreg_lc_type {
+  * @aux_devs_num - number of I2C devices feeding by auxiliary power;
+  * @main_devs - I2C devices feeding by main power;
+  * @main_devs_num - number of I2C devices feeding by main power;
++ * @defer_nr - highest number of I2C adapter, created by mux driver – until it
++ *	       is not created, devices can not be connected;
+  * @topo_id - topology Id of line card;
+  */
+ struct mlxreg_lc {
+@@ -65,17 +68,18 @@ struct mlxreg_lc {
+ 	struct platform_device *led;
+ 	struct platform_device *io_regs;
+ 	struct i2c_board_info *mux_brdinfo;
+-	struct i2c_client *mux;
++	struct platform_device *mux;
+ 	struct mlxreg_hotplug_device *aux_devs;
+ 	int aux_devs_num;
++	struct delayed_work dwork_aux;
+ 	struct mlxreg_hotplug_device *main_devs;
+ 	int main_devs_num;
++	int defer_nr;
++	struct delayed_work dwork_main;
+ 	int topo_id;
+ };
+ 
+-static struct mlxreg_lc_list {
+-	struct list_head list;
+-} mlxreg_lc_list;
++static struct list_head mlxreg_lc_list = LIST_HEAD_INIT(mlxreg_lc_list);
+ 
+ static bool mlxreg_lc_writeable_reg(struct device *dev, unsigned int reg)
+ {
+@@ -139,7 +143,7 @@ static const struct reg_default mlxreg_lc_regmap_default[] = {
+ static const struct regmap_config mlxreg_lc_regmap_conf = {
+ 	.reg_bits = 16,
+ 	.val_bits = 8,
+-	.max_register = 1024,
++	.max_register = MLXREG_LC_REG_MAX,
+ 	.cache_type = REGCACHE_FLAT,
+ 	.writeable_reg = mlxreg_lc_writeable_reg,
+ 	.readable_reg = mlxreg_lc_readable_reg,
+@@ -152,7 +156,7 @@ static const struct regmap_config mlxreg_lc_regmap_conf = {
+  * It contains only the channels, which physically connected to the devices,
+  * empty channels are skipped.
+  */
+-static int mlxreg_lc_channels[] = {
++static int mlxreg_lc_chan[] = {
+ 	0x04, 0x05, 0x06, 0x07, 0x08, 0x10, 0x20, 0x21, 0x22, 0x23, 0x40, 0x41,
+ 	0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
+ 	0x4e, 0x4f
+@@ -161,8 +165,8 @@ static int mlxreg_lc_channels[] = {
+ /* Defaul mux configuration. */
+ static struct mlxcpld_mux_plat_data mlxreg_lc_mux_data[] = {
+ 	{
+-		.adap_ids = mlxreg_lc_channels,
+-		.num_adaps = ARRAY_SIZE(mlxreg_lc_channels),
++		.adap_ids = mlxreg_lc_chan,
++		.num_adaps = ARRAY_SIZE(mlxreg_lc_chan),
+ 		.sel_reg_addr = MLXREG_LC_CHANNEL_I2C_REG,
+ 		.reg_size = 2,
+ 	},
+@@ -170,7 +174,7 @@ static struct mlxcpld_mux_plat_data mlxreg_lc_mux_data[] = {
+ 
+ /* Defaul mux board info. */
+ static struct i2c_board_info mlxreg_lc_mux_brdinfo = {
+-	.type = "mlxcpld-mux",
++	I2C_BOARD_INFO("i2c-mux-mlxcpld", 0x32),
+ };
+ 
+ /* Line card default auxiliary power static devices. */
+@@ -459,7 +463,7 @@ static int mlxreg_lc_ready_init(struct mlxplat_notifier_info *info)
+ {
+ 	struct mlxreg_lc *mlxreg_lc;
+ 
+-	list_for_each_entry(mlxreg_lc, &mlxreg_lc_list.list, list) {
++	list_for_each_entry(mlxreg_lc, &mlxreg_lc_list, list) {
+ 		/* Create static I2C device feeding by main power. */
+ 		if (mlxreg_lc->topo_id == info->topo_id)
+ 			return mlxreg_lc_create_static_devices(mlxreg_lc,
+@@ -474,7 +478,7 @@ static void mlxreg_lc_ready_exit(struct mlxplat_notifier_info *info)
+ {
+ 	struct mlxreg_lc *mlxreg_lc;
+ 
+-	list_for_each_entry(mlxreg_lc, &mlxreg_lc_list.list, list) {
++	list_for_each_entry(mlxreg_lc, &mlxreg_lc_list, list) {
+ 		/* Destroy static I2C device feeding by main power. */
+ 		if (mlxreg_lc->topo_id == info->topo_id)
+ 			return mlxreg_lc_destroy_static_devices(mlxreg_lc,
+@@ -514,14 +518,14 @@ mlxreg_lc_sn4800_c16_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 				 struct mlxreg_core_data *data)
+ {
+ 	struct device *dev = &data->hpdev.client->dev;
+-	int err;
++	struct mlxreg_hotplug_device *main_dev;
++	struct mlxreg_hotplug_device *aux_dev;
++	int i;
+ 
+ 	/* Set line card configuration according to the type. */
+ 	mlxreg_lc->mux_data = mlxreg_lc_mux_data;
+ 	mlxreg_lc->io_data = &mlxreg_lc_regs_io;
+ 	mlxreg_lc->led_data = &mlxreg_lc_led;
+-	mlxreg_lc->aux_devs = mlxreg_lc_aux_pwr_brdinfo;
+-	mlxreg_lc->main_devs = mlxreg_lc_main_pwr_brdinfo;
+ 	mlxreg_lc->mux_brdinfo = &mlxreg_lc_mux_brdinfo;
+ 
+ 	mlxreg_lc->aux_devs = devm_kmemdup(dev,
+@@ -532,6 +536,15 @@ mlxreg_lc_sn4800_c16_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 		return -ENOMEM;
+ 	mlxreg_lc->aux_devs_num = ARRAY_SIZE(mlxreg_lc_aux_pwr_brdinfo);
+ 
++
++	/*
++	 * Update busses for I2C device feeding by auxiliary power according to
++	 * the number of slot at which line card is located.
++	 */
++	aux_dev = mlxreg_lc->aux_devs;
++	for (i = 0; i <= mlxreg_lc->aux_devs_num; i++, aux_dev++)
++		aux_dev->nr += MLXREG_LC_SET_BASE_NR(data->slot);
++
+ 	mlxreg_lc->main_devs = devm_kmemdup(dev, mlxreg_lc_main_pwr_brdinfo,
+ 					    sizeof(mlxreg_lc_main_pwr_brdinfo),
+ 					    GFP_KERNEL);
+@@ -539,7 +552,15 @@ mlxreg_lc_sn4800_c16_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 		return -ENOMEM;
+ 	mlxreg_lc->main_devs_num = ARRAY_SIZE(mlxreg_lc_main_pwr_brdinfo);
+ 
+-	return err;
++	/*
++	 * Update busses for I2C device feeding by main power according to the
++	 * number of slot at which line card is located.
++	 */
++	main_dev = mlxreg_lc->main_devs;
++	for (i = 0; i <= mlxreg_lc->main_devs_num; i++, main_dev++)
++		main_dev->nr += MLXREG_LC_SET_BASE_NR(data->slot);
++
++	return 0;
+ }
+ 
+ static int
+@@ -556,7 +577,6 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 	if (err)
+ 		return err;
+ 	regval = (regval & GENMASK(7, 0)) << 8 | (lsb & GENMASK(7, 0));
+-
+ 	switch (regval) {
+ 	case MLXREG_LC_SN4800_C16:
+ 		err = mlxreg_lc_sn4800_c16_config_init(mlxreg_lc, regmap,
+@@ -571,8 +591,11 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 	/* Create mux infrastructure. */
+ 	mlxreg_lc->mux_data->base_nr = MLXREG_LC_SET_BASE_NR(data->slot);
+ 	mlxreg_lc->mux_brdinfo->platform_data = mlxreg_lc->mux_data;
+-	mlxreg_lc->mux = i2c_new_device(data->hpdev.adapter,
+-					mlxreg_lc->mux_brdinfo);
++	mlxreg_lc->mux =
++		platform_device_register_resndata(dev, "i2c-mux-mlxcpld",
++						data->hpdev.nr, NULL, 0,
++						mlxreg_lc->mux_data,
++						sizeof(*mlxreg_lc->mux_data));
+ 	if (IS_ERR(mlxreg_lc->mux))
+ 		return PTR_ERR(mlxreg_lc->mux);
+ 
+@@ -595,9 +618,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 		mlxreg_lc->led_data->regmap = regmap;
+ 		mlxreg_lc->led =
+ 		platform_device_register_resndata(dev, "leds-mlxreg",
+-						  data->hpdev.nr, NULL, 0,
+-						  mlxreg_lc->led_data,
+-						  sizeof(*mlxreg_lc->led_data));
++						data->hpdev.nr, NULL, 0,
++						mlxreg_lc->led_data,
++						sizeof(*mlxreg_lc->led_data));
+ 		if (IS_ERR(mlxreg_lc->led)) {
+ 			err = PTR_ERR(mlxreg_lc->led);
+ 			goto fail_register_led;
+@@ -611,7 +634,8 @@ fail_register_led:
+ 		platform_device_unregister(mlxreg_lc->io_regs);
+ fail_register_io:
+ 	if (mlxreg_lc->mux)
+-		i2c_unregister_device(mlxreg_lc->mux);
++		platform_device_unregister(mlxreg_lc->mux);
++
+ 	return err;
+ }
+ 
+@@ -625,16 +649,51 @@ static void mlxreg_lc_config_exit(struct mlxreg_lc *mlxreg_lc)
+ 		platform_device_unregister(mlxreg_lc->io_regs);
+ 	/* Create mux infrastructure. */
+ 	if (mlxreg_lc->mux)
+-		i2c_unregister_device(mlxreg_lc->mux);
++		platform_device_unregister(mlxreg_lc->mux);
++}
++
++static void
++mlxreg_lc_work(struct mlxreg_lc *mlxreg_lc, struct delayed_work *dwork,
++	       int defer_nr, struct mlxreg_hotplug_device *devs, int devs_num)
++{
++	struct i2c_adapter *adap;
++
++	adap = i2c_get_adapter(defer_nr);
++	if (!adap) {
++		i2c_put_adapter(adap);
++		cancel_delayed_work(dwork);
++		schedule_delayed_work(dwork, msecs_to_jiffies(10));
++		return;
++	}
++	i2c_put_adapter(adap);
++	cancel_delayed_work(dwork);
++	mlxreg_lc_create_static_devices(mlxreg_lc, devs, devs_num);
++}
++
++static void mlxreg_lc_work_main(struct work_struct *work)
++{
++	struct mlxreg_lc *mlxreg_lc;
++
++	mlxreg_lc = container_of(work, struct mlxreg_lc, dwork_main.work);
++	mlxreg_lc_work(mlxreg_lc, &mlxreg_lc->dwork_main, mlxreg_lc->defer_nr,
++		       mlxreg_lc->main_devs, mlxreg_lc->main_devs_num);
++}
++
++static void mlxreg_lc_work_aux(struct work_struct *work)
++{
++	struct mlxreg_lc *mlxreg_lc;
++
++	mlxreg_lc = container_of(work, struct mlxreg_lc, dwork_aux.work);
++	mlxreg_lc_work(mlxreg_lc, &mlxreg_lc->dwork_aux, mlxreg_lc->defer_nr,
++		       mlxreg_lc->aux_devs, mlxreg_lc->aux_devs_num);
+ }
+ 
+ static int mlxreg_lc_probe(struct platform_device *pdev)
+ {
+-	struct i2c_adapter *deferred_adap;
+ 	struct mlxreg_core_data *data;
+ 	struct mlxreg_lc *mlxreg_lc;
+ 	void *regmap;
+-	int deferred_nr, i, err;
++	int i, err;
+ 
+ 	data = dev_get_platdata(&pdev->dev);
+ 	if (!data)
+@@ -694,23 +753,28 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	 * Set line card higher adapter number. Defer probing if the higher
+ 	 * adapter is not configured yet.
+ 	 */
+-	deferred_nr = mlxreg_lc_channels[ARRAY_SIZE(mlxreg_lc_channels) - 1] +
+-		      data->hpdev.nr;
+-
+-	deferred_adap = i2c_get_adapter(deferred_nr);
+-	if (!deferred_adap)
+-		return -EPROBE_DEFER;
+-	i2c_put_adapter(deferred_adap);
+-	/* Create static I2C device feeding by auxiliary power. */
+-	err = mlxreg_lc_create_static_devices(mlxreg_lc, mlxreg_lc->aux_devs,
+-					      mlxreg_lc->aux_devs_num);
+-	if (err)
+-		goto mlxreg_lc_probe_fail;
+-
++	mlxreg_lc->defer_nr = mlxreg_lc_chan[ARRAY_SIZE(mlxreg_lc_chan) - 1] +
++			      data->slot * 100;
++	/*
++	 * Initialize delayed work queues for handling attachment of line card
++	 * on-board devices. These devices can not be attached immediately, but
++	 * only when deferred adapter is getting available.
++	 */
++	INIT_DELAYED_WORK(&mlxreg_lc->dwork_aux, mlxreg_lc_work_aux);
++	INIT_DELAYED_WORK(&mlxreg_lc->dwork_main, mlxreg_lc_work_main);
++	schedule_delayed_work(&mlxreg_lc->dwork_aux, msecs_to_jiffies(10));
++	schedule_delayed_work(&mlxreg_lc->dwork_main, msecs_to_jiffies(10));
+ 	platform_set_drvdata(pdev, mlxreg_lc);
+ 	mlxreg_lc->topo_id = rol32(data->hpdev.nr, 16) |
+ 			     data->hpdev.brdinfo->addr;
+-	list_add(&mlxreg_lc->list, &mlxreg_lc_list.list);
++
++	/* Register notifier only when the first device is probed. */
++	if (list_empty(&mlxreg_lc_list)) {
++		err = mlxplat_blk_notifier_register(&mlxreg_lc_notifier_block);
++		if (!err)
++			goto mlxreg_lc_probe_fail;
++	}
++	list_add(&mlxreg_lc->list, &mlxreg_lc_list);
+ 
+ 	return err;
+ 
+@@ -729,8 +793,11 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
+ 	if (!pdata)
+ 		return -EINVAL;
+ 
+-	if (!list_empty(&mlxreg_lc_list.list))
++	if (!list_empty(&mlxreg_lc_list))
+ 		list_del_rcu(&mlxreg_lc->list);
++	/* Unregister notifier only when the last device is removed. */
++	if (list_empty(&mlxreg_lc_list))
++		mlxplat_blk_notifier_unregister(&mlxreg_lc_notifier_block);
+ 
+ 	/* Destroy static I2C device feeding by main power. */
+ 	mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->aux_devs,
+@@ -759,35 +826,9 @@ static struct platform_driver mlxreg_lc_driver = {
+ 	},
+ };
+ 
+-static int __init mlxreg_lc_init(void)
+-{
+-	int err;
+-
+-	err = platform_driver_register(&mlxreg_lc_driver);
+-	if (!err)
+-		return err;
+-	err = mlxplat_blk_notifier_register(&mlxreg_lc_notifier_block);
+-	if (!err)
+-		goto mlxreg_lc_init_failed;
+-	INIT_LIST_HEAD(&mlxreg_lc_list.list);
+-
+-	return err;
+-
+-mlxreg_lc_init_failed:
+-	platform_driver_unregister(&mlxreg_lc_driver);
+-	return err;
+-}
+-
+-static void __exit mlxreg_lc_exit(void)
+-{
+-	mlxplat_blk_notifier_unregister(&mlxreg_lc_notifier_block);
+-	platform_driver_unregister(&mlxreg_lc_driver);
+-}
+-
+-module_init(mlxreg_lc_init);
+-module_exit(mlxreg_lc_exit);
++module_platform_driver(mlxreg_lc_driver);
+ 
+-MODULE_AUTHOR("Vadim Pasternak <vadimp@mellanox.com>");
+-MODULE_DESCRIPTION("Mellanox line cards platform driver");
++MODULE_AUTHOR("Vadim Pasternak <vadimp@nvidia.com>");
++MODULE_DESCRIPTION("Nvidia line cards platform driver");
+ MODULE_LICENSE("Dual BSD/GPL");
+ MODULE_ALIAS("platform:mlxreg-lc");
+-- 
+2.11.0
+
