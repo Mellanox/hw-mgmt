@@ -641,10 +641,12 @@ msn46xx_specific()
 	done
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	# this is MSN4600C
 	if [ "$sku" == "HI124" ]; then
 		thermal_type=$thermal_type_t8
 		echo 11000 > $config_path/fan_max_speed
 		echo 2235 > $config_path/fan_min_speed
+	# this is MSN4600
 	else
 		thermal_type=$thermal_type_def
 		echo 19500 > $config_path/fan_max_speed
