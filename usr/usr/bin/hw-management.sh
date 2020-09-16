@@ -643,14 +643,16 @@ msn46xx_specific()
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	if [ "$sku" == "HI124" ]; then
 		thermal_type=$thermal_type_t8
+		echo 11000 > $config_path/fan_max_speed
+		echo 2235 > $config_path/fan_min_speed
 	else
 		thermal_type=$thermal_type_def
+		echo 19500 > $config_path/fan_max_speed
+		echo 2800 > $config_path/fan_min_speed
 	fi
 
 	max_tachos=3
 	hotplug_fans=3
-	echo 19500 > $config_path/fan_max_speed
-	echo 2800 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
