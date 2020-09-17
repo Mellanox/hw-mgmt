@@ -132,7 +132,11 @@ psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
 # relationship between the ambient temperature and minimal FAN speed. Th
 # minimal FAN speed is coded as following: 12 for 20%, 13 for 30%, ..., 19 for
 # 90%, 20 for 100%.
-
+# In the tables whole ambient temperature range split into sub-ranges
+# with the 5-degree step. Each sub-range defined in the format: tl-th
+# where (tl) is a low threshold, (th) is a high threshold.
+# Checking if sensor temperature (t) is fit to range do by the rule:
+# tl <= tamb < th
 
 # Default thermal class. Put 60% as common default.
 p2c_dir_trust_def=(45000 16  $max_amb 16)
@@ -233,11 +237,11 @@ unk_dir_untrust_t3=(15000 13 30000 14 35000 15 40000 17 $max_amb 17)
 # 40-45		20	60	20	60	20	60
 
 p2c_dir_trust_t4=(45000 12 $max_amb 12)
-p2c_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
+p2c_dir_untrust_t4=(15000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
 c2p_dir_trust_t4=(45000 12 $max_amb 12)
-c2p_dir_untrust_t4=(15000 12 20000 13 25000 14 30000 15 35000 16 $max_amb 16)
+c2p_dir_untrust_t4=(20000 12 25000 13 30000 14 35000 15 40000 16 $max_amb 16)
 unk_dir_trust_t4=(45000 12  $max_amb 12)
-unk_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
+unk_dir_untrust_t4=(15000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
 
 # Class t5 for MSN3700|MQM8700
 # Direction	P2C		C2P		Unknown
@@ -256,12 +260,12 @@ unk_dir_untrust_t4=(10000 12 15000 13 20000 14 30000 15 35000 16 $max_amb 16)
 # 35-40		30	50	30	30	30	50
 # 40-45		40	60	40	40	40	60
 
-p2c_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-p2c_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
-c2p_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-c2p_dir_untrust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-unk_dir_trust_t5=(20000 12 25000 13 40000 14 $max_amb 14)
-unk_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
+p2c_dir_trust_t5=(25000 12 40000 13 45000 14 $max_amb 14)
+p2c_dir_untrust_t5=(15000 12 30000 13 35000 14 40000 15 45000 16 $max_amb 16)
+c2p_dir_trust_t5=(25000 12 40000 13 45000 14 $max_amb 14)
+c2p_dir_untrust_t5=(25000 12 40000 13 45000 14 $max_amb 14)
+unk_dir_trust_t5=(25000 12 40000 13 45000 14 $max_amb 14)
+unk_dir_untrust_t5=(15000 12 30000 13 35000 14 40000 15 45000 16 $max_amb 16)
 
 # Class t6 for MSN3700C
 # Direction	P2C		C2P		Unknown
@@ -280,12 +284,12 @@ unk_dir_untrust_t5=(10000 12 15000 13 30000 14 35000 15 40000 16 $max_amb 16)
 # 35-40		20	60	20	30	20	60
 # 40-45		30	60	20	40	30	60
 
-p2c_dir_trust_t6=(35000 12 40000 13 $max_amb 13)
-p2c_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
+p2c_dir_trust_t6=(40000 12 45000 13 $max_amb 13)
+p2c_dir_untrust_t6=(10000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
 c2p_dir_trust_t6=(20000 12 $max_amb 12)
-c2p_dir_untrust_t6=(30000 12 35000 13 40000 14 $max_amb 14)
-unk_dir_trust_t6=(35000 12 40000 13 $max_amb 13)
-unk_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
+c2p_dir_untrust_t6=(3500 12 40000 13 45000 14 $max_amb 14)
+unk_dir_trust_t6=(40000 12 45000 13 $max_amb 13)
+unk_dir_untrust_t6=(10000 12 20000 13 30000 14 35000 15 4 0000 16 $max_amb 16)
 
 # Class t7 for MSN3800
 # Direction	P2C		C2P		Unknown
@@ -304,12 +308,12 @@ unk_dir_untrust_t6=(5000 12 10000 13 20000 14 30000 15 35000 16 $max_amb 16)
 # 35-40		30	70	30	50	30	70
 # 40-45		30	70	40	60	40	70
 
-p2c_dir_trust_t7=(30000 12 35000 13 $max_amb 13)
-p2c_dir_untrust_t7=(0 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
-c2p_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
-c2p_dir_untrust_t7=(15000 12 20000 13 30000 14 35000 15 40000 16 $max_amb 16)
-unk_dir_trust_t7=(25000 12 30000 13 40000 14 $max_amb 14)
-unk_dir_untrust_t7=(5000 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
+p2c_dir_trust_t7=(35000 12 40000 13 $max_amb 13)
+p2c_dir_untrust_t7=(0 12 10000 13 15000 14 20000 15 35000 16 40000 17 $max_amb 17)
+c2p_dir_trust_t7=(30000 12 40000 13 45000 14 $max_amb 14)
+c2p_dir_untrust_t7=(20000 12 30000 13 35000 14 40000 15 45000 16 $max_amb 16)
+unk_dir_trust_t7=(30000 12 40000 13 45000 14 $max_amb 14)
+unk_dir_untrust_t7=(0 12 10000 13 15000 14 20000 15 35000 16 40000 17 $max_amb 17)
 
 # Class t8 for MSN4600
 # Direction	P2C		C2P		Unknown
@@ -329,11 +333,11 @@ unk_dir_untrust_t7=(5000 13 10000 14 15000 15 20000 16 35000 17 $max_amb 17)
 # 40-45		20	70	30	40	30	70
 
 p2c_dir_trust_t8=(45000 12  $max_amb 12)
-p2c_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17)
-c2p_dir_trust_t8=(35000 12 40000 13 $max_amb 13)
-c2p_dir_untrust_t8=(25000 12 30000 13 40000 14 $max_amb 14)
-unk_dir_trust_t8=(35000 12 40000 13 $max_amb 13)
-unk_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17)
+p2c_dir_untrust_t8=(5000 12 20000 13 30000 14 35000 15 40000 16 45000 17 $max_amb 17)
+c2p_dir_trust_t8=(40000 12 45000 13 $max_amb 13)
+c2p_dir_untrust_t8=(30000 12 40000 13 45000 14 $max_amb 14)
+unk_dir_trust_t8=(40000 12 45000 13 $max_amb 13)
+unk_dir_untrust_t8=(5000 12 20000 13 30000 14 35000 15 40000 16 45000 17 $max_amb 17)
 
 
 # Class t9 for MSN3420
@@ -355,11 +359,11 @@ unk_dir_untrust_t8=(0 12 5000 13 20000 14 30000 15 35000 16 40000 17 $max_amb 17
 # 40-45		20	60	20	40	20	60
 
 p2c_dir_trust_t9=(45000 12 $max_amb 12)
-p2c_dir_untrust_t9=(20000 12 25000 13 35000 14 40000 16 $max_amb 16)
+p2c_dir_untrust_t9=(25000 12 35000 13 40000 14 45000 16 $max_amb 16)
 c2p_dir_trust_t9=(45000 12 $max_amb 12)
-c2p_dir_untrust_t9=(35000 12 40000 14 $max_amb 14)
+c2p_dir_untrust_t9=(40000 12 45000 14 $max_amb 14)
 unk_dir_trust_t9=(45000 12 $max_amb 12)
-unk_dir_untrust_t9=(20000 12 25000 13 35000 14 40000 16 $max_amb 16)
+unk_dir_untrust_t9=(25000 12 35000 13 40000 14 45000 16 $max_amb 16)
 
 
 # Class t10 for MSN4700
@@ -379,12 +383,12 @@ unk_dir_untrust_t9=(20000 12 25000 13 35000 14 40000 16 $max_amb 16)
 # 35-40		50	50	50	50	50	50
 # 40-45		50	50	50	50	50	50
 
-p2c_dir_trust_t10=(30000 12 35000 15 $max_amb 15)
-p2c_dir_untrust_t10=(30000 12 35000 15 $max_amb 15)
-c2p_dir_trust_t10=(30000 12 35000 15 $max_amb 15)
-c2p_dir_untrust_t10=(30000 12 35000 15 $max_amb 15)
-unk_dir_trust_t10=(30000 12 35000 15 $max_amb 15)
-unk_dir_untrust_t10=(30000 12 35000 15 $max_amb 15)
+p2c_dir_trust_t10=(35000 12 40000 15 $max_amb 15)
+p2c_dir_untrust_t10=(35000 12 40000 15 $max_amb 15)
+c2p_dir_trust_t10=(35000 12 40000 15 $max_amb 15)
+c2p_dir_untrust_t10=(35000 12 40000 15 $max_amb 15)
+unk_dir_trust_t10=(35000 12 40000 15 $max_amb 15)
+unk_dir_untrust_t10=(35000 12 40000 15 $max_amb 15)
 
 
 
@@ -1050,7 +1054,8 @@ thermal_control_preinit
 # Start thermal monitoring.
 while true
 do
-	/bin/sleep $polling_time
+	/bin/sleep $polling_time &
+	wait $!
 
 	# Check if thermal algorithm is suspended.
 	[ -f "$config_path/suspend" ] && suspend=$(< $config_path/suspend)

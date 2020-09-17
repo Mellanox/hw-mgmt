@@ -641,16 +641,20 @@ msn46xx_specific()
 	done
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	# this is MSN4600C
 	if [ "$sku" == "HI124" ]; then
 		thermal_type=$thermal_type_t8
+		echo 11000 > $config_path/fan_max_speed
+		echo 2235 > $config_path/fan_min_speed
+	# this is MSN4600
 	else
 		thermal_type=$thermal_type_def
+		echo 19500 > $config_path/fan_max_speed
+		echo 2800 > $config_path/fan_min_speed
 	fi
 
 	max_tachos=3
 	hotplug_fans=3
-	echo 11000 > $config_path/fan_max_speed
-	echo 2235 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
@@ -776,7 +780,7 @@ check_system()
 					msn46xx_specific
 					;;
 				*)
-					proc_type=$(< /proc/cpuinfo | grep 'model name' | uniq  | awk '{print $5}')
+					proc_type=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $5}')
 					case $proc_type in
 						Atom*)
 							msn21xx_specific
