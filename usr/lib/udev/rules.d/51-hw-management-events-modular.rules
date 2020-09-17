@@ -38,3 +38,14 @@
 
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add linecard %S %p"
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm linecard %S %p"
+
+# Register space IO access attributes
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032/mlxreg-io.*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032/mlxreg-io.*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
+
+# LED
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:orange", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:orange", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"

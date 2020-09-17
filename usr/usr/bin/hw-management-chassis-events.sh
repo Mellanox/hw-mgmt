@@ -95,7 +95,7 @@ find_i2c_bus()
 
 find_linecard_bus()
 {
-	# Find base i2c bus number of Mellanox linecard.
+	# Find base i2c bus number of Mellanox line card.
 	for ((i=1; i<i2c_bus_max; i++)); do
 		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
 		if [ -d $folder ]; then
@@ -107,6 +107,31 @@ find_linecard_bus()
 		fi
 	done
 
+	log_err "mlxreg-lc driver is not loaded"
+	exit 0
+}
+
+find_linecard_num()
+{
+	input_bus_num="$1"
+	find_linecard_bus "$input_bus_num"
+	max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
+	# Check line card bus range.
+	if [ "$input_bus_num" -le "$max_lc_bus_num" ] &&
+	   [ "$input_bus_num" -ge "$linecard_bus_offset" ]; then
+		linecard_num=$((input_bus_num-linecard_bus_offset+1))
+		# Check line card num range.
+		if [ "$linecard_num" -le "$lc_max_num" ] &&
+		   [ "$linecard_num" -ge 1 ]; then
+			return
+		else
+			log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
+			exit 0
+		fi
+	else
+		log_err "Line card bus number out of range. $input_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
+		exit 0
+	fi
 	log_err "mlxreg-lc driver is not loaded"
 	exit 0
 }
@@ -260,6 +285,20 @@ if [ "$1" == "add" ]; then
 		done
 	fi
 	if [ "$2" == "led" ]; then
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname leds-mlxreg, for line card - leds-mlxreg.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		leds-mlxreg)
+			# Default case, nothing to do.
+			;;
+		leds-mlxreg.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			led_path="$hw_management_path"/lc"$linecard_num"/led
+			;;
+		esac
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
 		ln -sf "$3""$4"/brightness $led_path/led_"$name"_"$color"
@@ -279,7 +318,21 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
-		# Allow to driver insertion off all the attributes
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		mlxreg-io)
+			# Default case, nothing to do.
+			;;
+		mlxreg-io.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			system_path="$hw_management_path"/lc"$linecard_num"/system
+			;;
+		esac
+		# Allow to driver insertion off all the attributes.
 		sleep 1
 		if [ -d "$3""$4" ]; then
 			for attrpath in "$3""$4"/*; do
@@ -328,33 +381,19 @@ if [ "$1" == "add" ]; then
 				;;
 		esac
 	fi
-	# Creating lc folders hierarchy on add linecard udev event. 
+	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then
-		find_linecard_bus
-		lc_bus_num=$(echo "$3""$4" | xargs basename | cut -c1)
-		max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
-		# check linecard bus range
-		if [ "$lc_bus_num" -le "$max_lc_bus_num" ] &&
-		   [ "$lc_bus_num" -ge "$linecard_bus_offset" ]; then
-			linecard_num=$((lc_bus_num-linecard_bus_offset+1))
-			# check linecard num range
-			if [ "$linecard_num" -le "$lc_max_num" ] &&
-			   [ "$linecard_num" -ge 1 ]; then
-				if [ ! -d "$hw_management_path"/lc"$linecard_num" ]; then
-					mkdir "$hw_management_path"/lc"$linecard_num"
-				fi
-				for i in "${!linecard_folders[@]}"
-				do
-					if [ ! -d "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}" ]; then
-						mkdir "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}"
-					fi 
-				done
-			else
-				log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
-			fi
-		else
-			log_err "Line card bus number out of range. $lc_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
+		input_bus_num=$(echo "$3""$4" | xargs basename | cut -d"-" -f1)
+		find_linecard_num "$input_bus_num"
+		if [ ! -d "$hw_management_path"/lc"$linecard_num" ]; then
+			mkdir "$hw_management_path"/lc"$linecard_num"
 		fi
+		for i in "${!linecard_folders[@]}"
+		do
+			if [ ! -d "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}" ]; then
+				mkdir "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}"
+			fi 
+		done
 	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
@@ -414,6 +453,20 @@ else
 		done
 	fi
 	if [ "$2" == "led" ]; then
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname leds-mlxreg, for line card - leds-mlxreg.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		leds-mlxreg)
+			# Default case, nothing to do.
+			;;
+		leds-mlxreg.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			led_path="$hw_management_path"/lc"$linecard_num"/led
+			;;
+		esac
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
 		unlink $led_path/led_"$name"_"$color"
@@ -428,6 +481,20 @@ else
 		rm -f $led_path/led_"$name"_capability
 	fi
 	if [ "$2" == "regio" ]; then
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname mlxreg-io, for line card - mlxreg-io.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		mlxreg-io)
+			# Default case, nothing to do.
+			;;
+		mlxreg-io.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			system_path="$hw_management_path"/lc"$linecard_num"/system
+			;;
+		esac
 		if [ -d $system_path ]; then
 			for attrname in $system_path/*; do
 				attrname=$(basename "${attrname}")
@@ -470,28 +537,14 @@ else
 		unlock_service_state_change
 		rm -rf ${sfp_path}/*_status
 	fi
-	# Clear lc folders on rm linecard udev event. 
+	# Clear lc folders upon line card udev rm event.
 	if [ "$2" == "linecard" ]; then
-		find_linecard_bus
-		lc_bus_num=$(echo "$3""$4" | xargs basename | cut -c1)
-		max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
-		# check linecard bus range
-		if [ "$lc_bus_num" -le "$max_lc_bus_num" ] &&
-		   [ "$lc_bus_num" -ge "$linecard_bus_offset" ]; then
-			linecard_num=$((lc_bus_num-linecard_bus_offset+1))
-			# check linecard num range
-			if [ "$linecard_num" -le "$lc_max_num" ] &&
-			   [ "$linecard_num" -ge 1 ]; then
-				# Clean linecard folders 
-				if [ -d "$hw_management_path"/lc"$linecard_num" ]; then
-					find "$hw_management_path"/lc"$linecard_num" -type l -exec unlink {} \;
-					rm -rf "$hw_management_path"/lc"$linecard_num"
-				fi
-			else
-				log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
-			fi
-		else
-			log_err "Line card bus number out of range. $lc_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
+		input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+		find_linecard_num "$input_bus_num"
+		# Clean line card folders.
+		if [ -d "$hw_management_path"/lc"$linecard_num" ]; then
+			find "$hw_management_path"/lc"$linecard_num" -type l -exec unlink {} \;
+			rm -rf "$hw_management_path"/lc"$linecard_num"
 		fi
 	fi
 fi
