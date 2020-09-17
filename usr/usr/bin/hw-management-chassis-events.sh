@@ -59,6 +59,9 @@ eeprom_name=''
 sfp_counter=0
 LOCKFILE="/var/run/hw-management-chassis.lock"
 udev_ready=$hw_management_path/.udev_ready
+linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "thermal")
+mlxreg_lc_addr=32
+lc_max_num=8
 
 log_err()
 {
@@ -87,6 +90,24 @@ find_i2c_bus()
 	done
 
 	log_err "i2c-mlxcpld driver is not loaded"
+	exit 0
+}
+
+find_linecard_bus()
+{
+	# Find base i2c bus number of Mellanox linecard.
+	for ((i=1; i<i2c_bus_max; i++)); do
+		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
+		if [ -d $folder ]; then
+			name=$(cut $folder/name -d' ' -f 1)
+			if [ "$name" == "mlxreg-lc" ]; then
+				linecard_bus_offset=$i
+				return
+			fi
+		fi
+	done
+
+	log_err "mlxreg-lc driver is not loaded"
 	exit 0
 }
 
@@ -307,6 +328,34 @@ if [ "$1" == "add" ]; then
 				;;
 		esac
 	fi
+	# Creating lc folders hierarchy on add linecard udev event. 
+	if [ "$2" == "linecard" ]; then
+		find_linecard_bus
+		lc_bus_num=$(echo "$3""$4" | xargs basename | cut -c1)
+		max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
+		# check linecard bus range
+		if [ "$lc_bus_num" -le "$max_lc_bus_num" ] &&
+		   [ "$lc_bus_num" -ge "$linecard_bus_offset" ]; then
+			linecard_num=$((lc_bus_num-linecard_bus_offset+1))
+			# check linecard num range
+			if [ "$linecard_num" -le "$lc_max_num" ] &&
+			   [ "$linecard_num" -ge 1 ]; then
+				if [ ! -d "$hw_management_path"/lc"$linecard_num" ]; then
+					mkdir "$hw_management_path"/lc"$linecard_num"
+				fi
+				for i in "${!linecard_folders[@]}"
+				do
+					if [ ! -d "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}" ]; then
+						mkdir "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}"
+					fi 
+				done
+			else
+				log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
+			fi
+		else
+			log_err "Line card bus number out of range. $lc_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
+		fi
+	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
@@ -420,5 +469,29 @@ else
 		fi
 		unlock_service_state_change
 		rm -rf ${sfp_path}/*_status
+	fi
+	# Clear lc folders on rm linecard udev event. 
+	if [ "$2" == "linecard" ]; then
+		find_linecard_bus
+		lc_bus_num=$(echo "$3""$4" | xargs basename | cut -c1)
+		max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
+		# check linecard bus range
+		if [ "$lc_bus_num" -le "$max_lc_bus_num" ] &&
+		   [ "$lc_bus_num" -ge "$linecard_bus_offset" ]; then
+			linecard_num=$((lc_bus_num-linecard_bus_offset+1))
+			# check linecard num range
+			if [ "$linecard_num" -le "$lc_max_num" ] &&
+			   [ "$linecard_num" -ge 1 ]; then
+				# Clean linecard folders 
+				if [ -d "$hw_management_path"/lc"$linecard_num" ]; then
+					find "$hw_management_path"/lc"$linecard_num" -type l -exec unlink {} \;
+					rm -rf "$hw_management_path"/lc"$linecard_num"
+				fi
+			else
+				log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
+			fi
+		else
+			log_err "Line card bus number out of range. $lc_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
+		fi
 	fi
 fi
