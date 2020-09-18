@@ -159,7 +159,7 @@ find_eeprom_name()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
 	else
-		# Line card VPD at i2c bus {lc_num}07, INI - {lc_num}08
+		# Line card VPD at i2c bus {lc_num}07, INI - {lc_num}08.
 		case $bus in
 		*07)
 			eeprom_name=vpd
@@ -250,6 +250,17 @@ if [ "$1" == "add" ]; then
 		exit 0
 	fi
 	if [ "$2" == "a2d" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Line card event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				environment_path="$hw_management_path"/lc"$linecard_num"/environment
+			fi
+		fi
 		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$5"_voltage_scale
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
@@ -429,6 +440,17 @@ elif [ "$1" == "hotplug-event" ]; then
 	handle_hotplug_event "${2}" "${3}"
 else
 	if [ "$2" == "a2d" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Line card event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				environment_path="$hw_management_path"/lc"$linecard_num"/environment
+			fi
+		fi
 		unlink $environment_path/"$2"_"$5"_voltage_scale
 		for i in {0..7}; do
 			if [ -L $environment_path/"$2"_"$5"_raw_"$i" ]; then
