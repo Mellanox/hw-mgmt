@@ -283,6 +283,19 @@ if [ "$1" == "add" ]; then
 			if [ "$bus" != "$comex_bus" ]; then
 				exit 0
 			fi
+		else
+			# Detect if it belongs to line card or to main board.
+			input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+			driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+			if [ -d "$driver_dir" ]; then
+				driver_name=$(< "$driver_dir"/name)
+				if [ "$driver_name" == "mlxreg-lc" ]; then
+					# Linecard event, replace output folder.
+					find_linecard_num "$input_bus_num"
+					environment_path="$hw_management_path"/lc"$linecard_num"/environment
+					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
+				fi
+			fi
 		fi
 		for i in {1..3}; do
 			if [ -f "$3""$4"/in"$i"_input ]; then
@@ -472,6 +485,19 @@ else
 			# Verify if this is not COMEX device
 			if [ "$bus" != "$comex_bus" ]; then
 				exit 0
+			fi
+		else
+			# Detect if it belongs to line card or to main board.
+			input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+			driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+			if [ -d "$driver_dir" ]; then
+				driver_name=$(< "$driver_dir"/name)
+				if [ "$driver_name" == "mlxreg-lc" ]; then
+					# Linecard event, replace output folder.
+					find_linecard_num "$input_bus_num"
+					environment_path="$hw_management_path"/lc"$linecard_num"/environment
+					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
+				fi
 			fi
 		fi
 		for i in {1..3}; do
