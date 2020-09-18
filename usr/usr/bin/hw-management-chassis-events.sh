@@ -272,7 +272,8 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
 	   [ "$2" == "voltmon7" ] ||
-	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
+	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -475,7 +476,8 @@ else
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
 	   [ "$2" == "voltmon7" ] ||
-	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
+	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
