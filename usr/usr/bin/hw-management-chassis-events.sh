@@ -158,6 +158,16 @@ find_eeprom_name()
 		eeprom_name=fan3_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
+	else
+		# Line card VPD at i2c bus {lc_num}07, INI - {lc_num}08
+		case $bus in
+		*07)
+			eeprom_name=vpd
+			;;
+		*08)
+			eeprom_name=ini
+			;;
+		esac
 	fi
 }
 
@@ -346,6 +356,17 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Linecard event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
+			fi
+		fi
 		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -505,6 +526,17 @@ else
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Linecard event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
+			fi
+		fi
 		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
