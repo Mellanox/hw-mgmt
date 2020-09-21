@@ -1,0 +1,44 @@
+From be9e552bdd085897f80ccec1c21908ec29563bda Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 17 Sep 2020 16:00:46 +0300
+Subject: [PATCH backport v4.19 2/2] i2c: mux: mlxcpld: Fixes during bring-up
+
+Fixes during bring-up.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/muxes/i2c-mux-mlxcpld.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-mlxcpld.c b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+index 44180e2c1..4472781e2 100644
+--- a/drivers/i2c/muxes/i2c-mux-mlxcpld.c
++++ b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+@@ -146,9 +146,10 @@ static int mlxcpld_mux_probe(struct platform_device *pdev)
+ 	if (!muxc)
+ 		return -ENOMEM;
+ 
++	platform_set_drvdata(pdev, muxc);
+ 	data = i2c_mux_priv(muxc);
+-	memcpy(&data->pdata, pdata, sizeof(*pdata));
+ 	data->client = client;
++	memcpy(&data->pdata, pdata, sizeof(*pdata));
+ 	/* Save mux select address for 16 bits transaction size. */
+ 	memcpy(data->sel_buf, &sel_reg_addr, 2);
+ 	data->last_chan = 0; /* force the first selection */
+@@ -171,10 +172,10 @@ virt_reg_failed:
+ 
+ static int mlxcpld_mux_remove(struct platform_device *pdev)
+ {
+-	struct i2c_client *client = to_i2c_client(pdev->dev.parent);
+-	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
++	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
+ 
+ 	i2c_mux_del_adapters(muxc);
++
+ 	return 0;
+ }
+ 
+-- 
+2.11.0
+

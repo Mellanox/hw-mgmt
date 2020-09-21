@@ -1,0 +1,243 @@
+From e7bb98aa6129feebb34f98dda5fcd0d53056e719 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 17 Sep 2020 15:53:00 +0300
+Subject: [PATCH backport v4.19] platform/mellanox: Fixes to be merge to
+ previous patches
+
+Fixes, found during preliminary bring-up.
+
+Signed-off-by: Vadim Pasternak <nvidia@mellanox.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c |  8 +++---
+ drivers/platform/x86/mlx-platform.c        | 40 ++++++++++++++++++------------
+ include/linux/platform_data/mlxreg.h       | 12 +++------
+ 3 files changed, 32 insertions(+), 28 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index 311cd852a..e9c767689 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -171,7 +171,9 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 
+ 		data->hpdev.client = client;
+ 		break;
+-	case MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION:
++	case MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION:
++		/* Export parent regmap to underlying device. */
++		data->hpdev.brdinfo->platform_data = pdata->regmap;
+ 		data->hpdev.pdev =
+ 			platform_device_register_resndata(&priv->pdev->dev,
+ 							  brdinfo->type,
+@@ -221,7 +223,7 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
+ 			data->hpdev.adapter = NULL;
+ 		}
+ 		break;
+-	case MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION:
++	case MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION:
+ 		if (data->hpdev.pdev)
+ 			platform_device_unregister(data->hpdev.pdev);
+ 		break;
+@@ -230,8 +232,6 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
+ 	}
+ 
+ 	switch (kind) {
+-	case MLXREG_HOTPLUG_LC_PRESENT:
+-	case MLXREG_HOTPLUG_LC_VERIFIED:
+ 	case MLXREG_HOTPLUG_LC_POWERED:
+ 	case MLXREG_HOTPLUG_LC_SYNCED:
+ 	case MLXREG_HOTPLUG_LC_READY:
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index bf41fbf48..78c8167d0 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -1347,72 +1347,80 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.label = "lc1_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(0),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = /* MLXPLAT_CPLD_NR_LC_SET(0) */ 5,
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 1,
+ 	},
+ 	{
+ 		.label = "lc2_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(1),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = /* MLXPLAT_CPLD_NR_LC_SET(1) */ 6,
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 2,
+ 	},
+ 	{
+ 		.label = "lc3_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(2),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(2),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 3,
+ 	},
+ 	{
+ 		.label = "lc4_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(3),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(3),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 4,
+ 	},
+ 	{
+ 		.label = "lc5_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(4),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(4),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 5,
+ 	},
+ 	{
+ 		.label = "lc6_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(5),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(5),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 6,
+ 	},
+ 	{
+ 		.label = "lc7_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(6),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(6),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 7,
+ 	},
+ 	{
+ 		.label = "lc8_verified",
+ 		.reg = /* MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.mask = BIT(7),
++		.reg_prsnt = /* MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET */ MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(7),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+ 		.slot = 8,
+ 	},
+ };
+@@ -1424,7 +1432,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(0),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = /* MLXPLAT_CPLD_NR_LC_SET(0) */ 5,
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 1,
+ 	},
+ 	{
+@@ -1433,7 +1441,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(1),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = /* MLXPLAT_CPLD_NR_LC_SET(1) */ 6,
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 2,
+ 	},
+ 	{
+@@ -1442,7 +1450,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(2),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(2),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 3,
+ 	},
+ 	{
+@@ -1451,7 +1459,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(3),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(3),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 4,
+ 	},
+ 	{
+@@ -1460,7 +1468,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(4),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(4),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 5,
+ 	},
+ 	{
+@@ -1469,7 +1477,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(5),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(5),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 6,
+ 	},
+ 	{
+@@ -1478,7 +1486,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(6),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(6),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 7,
+ 	},
+ 	{
+@@ -1487,7 +1495,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+ 		.mask = BIT(7),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(7),
+-		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION,
++		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+ 		.slot = 8,
+ 	},
+ };
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index 2e3faaae4..980768dc9 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -50,18 +50,14 @@ enum mlxreg_hotplug_kind {
+  *
+  * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event, remove
+  *					  for 'off' event;
+- * @MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION: probe platform device for 'on'
+- *						 event, notify for 'off' event;
+- * @MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION: remove platform device for
+- *						  'off' event, notify for 'on'
+- *						   event;
++ * @MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION: probe platform device for 'on'
++ *					   event, remove for 'off' event;
+  * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
+  */
+ enum mlxreg_hotplug_device_action {
+ 	MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION = 0,
+-	MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION = 1,
+-	MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION = 2,
+-	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 3,
++	MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION = 1,
++	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 2,
+ };
+ 
+ /**
+-- 
+2.11.0
+
