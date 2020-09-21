@@ -75,6 +75,7 @@
 hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
+system_path=$hw_management_path/system
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
@@ -101,6 +102,7 @@ cooling_set_max_state=20
 max_amb=120000
 module_counter=0
 gearbox_counter=0
+lc_counter=0
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
@@ -420,6 +422,28 @@ log_info()
 	logger -t hw-management-tc -p daemon.info "$@"
 }
 
+# Validate thermal attributes for the subsystem
+# input parameters:
+# $1 - 'subsystem' relative path. Example '' for MGMT or 'lc{n}' for line card
+# $2 - thermal dev type name. Example: 'module', 'gearbox'
+# $3 - thermal dev count in subsystem
+validate_thermal_configuration_per_susbsys()
+{
+	subsys_path=$1
+	dev_type=$2
+	dev_count=$3
+
+	for ((i=1; i<=dev_count; i+=1)); do
+		if [ -L $hw_management_path/"$subsys_path"/thermal/"$dev_type""$i"_temp ]; then
+			if [ ! -L $hw_management_path/"$subsys_path"/thermal/"$dev_type""$i"_temp_fault ]; then
+				log_err "$subsys_path $dev_type($i)_temp_fault attribute not exist"
+				return 1
+			fi
+		fi
+	done
+	return 0
+}
+
 validate_thermal_configuration()
 {
 	# Wait for symbolic links creation.
@@ -444,14 +468,24 @@ validate_thermal_configuration()
 		log_err "PWM control and ASIC attributes are not exist"
 		return 1
 	fi
-	for ((i=1; i<=module_counter; i+=1)); do
-		if [ -L $thermal_path/module"$i"_temp ]; then
-			if [ ! -L $thermal_path/module"$i"_temp_fault ]; then
-				log_err "QSFP module ($i) module_temp_fault attribute not exist"
-				return 1
+	if [ "$lc_counter" -gt 0 ]; then
+		for ((i=1; i<=lc_counter; i+=1)); do
+			lc_active=$(< $system_path/lc"$i"_active)
+			if [ "$lc_active" -gt 0 ]; then
+				lc_module_count=$(< $hw_management_path/lc"$i"/config/module_counter)
+				validate_thermal_configuration_per_susbsys "lc$i" "module" "$lc_module_count"
+				if [ "$?" -ne 0 ]; then
+					return 1
+				fi
 			fi
-		fi
-	done
+		 done
+	fi
+
+	validate_thermal_configuration_per_susbsys "" "module" $module_counter
+	if [ "$?" -ne 0 ]; then
+		return 1
+	fi
+
 	if [ ! -L $temp_fan_amb ] || [ ! -L $temp_port_amb ]; then
 		log_err "Ambient temperature sensors attributes are not exist"
 		return 1
@@ -464,18 +498,111 @@ validate_thermal_configuration()
 	fi
 }
 
-check_untrested_module_sensor()
+# Validate for the untrusted thermal sensor
+# input parameters:
+# $1 - 'subsystem' relative path. Example '' for MGMT or 'lc{n}' for line card
+# $2 - thermal dev type name. Example: 'module', 'gearbox' 
+# $3 - thermal dev count in subsystem
+check_untrusted_sensor_per_type()
 {
-	for ((i=1; i<=module_counter; i+=1)); do
-		tz_check_suspend
-		if [ "$?" -ne 0 ]; then
-			return
-		fi
-		if [ -L $thermal_path/module"$i"_temp_fault ]; then
-			temp_fault=$(<$thermal_path/module"$i"_temp_fault)
+	subsys_path=$1
+	dev_type=$2
+	dev_count=$3	
+	for ((i=1; i<=dev_count; i+=1)); do
+		if [ -L $hw_management_path/"$subsys_path"/thermal/"$dev_type""$i"_temp_fault ]; then
+			temp_fault=$(<$hw_management_path/"$subsys_path"/thermal/"$dev_type""$i"_temp_fault)
 			if [ "$temp_fault" -eq 1 ]; then
 				untrusted_sensor=1
+				return 1
 			fi
+		fi
+	done
+}
+
+check_untrusted_sensors()
+{
+	tz_check_suspend
+	if [ "$?" -ne 0 ]; then
+		return
+	fi
+	if [ "$lc_counter" -gt 0 ]; then
+		for ((i=1; i<=lc_counter; i+=1)); do
+			lc_active=$(< $system_path/lc"$i"_active)
+			if [ "$lc_active" -gt 0 ]; then
+				lc_module_count=$(< $hw_management_path/lc"$i"/config/module_counter)
+				check_untrusted_sensor_per_type "lc$i" "module" "$lc_module_count"
+				if [ "$?" -ne 0 ]; then
+					return
+				fi
+			fi
+		 done
+	fi
+	
+	check_untrusted_sensor_per_type "" "module" $module_counter
+}
+
+# Print to log single tz information
+# input parameters:
+# $1 - 'tz_path' 
+# $2 - 'name' tz name: module, gearbox, asic...
+log_tz_info()
+{
+	tz_path=$1
+	name=$2
+	if [ -f "$tz_path"/thermal_zone_temp ]; then
+		t7=$(< "$tz_path"/thermal_zone_mode)
+		if [ "$t7" = "enabled" ]; then
+			t1=$(< "$tz_path"/thermal_zone_temp)
+			t2=$(< "$tz_path"/temp_trip_norm)
+			t3=$(< "$tz_path"/temp_trip_high)
+			t4=$(< "$tz_path"/temp_trip_hot)
+			t5=$(< "$tz_path"/temp_trip_crit)
+			t6=$(< "$tz_path"/thermal_zone_policy)
+			log_info "tz $name temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+		fi
+	fi
+}
+
+# Print to log tz information for modules in specified 'subsystem'
+# input parameters:
+# $1 - 'subsystem' relative path. Example '' for MGMT or 'lc{n}' for line card
+# $2 - module count in subsystem
+log_modules_tz_info()
+{
+	subsys_path=$1
+	module_count=$2
+
+	for ((i=1; i<=module_count; i+=1)); do
+		if [ -f $hw_management_path/"$subsys_path"/thermal/module"$i"_temp_input ]; then
+			t1=$(< $hw_management_path/"$subsys_path"/thermal/module"$i"_temp_input)
+			if [ "$t1" -gt  "0" ]; then
+				t2=$(< $hw_management_path/"$subsys_path"/thermal/module"$i"_temp_fault)
+				t3=$(< $hw_management_path/"$subsys_path"/thermal/module"$i"_temp_crit)
+				t4=$(< $hw_management_path/"$subsys_path"/thermal/module"$i"_temp_emergency)
+				log_info "$subsys_path module$i temp $t1 fault $t2 crit $t3 emerg $t4"
+			fi
+			log_tz_info "$hw_management_path/$subsys_path/thermal/mlxsw-module$i" "module$i"
+		fi
+	done
+}
+
+
+# Print to log tz information for gearboxes in specified 'subsystem'
+# input parameters:
+# $1 - 'subsystem' relative path. Example '' for MGMT or 'lc{n}' for line card 
+# $2 - gearbox count in subsystem
+log_gearbox_tz_info()
+{
+	subsys_path=$1
+	gbox_count=$2
+
+	for ((i=1; i<=gbox_count; i+=1)); do
+		if [ -f $hw_management_path/"$subsys_path"/thermal/module"$i"_temp_input ]; then
+			t1=$(< $hw_management_path/"$subsys_path"/thermal/gearbox"$i"_temp_input)
+			if [ "$t1" -gt  "0" ]; then
+				log_info "$subsys_path gearbox$i temp $t1"
+			fi
+			log_tz_info "$hw_management_path/$subsys_path/thermal/mlxsw-gearbox$i" "gearbox$i"
 		fi
 	done
 }
@@ -494,11 +621,11 @@ thermal_periodic_report()
 		if [ "$cooling" -gt "$f5" ]; then
 			f5=$cooling
 		fi
-        else
-                if [ "$cooling" -ge "$f5" ]; then
-                        f5=$cooling
-                        set_cur_state=$cooling
-                fi
+    else
+        if [ "$cooling" -ge "$f5" ]; then
+            f5=$cooling
+            set_cur_state=$cooling
+        fi
 	fi
 	ps_fan_speed=${psu_fan_speed[$f5]}
 	f5=$((f5*10))
@@ -514,59 +641,23 @@ thermal_periodic_report()
 			log_info "tacho$i speed is $tacho fault is $fault"
 		fi
 	done
-	for ((i=1; i<=module_counter; i+=1)); do
-		if [ -f $thermal_path/module"$i"_temp_input ]; then
-			t1=$(< $thermal_path/module"$i"_temp_input)
-			if [ "$t1" -gt  "0" ]; then
-				t2=$(< $thermal_path/module"$i"_temp_fault)
-				t3=$(< $thermal_path/module"$i"_temp_crit)
-				t4=$(< $thermal_path/module"$i"_temp_emergency)
-				log_info "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
-			fi
-			if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
-				t7=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_mode)
-				if [ "$t7" = "enabled" ]; then
-					t1=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_temp)
-					t2=$(< $thermal_path/mlxsw-module"$i"/temp_trip_norm)
-					t3=$(< $thermal_path/mlxsw-module"$i"/temp_trip_high)
-					t4=$(< $thermal_path/mlxsw-module"$i"/temp_trip_hot)
-					t5=$(< $thermal_path/mlxsw-module"$i"/temp_trip_crit)
-					t6=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_policy)
-					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
-				fi
-			fi
-		fi
-	done
-	for ((i=1; i<=gearbox_counter; i+=1)); do
-		if [ -f $thermal_path/gearbox"$i"_temp_input ]; then
-			t1=$(< $thermal_path/gearbox"$i"_temp_input)
-			if [ "$t1" -gt  "0" ]; then
-				log_info "gearbox$i temp $t1"
-			fi
-			if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp ]; then
-				t7=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode)
-				if [ "$t7" = "enabled" ]; then
-					t1=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp)
-					t2=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm)
-					t3=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_high)
-					t4=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_hot)
-					t5=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_crit)
-					t6=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy)
-					log_info "tz gearbox$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
-				fi
-			fi
-		fi
-	done
-	t1=$(< $thermal_path/mlxsw/thermal_zone_temp)
-	t2=$(< $thermal_path/mlxsw/temp_trip_norm)
-	t3=$(< $thermal_path/mlxsw/temp_trip_high)
-	t4=$(< $thermal_path/mlxsw/temp_trip_hot)
-	t5=$(< $thermal_path/mlxsw/temp_trip_crit)
-	t6=$(< $thermal_path/mlxsw/thermal_zone_policy)
-	t7=$(< $thermal_path/mlxsw/thermal_zone_mode)
-	if [ "$t7" = "enabled" ]; then
-		log_info "tz asic temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+
+	log_modules_tz_info "" "$module_counter"
+	log_gearbox_tz_info "" "$gearbox_counter"
+
+	if [ "$lc_counter" -gt 0 ]; then
+		for ((i=1; i<=lc_counter; i+=1)); do
+			lc_active=$(< $system_path/lc"$i"_active)
+			if [ "$lc_active" -gt 0 ]; then
+				lc_module_count=$(< $hw_management_path/lc"$i"/config/module_counter)
+				lc_gearbox_count=$(< $hw_management_path/lc"$i"/config/gearbox_counter)
+				log_modules_tz_info "lc$i" "$lc_module_count"
+				log_gearbox_tz_info "lc$i" "$lc_gearbox_count"
+		 	fi
+		done
 	fi
+
+	log_tz_info "$thermal_path/mlxsw" "asic"
 }
 
 config_p2c_dir_trust()
@@ -693,7 +784,7 @@ set_pwm_min_threshold()
 	c2p_dir=0
 
 	# Check for untrusted modules
-	check_untrested_module_sensor
+	check_untrusted_sensors
 
 	# Define FAN direction
 	temp_fan_ambient=$(< $temp_fan_amb)
@@ -896,31 +987,83 @@ set_dynamic_min_pwm()
 	log_info "FAN speed is set to $cur_state percent up to dynamic minimum"
 }
 
+# input parameters:
+# $1 - 'subsystem' relative path. Example '' for MGMT or 'lc{n}' for line card
+# $2 - thermal device type name. Example: 'module', 'gearbox' 
+# $3 - thermal device count in subsystem 
+check_trip_min_vs_current_temp_per_type()
+{
+	subsys_path=$1
+	dev_type=$2
+	dev_count=$3
+	
+	for ((i=1; i<=dev_count; i+=1)); do
+		if [ -f $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp ]; then
+			trip_norm=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_norm)
+			temp_now=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp)
+			if [ "$temp_now" -gt 0 ] && [ "$trip_norm" -le  "$temp_now" ]; then
+				return 1
+			fi
+		fi
+	done
+	return 0
+}
+
 check_trip_min_vs_current_temp()
 {
-	for ((i=1; i<=gearbox_counter; i+=1)); do
-		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp ]; then
-			trip_norm=$(< $thermal_path/mlxsw-gearbox"$i"/temp_trip_norm)
-			temp_now=$(< $thermal_path/mlxsw-gearbox"$i"/thermal_zone_temp)
-			if [ "$temp_now" -gt 0 ] && [ "$trip_norm" -le  "$temp_now" ]; then
-				return
+	check_trip_min_vs_current_temp_per_type "" "module" $module_counter
+	if [ "$?" -ne 0 ]; then
+		return
+	fi
+
+	check_trip_min_vs_current_temp_per_type "" "gearbox" $gearbox_counter
+	if [ "$?" -ne 0 ]; then
+		return
+	fi
+
+	if [ "$lc_counter" -gt 0 ]; then
+		for ((i=1; i<=lc_counter; i+=1)); do
+			lc_active=$(< $system_path/lc"$i"_active)
+			if [ "$lc_active" -gt 0 ]; then
+				lc_module_count=$(< $hw_management_path/lc"$i"/config/module_counter)
+				check_trip_min_vs_current_temp_per_type "lc$i" "module" "$lc_module_count"
+				if [ "$?" -ne 0 ]; then
+					return
+				fi
+				lc_gbox_count=$(< $hw_management_path/lc"$i"/config/gearbox_counter)
+				check_trip_min_vs_current_temp_per_type "lc$i" "gearbox" "$lc_gbox_count"
+				if [ "$?" -ne 0 ]; then
+					return
+				fi
 			fi
-		fi
-	done
-	for ((i=1; i<=module_counter; i+=1)); do
-		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
-			trip_norm=$(< $thermal_path/mlxsw-module"$i"/temp_trip_norm)
-			temp_now=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_temp)
-			if [ "$temp_now" -gt 0 ] && [ "$trip_norm" -le  "$temp_now" ]; then
-				return
-			fi
-		fi
-	done
+		done
+	fi
 	trip_norm=$(< $temp_trip_norm)
 	temp_now=$(< $tz_temp)
 	if [ "$trip_norm" -gt  "$temp_now" ]; then
 		set_dynamic_min_pwm
 	fi
+}
+
+# Ckeck existing and set thermal attributes
+# input parameters:
+# $1 - 'subsystem' relative path. Example '' for MGMT or 'lc{n}' for line card
+# $2 - dev type name. Example: 'module', 'gearbox'
+# $3 - dev count in subsystem
+# $4 - attribute name. Example: 'thermal_zone_policy', 'thermal_zone_mode', ...
+# $5 - attribute value
+set_thermal_zone_attr()
+{
+	subsys_path=$1
+	dev_type=$2
+	dev_count=$3
+	attr_name=$4
+	attr_val=$5
+	for ((i=1; i<=dev_count; i+=1)); do
+		if [ -f $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/"$attr_name" ]; then
+			echo "$attr_val" > $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/"$attr_name"
+		fi
+	done
 }
 
 enable_disable_zones_set_pwm()
@@ -939,29 +1082,15 @@ enable_disable_zones_set_pwm()
 	if [ -L $tz_mode ]; then
 		echo $policy > $tz_policy
 	fi
-	for ((i=1; i<=module_counter; i+=1)); do
-		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
-			echo $policy > $thermal_path/mlxsw-module"$i"/thermal_zone_policy
-		fi
-	done
-	for ((i=1; i<=gearbox_counter; i+=1)); do
-		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
-			echo $policy > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_policy
-		fi
-	done
+	set_thermal_zone_attr  "" "module" $module_counter "thermal_zone_policy" $policy
+	set_thermal_zone_attr  "" "gearbox" $gearbox_counter "thermal_zone_policy" $policy
+
 	if [ -L $tz_mode ]; then
 		echo $mode > $tz_mode
 	fi
-	for ((i=1; i<=module_counter; i+=1)); do
-		if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_mode ]; then
-			echo $mode > $thermal_path/mlxsw-module"$i"/thermal_zone_mode
-		fi
-	done
-	for ((i=1; i<=gearbox_counter; i+=1)); do
-		if [ -f $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode ]; then
-			echo $mode > $thermal_path/mlxsw-gearbox"$i"/thermal_zone_mode
-		fi
-	done
+
+	set_thermal_zone_attr  "" "module" $module_counter "thermal_zone_mode" $mode
+	set_thermal_zone_attr  "" "gearbox" $gearbox_counter "thermal_zone_mode" $mode
 
 	case $1 in
 	1)
@@ -1019,6 +1148,9 @@ init_service_params()
 	fi
 	if [ -f $config_path/gearbox_counter ]; then
 		gearbox_counter=$(< $config_path/gearbox_counter)
+	fi
+	if [ -f $config_path/lc_counter ]; then
+		lc_counter=$(< $config_path/lc_counter)
 	fi
 }
 
