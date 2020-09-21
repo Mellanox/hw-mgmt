@@ -43,7 +43,10 @@ fan_psu_default=$config_path/fan_psu_default
 events_path=$hw_management_path/events
 max_psus=2
 max_tachos=12
+min_module_gbox_ind=2
 max_module_gbox_ind=160
+min_lc_thermal_ind=1
+max_lc_thermal_ind=20
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
@@ -94,6 +97,37 @@ unlock_service_state_change()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+# Get line card number by module 'sysfs' device path
+# $1 - sys device path in, example: /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-3/3-0037/hwmon/hwmon<n>/
+# return line card number 1..8 or 0 in ASIC case
+get_lc_id_hwmon()
+{
+	sysfs_path=$1
+	name=$(< "$sysfs_path"/name)
+	regex="mlxsw-lc([0-9]+)"
+	[[ $name =~ $regex ]]
+	if [[ -z "${BASH_REMATCH[1]}" ]]; then
+		return 0
+	else
+		return "${BASH_REMATCH[1]}"
+	fi
+}
+
+# Get line card number from tz name
+# $1 - zone type example: mlxsw-lc2-module8, mlxsw-module8
+# return line card number 1..8 or 0 in ASIC case
+get_lc_id_tz()
+{
+	zonetype=$1
+	regex="mlxsw-lc([0-9]+)?-\S+[0-9]+"
+	[[ $zonetype =~ $regex ]]
+	if [[ -z "${BASH_REMATCH[1]}" ]]; then
+		return 0
+	else
+		return "${BASH_REMATCH[1]}"
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -117,22 +151,36 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "switch" ]; then
-		name=$(< "$3""$4"/name)
-		if [ ! -f "$config_path/gearbox_counter" ]; then
-			echo 0 > $config_path/gearbox_counter
+		get_lc_id_hwmon "$3$4"
+		lc_number=$?
+		if [ "$lc_number" -ne 0 ]; then
+			cpath="$hw_management_path/lc$lc_id/config"
+			tpath="$hw_management_path/lc$lc_id/thermal"
+			min_module_ind=$min_lc_thermal_ind
+			max_module_ind=$max_lc_thermal_ind
+		else
+			cpath="$config_path/lc$lc_id/config"
+			tpath="$thermal_path/lc$lc_id/thermal"
+			min_module_ind=$min_module_gbox_ind
+			max_module_ind=$max_module_gbox_ind
 		fi
-		if [ ! -f "$config_path/module_counter" ]; then
-			echo 0 > $config_path/module_counter
+
+		name=$(< "$3""$4"/name)
+		if [ ! -f "$cpath/gearbox_counter" ]; then
+			echo 0 > "$cpath"/gearbox_counter
+		fi
+		if [ ! -f "$cpath/module_counter" ]; then
+			echo 0 > "$cpath"/module_counter
 		fi
 
 		if [ "$name" == "mlxsw" ]; then
-			ln -sf "$3""$4"/temp1_input $thermal_path/asic
+			ln -sf "$3""$4"/temp1_input "$tpath"/asic
 			if [ -f "$3""$4"/pwm1 ]; then
-				ln -sf "$3""$4"/pwm1 $thermal_path/pwm1
-				echo "$name" > $config_path/cooling_name
+				ln -sf "$3""$4"/pwm1 "$tpath"/pwm1
+				echo "$name" > "$cpath"/cooling_name
 			fi
-			if [ -f $config_path/fan_inversed ]; then
-				inv=$(< $config_path/fan_inversed)
+			if [ -f "$cpath"/fan_inversed ]; then
+				inv=$(< "$cpath"/fan_inversed)
 			fi
 			for ((i=1; i<=max_tachos; i+=1)); do
 				if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
@@ -141,42 +189,44 @@ if [ "$1" == "add" ]; then
 					j=$((inv - i))
 				fi
 				if [ -f "$3""$4"/fan"$i"_input ]; then
-					ln -sf "$3""$4"/fan"$i"_input $thermal_path/fan"$j"_speed_get
-					ln -sf "$3""$4"/pwm1 $thermal_path/fan"$j"_speed_set
-					ln -sf "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
-					if [ -f $config_path/fan_min_speed ]; then
-						ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
+					ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
+					ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
+					ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
+					if [ -f "$cpath"/fan_min_speed ]; then
+						ln -sf "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
 					fi
-					if [ -f $config_path/fan_max_speed ]; then
-						ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
+					if [ -f "$cpath"/fan_max_speed ]; then
+						ln -sf "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
 					fi
 					# Save max_tachos to config
-					echo $i > $config_path/max_tachos
+					echo $i > "$cpath"/max_tachos
 				fi
 			done
-			for ((i=2; i<=max_module_gbox_ind; i+=1)); do
+		fi
+		if [ "$name" == "mlxsw" ] ||  [ "$name" == "mlxsw-lc" ] ; then
+			for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
 				if [ -f "$3""$4"/temp"$i"_input ]; then
 					label=$(< "$3""$4"/temp"$i"_label)
 					case $label in
 					*front*)
 						j=$((i-1))
-						ln -sf "$3""$4"/temp"$i"_input $thermal_path/module"$j"_temp_input
-						ln -sf "$3""$4"/temp"$i"_fault $thermal_path/module"$j"_temp_fault
-						ln -sf "$3""$4"/temp"$i"_crit $thermal_path/module"$j"_temp_crit
-						ln -sf "$3""$4"/temp"$i"_emergency $thermal_path/module"$j"_temp_emergency
+						ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
+						ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
+						ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
+						ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
 						lock_service_state_change
-						[ -f "$config_path/module_counter" ] && module_counter=$(< $config_path/module_counter)
+						[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
 						module_counter=$((module_counter+1))
-						echo "$module_counter" > $config_path/module_counter
+						echo "$module_counter" > "$cpath"/module_counter
 						unlock_service_state_change
 						;;
 					*gear*)
 						lock_service_state_change
-						[ -f "$config_path/gearbox_counter" ] && gearbox_counter=$(< $config_path/gearbox_counter)
+						[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
 						gearbox_counter=$((gearbox_counter+1))
-						echo "$gearbox_counter" > $config_path/gearbox_counter
+						echo "$gearbox_counter" > "$cpath"/gearbox_counter
 						unlock_service_state_change
-						ln -sf "$3""$4"/temp"$i"_input $thermal_path/gearbox"$gearbox_counter"_temp_input
+						ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
 						;;
 					*)
 						;;
@@ -215,26 +265,33 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "thermal_zone" ]; then
 		zonetype=$(< "$3""$4"/type)
-		zonep0type="${zonetype:0:${#zonetype}-1}"
-		zonep1type="${zonetype:0:${#zonetype}-2}"
-		zonep2type="${zonetype:0:${#zonetype}-3}"
-		if [ "$zonetype" == "mlxsw" ] ||
-		   [ "$zonep0type" == "mlxsw-module" ] ||
-		   [ "$zonep1type" == "mlxsw-module" ] ||
-		   [ "$zonep2type" == "mlxsw-module" ] ||
-		   [ "$zonep0type" == "mlxsw-gearbox" ] ||
-		   [ "$zonep1type" == "mlxsw-gearbox" ] ||
-		   [ "$zonep2type" == "mlxsw-gearbox" ]; then
-			mkdir $thermal_path/"$zonetype"
-			ln -sf "$3""$4"/mode $thermal_path/"$zonetype"/thermal_zone_mode
-			ln -sf "$3""$4"/policy $thermal_path/"$zonetype"/thermal_zone_policy
-			ln -sf "$3""$4"/trip_point_0_temp $thermal_path/"$zonetype"/temp_trip_norm
-			ln -sf "$3""$4"/trip_point_1_temp $thermal_path/"$zonetype"/temp_trip_high
-			ln -sf "$3""$4"/trip_point_2_temp $thermal_path/"$zonetype"/temp_trip_hot
-			ln -sf "$3""$4"/trip_point_3_temp $thermal_path/"$zonetype"/temp_trip_crit
-			ln -sf "$3""$4"/temp $thermal_path/"$zonetype"/thermal_zone_temp
+		get_lc_id_tz "$zonetype"
+		lc_number=$?
+		if [ "$lc_number" -ne 0 ]; then
+			# Remove "lc{n}" from zonetype substring
+			# mlxsw-lc1-module2 => mlxsw-module2
+			regex="(\S+)-lc[0-9]+(-\S+[0-9]+)"
+			[[ $zonetype =~ $regex ]]
+			zonetype="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+			tpath="$hw_management_path/lc$lc_number/thermal"
+		else
+			tpath="$hw_management_path/thermal"
+		fi
+
+		zoneptype=${zonetype//[0-9]/}
+		if [ "$zoneptype" == "mlxsw" ] ||
+		   [ "$zoneptype" == "mlxsw-module" ] ||
+		   [ "$zoneptype" == "mlxsw-gearbox" ]; then
+			mkdir $tpath/"$zonetype"
+			ln -sf "$3""$4"/mode $tpath/"$zonetype"/thermal_zone_mode
+			ln -sf "$3""$4"/policy $tpath/"$zonetype"/thermal_zone_policy
+			ln -sf "$3""$4"/trip_point_0_temp $tpath/"$zonetype"/temp_trip_norm
+			ln -sf "$3""$4"/trip_point_1_temp $tpath/"$zonetype"/temp_trip_high
+			ln -sf "$3""$4"/trip_point_2_temp $tpath/"$zonetype"/temp_trip_hot
+			ln -sf "$3""$4"/trip_point_3_temp $tpath/"$zonetype"/temp_trip_crit
+			ln -sf "$3""$4"/temp $tpath/"$zonetype"/thermal_zone_temp
 			if [ -f "$3""$4"/emul_temp ]; then
-				ln -sf "$3""$4"/emul_temp $thermal_path/"$zonetype"/thermal_zone_temp_emul
+				ln -sf "$3""$4"/emul_temp $tpath/"$zonetype"/thermal_zone_temp_emul
 			fi
 		fi
 	fi
@@ -463,6 +520,48 @@ else
 		if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
 			exit 0
 		fi
+		
+		get_lc_id_hwmon "$3$4"
+		lc_id$?		
+		if [ "$lc_id" -ne 0 ]; then
+			cpath="$hw_management_path/lc$lc_id/config"
+			tpath="$hw_management_path/lc$lc_id/thermal"
+		else
+			cpath="$config_path"
+			tpath="$thermal_path"
+		fi
+		
+		for ((i=max_module_gbox_ind; i>=2; i-=1)); do
+			j=$((i-1))
+			if [ -L $tpath/module"$j"_temp_input ]; then
+				unlink $tpath/module"$j"_temp_input
+				lock_service_state_change
+				[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
+				module_counter=$((module_counter-1))
+				echo $module_counter > "$cpath"/module_counter
+				unlock_service_state_change
+			fi
+			if [ -L $tpath/module"$j"_temp_fault ]; then
+				unlink $tpath/module"$j"_temp_fault
+			fi
+			if [ -L $tpath/module"$j"_temp_crit ]; then
+				unlink $tpath/module"$j"_temp_crit
+			fi
+			if [ -L $tpath/module"$j"_temp_emergency ]; then
+				unlink $tpath/module"$j"_temp_emergency
+			fi
+		done
+		find "$tpath" -type l -name '*_temp_input' -exec rm {} +
+		find "$tpath" -type l -name '*_temp_fault' -exec rm {} +
+		find "$tpath" -type l -name '*_temp_crit' -exec rm {} +
+		find "$tpath" -type l -name '*_temp_emergency' -exec rm {} +
+		echo 0 > $cpath/module_counter
+		echo 0 > $cpath/gearbox_counter
+
+		if [ "$lc_id" -ne 0 ]; then
+			exit 0
+		fi
+
 		if [ -L $thermal_path/asic ]; then
 			unlink $thermal_path/asic
 		fi
@@ -489,32 +588,6 @@ else
 				unlink $thermal_path/pwm1
 			fi
 		fi
-		for ((i=max_module_gbox_ind; i>=2; i-=1)); do
-			j=$((i-1))
-			if [ -L $thermal_path/module"$j"_temp_input ]; then
-				unlink $thermal_path/module"$j"_temp_input
-				lock_service_state_change
-				[ -f "$config_path/module_counter" ] && module_counter=$(< $config_path/module_counter)
-				module_counter=$((module_counter-1))
-				echo $module_counter > $config_path/module_counter
-				unlock_service_state_change
-			fi
-			if [ -L $thermal_path/module"$j"_temp_fault ]; then
-				unlink $thermal_path/module"$j"_temp_fault
-			fi
-			if [ -L $thermal_path/module"$j"_temp_crit ]; then
-				unlink $thermal_path/module"$j"_temp_crit
-			fi
-			if [ -L $thermal_path/module"$j"_temp_emergency ]; then
-				unlink $thermal_path/module"$j"_temp_emergency
-			fi
-		done
-		find /var/run/hw-management/thermal/ -type l -name '*_temp_input' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name '*_temp_fault' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name '*_temp_crit' -exec rm {} +
-		find /var/run/hw-management/thermal/ -type l -name '*_temp_emergency' -exec rm {} +
-		echo 0 > $config_path/module_counter
-		echo 0 > $config_path/gearbox_counter
 	fi
 	if [ "$2" == "regfan" ]; then
 		if [ -L $thermal_path/pwm1 ]; then
@@ -543,13 +616,28 @@ else
 		if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
 			exit 0
 		fi
-		for ((i=1; i<max_module_gbox_ind; i+=1)); do
-			if [ -d $thermal_path/mlxsw-module"$i" ]; then
-				rm -rf $thermal_path/mlxsw-module"$i"
-			elif [ -d $thermal_path/mlxsw-gearbox"$i" ]; then
-				rm -rf $thermal_path/mlxsw-gerabox"$i"
+
+		zonetype=$(< "$3""$4"/type)
+		get_lc_id_tz "$zonetype"
+		lc_id=$?
+		if [ "$lc_id" -ne 0 ]; then
+			tpath="$hw_management_path/lc$lc_id/thermal"
+			max_module_ind=$max_lc_thermal_ind
+		else
+			tpath="$thermal_path"
+			max_module_ind=$max_module_gbox_ind
+		fi
+		for ((i=1; i<max_module_ind; i+=1)); do
+			if [ -d $tpath/mlxsw-module"$i" ]; then
+				rm -rf $tpath/mlxsw-module"$i"
+			fi
+			if [ -d $tpath/mlxsw-gearbox"$i" ]; then
+				rm -rf $tpath/mlxsw-gerabox"$i"
 			fi
 		done
+		if [ "$lc_id" -ne 0 ]; then
+			exit 0
+		fi
 		if [ -d $thermal_path/mlxsw ]; then
 			rm -rf $thermal_path/mlxsw
 		fi
