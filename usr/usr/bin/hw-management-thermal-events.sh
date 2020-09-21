@@ -48,8 +48,6 @@ i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
-module_counter=0
-gearbox_counter=0
 fan_full_speed_code=20
 LOCKFILE="/var/run/hw-management-thermal.lock"
 udev_ready=$hw_management_path/.udev_ready
@@ -418,39 +416,6 @@ if [ "$1" == "add" ]; then
 		/usr/bin/hw-management.sh chipup
 	fi
 elif [ "$1" == "change" ]; then
-	if [ "$2" == "thermal_zone" ]; then
-		zonetype=$(< "$3""$4"/type)
-		zonep0type="${zonetype:0:${#zonetype}-1}"
-		zonep1type="${zonetype:0:${#zonetype}-2}"
-		zonep2type="${zonetype:0:${#zonetype}-3}"
-		if [ "$zonetype" == "mlxsw" ] || [ "$zonep0type" == "mlxsw-module" ] ||
-		   [ "$zonep1type" == "mlxsw-module" ] || [ "$zonep2type" == "mlxsw-module" ]; then
-			# Notify thermal control about thermal zone change.
-			if [ -f /var/run/hw-management.pid ]; then
-				pid=$(< /var/run/hw-management.pid)
-				if [ "$6" == "down" ]; then
-					kill -USR1 "$pid"
-				elif [ "$6" == "highest" ]; then
-					if [ -L $thermal_path/highest_thermal_zone ]; then
-						unlink $thermal_path/highest_thermal_zone
-					fi
-					ln -sf "$3""$4" $thermal_path/highest_thermal_zone
-					score=$7
-					max_score="${score:1}"
-					echo "$max_score" > $thermal_path/highest_score
-					kill -USR2 "$pid"
-				fi
-			fi
-		fi
-	fi
-	if [ "$2" == "cooling_device" ]; then
-		coolingtype=$(< "$3""$"/type)
-		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ]; then
-			pid=$(< /var/run/hw-management.pid)
-			kill -USR1 "$pid"
-		fi
-	fi
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
