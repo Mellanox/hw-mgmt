@@ -120,14 +120,14 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*",
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
 
 # LED
-SUBSYSTEM=="leds", KERNEL=="mlxreg:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
-SUBSYSTEM=="leds", KERNEL=="mlxreg:*:green", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:*:red", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:*:red", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
 
-SUBSYSTEM=="leds", KERNEL=="mlxreg:*:orange", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
-SUBSYSTEM=="leds", KERNEL=="mlxreg:*:orange", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:orange", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:orange", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
 
 SUBSYSTEM=="leds", KERNEL=="mlxreg:*:amber", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
 SUBSYSTEM=="leds", KERNEL=="mlxreg:*:amber", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
