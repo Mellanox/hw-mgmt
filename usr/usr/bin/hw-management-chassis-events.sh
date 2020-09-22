@@ -381,6 +381,13 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		busdir="$3""$4"
+		busfolder=$(basename "$busdir")
+		bus="${busfolder:0:${#busfolder}-5}"
+		find_i2c_bus
+		bus=$((bus-i2c_bus_offset))
+		addr="0x${busfolder: -2}"
+		find_eeprom_name "$bus" "$addr"
 		# Detect if it belongs to line card or to main board.
 		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
@@ -390,15 +397,15 @@ if [ "$1" == "add" ]; then
 				# Linecard event, replace output folder.
 				find_linecard_num "$input_bus_num"
 				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
+				# Parce VPD.
+				if [ "$eeprom_name" == "vpd" ]; then
+					hw-management-parse-eeprom.sh --layout 2 --conv --eeprom_path "$3""$4"/eeprom > "$eeprom_path"/vpd_parsed
+					if [ $? -ne 0 ]; then
+						echo "Failed to parse linecard VPD" > "$eeprom_path"/vpd_parsed
+					fi
+				fi
 			fi
 		fi
-		busdir="$3""$4"
-		busfolder=$(basename "$busdir")
-		bus="${busfolder:0:${#busfolder}-5}"
-		find_i2c_bus
-		bus=$((bus-i2c_bus_offset))
-		addr="0x${busfolder: -2}"
-		find_eeprom_name "$bus" "$addr"
 		ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
 	fi
@@ -595,6 +602,7 @@ else
 		addr="0x${busfolder: -2}"
 		find_eeprom_name "$bus" "$addr"
 		unlink $eeprom_path/$eeprom_name
+		rm -f $eeprom_path/vpd_parsed
 	fi
 	if [ "$2" == "cpld" ]; then
 		asic_cpld_remove_handler

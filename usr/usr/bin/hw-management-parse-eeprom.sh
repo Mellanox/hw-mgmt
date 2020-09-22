@@ -1,6 +1,6 @@
 #!/bin/bash
 ########################################################################
-# Copyright (c) 2020 Mellanox Technologies. All rights reserved.
+# Copyright (C) 2020 Nvidia Technologies Ltd. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,19 +33,23 @@
 
 set -e
 
-MLNX_CUSTOM_CHECKER=MLNX
+# SANITY 4D4C4E58 = MLNX.
+MLNX_CUSTOM_CHECKER=4D4C4E58
 f_length_layout0=(4 24 20 4 1 3)
 f_names_layout0=("SANITY" "SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD" "RSRVD" "MFG_DATE_FIELD")
 
 f_length_layout1=(4 24 1 1 20 4 3 11 5 4)
 f_names_layout1=("SANITY" "SN_VPD_FIELD" "RSRVD" "EFT_REV" "PN_VPD_FIELD" "REV_VPD_FIELD" "MFG_DATE_FIELD" "MFR_NAME" "FEED" "CAPACITY")
 
-base_offsets=(137 160)
+f_length_layout2=(24 20 4)
+f_names_layout2=("SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD")
+
+base_offsets=(137 160 0)
 
 dependecies=("awk" "xxd")
 
 function cleanup {
-	rm  -f "${tmp_psu_eeprom}"
+	rm  -f "${tmp_eeprom_path}"
 }
 
 trap cleanup EXIT
@@ -54,12 +58,11 @@ function find_base_offset ( )
 {
 	for i in "${!base_offsets[@]}"
 	do
-		cur_val=$(xxd -u -p -l 4 -s "${base_offsets[i]}" "$psu_eeprom")
+		cur_val=$(xxd -u -p -l 4 -s "${base_offsets[i]}" "$eeprom_path")
 
-		#check sanity
-		sanity_ascii=$(echo -ne "${cur_val}" | xxd -r -p)
-		if [ "${sanity_ascii}" == "$MLNX_CUSTOM_CHECKER" ]; then
-			#echo sanity ok
+		# Check sanity.
+		if [ "${cur_val}" == "$MLNX_CUSTOM_CHECKER" ]; then
+			# Sanity ok.
 			base_offset="${base_offsets[i]}"
 			l_arr=f_length_layout$i[@]
 			n_arr=f_names_layout$i[@]
@@ -78,40 +81,51 @@ function find_base_offset ( )
 
 function do_conv ( )
 {
-	if [ ! -v "psu_eeprom" ]; then
-		echo Mandatory argument psu_eeprom missed.
-		exit 1
-	fi
-
 	for i in "${!dependecies[@]}"
 	do
-		if [ ! -x "$(command -v ${dependecies[$i]})" ]; then
+		if [ ! -x $(command -v "${dependecies[$i]}") ]; then
 			echo Dependecies check fail. Please install "${dependecies[$i]}".
 			exit 1
 		fi
 	done
 
-	eeprom_fname=$(basename "$psu_eeprom")
-	tmp_psu_eeprom=/tmp/"$eeprom_fname".tmp
+	if [ ! -v "eeprom_path" ]; then
+		echo Mandatory argument eeprom missed.
+		exit 1
+	fi
 
-	cp "$psu_eeprom" "${tmp_psu_eeprom}"
-	psu_eeprom="${tmp_psu_eeprom}"
+	tmp_eeprom_path=$(mktemp)
 
-	find_base_offset
+	cp "$eeprom_path" "${tmp_eeprom_path}"
+	eeprom_path="${tmp_eeprom_path}"
+
+	if [ ! -v "layout" ]; then
+		find_base_offset
+	else
+		if [[ "$layout" < "${#base_offsets[@]}" ]]; then
+			base_offset="${base_offsets[layout]}"
+			l_arr=f_length_layout$layout[@]
+			n_arr=f_names_layout$layout[@]
+			f_length=( "${!l_arr}" )
+			f_names=( "${!n_arr}" )
+		else
+			echo layout out of range: 0 - $(( ${#base_offsets[@]}-1 ))
+			exit 1
+		fi
+	fi
 
 	prev_len=0
 	cur_offset="${base_offset}"
-	#echo "${base_offset}"
+
 	for i in "${!f_names[@]}"
 	do
 		cur_offset=$((cur_offset+prev_len))
 		prev_len="${f_length[i]}"
-		cur_val=$(xxd -u -p -l "${f_length[i]}" -s "$cur_offset" "$psu_eeprom")
-		#check sanity
+		cur_val=$(xxd -u -p -l "${f_length[i]}" -s "$cur_offset" "$eeprom_path")
+		# Check sanity.
 		if [ "${f_names[$i]}" == "SANITY" ]; then
-				sanity_ascii=$(echo -ne "${cur_val}" | xxd -r -p)
-				if [ "${sanity_ascii}" == "$MLNX_CUSTOM_CHECKER" ]; then
-					#echo sanity ok
+				if [ "${cur_val}" == "$MLNX_CUSTOM_CHECKER" ]; then
+					# Sanity ok.
 					continue
 				else
 					echo Mellanox sanity checker fail
@@ -120,7 +134,7 @@ function do_conv ( )
 		fi
 
 		if [ "${f_names[$i]}" == "RSRVD" ]; then
-			#echo skip reserved.
+			# Skip reserved.
 			continue
 		fi
 
@@ -131,13 +145,13 @@ function do_conv ( )
 			[ "${f_names[$i]}" == "MFR_NAME" ] || \
 			[ "${f_names[$i]}" == "FEED" ] || \
 			[ "${f_names[$i]}" == "EFT_REV" ]; then
-				#print as ASCII
+				# Print as ASCII.
 				echo -ne "${cur_val}" | xxd -r -p | tr -d '\0'
 		elif [ "${f_names[$i]}" == "CAPACITY" ]; then
-			#print in DEC
+			# Print in DEC.
 			echo -ne "$((0x$cur_val))"
 		else
-			#print as HEX
+			# Print as HEX.
 			echo -ne "${cur_val}"
 		fi
 		echo -ne '\n'
@@ -169,23 +183,27 @@ done
 case $command in
 	help)
 		echo "
-Tool for MLNX psu eeprom reading." '
+MLNX eeprom parsing tool.
 
 Usage:
-	hw-management-read-ps-eeprom.sh --conv --psu_eeprom <path to ps eeprom sysfs entry>
+	hw-management-parse-eeprom.sh --conv --eeprom_path <path to eeprom sysfs entry>
 Commands:
-	--conv: read psu eeprom.
+	--conv: parse eeprom.
 
-	--psu_eeprom: MANDATORY argument, path to PSU FRU EEPROM.
+	--eeprom_path: MANDATORY argument, path to FRU EEPROM.
 		example: /var/run/hw-management/eeprom/psu1_info
 				 /var/run/hw-management/eeprom/psu2_info
+
+	--layout: If not set, tool will try to find base offset and sanity.
+		Possible range: 0 - $(( ${#base_offsets[@]}-1 ))
 
 	--help: this help.
 
 Usage example: 
-	hw-management-read-ps-eeprom.sh --conv --psu_eeprom /var/run/hw-management/eeprom/psu1_info
+	hw-management-parse-eeprom.sh --conv --eeprom_path /var/run/hw-management/eeprom/psu1_info
+	hw-management-parse-eeprom.sh --layout 2 --conv --eeprom_path /var/run/hw-management/lc1/eeprom/vpd
 
-'
+"
 		exit 0
 		;;
 	conv)
