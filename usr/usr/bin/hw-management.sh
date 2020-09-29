@@ -91,6 +91,7 @@ sxcore_up=3
 hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
+hotplug_linecards=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 hw_management_path=/var/run/hw-management
@@ -724,6 +725,8 @@ msn48xx_specific()
 	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4800_dis_table[i]}
 	done
+
+	echo 8 > $config_path/hotplug_linecards
 }
 
 check_system()
@@ -883,6 +886,16 @@ create_event_files()
 			touch $events_path/fan$i
 		done
 	fi
+	if [ $hotplug_linecards -ne 0 ]; then
+		for ((i=1; i<=hotplug_linecards; i+=1)); do
+			touch $events_path/lc$i_prsnt
+			touch $events_path/lc$i_verified
+			touch $events_path/lc$i_powered
+			touch $events_path/lc$i_ready
+			touch $events_path/lc$i_synced
+			touch $events_path/lc$i_active
+		done
+	fi
 }
 
 set_config_data()
@@ -900,6 +913,7 @@ set_config_data()
 	echo $hotplug_psus > $config_path/hotplug_psus
 	echo $hotplug_pwrs > $config_path/hotplug_pwrs
 	echo $hotplug_fans > $config_path/hotplug_fans
+	echo $hotplug_linecards > $config_path/hotplug_linecards
 }
 
 connect_platform()

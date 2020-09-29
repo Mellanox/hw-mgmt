@@ -1150,7 +1150,7 @@ init_service_params()
 		gearbox_counter=$(< $config_path/gearbox_counter)
 	fi
 	if [ -f $config_path/lc_counter ]; then
-		lc_counter=$(< $config_path/lc_counter)
+		lc_counter=$(< $config_path/hotplug_linecards)
 	fi
 }
 
