@@ -888,12 +888,12 @@ create_event_files()
 	fi
 	if [ $hotplug_linecards -ne 0 ]; then
 		for ((i=1; i<=hotplug_linecards; i+=1)); do
-			touch $events_path/lc$i_prsnt
-			touch $events_path/lc$i_verified
-			touch $events_path/lc$i_powered
-			touch $events_path/lc$i_ready
-			touch $events_path/lc$i_synced
-			touch $events_path/lc$i_active
+			touch $events_path/lc"$i"_prsnt
+			touch $events_path/lc"$i"_verified
+			touch $events_path/lc"$i"_powered
+			touch $events_path/lc"$i"_ready
+			touch $events_path/lc"$i"_synced
+			touch $events_path/lc"$i"_active
 		done
 	fi
 }
