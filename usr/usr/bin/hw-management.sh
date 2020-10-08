@@ -726,7 +726,8 @@ msn48xx_specific()
 		dis_table[i]=${msn4800_dis_table[i]}
 	done
 
-	echo 8 > $config_path/hotplug_linecards
+	hotplug_linecards=8
+	echo 4 > $config_path/cpld_num
 }
 
 check_system()
