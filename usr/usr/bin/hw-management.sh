@@ -998,6 +998,12 @@ do_stop()
 	check_system
 	disconnect_platform
 	rm -fR /var/run/hw-management
+	# Re-try removing after 1 second in case of failure.
+	# It can happens if some app locked file for reading/writing
+	if [ "$?" -ne 0 ]; then
+		sleep 1
+		rm -fR /var/run/hw-management
+	fi
 }
 
 function lock_service_state_change()
@@ -1212,3 +1218,4 @@ case $ACTION in
 		exit 1
 	;;
 esac
+exit 0
