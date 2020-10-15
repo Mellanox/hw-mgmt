@@ -1,5 +1,5 @@
 diff --git a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
-index e81ebd3..063db0d 100755
+index e81ebd3..44274be 100755
 --- a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
 +++ b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
 @@ -44,6 +44,7 @@ CONFIG_FIX_EARLYCON_MEM=y
@@ -61,8 +61,8 @@ index e81ebd3..063db0d 100755
 -# CONFIG_DEBUG_KMEMLEAK is not set
 +CONFIG_DEBUG_KMEMLEAK=y
 +CONFIG_DEBUG_KMEMLEAK_EARLY_LOG_SIZE=8096
-+# CONFIG_DEBUG_KMEMLEAK_TEST is not set
-+CONFIG_DEBUG_KMEMLEAK_DEFAULT_OFF=y
++CONFIG_DEBUG_KMEMLEAK_TEST=m
++# CONFIG_DEBUG_KMEMLEAK_DEFAULT_OFF is not set
  # CONFIG_DEBUG_STACK_USAGE is not set
 -# CONFIG_DEBUG_VM is not set
 +CONFIG_DEBUG_VM=y
