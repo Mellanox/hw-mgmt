@@ -37,14 +37,14 @@
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 
 dump_cmd () {
-cmd=$1
-output_fname=$2
-cmd_name=${cmd%% *}
+	cmd=$1
+	output_fname=$2
+	cmd_name=${cmd%% *}
 
-if [ -x "$(command -v $cmd_name)" ]; 
-then
-	eval $cmd > $DUMP_FOLDER/$output_fname
-fi
+	if [ -x "$(command -v $cmd_name)" ];
+	then
+		eval $cmd > $DUMP_FOLDER/$output_fname
+	fi
 }
 
 rm -rf $DUMP_FOLDER
@@ -56,6 +56,8 @@ find -L /var/run/hw-management/  -type f,l -exec ls -la {} \; -exec cat {} \; > 
 cp /var/log/syslog $DUMP_FOLDER
 cp /var/log/dmesg* $DUMP_FOLDER
 uname -a > $DUMP_FOLDER/sys_version
+mkdir $DUMP_FOLDER/bin/
+cp /usr/bin/hw-management* $DUMP_FOLDER/bin/
 cat /etc/os-release >> $DUMP_FOLDER/sys_version
 [ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
 cat /proc/interrupts > $DUMP_FOLDER/interrupts
