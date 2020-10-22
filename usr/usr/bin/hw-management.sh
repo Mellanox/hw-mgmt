@@ -420,6 +420,7 @@ msn274x_specific()
 	echo 2000 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
 }
 
@@ -469,6 +470,7 @@ msn24xx_specific()
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
+	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 }
 
@@ -493,6 +495,7 @@ msn27xx_msb_msx_specific()
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
+	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
