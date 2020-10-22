@@ -1,4 +1,76 @@
-  
+================================================================================
+- V.7.0010.2000
+- Wed, 22 Sep 2020
+--------------------------------------------------------------------------------
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+Should we mention here things
+CI/ONL/daily/linux-4.19/@ONL_more-kernel-debug-options.patch
+CI/ONL/daily/linux-4.9/@ONL_more-kernel-debug-options.patch 
+
+CI/ONL/verification/linux-4.19/@ONL_thermal_sim_kernel_config.patch
+CI/ONL/verification/linux-4.9/@ONL_thermal_sim_kernel_config.patch
+CI/ONL/verification/linux-4.9/0099-Add-Thermal-emulation-for-test-purpose.patch 
+CI/ONL/verification/linux-4.19/0099-Add-Thermal-emulation-for-test-purpose.patch 
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+- New Feature
+    o   Support PSU without eeprom in all Mellanox chip Spectrum 1,2,3 (adding 1) - Move PSU eeprom connection to user space for systems with Mellanox chip Spectrum.
+    o   Add PSU EEPROM type "24c02" as default for the "msn274x", "msn24xx" and "msn27xx" systems
+        *Kernel 4.19 - 0030-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur.patch
+        *Kernel 4.19 - 0031-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur.patch
+	
+        *Kernel 4.9 - 0063-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur.patch
+        *Kernel 4.9 - 0064-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur.patch
+	
+- Bug fixes
+    HW Mgmt core:
+    o   Remove obsolete code from thermal-events 'change' event handler.
+    o   Add double check for current cooling level value set
+    o   Fix hw-managemnet service stop exit code:  add return code '0' on hw-management stop.   
+    o   Add second removal try for hw-management in case on first was failed
+    o   Updating documentation of Chassis Management for Mellanox Switch to rev 1.8. plus correcting value for "config/fan psu default
+        And removing old file  Chassis Management for Mellanox Switch to rev 1.7.
+    o   Speed up only ASIC initialization by setting I2C half cycle register to 400KHz (and avoid collision with chip reset coming from SDK)  before probing.
+        and setting it back to original speed in CPLD after probing.  
+- Kernel Fixes:
+    o   Fix kernel debug message: ‘include/linux/bitops.h: sanitize rotate primitives’ (Backport from 4.19)
+        *Kernel 4.9 - 0061-include-linux-bitops.h-sanitize-rotate-primitives.patch
+    o   Fix memory leak on mlxsw_core_bus_device module removal – applying patch of Ido Schimmel      
+        *Kernel 4.19 -0029-mlxsw-core-Fix-memory-leak-on-module-removal.patch 
+        *Kernel 4.9 - 0062-mlxsw-core-Fix-memory-leak-on-module-removal.patch  
+	
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+Should we mention here things
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+- Known issues and limitations:
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.  
+
+
 ================================================================================
 - V.7.0010.1900
 - Wed, 16 Sep 2020
