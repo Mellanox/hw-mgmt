@@ -1,0 +1,36 @@
+Kernel-4.9
+ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                             | commit id                                  |  status [Pending maintainer approval , accepted]|
+ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0062-mlxsw-core-Fix-memory-leak-on-module-removal                       |830b5fe8d010fd0334b32ed34ee0f93c6478ea4e    |  Pending maintainer approval                    |
+|0063-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |5815cac8e503be45485847b432aecc92f958dba4    |  Pending maintainer approval                    |
+|0064-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |5815cac8e503be45485847b432aecc92f958dba4    |  Pending maintainer approval                    | 
+|                                                                        |                                            |                                                 |                    
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+Kernel-4.19
+ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                             | commit id                                  |  status [Pending maintainer approval , accepted]|
+ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0029-mlxsw-core-Fix-memory-leak-on-module-removal                       |830b5fe8d010fd0334b32ed34ee0f93c6478ea4e    |  Pending maintainer approval                    |
+|0030-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |be5c2fc3c591b4413f8e72af6291b61dd3df0224    |  Pending maintainer approval                    |
+|0031-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |be5c2fc3c591b4413f8e72af6291b61dd3df0224    |  Pending maintainer approval                    |
+|                                                                        |                                            |                                                 |                    
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+|                                                                        |                                            |                                                 |
+ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
