@@ -93,6 +93,7 @@ wait_for_config=120
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
 polling_time_def=60
+cooling_level_update_state=0
 
 # Local constants
 pwm_noact=0
@@ -888,17 +889,30 @@ set_default_pwm()
 	echo $set_cur_state > $cooling_cur_state
 	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
+	cooling_level_update_state=1
 	log_info "FAN speed is set to $cur_state percent up to full speed"
 }
 
 set_dynamic_min_pwm()
 {
+	if [ "$cooling_level_update_state" -eq 1 ]; then
+		cooling_level_update_state=2
+	fi
+
 	set_cur_state=$((fan_dynamic_min-fan_max_state))
 	echo "$fan_dynamic_min" > $cooling_cur_state
 	echo "$set_cur_state" > $cooling_cur_state
 	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
 	log_info "FAN speed is set to $cur_state percent up to dynamic minimum"
+}
+
+update_dynamic_min_pwm()
+{
+	if [ "$cooling_level_update_state" -eq 2 ]; then
+		cooling_level_update_state=0
+		set_dynamic_min_pwm
+	fi
 }
 
 check_trip_min_vs_current_temp()
@@ -1056,7 +1070,9 @@ while true
 do
 	/bin/sleep $polling_time &
 	wait $!
-
+	
+	# Verify if cooling state required update.
+	update_dynamic_min_pwm
 	# Check if thermal algorithm is suspended.
 	[ -f "$config_path/suspend" ] && suspend=$(< $config_path/suspend)
 	if [ "$suspend" ] && [ "$suspend" != "$suspend_thermal" ]; then

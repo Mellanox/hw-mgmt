@@ -109,6 +109,8 @@ lm_sensors_configs_path="/etc/hw-management-sensors"
 LOCKFILE="/var/run/hw-management.lock"
 udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
+i2c_freq_400=0xf
+i2c_freq_reg=0x2004
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -371,6 +373,33 @@ is_module()
         return $RC
 }
 
+function get_i2c_bus_frequency_default()
+{
+	# Get I2C base frequency default value.
+	# Relevant only to particular system types.
+	i2c_freq=$(/usr/bin/iorw -b "$i2c_freq_reg" -r -l1 | awk '{print $5}')
+	echo "$i2c_freq" > $config_path/default_i2c_freq
+}
+
+function set_i2c_bus_frequency_400KHz()
+{
+	# Speed-up ASIC I2C driver probing by setting I2C frequency to 400KHz.
+	# Relevant only to particular system types.
+	if [ -f $config_path/default_i2c_freq ]; then
+		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
+	fi
+}
+
+function restore_i2c_bus_frequency_default()
+{
+	# Restore I2C base frequency to the default value.
+	# Relevant only to particular system types.
+	if [ -f $config_path/default_i2c_freq ]; then
+		i2c_freq=$(< $config_path/default_i2c_freq)
+		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
+	fi
+}
+
 msn274x_specific()
 {
 	connect_size=${#msn2740_connect_table[@]}
@@ -391,6 +420,7 @@ msn274x_specific()
 	echo 2000 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
+	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
 }
 
@@ -440,6 +470,7 @@ msn24xx_specific()
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
+	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 }
 
@@ -464,7 +495,9 @@ msn27xx_msb_msx_specific()
 	echo 9 > $config_path/fan_inversed
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
+	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
+	get_i2c_bus_frequency_default
 }
 
 msn201x_specific()
@@ -511,6 +544,7 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	get_i2c_bus_frequency_default
 }
 
 msn3420_specific()
@@ -581,6 +615,7 @@ msn24102_specific()
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
+	get_i2c_bus_frequency_default
 }
 
 msn27002_msb78002_specific()
@@ -998,6 +1033,12 @@ do_stop()
 	check_system
 	disconnect_platform
 	rm -fR /var/run/hw-management
+	# Re-try removing after 1 second in case of failure.
+	# It can happens if some app locked file for reading/writing
+	if [ "$?" -ne 0 ]; then
+		sleep 1
+		rm -fR /var/run/hw-management
+	fi
 }
 
 function lock_service_state_change()
@@ -1093,7 +1134,9 @@ do_chip_up_down()
 					fi
 				fi
 			fi
+			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
+			restore_i2c_bus_frequency_default
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -1212,3 +1255,4 @@ case $ACTION in
 		exit 1
 	;;
 esac
+exit 0
