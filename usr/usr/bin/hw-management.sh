@@ -49,6 +49,7 @@
 #  QMB7*|SN37*|SN34*
 #  SN38*|SN37*|SN34*|SN35*
 #  SN47*
+#  QM97*
 # Available options:
 # start	- load the kernel drivers required for chassis hardware management,
 #	  connect drivers to devices.
@@ -347,6 +348,42 @@ msn3510_dis_table=(	0x6d 5 \
 			0x71 5 \
 			0x49 7 \
 			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
+mqm97xx_connect_table=(	max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2975 0x64 5 \
+			mp2888 0x66 5 \
+			mp2884 0x68 5 \
+			mp2884 0x6A 5 \
+			mp2884 0x6C 5 \
+			mp2884 0x6E 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x53 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+mqm97xx_dis_table=(	0x6d 5 \
+			0x62 5 \
+			0x64 5 \
+			0x66 5 \
+			0x68 5 \
+			0x6a 5 \
+			0x6c 5 \
+			0x6e 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x53 7 \
 			0x51 8 \
 			0x6d 15 \
 			0x49 15 \
@@ -715,6 +752,27 @@ msn3510_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+mqm97xx_specific()
+{
+	connect_size=${#mqm97xx_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${mqm97xx_connect_table[i]}
+	done
+	disconnect_size=${#mqm97xx_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${mqm97xx_dis_table[i]}
+	done
+
+	thermal_type=$thermal_type_def
+	max_tachos=14
+	echo 29500 > $config_path/fan_max_speed
+	echo 5000 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	#lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+}
+
 msn_spc2_common()
 {
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -741,6 +799,9 @@ msn_spc3_common()
 		;;
 		HI122)
 			msn47xx_specific
+		;;
+		HI130)
+			mqm97xx_specific
 		;;
 		*)
 			msn47xx_specific
@@ -814,6 +875,9 @@ check_system()
 				MSN46*)
 					msn46xx_specific
 					;;
+				MQM97*)
+					mqm97xx_specific
+					;;
 				*)
 					proc_type=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $5}')
 					case $proc_type in
@@ -824,7 +888,14 @@ check_system()
 							msn27xx_msb_msx_specific
 						;;
 						Xeon*)
-							mqmxxx_msn37x_msn34x_specific
+							proc_modele=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $7}')
+							case $proc_modele in
+								E-2276*)
+									mqm97xx_specific
+									;;
+						        *)
+							        mqmxxx_msn37x_msn34x_specific
+							esac
 						;;
 						*)
 						log_err "$product is not supported"
