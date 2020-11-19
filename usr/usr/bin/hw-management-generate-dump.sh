@@ -32,9 +32,12 @@
 #
 
 # Description: hw-management generate dump script.
-#              This script collecting debug information and pack it in /tmp/hw-mgmt-dump.tar.gz 
+#              This script collecting debug information and pack it in /tmp/hw-mgmt-dump.tar.gz
 
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
+HW_MGMT_FOLDER="/var/run/hw-management/"
+
+MODE=$1
 
 dump_cmd () {
 	cmd=$1
@@ -51,15 +54,23 @@ rm -rf $DUMP_FOLDER
 mkdir $DUMP_FOLDER
 
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
-ls -Rla /var/run/hw-management/ > $DUMP_FOLDER/hw-management_tree
-find -L /var/run/hw-management/  -type f,l -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val  2> /dev/null
-cp /var/log/syslog $DUMP_FOLDER
-cp /var/log/dmesg* $DUMP_FOLDER
+if [ -d $HW_MGMT_FOLDER ]; then
+    ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
+    find -L $HW_MGMT_FOLDER -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val  2> /dev/null
+fi
+
+if [ -z $MODE ] || [ $MODE != "compact" ]; then
+	[ -f var/log/syslog ] && cp /var/log/syslog $DUMP_FOLDER
+	[ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
+	dump_cmd "journalctl" "journalctl"
+	dump_cmd "flint -d mlnxsw-255 -qq q" "flint"
+	dump_cmd "sx_sdk --version" "sx_sdk_ver"
+fi
+
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
 cp /usr/bin/hw-management* $DUMP_FOLDER/bin/
 cat /etc/os-release >> $DUMP_FOLDER/sys_version
-[ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
 cat /proc/interrupts > $DUMP_FOLDER/interrupts
 
 if [ -f "/sys/kernel/debug/regmap/mlxplat/registers" ]; then
@@ -70,17 +81,14 @@ if [ -f "/sys/kernel/debug/regmap/mlxplat/access" ]; then
     cat /sys/kernel/debug/regmap/mlxplat/access > $DUMP_FOLDER/access
 fi
 
+dump_cmd "dmesg" "dmesg"
 dump_cmd "dmidecode -t1 -t2 -t 11" "dmidecode"
 dump_cmd "lsmod" "lsmod"
 dump_cmd "lspci -vvv" "lspci"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top"
-dump_cmd "journalctl" "journalctl"
-dump_cmd "flint -d mlnxsw-255 -qq q" "flint"
-dump_cmd "sx_sdk --version" "sx_sdk_ver"
 dump_cmd "lshw" "lshw"
 dump_cmd "sensors" "sensors"
 dump_cmd "iio_info" "iio_info"
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
-
