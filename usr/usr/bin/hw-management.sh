@@ -388,10 +388,8 @@ mqm97xx_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2888 0x66 5 \
-			mp2884 0x68 5 \
-			mp2884 0x6A 5 \
-			mp2884 0x6C 5 \
-			mp2884 0x6E 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6C 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
@@ -407,9 +405,7 @@ mqm97xx_dis_table=(	0x6d 5 \
 			0x64 5 \
 			0x66 5 \
 			0x68 5 \
-			0x6a 5 \
 			0x6c 5 \
-			0x6e 5 \
 			0x49 7 \
 			0x4a 7 \
 			0x53 7 \
