@@ -330,6 +330,35 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn4700_A1_connect_table=(	max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2975 0x64 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6e 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn4700_A1_dis_table=(	0x6d 5 \
+			0x62 5 \
+			0x64 5 \
+			0x66 5 \
+			0x6a 5 \
+			0x6e 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 msn3510_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
@@ -398,6 +427,23 @@ function restore_i2c_bus_frequency_default()
 		i2c_freq=$(< $config_path/default_i2c_freq)
 		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
 	fi
+}
+
+function find_regio_sysfs_path()
+{
+	# Find hwmon{n} sysfs path for regio device
+	for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
+		if [ -d $path ]; then
+			name=$(cut $path/name -d' ' -f 1)
+			if [ "$name" == "mlxreg_io" ]; then
+				echo $path
+				return 0
+			fi
+		fi
+	done
+
+	log_err "mlxreg_io is not loaded"
+	return 1
 }
 
 msn274x_specific()
@@ -643,7 +689,7 @@ msn27002_msb78002_specific()
 	echo 24c02 > $config_path/psu_eeprom_type
 }
 
-msn47xx_specific()
+connect_msn4700_msn4600()
 {
 	connect_size=${#msn4700_msn4600_connect_table[@]}
 	for ((i=0; i<connect_size; i++)); do
@@ -653,6 +699,38 @@ msn47xx_specific()
 	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
+}
+
+connect_msn4700_A1()
+{
+	connect_size=${#msn4700_A1_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn4700_A1_connect_table[i]}
+	done
+	disconnect_size=${#msn4700_A1_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn4700_A1_dis_table[i]}
+	done
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+}
+
+msn47xx_specific()
+{
+	regio_path=$(find_regio_sysfs_path)
+    res=$?
+    if [ $res -eq 0 ]; then
+		sys_ver=$(cut $regio_path/config1 -d' ' -f 1)
+		case $sys_ver in
+			1)
+				connect_msn4700_A1
+			;;
+			*)
+				connect_msn4700_msn4600
+			;;
+		esac
+	else
+		connect_msn4700_msn4600
+	fi
 
 	thermal_type=$thermal_type_t10
 	max_tachos=12
@@ -661,7 +739,6 @@ msn47xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 msn46xx_specific()
