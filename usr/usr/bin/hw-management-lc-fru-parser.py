@@ -63,6 +63,7 @@ import sys
 import argparse
 import os.path
 import struct
+import zlib
 
 #############################
 # Global const
@@ -78,7 +79,7 @@ TLV_FORMAT = ">BB"
 TLV_FIELDS = ["type", "size"]
 
 # FRU bin header format
-FRU_SANITY_FORMAT = "8sBB"
+FRU_SANITY_FORMAT = "=8sBH"
 FRU_SANITY_FORMAT_FIELDS = ["tlv_header", "ver", "total_len"]
 
 # Supported FRU versions
@@ -86,17 +87,16 @@ SUPPORTED_FRU_VER = [1]
 
 # FRU fields description
 LC_FRU_ITEMS_FORMAT = {2 : {'type_name': "PRODUCT_NAME_VPD_FIELD", "format": "{}s"},
-                3 : {'type_name': "PN_VPD_FIELD", "format": "{}s"},
-                4 : {'type_name': "SN_VPD_FIELD", "format": "{}s"},
-                5 : {'type_name': "MFG_DATE_FIELD", "format": "{}s"},
-                6 : {'type_name': "SW_ID_FIELD", "format": "b"},
-                7 : {'type_name': "HW_REV_FIELD", "format": "b"},
-                8 : {'type_name': "PORT_NUM_FIELD", "format": "b"},
-                9 : {'type_name': "PORT_SPEEDFIELD", "format": "I"},
-                10: {'type_name': "MANUFACTURER_VPD_FIELD", "format": "{}s"},
-                11: {'type_name': "MAX_POWER_FIELD", "format": "{}s"},
-                16: {'type_name': "CHSUM_FIELD", "format": "i"}
-               }
+                       3 : {'type_name': "PN_VPD_FIELD", "format": "{}s"},
+                       4 : {'type_name': "SN_VPD_FIELD", "format": "{}s"},
+                       5 : {'type_name': "MFG_DATE_FIELD", "format": "{}s"},
+                       6 : {'type_name': "SW_REV_FIELD", "format": "b"},
+                       7 : {'type_name': "HW_REV_FIELD", "format": "b"},
+                       8 : {'type_name': "PORT_NUM_FIELD", "format": "b"},
+                       9 : {'type_name': "PORT_SPEED_FIELD", "format": "i"},
+                       10: {'type_name': "MANUFACTURER_VPD_FIELD", "format": "{}s"},
+                       11: {'type_name': "CHSUM_FIELD", "format": "I"}
+                      }
 
 def parse_packed_data(data, data_format, fields):
     '''
@@ -146,16 +146,16 @@ def parse_fru_bin(data):
 	    'total_len': 167,
 	    'ver': 1}
     '''
-
     fru_dict, offset = parse_packed_data(data, FRU_SANITY_FORMAT, FRU_SANITY_FORMAT_FIELDS)
     if 'TlvInfo' not in fru_dict['tlv_header'] and fru_dict['ver'] not in SUPPORTED_FRU_VER:
         print "Not supported FRU format"
         return None
 
     fru_dict['items'] = []
-    pos = 0
+    fru_dict['items_dict'] = {}
+    pos = offset
     while pos < fru_dict['total_len']:
-        blk_header, header_size = fru_get_tlv_header(data[pos + offset:])
+        blk_header, header_size = fru_get_tlv_header(data[pos:])
         pos += header_size
         if blk_header['type'] not in LC_FRU_ITEMS_FORMAT.keys():
             print "Not supported item type {}".format(blk_header['type'])
@@ -163,14 +163,15 @@ def parse_fru_bin(data):
         item = LC_FRU_ITEMS_FORMAT[blk_header['type']]
         item_format = item['format'].format(blk_header['size'])
 
-        _data = data[pos+offset : pos+offset+blk_header['size']]
+        _data = data[pos : pos+blk_header['size']]
         val = struct.unpack(item_format, _data)[0]
 
         if isinstance(val, str):
             val = val.split('\x00', 1)[0]
-        elif 'i' in item_format:
-            val = hex(val)
+        elif 'I' in item_format:
+            val = hex(val).upper()
         fru_dict['items'].append([item['type_name'], val])
+        fru_dict['items_dict'][item['type_name']] = val
         pos += blk_header['size']
 
     return fru_dict
@@ -220,7 +221,17 @@ def load_fru_bin(file_name):
 
     fru_file = open(file_name, 'rb')
     data_bin = fru_file.read()
+
     return data_bin
+
+def check_crc32(data_bin, crc32):
+    'Calculate and compare CRC32 '
+    crcvalue = 0
+    crcvalue = zlib.crc32(data_bin, 0)
+    crcvalue_str = format(crcvalue & 0xFFFFFFFF, '08x')
+    if crcvalue_str.upper() != crc32:
+        return 1
+    return 0
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Read and convert FRU binary file to human readable format")
@@ -242,13 +253,18 @@ if __name__ == '__main__':
         print "Input file read error."
         sys.exit(1)
 
-    fru_dict = parse_fru_bin(fru_data_bin)
-    if not fru_dict:
+    fru_data_dict = parse_fru_bin(fru_data_bin)
+    if not fru_data_dict:
         print "FRU parse error or wrong FRU file contents."
         sys.exit(1)
 
+    if check_crc32(fru_data_bin[ : fru_data_dict['total_len']-6],
+                   fru_data_dict['items_dict']['CHSUM_FIELD'][2:]):
+        print "CRC32 error."
+        sys.exit(1)
+
     if args.output:
-        save_fru(fru_dict, args.output)
+        save_fru(fru_data_dict, args.output)
     else:
-        dump_fru(fru_dict)
+        dump_fru(fru_data_dict)
     sys.exit(0)
