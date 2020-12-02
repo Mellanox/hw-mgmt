@@ -1,0 +1,49 @@
+From 8bf7e0d6e0f1beb3ac0260e51761c4e221b0e875 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 2 Dec 2020 20:09:31 +0200
+Subject: [backport v4.19 5/6] i2c: mux: mlxcpld: Update after upstream review
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/muxes/i2c-mux-mlxcpld.c   | 3 +--
+ include/linux/platform_data/mlxcpld.h | 3 +--
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-mlxcpld.c b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+index 4472781e2..760636b50 100644
+--- a/drivers/i2c/muxes/i2c-mux-mlxcpld.c
++++ b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+@@ -94,7 +94,7 @@ static int mlxcpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
+ 	/* Only select the channel if its different from the last channel */
+ 	if (mux->last_chan != chan) {
+ 		err = mlxcpld_mux_reg_write(muxc->parent, mux, chan);
+-		mux->last_chan = err < 0 ? -1 : chan;
++		mux->last_chan = err < 0 ? 0 : chan;
+ 	}
+ 
+ 	return err;
+@@ -175,7 +175,6 @@ static int mlxcpld_mux_remove(struct platform_device *pdev)
+ 	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
+ 
+ 	i2c_mux_del_adapters(muxc);
+-
+ 	return 0;
+ }
+ 
+diff --git a/include/linux/platform_data/mlxcpld.h b/include/linux/platform_data/mlxcpld.h
+index 41e5417cc..ea88817b3 100644
+--- a/include/linux/platform_data/mlxcpld.h
++++ b/include/linux/platform_data/mlxcpld.h
+@@ -16,8 +16,7 @@
+  * @adap_ids - adapter array
+  * @num_adaps - number of adapters
+  * @sel_reg_addr - mux select register offset in CPLD space
+- * @reg_size: register size in bytes (default 0 - 1 byte, I2C_SMBUS_BYTE_DATA,
+- *	      I2C_SMBUS_WORD_DATA - 1 and 2 bytes)
++ * @reg_size: register size in bytes (default 0 - 1 byte data, 1 - 2 bytes data
+  */
+ struct mlxcpld_mux_plat_data {
+ 	int base_nr;
+-- 
+2.11.0
+

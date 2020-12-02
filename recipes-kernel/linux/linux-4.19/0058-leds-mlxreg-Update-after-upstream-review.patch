@@ -1,0 +1,33 @@
+From 39c93335068b00d6f9d9aca8cd940da591f3f5e3 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 2 Dec 2020 20:11:04 +0200
+Subject: [backport v4.19 6/6] leds: mlxreg: Update after upstream review
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/leds/leds-mlxreg.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 53130a865..2eb1d4198 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -228,8 +228,14 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+ 			brightness = LED_OFF;
+ 			led_data->base_color = MLXREG_LED_GREEN_SOLID;
+ 		}
++
++		/*
++		 * Id greater than zero is used for LEDs located on replaceable unit,
++		 * like line card or fabric card. In this case Id is set to I2C bus
++		 * number. Otherwise LEDs located on the main board.
++		 */
+ 		if (priv->pdev->id > 0)
+-			sprintf(led_data->led_cdev_name, "%s%d:%s", "mlxreg",
++			sprintf(led_data->led_cdev_name, "%s%d:%s", "card",
+ 				priv->pdev->id, data->label);
+ 		else
+ 			sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",
+-- 
+2.11.0
+
