@@ -1,0 +1,111 @@
+Subject: [backport 4.19] mlxsw: core: thermal: Align with upstream code
+
+Fix mismatches with upstream code.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+--- drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c	2020-12-03 10:10:11.041011463 +0200
++++ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c	2020-12-03 21:02:44.187657122 +0200
+@@ -41,7 +41,7 @@
+ 	struct mlxsw_hwmon_attr hwmon_attrs[MLXSW_HWMON_ATTR_COUNT];
+ 	unsigned int attrs_count;
+ 	u8 sensor_count;
+-	u8 module_sensor_count;
++	u8 module_sensor_max;
+ };
+ 
+ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
+@@ -56,7 +56,7 @@
+ 	int err;
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlwsw_hwmon_attr->type_index,
+-					   mlxsw_hwmon->module_sensor_count);
++					   mlxsw_hwmon->module_sensor_max);
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+@@ -79,7 +79,7 @@
+ 	int err;
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlwsw_hwmon_attr->type_index,
+-					   mlxsw_hwmon->module_sensor_count);
++					   mlxsw_hwmon->module_sensor_max);
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+@@ -109,7 +109,7 @@
+ 		return -EINVAL;
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlwsw_hwmon_attr->type_index,
+-					   mlxsw_hwmon->module_sensor_count);
++					   mlxsw_hwmon->module_sensor_max);
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, index, true, true);
+ 	err = mlxsw_reg_write(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+@@ -336,7 +336,7 @@
+ 			container_of(attr, struct mlxsw_hwmon_attr, dev_attr);
+ 	struct mlxsw_hwmon *mlxsw_hwmon = mlwsw_hwmon_attr->hwmon;
+ 	int index = mlwsw_hwmon_attr->type_index -
+-		    mlxsw_hwmon->module_sensor_count + 1;
++		    mlxsw_hwmon->module_sensor_max + 1;
+ 
+ 	return sprintf(buf, "gearbox %03u\n", index);
+ }
+@@ -529,8 +529,8 @@
+ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
+ {
+ 	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+-	int index, i;
+-	int err;
++	u8 module_sensor_max;
++	int i, err;
+ 
+ 	if (!mlxsw_core_res_query_enabled(mlxsw_hwmon->core))
+ 		return 0;
+@@ -541,19 +541,17 @@
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       &mlxsw_hwmon->module_sensor_count);
+-	if (!mlxsw_hwmon->module_sensor_count)
+-		return 0;
++			       &module_sensor_max);
+ 
+ 	/* Add extra attributes for module temperature. Sensor index is
+ 	 * assigned to sensor_count value, while all indexed before
+ 	 * sensor_count are already utilized by the sensors connected through
+ 	 * mtmp register by mlxsw_hwmon_temp_init().
+ 	 */
+-	index = mlxsw_hwmon->sensor_count + mlxsw_hwmon->module_sensor_count;
+-	mlxsw_hwmon->module_sensor_count += mlxsw_hwmon->sensor_count;
++	mlxsw_hwmon->module_sensor_max = mlxsw_hwmon->sensor_count +
++					 module_sensor_max;
+ 	for (i = mlxsw_hwmon->sensor_count;
+-	     i < mlxsw_hwmon->module_sensor_count; i++) {
++	     i < mlxsw_hwmon->module_sensor_max; i++) {
+ 		mlxsw_hwmon_attr_add(mlxsw_hwmon,
+ 				     MLXSW_HWMON_ATTR_TYPE_TEMP_MODULE, i, i);
+ 		mlxsw_hwmon_attr_add(mlxsw_hwmon,
+@@ -585,17 +583,17 @@
+ 	mlxsw_reg_mgpir_pack(mgpir_pl);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
+ 	if (err)
+-		return 0;
++		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, &gbox_num, &device_type, NULL, NULL);
+-	if ((device_type != MLXSW_REG_MGPIR_TYPE_GEARBOX_DIE) ||
++	if (device_type != MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE ||
+ 	    !gbox_num)
+ 		return 0;
+ 
+-	index = mlxsw_hwmon->module_sensor_count;
+-	max_index = mlxsw_hwmon->module_sensor_count + gbox_num;
++	index = mlxsw_hwmon->module_sensor_max;
++	max_index = mlxsw_hwmon->module_sensor_max + gbox_num;
+ 	while (index < max_index) {
+-		sensor_index = index % mlxsw_hwmon->module_sensor_count +
++		sensor_index = index % mlxsw_hwmon->module_sensor_max +
+ 			       MLXSW_REG_MTMP_GBOX_INDEX_MIN;
+ 		mlxsw_reg_mtmp_pack(mtmp_pl, sensor_index, true, true);
+ 		err = mlxsw_reg_write(mlxsw_hwmon->core,
