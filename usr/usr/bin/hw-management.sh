@@ -1069,6 +1069,17 @@ function unlock_service_state_change()
 
 do_chip_up_down()
 {
+
+	board=$(cat /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0011)
+		# Chip up / down operations are to be performed automatically.
+		exit 0
+		;;
+	*)
+		;;
+	esac
+
 	# Add ASIC device.
 	bus=$(< $config_path/asic_bus)
 
