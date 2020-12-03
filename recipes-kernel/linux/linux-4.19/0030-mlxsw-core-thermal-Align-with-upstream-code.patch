@@ -1,12 +1,21 @@
-Subject: [backport 4.19] mlxsw: core: hwmon: Align with upstream code
+From 8e19a24e55396ff3cbbd364c1c037ed6d65eb20c Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 3 Dec 2020 22:53:25 +0200
+Subject: [PATCH backport v4.19 2/2] mlxsw: core: thermal: Align with upstream
+ code
 
 Fix mismatches with upstream code.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
---- drivers/net/ethernet/mellanox/mlxsw/core_thermal.c	2020-12-03 10:10:11.061011620 +0200
-+++ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c	2020-12-03 21:02:44.191657150 +0200
-@@ -942,7 +942,7 @@
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index fa045b414..d77c4c82b 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -942,7 +942,7 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	enum mlxsw_reg_mgpir_device_type device_type;
  	struct mlxsw_thermal_module *gearbox_tz;
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
@@ -15,7 +24,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  	int i;
  	int err;
  
-@@ -952,15 +952,15 @@
+@@ -952,15 +952,15 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	mlxsw_reg_mgpir_pack(mgpir_pl);
  	err = mlxsw_reg_query(core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
@@ -36,3 +45,6 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  	thermal->tz_gearbox_arr = kcalloc(thermal->tz_gearbox_num,
  					  sizeof(*thermal->tz_gearbox_arr),
  					  GFP_KERNEL);
+-- 
+2.11.0
+

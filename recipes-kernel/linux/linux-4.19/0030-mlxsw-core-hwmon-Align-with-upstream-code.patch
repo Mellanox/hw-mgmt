@@ -1,12 +1,21 @@
-Subject: [backport 4.19] mlxsw: core: thermal: Align with upstream code
+From a05c8186b1341f1ff16cf3187f8e56d11f1f215f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 3 Dec 2020 22:51:33 +0200
+Subject: [PATCH backport v4.19 1/2] mlxsw: core: hwmon: Align with upstream
+ code
 
 Fix mismatches with upstream code.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
---- drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c	2020-12-03 10:10:11.041011463 +0200
-+++ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c	2020-12-03 21:02:44.187657122 +0200
-@@ -41,7 +41,7 @@
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 34 +++++++++++-------------
+ 1 file changed, 16 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index b99062abc..3fe878d7c 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -41,7 +41,7 @@ struct mlxsw_hwmon {
  	struct mlxsw_hwmon_attr hwmon_attrs[MLXSW_HWMON_ATTR_COUNT];
  	unsigned int attrs_count;
  	u8 sensor_count;
@@ -15,7 +24,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  };
  
  static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
-@@ -56,7 +56,7 @@
+@@ -56,7 +56,7 @@ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
  	int err;
  
  	index = mlxsw_hwmon_get_attr_index(mlwsw_hwmon_attr->type_index,
@@ -24,7 +33,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
  	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
  	if (err) {
-@@ -79,7 +79,7 @@
+@@ -79,7 +79,7 @@ static ssize_t mlxsw_hwmon_temp_max_show(struct device *dev,
  	int err;
  
  	index = mlxsw_hwmon_get_attr_index(mlwsw_hwmon_attr->type_index,
@@ -33,7 +42,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
  	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
  	if (err) {
-@@ -109,7 +109,7 @@
+@@ -109,7 +109,7 @@ static ssize_t mlxsw_hwmon_temp_rst_store(struct device *dev,
  		return -EINVAL;
  
  	index = mlxsw_hwmon_get_attr_index(mlwsw_hwmon_attr->type_index,
@@ -42,7 +51,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  	mlxsw_reg_mtmp_pack(mtmp_pl, index, true, true);
  	err = mlxsw_reg_write(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
  	if (err) {
-@@ -336,7 +336,7 @@
+@@ -336,7 +336,7 @@ mlxsw_hwmon_gbox_temp_label_show(struct device *dev,
  			container_of(attr, struct mlxsw_hwmon_attr, dev_attr);
  	struct mlxsw_hwmon *mlxsw_hwmon = mlwsw_hwmon_attr->hwmon;
  	int index = mlwsw_hwmon_attr->type_index -
@@ -51,7 +60,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  
  	return sprintf(buf, "gearbox %03u\n", index);
  }
-@@ -529,8 +529,8 @@
+@@ -529,8 +529,8 @@ static int mlxsw_hwmon_fans_init(struct mlxsw_hwmon *mlxsw_hwmon)
  static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
  {
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
@@ -62,7 +71,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  
  	if (!mlxsw_core_res_query_enabled(mlxsw_hwmon->core))
  		return 0;
-@@ -541,19 +541,17 @@
+@@ -541,19 +541,17 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon *mlxsw_hwmon)
  		return err;
  
  	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
@@ -86,7 +95,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  		mlxsw_hwmon_attr_add(mlxsw_hwmon,
  				     MLXSW_HWMON_ATTR_TYPE_TEMP_MODULE, i, i);
  		mlxsw_hwmon_attr_add(mlxsw_hwmon,
-@@ -585,17 +583,17 @@
+@@ -585,17 +583,17 @@ static int mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon *mlxsw_hwmon)
  	mlxsw_reg_mgpir_pack(mgpir_pl);
  	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
@@ -109,3 +118,6 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  			       MLXSW_REG_MTMP_GBOX_INDEX_MIN;
  		mlxsw_reg_mtmp_pack(mtmp_pl, sensor_index, true, true);
  		err = mlxsw_reg_write(mlxsw_hwmon->core,
+-- 
+2.11.0
+
