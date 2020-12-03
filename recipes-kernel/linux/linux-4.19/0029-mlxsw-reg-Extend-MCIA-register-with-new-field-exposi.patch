@@ -1,0 +1,96 @@
+From fa6474acef0645b6c5498007a4ed669a0d624a84 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 3 Sep 2020 16:28:47 +0300
+Subject: [PATCH] mlxsw: reg: Extend MCIA register with new field exposing bank
+ number
+
+Extend MCIA - Management Cable Info Access Register with new field
+"bank_number" exposing the number of bank inside QSFP page.
+The motivation is to support "Common Management Interface Specification
+Rev 4.0", which allows support of up to four banks for pages 10h - 1Fh.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c | 11 ++++++-----
+ drivers/net/ethernet/mellanox/mlxsw/reg.h      | 12 ++++++++++--
+ 2 files changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 80c8432dd..0dcca3610 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -24,8 +24,8 @@ static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
+ 	u8 ident;
+ 	int err;
+ 
+-	mlxsw_reg_mcia_pack(mcia_pl, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0, 1,
+-			    MLXSW_REG_MCIA_I2C_ADDR_LOW);
++	mlxsw_reg_mcia_pack(mcia_pl, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0, 0,
++			    1, MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+ 		return err;
+@@ -89,7 +89,8 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 
+ 	if (cmis)
+ 		page = MLXSW_ENV_PAGE_MAP(page);
+-	mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, offset, size, i2c_addr);
++	mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, 0, offset, size,
++			    i2c_addr);
+ 
+ 	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+@@ -151,13 +152,13 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 			page = MLXSW_REG_MCIA_TH_PAGE_CMIS_NUM;
+ 		else
+ 			page = MLXSW_REG_MCIA_TH_PAGE_NUM;
+-		mlxsw_reg_mcia_pack(mcia_pl, module, 0, page,
++		mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, 0,
+ 				    MLXSW_REG_MCIA_TH_PAGE_OFF + off,
+ 				    MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	} else {
+ 		mlxsw_reg_mcia_pack(mcia_pl, module, 0,
+-				    MLXSW_REG_MCIA_PAGE0_LO,
++				    MLXSW_REG_MCIA_PAGE0_LO, 0,
+ 				    off, MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_HIGH);
+ 	}
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index a5952a03f..dd2db9aee 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8156,6 +8156,12 @@ MLXSW_ITEM32(reg, mcia, page_number, 0x04, 16, 8);
+  */
+ MLXSW_ITEM32(reg, mcia, device_address, 0x04, 0, 16);
+ 
++/* reg_mcia_bank_number
++ * Bank number.
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mcia, bank_number, 0x08, 16, 8);
++
+ /* reg_mcia_size
+  * Number of bytes to read/write (up to 48 bytes).
+  * Access: RW
+@@ -8208,13 +8214,15 @@ MLXSW_ITEM_BUF(reg, mcia, eeprom, 0x10, MLXSW_REG_MCIA_EEPROM_SIZE);
+ 				MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH + 1)
+ 
+ static inline void mlxsw_reg_mcia_pack(char *payload, u8 module, u8 lock,
+-				       u8 page_number, u16 device_addr,
+-				       u8 size, u8 i2c_device_addr)
++				       u8 page_number, u8 bank_number,
++				       u16 device_addr, u8 size,
++				       u8 i2c_device_addr)
+ {
+ 	MLXSW_REG_ZERO(mcia, payload);
+ 	mlxsw_reg_mcia_module_set(payload, module);
+ 	mlxsw_reg_mcia_l_set(payload, lock);
+ 	mlxsw_reg_mcia_page_number_set(payload, page_number);
++	mlxsw_reg_mcia_bank_number_set(payload, bank_number);
+ 	mlxsw_reg_mcia_device_address_set(payload, device_addr);
+ 	mlxsw_reg_mcia_size_set(payload, size);
+ 	mlxsw_reg_mcia_i2c_device_address_set(payload, i2c_device_addr);
+-- 
+2.11.0
+
