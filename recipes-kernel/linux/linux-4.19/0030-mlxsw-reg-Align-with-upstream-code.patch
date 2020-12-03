@@ -1,0 +1,28 @@
+From 659a588f58752d20a0d732bf3be29e3876bf8a96 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 4 Dec 2020 00:17:49 +0200
+Subject: [PATCH backport v4.19 1/1] mlxsw: reg: Align with upstream code
+
+Fix mismatches with upstream code.
+---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 032f47b69..dd2db9aee 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8951,8 +8951,8 @@ static inline void mlxsw_reg_mprs_pack(char *payload, u16 parsing_depth,
+ MLXSW_REG_DEFINE(mgpir, MLXSW_REG_MGPIR_ID, MLXSW_REG_MGPIR_LEN);
+ 
+ enum mlxsw_reg_mgpir_device_type {
+-	MLXSW_REG_MGPIR_TYPE_NONE,
+-	MLXSW_REG_MGPIR_TYPE_GEARBOX_DIE,
++	MLXSW_REG_MGPIR_DEVICE_TYPE_NONE,
++	MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE,
+ };
+ 
+ /* device_type
+-- 
+2.11.0
+
