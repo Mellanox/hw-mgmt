@@ -106,12 +106,21 @@ system_path=$hw_management_path/system
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
+jtag_path=$hw_management_path/jtag
 lm_sensors_configs_path="/etc/hw-management-sensors"
 LOCKFILE="/var/run/hw-management.lock"
 udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
+# CPU Family + CPU Model should idintify exact CPU architecture
+# IVB - Ivy-Bridge; RNG - Atom Rangeley
+# BDW - Broadwell-DE; CFL - Coffee Lake
+IVB_CPU=0x63A
+RNG_CPU=0x64D
+BDW_CPU=0x656
+CFL_CPU=0x69E
+cpu_type=
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -466,10 +475,10 @@ function find_regio_sysfs_path()
 {
 	# Find hwmon{n} sysfs path for regio device
 	for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
-		if [ -d $path ]; then
-			name=$(cut $path/name -d' ' -f 1)
+		if [ -d "$path" ]; then
+			name=$(cut "$path"/name -d' ' -f 1)
 			if [ "$name" == "mlxreg_io" ]; then
-				echo $path
+				echo "$path"
 				return 0
 			fi
 		fi
@@ -477,6 +486,114 @@ function find_regio_sysfs_path()
 
 	log_err "mlxreg_io is not loaded"
 	return 1
+}
+
+# SODIMM temperatures (C) for setting in scale 1000
+SODIMM_TEMP_CRIT=95000
+SODIMM_TEMP_MAX=85000
+SODIMM_TEMP_MIN=0
+SODIMM_TEMP_HYST=6000
+
+set_sodimm_temp_limits()
+{
+	# SODIMM temp reading is not supported on Broadwell-DE Comex.
+	# Broadwell-DE Comex can be installed interchangeably with new
+	# Coffee Lake Comex on part of systems e.g. on Anaconda.
+	# Thus check by CPU type and not by system type.
+	case $cpu_type in
+		$BDW_CPU)
+			return 0
+			;;
+		*)
+			;;
+	esac
+
+	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
+		modprobe jc42 > /dev/null 2>&1
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			while : ; do
+				sleep 1
+				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
+			done
+		else
+			return 1
+		fi
+	fi
+
+	if find /sys/bus/i2c/drivers/jc42/[0-9]*/ | grep -q hwmon ; then
+		for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*; do
+			echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
+			echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
+			echo $SODIMM_TEMP_MIN > "$temp_sens"/hwmon/hwmon*/temp1_min
+			echo $SODIMM_TEMP_HYST > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
+		done
+	else
+		return 1
+	fi
+
+	return 0
+}
+
+set_jtag_gpio()
+{
+	export_unexport=$1
+	# Check where supported and assign appropriate GPIO pin numbers
+	# for JTAG bit-banging operations.
+	# GPIO pin numbers are offset from gpiobase.
+	case $cpu_type in
+		$BDW_CPU)
+			jtag_tck=15
+			jtag_tms=24
+			jtag_tdo=27
+			jtag_tdi=28
+			;;
+		$CFL_CPU)
+			jtag_tdi=99
+			jtag_tdo=100
+			jtag_tms=101
+			jtag_tck=102
+			;;
+		*)
+			return 0
+			;;
+	esac
+
+	if find /sys/class/gpio/gpiochip* | grep -q base; then
+		echo "gpio controller driver is not loaded"
+		return 1
+	fi
+
+	if [ "$export_unexport" == "export" ]; then
+		if [ ! -d $jtag_path ]; then
+			mkdir $jtag_path
+		fi
+
+		if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+			ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+		fi
+	fi
+
+	gpiobase=$(</sys/class/gpio/gpiochip*/base)
+
+	gpio_tck=$((gpiobase+jtag_tck))
+	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
+
+	gpio_tms=$((gpiobase+jtag_tms))
+	echo $gpio_tms > /sys/class/gpio/"$export_unexport"
+
+	gpio_tdo=$((gpiobase+jtag_tdo))
+	echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
+
+	gpio_tdi=$((gpiobase+jtag_tdi))
+	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+
+	if [ "$export_unexport" == "export" ]; then
+		ln -sf /sys/class/gpio/gpio$gpio_tck $jtag_path/jtag_tck
+		ln -sf /sys/class/gpio/gpio$gpio_tms $jtag_path/jtag_tms
+		ln -sf /sys/class/gpio/gpio$gpio_tdo $jtag_path/jtag_tdo
+		ln -sf /sys/class/gpio/gpio$gpio_tdi $jtag_path/jtag_tdi
+	fi
 }
 
 msn274x_specific()
@@ -750,9 +867,9 @@ connect_msn4700_A1()
 msn47xx_specific()
 {
 	regio_path=$(find_regio_sysfs_path)
-    res=$?
-    if [ $res -eq 0 ]; then
-		sys_ver=$(cut $regio_path/config1 -d' ' -f 1)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			1)
 				connect_msn4700_A1
@@ -883,8 +1000,16 @@ msn_spc3_common()
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
+check_cpu_type()
+{
+	family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
+	model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
+	cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+}
+
 check_system()
 {
+	check_cpu_type
 	# Check ODM
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
@@ -952,34 +1077,32 @@ check_system()
 					mqm97xx_specific
 					;;
 				*)
-					proc_type=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $5}')
-					case $proc_type in
-						Atom*)
-							msn21xx_specific
-						;;
-						Celeron*)
-							msn27xx_msb_msx_specific
-						;;
-						Xeon*)
-							proc_modele=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $7}')
-							case $proc_modele in
-								E-2276*)
-									mqm97xx_specific
-									;;
-						        *)
-							        mqmxxx_msn37x_msn34x_specific
-							esac
-						;;
-						*)
+					# Check marginal system, system without SMBIOS customization,
+					# only on old types of Mellanox switches.
+					if grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor ; then
+						case $cpu_type in
+							$RNG_CPU)
+								msn21xx_specific
+								;;
+							$IVB_CPU)
+								msn27xx_msb_msx_specific
+								;;
+							$BDW_CPU)
+								mqmxxx_msn37x_msn34x_specific
+								;;
+							*)
+								log_err "$product is not supported"
+								exit 0
+								;;
+						esac
+					else
 						log_err "$product is not supported"
-							exit 0
-							;;
-					esac
+						exit 0
+					fi
 					;;
 			esac
 			;;
 	esac
-
 }
 
 find_i2c_bus()
@@ -1145,6 +1268,8 @@ do_start()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
+	set_sodimm_temp_limits
+	set_jtag_gpio "export"
 	set_config_data
 	find_i2c_bus
 	asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -1176,6 +1301,7 @@ do_stop()
 {
 	check_system
 	disconnect_platform
+	set_jtag_gpio "unexport"
 	rm -fR /var/run/hw-management
 	# Re-try removing after 1 second in case of failure.
 	# It can happens if some app locked file for reading/writing
@@ -1320,7 +1446,7 @@ do_chip_down()
 }
 
 __usage="
-Usage: $(basename $0) [Options]
+Usage: $(basename "$0") [Options]
 
 Options:
 	start		Start hw-management service, supposed to be
