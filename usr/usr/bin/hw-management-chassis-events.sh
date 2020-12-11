@@ -399,9 +399,15 @@ if [ "$1" == "add" ]; then
 				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
 				# Parce VPD.
 				if [ "$eeprom_name" == "vpd" ]; then
-				    hw-management-lc-fru-parser.py -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
+					hw-management-lc-fru-parser.py -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
 					if [ $? -ne 0 ]; then
 						echo "Failed to parse linecard VPD" > "$eeprom_path"/vpd_parsed
+					fi
+				fi
+				if [ "$eeprom_name" == "ini" ]; then
+					hw-management-parse-eeprom.sh --layout 3 --conv --eeprom_path "$3""$4"/eeprom > "$eeprom_path"/ini_parsed
+					if [ $? -ne 0 ]; then
+						echo "Failed to parse linecard INI" > "$eeprom_path"/ini_parsed
 					fi
 				fi
 			fi
