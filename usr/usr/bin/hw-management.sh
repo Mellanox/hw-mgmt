@@ -549,10 +549,10 @@ set_jtag_gpio()
 			jtag_tdi=28
 			;;
 		$CFL_CPU)
-			jtag_tdi=99
-			jtag_tdo=100
-			jtag_tms=101
-			jtag_tck=102
+			jtag_tdi=128
+			jtag_tdo=129
+			jtag_tms=130
+			jtag_tck=131
 			;;
 		*)
 			return 0
