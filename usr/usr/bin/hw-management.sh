@@ -85,10 +85,6 @@ psu2_i2c_addr=0x58
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
-sxcore_down=0
-sxcore_deferred=1
-sxcore_withdraw=2
-sxcore_up=3
 hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
@@ -1330,32 +1326,10 @@ do_chip_up_down()
 
 	case $1 in
 	0)
-		if [ -f /etc/init.d/sxdkernel ]; then
-			chipup_delay=$(< $config_path/chipup_delay)
-			if [ "$chipup_delay" != "0" ]; then
-				# Decline chipup if in wait state.
-				[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-					echo $sxcore_withdraw > $config_path/sxcore
-					return
-				fi
-			fi
-		fi
 		lock_service_state_change
 		chipup_delay=$(< $config_path/chipup_delay)
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
-			if [ -f /etc/init.d/sxdkernel ]; then
-				if [ "$chipup_delay" != "0" ]; then
-					[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-					if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_up" ]; then
-						echo $sxcore_down > $config_path/sxcore
-					else
-						unlock_service_state_change
-						return
-					fi
-				fi
-			fi
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
@@ -1372,38 +1346,9 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -f /etc/init.d/sxdkernel ]; then
-			if [ "$chipup_delay" != "0" ]; then
-				# Have delay in order to avoid impact of chip reset,
-				# performed by sxcore driver.
-				# In case sxcore driver does not reset chip, for example
-				# for reboot through kexec - just sleep 'chipup_delay'
-				# seconds.
-				[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_down" ]; then
-					echo $sxcore_deferred > $config_path/sxcore
-				elif [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-					echo $sxcore_up > $config_path/sxcore
-				else
-					unlock_service_state_change
-					return
-				fi
-			fi
-		fi
 		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
-			if [ -f /etc/init.d/sxdkernel ]; then
-				if [ "$chipup_delay" != "0" ]; then
-					# Skip if chipup has been dropped.
-					[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-					if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
-						echo $sxcore_down > $config_path/sxcore
-						unlock_service_state_change
-						return
-					fi
-				fi
-			fi
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
@@ -1413,11 +1358,6 @@ do_chip_up_down()
 				cpld_port=$(< $system_path/cpld3_version)
 				str=$str$(printf "_CPLD000000_REV%02d00" "$cpld_port")
 				echo "$str" > $system_path/cpld
-			fi
-			if [ "$chipup_delay" != "0" ]; then
-				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-					echo $sxcore_up > $config_path/sxcore
-				fi
 			fi
 		else
 			unlock_service_state_change
