@@ -93,7 +93,7 @@ wait_for_config=120
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
 polling_time_def=60
-cooling_level_update_state=0
+cooling_level_update_state=2
 
 # Local constants
 pwm_noact=0

@@ -1392,14 +1392,7 @@ do_chip_up_down()
 			unlock_service_state_change
 			return
 		fi
-		case $2 in
-		1)
-			echo 0 > $config_path/suspend
-			;;
-		*)
-			echo 1 > $config_path/suspend
-			;;
-		esac
+		echo 0 > $config_path/suspend
 		unlock_service_state_change
 		;;
 	*)
