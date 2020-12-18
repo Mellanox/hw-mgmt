@@ -341,7 +341,7 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
-msn4700_A1_connect_table=(	max11603 0x6d 5 \
+msn4700_msn4600_A1_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x6a 5 \
@@ -355,7 +355,7 @@ msn4700_A1_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-msn4700_A1_dis_table=(	0x6d 5 \
+msn4700_msn4600_A1_dis_table=(	0x6d 5 \
 			0x62 5 \
 			0x64 5 \
 			0x66 5 \
@@ -873,15 +873,15 @@ connect_msn4700_msn4600()
 	done
 }
 
-connect_msn4700_A1()
+connect_msn4700_msn4600_A1()
 {
-	connect_size=${#msn4700_A1_connect_table[@]}
+	connect_size=${#msn4700_msn4600_A1_connect_table[@]}
 	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_A1_connect_table[i]}
+		connect_table[i]=${msn4700_msn4600_A1_connect_table[i]}
 	done
-	disconnect_size=${#msn4700_A1_dis_table[@]}
+	disconnect_size=${#msn4700_msn4600_A1_dis_table[@]}
 	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_A1_dis_table[i]}
+		dis_table[i]=${msn4700_msn4600_A1_dis_table[i]}
 	done
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
@@ -894,7 +894,7 @@ msn47xx_specific()
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			1)
-				connect_msn4700_A1
+				connect_msn4700_msn4600_A1
 			;;
 			*)
 				connect_msn4700_msn4600
@@ -915,14 +915,21 @@ msn47xx_specific()
 
 msn46xx_specific()
 {
-	connect_size=${#msn4700_msn4600_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_msn4600_connect_table[i]}
-	done
-	disconnect_size=${#msn4700_msn4600_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_msn4600_dis_table[i]}
-	done
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			3)
+				connect_msn4700_msn4600_A1
+			;;
+			*)
+				connect_msn4700_msn4600
+			;;
+		esac
+	else
+		connect_msn4700_msn4600
+	fi
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	# this is MSN4600C
