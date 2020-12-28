@@ -344,6 +344,7 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 msn4700_msn4600_A1_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
+			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
 			mp2975 0x6e 5 \
 			tmp102 0x49 7 \
