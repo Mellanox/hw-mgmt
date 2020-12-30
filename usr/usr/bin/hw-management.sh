@@ -591,10 +591,10 @@ set_jtag_gpio()
 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
 
 	if [ "$export_unexport" == "export" ]; then
-		ln -sf /sys/class/gpio/gpio$gpio_tck $jtag_path/jtag_tck
-		ln -sf /sys/class/gpio/gpio$gpio_tms $jtag_path/jtag_tms
-		ln -sf /sys/class/gpio/gpio$gpio_tdo $jtag_path/jtag_tdo
-		ln -sf /sys/class/gpio/gpio$gpio_tdi $jtag_path/jtag_tdi
+		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
+		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
+		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
+		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
 	fi
 }
 
