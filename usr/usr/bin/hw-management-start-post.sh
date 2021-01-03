@@ -90,7 +90,7 @@ set_fan_drwr_num()
 board=$(cat /sys/devices/virtual/dmi/id/board_name)
 cpld_num=$(cat $config_path/cpld_num)
 case $board in
-	VMOD0001|VMOD0002|VMOD0003|VMOD0004)
+	VMOD0001|VMOD0004)
 		cpld_num=$((cpld_num-1))
 		;;
 	*)

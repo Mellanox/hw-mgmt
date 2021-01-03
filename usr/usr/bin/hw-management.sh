@@ -445,7 +445,6 @@ msn21xx_specific()
 	echo 1040 > $config_path/psu_fan_min
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
-	echo cpld1 > $config_path/cpld_port
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
 }
 
