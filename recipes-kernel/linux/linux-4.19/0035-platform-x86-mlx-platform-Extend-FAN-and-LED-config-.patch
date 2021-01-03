@@ -1,8 +1,8 @@
-From 62fbfcde5f153ac32f464be8f534a02db140c6e0 Mon Sep 17 00:00:00 2001
-From: Oleksandr Shamray <oleksandrs@nvidia.com>
-Date: Thu, 10 Dec 2020 09:38:46 +0200
-Subject: [PATCH] platform/x86: mlx-platform: Extend FAN and LED config to
- support new MQM97xx systems
+From 94af61262de2660247faf33bb6beb8f68c91a700 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 3 Jan 2021 12:53:33 +0200
+Subject: [PATCH platform-next 1/1] platform/x86: mlx-platform: Extend FAN and
+ LED config to support new MQM97xx systems
 
 Add support for new system types "MQM97xx", which is based on Mellanox
 Quantum-2 ASIC. It provides up to 64x400GB/s (IB) full bidirectional
@@ -23,12 +23,12 @@ All previous systems of this class supported only up to six fan drawers.
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com >
 ---
- drivers/hwmon/mlxreg-fan.c          |  2 +-
+ drivers/hwmon/mlxreg-fan.c          |  4 +++-
  drivers/platform/x86/mlx-platform.c | 46 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 47 insertions(+), 1 deletion(-)
+ 2 files changed, 49 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 7028a4f..d067955 100644
+index 7028a4f49..28668819e 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -12,7 +12,7 @@
@@ -40,8 +40,17 @@ index 7028a4f..d067955 100644
  #define MLXREG_FAN_MAX_STATE		10
  #define MLXREG_FAN_MIN_DUTY		51	/* 20% */
  #define MLXREG_FAN_MAX_DUTY		255	/* 100% */
+@@ -242,6 +242,8 @@ static const u32 mlxreg_fan_hwmon_fan_config[] = {
+ 	HWMON_F_INPUT | HWMON_F_FAULT,
+ 	HWMON_F_INPUT | HWMON_F_FAULT,
+ 	HWMON_F_INPUT | HWMON_F_FAULT,
++	HWMON_F_INPUT | HWMON_F_FAULT,
++	HWMON_F_INPUT | HWMON_F_FAULT,
+ 	0
+ };
+ 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index c1d1a78..b4f3a66 100644
+index c1d1a7817..3ab06b9f7 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -38,6 +38,7 @@
@@ -84,14 +93,14 @@ index c1d1a78..b4f3a66 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED6_OFFSET,
 +		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(5),
++		.bit = BIT(6),
 +	},
 +	{
 +		.label = "fan7:orange",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED6_OFFSET,
 +		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(5),
++		.bit = BIT(6),
 +	},
 +	{
  		.label = "uid:blue",
@@ -161,5 +170,5 @@ index c1d1a78..b4f3a66 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
 -- 
-2.8.4
+2.11.0
 
