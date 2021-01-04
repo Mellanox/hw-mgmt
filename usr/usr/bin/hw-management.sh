@@ -74,7 +74,7 @@ thermal_type_t10=10
 thermal_type_def=0
 
 thermal_type=$thermal_type_def
-max_tachos=12
+max_tachos=14
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2

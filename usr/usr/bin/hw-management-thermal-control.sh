@@ -1083,6 +1083,7 @@ thermal_control_preinit()
 	suspend_thermal=0
 }
 
+rm $config_path/periodic_report
 log_notice "Mellanox thermal control is started"
 # Wait for thermal configuration.
 log_notice "Mellanox thermal control is waiting for configuration."
