@@ -41,6 +41,7 @@ sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 config_path=$hw_management_path/config
 events_path=$hw_management_path/events
+thermal_path=$hw_management_path/thermal
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
 i2c_bus_offset=0
@@ -59,6 +60,10 @@ eeprom_name=''
 sfp_counter=0
 LOCKFILE="/var/run/hw-management-chassis.lock"
 udev_ready=$hw_management_path/.udev_ready
+fan_dir_offset_in_vpd_eeprom_pn=0x48
+# 46 - F, 52 - R
+fan_direction_exhaust=46
+fan_direction_intake=52
 
 log_err()
 {
@@ -163,17 +168,47 @@ function asic_cpld_remove_handler()
 	fi
 }
 
+function set_fan_direction()
+{
+	attribute=$1
+	event=$2
+	case $attribute in
+	fan*)
+		fan_dir=$(< $system_path/fan_dir)
+		fandirhex=$(printf "%x\n" "$fan_dir")
+		fan_bit_index=$(( ${attribute:3} - 1 ))
+		fan_direction_bit=$(( 0x$fandirhex & (1 << fan_bit_index) ))
+		fan_direction=($fan_direction_bit ? 1 : 0)
+		if [ "$fan_direction_bit" == 0 ]; then
+			fan_direction=0;
+		else
+			fan_direction=1;
+		fi
+		if [ "$event" == 1 ]; then
+			echo "$fan_direction" > $thermal_path/"${attribute}"_dir
+		else
+			rm -f $thermal_path/"${attribute}"_dir
+		fi
+		;;
+	*)
+		;;
+	esac
+}
+
 function handle_hotplug_event()
 {
-	local unit=$(echo "$1" | awk '{print tolower($0)}')
-	local event=$2
+	local attribute
+	local event
+	attribute=$(echo "$1" | awk '{print tolower($0)}')
+	event=$2
 	
-	if [ -f $events_path/"$unit" ]; then
-		echo "$event" > $events_path/"$unit"
+	if [ -f $events_path/"$attribute" ]; then
+		echo "$event" > $events_path/"$attribute"
 	else
 		# ToDo check if leave this error maessage
-		log_err "Path ${events_path}/${unit} doesn't exist"
+		log_err "Path ${events_path}/${attribute} doesn't exist"
 	fi
+	set_fan_direction "$attribute" "$event"
 }
 
 if [ "$1" == "add" ]; then
@@ -258,6 +293,12 @@ if [ "$1" == "add" ]; then
 				fi
 			done
 		fi
+		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
+			status=$(< $thermal_path/fan"$i"_status)
+			if [ "$status" -eq 1 ]; then
+				set_fan_direction fan"${i}" 1
+			fi
+		done
 	fi
 	if [ "$2" == "eeprom" ]; then
 		busdir="$3""$4"
@@ -269,6 +310,24 @@ if [ "$1" == "add" ]; then
 		find_eeprom_name "$bus" "$addr"
 		ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+		case $eeprom_name in
+		fan*_info)
+			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
+			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
+			case $fan_direction in
+			$fan_direction_exhaust)
+				echo 1 > $thermal_path/"${fan_prefix}"_dir
+				;;
+			$fan_direction_intake)
+				echo 0 > $thermal_path/"${fan_prefix}"_dir
+				;;
+			*)
+				;;
+			esac
+			;;
+		*)
+			;;
+		esac
 	fi
 	if [ "$2" == "cpld" ]; then
 		asic_cpld_add_handler "${3}${4}"
@@ -385,6 +444,8 @@ else
 		addr="0x${busfolder: -2}"
 		find_eeprom_name "$bus" "$addr"
 		unlink $eeprom_path/$eeprom_name
+		fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
+		rm -f $thermal_path/"${fan_prefix}"_dir
 	fi
 	if [ "$2" == "cpld" ]; then
 		asic_cpld_remove_handler

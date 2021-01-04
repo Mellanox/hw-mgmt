@@ -74,7 +74,7 @@ thermal_type_t10=10
 thermal_type_def=0
 
 thermal_type=$thermal_type_def
-max_tachos=12
+max_tachos=14
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
@@ -85,10 +85,6 @@ psu2_i2c_addr=0x58
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
-sxcore_down=0
-sxcore_deferred=1
-sxcore_withdraw=2
-sxcore_up=3
 hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
@@ -106,12 +102,26 @@ system_path=$hw_management_path/system
 sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 events_path=$hw_management_path/events
+jtag_path=$hw_management_path/jtag
 lm_sensors_configs_path="/etc/hw-management-sensors"
 LOCKFILE="/var/run/hw-management.lock"
 udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
+# CPU Family + CPU Model should idintify exact CPU architecture
+# IVB - Ivy-Bridge; RNG - Atom Rangeley
+# BDW - Broadwell-DE; CFL - Coffee Lake
+IVB_CPU=0x63A
+RNG_CPU=0x64D
+BDW_CPU=0x656
+CFL_CPU=0x69E
+cpu_type=
+pn_sanity_offset=62
+fan_dir_pn_offset=11
+# 46 - F, 52 - R
+fan_direction_exhaust=46
+fan_direction_intake=52
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -331,6 +341,36 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
+msn4700_msn4600_A1_connect_table=(	max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2975 0x64 5 \
+			mp2975 0x66 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6e 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8 \
+			max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+msn4700_msn4600_A1_dis_table=(	0x6d 5 \
+			0x62 5 \
+			0x64 5 \
+			0x66 5 \
+			0x6a 5 \
+			0x6e 5 \
+			0x49 7 \
+			0x4a 7 \
+			0x51 8 \
+			0x6d 15 \
+			0x49 15 \
+			0x58 15 \
+			0x61 15 \
+			0x50 16)
+
 msn3510_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
@@ -359,10 +399,8 @@ mqm97xx_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2888 0x66 5 \
-			mp2884 0x68 5 \
-			mp2884 0x6A 5 \
-			mp2884 0x6C 5 \
-			mp2884 0x6E 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6C 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
@@ -378,9 +416,7 @@ mqm97xx_dis_table=(	0x6d 5 \
 			0x64 5 \
 			0x66 5 \
 			0x68 5 \
-			0x6a 5 \
 			0x6c 5 \
-			0x6e 5 \
 			0x49 7 \
 			0x4a 7 \
 			0x53 7 \
@@ -437,6 +473,150 @@ function restore_i2c_bus_frequency_default()
 	fi
 }
 
+function find_regio_sysfs_path()
+{
+	# Find hwmon{n} sysfs path for regio device
+	for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
+		if [ -d "$path" ]; then
+			name=$(cut "$path"/name -d' ' -f 1)
+			if [ "$name" == "mlxreg_io" ]; then
+				echo "$path"
+				return 0
+			fi
+		fi
+	done
+
+	log_err "mlxreg_io is not loaded"
+	return 1
+}
+
+# SODIMM temperatures (C) for setting in scale 1000
+SODIMM_TEMP_CRIT=95000
+SODIMM_TEMP_MAX=85000
+SODIMM_TEMP_MIN=0
+SODIMM_TEMP_HYST=6000
+
+set_sodimm_temp_limits()
+{
+	# SODIMM temp reading is not supported on Broadwell-DE Comex.
+	# Broadwell-DE Comex can be installed interchangeably with new
+	# Coffee Lake Comex on part of systems e.g. on Anaconda.
+	# Thus check by CPU type and not by system type.
+	case $cpu_type in
+		$BDW_CPU)
+			return 0
+			;;
+		*)
+			;;
+	esac
+
+	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
+		modprobe jc42 > /dev/null 2>&1
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			while : ; do
+				sleep 1
+				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
+			done
+		else
+			return 1
+		fi
+	fi
+
+	if find /sys/bus/i2c/drivers/jc42/[0-9]*/ | grep -q hwmon ; then
+		for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*; do
+			echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
+			echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
+			echo $SODIMM_TEMP_MIN > "$temp_sens"/hwmon/hwmon*/temp1_min
+			echo $SODIMM_TEMP_HYST > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
+		done
+	else
+		return 1
+	fi
+
+	return 0
+}
+
+set_jtag_gpio()
+{
+	export_unexport=$1
+	# Check where supported and assign appropriate GPIO pin numbers
+	# for JTAG bit-banging operations.
+	# GPIO pin numbers are offset from gpiobase.
+	case $cpu_type in
+		$BDW_CPU)
+			jtag_tck=15
+			jtag_tms=24
+			jtag_tdo=27
+			jtag_tdi=28
+			;;
+		$CFL_CPU)
+			jtag_tdi=128
+			jtag_tdo=129
+			jtag_tms=130
+			jtag_tck=131
+			;;
+		*)
+			return 0
+			;;
+	esac
+
+	if find /sys/class/gpio/gpiochip* | grep -q base; then
+		echo "gpio controller driver is not loaded"
+		return 1
+	fi
+
+	if [ "$export_unexport" == "export" ]; then
+		if [ ! -d $jtag_path ]; then
+			mkdir $jtag_path
+		fi
+
+		if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+			ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+		fi
+	fi
+
+	gpiobase=$(</sys/class/gpio/gpiochip*/base)
+
+	gpio_tck=$((gpiobase+jtag_tck))
+	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
+
+	gpio_tms=$((gpiobase+jtag_tms))
+	echo $gpio_tms > /sys/class/gpio/"$export_unexport"
+
+	gpio_tdo=$((gpiobase+jtag_tdo))
+	echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
+
+	gpio_tdi=$((gpiobase+jtag_tdi))
+	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+
+	if [ "$export_unexport" == "export" ]; then
+		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
+		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
+		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
+		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
+	fi
+}
+
+fan_direction_fixed()
+{
+	sanity_offset=$(strings --radix=d $eeprom_path/vpd_info | grep MLNX | awk '{print $1}')
+	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
+	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
+	for i in $(seq 1 $max_tachos); do
+		case $fan_direction in
+		$fan_direction_exhaust)
+			echo 1 > $thermal_path/fan"${i}"_dir
+			;;
+		$fan_direction_intake)
+			echo 0 > $thermal_path/fan"${i}"_dir
+			;;
+		*)
+			;;
+		esac
+	done
+}
+
 msn274x_specific()
 {
 	connect_size=${#msn2740_connect_table[@]}
@@ -484,6 +664,7 @@ msn21xx_specific()
 	echo 2 > $config_path/cpld_num
 	echo cpld1 > $config_path/cpld_port
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
+	fixed_system=1
 }
 
 msn24xx_specific()
@@ -559,6 +740,7 @@ msn201x_specific()
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
+	fixed_system=1
 }
 
 mqmxxx_msn37x_msn34x_specific()
@@ -680,7 +862,7 @@ msn27002_msb78002_specific()
 	echo 24c02 > $config_path/psu_eeprom_type
 }
 
-msn47xx_specific()
+connect_msn4700_msn4600()
 {
 	connect_size=${#msn4700_msn4600_connect_table[@]}
 	for ((i=0; i<connect_size; i++)); do
@@ -690,6 +872,38 @@ msn47xx_specific()
 	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
+}
+
+connect_msn4700_msn4600_A1()
+{
+	connect_size=${#msn4700_msn4600_A1_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn4700_msn4600_A1_connect_table[i]}
+	done
+	disconnect_size=${#msn4700_msn4600_A1_dis_table[@]}
+	for ((i=0; i<disconnect_size; i++)); do
+		dis_table[i]=${msn4700_msn4600_A1_dis_table[i]}
+	done
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+}
+
+msn47xx_specific()
+{
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			1)
+				connect_msn4700_msn4600_A1
+			;;
+			*)
+				connect_msn4700_msn4600
+			;;
+		esac
+	else
+		connect_msn4700_msn4600
+	fi
 
 	thermal_type=$thermal_type_t10
 	max_tachos=12
@@ -698,19 +912,25 @@ msn47xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 msn46xx_specific()
 {
-	connect_size=${#msn4700_msn4600_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_msn4600_connect_table[i]}
-	done
-	disconnect_size=${#msn4700_msn4600_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_msn4600_dis_table[i]}
-	done
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			3)
+				connect_msn4700_msn4600_A1
+			;;
+			*)
+				connect_msn4700_msn4600
+			;;
+		esac
+	else
+		connect_msn4700_msn4600
+	fi
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	# this is MSN4600C
@@ -810,8 +1030,16 @@ msn_spc3_common()
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
+check_cpu_type()
+{
+	family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
+	model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
+	cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+}
+
 check_system()
 {
+	check_cpu_type
 	# Check ODM
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
@@ -879,34 +1107,32 @@ check_system()
 					mqm97xx_specific
 					;;
 				*)
-					proc_type=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $5}')
-					case $proc_type in
-						Atom*)
-							msn21xx_specific
-						;;
-						Celeron*)
-							msn27xx_msb_msx_specific
-						;;
-						Xeon*)
-							proc_modele=$(grep 'model name' /proc/cpuinfo | uniq  | awk '{print $7}')
-							case $proc_modele in
-								E-2276*)
-									mqm97xx_specific
-									;;
-						        *)
-							        mqmxxx_msn37x_msn34x_specific
-							esac
-						;;
-						*)
+					# Check marginal system, system without SMBIOS customization,
+					# only on old types of Mellanox switches.
+					if grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor ; then
+						case $cpu_type in
+							$RNG_CPU)
+								msn21xx_specific
+								;;
+							$IVB_CPU)
+								msn27xx_msb_msx_specific
+								;;
+							$BDW_CPU)
+								mqmxxx_msn37x_msn34x_specific
+								;;
+							*)
+								log_err "$product is not supported"
+								exit 0
+								;;
+						esac
+					else
 						log_err "$product is not supported"
-							exit 0
-							;;
-					esac
+						exit 0
+					fi
 					;;
 			esac
 			;;
 	esac
-
 }
 
 find_i2c_bus()
@@ -1072,6 +1298,8 @@ do_start()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
+	set_sodimm_temp_limits
+	set_jtag_gpio "export"
 	set_config_data
 	find_i2c_bus
 	asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -1097,12 +1325,16 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
+	if [ -v "fixed_system" ]; then
+		fan_direction_fixed
+	fi
 }
 
 do_stop()
 {
 	check_system
 	disconnect_platform
+	set_jtag_gpio "unexport"
 	rm -fR /var/run/hw-management
 	# Re-try removing after 1 second in case of failure.
 	# It can happens if some app locked file for reading/writing
@@ -1131,32 +1363,10 @@ do_chip_up_down()
 
 	case $1 in
 	0)
-		if [ -f /etc/init.d/sxdkernel ]; then
-			chipup_delay=$(< $config_path/chipup_delay)
-			if [ "$chipup_delay" != "0" ]; then
-				# Decline chipup if in wait state.
-				[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-					echo $sxcore_withdraw > $config_path/sxcore
-					return
-				fi
-			fi
-		fi
 		lock_service_state_change
 		chipup_delay=$(< $config_path/chipup_delay)
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
-			if [ -f /etc/init.d/sxdkernel ]; then
-				if [ "$chipup_delay" != "0" ]; then
-					[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-					if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_up" ]; then
-						echo $sxcore_down > $config_path/sxcore
-					else
-						unlock_service_state_change
-						return
-					fi
-				fi
-			fi
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
@@ -1173,38 +1383,9 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -f /etc/init.d/sxdkernel ]; then
-			if [ "$chipup_delay" != "0" ]; then
-				# Have delay in order to avoid impact of chip reset,
-				# performed by sxcore driver.
-				# In case sxcore driver does not reset chip, for example
-				# for reboot through kexec - just sleep 'chipup_delay'
-				# seconds.
-				[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_down" ]; then
-					echo $sxcore_deferred > $config_path/sxcore
-				elif [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-					echo $sxcore_up > $config_path/sxcore
-				else
-					unlock_service_state_change
-					return
-				fi
-			fi
-		fi
 		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
-			if [ -f /etc/init.d/sxdkernel ]; then
-				if [ "$chipup_delay" != "0" ]; then
-					# Skip if chipup has been dropped.
-					[ -f "$config_path/sxcore" ] && sxcore=$(< $config_path/sxcore)
-					if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_withdraw" ]; then
-						echo $sxcore_down > $config_path/sxcore
-						unlock_service_state_change
-						return
-					fi
-				fi
-			fi
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
@@ -1215,23 +1396,11 @@ do_chip_up_down()
 				str=$str$(printf "_CPLD000000_REV%02d00" "$cpld_port")
 				echo "$str" > $system_path/cpld
 			fi
-			if [ "$chipup_delay" != "0" ]; then
-				if [ "$sxcore" ] && [ "$sxcore" -eq "$sxcore_deferred" ]; then
-					echo $sxcore_up > $config_path/sxcore
-				fi
-			fi
 		else
 			unlock_service_state_change
 			return
 		fi
-		case $2 in
-		1)
-			echo 0 > $config_path/suspend
-			;;
-		*)
-			echo 1 > $config_path/suspend
-			;;
-		esac
+		echo 0 > $config_path/suspend
 		unlock_service_state_change
 		;;
 	*)
@@ -1247,7 +1416,7 @@ do_chip_down()
 }
 
 __usage="
-Usage: $(basename $0) [Options]
+Usage: $(basename "$0") [Options]
 
 Options:
 	start		Start hw-management service, supposed to be

@@ -1,36 +1,41 @@
 Kernel-4.9
- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-| patch name                                                             | commit id                                  |  status [Pending maintainer approval , accepted]|
- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|0062-mlxsw-core-Fix-memory-leak-on-module-removal                       |830b5fe8d010fd0334b32ed34ee0f93c6478ea4e    |  Pending maintainer approval                    |
-|0063-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |5815cac8e503be45485847b432aecc92f958dba4    |  Pending maintainer approval                    |
-|0064-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |5815cac8e503be45485847b432aecc92f958dba4    |  Pending maintainer approval                    | 
-|                                                                        |                                            |                                                 |                    
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                             | Upstream commit id                         |  status [Pending maintainer approval , accepted]| Notes                                                        |
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0058-mlxsw-core-thermal-Enable-thermal-zones-by-default                 |                                            |  Pending maintainer approval                    |                                                              |
+|0059-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               | 3ce235145dfc28ac3e937b55581cdeaaf47a9929   |  accepted                                       |                                                              |
+|0060-thermal-Fix-deadlock-in-thermal-thermal_zone_device_               | 163b00cde7cf2206e248789d2780121ad5e6a70b   |  accepted                                       |                                                              |
+|0061-Removed !!                                                         |                                            |  removed                                        | please add  https://lore.kernel.org/patchwork/patch/1085993/ |
+|0062-mlxsw-core-Fix-memory-leak-on-module-removal                       | adc80b6cfedff6dad8b93d46a5ea2775fd5af9ec   |  accepted                                       |                                                              |
+|0063-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               | 2bf5046bdb649908df8bcc0a012c56eee931a9af   |  accepted                                       |                                                              |
+|0064-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               | 912b341585e302ee44fc5a2733f7bcf505e2c86f   |  accepted                                       |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  
 Kernel-4.19
- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-| patch name                                                             | commit id                                  |  status [Pending maintainer approval , accepted]|
- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|0029-mlxsw-core-Fix-memory-leak-on-module-removal                       |830b5fe8d010fd0334b32ed34ee0f93c6478ea4e    |  Pending maintainer approval                    |
-|0030-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |be5c2fc3c591b4413f8e72af6291b61dd3df0224    |  Pending maintainer approval                    |
-|0031-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               |be5c2fc3c591b4413f8e72af6291b61dd3df0224    |  Pending maintainer approval                    |
-|                                                                        |                                            |                                                 |                    
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
-|                                                                        |                                            |                                                 |
- -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                             | Upstream commit id                         |  status [Pending maintainer approval , accepted]| Notes                                                        |
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0028-0028-thermal-Fix-deadlock-in-thermal-thermal_zone_device_          | 163b00cde7cf2206e248789d2780121ad5e6a70b   |  accepted                                       |                                                              |
+|0029-mlxsw-core-Fix-memory-leak-on-module-removal                       | adc80b6cfedff6dad8b93d46a5ea2775fd5af9ec   |  accepted                                       |                                                              |
+|0030-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               | 2bf5046bdb649908df8bcc0a012c56eee931a9af   |  accepted                                       |                                                              |
+|0031-platform-x86-mlx-platform-Remove-PSU-EEPROM-configur               | 912b341585e302ee44fc5a2733f7bcf505e2c86f   |  accepted                                       |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+|                                                                        |                                            |                                                 |                                                              |
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  
