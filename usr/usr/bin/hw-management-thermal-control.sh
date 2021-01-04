@@ -93,7 +93,7 @@ wait_for_config=120
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
 polling_time_def=60
-cooling_level_update_state=0
+cooling_level_update_state=2
 
 # Local constants
 pwm_noact=0
@@ -691,27 +691,47 @@ get_fan_faults()
 	pwm_required_act=$pwm_noact
 }
 
+get_fan_direction()
+{
+	p2c_dir=0
+	c2p_dir=0
+	fan_dir=0
+	for ((i=1; i<="$max_drwr"; i+=1)); do
+		if [ ! -f $thermal_path/fan"$i"_dir ]; then
+			# Some fan is not present.
+			return
+		fi
+		fan_dir=$(($(<$thermal_path/fan"$i"_dir) + fan_dir))
+	done
+
+	if [ "$fan_dir" -eq 0 ]; then
+		c2p_dir=1
+	elif [ "$fan_dir" -eq "$max_drwr" ]; then
+		p2c_dir=1
+	else
+		# There is a mismatch (actually this is a serious fault,
+		# but currently we don't handle such fault).
+		return
+	fi
+}
+
 set_pwm_min_threshold()
 {
 	untrusted_sensor=0
 	ambient=0
-	p2c_dir=0
-	c2p_dir=0
 
-	# Check for untrusted modules
+	# Check for untrusted modules.
 	check_untrested_module_sensor
 
-	# Define FAN direction
-	temp_fan_ambient=$(< $temp_fan_amb)
-	temp_port_ambient=$(< $temp_port_amb)
-	if [ "$temp_fan_ambient" -gt  "$temp_port_ambient" ]; then
-		ambient=$temp_port_ambient
-		p2c_dir=1
-	elif [ "$temp_fan_ambient" -lt "$temp_port_ambient" ]; then
-		ambient=$temp_fan_ambient
-		c2p_dir=1
+	# Get fan direction.
+	get_fan_direction
+
+	if [ "$p2c_dir" -eq 1 ]; then
+		ambient=$(< $temp_port_amb)
+	elif [ "$c2p_dir" -eq 1 ]; then
+		ambient=$(< $temp_fan_amb)
 	else
-		ambient=$temp_fan_ambient
+		ambient=$(< $temp_fan_amb)
 	fi
 
 	# Set FAN minimum speed according to FAN direction, cable type and
@@ -1020,6 +1040,12 @@ init_service_params()
 		max_tachos=$(< $config_path/max_tachos)
 	else
 		log_err "Mellanox thermal control start fail. Missing max tachos config."
+		exit 1
+	fi
+	if [ -f $config_path/fan_drwr_num ]; then
+		max_drwr=$(< $config_path/fan_drwr_num)
+	else
+		log_err "Mellanox thermal control start fail. Missing max fan drawers config."
 		exit 1
 	fi
 	if [ -f $config_path/hotplug_psus ]; then

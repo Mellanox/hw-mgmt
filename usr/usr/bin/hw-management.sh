@@ -117,6 +117,11 @@ RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 cpu_type=
+pn_sanity_offset=62
+fan_dir_pn_offset=11
+# 46 - F, 52 - R
+fan_direction_exhaust=46
+fan_direction_intake=52
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -336,9 +341,10 @@ msn4700_msn4600_dis_table=(	0x6d 5 \
 			0x61 15 \
 			0x50 16)
 
-msn4700_A1_connect_table=(	max11603 0x6d 5 \
+msn4700_msn4600_A1_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
+			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
 			mp2975 0x6e 5 \
 			tmp102 0x49 7 \
@@ -350,7 +356,7 @@ msn4700_A1_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-msn4700_A1_dis_table=(	0x6d 5 \
+msn4700_msn4600_A1_dis_table=(	0x6d 5 \
 			0x62 5 \
 			0x64 5 \
 			0x66 5 \
@@ -585,11 +591,30 @@ set_jtag_gpio()
 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
 
 	if [ "$export_unexport" == "export" ]; then
-		ln -sf /sys/class/gpio/gpio$gpio_tck $jtag_path/jtag_tck
-		ln -sf /sys/class/gpio/gpio$gpio_tms $jtag_path/jtag_tms
-		ln -sf /sys/class/gpio/gpio$gpio_tdo $jtag_path/jtag_tdo
-		ln -sf /sys/class/gpio/gpio$gpio_tdi $jtag_path/jtag_tdi
+		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
+		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
+		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
+		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
 	fi
+}
+
+fan_direction_fixed()
+{
+	sanity_offset=$(strings --radix=d $eeprom_path/vpd_info | grep MLNX | awk '{print $1}')
+	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
+	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
+	for i in $(seq 1 $max_tachos); do
+		case $fan_direction in
+		$fan_direction_exhaust)
+			echo 1 > $thermal_path/fan"${i}"_dir
+			;;
+		$fan_direction_intake)
+			echo 0 > $thermal_path/fan"${i}"_dir
+			;;
+		*)
+			;;
+		esac
+	done
 }
 
 msn274x_specific()
@@ -639,6 +664,7 @@ msn21xx_specific()
 	echo 2 > $config_path/cpld_num
 	echo cpld1 > $config_path/cpld_port
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
+	fixed_system=1
 }
 
 msn24xx_specific()
@@ -714,6 +740,7 @@ msn201x_specific()
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
+	fixed_system=1
 }
 
 mqmxxx_msn37x_msn34x_specific()
@@ -847,15 +874,15 @@ connect_msn4700_msn4600()
 	done
 }
 
-connect_msn4700_A1()
+connect_msn4700_msn4600_A1()
 {
-	connect_size=${#msn4700_A1_connect_table[@]}
+	connect_size=${#msn4700_msn4600_A1_connect_table[@]}
 	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_A1_connect_table[i]}
+		connect_table[i]=${msn4700_msn4600_A1_connect_table[i]}
 	done
-	disconnect_size=${#msn4700_A1_dis_table[@]}
+	disconnect_size=${#msn4700_msn4600_A1_dis_table[@]}
 	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_A1_dis_table[i]}
+		dis_table[i]=${msn4700_msn4600_A1_dis_table[i]}
 	done
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
@@ -868,7 +895,7 @@ msn47xx_specific()
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			1)
-				connect_msn4700_A1
+				connect_msn4700_msn4600_A1
 			;;
 			*)
 				connect_msn4700_msn4600
@@ -889,14 +916,21 @@ msn47xx_specific()
 
 msn46xx_specific()
 {
-	connect_size=${#msn4700_msn4600_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_msn4600_connect_table[i]}
-	done
-	disconnect_size=${#msn4700_msn4600_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_msn4600_dis_table[i]}
-	done
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			3)
+				connect_msn4700_msn4600_A1
+			;;
+			*)
+				connect_msn4700_msn4600
+			;;
+		esac
+	else
+		connect_msn4700_msn4600
+	fi
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	# this is MSN4600C
@@ -1291,6 +1325,9 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
+	if [ -v "fixed_system" ]; then
+		fan_direction_fixed
+	fi
 }
 
 do_stop()
@@ -1363,14 +1400,7 @@ do_chip_up_down()
 			unlock_service_state_change
 			return
 		fi
-		case $2 in
-		1)
-			echo 0 > $config_path/suspend
-			;;
-		*)
-			echo 1 > $config_path/suspend
-			;;
-		esac
+		echo 0 > $config_path/suspend
 		unlock_service_state_change
 		;;
 	*)

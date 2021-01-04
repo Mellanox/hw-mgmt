@@ -33,3 +33,8 @@ override_dh_systemd_enable:
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management
 	dh_systemd_start --name=hw-management-tc
+
+override_dh_strip_nondeterminism:
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
