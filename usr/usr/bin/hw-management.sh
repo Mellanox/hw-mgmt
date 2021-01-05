@@ -1371,7 +1371,7 @@ do_chip_up_down()
 	action=$1
 	# Add ASIC device.
 	get_asic_bus
-	bus=$1
+	bus=$?
 
 	case $action in
 	0)
