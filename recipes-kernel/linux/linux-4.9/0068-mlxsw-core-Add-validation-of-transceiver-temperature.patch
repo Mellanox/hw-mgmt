@@ -1,0 +1,47 @@
+From b53f2a2d2333a3c488574d3a063d915e0d5d2208 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 6 Jan 2021 20:45:52 +0200
+Subject: [PATCH mlxsw/backport 2/2] mlxsw: core: Add validation of transceiver
+ temperature thresholds
+
+Validate thresholds to avoid a single failure due to some transceiver
+unreliability. Ignore the readouts last in case alarm temperature is
+above warning temperature, since it can cause unexpected thermal
+shutdown. Stay with the previous values and refresh threshold within
+the next loop.
+
+This is the rarest scenario, but somehow once it has been observed at a
+customer site.
+
+Fixes: 6a79507cfe94 ("mlxsw: core: Extend thermal module with per QSFP module thermal zones")
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 24e40a64a716..5a86cd009b7e 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -183,6 +183,18 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
+ 	if (err)
+ 		return err;
+ 
++	/* Validate thresholds to avoid a single failure due to some
++	 * transceiver unreliability. Ignore the readouts last in case alarm
++	 * temperature is above warning temperature, since it can cause
++	 * unexpected thermal shutdown. Stay with the previous values and
++	 * refresh threshold within the next loop.
++	 */
++	if (crit_temp > emerg_temp) {
++		dev_warn(dev, "%s : Critical threshold %d is greater than emergency threshold %d\n",
++			 tz->tzdev->type, crit_temp, emerg_temp);
++		return 0;
++	}
++
+ 	/* According to the system thermal requirements, the thermal zones are
+ 	 * defined with four trip points. The critical and emergency
+ 	 * temperature thresholds, provided by QSFP module are set as "active"
+-- 
+2.11.0
+
