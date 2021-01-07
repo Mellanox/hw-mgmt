@@ -1,40 +1,33 @@
-From b53f2a2d2333a3c488574d3a063d915e0d5d2208 Mon Sep 17 00:00:00 2001
+From f60f814913100fb208c429d53b5bfb94242a8694 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Wed, 6 Jan 2021 20:45:52 +0200
+Date: Thu, 7 Jan 2021 13:56:38 +0200
 Subject: [PATCH mlxsw/backport 2/2] mlxsw: core: Add validation of transceiver
  temperature thresholds
 
 Validate thresholds to avoid a single failure due to some transceiver
-unreliability. Ignore the readouts last in case alarm temperature is
-above warning temperature, since it can cause unexpected thermal
+unreliability. Ignore the last readouts in case warning temperature is
+above alarm temperature, since it can cause unexpected thermal
 shutdown. Stay with the previous values and refresh threshold within
-the next loop.
+the next iteration.
 
-This is the rarest scenario, but somehow once it has been observed at a
-customer site.
+This is a rare scenario, but it was observed at a customer site.
 
 Fixes: 6a79507cfe94 ("mlxsw: core: Extend thermal module with per QSFP module thermal zones")
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 24e40a64a716..5a86cd009b7e 100644
+index 24e40a64a716..5ac0d157c8fa 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -183,6 +183,18 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
+@@ -183,6 +183,12 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
  	if (err)
  		return err;
  
-+	/* Validate thresholds to avoid a single failure due to some
-+	 * transceiver unreliability. Ignore the readouts last in case alarm
-+	 * temperature is above warning temperature, since it can cause
-+	 * unexpected thermal shutdown. Stay with the previous values and
-+	 * refresh threshold within the next loop.
-+	 */
 +	if (crit_temp > emerg_temp) {
-+		dev_warn(dev, "%s : Critical threshold %d is greater than emergency threshold %d\n",
++		dev_warn(dev, "%s : Critical threshold %d is above emergency threshold %d\n",
 +			 tz->tzdev->type, crit_temp, emerg_temp);
 +		return 0;
 +	}
@@ -42,6 +35,19 @@ index 24e40a64a716..5a86cd009b7e 100644
  	/* According to the system thermal requirements, the thermal zones are
  	 * defined with four trip points. The critical and emergency
  	 * temperature thresholds, provided by QSFP module are set as "active"
+@@ -197,11 +203,8 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
+ 		tz->trips[MLXSW_THERMAL_TEMP_TRIP_NORM].temp = crit_temp;
+ 	tz->trips[MLXSW_THERMAL_TEMP_TRIP_HIGH].temp = crit_temp;
+ 	tz->trips[MLXSW_THERMAL_TEMP_TRIP_HOT].temp = emerg_temp;
+-	if (emerg_temp > crit_temp)
+-		tz->trips[MLXSW_THERMAL_TEMP_TRIP_CRIT].temp = emerg_temp +
++	tz->trips[MLXSW_THERMAL_TEMP_TRIP_CRIT].temp = emerg_temp +
+ 					MLXSW_THERMAL_MODULE_TEMP_SHIFT;
+-	else
+-		tz->trips[MLXSW_THERMAL_TEMP_TRIP_CRIT].temp = emerg_temp;
+ 
+ 	return 0;
+ }
 -- 
 2.11.0
 
