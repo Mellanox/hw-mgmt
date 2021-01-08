@@ -25,6 +25,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN4700
 - MSN4600C
 - MSN4600
+- MQM9700
 
 ## Supported Kernel versions:
 - 4.9.xx
