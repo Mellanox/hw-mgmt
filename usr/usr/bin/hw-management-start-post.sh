@@ -97,5 +97,6 @@ case $board in
 		;;
 esac
 
+timeout 3 bash -c 'until [  -L $system_path/cpld1_version ]; do sleep 1; done'
 handle_cpld_versions $cpld_num
 set_fan_drwr_num

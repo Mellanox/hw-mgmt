@@ -1316,7 +1316,7 @@ do_start()
 	get_asic_bus
 	create_event_files
 	connect_platform
-	sleep 1
+	sleep 2
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
