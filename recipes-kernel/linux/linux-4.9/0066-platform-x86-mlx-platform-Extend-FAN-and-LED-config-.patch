@@ -1,8 +1,8 @@
-From e2b941f80764c68b341b6cee245c6eec341f5faa Mon Sep 17 00:00:00 2001
-From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 3 Jan 2021 13:24:14 +0200
-Subject: [PATCH platform-next 1/1] platform/x86: mlx-platform: Extend FAN and
- LED config to support new MQM97xx systems
+From 80974b1a7a86b735c0c956e5e7c2529b4190b4cc Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Thu, 10 Dec 2020 09:38:46 +0200
+Subject: [PATCH 1/2] platform/x86: mlx-platform: Extend FAN and LED config to
+ support new MQM97xx systems
 
 Add support for new system types "MQM97xx", which is based on Mellanox
 Quantum-2 ASIC. It provides up to 64x400GB/s (IB) full bidirectional
@@ -20,14 +20,15 @@ Extend 'mlxplat_mlxcpld_default_ng_fan_items_data', 'mlxplat_mlxcpld_default_ng_
 and 'mlxplat_mlxcpld_default_fan_data' structures in order to support seven fan drawers.
 All previous systems of this class supported only up to six fan drawers.
 
-Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com >
 ---
- drivers/hwmon/mlxreg-fan.c          |  4 +++-
- drivers/platform/x86/mlx-platform.c | 46 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 49 insertions(+), 1 deletion(-)
+ drivers/hwmon/mlxreg-fan.c          |  6 +++--
+ drivers/platform/x86/mlx-platform.c | 48 ++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 51 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 7028a4f497b0..28668819e7eb 100644
+index 7028a4f..95a30bf 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -12,7 +12,7 @@
@@ -39,17 +40,19 @@ index 7028a4f497b0..28668819e7eb 100644
  #define MLXREG_FAN_MAX_STATE		10
  #define MLXREG_FAN_MIN_DUTY		51	/* 20% */
  #define MLXREG_FAN_MAX_DUTY		255	/* 100% */
-@@ -242,6 +242,8 @@ static const u32 mlxreg_fan_hwmon_fan_config[] = {
+@@ -242,7 +242,9 @@ static const u32 mlxreg_fan_hwmon_fan_config[] = {
  	HWMON_F_INPUT | HWMON_F_FAULT,
  	HWMON_F_INPUT | HWMON_F_FAULT,
  	HWMON_F_INPUT | HWMON_F_FAULT,
+-	0
 +	HWMON_F_INPUT | HWMON_F_FAULT,
 +	HWMON_F_INPUT | HWMON_F_FAULT,
- 	0
++ 	0
  };
  
+ static const struct hwmon_channel_info mlxreg_fan_hwmon_fan = {
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index c1d1a7817d02..3ab06b9f7a7f 100644
+index c1d1a78..cd6c168 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -38,6 +38,7 @@
@@ -69,6 +72,15 @@ index c1d1a7817d02..3ab06b9f7a7f 100644
  #define MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET	0xf5
  #define MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET	0xf6
  #define MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET	0xf7
+@@ -136,7 +139,7 @@
+ #define MLXPLAT_CPLD_PWR_EXT_MASK	GENMASK(3, 0)
+ #define MLXPLAT_CPLD_FAN_MASK		GENMASK(3, 0)
+ #define MLXPLAT_CPLD_ASIC_MASK		GENMASK(1, 0)
+-#define MLXPLAT_CPLD_FAN_NG_MASK	GENMASK(5, 0)
++#define MLXPLAT_CPLD_FAN_NG_MASK	GENMASK(6, 0)
+ #define MLXPLAT_CPLD_LED_LO_NIBBLE_MASK	GENMASK(7, 4)
+ #define MLXPLAT_CPLD_LED_HI_NIBBLE_MASK	GENMASK(3, 0)
+ #define MLXPLAT_CPLD_VOLTREG_UPD_MASK	GENMASK(5, 4)
 @@ -808,6 +811,14 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_fan_items_data[] = {
  		.bit = BIT(5),
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
@@ -169,5 +181,5 @@ index c1d1a7817d02..3ab06b9f7a7f 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET:
 -- 
-2.11.0
+2.8.4
 

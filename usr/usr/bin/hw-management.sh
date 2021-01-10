@@ -74,7 +74,7 @@ thermal_type_t10=10
 thermal_type_def=0
 
 thermal_type=$thermal_type_def
-max_tachos=12
+max_tachos=14
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
@@ -1202,6 +1202,18 @@ create_event_files()
 	fi
 }
 
+get_asic_bus()
+{
+	if [ ! -f $config_path/asic_bus ]; then
+		find_i2c_bus
+		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
+		echo $asic_bus > $config_path/asic_bus
+	else
+		asic_bus=$(cat $config_path/asic_bus)
+	fi
+	return "$asic_bus"
+}
+
 set_config_data()
 {
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
@@ -1301,12 +1313,10 @@ do_start()
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
 	set_config_data
-	find_i2c_bus
-	asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
-	echo $asic_bus > $config_path/asic_bus
+	get_asic_bus
 	create_event_files
 	connect_platform
-	sleep 1
+	sleep 2
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
@@ -1358,10 +1368,12 @@ function unlock_service_state_change()
 
 do_chip_up_down()
 {
+	action=$1
 	# Add ASIC device.
-	bus=$(< $config_path/asic_bus)
+	get_asic_bus
+	bus=$?
 
-	case $1 in
+	case $action in
 	0)
 		lock_service_state_change
 		chipup_delay=$(< $config_path/chipup_delay)

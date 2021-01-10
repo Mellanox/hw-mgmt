@@ -1,4 +1,76 @@
 ================================================================================
+- V.7.0010.2100
+- Sun, 10 Jan 2021
+--------------------------------------------------------------------------------
+- New Feature
+    o	For MSN4700 A1 (Leopard re-spin): add support 5 mp2975 instead of 7 xdpe12284 
+    o	For MQM9700 (Gorilla) 
+        add support for mp2975 and mp2888, (Align driver mp2975 with upstream)
+        *Kernel 4.19 - 0032-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2975-c.patch
+        *Kernel 4.19 - 0037-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch
+        *Kernel 4.9  - 0065-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2975-c.patch
+        *Kernel 4.9  - 0068-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch
+
+	add support for 7th FAN and 7th LED and tachometers
+        *Kernel 4.19 - 0035-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch
+        *Kernel 4.9  - 0066-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch
+
+    o	For any non-Broadwell CPU: Initialize temperature limits critical, max, min and hysteresis of all discovered SODIMMs with temp sensor.
+    o	Export appropriate GPIO pins (through sysfs) that are used for JTAG bit-bang CPLD burning. For platforms that support JTAG-GPIO FU. (Broadwell & Coffeelake)
+    o	Add common fan direction attribute for SPC1/2/3 using sysfs, and replace existing thermal algorithm temperature difference mechanism for detecting fan direction with   	new fan_dir attribute 
+    o	For MSN4600 A1 (Liger re-spin like existing Leopard re-spin) add support 5 mp2975 instead of 7 xdpe12284.
+
+- Bug fixes
+    o	Fix dmesg dump
+    o	Minimizing hw-mgmt dump when used in mlnx OS to not include overlapping data with sysdump
+    o	Change during ASIC restart without active resume, the thermal control default from suspend to non-suspend.
+    o	Add capability to build hw-management directly in vdi(centos)
+    o	Fix issue mlxsw_minimal init failure - can't read asic_bus from config/asic_bus file not created yet.
+
+    o	Remove Patch: In systems w/o SMBIOS, predict system based on CPU (stays CL only)
+        *Kernel 4.19 - 0005-platform-x86-mlx-platform-DMI-match-for-marginal-sys.patch from ONL 
+    o	Add support for NVMe : Backport capability from kernel 5.6 to kernel 4.19 which allows NVME temperature reading using sysfs
+        *Kernel 4.19 - 0033-hwmon-Add-convience-macro-to-define-simple-static-se.patch
+        *Kernel 4.19 - 0034-backport-nvme-Add-hardware-monitoring-support.patch
+    o	Modify ASIC shut down temperature threshold to 140c (SX, SPC 1/2/3)
+        *Kernel 4.19 - 0036-mlxsw-core-Increase-critical-threshold-for-ASIC-ther.patch
+    o	Validate critical temperature threshold read from port cage.
+        *Kernel 4.19 - 0038-mlxsw-core-Add-validation-of-transceiver-temperature.patch
+	
+    o	Modify ASIC shut down temperature threshold to 140c (SX, SPC 1/2/3)
+        *Kernel 4.9 - 0067-mlxsw-core-Increase-critical-threshold-for-ASIC-ther.patch
+    o	Validate critical temperature threshold read from port cage.
+        *Kernel 4.9 - 0069-mlxsw-core-Add-validation-of-transceiver-temperature.patch
+
+- Known issues and limitations:
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.  
+================================================================================
 - V.7.0010.2000
 - Wed, 22 Sep 2020
 --------------------------------------------------------------------------------
