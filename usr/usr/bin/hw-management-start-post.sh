@@ -99,4 +99,7 @@ esac
 
 timeout 3 bash -c 'until [  -L $system_path/cpld1_version ]; do sleep 1; done'
 handle_cpld_versions $cpld_num
-set_fan_drwr_num
+# Do not set for fixed fans systems. For fixed fans systems fan_drwr_num set in system specific init function.
+if [ ! -f $config_path/fixed_fans_system ]; then
+	set_fan_drwr_num
+fi
