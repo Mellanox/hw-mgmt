@@ -1,8 +1,8 @@
-From 48eac1f660472ad004f111aa908d23ce2adcce7c Mon Sep 17 00:00:00 2001
-From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Wed, 26 Aug 2020 23:11:44 +0300
-Subject: [PATCH backport v4.19 18/18] hwmon: (pmbus) Add support for MPS
- Multi-phase mp2975 controller
+From 4218cfb886d2de82677a3fe1aeb44858c38f81bd Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Thu, 12 Nov 2020 16:16:50 +0200
+Subject: [PATCH 1/4] hwmon: (pmbus) Add support for MPS Multi-phase mp2975
+ controller
 
 Add support for mp295 device from Monolithic Power Systems, Inc. (MPS)
 vendor. This is a dual-loop, digital, multi-phase controller.
@@ -22,12 +22,12 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/hwmon/pmbus/Kconfig  |  10 +
  drivers/hwmon/pmbus/Makefile |   1 +
- drivers/hwmon/pmbus/mp2975.c | 802 +++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 813 insertions(+)
+ drivers/hwmon/pmbus/mp2975.c | 804 +++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 815 insertions(+)
  create mode 100644 drivers/hwmon/pmbus/mp2975.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
-index 14c0572..6441b58 100644
+index 14c0572..fbf326e 100644
 --- a/drivers/hwmon/pmbus/Kconfig
 +++ b/drivers/hwmon/pmbus/Kconfig
 @@ -145,6 +145,16 @@ config SENSORS_MAX8688
@@ -61,10 +61,10 @@ index 8c8edb5..df7a80f 100644
  obj-$(CONFIG_SENSORS_UCD9000)	+= ucd9000.o
 diff --git a/drivers/hwmon/pmbus/mp2975.c b/drivers/hwmon/pmbus/mp2975.c
 new file mode 100644
-index 0000000..1949005
+index 0000000..a0c2bcf
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp2975.c
-@@ -0,0 +1,802 @@
+@@ -0,0 +1,804 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * Hardware monitoring driver for MPS Multi-phase Digital VR Controllers
@@ -797,15 +797,17 @@ index 0000000..1949005
 +		return ret;
 +
 +	if (ret)
-+		data->info.pages = MP2975_PAGE_NUM,
-+#if 0
++		data->info.pages = MP2975_PAGE_NUM;
++
 +	if (ret) {
 +		/* Two rails are connected. */
 +		data->info.pages = MP2975_PAGE_NUM;
++#if 0
 +		data->info.phases[1] = ret;
++#endif
 +		data->info.func[1] = MP2975_RAIL2_FUNC;
 +	}
-+
++#if 0
 +	/* Identify multiphase configuration. */
 +	ret = mp2975_identify_multiphase(client, data, info);
 +	if (ret)
