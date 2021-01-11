@@ -598,23 +598,21 @@ set_jtag_gpio()
 	fi
 }
 
-fan_direction_fixed()
+get_fixed_fans_direction()
 {
 	sanity_offset=$(strings --radix=d $eeprom_path/vpd_info | grep MLNX | awk '{print $1}')
 	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
 	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
-	for i in $(seq 1 $max_tachos); do
-		case $fan_direction in
-		$fan_direction_exhaust)
-			echo 1 > $thermal_path/fan"${i}"_dir
-			;;
-		$fan_direction_intake)
-			echo 0 > $thermal_path/fan"${i}"_dir
-			;;
-		*)
-			;;
-		esac
-	done
+	case $fan_direction in
+	$fan_direction_exhaust)
+		echo 1 > $config_path/fixed_fans_dir
+		;;
+	$fan_direction_intake)
+		echo 0 > $config_path/fixed_fans_dir
+		;;
+	*)
+		;;
+	esac
 }
 
 msn274x_specific()
@@ -664,7 +662,8 @@ msn21xx_specific()
 	echo 2 > $config_path/cpld_num
 	echo cpld1 > $config_path/cpld_port
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
-	fixed_system=1
+	echo 4 > $config_path/fan_drwr_num
+	echo 1 > $config_path/fixed_fans_system
 }
 
 msn24xx_specific()
@@ -740,7 +739,8 @@ msn201x_specific()
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
-	fixed_system=1
+	echo 4 > $config_path/fan_drwr_num
+	echo 1 > $config_path/fixed_fans_system
 }
 
 mqmxxx_msn37x_msn34x_specific()
@@ -1316,7 +1316,7 @@ do_start()
 	get_asic_bus
 	create_event_files
 	connect_platform
-	sleep 2
+	sleep 1
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
@@ -1335,8 +1335,13 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
-	if [ -v "fixed_system" ]; then
-		fan_direction_fixed
+	if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
+		get_fixed_fans_direction
+		if [ -f $config_path/fixed_fans_dir ]; then
+			for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
+				cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
+			done
+		fi
 	fi
 }
 
