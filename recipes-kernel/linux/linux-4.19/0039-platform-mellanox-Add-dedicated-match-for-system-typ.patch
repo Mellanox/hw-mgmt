@@ -421,7 +421,7 @@ index cd6c168..a30f111 100644
 +		.callback = mlxplat_dmi_qmb8700_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
-+			DMI_MATCH(DMI_PRODUCT_NAME, "QMB8700"),
++			DMI_MATCH(DMI_PRODUCT_NAME, "MQM8700"),
 +		},
 +	},
 +	{
