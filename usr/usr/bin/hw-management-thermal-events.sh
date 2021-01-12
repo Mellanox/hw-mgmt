@@ -38,11 +38,13 @@ eeprom_path=$hw_management_path/eeprom
 power_path=$hw_management_path/power
 alarm_path=$hw_management_path/alarm
 config_path=$hw_management_path/config
+system_path=$hw_management_path/system
 fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
 events_path=$hw_management_path/events
-max_psus=2
-max_tachos=12
+max_psus=4
+max_tachos=14
+max_lcs=8
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
@@ -328,6 +330,72 @@ if [ "$1" == "add" ]; then
 				event=$(< "$thermal_path"/psu"$i"_pwr_status)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/pwr"$i"
+				fi
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_active
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_active ]; then
+				ln -sf "$3""$4"/lc"$i"_active $system_path/lc"$i"_active
+				event=$(< $system_path/lc"$i"_active)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_active
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_powered ]; then
+				ln -sf "$3""$4"/lc"$i"_powered $system_path/lc"$i"_powered
+				event=$(< $system_path/lc"$i"_powered)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_powered
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_present ]; then
+				ln -sf "$3""$4"/lc"$i"_present $system_path/lc"$i"_present
+				event=$(< $system_path/lc"$i"_present)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_present
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_ready ]; then
+				ln -sf "$3""$4"/lc"$i"_ready $system_path/lc"$i"_ready
+				event=$(< $system_path/lc"$i"_ready)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_ready
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_shutdown ]; then
+				ln -sf "$3""$4"/lc"$i"_shutdown $system_path/lc"$i"_shutdown
+				event=$(< $system_path/lc"$i"_shutdown)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_shutdown
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_synced ]; then
+				ln -sf "$3""$4"/lc"$i"_synced $system_path/lc"$i"_synced
+				event=$(< $system_path/lc"$i"_synced)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_synced
+				fi
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -f "$3""$4"/lc"$i"_verified ]; then
+				ln -sf "$3""$4"/lc"$i"_verified $system_path/lc"$i"_verified
+				event=$(< $system_path/lc"$i"_verified)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/lc"$i"_verified
 				fi
 			fi
 		done
@@ -662,6 +730,29 @@ else
 			fi
 			if [ -L $thermal_path/psu"$i"_pwr_status ]; then
 				unlink $thermal_path/psu"$i"_pwr_status
+			fi
+		done
+		for ((i=1; i<=max_lcs; i+=1)); do
+			if [ -L $system_path/lc"$i"_active ]; then
+				unlink $system_path/lc"$i"_active
+			fi
+			if [ -L $system_path/lc"$i"_powered ]; then
+				unlink $system_path/lc"$i"_powered
+			fi
+			if [ -L $system_path/lc"$i"_present ]; then
+				unlink $system_path/lc"$i"_present
+			fi
+			if [ -L $system_path/lc"$i"_ready ]; then
+				unlink $system_path/lc"$i"_ready
+			fi
+			if [ -L $system_path/lc"$i"_shutdown ]; then
+				unlink $system_path/lc"$i"_shutdown
+			fi
+			if [ -L $system_path/lc"$i"_synced ]; then
+				unlink $system_path/lc"$i"_synced
+			fi
+			if [ -L $system_path/lc"$i"_verified ]; then
+				unlink $system_path/lc"$i"_verified
 			fi
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
