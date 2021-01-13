@@ -269,3 +269,4 @@ SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*
 # SDK
 SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add"
 SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="offline", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove"
