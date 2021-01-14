@@ -990,7 +990,7 @@ mqm97xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	#lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 }
 
 msn_spc2_common()
