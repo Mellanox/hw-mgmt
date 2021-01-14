@@ -872,6 +872,7 @@ connect_msn4700_msn4600()
 	for ((i=0; i<disconnect_size; i++)); do
 		dis_table[i]=${msn4700_msn4600_dis_table[i]}
 	done
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
@@ -970,6 +971,7 @@ msn3510_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
 mqm97xx_specific()
@@ -1007,7 +1009,6 @@ msn_spc2_common()
 			mqmxxx_msn37x_msn34x_specific
 			;;
 	esac
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
 msn_spc3_common()
@@ -1027,7 +1028,6 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
-	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 check_cpu_type()
