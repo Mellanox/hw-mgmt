@@ -79,7 +79,7 @@ TLV_FORMAT = ">BB"
 TLV_FIELDS = ["type", "size"]
 
 # FRU bin header format
-FRU_SANITY_FORMAT = "=8sBH"
+FRU_SANITY_FORMAT = ">8sBH"
 FRU_SANITY_FORMAT_FIELDS = ["tlv_header", "ver", "total_len"]
 
 # Supported FRU versions
@@ -95,10 +95,11 @@ LC_FRU_ITEMS_FORMAT = {2 : {'type_name': "PRODUCT_NAME_VPD_FIELD", "format": "{}
                        8 : {'type_name': "PORT_NUM_FIELD", "format": "b"},
                        9 : {'type_name': "PORT_SPEED_FIELD", "format": "i"},
                        10: {'type_name': "MANUFACTURER_VPD_FIELD", "format": "{}s"},
-                       11: {'type_name': "CHSUM_FIELD", "format": "I"}
+                       11: {'type_name': "CHSUM_FIELD", "format": ">I"}
                       }
 
 def parse_packed_data(data, data_format, fields):
+    
     '''
     @summary: converting binary packed data to dictionary
     @param data: binary data array
@@ -154,7 +155,7 @@ def parse_fru_bin(data):
     fru_dict['items'] = []
     fru_dict['items_dict'] = {}
     pos = offset
-    while pos < fru_dict['total_len']:
+    while pos < fru_dict['total_len'] + offset:
         blk_header, header_size = fru_get_tlv_header(data[pos:])
         pos += header_size
         if blk_header['type'] not in LC_FRU_ITEMS_FORMAT.keys():
@@ -258,7 +259,7 @@ if __name__ == '__main__':
         print "FRU parse error or wrong FRU file contents."
         sys.exit(1)
 
-    if check_crc32(fru_data_bin[ : fru_data_dict['total_len']-6],
+    if check_crc32(fru_data_bin[ : fru_data_dict['total_len']+7],
                    fru_data_dict['items_dict']['CHSUM_FIELD'][2:]):
         print "CRC32 error."
         sys.exit(1)
