@@ -133,181 +133,90 @@ fan_direction_intake=52
 # Hardware monitoring related drivers for ambient temperature sensing will be
 # loaded in case they were not loaded before or in case these drivers are not
 # configured as modules.
-msn2700_connect_table=( pmbus 0x27 5 \
+
+# Ivybridge and Rangeley CPU mostly used on SPC1 systems.
+cpu_type0_connection_table=(	max11603 0x6d 15 \
+			24c32 0x51 16)
+
+# Special for MSN2**** with Broadwell Comex CPU.
+cpu_type1_connection_table=(	max11603 0x6d 23 \
+			tmp102 0x49 23 \
+			tps53679 0x58 23 \
+			tps53679 0x61 23 \
+			24c32 0x50 24)
+
+# Broadwell CPU, mostly used on SPC2/SPC3 systems.
+cpu_type2_connection_table=(	max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			tps53679 0x58 15 \
+			tps53679 0x61 15 \
+			24c32 0x50 16)
+
+# CoffeeLake CPU.
+cpu_type3_connection_table=(	max11603 0x6d 15 \
+			mp2975 0x6e 15 \
+			24c32 0x51 16)
+
+msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
 			lm75 0x4a 7 \
 			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			24c32 0x51 16 \
 			lm75 0x49 17)
 
-msn2700_dis_table=(	0x27 5 \
-			0x41 5 \
-			0x6d 5 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x51 16 \
-			0x49 17)
-
-msn2100_connect_table=( pmbus 0x27 5 \
+msn2100_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
 			lm75 0x4a 7 \
 			lm75 0x4b 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			24c32 0x51 16)
+			24c32 0x51 8)
 
-msn2100_dis_table=(	0x27 5 \
-			0x41 5 \
-			0x6d 5 \
-			0x4a 7 \
-			0x4b 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x51 16)
-
-msn2740_connect_table=(	pmbus 0x27 5 \
+msn2740_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x64 5 \
 			tmp102 0x49 6 \
 			tmp102 0x48 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			24c32 0x51 16)
+			24c32 0x51 8)
 
-msn2740_dis_table=(	0x27 5 \
-			0x41 5 \
-			0x64 5 \
-			0x49 6 \
-			0x48 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x51 16)
-
-msn2010_connect_table=(	max11603 0x6d 5 \
+msn2010_base_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			lm75 0x4a 7 \
 			lm75 0x4b 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			24c32 0x51 16)
+			24c32 0x51 8)
 
-msn2010_dis_table=(	0x71 5 \
-			0x70 5 \
-			0x6d 5 \
-			0x4b 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x51 16)
-
-mqm8700_connect_table=(	max11603 0x64 5 \
+mqm8700_base_connect_table=(	max11603 0x64 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
+			24c32 0x51 8)
 
-mqm8700_dis_table=(	0x64 5 \
-			0x70 5 \
-			0x71 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
-
-msn3420_connect_table=(	max11603 0x6d 5 \
+msn3420_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
+			24c32 0x51 8)
 
-msn3420_dis_table=(	0x6d 5 \
-			0x62 5 \
-			0x64 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
-
-msn3800_connect_table=( max11603 0x6d 5 \
+msn3800_base_connect_table=( max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tps53679 0x72 5 \
 			tps53679 0x73 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
+			24c32 0x51 8)
 
-msn3800_dis_table=(	0x6d 5 \
-			0x70 5 \
-			0x71 5 \
-			0x72 5 \
-			0x73 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
-
-msn27002_msn24102_msb78002_connect_table=( pmbus 0x27 5 \
+msn27002_msn24102_msb78002_base_connect_table=( pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			max11603 0x6d 5 \
 			lm75 0x4a 7 \
 			24c32 0x51 8 \
 			max11603 0x6d 15 \
-			max11603 0x6d 23 \
-			tmp102 0x49 23 \
-			tps53679 0x58 23 \
-			tps53679 0x61 23 \
-			24c32 0x50 24 \
 			lm75 0x49 17)
 
-msn27002_msn24102_msb78002_dis_table=(	0x27 5 \
-			0x41 5 \
-			0x6d 5 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x6d 23 \
-			0x49 23 \
-			0x58 23 \
-			0x61 23 \
-			0x50 24 \
-			0x49 17)
-
-msn4700_msn4600_connect_table=(	max11603 0x6d 5 \
+msn4700_msn4600_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
 			xdpe12284 0x66 5 \
@@ -317,31 +226,9 @@ msn4700_msn4600_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x6e 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
+			24c32 0x51 8)
 
-msn4700_msn4600_dis_table=(	0x6d 5 \
-			0x62 5 \
-			0x64 5 \
-			0x66 5 \
-			0x68 5 \
-			0x6a 5 \
-			0x6c 5 \
-			0x6e 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
-
-msn4700_msn4600_A1_connect_table=(	max11603 0x6d 5 \
+msn4700_msn4600_A1_base_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x66 5 \
@@ -349,53 +236,16 @@ msn4700_msn4600_A1_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x6e 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
+			24c32 0x51 8)
 
-msn4700_msn4600_A1_dis_table=(	0x6d 5 \
-			0x62 5 \
-			0x64 5 \
-			0x66 5 \
-			0x6a 5 \
-			0x6e 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
-
-msn3510_connect_table=(	max11603 0x6d 5 \
+msn3510_base_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
+			24c32 0x51 8)
 
-msn3510_dis_table=(	0x6d 5 \
-			0x70 5 \
-			0x71 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
-
-mqm97xx_connect_table=(	max11603 0x6d 5 \
+mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2888 0x66 5 \
@@ -404,28 +254,7 @@ mqm97xx_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
-			24c32 0x51 8 \
-			max11603 0x6d 15 \
-			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
-			24c32 0x50 16)
-
-mqm97xx_dis_table=(	0x6d 5 \
-			0x62 5 \
-			0x64 5 \
-			0x66 5 \
-			0x68 5 \
-			0x6c 5 \
-			0x49 7 \
-			0x4a 7 \
-			0x53 7 \
-			0x51 8 \
-			0x6d 15 \
-			0x49 15 \
-			0x58 15 \
-			0x61 15 \
-			0x50 16)
+			24c32 0x51 8)
 
 ACTION=$1
 
@@ -615,16 +444,29 @@ get_fixed_fans_direction()
 	esac
 }
 
+add_cpu_board_to_connection_table()
+{
+	case $cpu_type in
+		$RNG_CPU|$IVB_CPU)
+			connect_table+=( ${cpu_type0_connection_table[@]} )
+			;;
+		$BDW_CPU)
+			connect_table+=( ${cpu_type2_connection_table[@]} )
+			;;
+		$CFL_CPU)
+			connect_table+=( ${cpu_type3_connection_table[@]} )
+			;;
+		*)
+			log_err "$product is not supported"
+			exit 0
+			;;
+	esac
+}
+
 msn274x_specific()
 {
-	connect_size=${#msn2740_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn2740_connect_table[i]}
-	done
-	disconnect_size=${#msn2740_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn2740_dis_table[i]}
-	done
+	connect_table=(${msn2740_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t3
 	max_tachos=4
@@ -641,14 +483,8 @@ msn274x_specific()
 
 msn21xx_specific()
 {
-	connect_size=${#msn2100_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn2100_connect_table[i]}
-	done
-	disconnect_size=${#msn2100_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn2100_dis_table[i]}
-	done
+	connect_table=(${msn2100_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t2
 	max_tachos=4
@@ -668,14 +504,8 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	connect_size=${#msn2700_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn2700_connect_table[i]}
-	done
-	disconnect_size=${#msn2700_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn2700_dis_table[i]}
-	done
+	connect_table=(${msn2700_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -693,14 +523,8 @@ msn24xx_specific()
 
 msn27xx_msb_msx_specific()
 {
-	connect_size=${#msn2700_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn2700_connect_table[i]}
-	done
-	disconnect_size=${#msn2700_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn2700_dis_table[i]}
-	done
+	connect_table=(${msn2700_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -719,14 +543,8 @@ msn27xx_msb_msx_specific()
 
 msn201x_specific()
 {
-	connect_size=${#msn2010_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn2010_connect_table[i]}
-	done
-	disconnect_size=${#msn2010_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn2010_dis_table[i]}
-	done
+	connect_table=(${msn2010_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t4
 	max_tachos=4
@@ -745,14 +563,8 @@ msn201x_specific()
 
 mqmxxx_msn37x_msn34x_specific()
 {
-	connect_size=${#mqm8700_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${mqm8700_connect_table[i]}
-	done
-	disconnect_size=${#mqm8700_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${mqm8700_dis_table[i]}
-	done
+	connect_table=(${mqm8700_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
@@ -768,14 +580,8 @@ mqmxxx_msn37x_msn34x_specific()
 
 msn3420_specific()
 {
-	connect_size=${#msn3420_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn3420_connect_table[i]}
-	done
-	disconnect_size=${#msn3420_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn3420_dis_table[i]}
-	done
+	connect_table=(${msn3420_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t9
 	max_tachos=10
@@ -791,14 +597,8 @@ msn3420_specific()
 
 msn38xx_specific()
 {
-	connect_size=${#msn3800_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn3800_connect_table[i]}
-	done
-	disconnect_size=${#msn3800_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn3800_dis_table[i]}
-	done
+	connect_table=(${msn3800_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t7
 	max_tachos=3
@@ -813,14 +613,8 @@ msn38xx_specific()
 
 msn24102_specific()
 {
-	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
-	done
-	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
-	done
+	# This system do not use auto detected cpu conection table.
+	connect_table=(${cpu_type1_connection_table[@]} ${msn27002_msn24102_msb78002_base_connect_table[@]})
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -839,14 +633,8 @@ msn24102_specific()
 
 msn27002_msb78002_specific()
 {
-	connect_size=${#msn27002_msn24102_msb78002_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn27002_msn24102_msb78002_connect_table[i]}
-	done
-	disconnect_size=${#msn27002_msn24102_msb78002_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn27002_msn24102_msb78002_dis_table[i]}
-	done
+	# This system do not use auto detected cpu conection table.
+	connect_table=(${cpu_type1_connection_table[@]} ${msn27002_msn24102_msb78002_base_connect_table[@]})
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -864,27 +652,15 @@ msn27002_msb78002_specific()
 
 connect_msn4700_msn4600()
 {
-	connect_size=${#msn4700_msn4600_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_msn4600_connect_table[i]}
-	done
-	disconnect_size=${#msn4700_msn4600_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_msn4600_dis_table[i]}
-	done
+	connect_table=(${msn4700_msn4600_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
 {
-	connect_size=${#msn4700_msn4600_A1_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4700_msn4600_A1_connect_table[i]}
-	done
-	disconnect_size=${#msn4700_msn4600_A1_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn4700_msn4600_A1_dis_table[i]}
-	done
+	connect_table=(${msn4700_msn4600_A1_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
@@ -955,14 +731,8 @@ msn46xx_specific()
 
 msn3510_specific()
 {
-	connect_size=${#msn3510_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn3510_connect_table[i]}
-	done
-	disconnect_size=${#msn3510_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${msn3510_dis_table[i]}
-	done
+	connect_table=(${msn3510_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
 	max_tachos=12
@@ -976,14 +746,8 @@ msn3510_specific()
 
 mqm97xx_specific()
 {
-	connect_size=${#mqm97xx_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${mqm97xx_connect_table[i]}
-	done
-	disconnect_size=${#mqm97xx_dis_table[@]}
-	for ((i=0; i<disconnect_size; i++)); do
-		dis_table[i]=${mqm97xx_dis_table[i]}
-	done
+	connect_table=(${mqm97xx_base_connect_table[@]})
+	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
@@ -1233,7 +997,7 @@ set_config_data()
 
 connect_platform()
 {
-	for ((i=0; i<connect_size; i+=3)); do
+	for ((i=0; i<${#connect_table[@]}; i+=3)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
 	done
@@ -1241,8 +1005,8 @@ connect_platform()
 
 disconnect_platform()
 {
-	for ((i=0; i<disconnect_size; i+=2)); do
-		disconnect_device "${dis_table[i]}" "${dis_table[i+1]}"
+	for ((i=0; i<${#connect_table[@]}; i+=3)); do
+		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 	done
 }
 
