@@ -71,6 +71,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc1_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_SYNCED 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc1_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc1_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc1_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc1_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_SHUTDOWN 1"
 
 # Hotpug events for line card 2
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc2_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC2_PRSNT 0"
@@ -85,6 +87,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc2_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC2_SYNCED 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc2_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC2_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc2_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC2_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc2_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC2_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc2_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC2_SHUTDOWN 1"
 
 # Hotpug events for line card 3
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc3_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC3_PRSNT 0"
@@ -99,6 +103,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc3_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC3_SYNCED 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc3_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC3_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc3_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC3_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc3_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC3_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc3_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC3_SHUTDOWN 1"
 
 # Hotpug events for line card 4
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc4_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC4_PRSNT 0"
@@ -113,6 +119,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc4_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC4_SYNCED 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc4_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC4_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc4_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC4_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc4_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC4_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc4_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC4_SHUTDOWN 1"
 
 # Hotpug events for line card 5
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc5_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC5_PRSNT 0"
@@ -127,6 +135,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc5_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC5_SYNCED 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc5_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC5_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc5_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC5_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc5_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC5_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc5_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC5_SHUTDOWN 1"
 
 # Hotpug events for line card 6
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc6_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC6_PRSNT 0"
@@ -141,3 +151,37 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc6_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC6_SYNCED 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc6_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC6_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc6_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC6_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc6_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC6_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc6_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC6_SHUTDOWN 1"
+
+# Hotpug events for line card 7
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_PRSNT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_prsnt}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_PRSNT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_verified}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_VERIFIED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_verified}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_VERIFIED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_powered}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_POWERED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_powered}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_POWERED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_ready}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_ready}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_synced}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_SYNCED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_SYNCED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_ACTIVE 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc7_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC7_SHUTDOWN 1"
+
+# Hotpug events for line card 8
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_prsnt}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_PRSNT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_prsnt}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_PRSNT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_verified}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_verified}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_powered}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_POWERED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_powered}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_POWERED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_ready}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_ready}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_synced}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_SYNCED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_synced}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_SYNCED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_active}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_ACTIVE 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_active}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_ACTIVE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_shutdown}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_SHUTDOWN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{lc8_shutdown}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_SHUTDOWN 1"

@@ -923,6 +923,7 @@ create_event_files()
 			touch $events_path/lc"$i"_ready
 			touch $events_path/lc"$i"_synced
 			touch $events_path/lc"$i"_active
+			touch $events_path/lc"$i"_shutdown
 		done
 	fi
 }
