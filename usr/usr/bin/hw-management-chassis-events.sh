@@ -73,6 +73,52 @@ log_info()
 	logger -t hw-management -p daemon.info "$@"
 }
 
+linecard_i2c_busses=( \
+	"vr" \
+	"a2d" \
+	"hotswap" \
+	"ini" \
+	"fru" \
+	"fpga1" \
+	"gearbox01" \
+	"gearbox02" \
+	"gearbox03" \
+	"gearbox04" \
+	"transceiver01" \
+	"transceiver02" \
+	"transceiver03" \
+	"transceiver04" \
+	"transceiver05" \
+	"transceiver06" \
+	"transceiver07" \
+	"transceiver08" \
+	"transceiver09" \
+	"transceiver10" \
+	"transceiver11" \
+	"transceiver12" \
+	"transceiver13" \
+	"transceiver14" \
+	"transceiver15" \
+	"transceiver16")
+
+create_linecard_i2c_links()
+{
+	local counter
+	mkdir /dev/lc"$1"
+        list=`find /sys/class/i2c-adapter/i2c-"$2"/ -maxdepth 1  -name '*i2c-*' ! -name i2c-dev ! -name i2c-"$2" -exec bash -c 'name=$(basename $0); name="${name:4}"; echo "$name" ' {} \;`
+        list_sorted=`for name in "$list"; do echo "$name"; done | sort -V`
+	for name in $list_sorted; do
+		sym_name=${linecard_i2c_busses[counter]}
+		ln -s /dev/i2c-"$name" /dev/lc"$1"/"$sym_name"
+		counter=$((counter+1))
+	done
+}
+
+destroy_linecard_i2c_links()
+{
+	rm -rf /dev/lc"$1"
+}
+
 find_i2c_bus()
 {
 	# Find physical bus number of Mellanox I2C controller. The default
@@ -454,6 +500,10 @@ if [ "$1" == "add" ]; then
 			fi 
 		done
 	fi
+	# Create line card i2c mux symbolic link infrastructure
+	if [ "$2" == "lc_topo" ]; then
+		create_linecard_i2c_links "$3" "$4"
+	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
@@ -642,5 +692,9 @@ else
 			find "$hw_management_path"/lc"$linecard_num" -type l -exec unlink {} \;
 			rm -rf "$hw_management_path"/lc"$linecard_num"
 		fi
+	fi
+	# Destroy line card i2c mux symbolic link infrastructure
+	if [ "$2" == "lc_topo" ]; then
+		destroy_linecard_i2c_links "$3"
 	fi
 fi

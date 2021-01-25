@@ -36,6 +36,30 @@
 # temperatures. When trigger is matched, rule related data is to be passed to
 # the event handler.
 
+# I2C infrastructure.
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-5/5-0032/i2c-mux-mlxcpld.5", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 1 5 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-5/5-0032/i2c-mux-mlxcpld.5", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 1 5 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-6/6-0032/i2c-mux-mlxcpld.6", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 2 6 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-6/6-0032/i2c-mux-mlxcpld.6", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 2 6 %S %p"
+# Remove the above lines after bring-up.
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-34/34-0032/i2c-mux-mlxcpld.34", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 1 34 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-34/34-0032/i2c-mux-mlxcpld.34", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 1 34 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-35/35-0032/i2c-mux-mlxcpld.35", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 2 35 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-35/35-0032/i2c-mux-mlxcpld.35", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 2 35 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-36/36-0032/i2c-mux-mlxcpld.36", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 3 36 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-36/36-0032/i2c-mux-mlxcpld.36", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 3 36 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-37/37-0032/i2c-mux-mlxcpld.37", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 4 37 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-37/37-0032/i2c-mux-mlxcpld.37", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 4 37 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-38/38-0032/i2c-mux-mlxcpld.38", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 5 38 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-38/38-0032/i2c-mux-mlxcpld.38", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 5 38 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-39/39-0032/i2c-mux-mlxcpld.39", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 6 39 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-39/39-0032/i2c-mux-mlxcpld.39", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 6 39 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-40/40-0032/i2c-mux-mlxcpld.40", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 7 40 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-40/40-0032/i2c-mux-mlxcpld.40", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 7 40 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-41/41-0032/i2c-mux-mlxcpld.41", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 8 41 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-41/41-0032/i2c-mux-mlxcpld.41", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 8 41 %S %p"
+
+# Line card events.
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add linecard %S %p"
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm linecard %S %p"
 
