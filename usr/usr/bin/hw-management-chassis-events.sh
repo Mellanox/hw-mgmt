@@ -105,7 +105,7 @@ create_linecard_i2c_links()
 {
 	local counter
 	mkdir /dev/lc"$1"
-        list=`find /sys/class/i2c-adapter/i2c-"$2"/ -maxdepth 1  -name '*i2c-*' ! -name i2c-dev ! -name i2c-"$2" -exec bash -c 'name=$(basename $0); name="${name:4}"; echo "$name" ' {} \;`
+        list=$(find /sys/class/i2c-adapter/i2c-"$2"/ -maxdepth 1  -name '*i2c-*' ! -name i2c-dev ! -name i2c-"$2" -exec bash -c 'name=$(basename $0); name="${name:4}"; echo "$name" ' {} \;)
         list_sorted=`for name in "$list"; do echo "$name"; done | sort -V`
 	for name in $list_sorted; do
 		sym_name=${linecard_i2c_busses[counter]}
@@ -205,15 +205,11 @@ find_eeprom_name()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
 	else
-		# Line card VPD at i2c bus {lc_num}07, INI - {lc_num}08.
-		case $bus in
-		*07)
-			eeprom_name=vpd
-			;;
-		*08)
-			eeprom_name=ini
-			;;
-		esac
+		# Wait to allow line card symbolic links creation.
+		sleep 1
+		lc_dev=$3
+		symlink=$(find -L /dev/lc* -samefile /dev/"$lc_dev")
+		eeprom_name=$(basename "$symlink")
 	fi
 }
 
@@ -433,7 +429,10 @@ if [ "$1" == "add" ]; then
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
 		addr="0x${busfolder: -2}"
-		find_eeprom_name "$bus" "$addr"
+		# Get parent bus for line card EEPROM - skip two folders.
+		parentdir=$(dirname "$busdir")
+		parentbus=$(basename "$parentdir")
+		find_eeprom_name "$bus" "$addr" "$parentbus"
 		# Detect if it belongs to line card or to main board.
 		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
@@ -443,7 +442,7 @@ if [ "$1" == "add" ]; then
 				# Linecard event, replace output folder.
 				find_linecard_num "$input_bus_num"
 				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
-				# Parce VPD.
+				# Parse VPD.
 				if [ "$eeprom_name" == "vpd" ]; then
 					hw-management-lc-fru-parser.py -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
 					if [ $? -ne 0 ]; then
