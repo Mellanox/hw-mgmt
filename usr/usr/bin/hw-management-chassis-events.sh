@@ -443,7 +443,7 @@ if [ "$1" == "add" ]; then
 				find_linecard_num "$input_bus_num"
 				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
 				# Parse VPD.
-				if [ "$eeprom_name" == "vpd" ]; then
+				if [ "$eeprom_name" == "fru" ]; then
 					hw-management-lc-fru-parser.py -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
 					if [ $? -ne 0 ]; then
 						echo "Failed to parse linecard VPD" > "$eeprom_path"/vpd_parsed
