@@ -1,0 +1,33 @@
+From 75847f8073383fcc2648cba4365022643a9217d8 Mon Sep 17 00:00:00 2001
+From: Mykola Kostenok <c_mykolak@nvidia.com>
+Date: Wed, 27 Jan 2021 20:46:04 +0200
+Subject: [PATCH] disable MLXPLAT_CPLD_CH3 segment
+
+Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index fbd47fe..81dfcef 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -458,6 +458,7 @@ static struct i2c_mux_reg_platform_data mlxplat_modular_mux_data[] = {
+ 		.values = mlxplat_modular_channels,
+ 		.n_values = ARRAY_SIZE(mlxplat_modular_channels),
+ 	},
++#if 0
+ 	{
+ 		.parent = MLXPLAT_CPLD_CH1,
+ 		.base_nr = MLXPLAT_CPLD_CH3_ETH_MODULAR,
+@@ -468,6 +469,7 @@ static struct i2c_mux_reg_platform_data mlxplat_modular_mux_data[] = {
+ 		.values = mlxplat_msn21xx_channels,
+ 		.n_values = ARRAY_SIZE(mlxplat_msn21xx_channels),
+ 	},
++#endif
+ 	{
+ 		.parent = 1,
+ 		.base_nr = MLXPLAT_CPLD_CH4_ETH_MODULAR,
+-- 
+2.8.4
+
