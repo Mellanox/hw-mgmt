@@ -1,0 +1,73 @@
+From e27907538779e39b4a441b5eac4077d9377a263e Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 27 Jan 2021 16:27:30 +0200
+Subject: [PATCH backport 4.19 1/1] i2c: mux: mlxcpld: Fixes after upstream
+ review
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/muxes/i2c-mux-mlxcpld.c   | 3 +--
+ drivers/platform/mellanox/mlxreg-lc.c | 4 ----
+ include/linux/platform_data/mlxcpld.h | 3 ---
+ 3 files changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-mlxcpld.c b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+index 77ad82f5f..5e0b91079 100644
+--- a/drivers/i2c/muxes/i2c-mux-mlxcpld.c
++++ b/drivers/i2c/muxes/i2c-mux-mlxcpld.c
+@@ -157,8 +157,7 @@ static int mlxcpld_mux_probe(struct platform_device *pdev)
+ 
+ 	/* Create an adapter for each channel. */
+ 	for (num = 0; num < pdata->num_adaps; num++) {
+-		err = i2c_mux_add_adapter(muxc, pdata->base_nr + num,
+-					  pdata->chan_ids[num], 0);
++		err = i2c_mux_add_adapter(muxc, 0, pdata->chan_ids[num], 0);
+ 		if (err)
+ 			goto virt_reg_failed;
+ 	}
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 7746ca105..34dab48fe 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -29,9 +29,6 @@
+ #define MLXREG_LC_REG_CONFIG_OFFSET		0x25fb
+ #define MLXREG_LC_REG_MAX			0x2600
+ 
+-#define MLXREG_LC_BASE_NR		100
+-#define MLXREG_LC_SET_BASE_NR(slot)	(MLXREG_LC_BASE_NR * (slot))
+-
+ /**
+  * enum mlxreg_lc_type - line cards types
+  *
+@@ -609,7 +606,6 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+ 	}
+ 
+ 	/* Create mux infrastructure. */
+-	mlxreg_lc->mux_data->base_nr = MLXREG_LC_SET_BASE_NR(data->slot);
+ 	mlxreg_lc->mux_data->handle = mlxreg_lc;
+ 	mlxreg_lc->mux_data->completion_notify = mlxreg_lc_completion_notify;
+ 	mlxreg_lc->mux_brdinfo->platform_data = mlxreg_lc->mux_data;
+diff --git a/include/linux/platform_data/mlxcpld.h b/include/linux/platform_data/mlxcpld.h
+index b793382e7..fae19adf5 100644
+--- a/include/linux/platform_data/mlxcpld.h
++++ b/include/linux/platform_data/mlxcpld.h
+@@ -11,8 +11,6 @@
+ /* Platform data for the CPLD I2C multiplexers */
+ 
+ /* mlxcpld_mux_plat_data - per mux data, used with i2c_register_board_info
+- * @base_nr: base I2C bus number to number adapters from or zero for setting
+- *	     to adap_ids vector
+  * @chan_ids - channels array
+  * @num_adaps - number of adapters
+  * @sel_reg_addr - mux select register offset in CPLD space
+@@ -21,7 +19,6 @@
+  * @completion_notify: callback to notify when all the adapters are created
+  */
+ struct mlxcpld_mux_plat_data {
+-	int base_nr;
+ 	int *chan_ids;
+ 	int num_adaps;
+ 	int sel_reg_addr;
+-- 
+2.11.0
+
