@@ -426,6 +426,20 @@ log_info()
 	logger -t hw-management-tc -p daemon.info "$@"
 }
 
+get_fan_fault_trusted()
+{
+	i=$1
+	fault=0
+	if [ -L $thermal_path/fan"$i"_fault ]; then
+		fault=$(< $thermal_path/fan"$i"_fault)
+		if [ $fault -eq 1 ]; then
+			sleep 1
+			fault=$(< $thermal_path/fan"$i"_fault)
+		fi
+	fi
+	return $((fault))
+}
+
 validate_thermal_configuration()
 {
 	# Wait for symbolic links creation.
@@ -516,7 +530,8 @@ thermal_periodic_report()
 	for ((i=1; i<=max_tachos; i+=1)); do
 		if [ -f $thermal_path/fan"$i"_speed_get ]; then
 			tacho=$(< $thermal_path/fan"$i"_speed_get)
-			fault=$(< $thermal_path/fan"$i"_fault)
+			get_fan_fault_trusted
+			fault=$?
 			log_info "tacho$i speed is $tacho fault is $fault"
 		fi
 	done
@@ -674,9 +689,8 @@ update_psu_fan_speed()
 get_fan_faults()
 {
 	for ((i=1; i<=max_tachos; i+=1)); do
-		if [ -L $thermal_path/fan"$i"_fault ]; then
-			fault=$(< $thermal_path/fan"$i"_fault)
-		fi
+		get_fan_fault_trusted
+		fault=$?
 		speed=$(< $thermal_path/fan"$i"_speed_get)
 		if [ "$fault" -eq 1 ] || [ "$speed" -eq 0 ] ; then
 			pwm_required_act=$pwm_max
