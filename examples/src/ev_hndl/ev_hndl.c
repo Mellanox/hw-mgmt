@@ -195,7 +195,7 @@ static int ev_hndl_init(struct ev_hndl_priv_data *data)
 
 	data->ev_info = calloc(ev_num, sizeof(struct ev_hndl_ev_info));
 	if (!data->ev_info) {
-		syslog(LOG_ERR, "Failled allocate ev_info, %s",
+		syslog(LOG_ERR, "Failed allocate ev_info, %s",
 			strerror(errno));
 		goto fail;
 	}
@@ -331,7 +331,7 @@ static int ev_hndl_wait_event(struct ev_hndl_priv_data *data)
 
 	events = calloc(data->ev_num, sizeof(struct inotify_event));
 	if (!events) {
-		syslog(LOG_ERR, "Failled allocate events data, %s",
+		syslog(LOG_ERR, "Failed allocate events data, %s",
 			strerror(errno));
 		return -1;
 	}
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
 
 	ev_hndl_data = calloc(1, sizeof(struct ev_hndl_priv_data));
 	if (!ev_hndl_data) {
-		syslog(LOG_ERR, "Failled allocate ev_hndl data, %s",
+		syslog(LOG_ERR, "Failed allocate ev_hndl data, %s",
 			strerror(errno));
 		exit(-1);
 	}
