@@ -204,10 +204,13 @@ find_eeprom_name()
 		eeprom_name=fan3_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
+	elif [ "$bus" -eq 0 ]; then
+		:
 	else
 		# Wait to allow line card symbolic links creation.
-		sleep 1
+		local find_retry=0
 		lc_dev=$3
+		while [ ! $(find -L /dev/lc* -samefile /dev/"$lc_dev") ] && [ $find_retry -lt 3 ]; do sleep 1; done;
 		symlink=$(find -L /dev/lc* -samefile /dev/"$lc_dev")
 		eeprom_name=$(basename "$symlink")
 	fi
