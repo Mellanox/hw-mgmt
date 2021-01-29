@@ -975,7 +975,7 @@ get_asic_bus()
 	else
 		asic_bus=$(cat $config_path/asic_bus)
 	fi
-	return "$asic_bus"
+	return $((asic_bus))
 }
 
 set_config_data()
