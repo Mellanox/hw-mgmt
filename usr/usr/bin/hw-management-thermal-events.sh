@@ -309,6 +309,12 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 	fi
+	if [ "$2" == "pch_temp" ]; then
+		name=$(<"$3""$4"/name)
+		if [ name == "pch_cannonlake" ]; then
+			ln -sf "$3""$4"/temp1_input $thermal_path/pch_temp
+		fi
+	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -598,6 +604,9 @@ else
 				unlink $alarm_path/cpu_core"$j"_crit_alarm
 			fi
 		done
+	fi
+	if [ "$2" == "pch_temp" ]; then
+		unlink $thermal_path/pch_temp
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
 		find_i2c_bus

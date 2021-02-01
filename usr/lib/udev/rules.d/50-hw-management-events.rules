@@ -55,6 +55,9 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/coretemp.0/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cputemp %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/coretemp.0/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cputemp %S %p"
 
+# PCH temp
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/virtual/thermal/thermal_zone*/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pch_temp %S %p"
+
 # Switch - FAN tachometers, ASIC and ports temperatures and faults (I2C).
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
