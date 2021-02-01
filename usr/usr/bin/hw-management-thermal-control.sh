@@ -692,7 +692,7 @@ get_fan_faults()
 		get_fan_fault_trusted
 		fault=$?
 		speed=$(< $thermal_path/fan"$i"_speed_get)
-		if [ "$fault" -eq 1 ] || [ "$speed" -eq 0 ] ; then
+		if [ "$fault" -eq 1 ] || [ "$speed" -eq 0 ]; then
 			pwm_required_act=$pwm_max
 			if [ "$full_speed" -ne $pwm_max ]; then
 				set_fan_to_full_speed
