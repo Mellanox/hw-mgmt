@@ -311,7 +311,7 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "pch_temp" ]; then
 		name=$(<"$3""$4"/name)
-		if [ name == "pch_cannonlake" ]; then
+		if [ "$name" == "pch_cannonlake" ]; then
 			ln -sf "$3""$4"/temp1_input $thermal_path/pch_temp
 		fi
 	fi
