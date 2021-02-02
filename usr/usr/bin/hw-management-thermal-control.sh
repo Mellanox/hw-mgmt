@@ -428,13 +428,13 @@ log_info()
 
 get_fan_fault_trusted()
 {
-	i=$1
+	idx=$1
 	fault=0
-	if [ -L $thermal_path/fan"$i"_fault ]; then
-		fault=$(< $thermal_path/fan"$i"_fault)
+	if [ -L $thermal_path/fan"$idx"_fault ]; then
+		fault=$(< $thermal_path/fan"$idx"_fault)
 		if [ $fault -eq 1 ]; then
 			sleep 1
-			fault=$(< $thermal_path/fan"$i"_fault)
+			fault=$(< $thermal_path/fan"$idx"_fault)
 		fi
 	fi
 	return $((fault))
@@ -530,7 +530,7 @@ thermal_periodic_report()
 	for ((i=1; i<=max_tachos; i+=1)); do
 		if [ -f $thermal_path/fan"$i"_speed_get ]; then
 			tacho=$(< $thermal_path/fan"$i"_speed_get)
-			get_fan_fault_trusted
+			get_fan_fault_trusted $i
 			fault=$?
 			log_info "tacho$i speed is $tacho fault is $fault"
 		fi
@@ -689,7 +689,7 @@ update_psu_fan_speed()
 get_fan_faults()
 {
 	for ((i=1; i<=max_tachos; i+=1)); do
-		get_fan_fault_trusted
+		get_fan_fault_trusted $i
 		fault=$?
 		speed=$(< $thermal_path/fan"$i"_speed_get)
 		if [ "$fault" -eq 1 ] || [ "$speed" -eq 0 ]; then
