@@ -64,6 +64,9 @@ fan_dir_offset_in_vpd_eeprom_pn=0x48
 # 46 - F, 52 - R
 fan_direction_exhaust=46
 fan_direction_intake=52
+linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "thermal")
+mlxreg_lc_addr=32
+lc_max_num=8
 
 log_err()
 {
@@ -73,6 +76,52 @@ log_err()
 log_info()
 {
 	logger -t hw-management -p daemon.info "$@"
+}
+
+linecard_i2c_busses=( \
+	"vr" \
+	"a2d" \
+	"hotswap" \
+	"ini" \
+	"fru" \
+	"fpga1" \
+	"gearbox00" \
+	"gearbox01" \
+	"gearbox02" \
+	"gearbox03" \
+	"transceiver01" \
+	"transceiver02" \
+	"transceiver03" \
+	"transceiver04" \
+	"transceiver05" \
+	"transceiver06" \
+	"transceiver07" \
+	"transceiver08" \
+	"transceiver09" \
+	"transceiver10" \
+	"transceiver11" \
+	"transceiver12" \
+	"transceiver13" \
+	"transceiver14" \
+	"transceiver15" \
+	"transceiver16")
+
+create_linecard_i2c_links()
+{
+	local counter
+	mkdir /dev/lc"$1"
+        list=$(find /sys/class/i2c-adapter/i2c-"$2"/ -maxdepth 1  -name '*i2c-*' ! -name i2c-dev ! -name i2c-"$2" -exec bash -c 'name=$(basename $0); name="${name:4}"; echo "$name" ' {} \;)
+        list_sorted=`for name in "$list"; do echo "$name"; done | sort -V`
+	for name in $list_sorted; do
+		sym_name=${linecard_i2c_busses[counter]}
+		ln -s /dev/i2c-"$name" /dev/lc"$1"/"$sym_name"
+		counter=$((counter+1))
+	done
+}
+
+destroy_linecard_i2c_links()
+{
+	rm -rf /dev/lc"$1"
 }
 
 find_i2c_bus()
@@ -92,6 +141,49 @@ find_i2c_bus()
 	done
 
 	log_err "i2c-mlxcpld driver is not loaded"
+	exit 0
+}
+
+find_linecard_bus()
+{
+	# Find base i2c bus number of Mellanox line card.
+	for ((i=1; i<i2c_bus_max; i++)); do
+		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
+		if [ -d $folder ]; then
+			name=$(cut $folder/name -d' ' -f 1)
+			if [ "$name" == "mlxreg-lc" ]; then
+				linecard_bus_offset=$i
+				return
+			fi
+		fi
+	done
+
+	log_err "mlxreg-lc driver is not loaded"
+	exit 0
+}
+
+find_linecard_num()
+{
+	input_bus_num="$1"
+	find_linecard_bus "$input_bus_num"
+	max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
+	# Check line card bus range.
+	if [ "$input_bus_num" -le "$max_lc_bus_num" ] &&
+	   [ "$input_bus_num" -ge "$linecard_bus_offset" ]; then
+		linecard_num=$((input_bus_num-linecard_bus_offset+1))
+		# Check line card num range.
+		if [ "$linecard_num" -le "$lc_max_num" ] &&
+		   [ "$linecard_num" -ge 1 ]; then
+			return
+		else
+			log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
+			exit 0
+		fi
+	else
+		log_err "Line card bus number out of range. $input_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
+		exit 0
+	fi
+	log_err "mlxreg-lc driver is not loaded"
 	exit 0
 }
 
@@ -117,6 +209,15 @@ find_eeprom_name()
 		eeprom_name=fan3_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
+	elif [ "$bus" -eq 0 ]; then
+		:
+	else
+		# Wait to allow line card symbolic links creation.
+		local find_retry=0
+		lc_dev=$3
+		while [ ! $(find -L /dev/lc* -samefile /dev/"$lc_dev") ] && [ $find_retry -lt 3 ]; do sleep 1; done;
+		symlink=$(find -L /dev/lc* -samefile /dev/"$lc_dev")
+		eeprom_name=$(basename "$symlink")
 	fi
 }
 
@@ -217,6 +318,17 @@ if [ "$1" == "add" ]; then
 		exit 0
 	fi
 	if [ "$2" == "a2d" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Line card event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				environment_path="$hw_management_path"/lc"$linecard_num"/environment
+			fi
+		fi
 		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$5"_voltage_scale
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
@@ -228,7 +340,8 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
 	   [ "$2" == "voltmon7" ] ||
-	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
+	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -238,6 +351,19 @@ if [ "$1" == "add" ]; then
 			# Verify if this is not COMEX device
 			if [ "$bus" != "$comex_bus" ]; then
 				exit 0
+			fi
+		else
+			# Detect if it belongs to line card or to main board.
+			input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+			driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+			if [ -d "$driver_dir" ]; then
+				driver_name=$(< "$driver_dir"/name)
+				if [ "$driver_name" == "mlxreg-lc" ]; then
+					# Linecard event, replace output folder.
+					find_linecard_num "$input_bus_num"
+					environment_path="$hw_management_path"/lc"$linecard_num"/environment
+					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
+				fi
 			fi
 		fi
 		for i in {1..3}; do
@@ -262,6 +388,20 @@ if [ "$1" == "add" ]; then
 		done
 	fi
 	if [ "$2" == "led" ]; then
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname leds-mlxreg, for line card - leds-mlxreg.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		leds-mlxreg)
+			# Default case, nothing to do.
+			;;
+		leds-mlxreg.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			led_path="$hw_management_path"/lc"$linecard_num"/led
+			;;
+		esac
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
 		ln -sf "$3""$4"/brightness $led_path/led_"$name"_"$color"
@@ -281,7 +421,21 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
-		# Allow to driver insertion off all the attributes
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		mlxreg-io)
+			# Default case, nothing to do.
+			;;
+		mlxreg-io.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			system_path="$hw_management_path"/lc"$linecard_num"/system
+			;;
+		esac
+		# Allow to driver insertion off all the attributes.
 		sleep 1
 		if [ -d "$3""$4" ]; then
 			for attrpath in "$3""$4"/*; do
@@ -307,7 +461,34 @@ if [ "$1" == "add" ]; then
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
 		addr="0x${busfolder: -2}"
-		find_eeprom_name "$bus" "$addr"
+		# Get parent bus for line card EEPROM - skip two folders.
+		parentdir=$(dirname "$busdir")
+		parentbus=$(basename "$parentdir")
+		find_eeprom_name "$bus" "$addr" "$parentbus"
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Linecard event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
+				# Parse VPD.
+				if [ "$eeprom_name" == "fru" ]; then
+					hw-management-lc-fru-parser.py -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
+					if [ $? -ne 0 ]; then
+						echo "Failed to parse linecard VPD" > "$eeprom_path"/vpd_parsed
+					fi
+				fi
+				if [ "$eeprom_name" == "ini" ]; then
+					hw-management-parse-eeprom.sh --layout 3 --conv --eeprom_path "$3""$4"/eeprom > "$eeprom_path"/ini_parsed
+					if [ $? -ne 0 ]; then
+						echo "Failed to parse linecard INI" > "$eeprom_path"/ini_parsed
+					fi
+				fi
+			fi
+		fi
 		ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
 		case $eeprom_name in
@@ -354,6 +535,24 @@ if [ "$1" == "add" ]; then
 				;;
 		esac
 	fi
+	# Creating lc folders hierarchy upon line card udev add event.
+	if [ "$2" == "linecard" ]; then
+		input_bus_num=$(echo "$3""$4" | xargs basename | cut -d"-" -f1)
+		find_linecard_num "$input_bus_num"
+		if [ ! -d "$hw_management_path"/lc"$linecard_num" ]; then
+			mkdir "$hw_management_path"/lc"$linecard_num"
+		fi
+		for i in "${!linecard_folders[@]}"
+		do
+			if [ ! -d "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}" ]; then
+				mkdir "$hw_management_path"/lc"$linecard_num"/"${linecard_folders[$i]}"
+			fi 
+		done
+	fi
+	# Create line card i2c mux symbolic link infrastructure
+	if [ "$2" == "lc_topo" ]; then
+		create_linecard_i2c_links "$3" "$4"
+	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
@@ -367,6 +566,17 @@ elif [ "$1" == "hotplug-event" ]; then
 	handle_hotplug_event "${2}" "${3}"
 else
 	if [ "$2" == "a2d" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Line card event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				environment_path="$hw_management_path"/lc"$linecard_num"/environment
+			fi
+		fi
 		unlink $environment_path/"$2"_"$5"_voltage_scale
 		for i in {0..7}; do
 			if [ -L $environment_path/"$2"_"$5"_raw_"$i" ]; then
@@ -378,7 +588,8 @@ else
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
 	   [ "$2" == "voltmon7" ] ||
-	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ]; then
+	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
+	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -388,6 +599,19 @@ else
 			# Verify if this is not COMEX device
 			if [ "$bus" != "$comex_bus" ]; then
 				exit 0
+			fi
+		else
+			# Detect if it belongs to line card or to main board.
+			input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+			driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+			if [ -d "$driver_dir" ]; then
+				driver_name=$(< "$driver_dir"/name)
+				if [ "$driver_name" == "mlxreg-lc" ]; then
+					# Linecard event, replace output folder.
+					find_linecard_num "$input_bus_num"
+					environment_path="$hw_management_path"/lc"$linecard_num"/environment
+					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
+				fi
 			fi
 		fi
 		for i in {1..3}; do
@@ -412,6 +636,20 @@ else
 		done
 	fi
 	if [ "$2" == "led" ]; then
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname leds-mlxreg, for line card - leds-mlxreg.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		leds-mlxreg)
+			# Default case, nothing to do.
+			;;
+		leds-mlxreg.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			led_path="$hw_management_path"/lc"$linecard_num"/led
+			;;
+		esac
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
 		unlink $led_path/led_"$name"_"$color"
@@ -426,6 +664,20 @@ else
 		rm -f $led_path/led_"$name"_capability
 	fi
 	if [ "$2" == "regio" ]; then
+		# Detect if it belongs to line card or to main board.
+		# For main board dirname mlxreg-io, for line card - mlxreg-io.{bus_num}.
+		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
+		case "$driver_dir" in
+		mlxreg-io)
+			# Default case, nothing to do.
+			;;
+		mlxreg-io.*)
+			# Line card event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+			find_linecard_num "$input_bus_num"
+			system_path="$hw_management_path"/lc"$linecard_num"/system
+			;;
+		esac
 		if [ -d $system_path ]; then
 			for attrname in $system_path/*; do
 				attrname=$(basename "${attrname}")
@@ -436,6 +688,17 @@ else
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		# Detect if it belongs to line card or to main board.
+		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		if [ -d "$driver_dir" ]; then
+			driver_name=$(< "$driver_dir"/name)
+			if [ "$driver_name" == "mlxreg-lc" ]; then
+				# Linecard event, replace output folder.
+				find_linecard_num "$input_bus_num"
+				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
+			fi
+		fi
 		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -446,6 +709,7 @@ else
 		unlink $eeprom_path/$eeprom_name
 		fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
 		rm -f $thermal_path/"${fan_prefix}"_dir
+		rm -f $eeprom_path/vpd_parsed
 	fi
 	if [ "$2" == "cpld" ]; then
 		asic_cpld_remove_handler
@@ -469,5 +733,19 @@ else
 		fi
 		unlock_service_state_change
 		rm -rf ${sfp_path}/*_status
+	fi
+	# Clear lc folders upon line card udev rm event.
+	if [ "$2" == "linecard" ]; then
+		input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+		find_linecard_num "$input_bus_num"
+		# Clean line card folders.
+		if [ -d "$hw_management_path"/lc"$linecard_num" ]; then
+			find "$hw_management_path"/lc"$linecard_num" -type l -exec unlink {} \;
+			rm -rf "$hw_management_path"/lc"$linecard_num"
+		fi
+	fi
+	# Destroy line card i2c mux symbolic link infrastructure
+	if [ "$2" == "lc_topo" ]; then
+		destroy_linecard_i2c_links "$3"
 	fi
 fi

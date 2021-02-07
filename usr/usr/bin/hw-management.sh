@@ -88,6 +88,7 @@ chipup_delay_default=0
 hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
+hotplug_linecards=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 hw_management_path=/var/run/hw-management
@@ -255,6 +256,24 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
 			24c32 0x51 8)
+
+msn4800_base_connect_table=( mp2975 0x62 6 \
+	mp2975 0x64 5 \
+	mp2975 0x66 5 \
+	mp2975 0x68 5 \
+	mp2975 0x6a 5 \
+	max11603 0x6d 6 \
+	max11603 0x64 6 \
+	tmp102 0x49 7 \
+	24c32 0x51 8 \
+	max11603 0x6d 15 \
+	tmp102 0x49 15 \
+	tps53679 0x58 15 \
+	tps53679 0x61 15 \
+	24c32 0x50 16 \
+	max11603 0x6d 21 \
+	tmp102 0x4a 22 \
+	24c32 0x51 23)
 
 ACTION=$1
 
@@ -801,6 +820,16 @@ check_cpu_type()
 	cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
 }
 
+msn48xx_specific()
+{
+	connect_size=${#msn4800_base_connect_table[@]}
+	for ((i=0; i<connect_size; i++)); do
+		connect_table[i]=${msn4800_base_connect_table[i]}
+	done
+	hotplug_linecards=8
+	echo 4 > $config_path/cpld_num
+}
+
 check_system()
 {
 	check_cpu_type
@@ -830,6 +859,9 @@ check_system()
 			;;
 		VMOD0010)
 			msn_spc3_common
+			;;
+		VMOD0011)
+			msn48xx_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -964,6 +996,17 @@ create_event_files()
 			touch $events_path/fan$i
 		done
 	fi
+	if [ $hotplug_linecards -ne 0 ]; then
+		for ((i=1; i<=hotplug_linecards; i+=1)); do
+			touch $events_path/lc"$i"_prsnt
+			touch $events_path/lc"$i"_verified
+			touch $events_path/lc"$i"_powered
+			touch $events_path/lc"$i"_ready
+			touch $events_path/lc"$i"_synced
+			touch $events_path/lc"$i"_active
+			touch $events_path/lc"$i"_shutdown
+		done
+	fi
 }
 
 get_asic_bus()
@@ -987,12 +1030,10 @@ set_config_data()
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
-	if [ -f /etc/init.d/sxdkernel ]; then
-		echo $sxcore_down > $config_path/sxcore
-	fi
 	echo $hotplug_psus > $config_path/hotplug_psus
 	echo $hotplug_pwrs > $config_path/hotplug_pwrs
 	echo $hotplug_fans > $config_path/hotplug_fans
+	echo $hotplug_linecards > $config_path/hotplug_linecards
 }
 
 connect_platform()
@@ -1138,6 +1179,17 @@ function unlock_service_state_change()
 do_chip_up_down()
 {
 	action=$1
+
+	board=$(cat /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0011)
+		# Chip up / down operations are to be performed automatically.
+		exit 0
+		;;
+	*)
+		;;
+	esac
+
 	# Add ASIC device.
 	get_asic_bus
 	bus=$?
