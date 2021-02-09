@@ -161,8 +161,8 @@ if [ "$1" == "add" ]; then
 			min_module_ind=$min_lc_thermal_ind
 			max_module_ind=$max_lc_thermal_ind
 		else
-			cpath="$config_path/lc$lc_id/config"
-			tpath="$thermal_path/lc$lc_id/thermal"
+			cpath="$config_path"
+			tpath="$thermal_path"
 			min_module_ind=$min_module_gbox_ind
 			max_module_ind=$max_module_gbox_ind
 		fi
