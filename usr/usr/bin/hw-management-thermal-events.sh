@@ -533,13 +533,13 @@ if [ "$1" == "add" ]; then
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$2"_vpd
 		if [ $? -ne 0 ]; then
-			#EEPROM VPD
+			# PS EEPROM VPD.
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$2"_info > $eeprom_path/"$2"_vpd
 			if [ $? -ne 0 ]; then
-				#EEPROM failed
+				# EEPROM failed.
 				echo "Failed to read PSU VPD" > $eeprom_path/"$2"_vpd
 			else
-				#Add PSU FAN speed info
+				# Add PSU FAN speed info.
 				if [ -f $config_path/psu_fan_max ]; then
 					echo -ne MAX_RPM: >> $eeprom_path/"$2"_vpd
 					cat $config_path/psu_fan_max >> $eeprom_path/"$2"_vpd
