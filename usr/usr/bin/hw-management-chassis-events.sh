@@ -221,6 +221,31 @@ find_eeprom_name()
 	fi
 }
 
+find_eeprom_name_on_remove()
+{
+	bus=$1
+	addr=$2
+	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
+		eeprom_name=vpd_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
+		eeprom_name=cpu_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] || [ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
+		if [ "$addr" = "$psu1_i2c_addr" ]; then
+			eeprom_name=psu1_info
+		elif [ "$addr" = "$psu2_i2c_addr" ]; then
+			eeprom_name=psu2_info
+		fi
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan1" ]; then
+		eeprom_name=fan1_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan2" ]; then
+		eeprom_name=fan2_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan3" ]; then
+		eeprom_name=fan3_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
+		eeprom_name=fan4_info
+	fi
+}
+
 lock_service_state_change()
 {
 	exec {LOCKFD}>${LOCKFILE}
@@ -697,6 +722,10 @@ else
 				# Linecard event, replace output folder.
 				find_linecard_num "$input_bus_num"
 				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
+				if [ -d "$eeprom_path" ]; then
+					rm -rf "$eeprom_path"
+					return
+				fi
 			fi
 		fi
 		busdir="$3""$4"
@@ -705,11 +734,19 @@ else
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
 		addr="0x${busfolder: -2}"
-		find_eeprom_name "$bus" "$addr"
+		find_eeprom_name_on_remove "$bus" "$addr"
 		unlink $eeprom_path/$eeprom_name
-		fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
-		rm -f $thermal_path/"${fan_prefix}"_dir
-		rm -f $eeprom_path/vpd_parsed
+		case "$eeprom_name" in
+			fan*)
+				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
+				rm -f $thermal_path/"${fan_prefix}"_dir
+				;;
+			vpd*)
+				rm -f $eeprom_path/vpd_parsed
+				;;
+			*)
+				;;
+		esac
 	fi
 	if [ "$2" == "cpld" ]; then
 		asic_cpld_remove_handler
