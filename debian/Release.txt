@@ -1,3 +1,68 @@
+  
+================================================================================
+- V.7.0010.2200
+- Sun, 21 Feb 2021
+--------------------------------------------------------------------------------
+- New Features
+    o	Add hw-mgmt: events: Add udev rules for PCH temperature
+    o	Add hw-mgmt: events: add udev rule for coffeelake voltmon
+    o	Add hw-mgmt: events: Add udev rules for SODIMM temperature sensor
+    o	Add hw-mgmt: system: add coffeelake cpu
+    o	Add hw-mgmt: events: Add support for SDK OFFLINE event for handling flow with in service firmware upgrade (ISSU) 
+    o	For MQM9700 (Gorilla) 
+        add lm-sensors config for MQM9700 system
+       
+- Bug fixes
+    o	Fix for sensors.conf assignment per system type (rather than based on SPC type)
+    o	Fix hw-mgmt: thermal: Add fan{i}_fault double check
+    o	Fix hw-mgmt: Fix asic bus number return value type.
+    o	Fix hw-mgmt: attributes: fix fan_dir attribute setting flow on fixed fan sytems.
+    o	Fix i2c related infrastructure: [1] remove duplication of i2c connection/disconnection tables of all system [2] create 2 level hirerachy of connection table: 
+        A. system, B. CPUS type.
+    o	Fix hw-mgmt: system: fix coffeelake eeprom addr (non released hw)
+    o	Fix hw-mgmt: configuration: Remove link for CPLD3 port for MSN2010 & MSN2100 system (avoid "fwutil" failure with error: "Missing component CPLD3)
+    o	Fix hw-mgmt: chassis events: Separate eeprom adding and removal function for more precise removal of eeprom.
+
+	*Kernel 4.19
+    o	Fix mp2975 page number to support 2 pages (instead of 1)
+        Modify 0032-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2975-c.patch
+    o	Fix CPLD limitation to reply correct fan count
+        Add 0039-platform-mellanox-Add-dedicated-match-for-system-typ.patch
+        
+	*Kernel 4.9
+    o	Fix mp2975 page number to support 2 pages (instead of 1)
+        Modify 0065-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2975-c.patch
+    o	Fix CPLD limitation to reply correct fan count
+        Add 0070-platform-mellanox-Add-dedicated-match-for-system-typ.patch 
+
+- Known issues and limitations:
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.  
 ================================================================================
 - V.7.0010.2100
 - Sun, 10 Jan 2021
