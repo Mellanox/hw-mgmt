@@ -156,7 +156,7 @@ cpu_type2_connection_table=(	max11603 0x6d 15 \
 # CoffeeLake CPU.
 cpu_type3_connection_table=(	max11603 0x6d 15 \
 			mp2975 0x6e 15 \
-			24c32 0x51 16)
+			24c32 0x50 16)
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
