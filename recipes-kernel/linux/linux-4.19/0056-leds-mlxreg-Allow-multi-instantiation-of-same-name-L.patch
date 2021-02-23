@@ -1,8 +1,8 @@
-From be21bac03b14053a0de24b28f50d2384d56349b4 Mon Sep 17 00:00:00 2001
+From 6c77378564fe382d6837552fc2020e11584eb3f1 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 7 Feb 2021 21:53:13 +0200
-Subject: [PATCH backport 4.19 1/1] leds: mlxreg: Allow multi-instantiation of
- same name LED for modular systems
+Date: Tue, 23 Feb 2021 22:05:06 +0200
+Subject: [PATCH led backport 4.19 1/1] leds: mlxreg: Allow multi-instantiation
+ of same name LED for modular systems
 
 It could be more than one instance of LED with the same name in the
 modular systems. For example, "status" or "uid" LED can be located
@@ -45,11 +45,11 @@ The next coming  card generations are supposed to support:
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/leds/leds-mlxreg.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ drivers/leds/leds-mlxreg.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
-index 781eb03459e3..82aea1cd0c12 100644
+index 781eb0345..afc907048 100644
 --- a/drivers/leds/leds-mlxreg.c
 +++ b/drivers/leds/leds-mlxreg.c
 @@ -187,7 +187,7 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
@@ -61,17 +61,28 @@ index 781eb03459e3..82aea1cd0c12 100644
  	u32 regval;
  	int i;
  	int err;
-@@ -228,8 +228,8 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+@@ -228,8 +228,19 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
  			brightness = LED_OFF;
  			led_data->base_color = MLXREG_LED_GREEN_SOLID;
  		}
 -		sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",
 -			data->label);
-+		snprintf(led_data->led_cdev_name, sizeof(led_data->led_cdev_name),
-+			 "mlxreg:%s", data->label);
++
++		/*
++		 * Id greater than zero is used for LEDs located on replaceable unit,
++		 * like line card or fabric card. In this case Id is set to I2C bus
++		 * number. Otherwise LEDs located on the main board. The field "identity"
++		 * specifies the type of bus connecting line card to the chassis.
++		 */
++		if (priv->pdev->id > 0)
++			sprintf(led_data->led_cdev_name, "%scard%d:%s", led_pdata->identity,
++				priv->pdev->id, data->label);
++		else
++			sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",
++				data->label);
  		led_cdev->name = led_data->led_cdev_name;
  		led_cdev->brightness = brightness;
  		led_cdev->max_brightness = LED_ON;
 -- 
-2.11.0
+2.20.1
 
