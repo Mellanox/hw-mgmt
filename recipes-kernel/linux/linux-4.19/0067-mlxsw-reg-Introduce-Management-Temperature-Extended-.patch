@@ -1,0 +1,286 @@
+From 9bb7ae2ddb80a6f363473e90738ecf826387d60e Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 23 Feb 2021 22:28:01 +0200
+Subject: [PATCH backport 4.19 2/5] mlxsw: reg: Introduce Management
+ Temperature Extended Capabilities Register
+
+Introduce new register MTECR (Management Temperature Extended
+Capabilities Register). This register exposes the capabilities of the
+device and system temperature sensing. It provides information for
+all possible temperature sensors that are on the system.
+
+Add APIs mlxsw_env_sensor_map_init() and mlxsw_env_sensor_map_fini(().
+The purpose of the first one is to allocate and create thermal sensors
+mapping for temperature sensors, presented within the main board or
+line card. It obtains mapping information from the Management
+Temperature Extended Capabilities Register, by specifying the relevant
+device by the number of a slot at which this device is located. Slot
+zero is used for the main board. The second API just free allocated
+memory.
+The motivation is to create dynamic mapping for gearbox thermal sensors
+access.
+
+Add support for MDDQ and MDDC registers.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/reg.h | 236 ++++++++++++++++++++++
+ 1 file changed, 236 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 278bfa011..96b0415f6 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -9028,6 +9028,239 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+ 		*num_of_slots = mlxsw_reg_mgpir_num_of_slots_get(payload);
+ }
+ 
++/* MTECR - Management Temperature Extended Capabilities Register
++ * -------------------------------------------------------------
++ * MTECR register exposes the capabilities of the device and system
++ * temperature sensing.
++ */
++#define MLXSW_REG_MTECR_ID 0x9109
++#define MLXSW_REG_MTECR_LEN 0x60
++#define MLXSW_REG_MTECR_SENSOR_MAP_LEN 0x58
++
++MLXSW_REG_DEFINE(mtecr, MLXSW_REG_MTECR_ID, MLXSW_REG_MTECR_LEN);
++
++/* reg_mtecr_last_sensor.
++ * Last sensor index that is available in the system to read from.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mtecr, last_sensor, 0x00, 16, 12);
++
++/* reg_mtecr_sensor_count.
++ * Number of sensors supported by the device.
++ * This includes the ASIC, ambient sensors, Gearboxes etc.
++ * QSFP module sensors are not included.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mtecr, sensor_count, 0x00, 0, 12);
++
++/* reg_mtecr_slot_index.
++ * Slot index (0: Main board).
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mtecr, slot_index, 0x04, 28, 4);
++
++/* reg_mtecr_internal_sensor_count.
++ * Number of sensors supported by the device that are in the ASIC.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mtecr, internal_sensor_count, 0x04, 0, 7);
++
++/* reg_mtecr_sensor_map.
++ * Mapping of system sensors supported by the device. Each bit represents a
++ * sensor. This field is size variable based on the last_sensor field and in
++ * granularity of 32 bits.
++ * 0: Not connected or not supported
++ * 1: Supports temperature measurements
++ *
++ */
++MLXSW_ITEM_BIT_ARRAY(reg, mtecr, sensor_map, 0x08, MLXSW_REG_MTECR_SENSOR_MAP_LEN, 1);
++
++static inline void mlxsw_reg_mtecr_pack(char *payload, u8 slot_index)
++{
++	MLXSW_REG_ZERO(mtecr, payload);
++	mlxsw_reg_mtecr_slot_index_set(payload, slot_index);
++}
++
++static inline void mlxsw_reg_mtecr_unpack(char *payload, u16 *sensor_count,
++					  u16 *last_sensor,
++					  u8 *internal_sensor_count,
++					  u8 *sensor_map)
++{
++	int bit;
++
++	*sensor_count = mlxsw_reg_mtecr_sensor_count_get(payload);
++	if (last_sensor)
++		*last_sensor = mlxsw_reg_mtecr_last_sensor_get(payload);
++	if (internal_sensor_count)
++		*internal_sensor_count =
++			mlxsw_reg_mtecr_internal_sensor_count_get(payload);
++	/* Fill out sensor mapping array. */
++	if (sensor_map) {
++		for (bit = 0; bit < *last_sensor; bit++) {
++			if (mlxsw_reg_mtecr_sensor_map_get(payload, bit))
++				*sensor_map++ = bit;
++		}
++	}
++}
++
++/* MDDQ - Management DownStream Device Query Register
++ * --------------------------------------------------
++ * This register allows to query the DownStream device properties. The desired
++ * information is chosen upon the query_type field and is delivered by 32B
++ * of data blocks. Each block is tagged with a message sequential number,
++ * thus a retry request might be asked in case the block was corrupted.
++ * For specific information (for example, port_info - TBD), a previous
++ * information might be necessary to read before to be filled in the
++ * query_index field (for example, device_index).
++ */
++#define MLXSW_REG_MDDQ_ID 0x9161
++#define MLXSW_REG_MDDQ_LEN 0x30
++
++MLXSW_REG_DEFINE(mddq, MLXSW_REG_MDDQ_ID, MLXSW_REG_MDDQ_LEN);
++
++/* reg_mddq_sie
++ * Slot info event enable.
++ * When set to '1', each change in the slot_info.provisioned / sr_valid /
++ * active / ready will generate an event.
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mddq, sie, 0x00, 31, 1);
++
++enum mlxsw_reg_mddq_query_type {
++	MLXSW_REG_MDDQ_QUERY_TYPE_SLOT_INFO = 1,
++	MLXSW_REG_MDDQ_QUERY_TYPE_DEVICE_INFO,
++};
++
++/* reg_mddq_query_type
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mddq, query_type, 0x00, 16, 8);
++
++/* reg_mddq_slot_index
++ * Slot index. 0 is reserved.
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mddq, slot_index, 0x00, 0, 4);
++
++/* reg_mddq_provisioned
++ * If set, the INI file is applied and the card is provisioned.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, provisioned, 0x10, 31, 1);
++
++/* reg_mddq_sr_valid
++ * If set, Shift Register is valid (after being provisioned).
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, sr_valid, 0x10, 30, 1);
++
++/* reg_mddq_lc_ready
++ * If set, the LC is powered on, matching the INI version and a new FW
++ * version can be burnt (if necessary).
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, lc_ready, 0x10, 29, 1);
++
++/* reg_mddq_active
++ * If set, the FW has completed the MDDC.device_enable command.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, active, 0x10, 28, 1);
++
++/* reg_mddq_hw_revision
++ * Major user-configured version number of the current INI file.
++ * Valid only when active or ready are '1'.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, hw_revision, 0x14, 16, 16);
++
++/* reg_mddq_minor_ini_file_version
++ * Major user-configured version number of the current INI file.
++ * Valid only when active or ready are '1'.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, minor_ini_file_version, 0x14, 0, 16);
++
++enum mlxsw_reg_mddq_card_type {
++	MLXSW_REG_MDDQ_CARD_TYPE_BUFFALO_4X400G,
++	MLXSW_REG_MDDQ_CARD_TYPE_BUFFALO_8X200G,
++	MLXSW_REG_MDDQ_CARD_TYPE_BUFFALO_16X100G,
++};
++
++/* reg_mddq_card_type
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mddq, card_type, 0x18, 0, 8);
++
++static inline void
++mlxsw_reg_mddq_pack(char *payload, u8 slot_index, bool sie,
++		    enum mlxsw_reg_mddq_query_type query_type)
++{
++	MLXSW_REG_ZERO(mddq, payload);
++	mlxsw_reg_mddq_slot_index_set(payload, slot_index);
++	mlxsw_reg_mddq_sie_set(payload, sie);
++	mlxsw_reg_mddq_query_type_set(payload, query_type);
++}
++
++static inline void
++mlxsw_reg_mddq_slot_info_unpack(const char *payload, u8 *p_slot_index,
++				bool *p_provisioned, bool *p_sr_valid,
++				bool *p_lc_ready, bool *p_active,
++				u16 *p_hw_revision,
++				u16 *p_minor_ini_file_version,
++				enum mlxsw_reg_mddq_card_type *p_card_type)
++{
++	*p_slot_index = mlxsw_reg_mddq_slot_index_get(payload);
++	*p_provisioned = mlxsw_reg_mddq_provisioned_get(payload);
++	*p_sr_valid = mlxsw_reg_mddq_sr_valid_get(payload);
++	*p_lc_ready = mlxsw_reg_mddq_lc_ready_get(payload);
++	*p_active = mlxsw_reg_mddq_active_get(payload);
++	*p_hw_revision = mlxsw_reg_mddq_hw_revision_get(payload);
++	*p_minor_ini_file_version =
++		mlxsw_reg_mddq_minor_ini_file_version_get(payload);
++	*p_card_type = mlxsw_reg_mddq_card_type_get(payload);
++}
++
++/* MDDC - Management DownStream Device Control Register
++ * ----------------------------------------------------
++ * This register allows control downstream devices and line cards.
++ */
++#define MLXSW_REG_MDDC_ID 0x9163
++#define MLXSW_REG_MDDC_LEN 0x30
++
++MLXSW_REG_DEFINE(mddc, MLXSW_REG_MDDC_ID, MLXSW_REG_MDDC_LEN);
++
++/* reg_mddc_slot_index
++ * Slot index. 0 is reserved.
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mddc, slot_index, 0x00, 0, 4);
++
++enum mlxsw_reg_mddc_rst {
++	MLXSW_REG_MDDC_RST_SOFT_RESET = 1,
++};
++
++/* reg_mddc_rst
++ * Reset request.
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mddc, rst, 0x04, 29, 3);
++
++/* reg_mddc_device_enable
++ * When set, FW is the manager and allowed to program the Downstream Device.
++ * Access: RW
++ */
++MLXSW_ITEM32(reg, mddc, device_enable, 0x04, 28, 1);
++
++static inline void
++mlxsw_reg_mddc_pack(char *payload, u8 slot_index, bool device_enable)
++{
++	MLXSW_REG_ZERO(mddc, payload);
++	mlxsw_reg_mddc_slot_index_set(payload, slot_index);
++	mlxsw_reg_mddc_rst_set(payload, MLXSW_REG_MDDC_RST_SOFT_RESET);
++	mlxsw_reg_mddc_device_enable_set(payload, device_enable);
++}
++
+ /* TNGCR - Tunneling NVE General Configuration Register
+  * ----------------------------------------------------
+  * The TNGCR register is used for setting up the NVE Tunneling configuration.
+@@ -10043,6 +10276,9 @@ static const struct mlxsw_reg_info *mlxsw_reg_infos[] = {
+ 	MLXSW_REG(mgpc),
+ 	MLXSW_REG(mprs),
+ 	MLXSW_REG(mgpir),
++	MLXSW_REG(mtecr),
++	MLXSW_REG(mddq),
++	MLXSW_REG(mddc),
+ 	MLXSW_REG(tngcr),
+ 	MLXSW_REG(tnumt),
+ 	MLXSW_REG(tnqcr),
+-- 
+2.20.1
+
