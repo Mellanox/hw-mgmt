@@ -1,0 +1,319 @@
+From f816455d6a407c6c044a93fd6db623f87ef522f5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 25 Feb 2021 10:55:01 +0200
+Subject: [PATCH backport 4.19 5/5] mlxsw: minimal: Add support for line card
+ event handling
+
+Extend "minimal" driver with interrupt handler to support line card
+initialization and de-initialization events.
+
+It provides support for Nvidia modular Ethernet switch system, which is
+equipped with Spectrum-3 chip and with programmable devices with logic
+providing system control.
+
+It could be also relevant for the vendors which build its own system,
+equipped with Nvidia Spectrum-3 chip and with programmable device or
+devices implementing the same logic.
+
+This logic includes interrupt controller for line card related events.
+Whenever any event is happened, the relevant signal is raised to CPU.
+These events are associated with a number of line card states, like
+line card insertion and removing, security validation, powering on and
+off, enabling (release from reset) and disabling (hold in reset),
+firmware active and inactive. The final event in initialization flow is
+firmware active. And it indicates that firmware is fully prepared for
+line card ports handling.
+
+When "active event" is received for particular line card, its network,
+hardware monitoring and thermal interfaces should be configured
+according to the configuration obtained from the firmware. When
+opposite "inactive event" is received all the above interfaces should
+be teared down.
+
+It is important to note that there are two different flows for line
+card configuration. The first one is for "spectrum" driver working over
+PCIe bus and running on host CPU. The second one is for "minimal"
+driver working over I2C bus, which could be running on host CPU or on
+Baseboard Management Controller (BMC).
+
+Within the first flow "active event" and "inactive event" raised to CPU
+directly from the Spectrum chip firmware in form of a trap
+notification. Such trapping mechanism required Ethernet Management
+Datagrams support from the driver. For the second flow this mechanism
+is not available, since it does not supported over I2C bus.
+
+The only way to deliver these events to "minimal" driver is to route
+them from the Spectrum chip firmware to system programmable device,
+which in their turn will generate relevant signal to CPU.
+
+The purpose of "minimal" driver interrupt handler is to handle these
+signals and invoke related APIs: mlxsw_core_line_card_init() for
+"active event" and mlxsw_core_line_card_fini() for "inactive event",
+while "active event" / "inactive event" are detected through PRM
+Management DownStream Device Query Register
+
+This interrupt handler shares physical interrupt line with system
+interrupt handler, implemented in programmable device logic:
+17:	0	...	0	IR-IO-APIC  17-fasteoi mlxreg-hotplug,
+mlxsw-minimal
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c    |  3 +-
+ drivers/net/ethernet/mellanox/mlxsw/core.h    |  4 +-
+ drivers/net/ethernet/mellanox/mlxsw/i2c.c     | 84 ++++++++++++++++++++++++++-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 32 ++++++----
+ 4 files changed, 110 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index ed34c54bf71e..2013423bd602 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -1018,7 +1018,8 @@ int mlxsw_core_bus_device_register(const struct mlxsw_bus_info *mlxsw_bus_info,
+ 	mlxsw_core->bus_info = mlxsw_bus_info;
+ 
+ 	res = mlxsw_driver->res_query_enabled ? &mlxsw_core->res : NULL;
+-	err = mlxsw_bus->init(bus_priv, mlxsw_core, mlxsw_driver->profile, res);
++	err = mlxsw_bus->init(bus_priv, mlxsw_core, mlxsw_driver->profile, res,
++			      mlxsw_driver->sys_event_handler);
+ 	if (err)
+ 		goto err_bus_init;
+ 
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.h b/drivers/net/ethernet/mellanox/mlxsw/core.h
+index dd7726f1546f..7bae592a92d5 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.h
+@@ -290,6 +290,7 @@ struct mlxsw_driver {
+ 			     u64 *p_linear_size);
+ 	int (*params_register)(struct mlxsw_core *mlxsw_core);
+ 	void (*params_unregister)(struct mlxsw_core *mlxsw_core);
++	void (*sys_event_handler)(struct mlxsw_core *mlxsw_core);
+ 	u8 txhdr_len;
+ 	const struct mlxsw_config_profile *profile;
+ 	bool res_query_enabled;
+@@ -322,7 +323,8 @@ struct mlxsw_bus {
+ 	const char *kind;
+ 	int (*init)(void *bus_priv, struct mlxsw_core *mlxsw_core,
+ 		    const struct mlxsw_config_profile *profile,
+-		    struct mlxsw_res *res);
++		    struct mlxsw_res *res,
++		    void (*sys_event_handler)(struct mlxsw_core *mlxsw_core));
+ 	void (*fini)(void *bus_priv);
+ 	bool (*skb_transmit_busy)(void *bus_priv,
+ 				  const struct mlxsw_tx_info *tx_info);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+index e04d521d9376..10754f704c7d 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+@@ -9,6 +9,7 @@
+ #include <linux/mutex.h>
+ #include <linux/module.h>
+ #include <linux/mod_devicetable.h>
++#include <linux/platform_data/mlxreg.h>
+ #include <linux/slab.h>
+ 
+ #include "cmd.h"
+@@ -62,6 +63,10 @@
+  * @core: switch core pointer;
+  * @bus_info: bus info block;
+  * @block_size: maximum block size allowed to pass to under layer;
++ * @pdata: device platform data;
++ * @dwork_irq: interrupts delayed work queue;
++ * @lock - lock for interrupts sync;
++ * @sys_event_handler: system events handler callback;
+  */
+ struct mlxsw_i2c {
+ 	struct {
+@@ -75,6 +80,10 @@ struct mlxsw_i2c {
+ 	struct mlxsw_core *core;
+ 	struct mlxsw_bus_info bus_info;
+ 	u16 block_size;
++	struct mlxreg_core_hotplug_platform_data *pdata;
++	struct delayed_work dwork_irq;
++	spinlock_t lock; /* sync with interrupt */
++	void (*sys_event_handler)(struct mlxsw_core *mlxsw_core);
+ };
+ 
+ #define MLXSW_I2C_READ_MSG(_client, _addr_buf, _buf, _len) {	\
+@@ -508,13 +517,15 @@ static int mlxsw_i2c_skb_transmit(void *bus_priv, struct sk_buff *skb,
+ static int
+ mlxsw_i2c_init(void *bus_priv, struct mlxsw_core *mlxsw_core,
+ 	       const struct mlxsw_config_profile *profile,
+-	       struct mlxsw_res *res)
++	       struct mlxsw_res *res,
++	       void (*sys_event_handler)(struct mlxsw_core *mlxsw_core))
+ {
+ 	struct mlxsw_i2c *mlxsw_i2c = bus_priv;
+ 	char *mbox;
+ 	int err;
+ 
+ 	mlxsw_i2c->core = mlxsw_core;
++	mlxsw_i2c->sys_event_handler = sys_event_handler;
+ 
+ 	mbox = mlxsw_cmd_mbox_alloc();
+ 	if (!mbox)
+@@ -545,6 +556,71 @@ static void mlxsw_i2c_fini(void *bus_priv)
+ 	mlxsw_i2c->core = NULL;
+ }
+ 
++static void mlxsw_i2c_work_handler(struct work_struct *work)
++{
++	struct mlxsw_i2c *mlxsw_i2c;
++	unsigned long flags;
++
++	mlxsw_i2c = container_of(work, struct mlxsw_i2c, dwork_irq.work);
++	mlxsw_i2c->sys_event_handler(mlxsw_i2c->core);
++
++	spin_lock_irqsave(&mlxsw_i2c->lock, flags);
++
++	/* It is possible, that some signals have been inserted, while
++	 * interrupts has been masked. In this case such signals could be missed.
++	 * In order to handle these signals delayed work is canceled and work task
++	 * re-scheduled for immediate execution. It allows to handle missed
++	 * signals, if any. In other case work handler just validates that no new
++	 * signals have been received during masking.
++	 */
++	cancel_delayed_work(&mlxsw_i2c->dwork_irq);
++	schedule_delayed_work(&mlxsw_i2c->dwork_irq, 0);
++
++	spin_unlock_irqrestore(&mlxsw_i2c->lock, flags);
++}
++
++static irqreturn_t mlxsw_i2c_irq_handler(int irq, void *dev)
++{
++	struct mlxsw_i2c *mlxsw_i2c = (struct mlxsw_i2c *)dev;
++
++	/* Schedule work task for immediate execution.*/
++	schedule_delayed_work(&mlxsw_i2c->dwork_irq, 0);
++
++	return IRQ_HANDLED;
++}
++
++static int mlxsw_i2c_event_handler_register(struct mlxsw_i2c *mlxsw_i2c)
++{
++	int err;
++
++	/* Initialize interrupt handler if system hotplug driver is reachable
++	 * and platform data is available.
++	 */
++	if (!IS_REACHABLE(CONFIG_MLXREG_HOTPLUG) || !mlxsw_i2c->pdata || !mlxsw_i2c->pdata->irq)
++		return 0;
++
++	err = devm_request_irq(mlxsw_i2c->dev, mlxsw_i2c->pdata->irq, mlxsw_i2c_irq_handler,
++			       IRQF_TRIGGER_FALLING | IRQF_SHARED, "mlxsw-i2c", mlxsw_i2c);
++	if (err) {
++		dev_err(mlxsw_i2c->bus_info.dev, "Failed to request irq: %d\n",
++			err);
++		return err;
++	}
++
++	spin_lock_init(&mlxsw_i2c->lock);
++	INIT_DELAYED_WORK(&mlxsw_i2c->dwork_irq, mlxsw_i2c_work_handler);
++
++	return 0;
++}
++
++static void mlxsw_i2c_event_handler_unregister(struct mlxsw_i2c *mlxsw_i2c)
++{
++	if (!IS_REACHABLE(CONFIG_MLXREG_HOTPLUG) || !mlxsw_i2c->pdata || !mlxsw_i2c->pdata->irq)
++		return;
++
++	devm_free_irq(mlxsw_i2c->bus_info.dev, mlxsw_i2c->pdata->irq, mlxsw_i2c);
++}
++
+ static const struct mlxsw_bus mlxsw_i2c_bus = {
+ 	.kind			= "i2c",
+ 	.init			= mlxsw_i2c_init,
+@@ -637,6 +713,7 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
+ 	mlxsw_i2c->bus_info.dev = &client->dev;
+ 	mlxsw_i2c->bus_info.low_frequency = true;
+ 	mlxsw_i2c->dev = &client->dev;
++	mlxsw_i2c->pdata = client->dev.platform_data;
+ 
+ 	err = mlxsw_core_bus_device_register(&mlxsw_i2c->bus_info,
+ 					     &mlxsw_i2c_bus, mlxsw_i2c, false,
+@@ -646,6 +723,10 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
+ 		return err;
+ 	}
+ 
++	err = mlxsw_i2c_event_handler_register(mlxsw_i2c);
++	if (err)
++		return err;
++
+ 	dev_info(&client->dev, "Firmware revision: %d.%d.%d\n",
+ 		 mlxsw_i2c->bus_info.fw_rev.major,
+ 		 mlxsw_i2c->bus_info.fw_rev.minor,
+@@ -663,6 +744,7 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
+ {
+ 	struct mlxsw_i2c *mlxsw_i2c = i2c_get_clientdata(client);
+ 
++	mlxsw_i2c_event_handler_unregister(mlxsw_i2c);
+ 	mlxsw_core_bus_device_unregister(mlxsw_i2c->core, false);
+ 	mutex_destroy(&mlxsw_i2c->cmd.lock);
+ 
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 1623f827f36e..c9024d3e2ba6 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -228,18 +228,8 @@ static void mlxsw_m_port_remove(struct mlxsw_m_area *mlxsw_m_area, u8 local_port
+ 
+ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index)
+ {
+-	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+ 	int i, err;
+ 
+-	mlxsw_reg_mgpir_pack(mgpir_pl, slot_index);
+-	err = mlxsw_reg_query(mlxsw_m_area->mlxsw_m->core, MLXSW_REG(mgpir),
+-			      mgpir_pl);
+-	if (err)
+-		return err;
+-
+-	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       &mlxsw_m_area->max_ports, NULL);
+-
+ 	if (!mlxsw_m_area->max_ports)
+ 		return 0;
+ 
+@@ -287,10 +277,31 @@ static void mlxsw_m_ports_remove(struct mlxsw_m_area *mlxsw_m_area)
+ 	kfree(mlxsw_m_area->ports);
+ }
+ 
++static void mlxsw_m_sys_event_handler(struct mlxsw_core *mlxsw_core)
++{
++	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_core);
++	char mddq_pl[MLXSW_REG_MDDQ_LEN];
++	int i, err;
++
++	/* Handle line cards, for which active status has been changed. */
++	for (i = 1; i <= linecards->count; i++) {
++		mlxsw_reg_mddq_pack(mddq_pl, MLXSW_REG_MDDQ_QUERY_TYPE_SLOT_INFO,
++				    false, i);
++		err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(mddq), mddq_pl);
++		if (err)
++			dev_err(mlxsw_m->bus_info->dev, "Fail to query MDDQ register for slot %d\n",
++				i);
++
++		mlxsw_linecard_status_process(mlxsw_m->core, mddq_pl);
++	}
++}
++
+ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 			const struct mlxsw_bus_info *mlxsw_bus_info)
+ {
+ 	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
++	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+ 	int err;
+ 
+ 	mlxsw_m->main = kzalloc(sizeof(*mlxsw_m->main), GFP_KERNEL);
+@@ -328,6 +339,7 @@ static struct mlxsw_driver mlxsw_m_driver = {
+ 	.priv_size		= sizeof(struct mlxsw_m),
+ 	.init			= mlxsw_m_init,
+ 	.fini			= mlxsw_m_fini,
++	.sys_event_handler	= mlxsw_m_sys_event_handler,
+ 	.profile		= &mlxsw_m_config_profile,
+ 	.res_query_enabled	= true,
+ };
+-- 
+2.11.0
+
