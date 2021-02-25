@@ -1,4 +1,5 @@
 #!/bin/bash
+
 ########################################################################
 # Copyright (c) 2018 Mellanox Technologies. All rights reserved.
 #
@@ -56,6 +57,11 @@ i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
 LOCKFILE="/var/run/hw-management-thermal.lock"
 udev_ready=$hw_management_path/.udev_ready
+IVB_CPU=0x63A
+RNG_CPU=0x64D
+BDW_CPU=0x656
+CFL_CPU=0x69E
+cpu_type=
 
 log_err()
 {
@@ -85,6 +91,18 @@ find_i2c_bus()
 
 	log_err "i2c-mlxcpld driver is not loaded"
 	exit 0
+}
+
+check_cpu_type()
+{
+	if [ ! -f $config_path/cpu_type ]; then
+		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
+		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
+		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+		echo $cpu_type > $config_path/cpu_type
+	else
+		cpu_type=$(cat $config_path/cpu_type)
+	fi
 }
 
 lock_service_state_change()
@@ -441,13 +459,36 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
+		check_cpu_type
+		shopt -s extglob
+		case $cpu_type in
+			$RNG_CPU)
+				sodimm1_addr='0-0018'
+				sodimm2_addr='0-001a'
+			;;
+			$IVB_CPU)
+				sodimm1_addr='0-001b'
+				sodimm2_addr='0-001a'
+			;;
+			$CFL_CPU)
+				sodimm1_addr='0-001c'
+				sodimm2_addr='@(0-001a|0-001e)'
+			;;
+			*)
+				exit 0
+			;;
+		esac
+
 		sodimm_i2c_addr=$(echo "$3"|xargs dirname|xargs dirname|xargs basename)
 		case $sodimm_i2c_addr in
-			0-001c|0-001e)
+			$sodimm1_addr)
+				sodimm_name=sodimm1_temp
+			;;
+			$sodimm2_addr)
 				sodimm_name=sodimm2_temp
 			;;
 			*)
-				sodimm_name=sodimm1_temp
+				exit 0
 			;;
 		esac
 		find "$5""$3" -iname 'temp1_*' -exec sh -c 'ln -sf $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
@@ -800,16 +841,7 @@ else
 		unlink $thermal_path/pch_temp
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
-		sodimm_i2c_addr=$(echo "$3"|xargs dirname|xargs dirname|xargs basename)
-		case $sodimm_i2c_addr in
-			0-001c|0-001e)
-				sodimm_name=sodimm2_temp
-			;;
-			*)
-				sodimm_name=sodimm1_temp
-			;;
-		esac
-		find "$thermal_path" -iname "$sodimm_name*" -exec unlink {} \;
+		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
 		find_i2c_bus

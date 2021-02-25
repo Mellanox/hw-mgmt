@@ -814,9 +814,14 @@ msn_spc3_common()
 
 check_cpu_type()
 {
-	family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
-	model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
-	cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+	if [ ! -f $config_path/cpu_type ]; then
+		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
+		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
+		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+		echo $cpu_type > $config_path/cpu_type
+	else
+		cpu_type=$(cat $config_path/cpu_type)
+	fi
 }
 
 msn48xx_specific()
