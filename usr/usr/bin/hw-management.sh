@@ -135,26 +135,21 @@ fan_direction_intake=52
 # loaded in case they were not loaded before or in case these drivers are not
 # configured as modules.
 
+base_cpu_bus_offset=10
+
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
 cpu_type0_connection_table=(	max11603 0x6d 15 \
 			24c32 0x51 16)
 
-# Special for MSN2**** with Broadwell Comex CPU.
-cpu_type1_connection_table=(	max11603 0x6d 23 \
-			tmp102 0x49 23 \
-			tps53679 0x58 23 \
-			tps53679 0x61 23 \
-			24c32 0x50 24)
-
 # Broadwell CPU, mostly used on SPC2/SPC3 systems.
-cpu_type2_connection_table=(	max11603 0x6d 15 \
+cpu_type1_connection_table=(	max11603 0x6d 15 \
 			tmp102 0x49 15 \
 			tps53679 0x58 15 \
 			tps53679 0x61 15 \
 			24c32 0x50 16)
 
 # CoffeeLake CPU.
-cpu_type3_connection_table=(	max11603 0x6d 15 \
+cpu_type2_connection_table=(	max11603 0x6d 15 \
 			mp2975 0x6e 15 \
 			24c32 0x50 16)
 
@@ -266,11 +261,6 @@ msn4800_base_connect_table=( mp2975 0x62 6 \
 	max11603 0x64 6 \
 	tmp102 0x49 7 \
 	24c32 0x51 8 \
-	max11603 0x6d 15 \
-	tmp102 0x49 15 \
-	tps53679 0x58 15 \
-	tps53679 0x61 15 \
-	24c32 0x50 16 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
@@ -465,21 +455,32 @@ get_fixed_fans_direction()
 
 add_cpu_board_to_connection_table()
 {
+	local cpu_connection_table=( )
 	case $cpu_type in
 		$RNG_CPU|$IVB_CPU)
-			connect_table+=( ${cpu_type0_connection_table[@]} )
+			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
-			connect_table+=( ${cpu_type2_connection_table[@]} )
+			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 			;;
 		$CFL_CPU)
-			connect_table+=( ${cpu_type3_connection_table[@]} )
+			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
 			exit 0
 			;;
 	esac
+
+	# $1 - cpu bus offset.
+	if [ ! -z "$1" ]; then
+		local cpu_bus_offset=$1
+		for ((i=0; i<${#cpu_connection_table[@]}; i+=3)); do
+			cpu_connection_table[$i+2]=$(( cpu_connection_table[i+2]-base_cpu_bus_offset+cpu_bus_offset ))
+		done
+	fi
+
+	connect_table+=(${cpu_connection_table[@]})
 }
 
 msn274x_specific()
@@ -631,8 +632,10 @@ msn38xx_specific()
 
 msn24102_specific()
 {
+	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${cpu_type1_connection_table[@]} ${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -651,8 +654,10 @@ msn24102_specific()
 
 msn27002_msb78002_specific()
 {
+	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${cpu_type1_connection_table[@]} ${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -826,11 +831,12 @@ check_cpu_type()
 
 msn48xx_specific()
 {
-	connect_size=${#msn4800_base_connect_table[@]}
-	for ((i=0; i<connect_size; i++)); do
-		connect_table[i]=${msn4800_base_connect_table[i]}
-	done
+	local cpu_bus_offset=51
+	connect_table=(${msn4800_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
 	hotplug_linecards=8
+	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	echo 4 > $config_path/cpld_num
 }
 
