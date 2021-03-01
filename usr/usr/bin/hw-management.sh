@@ -271,9 +271,9 @@ msn4800_base_connect_table=( mp2975 0x62 6 \
 	tps53679 0x58 15 \
 	tps53679 0x61 15 \
 	24c32 0x50 16 \
-	max11603 0x6d 21 \
-	tmp102 0x4a 22 \
-	24c32 0x51 23)
+	max11603 0x6d 43 \
+	tmp102 0x4a 44 \
+	24c32 0x51 45)
 
 ACTION=$1
 

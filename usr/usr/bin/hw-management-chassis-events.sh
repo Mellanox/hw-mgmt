@@ -53,6 +53,7 @@ i2c_bus_def_off_eeprom_fan1=11
 i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
+i2c_bus_def_off_eeprom_mgmt=45
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
@@ -209,6 +210,8 @@ find_eeprom_name()
 		eeprom_name=fan3_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_mgmt" ]; then
+		eeprom_name=mgmt_info
 	elif [ "$bus" -eq 0 ]; then
 		:
 	else
