@@ -840,6 +840,7 @@ msn48xx_specific()
 	echo 4 > $config_path/cpld_num
 	hotplug_pwrs=4
 	hotplug_psus=4
+	i2c_asic_bus_default=3
 }
 
 check_system()
