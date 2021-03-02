@@ -838,6 +838,8 @@ msn48xx_specific()
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	echo 4 > $config_path/cpld_num
+	hotplug_pwrs=4
+	hotplug_psus=4
 }
 
 check_system()

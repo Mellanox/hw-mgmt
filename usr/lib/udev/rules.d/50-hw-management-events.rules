@@ -84,6 +84,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu1 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu2 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu2 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu3 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu3 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu4 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu4 %p %k %S %n"
 
 # Hotplug devices statuses.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug %S %p"
