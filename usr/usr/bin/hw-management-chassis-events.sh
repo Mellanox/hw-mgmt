@@ -379,9 +379,10 @@ function handle_hotplug_event()
 	
 	if [ -f $events_path/"$attribute" ]; then
 		echo "$event" > $events_path/"$attribute"
+		log_info "Event ${event} is received for attribute ${attribute}"
 	else
-		# ToDo check if leave this error maessage
-		log_err "Path ${events_path}/${attribute} doesn't exist"
+		# ToDo check if leave this error message
+		log_err "Path ${events_path}/${attribute} does not exist"
 	fi
 	set_fan_direction "$attribute" "$event"
 }

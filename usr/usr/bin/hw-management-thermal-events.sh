@@ -349,9 +349,6 @@ if [ "$1" == "add" ]; then
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/pwr"$i"
 				fi
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_active
-				fi
 			fi
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
