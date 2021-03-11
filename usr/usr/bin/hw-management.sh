@@ -1201,7 +1201,7 @@ do_chip_up_down()
 	case $board in
 	VMOD0011)
 		# Chip up / down operations are to be performed automatically.
-		exit 0
+		return
 		;;
 	*)
 		;;
