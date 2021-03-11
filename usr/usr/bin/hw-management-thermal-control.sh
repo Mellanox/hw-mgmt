@@ -80,8 +80,6 @@ temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
 asic=$thermal_path/asic
-psu1_status=$thermal_path/psu1_status
-psu2_status=$thermal_path/psu2_status
 fan_command=$config_path/fan_command
 tz_mode=$thermal_path/mlxsw/thermal_zone_mode
 tz_policy=$thermal_path/mlxsw/thermal_zone_policy
@@ -511,10 +509,13 @@ validate_thermal_configuration()
 		return 1
 	fi
 	if [ "$max_psus" -gt 0 ]; then
-		if [ ! -L $psu1_status ] || [ ! -L $psu2_status ]; then
-			log_err "PS units status attributes are not exist"
-			return 1
-		fi
+		for ((i=1; i<=max_psus; i+=1)); do
+			psu_status="$thermal_path"/psu"$i"_status
+			if [ ! -L "$psu_status" ]; then
+			    log_err "PS$i status attribute not exist"
+			    return 1
+			fi
+		done
 	fi
 }
 
