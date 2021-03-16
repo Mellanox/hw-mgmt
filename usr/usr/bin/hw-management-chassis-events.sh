@@ -323,10 +323,10 @@ function asic_cpld_add_handler()
 	# Verify if CPLD attributes are exist
 	if [ -f "$config_path/cpld_port" ]; then
 		local  cpld=$(< $config_path/cpld_port)
-		if [ "$cpld" == "cpld1" ] && [ -f "${ASIC_I2C_PATH}"/cpld1_version ]; then
+		if [ "$cpld" == "cpld1" ]; then
 			ln -sf "${ASIC_I2C_PATH}"/cpld1_version $system_path/cpld3_version
 		fi
-		if [ "$cpld" == "cpld3" ] && [ -f "${ASIC_I2C_PATH}"/cpld3_version ]; then
+		if [ "$cpld" == "cpld3" ]; then
 			ln -sf "${ASIC_I2C_PATH}"/cpld3_version $system_path/cpld3_version
 		fi
 	fi
