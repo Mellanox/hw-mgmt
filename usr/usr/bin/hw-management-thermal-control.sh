@@ -76,6 +76,7 @@ hw_management_path=/var/run/hw-management
 thermal_path=$hw_management_path/thermal
 config_path=$hw_management_path/config
 system_path=$hw_management_path/system
+led_path=$hw_management_path/led
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
@@ -778,8 +779,26 @@ update_psu_fan_speed()
 	done
 }
 
+set_fan_led()
+{
+	fan=$1
+	color=$2
+
+	if [ -f $led_path/led_fan"$fan"_$color ]; then
+		echo 255 > $led_path/led_fan"$fan"_$color
+	fi
+}
+
 get_fan_faults()
 {
+	fan_per_drwr=$(($max_tachos / $max_drwr))
+	local fault_drwr=(0)
+
+	for ((i=1; i<=max_drwr; i+=1)); do
+		fault_drwr[$i]=0
+	done
+
+	pwm_required_act=$pwm_noact
 	for ((i=1; i<=max_tachos; i+=1)); do
 		get_fan_fault_trusted $i
 		fault=$?
@@ -790,11 +809,18 @@ get_fan_faults()
 				set_fan_to_full_speed
 				log_info "FAN speed is set to full speed due to FAN$i fault"
 			fi
-			return
+			fault_drwr_num=$((($i - 1) / $fan_per_drwr + 1))
+			fault_drwr[$fault_drwr_num]=1
 		fi
 	done
 
-	pwm_required_act=$pwm_noact
+	for ((i=1; i<=max_drwr; i+=1)); do
+		if [ ${fault_drwr[$i]} -eq 1 ]; then
+			set_fan_led $i "orange"
+		else
+			set_fan_led $i "green"
+		fi
+	done
 }
 
 get_fan_direction()
