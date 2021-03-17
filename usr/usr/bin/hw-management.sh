@@ -150,7 +150,7 @@ cpu_type1_connection_table=(	max11603 0x6d 15 \
 
 # CoffeeLake CPU.
 cpu_type2_connection_table=(	max11603 0x6d 15 \
-			mp2975 0x6e 15 \
+			mp2975 0x6b 15 \
 			24c32 0x50 16)
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
@@ -838,6 +838,13 @@ msn48xx_specific()
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	echo 4 > $config_path/cpld_num
+	hotplug_pwrs=4
+	hotplug_psus=4
+	i2c_asic_bus_default=3
+	echo 22000 > $config_path/fan_max_speed
+	echo 3000 > $config_path/fan_min_speed
+	echo 27500 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
 }
 
 check_system()
@@ -1194,7 +1201,7 @@ do_chip_up_down()
 	case $board in
 	VMOD0011)
 		# Chip up / down operations are to be performed automatically.
-		exit 0
+		return
 		;;
 	*)
 		;;
