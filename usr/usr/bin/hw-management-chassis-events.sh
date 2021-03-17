@@ -82,6 +82,36 @@ log_info()
 	logger -t hw-management -p daemon.info "$@"
 }
 
+# Voltmon sensors by label mapping:
+#                   dummy   voltmon1      voltmon2       voltmon3
+VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
+CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
+POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
+
+# Find sensor index which label matching to mask.
+# $1 - patch to sensor in sysfs
+# $2 - sensor type ('in', 'curr', 'power'...)
+# $3 - mask to matching  label
+# return sensor index if match is found or 0 if match not found
+find_sensor_by_label()
+{
+	path=$1
+	sens_type=$2
+	label_mask=$3
+	local i=1
+	FILES=$(find "$path"/"$sens_type"*label)
+	for label_file in $FILES
+	do
+			curr_label=$(< "$label_file")
+			if [[ $curr_label =~ $label_mask ]]; then
+				return $i
+			fi
+			i=$((i+1))
+	done
+	# 0 means label by 'pattern' not found.
+    return 0
+}
+
 linecard_i2c_busses=( \
 	"vr" \
 	"a2d" \
@@ -442,17 +472,21 @@ if [ "$1" == "add" ]; then
 			fi
 		fi
 		for i in {1..3}; do
-			if [ -f "$3""$4"/in"$i"_input ]; then
-				ln -sf "$3""$4"/in"$i"_input $environment_path/"$2"_in"$i"_input
+			find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
+			sensor_id=$?
+			if [ ! $sensor_id -eq 0 ]; then
+				if [ -f "$3""$4"/in"$sensor_id"_input ]; then
+					ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
+				fi
+				if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
+					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
+				fi
 			fi
 			if [ -f "$3""$4"/curr"$i"_input ]; then
 				ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
 			fi
 			if [ -f "$3""$4"/power"$i"_input ]; then
 				ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
-			fi
-			if [ -f "$3""$4"/in"$i"_alarm ]; then
-				ln -sf "$3""$4"/in"$i"_alarm $alarm_path/"$2"_in"$i"_alarm
 			fi
 			if [ -f "$3""$4"/curr"$i"_alarm ]; then
 				ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
