@@ -308,7 +308,6 @@ if [ "$1" == "add" ]; then
 			ln -sf "$3""$4"/trip_point_0_temp $tpath/"$zonetype"/temp_trip_norm
 			ln -sf "$3""$4"/trip_point_1_temp $tpath/"$zonetype"/temp_trip_high
 			ln -sf "$3""$4"/trip_point_2_temp $tpath/"$zonetype"/temp_trip_hot
-			ln -sf "$3""$4"/trip_point_3_temp $tpath/"$zonetype"/temp_trip_crit
 			ln -sf "$3""$4"/temp $tpath/"$zonetype"/thermal_zone_temp
 			if [ -f "$3""$4"/emul_temp ]; then
 				ln -sf "$3""$4"/emul_temp $tpath/"$zonetype"/thermal_zone_temp_emul
