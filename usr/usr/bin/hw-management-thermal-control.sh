@@ -571,15 +571,14 @@ log_tz_info()
 	tz_path=$1
 	name=$2
 	if [ -f "$tz_path"/thermal_zone_temp ]; then
-		t7=$(< "$tz_path"/thermal_zone_mode)
-		if [ "$t7" = "enabled" ]; then
+		t6=$(< "$tz_path"/thermal_zone_mode)
+		if [ "$t6" = "enabled" ]; then
 			t1=$(< "$tz_path"/thermal_zone_temp)
 			t2=$(< "$tz_path"/temp_trip_norm)
 			t3=$(< "$tz_path"/temp_trip_high)
 			t4=$(< "$tz_path"/temp_trip_hot)
-			t5=$(< "$tz_path"/temp_trip_crit)
-			t6=$(< "$tz_path"/thermal_zone_policy)
-			log_info "tz $name temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+			t5=$(< "$tz_path"/thermal_zone_policy)
+			log_info "tz $name temp $t1 trips $t2 $t3 $t4 $t5 $t6"
 		fi
 	fi
 }
