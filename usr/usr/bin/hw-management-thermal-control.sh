@@ -530,15 +530,14 @@ thermal_periodic_report()
 				log_info "module$i temp $t1 fault $t2 crit $t3 emerg $t4"
 			fi
 			if [ -f $thermal_path/mlxsw-module"$i"/thermal_zone_temp ]; then
-				t7=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_mode)
-				if [ "$t7" = "enabled" ]; then
+				t6=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_mode)
+				if [ "$t6" = "enabled" ]; then
 					t1=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_temp)
 					t2=$(< $thermal_path/mlxsw-module"$i"/temp_trip_norm)
 					t3=$(< $thermal_path/mlxsw-module"$i"/temp_trip_high)
 					t4=$(< $thermal_path/mlxsw-module"$i"/temp_trip_hot)
-					t5=$(< $thermal_path/mlxsw-module"$i"/temp_trip_crit)
-					t6=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_policy)
-					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+					t5=$(< $thermal_path/mlxsw-module"$i"/thermal_zone_policy)
+					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6"
 				fi
 			fi
 		fi
