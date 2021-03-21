@@ -1,4 +1,131 @@
-  
+  ================================================================================
+- V.7.0010.2300
+- Sun, 21 March 2021
+--------------------------------------------------------------------------------
+
+- New Features
+    o	Customize initialization of Intel SMBus driver - Enforce i2c_i801 to polling mode to avoid interrupt flooding.
+    o	Extend kernel config options for Comex CFL support
+    o	hw-mgmt: rules: Extend udev rules for network devices - Add rules for re-naming network devices associated with the modules indexes from 65 to 128
+    o	hw-mgmt: thermal: Remove symbolic links for critical trip points after critical thermal zones have been removed from the kernel.
+
+	*Kernel 4.19
+    o	mlxsw: core: Remove critical trip point from thermal zones for disabling system reset in thermal algorithm
+	0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch
+	*Kernel 4.9
+    o	mlxsw: core: Remove critical trip point from thermal zones for disabling system reset in thermal algorithm
+	0071-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch
+
+	Added support for MSN4800 Buffalo features
+    o	Add new link to mgmt eeprom and fix connection table address of max11603(a2d), tmp102, 24c32(vpd eeprom)
+    o	Add more flexibility between cpu type and platform for achieving the address composition (in connection tables).
+    o	Add new udev rules and links for additional 2 PSU of Buffalo (3rd & 4th)
+    o	Fix PSU status checking for supporting more than 2 PSU
+    o	Modify ASIC bus address for buffalo to be 0x3
+    o	Add missing min/max fan speed and min/max PSU’s fan speed
+    o	Modify chip up down – to return to script (instead of exit) so it may continue to “do_stop” and disconnect connection table.
+    o	Add log report for hotplug events
+
+	*Kernel 4.19
+    o	platform/mellanox: mlxreg-hotplug: Use capability register for attribute creation
+        0044-platform-mellanox-mlxreg-hotplug-Use-capability-regi.patch
+    o	i2c: mlxcpld: Update module license
+        0045-i2c-mlxcpld-Update-module-license.patch
+    o	i2c: mlxcpld: Add support for I2C bus frequency setting
+        0046-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch
+    o	i2c: mux: mlxcpld: Update module license
+        0047-i2c-mux-mlxcpld-Update-module-license.patch
+    o	i2c: mux: mlxcpld: Move header file out of x86 realm
+        0048-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch
+    o	platform/x86: mlxcpld: Update module license
+        0049-platform-x86-mlxcpld-Update-module-license.patch
+    o	i2c: mux: mlxcpld: Convert driver to platform driver
+        0050-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch
+    o	i2c: mux: mlxcpld: Prepare mux selection infrastructure for two-byte support
+        0051-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch
+    o	i2c: mux: mlxcpld: Get rid of adapter numbers enforcement
+        0052-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch
+    o	i2c: mux: mlxcpld: Extend driver to support word address space devices
+        0053-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch
+    o	i2c: mux: mlxcpld: Extend supported mux number
+        0054-i2c-mux-mlxcpld-Extend-supported-mux-number.patch
+    o	i2c: mux: mlxcpld: Add callback to notify mux creation completion
+        0055-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch
+    o	leds: mlxreg: Allow multi-instantiation of same name LED for modular systems
+        0056-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch
+    o	platform/x86: mlx-platform: remove an unused variable
+        0057-platform-x86-mlx-platform-remove-an-unused-variable.patch
+    o	platform/x86: mlx-platform: Fix item counter assignment for MSN2700, MSN24xx systems
+        0058-platform-x86-mlx-platform-Fix-item-counter-assignmen.patch
+    o	platform/x86: mlx-platform: Fix item counter assignment for MSN2700/ComEx system
+        0059-platform-x86-mlx-platform-Fix-item-counter-assignmen.patch
+    o	platform_data/mlxreg: Add new types to support for modular systems
+        0060-platform_data-mlxreg-Add-new-types-to-support-for-mo.patch
+    o	platform/x86: mlx-platform: Add initial support for new modular system
+        0061-platform-x86-mlx-platform-Add-initial-support-for-ne.patch
+    o	platform/mellanox: mlxreg-hotplug: Extend logic for hotplug devices operations
+        0062-platform-mellanox-mlxreg-hotplug-Extend-logic-for-ho.patch
+    o	platform/mellanox: mlxreg-io: Extend number of hwmon attributes
+        0063-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch
+    o	platform/mellanox: mlxreg-hotplug: Add line card event callbacks support for modular system
+        0064-platform-mellanox-mlxreg-hotplug-Add-line-card-event.patch
+    o	platform/mellanox: mlxreg-lc: Add initial support for Mellanox line card devices
+        0065-platform-mellanox-mlxreg-lc-Add-initial-support-for-.patch
+    o	mlxsw: core: Introduce initial chassis management support for modular Ethernet system
+        0066-mlxsw-core-Introduce-initial-chassis-management-supp.patch
+    o	mlxsw: reg: Introduce Management Temperature Extended Capabilities Register
+        0067-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch
+    o	mlxsw: core: Add APIs for thermal sensor mapping
+        0068-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch
+    o	mlxsw: core_linecards: Add line card objects and implement infrastructure
+        0069-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch
+    o	mlxsw: minimal: Extend internal structures to support port areas
+        0070-mlxsw-minimal-Extend-internal-structures-to-support-.patch
+    o	mlxsw: minimal: Add support for line card event handling
+        0071-mlxsw-minimal-Add-support-for-line-card-event-handli.patch
+    o	mlxsw: core_thermal: Add line card support
+        0072-mlxsw-core_thermal-Add-line-card-support.patch
+    o	mlxsw: core_hwmon: Add line card support MIME-Version: 1.0
+        0073-mlxsw-core_hwmon-Add-line-card-support.patch
+    o	mlxsw: minimal: Add support line card ready/unready events
+        0074-mlxsw-minimal-Add-support-line-card-ready-unready-ev.patch
+    o	platform/x86: mlx-platform: Extend register space with BIOS related attributes
+        0075-platform-x86-mlx-platform-Extend-register-space-with.patch
+
+- Bug fixes
+    o	Fix hw-mgmt: system: change CFL voltmon mp2975 I2C address from 0x6e to 0x6b
+    o	Fix SODIMM addressing - Add rules for adding SODIMM temp sensors per CPU type
+    o	Fix hw-mgmt: events: remove too early validation of cpld version
+
+- Known issues and limitations:
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.  
 ================================================================================
 - V.7.0010.2200
 - Sun, 21 Feb 2021
