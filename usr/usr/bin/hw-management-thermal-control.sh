@@ -427,9 +427,8 @@ thermal_periodic_report()
 					t2=`cat $thermal_path/mlxsw-module"$i"/temp_trip_norm`
 					t3=`cat $thermal_path/mlxsw-module"$i"/temp_trip_high`
 					t4=`cat $thermal_path/mlxsw-module"$i"/temp_trip_hot`
-					t5=`cat $thermal_path/mlxsw-module"$i"/temp_trip_crit`
 					t6=`cat $thermal_path/mlxsw-module"$i"/thermal_zone_policy`
-					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t5 $t6 $t7"
+					log_info "tz module$i temp $t1 trips $t2 $t3 $t4 $t6 $t7"
 				fi
 			fi
 		fi
