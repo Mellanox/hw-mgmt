@@ -137,30 +137,18 @@ function create_sfp_symbolic_links()
 # ASIC CPLD event
 function asic_cpld_add_handler()
 {
-        local -r ASIC_I2C_PATH="${1}"
+	local -r ASIC_I2C_PATH="${1}"
 
-        if [ -f "$config_path/cpld_port" ]; then
-                local -r cpld=`cat $config_path/cpld_port`
-                if [ "$cpld" == "cpld1" ]; then
-			ln -sf ${ASIC_I2C_PATH}/cpld1_version $system_path/cpld3_version
-                fi
-                if [ "$cpld" == "cpld3" ]; then
-			ln -sf ${ASIC_I2C_PATH}/cpld3_version $system_path/cpld3_version
-                fi
-        fi
-
-        # Verify if CPLD attributes are exist
-        [ -f "$config_path/cpld_port" ] && cpld=`cat $config_path/cpld_port`
-        if [ "$cpld" == "cpld1" ]; then
-                if [ -f ${QSFP_I2C_PATH}/cpld1_version ]; then
-                        ln -sf ${QSFP_I2C_PATH}/cpld1_version $system_path/cpld3_version
-                fi
-        fi
-        if [ "$cpld" == "cpld3" ]; then
-                if [ -f ${QSFP_I2C_PATH}/cpld3_version ]; then
-                        ln -sf ${QSFP_I2C_PATH}/cpld3_version $system_path/cpld3_version
-                fi
-        fi
+	# Verify if CPLD attributes are exist
+	if [ -f "$config_path/cpld_port" ]; then
+		local  cpld=$(< $config_path/cpld_port)
+		if [ "$cpld" == "cpld1" ]; then
+			ln -sf "${ASIC_I2C_PATH}"/cpld1_version $system_path/cpld3_version
+		fi
+		if [ "$cpld" == "cpld3" ]; then
+			ln -sf "${ASIC_I2C_PATH}"/cpld3_version $system_path/cpld3_version
+		fi
+	fi
 }
 
 function asic_cpld_remove_handler()
