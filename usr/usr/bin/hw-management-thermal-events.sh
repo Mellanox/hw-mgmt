@@ -489,7 +489,8 @@ if [ "$1" == "add" ]; then
 		esac
 		find "$5""$3" -iname 'temp1_*' -exec sh -c 'ln -sf $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
 	fi
-	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
+	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
+	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# PSU unit FAN speed set
@@ -839,7 +840,8 @@ else
 	if [ "$2" == "sodimm_temp" ]; then
 		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
 	fi
-	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ]; then
+	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
+	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# PSU unit FAN speed set
