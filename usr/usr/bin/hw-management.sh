@@ -684,7 +684,7 @@ connect_msn4700_msn4600_A1()
 {
 	connect_table=(${msn4700_msn4600_A1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
-	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 }
 
 msn47xx_specific()
