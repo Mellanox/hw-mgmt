@@ -231,10 +231,15 @@ if [ "$1" == "add" ]; then
 			if [ -f $3$4/emul_temp ]; then
 				ln -sf $3$4/emul_temp $thermal_path/$zonetype/thermal_zone_temp_emul
 			fi
-		fi
-		# Create entry with hardcoded value for compatibility with user space.
-		if [ "$zoneptype" == "mlxsw" ] || [ "$zoneptype" == "mlxsw-gearbox" ]; then
-			echo 120000 > $tpath/"$zonetype"/temp_trip_crit
+			# Create entry with hardcoded value for compatibility with user space.
+			if [ "$zonetype" == "mlxsw" ] ||
+			   [ "$zonep0type" == "mlxsw-gearbox" ] ||
+			   [ "$zonep1type" == "mlxsw-gearbox" ] ||
+			   [ "$zonep2type" == "mlxsw-gearbox" ]; then
+				if [ ! -f $thermal_path/"$zonetype"/temp_trip_crit ]; then
+					echo 120000 > $thermal_path/"$zonetype"/temp_trip_crit
+				fi
+			fi
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
