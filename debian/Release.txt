@@ -1,4 +1,17 @@
-  ================================================================================
+================================================================================
+- V.7.0010.2302
+-Wed, 24 Mar 2021
+--------------------------------------------------------------------------------
+- Bug fixes
+    o	hw-mgmt: thermal: Add hardcoded critical trip point.
+	Follow-up after patch "Removing critical thermal zones to prevent unexpected software system shutdown".
+
+    o   Fix sensor attribute mapping to be label based instead of index based to allow common handling of
+	voltage regulator names independently of hardware changes.
+
+    o  	Update 'lm-sensors' custom configuation file.
+	Relevant only for users utilizing sensors.conf files coming along with hw-management package.
+================================================================================
 - V.7.0010.2300
 - Sun, 21 March 2021
 --------------------------------------------------------------------------------
