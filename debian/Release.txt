@@ -1,4 +1,17 @@
 ================================================================================
+- V.7.0010.1002
+-Wed, 24 Mar 2021
+--------------------------------------------------------------------------------
+- Bug fixes
+    o   Removing critical thermal zones to prevent unexpected software system shutdown:
+	*Kernel 4.9  -0071-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch
+	*Kernel 4.19 -076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch
+	hw-mgmt: thermal: Add hardcoded critical trip point
+
+    o   Removing redundant link for cpld3 for fixed systems (SN2100, SN2010).
+
+    o   Fix an issue with missed attribute for cpld3 (port CPLD) for SN2700, SN2410.
+================================================================================
 - V.7.0010.1000
 - Sun, 31 May 2020
 --------------------------------------------------------------------------------
