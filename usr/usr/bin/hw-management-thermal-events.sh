@@ -232,6 +232,10 @@ if [ "$1" == "add" ]; then
 				ln -sf $3$4/emul_temp $thermal_path/$zonetype/thermal_zone_temp_emul
 			fi
 		fi
+		# Create entry with hardcoded value for compatibility with user space.
+		if [ "$zoneptype" == "mlxsw" ] || [ "$zoneptype" == "mlxsw-gearbox" ]; then
+			echo 120000 > $tpath/"$zonetype"/temp_trip_crit
+		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
 		coolingtype=`cat $3$4/type`
