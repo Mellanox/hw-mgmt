@@ -880,6 +880,9 @@ check_system()
 		VMOD0011)
 			msn48xx_specific
 			;;
+		VMOD0012)
+			mqm97xx_specific
+			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $product in
