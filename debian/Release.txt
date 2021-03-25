@@ -11,7 +11,7 @@
 
     o  	Update 'lm-sensors' custom configuation file.
 	Relevant only for users utilizing sensors.conf files coming along with hw-management package.
-	
+
 - Known issues and limitations:
     o This version disables system reset in thermal algorithm
     o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
@@ -40,7 +40,7 @@
         - No need to apply these patches when working with these kernel versions
           or above
     o   This version requires FW version 29.2000.1886 or higher for spectrum-2
-	and  13.2000.1886 or higher for spectrum-1.  
+	and  13.2000.1886 or higher for spectrum-1.
 ================================================================================
 ================================================================================
 - V.7.0010.2300
