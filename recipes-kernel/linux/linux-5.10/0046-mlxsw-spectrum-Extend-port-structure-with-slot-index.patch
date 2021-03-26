@@ -1,0 +1,66 @@
+From 9ab20933646305e1ddc091a580a52098c1f23a6d Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 18 Nov 2020 22:55:22 +0200
+Subject: [PATCH backport v5.10 46/52] mlxsw: spectrum: Extend port structure
+ with slot index field
+
+A number of registers have been extended with 'slot_index' field for
+line card support. The purpose of this field is to indicate the
+location of the port, so that it could be used when trying to read
+module info.
+
+For main board it'll always be zero, for line cards it'll be set to the
+physical slot number at which line card is located. For now the slot
+index is always 0.
+That is, ports are still not instantiated from line cards.
+
+Add 'slot_index' field to 'mlxsw_sp_port' structure. Use it for module
+info access.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/spectrum.h         | 1 +
+ drivers/net/ethernet/mellanox/mlxsw/spectrum_ethtool.c | 6 ++++--
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.h b/drivers/net/ethernet/mellanox/mlxsw/spectrum.h
+index 74b3959b36d4..c05eb03dfc2e 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.h
+@@ -274,6 +274,7 @@ struct mlxsw_sp_port {
+ 	struct net_device *dev;
+ 	struct mlxsw_sp_port_pcpu_stats __percpu *pcpu_stats;
+ 	struct mlxsw_sp *mlxsw_sp;
++	u8 slot_index;
+ 	u8 local_port;
+ 	u8 lagged:1,
+ 	   split:1;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum_ethtool.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum_ethtool.c
+index a3eba33985ed..41288144852d 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/spectrum_ethtool.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum_ethtool.c
+@@ -1032,7 +1032,8 @@ static int mlxsw_sp_get_module_info(struct net_device *netdev,
+ 	struct mlxsw_sp *mlxsw_sp = mlxsw_sp_port->mlxsw_sp;
+ 	int err;
+ 
+-	err = mlxsw_env_get_module_info(mlxsw_sp->core, 0,
++	err = mlxsw_env_get_module_info(mlxsw_sp->core,
++					mlxsw_sp_port->slot_index,
+ 					mlxsw_sp_port->mapping.module,
+ 					modinfo);
+ 
+@@ -1046,7 +1047,8 @@ static int mlxsw_sp_get_module_eeprom(struct net_device *netdev,
+ 	struct mlxsw_sp *mlxsw_sp = mlxsw_sp_port->mlxsw_sp;
+ 	int err;
+ 
+-	err = mlxsw_env_get_module_eeprom(netdev, mlxsw_sp->core, 0,
++	err = mlxsw_env_get_module_eeprom(netdev, mlxsw_sp->core,
++					  mlxsw_sp_port->slot_index,
+ 					  mlxsw_sp_port->mapping.module, ee,
+ 					  data);
+ 
+-- 
+2.11.0
+
