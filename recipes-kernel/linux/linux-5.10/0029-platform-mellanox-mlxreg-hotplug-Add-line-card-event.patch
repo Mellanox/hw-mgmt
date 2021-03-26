@@ -1,0 +1,152 @@
+From c6554187af9fbacb16092d5a0c173e50b6bde901 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 26 Mar 2021 15:06:45 +0300
+Subject: [PATCH backport v5.10 29/32] platform/mellanox: mlxreg-hotplug: Add
+ line card event callbacks support for modular system
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add event callback field to 'mlxreg_hotplug_device' structure. These
+callback functions are set by a probing routine of a driver, which is
+supposed to perform some action when particular event is received. The
+probing routine is also supposed to set the handle of the object
+associated with the events. For example power on/ready/shutdown events
+for the line card in slot #n.
+If callback function is set, it will be called by ‘mlxreg-hotplug’
+driver, when it receives signals related to line card state change.
+
+The next signals could be received  for line card in particular slot:
+- Line card was inserted or removed.
+- Line card passed security signature validation by hardware.
+- Line card has been powered on / off.
+- Line card passed hardware-firmware synchronization handshake.
+- Line card received ready event, indicating its PHYs ready / unready
+  states.
+- Line card received enable event indicating that line card’s FPGA and
+  PHYs have been enabled.
+- Line card received ready event indicating that ASIC firmware is ready
+  for handling network, hardware monitoring and thermal interfaces
+  associated with PHYs and ports found on this line card.
+- Line card thermal shutdown event indicating that line card has some
+  thermal issue and should be powered off.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c | 26 +++++++++++++++++---------
+ include/linux/platform_data/mlxreg.h       |  4 ++++
+ 2 files changed, 21 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index b0512e525964..096cfe5d4a6f 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -99,7 +99,8 @@ mlxreg_hotplug_pdata_export(void *pdata, void *regmap)
+ }
+ 
+ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+-					struct mlxreg_core_data *data)
++					struct mlxreg_core_data *data,
++					enum mlxreg_hotplug_kind kind)
+ {
+ 	struct i2c_board_info *brdinfo = data->hpdev.brdinfo;
+ 	struct mlxreg_core_hotplug_platform_data *pdata;
+@@ -162,12 +163,16 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 		break;
+ 	}
+ 
++	if (data->hpdev.user_handler)
++		return data->hpdev.user_handler(data->hpdev.handle, kind, 1);
++
+ 	return 0;
+ }
+ 
+ static void
+ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
+-			      struct mlxreg_core_data *data)
++			      struct mlxreg_core_data *data,
++			      enum mlxreg_hotplug_kind kind)
+ {
+ 	/* Notify user by sending hwmon uevent. */
+ 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, false);
+@@ -191,6 +196,9 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
+ 	default:
+ 		break;
+ 	}
++
++	if (data->hpdev.user_handler)
++		data->hpdev.user_handler(data->hpdev.handle, kind, 0);
+ }
+ 
+ static ssize_t mlxreg_hotplug_attr_show(struct device *dev,
+@@ -361,14 +369,14 @@ mlxreg_hotplug_work_helper(struct mlxreg_hotplug_priv_data *priv,
+ 		data = item->data + bit;
+ 		if (regval & BIT(bit)) {
+ 			if (item->inversed)
+-				mlxreg_hotplug_device_destroy(priv, data);
++				mlxreg_hotplug_device_destroy(priv, data, item->kind);
+ 			else
+-				mlxreg_hotplug_device_create(priv, data);
++				mlxreg_hotplug_device_create(priv, data, item->kind);
+ 		} else {
+ 			if (item->inversed)
+-				mlxreg_hotplug_device_create(priv, data);
++				mlxreg_hotplug_device_create(priv, data, item->kind);
+ 			else
+-				mlxreg_hotplug_device_destroy(priv, data);
++				mlxreg_hotplug_device_destroy(priv, data, item->kind);
+ 		}
+ 	}
+ 
+@@ -425,7 +433,7 @@ mlxreg_hotplug_health_work_helper(struct mlxreg_hotplug_priv_data *priv,
+ 				 * ASIC is in steady state. Connect associated
+ 				 * device, if configured.
+ 				 */
+-				mlxreg_hotplug_device_create(priv, data);
++				mlxreg_hotplug_device_create(priv, data, item->kind);
+ 				data->attached = true;
+ 			}
+ 		} else {
+@@ -435,7 +443,7 @@ mlxreg_hotplug_health_work_helper(struct mlxreg_hotplug_priv_data *priv,
+ 				 * in steady state. Disconnect associated
+ 				 * device, if it has been connected.
+ 				 */
+-				mlxreg_hotplug_device_destroy(priv, data);
++				mlxreg_hotplug_device_destroy(priv, data, item->kind);
+ 				data->attached = false;
+ 				data->health_cntr = 0;
+ 			}
+@@ -674,7 +682,7 @@ static void mlxreg_hotplug_unset_irq(struct mlxreg_hotplug_priv_data *priv)
+ 		/* Remove all the attached devices in group. */
+ 		count = item->count;
+ 		for (j = 0; j < count; j++, data++)
+-			mlxreg_hotplug_device_destroy(priv, data);
++			mlxreg_hotplug_device_destroy(priv, data, item->kind);
+ 	}
+ }
+ 
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index 6d24aa5823b3..4b4149256039 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -78,6 +78,8 @@ enum mlxreg_hotplug_device_action {
+  * @nr: I2C device adapter number, to which device is to be attached;
+  * @pdev: platform device, if device is instantiated as a platform device;
+  * @action: action to be performed upon event receiving;
++ * @handle: user handle to be passed by user handler function;
++ * @user_handler: user handler function associated with the event;
+  *
+  * Structure represents I2C hotplug device static data (board topology) and
+  * dynamic data (related kernel objects handles).
+@@ -89,6 +91,8 @@ struct mlxreg_hotplug_device {
+ 	int nr;
+ 	struct platform_device *pdev;
+ 	enum mlxreg_hotplug_device_action action;
++	void *handle;
++	int (*user_handler)(void *handle, enum mlxreg_hotplug_kind kind, u8 action);
+ };
+ 
+ /**
+-- 
+2.11.0
+
