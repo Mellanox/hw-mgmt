@@ -57,10 +57,10 @@ handle_cpld_versions()
 	fi
 
 	for ((i=1; i<=cpld_num_loc; i+=1)); do
-		if [ -L $system_path/cpld"$i"_version ]; then
+		if [ -L $system_path/cpld"$i"_pn ]; then
 			cpld_pn=$(cat $system_path/cpld"$i"_pn)
 		fi
-		if [ -L $system_path/cpld"$i"_pn ]; then
+		if [ -L $system_path/cpld"$i"_version ]; then
 			cpld_ver=$(cat $system_path/cpld"$i"_version)
 		fi
 		if [ -L $system_path/cpld"$i"_version_min ]; then
@@ -97,7 +97,7 @@ case $board in
 		;;
 esac
 
-timeout 3 bash -c 'until [  -L $system_path/cpld1_version ]; do sleep 1; done'
+timeout 6 bash -c 'until [  -L $system_path/cpld1_version ]; do sleep 1; done'
 handle_cpld_versions $cpld_num
 # Do not set for fixed fans systems. For fixed fans systems fan_drwr_num set in system specific init function.
 if [ ! -f $config_path/fixed_fans_system ]; then
