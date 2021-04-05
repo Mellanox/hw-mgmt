@@ -959,6 +959,7 @@ find_i2c_bus()
 			name=$(cut $folder/name -d' ' -f 1)
 			if [ "$name" == "i2c-mlxcpld" ]; then
 				i2c_bus_offset=$((i-1))
+				echo $i2c_bus_offset > $config_path/i2c_bus_offset
 				return
 			fi
 		fi
@@ -1055,6 +1056,7 @@ set_config_data()
 
 connect_platform()
 {
+	find_i2c_bus
 	for ((i=0; i<${#connect_table[@]}; i+=3)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
@@ -1063,6 +1065,9 @@ connect_platform()
 
 disconnect_platform()
 {
+	if [ -f $config_path/i2c_bus_offset ]; then
+		i2c_bus_offset=$(<$config_path/i2c_bus_offset)
+	fi
 	for ((i=0; i<${#connect_table[@]}; i+=3)); do
 		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 	done
