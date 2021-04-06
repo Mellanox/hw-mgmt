@@ -14,7 +14,7 @@ Supported systems:
 - MQMB7800
 - MSN3700
 - MSN3800
-
+-----------
 # Introduction:
 Mellanox thermal monitoring is an open source package for better thermal
 performance and fan efficiently in Mellanox Spectrum managed products.
