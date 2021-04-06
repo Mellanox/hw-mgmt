@@ -45,21 +45,21 @@ if echo "$0" | grep -q "/pwr_consum" ; then
 		echo 0 > $system_path/select_iio
 	fi
 
-	iioreg=`cat $environment_path/a2d_iio\:device1_raw_1`
-	echo $(($iioreg * 80 * 12))
+	iioreg=$(< $environment_path/a2d_iio\:device1_raw_1)
+	echo $((iioreg * 80 * 12))
 	exit 0
 fi
 
 if echo "$0" | grep -q "/pwr_sys" ; then
 	if [ "$1" == "psu1" ]; then
-		iioreg_vin=`cat $environment_path/a2d_iio\:device0_raw_1`
-		iioreg_iin=`cat $environment_path/a2d_iio\:device0_raw_6`
+		iioreg_vin=$($environment_path/a2d_iio\:device0_raw_1)
+		iioreg_iin=$($environment_path/a2d_iio\:device0_raw_6)
 	elif [ "$1" == "psu2" ]; then
-		iioreg_vin=`cat $environment_path/a2d_iio\:device0_raw_2`
-		iioreg_iin=`cat $environment_path/a2d_iio\:device0_raw_7`
+		iioreg_vin=$($environment_path/a2d_iio\:device0_raw_2)
+		iioreg_iin=$($environment_path/a2d_iio\:device0_raw_7)
 	fi
 
-	echo $(($iioreg_vin * $iioreg_iin * 59 * 80))
+	echo $((iioreg_vin * iioreg_iin * 59 * 80))
 	exit 0
 fi
 

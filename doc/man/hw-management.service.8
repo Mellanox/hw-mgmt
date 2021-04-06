@@ -1,0 +1,15 @@
+.TH HW-MANAGEMENT "8" "June 2020" "hw-management " "hw-management"
+.SH NAME
+hw-management.service \- service used to run hw-management.sh
+.SH SYNOPSIS
+Chassis management for Mellanox systems.
+Mellanox hw-management package uses a virtual file system provided by the Linux kernel
+called sysfs.
+The sysfs file system enumerates the devices and buses attached to the system in a file
+system hierarchy that can be accessed from the user space.
+The major advantage of working with sysfs is that it makes HW hierarchy easy to understand
+and control without having to learn about HW component location and the buses through
+which they are connected.
+.SH SEE ALSO
+\fBhw-management\fR(1)
+\fBhw-management-tc.service\fR(8)

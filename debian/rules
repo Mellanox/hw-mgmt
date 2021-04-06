@@ -20,6 +20,21 @@ override_dh_auto_install:
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
 	dh_installdirs -p$(pname) lib/udev/rules.d/
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
+	dh_installdirs -p$(pname) etc/hw-management-sensors
+	cp usr/etc/hw-management-sensors/* debian/$(pname)/etc/hw-management-sensors
 
 override_dh_installinit:
-	dh_installinit
+	dh_installinit --name=hw-management
+	dh_installinit --name=hw-management-tc
+
+override_dh_systemd_enable:
+	dh_systemd_enable --name=hw-management
+
+override_dh_systemd_start:
+	dh_systemd_start --name=hw-management
+	dh_systemd_start --name=hw-management-tc
+
+override_dh_strip_nondeterminism:
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info

@@ -1,0 +1,85 @@
+From ade7060f241fea47bcf739f26ea51fa64f043bb5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 10 Jan 2021 16:22:05 +0200
+Subject: [PATCH 5.10-rc7/backport 12/13] mlxsw: core: thermal: Skip thermal
+ zones setting for modules during probing
+
+Skip thermal zones setting for modules during probing to reduce probing
+time, which is critical for thermal control working over I2C bus.
+Setting will be perform during the first thermal zone operations.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 38d53b498d51..e2a6feaa5009 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -115,6 +115,7 @@ struct mlxsw_thermal {
+ 	u8 tz_gearbox_num;
+ 	unsigned int tz_highest_score;
+ 	struct thermal_zone_device *tz_highest_dev;
++	bool initializing; /* Driver is in initialization stage */
+ };
+ 
+ static inline u8 mlxsw_state_to_duty(int state)
+@@ -287,6 +288,12 @@ static int mlxsw_thermal_get_temp(struct thermal_zone_device *tzdev,
+ 	int temp;
+ 	int err;
+ 
++	/* Do not read temperature in initialization stage. */
++	if (thermal->initializing) {
++		*p_temp = 0;
++		return 0;
++	}
++
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, 0, false, false);
+ 
+ 	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mtmp), mtmp_pl);
+@@ -448,6 +455,12 @@ static int mlxsw_thermal_module_temp_get(struct thermal_zone_device *tzdev,
+ 	int temp;
+ 	int err;
+ 
++	/* Do not read temperature in initialization stage. */
++	if (thermal->initializing) {
++		*p_temp = 0;
++		return 0;
++	}
++
+ 	/* Read module temperature. */
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, MLXSW_REG_MTMP_MODULE_INDEX_MIN +
+ 			    tz->module, false, false);
+@@ -572,6 +585,12 @@ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
+ 	int temp;
+ 	int err;
+ 
++	/* Do not read temperature in initialization stage. */
++	if (thermal->initializing) {
++		*p_temp = 0;
++		return 0;
++	}
++
+ 	index = MLXSW_REG_MTMP_GBOX_INDEX_MIN + tz->module;
+ 	mlxsw_reg_mtmp_pack(mtmp_pl, index, false, false);
+ 
+@@ -937,6 +956,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+ 	thermal->core = core;
+ 	thermal->bus_info = bus_info;
+ 	memcpy(thermal->trips, default_thermal_trips, sizeof(thermal->trips));
++	thermal->initializing = true;
+ 
+ 	err = mlxsw_reg_query(thermal->core, MLXSW_REG(mfcr), mfcr_pl);
+ 	if (err) {
+@@ -1015,6 +1035,7 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+ 	if (err)
+ 		goto err_unreg_gearboxes;
+ 
++	thermal->initializing = false;
+ 	*p_thermal = thermal;
+ 	return 0;
+ 
+-- 
+2.11.0
+
