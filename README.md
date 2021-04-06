@@ -5,6 +5,7 @@ switches.
 
 Supported systems:
 
+------
 - MSN2740
 - MSN2100
 - MSN2410
