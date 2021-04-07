@@ -5,7 +5,7 @@ The major advantage of working with sysfs is that it makes HW hierarchy easy to 
 For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
 
 ##### Table of Contents  
-
+-
 - [Supported systems](#supported_systems)
 - [Supported Kernel versions](#supported-kernel-versions)
 - [Sysfs attributes](#sysfs-attributes)
