@@ -15,7 +15,7 @@ Kernel-4.9
 |0068-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch         |                                            |  pending                                        | Target 5.14                                                  |
 |0069-mlxsw-core-Add-validation-of-transceiver-temperature.patch         | 57726ebe2733891c9f59105eff028735f73d05fb   |  accepted                                       |                                                              |
 |0070-platform-mellanox-Add-dedicated-match-for-system-typ.patch         | Not relevant                               |  downstream                                     | WA for system type QMB8700 (not needed for Sonic)            |
-|0071-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  pending                                        | Target 5.13                                                  |
+|0071-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  applied to net-next - see note 1               | Target 5.13                                                  |
 |                                                                        |                                            |                                                 |                                                              |
 |                                                                        |                                            |                                                 |                                                              |
 |                                                                        |                                            |                                                 |                                                              |
@@ -71,9 +71,12 @@ Kernel-4.19
 |0073-mlxsw-core_hwmon-Add-line-card-support.patch                       |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0074-mlxsw-minimal-Add-support-line-card-ready-unready-ev.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0075-platform-x86-mlx-platform-Extend-register-space-with.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
-|0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  pending                                        |  Target 5.13                                                 |
+|0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  applied to net-next - see note 1               |  Target 5.13                                                 |
 |0077-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Accepted for next kerenl release:
+Note 1: https://git.kernel.org/pub/scm/linux/kernel/git/netdev/net-next.git/commit/?id=d567fd6e82fa
  
 © 2021 GitHub, Inc.
