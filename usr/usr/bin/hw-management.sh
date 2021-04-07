@@ -1,4 +1,4 @@
-#!/bin/bash
+#111!/bin/bash
 ########################################################################
 # Copyright (c) 2018 Mellanox Technologies. All rights reserved.
 #
