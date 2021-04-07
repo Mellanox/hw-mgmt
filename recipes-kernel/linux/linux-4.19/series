@@ -72,3 +72,5 @@
 0074-mlxsw-minimal-Add-support-line-card-ready-unready-ev.patch
 0075-platform-x86-mlx-platform-Extend-register-space-with.patch
 0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch
+0077-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch
+0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch
