@@ -46,7 +46,7 @@ dump_cmd () {
 
 	if [ -x "$(command -v $cmd_name)" ];
 	then
-		eval $cmd > $DUMP_FOLDER/$output_fname
+		eval "$cmd" &> $DUMP_FOLDER/"$output_fname"
 	fi
 }
 
@@ -56,7 +56,7 @@ mkdir $DUMP_FOLDER
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
-    find -L $HW_MGMT_FOLDER -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val  2> /dev/null
+    find -L $HW_MGMT_FOLDER -maxdepth 4 -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val  2> /dev/null
 fi
 
 if [ -z $MODE ] || [ $MODE != "compact" ]; then
@@ -89,6 +89,7 @@ dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top"
 dump_cmd "lshw" "lshw"
 dump_cmd "sensors" "sensors"
 dump_cmd "iio_info" "iio_info"
+dump_cmd "for i in {0..17} ; do i2cdetect -y $i 2>/dev/null; done" "i2c_scan"
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
