@@ -438,7 +438,7 @@ set_jtag_gpio()
 
 get_fixed_fans_direction()
 {
-	sanity_offset=$(strings --radix=d $eeprom_path/vpd_info | grep MLNX | awk '{print $1}')
+	sanity_offset=$(grep MLNX $eeprom_path/vpd_info -b -a -o | cut -f1 -d:)
 	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
 	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
 	case $fan_direction in
