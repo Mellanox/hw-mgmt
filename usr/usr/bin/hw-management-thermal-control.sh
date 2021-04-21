@@ -398,6 +398,7 @@ report_counter=120
 fan_max_state=10
 fan_dynamic_min=12
 fan_dynamic_min_last=12
+temperature_ambient_last=0
 untrusted_sensor=0
 p2c_dir=0
 c2p_dir=0
@@ -838,6 +839,7 @@ set_pwm_min_threshold()
 	else
 		ambient=$(< $temp_fan_amb)
 	fi
+	temperature_ambient_last=$ambient
 
 	# Set FAN minimum speed according to FAN direction, cable type and
 	# presence of untrusted cabels.
@@ -1293,6 +1295,8 @@ do
 	# Update cooling levels of FAN If dynamic minimum has been changed
 	# since the last time.
 	if [ "$fan_dynamic_min" -ne "$fan_dynamic_min_last" ]; then
+		log_info "fan_dynamic_min changed $fan_dynamic_min_last => $fan_dynamic_min"
+		log_info "due to temp change to $temperature_ambient_last"
 		echo "$fan_dynamic_min" > $cooling_cur_state
 		echo $set_cur_state > $cooling_cur_state
 		fan_from=$((fan_dynamic_min_last-fan_max_state))
