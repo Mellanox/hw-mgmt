@@ -188,6 +188,13 @@ mqm8700_base_connect_table=(	max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
+mqm8700_rev1_base_connect_table=(    max11603 0x64 5 \
+			mp2975 0x62 5 \
+			mp2975 0x66 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8)
+
 msn3420_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
@@ -782,8 +789,32 @@ mqm97xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 }
 
+mqm87xx_rev1_specific()
+{
+	connect_table=(${mqm8700_rev1_base_connect_table[@]})
+	add_cpu_board_to_connection_table
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	get_i2c_bus_frequency_default
+}
+
 msn_spc2_common()
 {
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+	else 
+		sys_ver=0
+	fi
+
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI120)
@@ -792,6 +823,16 @@ msn_spc2_common()
 		HI121)
 			msn3510_specific
 			;;
+		HI100)
+    		case $sys_ver in
+                2)
+                    mqm87xx_rev1_specific
+                ;;
+                *)
+                    mqmxxx_msn37x_msn34x_specific
+                ;;
+            esac
+            ;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
 			;;
@@ -918,6 +959,9 @@ check_system()
 					;;
 				MQM97*)
 					mqm97xx_specific
+					;;
+				MQM87*)
+					mqm87xx_specific
 					;;
 				*)
 					# Check marginal system, system without SMBIOS customization,
