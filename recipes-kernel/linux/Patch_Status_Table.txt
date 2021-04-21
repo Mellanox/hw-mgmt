@@ -73,6 +73,7 @@ Kernel-4.19
 |0074-mlxsw-minimal-Add-support-line-card-ready-unready-ev.patch         |                                            |  pending                                        |                                                              |
 |0075-platform-x86-mlx-platform-Extend-register-space-with.patch         |                                            |  pending                                        |                                                              |
 |0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  pending                                        |                                                              |
+|0077-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch         |                                            |  pending                                        |                                                              |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  
 © 2021 GitHub, Inc.
