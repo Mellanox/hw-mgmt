@@ -70,7 +70,7 @@ Detailed information about all available nodes can be found in the documentation
 
 ## Kernel configuration
 At a minimum, the following configuration options should be set:
-```
+``` 
 CONFIG_NET_VENDOR_MELLANOX=y
 CONFIG_MELLANOX_PLATFORM=y
 CONFIG_NET_DEVLINK=y
@@ -99,6 +99,7 @@ CONFIG_MLX_PLATFORM=m
 CONFIG_MLXREG_HOTPLUG=m
 CONFIG_MLXREG_IO=m
 CONFIG_MLX_WDT=m
+CONFIG_THERMAL_STATISTICS=n 
 CONFIG_THERMAL=y
 CONFIG_THERMAL_HWMON=y
 CONFIG_THERMAL_WRITABLE_TRIPS=y
