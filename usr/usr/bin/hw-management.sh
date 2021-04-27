@@ -1,5 +1,5 @@
 #!/bin/bash
-########################################################################
+########################################################################№
 # Copyright (c) 2018 Mellanox Technologies. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
