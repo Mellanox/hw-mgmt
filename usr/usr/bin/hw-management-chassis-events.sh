@@ -511,7 +511,7 @@ if [ "$1" == "add" ]; then
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
 		ln -sf "$3""$4"/brightness $led_path/led_"$name"_"$color"
-		echo timer > "$3""$4"/trigger
+		ln -sf "$3""$4"/trigger  $led_path/led_"$name"_"$color"_trigger
 		ln -sf "$3""$4"/delay_on  $led_path/led_"$name"_"$color"_delay_on
 		ln -sf "$3""$4"/delay_off $led_path/led_"$name"_"$color"_delay_off
 		ln -sf $LED_STATE $led_path/led_"$name"_state
