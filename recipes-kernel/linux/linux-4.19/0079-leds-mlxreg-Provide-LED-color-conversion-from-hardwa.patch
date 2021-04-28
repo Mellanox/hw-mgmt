@@ -1,0 +1,51 @@
+From 4f65a4ec35713095e365fa98114a0bf7d810c793 Mon Sep 17 00:00:00 2001
+From: Mykola Kostenok <c_mykolak@nvidia.com>
+Date: Thu, 29 Apr 2021 13:39:56 +0300
+Subject: [PATCH] leds: mlxreg: Provide LED color conversion from hardware to
+ software mask
+
+LED color at initial state is set by hardware.
+The difference between hardware mask and software mask as following:
+HW mask | MLXREG_LED_HW_CONTROL == SW mask.
+
+Hardware controls LED color until first write access to any LED register.
+In case register is set with hardware, convert the value to the software
+ mask to expose correct color to "sysfs".
+
+Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/leds/leds-mlxreg.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 53130a8..931c13b 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
+@@ -23,6 +23,7 @@
+ #define MLXREG_LED_BLINK_3HZ		167 /* ~167 msec off/on - HW support */
+ #define MLXREG_LED_BLINK_6HZ		83 /* ~83 msec off/on - HW support */
+ #define MLXREG_LED_CAPABILITY_CLEAR	GENMASK(31, 8) /* Clear mask */
++#define MLXREG_LED_HW_CONTROL		BIT(2)
+ 
+ /**
+  * struct mlxreg_led_data - led control data:
+@@ -124,6 +125,15 @@ mlxreg_led_get_hw(struct mlxreg_led_data *led_data)
+ 	regval = regval & ~data->mask;
+ 	regval = (ror32(data->mask, data->bit) == 0xf0) ? ror32(regval,
+ 		 data->bit) : ror32(regval, data->bit + 4);
++
++	/*
++	 * LED color at initial state is set by hardware. The difference between hardware mask and
++	 * software mask as following: HW mask | MLXREG_LED_HW_CONTROL == SW mask. Hardware
++	 * controls LED color until first write access to any LED register. In case register is set
++	 * with hardware, convert the value to the software mask to expose correct color.
++	 */
++	if (regval == (regval & ~MLXREG_LED_HW_CONTROL))
++		regval |= MLXREG_LED_HW_CONTROL;
+ 	if (regval >= led_data->base_color &&
+ 	    regval <= (led_data->base_color + MLXREG_LED_OFFSET_BLINK_6HZ))
+ 		return LED_FULL;
+-- 
+2.8.4
+
