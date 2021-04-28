@@ -46,7 +46,7 @@ dump_cmd () {
 
 	if [ -x "$(command -v $cmd_name)" ];
 	then
-		eval "$cmd" &> $DUMP_FOLDER/"$output_fname"
+		eval '$cmd' '&>' '$DUMP_FOLDER/$output_fname'
 	fi
 }
 
