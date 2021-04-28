@@ -74,3 +74,4 @@
 0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch
 0077-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch
 0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch
+0079-leds-mlxreg-Provide-LED-color-conversion-from-hardwa.patch
