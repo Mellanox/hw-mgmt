@@ -46,6 +46,7 @@ dump_cmd () {
 
 	if [ -x "$(command -v $cmd_name)" ];
 	then
+		# ignore shellcheck message SC2016. Arguments should be single-quoted (')
 		eval '$cmd' '&>' '$DUMP_FOLDER/$output_fname'
 	fi
 }
