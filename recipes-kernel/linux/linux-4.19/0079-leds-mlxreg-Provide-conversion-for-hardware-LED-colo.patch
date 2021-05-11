@@ -1,27 +1,26 @@
-From 48ac043925189ba2fece91d680dce0464c6ec237 Mon Sep 17 00:00:00 2001
+From e5565dcc3fc7df1c2c3b5498ab895a3291fdfa82 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Wed, 5 May 2021 13:02:03 +0300
-Subject: [PATCH led-next 1/1] leds: mlxreg: Provide LED color conversion from
- hardware to software mask
+Date: Tue, 11 May 2021 08:12:49 +0300
+Subject: [PATCH] leds: mlxreg: Provide conversion for hardware LED color code
 
-In case register is set by hardware, convert the value to the software
-mask to expose correct color to "sysfs".
+In case register is set by hardware, convert hardware color code to
+expose correct color to "sysfs".
 For some LED color at initial state is set by hardware. Hardware
 controls LED color until the first software write access to any LED
-register - first software access cancels hardware control.
-If LED is under hardware control - convert the value to the software
-mask to expose correct color.
+register - the first software access cancels hardware control.
+If LED is under hardware control - detect the color in brightness_get()
+function.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/leds/leds-mlxreg.c | 28 +++++++++++++++++++++++-----
- 1 file changed, 23 insertions(+), 5 deletions(-)
+ drivers/leds/leds-mlxreg.c | 27 ++++++++++++++++++++++-----
+ 1 file changed, 22 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
-index afc9070485da..d442e97513c5 100644
+index 53130a8..a472c16 100644
 --- a/drivers/leds/leds-mlxreg.c
 +++ b/drivers/leds/leds-mlxreg.c
-@@ -17,12 +17,15 @@
+@@ -17,7 +17,9 @@
  #define MLXREG_LED_OFFSET_BLINK_3HZ	0x01 /* Offset from solid: 3Hz blink */
  #define MLXREG_LED_OFFSET_BLINK_6HZ	0x02 /* Offset from solid: 6Hz blink */
  #define MLXREG_LED_IS_OFF		0x00 /* Off */
@@ -32,13 +31,7 @@ index afc9070485da..d442e97513c5 100644
  #define MLXREG_LED_GREEN_SOLID		0x0D /* Solid green */
  #define MLXREG_LED_AMBER_SOLID		0x09 /* Solid amber */
  #define MLXREG_LED_BLINK_3HZ		167 /* ~167 msec off/on - HW support */
- #define MLXREG_LED_BLINK_6HZ		83 /* ~83 msec off/on - HW support */
- #define MLXREG_LED_CAPABILITY_CLEAR	GENMASK(31, 8) /* Clear mask */
-+#define MLXREG_LED_HW_CONTROL		BIT(2)
- 
- /**
-  * struct mlxreg_led_data - led control data:
-@@ -30,6 +33,7 @@
+@@ -30,6 +32,7 @@
   * @data: led configuration data;
   * @led_classdev: led class data;
   * @base_color: base led color (other colors have constant offset from base);
@@ -46,7 +39,7 @@ index afc9070485da..d442e97513c5 100644
   * @led_data: led data;
   * @data_parent: pointer to private device control data of parent;
   */
-@@ -37,6 +41,7 @@ struct mlxreg_led_data {
+@@ -37,6 +40,7 @@ struct mlxreg_led_data {
  	struct mlxreg_core_data *data;
  	struct led_classdev led_cdev;
  	u8 base_color;
@@ -54,7 +47,7 @@ index afc9070485da..d442e97513c5 100644
  	void *data_parent;
  	char led_cdev_name[MLXREG_CORE_LABEL_MAX_SIZE];
  };
-@@ -124,8 +129,17 @@ mlxreg_led_get_hw(struct mlxreg_led_data *led_data)
+@@ -124,8 +128,17 @@ mlxreg_led_get_hw(struct mlxreg_led_data *led_data)
  	regval = regval & ~data->mask;
  	regval = (ror32(data->mask, data->bit) == 0xf0) ? ror32(regval,
  		 data->bit) : ror32(regval, data->bit + 4);
@@ -74,7 +67,7 @@ index afc9070485da..d442e97513c5 100644
  		return LED_FULL;
  
  	return LED_OFF;
-@@ -217,16 +231,20 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+@@ -217,16 +230,20 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
  
  		led_cdev = &led_data->led_cdev;
  		led_data->data_parent = priv;
@@ -95,8 +88,8 @@ index afc9070485da..d442e97513c5 100644
  			led_data->base_color = MLXREG_LED_GREEN_SOLID;
 +			led_data->base_color_hw = MLXREG_LED_GREEN_SOLID_HW;
  		}
- 
- 		/*
+ 		if (priv->pdev->id > 0)
+ 			sprintf(led_data->led_cdev_name, "%s%d:%s", "mlxreg",
 -- 
-2.11.0
+2.8.4
 
