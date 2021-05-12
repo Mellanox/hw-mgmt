@@ -1054,9 +1054,9 @@ check_trip_min_vs_current_temp_per_type()
 	
 	for ((i=1; i<=dev_count; i+=1)); do
 		if [ -f $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp ]; then
-			trip_norm=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_norm)
+			trip_high=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_high)
 			temp_now=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp)
-			if [ "$temp_now" -gt 0 ] && [ "$trip_norm" -le  "$temp_now" ]; then
+			if [ "$temp_now" -gt 0 ] && [ "$trip_high" -le  "$temp_now" ]; then
 				return 1
 			fi
 		fi
@@ -1093,9 +1093,9 @@ check_trip_min_vs_current_temp()
 			fi
 		done
 	fi
-	trip_norm=$(< $temp_trip_norm)
+	trip_high=$(< $temp_trip_high)
 	temp_now=$(< $tz_temp)
-	if [ "$trip_norm" -gt  "$temp_now" ]; then
+	if [ "$trip_high" -gt  "$temp_now" ]; then
 		set_dynamic_min_pwm
 	fi
 }
