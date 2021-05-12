@@ -728,7 +728,7 @@ msn46xx_specific()
 	if [ $res -eq 0 ]; then
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
-			3)
+			1)
 				connect_msn4700_msn4600_A1
 			;;
 			*)
