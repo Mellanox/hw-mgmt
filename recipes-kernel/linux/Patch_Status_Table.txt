@@ -53,9 +53,9 @@ Kernel-4.19
 |0054-i2c-mux-mlxcpld-Extend-supported-mux-number.patch                  | 699c0506543ee9ba3f5a67ab0837b292b098aeb4   |  accepted                                       |  Modular SN4800                                              |
 |0055-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch         | a39bd92e92b96d05d676fb5c9493cf1c911d2a0a   |  accepted                                       |  Modular SN4800 (target 5.13)                                |
 |0056-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch         |                                            |  pending                                        |  Modular SN4800                                              |
-|0057-platform-x86-mlx-platform-remove-an-unused-variable.patch          | eca6ba20f38cfa2f148d7bd13db7ccd19e88635b   |  accepted                                       |  Bugfis                                                      |
-|0058-platform-x86-mlx-platform-Fix-item-counter-assignmen.patch         | ba4939f1dd46dde08c2f9b9d7ac86ed3ea7ead86   |  accepted                                       |  Bugfix                                                      |
-|0059-platform-x86-mlx-platform-Fix-item-counter-assignmen.patch         | cf791774a16caf87b0e4c0c55b82979bad0b6c01   |  accepted                                       |  Bugfix                                                      |
+|0057-platform-x86-mlx-platform-remove-an-unused-variable.patch          | eca6ba20f38cfa2f148d7bd13db7ccd19e88635b   |  accepted                                       |  Bugfis                                                             |
+|0058-platform-x86-mlx-platform-Fix-item-counter-assignmen.patch         | ba4939f1dd46dde08c2f9b9d7ac86ed3ea7ead86   |  accepted                                       |  Bugfix                                                             |
+|0059-platform-x86-mlx-platform-Fix-item-counter-assignmen.patch         | cf791774a16caf87b0e4c0c55b82979bad0b6c01   |  accepted                                       |  Bugfix                                                             |
 |0060-platform_data-mlxreg-Add-new-types-to-support-for-mo.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0061-platform-x86-mlx-platform-Add-initial-support-for-ne.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0062-platform-mellanox-mlxreg-hotplug-Extend-logic-for-ho.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
@@ -75,6 +75,8 @@ Kernel-4.19
 |0076-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  applied to net-next - see note 1               |  Target 5.13                                                 |
 |0077-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
+|0079-leds-mlxreg-Provide-LED-color-conversion-from-hardwa.patch         |                                            |  pending                                        |                                                                     |
+|0080-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch         |                                            |  pending                                        |  For MQM9700                                                     |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Accepted for next kerenl release:
