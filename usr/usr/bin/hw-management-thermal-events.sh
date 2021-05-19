@@ -298,6 +298,7 @@ if [ "$1" == "add" ]; then
 			tpath="$hw_management_path/thermal"
 		fi
 
+		zonename="$zonetype"
 		zoneptype=${zonetype//[0-9]/}
 		if [ "$zoneptype" == "mlxsw" ] ||
 		   [ "$zoneptype" == "mlxsw-module" ] ||
@@ -313,12 +314,9 @@ if [ "$1" == "add" ]; then
 				ln -sf "$3""$4"/emul_temp $tpath/"$zonetype"/thermal_zone_temp_emul
 			fi
 			# Create entry with hardcoded value for compatibility with user space.
-			if [ "$zonetype" == "mlxsw" ] ||
-			   [ "$zonep0type" == "mlxsw-gearbox" ] ||
-			   [ "$zonep1type" == "mlxsw-gearbox" ] ||
-			   [ "$zonep2type" == "mlxsw-gearbox" ]; then
+			if [ "$zoneptype" == "mlxsw" ] || [ "$zoneptype" == "mlxsw-gearbox" ]; then
 				if [ ! -f $thermal_path/"$zonetype"/temp_trip_crit ]; then
-					echo 120000 > $thermal_path/"$zonetype"/temp_trip_crit
+					echo 120000 > $thermal_path/"$zonename"/temp_trip_crit
 				fi
 			fi
 		fi
