@@ -85,6 +85,7 @@ tz_mode=$thermal_path/mlxsw/thermal_zone_mode
 tz_policy=$thermal_path/mlxsw/thermal_zone_policy
 tz_temp=$thermal_path/mlxsw/thermal_zone_temp
 temp_trip_norm=$thermal_path/mlxsw/temp_trip_norm
+temp_trip_high=$thermal_path/mlxsw/temp_trip_high
 cooling_cur_state=$thermal_path/cooling_cur_state
 wait_for_config=120
 
