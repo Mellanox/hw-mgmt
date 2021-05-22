@@ -230,9 +230,7 @@ find_linecard_match()
 		lc_num="${linecard_i2c_parent_bus_offset[$((i+1))]}"
 		lc_bus_num=$((lc_bus_offset+i2c_bus_offset))
 		if [ "$lc_bus_num" -eq "$input_bus_num" ]; then
-			if [ -d /dev/lc"$lc_num" ] && [ ! "$(ls -A /dev/lc$lc_num)" ]; then
-				create_linecard_i2c_links "$lc_num" "$input_bus_num"
-			fi
+			create_linecard_i2c_links "$lc_num" "$input_bus_num"
 			return
 		fi
 	done
@@ -701,7 +699,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Create line card i2c mux symbolic link infrastructure
 	if [ "$2" == "lc_topo" ]; then
-		create_linecard_i2c_links "$3" "$4"
+		log_info "I2C infrastucture for line card $3 is created."
 	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
