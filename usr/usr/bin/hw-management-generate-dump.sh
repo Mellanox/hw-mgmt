@@ -63,7 +63,6 @@ if [ -z $MODE ] || [ $MODE != "compact" ]; then
 	[ -f var/log/syslog ] && cp /var/log/syslog $DUMP_FOLDER
 	[ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
 	dump_cmd "journalctl" "journalctl"
-	dump_cmd "flint -d mlnxsw-255 -qq q" "flint"
 	dump_cmd "sx_sdk --version" "sx_sdk_ver"
 fi
 
