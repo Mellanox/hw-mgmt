@@ -194,26 +194,6 @@ find_i2c_bus()
 	exit 0
 }
 
-find_linecard_bus()
-{
-	#local lc_i2c_bus_from="$1"
-
-	# Find base i2c bus number of line card.
-	for ((i=lc_i2c_bus_min; i<lc_i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "mlxreg-lc" ]; then
-				linecard_bus_offset=$i
-				return
-			fi
-		fi
-	done
-
-	log_err "mlxreg-lc driver is not loaded"
-	exit 0
-}
-
 find_linecard_match()
 {
 	local input_bus_num
@@ -238,25 +218,36 @@ find_linecard_match()
 
 find_linecard_num()
 {
-	input_bus_num="$1"
-	find_linecard_bus "$input_bus_num"
-	max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
-	# Check line card bus range.
-	if [ "$input_bus_num" -le "$max_lc_bus_num" ] &&
-	   [ "$input_bus_num" -ge "$linecard_bus_offset" ]; then
-		linecard_num=$((input_bus_num-linecard_bus_offset+1))
-		# Check line card number in range.
-		if [ "$linecard_num" -le "$lc_max_num" ] &&
-		   [ "$linecard_num" -ge 1 ]; then
-			return
-		else
-			log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
-			exit 0
+	local input_bus_num="$1"
+	local lc_bus_offset
+	local lc_bus_num
+	local lc_num
+	local size
+
+	# Find base i2c bus number of line card.
+	folder=/sys/bus/i2c/devices/i2c-"$input_bus_num"/"$input_bus_num"-00"$mlxreg_lc_addr"
+	if [ -d $folder ]; then
+		name=$(cut $folder/name -d' ' -f 1)
+		if [ "$name" == "mlxreg-lc" ]; then
+			i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+			size=${#linecard_i2c_parent_bus_offset[@]}
+			for ((i=0; i<size; i+=2)); do
+				lc_bus_offset="${linecard_i2c_parent_bus_offset[i]}"
+				linecard_num="${linecard_i2c_parent_bus_offset[$((i+1))]}"
+				lc_bus_num=$((lc_bus_offset+i2c_bus_offset))
+				if [ "$lc_bus_num" -eq "$input_bus_num" ]; then
+					if [ "$linecard_num" -le "$lc_max_num" ] &&
+					   [ "$linecard_num" -ge 1 ]; then
+						return
+					else
+						log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
+						exit 0
+					fi
+				fi
+			done
 		fi
-	else
-		log_err "Line card bus number out of range. $input_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
-		exit 0
 	fi
+
 	log_err "mlxreg-lc driver is not loaded"
 	exit 0
 }
