@@ -268,6 +268,7 @@ msn4800_base_connect_table=( mp2975 0x62 6 \
 	max11603 0x64 6 \
 	24c32 0x51 8 \
 	tmp102 0x49 12 \
+	tmp421 0x48 14 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
@@ -886,6 +887,11 @@ msn48xx_specific()
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
+
+	# TMP - to be removed after BU
+	# Set fan to 40%
+	echo 14 > /var/run/hw-management/thermal/cooling_cur_state
+	echo 4 > /var/run/hw-management/thermal/cooling_cur_state
 }
 
 check_system()
