@@ -12,7 +12,7 @@ Removed
 - [Packaging](#packaging)
 - [Installation from local file and de-installation](#installation-from-local-file-and-de-installation)
 - [Activation, de-activation and reading status](#activation-de-activation-and-reading-status)
-
+  
 ## Supported systems:
 - MSN2740
 - MSN2100
