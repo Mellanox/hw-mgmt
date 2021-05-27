@@ -882,7 +882,7 @@ set_pwm_min_threshold()
     # Temperature diff between current temperature and last dmin_change
     temperature_diff=$((ambient-temperature_ambient_tresh_cross))
 
-    # check if fan_dynamic_min was changed
+    # Check if fan_dynamic_min was changed
     if [ ! "$fan_dynamic_min_curr" -eq "$fan_dynamic_min" ];
     then
         # Check if temperature change is more then hysteresis
