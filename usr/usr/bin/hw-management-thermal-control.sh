@@ -103,6 +103,8 @@ max_amb=120000
 module_counter=0
 gearbox_counter=0
 lc_counter=0
+temp_grow_hyst=0
+temp_fall_hyst=2000
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
@@ -822,87 +824,78 @@ get_fan_direction()
 	fi
 }
 
+copy_treshold_vector()
+{
+    array=("$@")
+    size=${#array[@]}
+    for ((i=0; i<size; i++)); do
+        treshold_vector[i]=${array[i]}
+    done
+}
+
+config_treshold_vector()
+{
+    untrusted_sensor=0
+    # Check for untrusted modules
+    check_untrusted_sensors
+
+    if [ "$untrusted_sensor" -eq 0 ]; then
+        if [ "$p2c_dir" -eq 1 ]; then
+            copy_treshold_vector "${p2c_dir_trust[@]}"
+        elif [ "$c2p_dir" -eq 1 ]; then
+            copy_treshold_vector "${c2p_dir_trust[@]}"
+        else
+            copy_treshold_vector "${unk_dir_trust[@]}"
+        fi
+    else
+        if [ "$p2c_dir" -eq 1 ]; then
+            copy_treshold_vector "${p2c_dir_untrust[@]}"
+        elif [ "$c2p_dir" -eq 1 ]; then
+            copy_treshold_vector "${c2p_dir_untrust[@]}"
+        else
+            copy_treshold_vector "${unk_dir_untrust[@]}"
+        fi
+    fi
+}
+
 set_pwm_min_threshold()
 {
-	untrusted_sensor=0
-	ambient=0
+    if [ "$p2c_dir" -eq 1 ]; then
+        ambient=$(< $temp_port_amb)
+    elif [ "$c2p_dir" -eq 1 ]; then
+        ambient=$(< $temp_fan_amb)
+    else
+        ambient=$(< $temp_fan_amb)
+    fi
 
-	# Check for untrusted modules
-	check_untrusted_sensors
+    config_treshold_vector
+    size=${#treshold_vector[@]}
+    for ((i=0; i<size; i+=2)); do
+        tresh=${treshold_vector[i]}
+        if [ "$ambient" -lt "$tresh" ]; then
+            fan_dynamic_min_curr=${treshold_vector[$((i+1))]}
+            tresh_next=$tresh
+            break
+        fi
+        tresh_prev=$tresh
+    done
 
-	# Get fan direction.
-	get_fan_direction
+    # Temperature diff between current temperature and last dmin_change
+    temperature_diff=$((ambient-temperature_ambient_tresh_cross))
 
-	if [ "$p2c_dir" -eq 1 ]; then
-		ambient=$(< $temp_port_amb)
-	elif [ "$c2p_dir" -eq 1 ]; then
-		ambient=$(< $temp_fan_amb)
-	else
-		ambient=$(< $temp_fan_amb)
-	fi
-	temperature_ambient_last=$ambient
-
-	# Set FAN minimum speed according to FAN direction, cable type and
-	# presence of untrusted cabels.
-	if [ "$untrusted_sensor" -eq 0 ]; then
-		if [ "$p2c_dir" -eq 1 ]; then
-			size=${#p2c_dir_trust[@]}
-			for ((i=0; i<size; i+=2)); do
-				tresh=${p2c_dir_trust[i]}
-				if [ "$ambient" -lt "$tresh" ]; then
-					fan_dynamic_min=${p2c_dir_trust[$((i+1))]}
-					break
-				fi
-			done
-		elif [ "$c2p_dir" -eq 1 ]; then
-			size=${#c2p_dir_trust[@]}
-			for ((i=0; i<size; i+=2)); do
-				tresh=${c2p_dir_trust[i]}
-				if [ "$ambient" -lt "$tresh" ]; then
-					fan_dynamic_min=${c2p_dir_trust[$((i+1))]}
-					break
-				fi
-			done
-		else
-			size=${#unk_dir_trust[@]}
-			for ((i=0; i<size; i+=2)); do
-				tresh=${unk_dir_trust[i]}
-				if [ "$ambient" -lt "$tresh" ]; then
-					fan_dynamic_min=${unk_dir_trust[$((i+1))]}
-					break
-				fi
-			done
-		fi
-	else
-		if [ "$p2c_dir" -eq 1 ]; then
-			size=${#p2c_dir_untrust[@]}
-			for ((i=0; i<size; i+=2)); do
-				tresh=${unk_dir_untrust[i]}
-				if [ "$ambient" -lt "$tresh" ]; then
-					fan_dynamic_min=${unk_dir_untrust[$((i+1))]}
-					break
-				fi
-			done
-		elif [ "$c2p_dir" -eq 1 ]; then
-			size=${#c2p_dir_untrust[@]}
-			for ((i=0; i<size; i+=2)); do
-				tresh=${c2p_dir_untrust[i]}
-				if [ "$ambient" -lt "$tresh" ]; then
-					fan_dynamic_min=${c2p_dir_untrust[$((i+1))]}
-					break
-				fi
-			done
-		else
-			size=${#unk_dir_untrust[@]}
-			for ((i=0; i<size; i+=2)); do
-				tresh=${unk_dir_untrust[i]}
-				if [ "$ambient" -lt "$tresh" ]; then
-					fan_dynamic_min=${unk_dir_untrust[$((i+1))]}
-					break
-				fi
-			done
-		fi
-	fi
+    # Check if fan_dynamic_min was changed
+    if [ ! "$fan_dynamic_min_curr" -eq "$fan_dynamic_min" ];
+    then
+        # Check if temperature change is more then hysteresis
+        if [ $temperature_diff -ge $temp_grow_hyst ]; then
+            fan_dynamic_min=$fan_dynamic_min_curr
+            temperature_ambient_tresh_cross=$tresh_prev
+        elif [ $temperature_diff -le -$temp_fall_hyst ]; then
+            fan_dynamic_min=$fan_dynamic_min_curr
+            temperature_ambient_tresh_cross=$tresh_next
+        fi
+    fi
+    temperature_ambient_last=$ambient
 }
 
 init_system_dynamic_minimum_db()
@@ -1221,6 +1214,7 @@ thermal_control_preinit()
 	init_service_params
 	# Initialize system dynamic minimum speed data base.
 	init_system_dynamic_minimum_db
+	get_fan_direction
 
 	# Periodic report counter
 	periodic_report=$((polling_time*report_counter))
