@@ -879,13 +879,13 @@ set_pwm_min_threshold()
         tresh_prev=$tresh
     done
 
-    # temperature diff between current temperature and last dmin_change
+    # Temperature diff between current temperature and last dmin_change
     temperature_diff=$((ambient-temperature_ambient_tresh_cross))
 
     # check if fan_dynamic_min was changed
     if [ ! "$fan_dynamic_min_curr" -eq "$fan_dynamic_min" ];
     then
-        # check if temperature change is more then hysteresis
+        # Check if temperature change is more then hysteresis
         if [ $temperature_diff -ge $temp_grow_hyst ]; then
             fan_dynamic_min=$fan_dynamic_min_curr
             temperature_ambient_tresh_cross=$tresh_prev
