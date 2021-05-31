@@ -195,6 +195,13 @@ mqm8700_rev1_base_connect_table=(    max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
+msn37xx_secured_connect_table=(    max11603 0x64 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
 msn3420_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
@@ -589,7 +596,16 @@ msn201x_specific()
 
 mqmxxx_msn37x_msn34x_specific()
 {
-	connect_table=(${mqm8700_base_connect_table[@]})
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI136)
+			connect_table=(${msn37xx_secured_connect_table[@]})
+		;;
+		*)
+			connect_table=(${mqm8700_base_connect_table[@]})
+		;;
+	esac
+
 	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
