@@ -560,6 +560,7 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
+		local linecard=0
 		# Detect if it belongs to line card or to main board.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
 		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
@@ -572,6 +573,7 @@ if [ "$1" == "add" ]; then
 			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
 			find_linecard_num "$input_bus_num"
 			system_path="$hw_management_path"/lc"$linecard_num"/system
+			linecard="$linecard_num"
 			;;
 		esac
 		# Allow to driver insertion off all the attributes.
@@ -592,6 +594,58 @@ if [ "$1" == "add" ]; then
 				set_fan_direction fan"${i}" 1
 			fi
 		done
+
+		# Handle linecard.
+		if [ "$linecard" -ne 0 ]; then
+			local lc_path="$hw_management_path"/lc"$linecard"
+
+			if [ ! -d "$lc_path"/config ]; then
+				mkdir "$lc_path"/config
+			fi
+			config=$(< "$lc_path"/config/config)
+			case "$config" in
+			0)
+				echo 16 > "$lc_path"/config/port_num
+				echo 1 > "$lc_path"/config/cpld_num
+				echo 1 > "$lc_path"/config/fpga_num
+				echo 4 > "$lc_path"/config/gearbox_num
+				echo 1 > "$lc_path"/config/gearbox_mgr_num
+				;;
+			1)
+				echo 8 > "$lc_path"/config/port_num
+				echo 1 > "$lc_path"/config/cpld_num
+				echo 1 > "$lc_path"/config/fpga_num
+				;;
+			*)
+				;;
+			esac
+
+			# Set linecard CPLD combined version.
+			if [ -L "$lc_path"/system/cpld1_pn ]; then
+				cpld_pn=$(cat "$lc_path"/system/cpld1_pn)
+			fi
+			if [ -L "$lc_path"/system/cpld1_version ]; then
+				cpld_ver=$(cat "$lc_path"/system/cpld1_version)
+			fi
+			if [ -L "$lc_path"/system/cpld1_version_min ]; then
+				cpld_ver_min=$(cat "$lc_path"/system/cpld1_version_min)
+			fi
+			str=$str$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+			echo "$str" > "$lc_path"/system/cpld
+
+			# Set linecard FPGA combined version.
+			if [ -L "$lc_path"/system/fpga1_pn ]; then
+				fpga_pn=$(cat "$lc_path"/system/fpga1_pn)
+			fi
+			if [ -L "$lc_path"/system/fpga1_version ]; then
+				fpga_ver=$(cat "$lc_path"/system/fpga1_version)
+			fi
+			if [ -L "$lc_path"/system/fpga1_version_min ]; then
+				fpga_ver_min=$(cat "$lc_path"/system/fpga1_version_min)
+			fi
+			str=$str$(printf "FPGA%06d_REV%02d%02d" "$fpga_pn" "$fpga_ver" "$fpga_ver_min")
+			echo "$str" > "$lc_path"/system/fpga
+		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
 		busdir="$3""$4"
