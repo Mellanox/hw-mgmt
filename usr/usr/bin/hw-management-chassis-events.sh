@@ -434,7 +434,6 @@ function set_fan_direction()
 function set_lc_fpga_combined_version()
 {
 	lc_path="$1"
-log_info "lc_path $lc_path"
 	# Set linecard FPGA combined version.
 	if [ -L "$lc_path"/system/fpga1_pn ]; then
 		fpga_pn=$(cat "$lc_path"/system/fpga1_pn)
