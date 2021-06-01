@@ -44,8 +44,6 @@ events_path=$hw_management_path/events
 thermal_path=$hw_management_path/thermal
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
-lc_i2c_bus_min=34
-lc_i2c_bus_max=43
 i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
@@ -433,16 +431,45 @@ function set_fan_direction()
 	esac
 }
 
+function set_lc_fpga_combined_version()
+{
+	lc_path="$1"
+log_info "lc_path $lc_path"
+	# Set linecard FPGA combined version.
+	if [ -L "$lc_path"/system/fpga1_pn ]; then
+		fpga_pn=$(cat "$lc_path"/system/fpga1_pn)
+	fi
+	if [ -L "$lc_path"/system/fpga1_version ]; then
+		fpga_ver=$(cat "$lc_path"/system/fpga1_version)
+	fi
+	if [ -L "$lc_path"/system/fpga1_version_min ]; then
+		fpga_ver_min=$(cat "$lc_path"/system/fpga1_version_min)
+	fi
+	str=$(printf "FPGA%06d_REV%02d%02d" "$fpga_pn" "$fpga_ver" "$fpga_ver_min")
+	echo "$str" > "$lc_path"/system/fpga
+}
+
 function handle_hotplug_event()
 {
 	local attribute
 	local event
+	local lc_path
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
 	
 	if [ -f $events_path/"$attribute" ]; then
 		echo "$event" > $events_path/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
+
+		case "$attribute" in
+		lc*_active)
+			linecard=`echo ${attribute:0:3}`
+			lc_path="$hw_management_path"/"$linecard"
+			set_lc_fpga_combined_version "$lc_path"
+			;;
+		*)
+			;;
+		esac
 	fi
 	set_fan_direction "$attribute" "$event"
 }
@@ -560,7 +587,7 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
-		local linecard=0
+		linecard=0
 		# Detect if it belongs to line card or to main board.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
 		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
@@ -597,7 +624,7 @@ if [ "$1" == "add" ]; then
 
 		# Handle linecard.
 		if [ "$linecard" -ne 0 ]; then
-			local lc_path="$hw_management_path"/lc"$linecard"
+			lc_path="$hw_management_path"/lc"$linecard"
 
 			if [ ! -d "$lc_path"/config ]; then
 				mkdir "$lc_path"/config
@@ -630,21 +657,11 @@ if [ "$1" == "add" ]; then
 			if [ -L "$lc_path"/system/cpld1_version_min ]; then
 				cpld_ver_min=$(cat "$lc_path"/system/cpld1_version_min)
 			fi
-			str=$str$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+			str=$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
 			echo "$str" > "$lc_path"/system/cpld
 
 			# Set linecard FPGA combined version.
-			if [ -L "$lc_path"/system/fpga1_pn ]; then
-				fpga_pn=$(cat "$lc_path"/system/fpga1_pn)
-			fi
-			if [ -L "$lc_path"/system/fpga1_version ]; then
-				fpga_ver=$(cat "$lc_path"/system/fpga1_version)
-			fi
-			if [ -L "$lc_path"/system/fpga1_version_min ]; then
-				fpga_ver_min=$(cat "$lc_path"/system/fpga1_version_min)
-			fi
-			str=$str$(printf "FPGA%06d_REV%02d%02d" "$fpga_pn" "$fpga_ver" "$fpga_ver_min")
-			echo "$str" > "$lc_path"/system/fpga
+			set_lc_fpga_combined_version "$lc_path"
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
