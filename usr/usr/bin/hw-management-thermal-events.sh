@@ -319,6 +319,10 @@ if [ "$1" == "add" ]; then
 					echo 120000 > $thermal_path/"$zonename"/temp_trip_crit
 				fi
 			fi
+			# Invoke user thermal governor if exist.
+			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
+				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
+			fi
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
