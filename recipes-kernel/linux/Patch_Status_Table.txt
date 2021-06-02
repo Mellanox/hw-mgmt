@@ -77,6 +77,7 @@ Kernel-4.19
 |0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch         |                                            |  pending                                        |  Modular SN4800 (target 5.14)                                |
 |0079-leds-mlxreg-Provide-LED-color-conversion-from-hardwa.patch         |                                            |  pending                                        |                                                                     |
 |0080-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch         |                                            |  pending                                        |  For MQM9700                                                     |
+|0081-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch         |                                            |  pending                                        |                                                                     |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Accepted for next kerenl release:
