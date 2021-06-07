@@ -77,3 +77,7 @@
 0079-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
 0080-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch
 0081-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch
+0082-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch
+0083-mlxsw-core_env-Read-module-temperature-thresholds-us.patch
+0084-mlxsw-thermal-Add-function-for-reading-module-temper.patch
+0085-mlxsw-thermal-Read-module-temperature-thresholds-usi.patch
