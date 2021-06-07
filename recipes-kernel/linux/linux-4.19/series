@@ -76,3 +76,4 @@
 0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch
 0079-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
 0080-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch
+0081-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch
