@@ -1,0 +1,27 @@
+From bfd9f1ffc9fc6b7888b4de5c605d2f60d739840a Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Mon, 7 Jun 2021 11:57:20 +0300
+Subject: [PATCH] Revert "i2c: busses: i2c-mlxcpld: Increase transaction
+ pooling time"
+
+This reverts commit 10301ce5d3375b4a088710e3ce8ecc6f4acc6ed7.
+---
+ drivers/i2c/busses/i2c-mlxcpld.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
+index 6da4b58..41b5702 100644
+--- a/drivers/i2c/busses/i2c-mlxcpld.c
++++ b/drivers/i2c/busses/i2c-mlxcpld.c
+@@ -51,7 +51,7 @@
+ #define MLXCPLD_I2C_MAX_ADDR_LEN	4
+ #define MLXCPLD_I2C_RETR_NUM		2
+ #define MLXCPLD_I2C_XFER_TO		500000 /* usec */
+-#define MLXCPLD_I2C_POLL_TIME		400   /* usec */
++#define MLXCPLD_I2C_POLL_TIME		200   /* usec */
+ 
+ /* LPC I2C registers */
+ #define MLXCPLD_LPCI2C_CPBLTY_REG	0x0
+-- 
+2.8.4
+
