@@ -452,7 +452,7 @@ set_jtag_gpio()
 
 get_fixed_fans_direction()
 {
-	sanity_offset=$(strings --radix=d $eeprom_path/vpd_info | grep MLNX | awk '{print $1}')
+	sanity_offset=$(grep MLNX $eeprom_path/vpd_info -b -a -o | cut -f1 -d:)
 	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
 	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
 	case $fan_direction in
@@ -744,7 +744,7 @@ msn46xx_specific()
 	if [ $res -eq 0 ]; then
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
-			3)
+			1)
 				connect_msn4700_msn4600_A1
 			;;
 			*)
@@ -1019,6 +1019,7 @@ find_i2c_bus()
 			name=$(cut $folder/name -d' ' -f 1)
 			if [ "$name" == "i2c-mlxcpld" ]; then
 				i2c_bus_offset=$((i-1))
+				echo $i2c_bus_offset > $config_path/i2c_bus_offset
 				return
 			fi
 		fi
@@ -1115,6 +1116,7 @@ set_config_data()
 
 connect_platform()
 {
+	find_i2c_bus
 	for ((i=0; i<${#connect_table[@]}; i+=3)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
@@ -1123,6 +1125,9 @@ connect_platform()
 
 disconnect_platform()
 {
+	if [ -f $config_path/i2c_bus_offset ]; then
+		i2c_bus_offset=$(<$config_path/i2c_bus_offset)
+	fi
 	for ((i=0; i<${#connect_table[@]}; i+=3)); do
 		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 	done

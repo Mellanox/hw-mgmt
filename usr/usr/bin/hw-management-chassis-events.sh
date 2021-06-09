@@ -44,6 +44,8 @@ events_path=$hw_management_path/events
 thermal_path=$hw_management_path/thermal
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
+lc_i2c_bus_min=34
+lc_i2c_bus_max=43
 i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
@@ -181,7 +183,7 @@ find_i2c_bus()
 find_linecard_bus()
 {
 	# Find base i2c bus number of Mellanox line card.
-	for ((i=1; i<i2c_bus_max; i++)); do
+	for ((i=lc_i2c_bus_min; i<lc_i2c_bus_max; i++)); do
 		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
 		if [ -d $folder ]; then
 			name=$(cut $folder/name -d' ' -f 1)
@@ -511,7 +513,7 @@ if [ "$1" == "add" ]; then
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
 		ln -sf "$3""$4"/brightness $led_path/led_"$name"_"$color"
-		echo timer > "$3""$4"/trigger
+		ln -sf "$3""$4"/trigger  $led_path/led_"$name"_"$color"_trigger
 		ln -sf "$3""$4"/delay_on  $led_path/led_"$name"_"$color"_delay_on
 		ln -sf "$3""$4"/delay_off $led_path/led_"$name"_"$color"_delay_off
 		ln -sf $LED_STATE $led_path/led_"$name"_state

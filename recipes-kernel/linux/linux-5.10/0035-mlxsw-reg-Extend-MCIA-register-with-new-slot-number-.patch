@@ -1,0 +1,100 @@
+From 0ac99bd1f22e9cc2bcf73c25be73584d50ed1088 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 4 Nov 2020 20:07:18 +0200
+Subject: [PATCH backport v5.10 35/52] mlxsw: reg: Extend MCIA register with
+ new slot number field
+
+Extend MCIA (Management Cable Info Access Register) with new field
+specifying the slot number. The purpose of this field is to support
+access to MCIA register for reading cage cable information on modular
+system. For '1U' systems the 'module' number uniquely identifies the
+transceiver location. For modular systems the transceivers are
+identified by two indexes:
+- 'slot_index', specifying the slot number, where line card is located;
+- 'module', specifying cage transceiver within the line card.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c | 11 ++++++-----
+ drivers/net/ethernet/mellanox/mlxsw/reg.h      | 14 +++++++++++---
+ 2 files changed, 17 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 74127360c1b1..65f214a5e721 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -30,8 +30,8 @@ static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
+ 	u8 ident;
+ 	int err;
+ 
+-	mlxsw_reg_mcia_pack(mcia_pl, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0, 1,
+-			    MLXSW_REG_MCIA_I2C_ADDR_LOW);
++	mlxsw_reg_mcia_pack(mcia_pl, 0, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0,
++			    1, MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+ 		return err;
+@@ -105,7 +105,8 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 		}
+ 	}
+ 
+-	mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, offset, size, i2c_addr);
++	mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page, offset, size,
++			    i2c_addr);
+ 
+ 	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+@@ -170,12 +171,12 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 			page = MLXSW_REG_MCIA_TH_PAGE_CMIS_NUM;
+ 		else
+ 			page = MLXSW_REG_MCIA_TH_PAGE_NUM;
+-		mlxsw_reg_mcia_pack(mcia_pl, module, 0, page,
++		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page,
+ 				    MLXSW_REG_MCIA_TH_PAGE_OFF + off,
+ 				    MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	} else {
+-		mlxsw_reg_mcia_pack(mcia_pl, module, 0,
++		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0,
+ 				    MLXSW_REG_MCIA_PAGE0_LO,
+ 				    off, MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_HIGH);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 7413d381324c..e4f8c53431c3 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8707,6 +8707,12 @@ MLXSW_ITEM32(reg, mcia, l, 0x00, 31, 1);
+  */
+ MLXSW_ITEM32(reg, mcia, module, 0x00, 16, 8);
+ 
++/* reg_mcia_slot_index
++ * Slot index (0: Main board)
++ * Access: Index
++ */
++MLXSW_ITEM32(reg, mcia, slot, 0x00, 12, 4);
++
+ /* reg_mcia_status
+  * Module status.
+  * Access: RO
+@@ -8785,11 +8791,13 @@ MLXSW_ITEM_BUF(reg, mcia, eeprom, 0x10, MLXSW_REG_MCIA_EEPROM_SIZE);
+ 				MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH) / \
+ 				MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH + 1)
+ 
+-static inline void mlxsw_reg_mcia_pack(char *payload, u8 module, u8 lock,
+-				       u8 page_number, u16 device_addr,
+-				       u8 size, u8 i2c_device_addr)
++static inline void mlxsw_reg_mcia_pack(char *payload, u8 slot_index, u8 module,
++				       u8 lock, u8 page_number,
++				       u16 device_addr, u8 size,
++				       u8 i2c_device_addr)
+ {
+ 	MLXSW_REG_ZERO(mcia, payload);
++	mlxsw_reg_mcia_slot_set(payload, slot_index);
+ 	mlxsw_reg_mcia_module_set(payload, module);
+ 	mlxsw_reg_mcia_l_set(payload, lock);
+ 	mlxsw_reg_mcia_page_number_set(payload, page_number);
+-- 
+2.11.0
+

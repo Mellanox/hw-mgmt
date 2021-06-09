@@ -1,0 +1,83 @@
+From fcb73e19a230daa4e680db1fe65eaa34f95d35d5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 18 Nov 2020 22:55:28 +0200
+Subject: [PATCH backport v5.10 52/52] mlxsw: core_hwmon: Add line card id
+ prefix to line card label attribute names
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add prefix "linecard#n" to 'hwmon' label attributes for the 'hwmon'
+objects found on the line cards.
+
+For example cage temperature for module #9 located at line card #7 will
+be exposed by utility 'sensors' like:
+linecard#07 front panel 009:	+32.0°C  (crit = +70.0°C, emerg = +80.0°C)
+And temperature for gearbox #3 located at line card #5 will be exposed
+like:
+linecard#05 gearbox 003:		+41.0°C  (highest = +41.0°C)
+
+For now the slot index is always 0 and field 'name' of the structure
+'mlxsw_hwmon_dev' is empty. For line card this field is supposed to
+be initialized to 'linecard#n', when line card in slot #n is enabled.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index e1200759eed1..2604c7ea119e 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -19,6 +19,7 @@
+ #define MLXSW_HWMON_ATTR_PER_SENSOR 3
+ #define MLXSW_HWMON_ATTR_PER_MODULE 7
+ #define MLXSW_HWMON_ATTR_PER_GEARBOX 4
++#define MLXSW_HWMON_DEV_NAME_LEN_MAX 16
+ 
+ #define MLXSW_HWMON_ATTR_COUNT (MLXSW_HWMON_SENSORS_MAX_COUNT * MLXSW_HWMON_ATTR_PER_SENSOR + \
+ 				MLXSW_HWMON_MODULES_MAX_COUNT * MLXSW_HWMON_ATTR_PER_MODULE + \
+@@ -42,6 +43,7 @@ mlxsw_hwmon_get_attr_index(int index, int count, u16 *gearbox_sensor_map)
+ }
+ 
+ struct mlxsw_hwmon_dev {
++	char name[MLXSW_HWMON_DEV_NAME_LEN_MAX];
+ 	struct mlxsw_hwmon *hwmon;
+ 	struct device *hwmon_dev;
+ 	struct attribute_group group;
+@@ -404,9 +406,15 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
+ {
+ 	struct mlxsw_hwmon_attr *mlxsw_hwmon_attr =
+ 			container_of(attr, struct mlxsw_hwmon_attr, dev_attr);
++	struct mlxsw_hwmon_dev *mlxsw_hwmon_dev;
+ 
+-	return sprintf(buf, "front panel %03u\n",
+-		       mlxsw_hwmon_attr->type_index);
++	mlxsw_hwmon_dev = mlxsw_hwmon_attr->mlxsw_hwmon_dev;
++	if (strlen(mlxsw_hwmon_dev->name))
++		return sprintf(buf, "%s front panel %03u\n", mlxsw_hwmon_dev->name,
++			       mlxsw_hwmon_attr->type_index);
++	else
++		return sprintf(buf, "front panel %03u\n",
++			       mlxsw_hwmon_attr->type_index);
+ }
+ 
+ static ssize_t
+@@ -420,7 +428,10 @@ mlxsw_hwmon_gbox_temp_label_show(struct device *dev,
+ 	int index = mlxsw_hwmon_attr->type_index -
+ 		    mlxsw_hwmon_dev->module_sensor_max + 1;
+ 
+-	return sprintf(buf, "gearbox %03u\n", index);
++	if (strlen(mlxsw_hwmon_dev->name))
++		return sprintf(buf, "%s gearbox %03u\n", mlxsw_hwmon_dev->name, index);
++	else
++		return sprintf(buf, "gearbox %03u\n", index);
+ }
+ 
+ static ssize_t mlxsw_hwmon_temp_critical_alarm_show(struct device *dev,
+-- 
+2.11.0
+

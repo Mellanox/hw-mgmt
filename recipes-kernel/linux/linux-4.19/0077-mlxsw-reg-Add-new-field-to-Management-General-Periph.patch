@@ -1,0 +1,138 @@
+From 6fc02870fe494135c52a8ae7edf9ee184b6328d2 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 5 Apr 2021 12:45:04 +0300
+Subject: [PATCH backport 4.19 1/2] mlxsw: reg: Add new field to Management
+ General Peripheral Information Register
+
+Add new field 'max_modules_per_slot' to provide maximum number of
+modules that can be connected per slot. This field will be always zero,
+if 'slot_index' in query request is set to non-zero value, otherwise
+value in this field will provide maximum modules number, which can be
+equipped on device inserted at any slot.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c     |  4 ++--
+ drivers/net/ethernet/mellanox/mlxsw/core_linecards.c |  2 +-
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c   |  4 ++--
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c        |  3 ++-
+ drivers/net/ethernet/mellanox/mlxsw/reg.h            | 11 ++++++++++-
+ 5 files changed, 17 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 15a9eecd4c96..0f46125d688c 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -611,7 +611,7 @@ static int mlxsw_hwmon_module_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev)
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       &module_sensor_max, NULL);
++			       &module_sensor_max, NULL, NULL);
+ 
+ 	/* Add extra attributes for module temperature. Sensor index is
+ 	 * assigned to sensor_count value, while all indexed before
+@@ -656,7 +656,7 @@ mlxsw_hwmon_gearbox_main_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev,
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, gbox_num, &device_type, NULL, NULL,
+-			       NULL);
++			       NULL, NULL);
+ 	if (device_type != MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE)
+ 		*gbox_num = 0;
+ 
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+index cb969177d629..22db8b230589 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
+@@ -266,7 +266,7 @@ int mlxsw_linecards_init(struct mlxsw_core *mlxsw_core,
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       NULL, &slot_count);
++			       NULL, &slot_count, NULL);
+ 	if (!slot_count) {
+ 		*p_linecards = NULL;
+ 		return 0;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index fc7f48ad940e..ee4c0c5d96cb 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -872,7 +872,7 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       &area->tz_module_num, NULL);
++			       &area->tz_module_num, NULL, NULL);
+ 
+ 	area->tz_module_arr = kcalloc(area->tz_module_num,
+ 				      sizeof(*area->tz_module_arr),
+@@ -966,7 +966,7 @@ mlxsw_thermal_gearboxes_main_init(struct device *dev, struct mlxsw_core *core,
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, &area->tz_gearbox_num, &device_type,
+-			       NULL, NULL, NULL);
++			       NULL, NULL, NULL, NULL);
+ 	if (device_type != MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE)
+ 		area->tz_gearbox_num = 0;
+ 
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 89068d9803e0..093989625cd0 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -29,6 +29,7 @@ struct mlxsw_m {
+ 	u8 base_mac[ETH_ALEN];
+ 	struct mlxsw_m_area *main;
+ 	struct mlxsw_m_area **linecards;
++	u8 max_ports;
+ };
+ 
+ struct mlxsw_m_area {
+@@ -239,7 +240,7 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+-			       &mlxsw_m_area->max_ports, NULL);
++			       &mlxsw_m_area->max_ports, NULL, NULL);
+ 
+ 	if (!mlxsw_m_area->max_ports)
+ 		return 0;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+index 96b0415f66b9..bb2a1420d741 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
+@@ -8991,6 +8991,12 @@ MLXSW_ITEM32(reg, mgpir, devices_per_flash, 0x00, 16, 8);
+  */
+ MLXSW_ITEM32(reg, mgpir, num_of_devices, 0x00, 0, 8);
+ 
++/* max_modules_per_slot
++ * Maximum number of modules that can be connected per slot.
++ * Access: RO
++ */
++MLXSW_ITEM32(reg, mgpir, max_modules_per_slot, 0x04, 16, 8);
++
+ /* num_of_slots
+  * Number of slots in the system.
+  * Access: RO
+@@ -9013,7 +9019,7 @@ static inline void
+ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+ 		       enum mlxsw_reg_mgpir_device_type *device_type,
+ 		       u8 *devices_per_flash, u8 *num_of_modules,
+-		       u8 *num_of_slots)
++		       u8 *num_of_slots, u8 *max_modules_per_slot)
+ {
+ 	if (num_of_devices)
+ 		*num_of_devices = mlxsw_reg_mgpir_num_of_devices_get(payload);
+@@ -9026,6 +9032,9 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,
+ 		*num_of_modules = mlxsw_reg_mgpir_num_of_modules_get(payload);
+ 	if (num_of_slots)
+ 		*num_of_slots = mlxsw_reg_mgpir_num_of_slots_get(payload);
++	if (max_modules_per_slot)
++		*max_modules_per_slot =
++				mlxsw_reg_mgpir_max_modules_per_slot_get(payload);
+ }
+ 
+ /* MTECR - Management Temperature Extended Capabilities Register
+-- 
+2.11.0
+

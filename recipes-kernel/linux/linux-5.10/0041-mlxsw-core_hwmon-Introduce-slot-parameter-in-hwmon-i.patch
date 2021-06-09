@@ -1,0 +1,104 @@
+From a5d670f8fa0e30aab2d4f15e39ab6827cd69a326 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 4 Nov 2020 20:07:23 +0200
+Subject: [PATCH backport v5.10 41/52] mlxsw: core_hwmon: Introduce slot
+ parameter in hwmon interfaces
+
+Add 'slot' parameter to 'mlxsw_hwmon_dev' structure. Use this parameter
+in mlxsw_reg_mtmp_pack(), mlxsw_reg_mtbr_pack() and
+Use mlxsw_reg_mtmp_slot_index_set() routines.
+For main board it'll always be zero, for line cards it'll be set to
+the physical slot number in modular systems.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 331909aac80a..9eccf13075f6 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -50,6 +50,7 @@ struct mlxsw_hwmon_dev {
+ 	unsigned int attrs_count;
+ 	u8 sensor_count;
+ 	u8 module_sensor_max;
++	u8 slot_index;
+ };
+ 
+ struct mlxsw_hwmon {
+@@ -72,7 +73,8 @@ static ssize_t mlxsw_hwmon_temp_show(struct device *dev,
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+ 					   mlxsw_hwmon_dev->module_sensor_max);
+-	mlxsw_reg_mtmp_pack(mtmp_pl, 0, index, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index, index, false,
++			    false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		dev_err(mlxsw_hwmon->bus_info->dev, "Failed to query temp sensor\n");
+@@ -96,7 +98,8 @@ static ssize_t mlxsw_hwmon_temp_max_show(struct device *dev,
+ 
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+ 					   mlxsw_hwmon_dev->module_sensor_max);
+-	mlxsw_reg_mtmp_pack(mtmp_pl, 0, index, false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index, index, false,
++			    false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		dev_err(mlxsw_hwmon->bus_info->dev, "Failed to query temp sensor\n");
+@@ -128,6 +131,7 @@ static ssize_t mlxsw_hwmon_temp_rst_store(struct device *dev,
+ 	index = mlxsw_hwmon_get_attr_index(mlxsw_hwmon_attr->type_index,
+ 					   mlxsw_hwmon_dev->module_sensor_max);
+ 
++	mlxsw_reg_mtmp_slot_index_set(mtmp_pl, mlxsw_hwmon_dev->slot_index);
+ 	mlxsw_reg_mtmp_sensor_index_set(mtmp_pl, index);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err)
+@@ -245,8 +249,9 @@ static int mlxsw_hwmon_module_temp_get(struct device *dev,
+ 	int err;
+ 
+ 	module = mlxsw_hwmon_attr->type_index - mlxsw_hwmon_dev->sensor_count;
+-	mlxsw_reg_mtmp_pack(mtmp_pl, 0, MLXSW_REG_MTMP_MODULE_INDEX_MIN + module,
+-			    false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index,
++			    MLXSW_REG_MTMP_MODULE_INDEX_MIN + module, false,
++			    false);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err) {
+ 		dev_err(dev, "Failed to query module temperature\n");
+@@ -284,8 +289,8 @@ static ssize_t mlxsw_hwmon_module_temp_fault_show(struct device *dev,
+ 	int err;
+ 
+ 	module = mlxsw_hwmon_attr->type_index - mlxsw_hwmon_dev->sensor_count;
+-	mlxsw_reg_mtbr_pack(mtbr_pl, 0, MLXSW_REG_MTBR_BASE_MODULE_INDEX + module,
+-			    1);
++	mlxsw_reg_mtbr_pack(mtbr_pl, mlxsw_hwmon_dev->slot_index,
++			    MLXSW_REG_MTBR_BASE_MODULE_INDEX + module, 1);
+ 	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtbr), mtbr_pl);
+ 	if (err) {
+ 		dev_err(dev, "Failed to query module temperature sensor\n");
+@@ -606,6 +611,8 @@ static int mlxsw_hwmon_temp_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev)
+ 	for (i = 0; i < mlxsw_hwmon_dev->sensor_count; i++) {
+ 		char mtmp_pl[MLXSW_REG_MTMP_LEN] = {0};
+ 
++		mlxsw_reg_mtmp_slot_index_set(mtmp_pl,
++					      mlxsw_hwmon_dev->slot_index);
+ 		mlxsw_reg_mtmp_sensor_index_set(mtmp_pl, i);
+ 		err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mtmp),
+ 				      mtmp_pl);
+@@ -763,7 +770,8 @@ mlxsw_hwmon_gearbox_init(struct mlxsw_hwmon_dev *mlxsw_hwmon_dev, u8 gbox_num)
+ 	while (index < max_index) {
+ 		sensor_index = index % mlxsw_hwmon_dev->module_sensor_max +
+ 			       MLXSW_REG_MTMP_GBOX_INDEX_MIN;
+-		mlxsw_reg_mtmp_pack(mtmp_pl, 0, sensor_index, true, true);
++		mlxsw_reg_mtmp_pack(mtmp_pl, mlxsw_hwmon_dev->slot_index,
++				    sensor_index, true, true);
+ 		err = mlxsw_reg_write(mlxsw_hwmon->core,
+ 				      MLXSW_REG(mtmp), mtmp_pl);
+ 		if (err) {
+-- 
+2.11.0
+

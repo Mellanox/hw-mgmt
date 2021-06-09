@@ -21,6 +21,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN2010
 - MQMB7800
 - MSN3700
+- MSN3700S
 - MSN3800
 - MSN4700
 - MSN4600C
@@ -70,7 +71,7 @@ Detailed information about all available nodes can be found in the documentation
 
 ## Kernel configuration
 At a minimum, the following configuration options should be set:
-```
+``` 
 CONFIG_NET_VENDOR_MELLANOX=y
 CONFIG_MELLANOX_PLATFORM=y
 CONFIG_NET_DEVLINK=y
@@ -100,6 +101,7 @@ CONFIG_MLXREG_HOTPLUG=m
 CONFIG_MLXREG_IO=m
 CONFIG_MLX_WDT=m
 CONFIG_MLXREG_LC=m
+CONFIG_THERMAL_STATISTICS=n 
 CONFIG_THERMAL=y
 CONFIG_THERMAL_HWMON=y
 CONFIG_THERMAL_WRITABLE_TRIPS=y
@@ -145,8 +147,7 @@ CONFIG_DW_DMAC_PCI=y
 CONFIG_SECURITY_LOCKDOWN_LSM=y (if kernel version >= v5.4)
 CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y (if kernel version >= v5.4)
 CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y (if kernel version >= v5.4)
-
-
+CONFIG_THERMAL_NETLINK (if kernel version >= v5.10)
 
 ```
 **Note:**
