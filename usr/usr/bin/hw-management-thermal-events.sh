@@ -124,7 +124,7 @@ get_lc_id_hwmon()
 {
 	sysfs_path=$1
 	name=$(< "$sysfs_path"/name)
-	regex="mlxsw-lc([0-9]+)"
+	regex="linecard#([0-9]+)"
 	[[ $name =~ $regex ]]
 	if [[ -z "${BASH_REMATCH[1]}" ]]; then
 		return 0
@@ -174,8 +174,8 @@ if [ "$1" == "add" ]; then
 		get_lc_id_hwmon "$3$4"
 		lc_number=$?
 		if [ "$lc_number" -ne 0 ]; then
-			cpath="$hw_management_path/lc$lc_id/config"
-			tpath="$hw_management_path/lc$lc_id/thermal"
+			cpath="$hw_management_path/lc$lc_number/config"
+			tpath="$hw_management_path/lc$lc_number/thermal"
 			min_module_ind=$min_lc_thermal_ind
 			max_module_ind=$max_lc_thermal_ind
 		else
@@ -223,7 +223,9 @@ if [ "$1" == "add" ]; then
 				fi
 			done
 		fi
-		if [ "$name" == "mlxsw" ] ||  [ "$name" == "mlxsw-lc" ] ; then
+
+		lcmatch=`echo $name | cut -d"#" -f1`
+		if [ "$name" == "mlxsw" ] || [ "$lcmatch" == "linecard" ]; then
 			for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
 				if [ -f "$3""$4"/temp"$i"_input ]; then
 					label=$(< "$3""$4"/temp"$i"_label)
@@ -238,6 +240,11 @@ if [ "$1" == "add" ]; then
 						[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
 						module_counter=$((module_counter+1))
 						echo "$module_counter" > "$cpath"/module_counter
+						if [ "$lc_number" -ne 0 ]; then
+							chassis_module_counter=$(< "$config_path"/module_counter)
+							chassis_module_counter=$((chassis_module_counter+1))
+							echo "$chassis_module_counter " > "$config_path"/module_counter
+						fi
 						unlock_service_state_change
 						;;
 					*gear*)
@@ -245,6 +252,11 @@ if [ "$1" == "add" ]; then
 						[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
 						gearbox_counter=$((gearbox_counter+1))
 						echo "$gearbox_counter" > "$cpath"/gearbox_counter
+						if [ "$lc_number" -ne 0 ]; then
+							chassis_gerabox_counter=$(< "$config_path"/gearbox_counter)
+							chassis_gerabox_counter=$((chassis_gearbox_counter+1))
+							echo "$chassis_gerabox_counter " > "$config_path"/gearbox_counter
+						fi
 						unlock_service_state_change
 						ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
 						;;
@@ -255,6 +267,7 @@ if [ "$1" == "add" ]; then
 			done
 		fi
 	fi
+
 	if [ "$2" == "regfan" ]; then
 		name=$(< "$3""$4"/name)
 		echo "$name" > $config_path/cooling_name
@@ -674,6 +687,11 @@ else
 				[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
 				module_counter=$((module_counter-1))
 				echo $module_counter > "$cpath"/module_counter
+				if [ "$lc_number" -ne 0 ]; then
+					chassis_module_counter=$(< "$config_path"/module_counter)
+					chassis_module_counter=$((chassis_module_counter+1))
+					echo "$chassis_module_counter " > "$config_path"/module_counter
+				fi
 				unlock_service_state_change
 			fi
 			if [ -L $tpath/module"$j"_temp_fault ]; then

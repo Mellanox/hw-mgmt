@@ -628,7 +628,7 @@ if [ "$1" == "add" ]; then
 			if [ ! -d "$lc_path"/config ]; then
 				mkdir "$lc_path"/config
 			fi
-			config=$(< "$lc_path"/config/config)
+			config=$(< "$lc_path"/system/config)
 			case "$config" in
 			0)
 				echo 16 > "$lc_path"/config/port_num
