@@ -1,4 +1,84 @@
 ================================================================================
+- V.7.0010.3100
+-Wed, 9 june 2021
+--------------------------------------------------------------------------------
+- New Features
+    o	System: Add support for MSN4600 A1 
+    o	System: Add support for MSN4700 A1
+    o	System: Add support for MSN3700S 
+    o	System: NVM W/R extended support for both SPI & EEPROM                                                                                                                       
+	*Kernel 4.19
+    o	patches 4.19: Minimal: (For MSN4800) Add support for setting line card device address
+        Modify 0077-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch
+        Modify 0078-mlxsw-minimal-Add-support-for-setting-line-card-devi.patch 
+    
+- Bug fixes
+    o	Config: Update 'lm-sensors' custom configuration file for msn4700. Relevant only for users utilizing sensors.conf files coming along with hw-management package.
+    o	Events: Add Voltmon link by label instead of by number.
+    o	Config: Remove cpld#4 link on systems with 3 CPLD's
+    o	Doc: extend kernel config options for m2888 and mp2975
+    o	Events: in hotplug events handling - remove log report for non-existing attributes 
+    o	Sysfs: remove dependency on strings with shell grep cmd for fixed fan_dir detection
+    o	Sysfs: for msn3700 and msn3800 fix delta 1100 vout limits in lm-sensor config.
+    o	Thermal: (post critical trip functional disabling) Add hardcoded critial trip point - Add hardcoded threshold for ASIC and gearbox critical temperature for backward    
+        compatibility with user interface
+    o	Sysfs: Add attribute for i2c bus offset
+    o	Thermal: Fix cooling device enforcement criteria from present “normal” temperature trip to “high” temperature trip.
+    o	Thermal: Fix attribute name for critical temperature - Fix gearbox thermal zone name, which was lack suffix thermal zone number.
+    o	Thermal: Fan toggling up down around certain percentage by introducing Hysteresis for dynamic minimum .
+    o	Sysfs: add LED trigger attribute for blinking functionality.
+
+	*Kernel 4.19
+    o	patches 4.19: Leds: mlxreg: Provide conversion for hardware LED color code
+        Add 0079-leds-mlxreg-Provide-LED-color-conversion-from-hardwa.patch
+
+    o	patches 4.19: Fan: (MQM9700) mlxplatform: Fix LED_FAN_7/tacho13/tacho14 missing in sysfs issue
+        Add 0080-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch
+
+    o	patches 4.19: Thermal: Add support for reading temp threshold via MTMP
+        Add 0081-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch
+        Add 0082-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch
+        Add 0083-mlxsw-core_env-Read-module-temperature-thresholds-us.patch
+        Add 0084-mlxsw-thermal-Add-function-for-reading-module-temper.patch
+        Add 0085-mlxsw-thermal-Read-module-temperature-thresholds-usi.patch
+
+    o	patches 4.19: mlxcpld decrease I2C bus polling-time interval
+        Add 0086-i2c-mlxcpld-Decrease-I2C-bus-polling-time.patch
+
+	*Kernel 4.9
+    o	patches 4.9: mlxcpld decrease I2C bus polling-time interval
+        Add 0072-Revert-i2c-busses-i2c-mlxcpld-Increase-transaction-p.patch 
+
+- Known issues and limitations:
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0010.2302
 -Wed, 24 Mar 2021
 --------------------------------------------------------------------------------
@@ -41,7 +121,6 @@
           or above
     o   This version requires FW version 29.2000.1886 or higher for spectrum-2
 	and  13.2000.1886 or higher for spectrum-1.
-================================================================================
 ================================================================================
 - V.7.0010.2300
 - Sun, 21 March 2021
