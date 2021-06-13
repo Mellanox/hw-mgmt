@@ -887,11 +887,7 @@ msn48xx_specific()
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
-
-	# TMP - to be removed after BU
-	# Set fan to 40%
-	echo 14 > /var/run/hw-management/thermal/cooling_cur_state
-	echo 4 > /var/run/hw-management/thermal/cooling_cur_state
+	echo 14 > $config_path/pcie_default_i2c_bus
 }
 
 check_system()

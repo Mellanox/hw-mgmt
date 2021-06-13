@@ -53,6 +53,8 @@ max_lc_thermal_ind=20
 i2c_bus_max=10
 i2c_bus_offset=0
 i2c_asic_bus_default=2
+pciesw_i2c_bus_default=14
+pciesw_i2c_bus=0
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
 LOCKFILE="/var/run/hw-management-thermal.lock"
@@ -159,6 +161,10 @@ if [ "$1" == "add" ]; then
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
+		if [ -f $config_path/pcie_default_i2c_bus ]; then
+			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
+			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -166,6 +172,8 @@ if [ "$1" == "add" ]; then
 			ln -sf "$3""$4"/temp1_input $thermal_path/comex_amb
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
+		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
+			ln -sf "$3""$4"/temp1_input $thermal_path/pciesw_amb
 		else
 			ln -sf "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
@@ -652,6 +660,10 @@ else
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
+		if [ -f $config_path/pcie_default_i2c_bus ]; then
+			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
+			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -659,6 +671,8 @@ else
 			unlink $thermal_path/comex_amb
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
+		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
+			unlink $thermal_path/pciesw_amb
 		else
 			unlink $thermal_path/$
 		fi
