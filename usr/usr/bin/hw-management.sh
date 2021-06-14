@@ -82,6 +82,8 @@ i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
+psu3_i2c_addr=0x53
+psu4_i2c_addr=0x52
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
@@ -1089,6 +1091,8 @@ set_config_data()
 {
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
 	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
+	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay

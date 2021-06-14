@@ -49,7 +49,6 @@ i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
-i2c_bus_modular_off_eeprom_psu=5
 i2c_bus_def_off_eeprom_fan1=11
 i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
@@ -259,8 +258,7 @@ find_eeprom_name()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_modular_off_eeprom_psu" ]; then
+		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 		if [ "$addr" = "$psu1_i2c_addr" ]; then
 			eeprom_name=psu1_info
 		elif [ "$addr" = "$psu2_i2c_addr" ]; then
@@ -303,8 +301,7 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_modular_off_eeprom_psu" ]; then
+		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 		if [ "$addr" = "$psu1_i2c_addr" ]; then
 			eeprom_name=psu1_info
 		elif [ "$addr" = "$psu2_i2c_addr" ]; then
@@ -334,8 +331,7 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_modular_off_eeprom_psu" ]; then
+		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 		if [ "$addr" = "$psu1_i2c_addr" ]; then
 			eeprom_name=psu1_info
 		elif [ "$addr" = "$psu2_i2c_addr" ]; then

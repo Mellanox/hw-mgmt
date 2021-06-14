@@ -335,6 +335,12 @@ SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/hw-manageme
 SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
 
+SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+
+SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+
 # WATCHDOG
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add watchdog %S %p"
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm watchdog %S %p"
