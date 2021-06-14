@@ -1251,8 +1251,9 @@ do_chip_up_down()
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 	VMOD0011)
-		# Chip up / down operations are to be performed automatically.
-		return
+		# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+		i2c_asic_addr_name=0037
+		i2c_asic_addr=0x37
 		;;
 	*)
 		;;
