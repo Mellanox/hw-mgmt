@@ -1,0 +1,32 @@
+From ebe32913783c07778fcaae7eba1f9a79b7c1413a Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 15 Jun 2021 06:37:26 +0000
+Subject: [PATCH backport 4.19 1/5] hwmon: (pmbus/mp2975) Add missed POUT
+ attribute for page 2 mp2975 controller
+
+Add missed attribute for reading POUT from page 2.
+It is supported by device, but has been missed in initial commit.
+
+Fixes: 2c6fcbb21149 ("hwmon: (pmbus) Add support for MPS Multi-phase mp2975 controller")
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/hwmon/pmbus/mp2975.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/hwmon/pmbus/mp2975.c b/drivers/hwmon/pmbus/mp2975.c
+index 19490058b..08aed5912 100644
+--- a/drivers/hwmon/pmbus/mp2975.c
++++ b/drivers/hwmon/pmbus/mp2975.c
+@@ -54,7 +54,8 @@
+ #define MP2975_PAGE_NUM		2
+ 
+ #define MP2975_RAIL2_FUNC	(PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT | \
+-				 PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT)
++				 PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | \
++				 PMBUS_HAVE_POUT)
+ 
+ struct mp2975_data {
+ 	struct pmbus_driver_info info;
+-- 
+2.20.1
+
