@@ -114,12 +114,22 @@ find_sensor_by_label()
     return 0
 }
 
+linecard_i2c_parent_bus_offset=( \
+	34 1 \
+	35 2 \
+	36 3 \
+	37 4 \
+	38 5 \
+	39 6 \
+	40 7 \
+	41 8)
+
 linecard_i2c_busses=( \
 	"vr" \
 	"a2d" \
 	"hotswap" \
-	"ini" \
 	"fru" \
+	"ini" \
 	"fpga1" \
 	"gearbox00" \
 	"gearbox01" \
@@ -144,8 +154,12 @@ linecard_i2c_busses=( \
 
 create_linecard_i2c_links()
 {
-	local counter
-	mkdir /dev/lc"$1"
+	local counter=0
+
+	if [ ! -d /dev/lc"$1" ]; then
+		mkdir /dev/lc"$1"
+	fi
+
         list=$(find /sys/class/i2c-adapter/i2c-"$2"/ -maxdepth 1  -name '*i2c-*' ! -name i2c-dev ! -name i2c-"$2" -exec bash -c 'name=$(basename $0); name="${name:4}"; echo "$name" ' {} \;)
         list_sorted=`for name in "$list"; do echo "$name"; done | sort -V`
 	for name in $list_sorted; do
@@ -182,7 +196,9 @@ find_i2c_bus()
 
 find_linecard_bus()
 {
-	# Find base i2c bus number of Mellanox line card.
+	#local lc_i2c_bus_from="$1"
+
+	# Find base i2c bus number of line card.
 	for ((i=lc_i2c_bus_min; i<lc_i2c_bus_max; i++)); do
 		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
 		if [ -d $folder ]; then
@@ -198,6 +214,30 @@ find_linecard_bus()
 	exit 0
 }
 
+find_linecard_match()
+{
+	local input_bus_num
+	local lc_bus_offset
+	local lc_bus_num
+	local lc_num
+	local size
+
+	input_bus_num="$1"
+	i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+	size=${#linecard_i2c_parent_bus_offset[@]}
+	for ((i=0; i<size; i+=2)); do
+		lc_bus_offset="${linecard_i2c_parent_bus_offset[i]}"
+		lc_num="${linecard_i2c_parent_bus_offset[$((i+1))]}"
+		lc_bus_num=$((lc_bus_offset+i2c_bus_offset))
+		if [ "$lc_bus_num" -eq "$input_bus_num" ]; then
+			if [ -d /dev/lc"$lc_num" ] && [ ! "$(ls -A /dev/lc$lc_num)" ]; then
+				create_linecard_i2c_links "$lc_num" "$input_bus_num"
+			fi
+			return
+		fi
+	done
+}
+
 find_linecard_num()
 {
 	input_bus_num="$1"
@@ -207,7 +247,7 @@ find_linecard_num()
 	if [ "$input_bus_num" -le "$max_lc_bus_num" ] &&
 	   [ "$input_bus_num" -ge "$linecard_bus_offset" ]; then
 		linecard_num=$((input_bus_num-linecard_bus_offset+1))
-		# Check line card num range.
+		# Check line card number in range.
 		if [ "$linecard_num" -le "$lc_max_num" ] &&
 		   [ "$linecard_num" -ge 1 ]; then
 			return
@@ -258,6 +298,8 @@ find_eeprom_name()
 	else
 		# Wait to allow line card symbolic links creation.
 		local find_retry=0
+		find_linecard_num "$4"
+		find_linecard_match "$4"
 		lc_dev=$3
 		while [ ! $(find -L /dev/lc* -samefile /dev/"$lc_dev") ] && [ $find_retry -lt 3 ]; do sleep 1; done;
 		symlink=$(find -L /dev/lc* -samefile /dev/"$lc_dev")
@@ -572,10 +614,10 @@ if [ "$1" == "add" ]; then
 		# Get parent bus for line card EEPROM - skip two folders.
 		parentdir=$(dirname "$busdir")
 		parentbus=$(basename "$parentdir")
-		find_eeprom_name "$bus" "$addr" "$parentbus"
 		# Detect if it belongs to line card or to main board.
 		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		find_eeprom_name "$bus" "$addr" "$parentbus" "$input_bus_num"
 		if [ -d "$driver_dir" ]; then
 			driver_name=$(< "$driver_dir"/name)
 			if [ "$driver_name" == "mlxreg-lc" ]; then
