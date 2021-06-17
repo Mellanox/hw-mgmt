@@ -890,6 +890,7 @@ msn48xx_specific()
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 14 > $config_path/pcie_default_i2c_bus
+	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 }
 
 check_system()
