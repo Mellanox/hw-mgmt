@@ -148,6 +148,14 @@ c2p_dir_untrust_def=(45000 16  $max_amb 16)
 unk_dir_trust_def=(45000 16  $max_amb 16)
 unk_dir_untrust_def=(45000 16  $max_amb 16)
 
+# Thermal class with full speed enforcement. Put 100% as enforcement.
+p2c_dir_trust_full=(45000 20  $max_amb 20)
+p2c_dir_untrust_full=(45000 20  $max_amb 20)
+c2p_dir_trust_full=(45000 20  $max_amb 20)
+c2p_dir_untrust_full=(45000 20  $max_amb 20)
+unk_dir_trust_full=(45000 20  $max_amb 20)
+unk_dir_untrust_full=(45000 20  $max_amb 20)
+
 
 # Class t1 for MSN27*|MSN24*
 # Direction	P2C		C2P		Unknown
@@ -997,6 +1005,15 @@ init_system_dynamic_minimum_db()
 		config_c2p_dir_untrust "${c2p_dir_untrust_t10[@]}"
 		config_unk_dir_trust "${unk_dir_trust_t10[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t10[@]}"
+		;;
+	100)
+		# Config FAN default minimal speed setting
+		config_p2c_dir_trust "${p2c_dir_trust_def[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_def[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_def[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_def[@]}"
+		config_unk_dir_trust "${unk_dir_trust_def[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_def[@]}"
 		;;
 	*)
 		# Config FAN default minimal speed setting

@@ -72,6 +72,7 @@ thermal_type_t8=8
 thermal_type_t9=9
 thermal_type_t10=10
 thermal_type_def=0
+thermal_type_full=100
 
 thermal_type=$thermal_type_def
 max_tachos=14
@@ -878,6 +879,7 @@ msn48xx_specific()
 	local cpu_bus_offset=51
 	connect_table=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
+	thermal_type=$thermal_type_full
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
