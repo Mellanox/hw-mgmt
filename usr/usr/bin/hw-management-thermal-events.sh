@@ -148,6 +148,29 @@ get_lc_id_tz()
 	fi
 }
 
+# Check if file exists and create soft link
+# $1 - file path
+# $2 - link path
+# return none
+check_n_link()
+{
+    if [ -f "$1" ];
+    then
+        ln -sf "$1" "$2"
+    fi
+}
+
+# Check if link exists and unlink it
+# $1 - link path
+# return none
+check_n_unlink()
+{
+    if [ -L "$1" ];
+    then
+        unlink "$1"
+    fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -212,12 +235,8 @@ if [ "$1" == "add" ]; then
 					ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
 					ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
 					ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
-					if [ -f "$cpath"/fan_min_speed ]; then
-						ln -sf "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
-					fi
-					if [ -f "$cpath"/fan_max_speed ]; then
-						ln -sf "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
-					fi
+					check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
+					check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
 					# Save max_tachos to config
 					echo $i > "$cpath"/max_tachos
 				fi
@@ -272,12 +291,8 @@ if [ "$1" == "add" ]; then
 				ln -sf "$3""$4"/fan"$i"_input $thermal_path/fan"$j"_speed_get
 				ln -sf "$3""$4"/pwm1 $thermal_path/fan"$j"_speed_set
 				ln -sf "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
-				if [ -f $config_path/fan_min_speed ]; then
-					ln -sf $config_path/fan_min_speed $thermal_path/fan"$j"_min
-				fi
-				if [ -f $config_path/fan_max_speed ]; then
-					ln -sf $config_path/fan_max_speed $thermal_path/fan"$j"_max
-				fi
+				check_n_link $config_path/fan_min_speed $thermal_path/fan"$j"_min
+				check_n_link $config_path/fan_max_speed $thermal_path/fan"$j"_max
 				#save max_tachos to config
 				echo $i > $config_path/max_tachos
 			fi
@@ -310,9 +325,7 @@ if [ "$1" == "add" ]; then
 			ln -sf "$3""$4"/trip_point_1_temp $tpath/"$zonetype"/temp_trip_high
 			ln -sf "$3""$4"/trip_point_2_temp $tpath/"$zonetype"/temp_trip_hot
 			ln -sf "$3""$4"/temp $tpath/"$zonetype"/thermal_zone_temp
-			if [ -f "$3""$4"/emul_temp ]; then
-				ln -sf "$3""$4"/emul_temp $tpath/"$zonetype"/thermal_zone_temp_emul
-			fi
+			check_n_link $tpath/"$zonetype"/thermal_zone_temp_emul
 			# Create entry with hardcoded value for compatibility with user space.
 			if [ "$zoneptype" == "mlxsw" ] || [ "$zoneptype" == "mlxsw-gearbox" ]; then
 				if [ ! -f $thermal_path/"$zonetype"/temp_trip_crit ]; then
@@ -423,9 +436,7 @@ if [ "$1" == "add" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
-		if [ -f "$3""$4"/uevent ]; then
-			ln -sf "$3""$4"/uevent $config_path/port_config_done
-		fi
+		check_n_link "$3""$4"/uevent $config_path/port_config_done
 		asic_health=$(< "$3""$4"/asic1)
 		if [ "$asic_health" -ne 2 ]; then
 			exit 0
@@ -521,21 +532,11 @@ if [ "$1" == "add" ]; then
 		ln -sf "$5""$3"/temp1_input $thermal_path/"$2"_temp
 		ln -sf "$5""$3"/temp1_max $thermal_path/"$2"_temp_max
 		ln -sf "$5""$3"/temp1_max_alarm $thermal_path/"$2"_temp_max_alarm
-		if [ -f "$5""$3"/temp2_input ]; then
-			ln -sf "$5""$3"/temp2_input $thermal_path/"$2"_temp2
-		fi
-		if [ -f "$5""$3"/temp2_max ]; then
-			ln -sf "$5""$3"/temp2_max $thermal_path/"$2"_temp2_max
-		fi
-		if [ -f "$5""$3"/temp2_max_alarm ]; then
-			ln -sf "$5""$3"/temp2_max_alarm $thermal_path/"$2"_temp2_max_alarm
-		fi
-		if [ -f "$5""$3"/fan1_alarm ]; then
-			ln -sf "$5""$3"/fan1_alarm $alarm_path/"$2"_fan1_alarm
-		fi
-		if [ -f "$5""$3"/power1_alarm ]; then
-			ln -sf "$5""$3"/power1_alarm $alarm_path/"$2"_power1_alarm
-		fi
+		check_n_link "$5""$3"/temp2_input $thermal_path/"$2"_temp2
+		check_n_link "$5""$3"/temp2_max $thermal_path/"$2"_temp2_max
+		check_n_link "$5""$3"/temp2_max_alarm $thermal_path/"$2"_temp2_max_alarm
+		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$2"_fan1_alarm
+		check_n_link "$5""$3"/power1_alarm $alarm_path/"$2"_power1_alarm
 		ln -sf "$5""$3"/fan1_input $thermal_path/"$2"_fan1_speed_get
 		# Add power attributes
 		ln -sf "$5""$3"/in1_input $power_path/"$2"_volt_in
@@ -672,15 +673,9 @@ else
 				echo $module_counter > "$cpath"/module_counter
 				unlock_service_state_change
 			fi
-			if [ -L $tpath/module"$j"_temp_fault ]; then
-				unlink $tpath/module"$j"_temp_fault
-			fi
-			if [ -L $tpath/module"$j"_temp_crit ]; then
-				unlink $tpath/module"$j"_temp_crit
-			fi
-			if [ -L $tpath/module"$j"_temp_emergency ]; then
-				unlink $tpath/module"$j"_temp_emergency
-			fi
+			check_n_unlink $tpath/module"$j"_temp_fault
+			check_n_unlink $tpath/module"$j"_temp_crit
+			check_n_unlink $tpath/module"$j"_temp_emergency
 		done
 		find "$tpath" -type l -name '*_temp_input' -exec rm {} +
 		find "$tpath" -type l -name '*_temp_fault' -exec rm {} +
@@ -692,32 +687,19 @@ else
 		if [ "$lc_id" -ne 0 ]; then
 			exit 0
 		fi
-
-		if [ -L $thermal_path/asic ]; then
-			unlink $thermal_path/asic
-		fi
+		check_n_unlink $thermal_path/asic
 		name=$(< $$config_path/cooling_name)
 		if [ "$name" == "mlxsw" ]; then
 			if [ -L $thermal_path/pwm1 ]; then
 				unlink $thermal_path/pwm1
 			fi
 			for ((i=1; i<=max_tachos; i+=1)); do
-				if [ -L $thermal_path/fan"$i"_fault ]; then
-					unlink $thermal_path/fan"$i"_fault
-				fi
-				if [ -L $thermal_path/fan"$i"_speed_get ]; then
-					unlink $thermal_path/fan"$i"_speed_get
-				fi
-				if [ -L $thermal_path/fan"$j"_min ]; then
-					unlink $thermal_path/fan"$j"_min
-				fi
-				if [ -L $thermal_path/fan"$j"_max ]; then
-					unlink $thermal_path/fan"$j"_max
-				fi
+				check_n_unlink $thermal_path/fan"$i"_fault
+				check_n_unlink $thermal_path/fan"$i"_speed_get
+				check_n_unlink $thermal_path/fan"$j"_min
+				check_n_unlink $thermal_path/fan"$j"_max
 			done
-			if [ -L $thermal_path/pwm1 ]; then
-				unlink $thermal_path/pwm1
-			fi
+			check_n_unlink $thermal_path/pwm1
 		fi
 	fi
 	if [ "$2" == "regfan" ]; then
@@ -725,21 +707,11 @@ else
 			unlink $thermal_path/pwm1
 		fi
 		for ((i=1; i<=max_tachos; i+=1)); do
-			if [ -L $thermal_path/fan"$i"_fault ]; then
-				unlink $thermal_path/fan"$i"_fault
-			fi
-			if [ -L $thermal_path/fan"$i"_speed_get ]; then
-				unlink $thermal_path/fan"$i"_speed_get
-			fi
-			if [ -L $thermal_path/fan"$i"_speed_set ]; then
-				unlink $thermal_path/fan"$i"_speed_set
-			fi
-			if [ -L $thermal_path/fan"$i"_min ]; then
-				unlink $thermal_path/fan"$i"_min
-			fi
-			if [ -L $thermal_path/fan"$i"_max ]; then
-				unlink $thermal_path/fan"$i"_max
-			fi
+			check_n_unlink $thermal_path/fan"$i"_fault
+			check_n_unlink $thermal_path/fan"$i"_speed_get
+			check_n_unlink $thermal_path/fan"$i"_speed_set
+			check_n_unlink $thermal_path/fan"$i"_min
+			check_n_unlink $thermal_path/fan"$i"_max
 		done
 	fi
 	if [ "$2" == "thermal_zone" ]; then
@@ -772,58 +744,32 @@ else
 		if [ -d $thermal_path/mlxsw ]; then
 			rm -rf $thermal_path/mlxsw
 		fi
-		if [ -L $thermal_path/highest_thermal_zone ]; then
-			unlink $thermal_path/highest_thermal_zone
-		fi
+		check_n_unlink $thermal_path/highest_thermal_zone
 	fi
 	if [ "$2" == "cooling_device" ]; then
-		if [ -L $thermal_path/cooling_cur_state ]; then
-			unlink $thermal_path/cooling_cur_state
-		fi
+		check_n_unlink $thermal_path/cooling_cur_state
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for ((i=1; i<=max_tachos; i+=1)); do
-			if [ -L $thermal_path/fan"$i"_status ]; then
-				unlink $thermal_path/fan"$i"_status
-			fi
+			check_n_unlink $thermal_path/fan"$i"_status
 		done
 		for ((i=1; i<=max_psus; i+=1)); do
-			if [ -L $thermal_path/psu"$i"_status ]; then
-				unlink $thermal_path/psu"$i"_status
-			fi
-			if [ -L $thermal_path/psu"$i"_pwr_status ]; then
-				unlink $thermal_path/psu"$i"_pwr_status
-			fi
+			check_n_unlink $thermal_path/psu"$i"_status
+			check_n_unlink $thermal_path/psu"$i"_pwr_status
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
-			if [ -L $system_path/lc"$i"_active ]; then
-				unlink $system_path/lc"$i"_active
-			fi
-			if [ -L $system_path/lc"$i"_powered ]; then
-				unlink $system_path/lc"$i"_powered
-			fi
-			if [ -L $system_path/lc"$i"_present ]; then
-				unlink $system_path/lc"$i"_present
-			fi
-			if [ -L $system_path/lc"$i"_ready ]; then
-				unlink $system_path/lc"$i"_ready
-			fi
-			if [ -L $system_path/lc"$i"_shutdown ]; then
-				unlink $system_path/lc"$i"_shutdown
-			fi
-			if [ -L $system_path/lc"$i"_synced ]; then
-				unlink $system_path/lc"$i"_synced
-			fi
-			if [ -L $system_path/lc"$i"_verified ]; then
-				unlink $system_path/lc"$i"_verified
-			fi
+    		check_n_unlink $system_path/lc"$i"_active
+			check_n_unlink $system_path/lc"$i"_powered
+			check_n_unlink $system_path/lc"$i"_present
+			check_n_unlink $system_path/lc"$i"_ready
+			check_n_unlink $system_path/lc"$i"_shutdown
+			check_n_unlink $system_path/lc"$i"_synced
+			check_n_unlink $system_path/lc"$i"_verified
 		done
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
-		if [ -L $config_path/port_config_done ]; then
-			unlink $config_path/port_config_done
-		fi
+		check_n_unlink $config_path/port_config_done
 		/usr/bin/hw-management.sh chipdown
 	fi
 	if [ "$2" == "cputemp" ]; then
@@ -869,58 +815,26 @@ else
 
 		fi
 		# Remove thermal attributes
-		if [ -L $thermal_path/"$2"_temp ]; then
-			unlink $thermal_path/"$2"_temp
-		fi
-		if [ -L $thermal_path/"$2"_temp_max ]; then
-			unlink $thermal_path/"$2"_temp_max
-		fi
-		if [ -L $thermal_path/"$2"_temp_alarm ]; then
-			unlink $thermal_path/"$2"_temp_alarm
-		fi
-		if [ -L $thermal_path/"$2"_temp_max_alarm ]; then
-			unlink $thermal_path/"$2"_temp_max_alarm
-		fi
-		if [ -L $thermal_path/"$2"_temp2 ]; then
-			unlink $thermal_path/"$2"_temp2
-		fi
-		if [ -L $thermal_path/"$2"_temp2_max ]; then
-			unlink $thermal_path/"$2"_temp2_max
-		fi
-		if [ -L $thermal_path/"$2"_temp2_max_alarm ]; then
-			unlink $thermal_path/"$2"_temp2_max_alarm
-		fi
-		if [ -L $alarm_path/"$2"_fan1_alarm ]; then
-			unlink $alarm_path/"$2"_fan1_alarm
-		fi
-		if [ -L $alarm_path/"$2"_power1_alarm ]; then
-			unlink $alarm_path/"$2"_power1_alarm
-		fi
-		if [ -L $thermal_path/"$2"_fan1_speed_get ]; then
-			unlink $thermal_path/"$2"_fan1_speed_get
-		fi
+		check_n_unlink $thermal_path/"$2"_temp
+		check_n_unlink $thermal_path/"$2"_temp_max
+		check_n_unlink $thermal_path/"$2"_temp_alarm
+		check_n_unlink $thermal_path/"$2"_temp_max_alarm
+		check_n_unlink $thermal_path/"$2"_temp2
+		check_n_unlink $thermal_path/"$2"_temp2_max
+		check_n_unlink $thermal_path/"$2"_temp2_max_alarm
+		check_n_unlink $alarm_path/"$2"_fan1_alarm
+		check_n_unlink $alarm_path/"$2"_power1_alarm
+		check_n_unlink $thermal_path/"$2"_fan1_speed_get
+
 		# Remove power attributes
-		if [ -L $power_path/"$2"_volt_in ]; then
-			unlink $power_path/"$2"_volt_in
-		fi
-		if [ -L $power_path/"$2"_volt ]; then
-			unlink $power_path/"$2"_volt
-		fi
-		if [ -L $power_path/"$2"_volt_out2 ]; then
-			unlink $power_path/"$2"_volt_out2
-		fi
-		if [ -L $power_path/"$2"_power_in ]; then
-			unlink $power_path/"$2"_power_in
-		fi
-		if [ -L $power_path/"$2"_power ]; then
-			unlink $power_path/"$2"_power
-		fi
-		if [ -L $power_path/"$2"_curr_in ]; then
-			unlink $power_path/"$2"_curr_in
-		fi
-		if [ -L $power_path/"$2"_curr ]; then
-			unlink $power_path/"$2"_curr
-		fi
+		check_n_unlink $power_path/"$2"_volt_in
+		check_n_unlink $power_path/"$2"_volt
+		check_n_unlink $power_path/"$2"_volt_out2
+		check_n_unlink $power_path/"$2"_power_in
+		check_n_unlink $power_path/"$2"_power
+		check_n_unlink $power_path/"$2"_curr_in
+		check_n_unlink $power_path/"$2"_curr
+
 		rm -f $eeprom_path/"$2"_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
