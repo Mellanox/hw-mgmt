@@ -1,0 +1,112 @@
+From 7223477295e22aa1c9b505ff53e97caabcde46f7 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 20 Jun 2021 20:40:25 +0000
+Subject: [PATCH backport/bringup 4.19 2/2] platform: mellanox: Extend platform
+ with bring-up fixes (attributes)
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-lc.c |  2 +-
+ drivers/platform/x86/mlx-platform.c   | 35 +++++++++++++++++++++++----
+ 2 files changed, 31 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 512cb256a..133e3c90b 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -42,7 +42,7 @@ enum mlxreg_lc_type {
+  * enum mlxreg_lc_state - line cards state
+  *
+  * @MLXREG_LC_INITIALIZED: line card is initialized;
+- * @MLXREG_LC_POWERD: line card is powered;
++ * @MLXREG_LC_POWERED: line card is powered;
+  * @MLXREG_LC_SYNCED: line card is syncronized between hardware and firmware;
+  */
+ enum mlxreg_lc_state {
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index efec89e00..c94cbff4b 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -50,6 +50,9 @@
+ #define MLXPLAT_CPLD_LPC_REG_WP1_OFFSET		0x31
+ #define MLXPLAT_CPLD_LPC_REG_GP2_OFFSET		0x32
+ #define MLXPLAT_CPLD_LPC_REG_WP2_OFFSET		0x33
++#define MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE	0x34
++#define MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET	0x35
++#define MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET	0x36
+ #define MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET	0x37
+ #define MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET	0x3a
+ #define MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET	0x3b
+@@ -3565,6 +3568,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0200,
+ 	},
++	{
++		.label = "auto_power_mode",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0644,
++	},
+ 	{
+ 		.label = "pm_mgmt_en",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
+@@ -3573,14 +3582,21 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 	},
+ 	{
+ 		.label = "jtag_enable",
+-		.reg = MLXPLAT_CPLD_LPC_REG_GP2_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(4),
++		.reg = MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE,
++		.mask = GENMASK(3, 0),
++		.bit = 1,
+ 		.mode = 0644,
+ 	},
+ 	{
+-		.label = "os_ready",
+-		.reg = MLXPLAT_CPLD_LPC_REG_GP2_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(6),
++		.label = "safe_bios_dis",
++		.reg = MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
++		.label = "safe_bios_dis_wp",
++		.reg = MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0444,
+ 	},
+ 	{
+@@ -4136,6 +4152,9 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_WP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_WP2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE:
++	case MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET:
++	case MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLO_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRCO_MASK_OFFSET:
+@@ -4213,6 +4232,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_WP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_WP2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE:
++	case MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET:
++	case MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET:
+@@ -4330,6 +4352,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_GP_RST_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_GP2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE:
++	case MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET:
++	case MLXPLAT_CPLD_LPC_SAFE_BIOS_WP_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET:
+-- 
+2.20.1
+
