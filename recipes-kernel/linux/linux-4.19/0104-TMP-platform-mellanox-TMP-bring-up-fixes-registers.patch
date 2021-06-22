@@ -1,0 +1,143 @@
+From ff02f15b3f2640c030dc5c454e7acc7dd44bba4c Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 22 Jun 2021 17:47:32 +0000
+Subject: [PATCH backport/bringup 4.19 1/2] platform: mellanox: TMP bring-up
+ fixes (registers)
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-lc.c | 14 +++++++-------
+ drivers/platform/x86/mlx-platform.c   | 17 +++++++++--------
+ 2 files changed, 16 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 133e3c90b..99bd363b8 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -602,11 +602,10 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
+ 							      mlxreg_lc->main_devs_num);
+ 			if (err)
+ 				return err;
+-#if 0
++
+ 			/* In case line card is already in ready state - enable it. */
+ 			if (mlxreg_lc->state & MLXREG_LC_CONFIGURED)
+ 				err = mlxreg_lc_enable_disable(mlxreg_lc, 1);
+-#endif
+ 		} else {
+ 			mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->main_devs,
+ 							 mlxreg_lc->main_devs_num);
+@@ -664,7 +663,7 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
+ 	}
+ 
+ 	/* Verify if line card is powered. */
+-	err = regmap_read(mlxreg_lc->par_regmap, mlxreg_lc->data->reg_prsnt, &regval);
++	err = regmap_read(mlxreg_lc->par_regmap, mlxreg_lc->data->reg_pwr, &regval);
+ 	if (err)
+ 		goto mlxreg_lc_regmap_read_power_fail;
+ 
+@@ -684,12 +683,13 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
+ 
+ 	/* Power on line card if necessary. */
+ 	if (regval & mlxreg_lc->data->mask && mlxreg_lc->state & MLXREG_LC_SYNCED) {
+-		err = mlxreg_lc_power_on_off(mlxreg_lc, 1);
+-		if (err)
+-			goto mlxreg_lc_regmap_power_on_off_fail;
+-
+ 		mlxreg_lc->state |= MLXREG_LC_SYNCED;
+ 		mlxreg_lc_state_update(mlxreg_lc, MLXREG_LC_SYNCED, 1);
++		if (mlxreg_lc->state & ~MLXREG_LC_POWERED) {
++			err = mlxreg_lc_power_on_off(mlxreg_lc, 1);
++			if (err)
++				goto mlxreg_lc_regmap_power_on_off_fail;
++		}
+ 	}
+ 
+ 	mlxreg_lc_state_update(mlxreg_lc, MLXREG_LC_INITIALIZED, 1);
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index c94cbff4b..62c703abb 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -1324,6 +1324,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pr_items_data[] = {
+ 	{
+ 		.label = "lc1_present",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
++		.mask = BIT(0),
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(0),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_NO_ACTION,
+@@ -1410,7 +1411,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(0),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1424,7 +1425,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[1],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(1),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1438,7 +1439,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[2],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(2),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1452,7 +1453,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[3],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(3),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1466,7 +1467,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[4],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(4),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1480,7 +1481,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[5],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(5),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1494,7 +1495,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[6],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(6),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -1508,7 +1509,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_ver_items_data[] = {
+ 		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+ 		.reg_sync = MLXPLAT_CPLD_LPC_REG_LC_SN_OFFSET,
+ 		.reg_pwr = MLXPLAT_CPLD_LPC_REG_LC_PWR_ON,
+-		.reg_ena = MLXPLAT_CPLD_LPC_REG_WP1_OFFSET,
++		.reg_ena = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[7],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(7),
+ 		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+-- 
+2.20.1
+

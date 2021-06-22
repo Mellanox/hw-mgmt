@@ -1,0 +1,27 @@
+From 80650f0263185cc09a57769899238e7ff04fe361 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 22 Jun 2021 17:48:33 +0000
+Subject: [PATCH backport/bringup 4.19 2/2] squash to: net: mlxsw: Extend mlxsw
+ driver with bring-up fixes
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 39111620f..faae6fe3c 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -348,7 +348,7 @@ int mlxsw_env_sensor_map_create(struct mlxsw_core *core,
+ 			map->sensor_bit_map[i++] = bit;
+ 	}
+ 
+- 	return 0;
++	return 0;
+ }
+ EXPORT_SYMBOL(mlxsw_env_sensor_map_create);
+ 
+-- 
+2.20.1
+
