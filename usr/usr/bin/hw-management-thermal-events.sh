@@ -154,10 +154,10 @@ get_lc_id_tz()
 # return none
 check_n_link()
 {
-    if [ -f "$1" ];
-    then
-        ln -sf "$1" "$2"
-    fi
+	if [ -f "$1" ];
+	then
+		ln -sf "$1" "$2"
+	fi
 }
 
 # Check if link exists and unlink it
@@ -165,10 +165,51 @@ check_n_link()
 # return none
 check_n_unlink()
 {
-    if [ -L "$1" ];
-    then
-        unlink "$1"
-    fi
+	if [ -L "$1" ];
+	then
+		unlink "$1"
+	fi
+}
+
+psu_sensor_attr_list=("min" "max" "crit" "lcrit")
+
+# Connect PSU sensor with attributes (min, max, crit, lcrit)
+# $1 - sensor sysfs path
+# $2 - sensor name (volt, volt_in, curr, ...)
+# return none
+psu_connect_power_sensor()
+{
+	sysfs_sensor_path=$1
+	sensor_name=$2
+
+	# First check and connect sensor
+	if [ -f "$sysfs_sensor_path"_input ];
+	then
+		ln -sf "$sysfs_sensor_path"_input "$power_path"/"$sensor_name"
+		for attr_name in ${psu_sensor_attr_list[*]}
+		do
+			sysfs_sensor_attr_path="$sysfs_sensor_path"_$attr_name
+			if [ -f "$sysfs_sensor_attr_path" ];
+			then
+				ln -sf "$sysfs_sensor_attr_path" "$power_path"/"$sensor_name"_"$attr_name"
+				echo -n "$attr_name " >> "$power_path"/"$sensor_name"_capability
+			fi
+		done
+	fi
+}
+
+# Disconnect PSU sensor with attributes (min, max,crit, lcrit)
+# $1 - sensor name
+# return none
+psu_disconnect_power_sensor()
+{
+	sensor_name=$1
+	check_n_unlink "$power_path"/"$sensor_name"
+	for attr_name in ${psu_sensor_attr_list[*]}
+	do
+		check_n_unlink "$power_path"/"$sensor_name"_"$attr_name"
+	done
+	rm -f "$power_path"/"$sensor_name"_capability
 }
 
 if [ "$1" == "add" ]; then
@@ -538,21 +579,23 @@ if [ "$1" == "add" ]; then
 		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$2"_fan1_alarm
 		check_n_link "$5""$3"/power1_alarm $alarm_path/"$2"_power1_alarm
 		ln -sf "$5""$3"/fan1_input $thermal_path/"$2"_fan1_speed_get
-		# Add power attributes
-		ln -sf "$5""$3"/in1_input $power_path/"$2"_volt_in
-		ln -sf "$5""$3"/in2_input $power_path/"$2"_volt
+
+		# Add PSU power attributes
+		psu_connect_power_sensor "$5""$3"/in1 "$2"_volt_in
+		psu_connect_power_sensor "$5""$3"/in2 "$2"_volt
+
 		if [ -f "$5""$3"/in3_input ]; then
-			ln -sf "$5""$3"/in3_input $power_path/"$2"_volt_out2
+			psu_connect_power_sensor "$5""$3"/in3 "$2"_volt_out2
 		else
 			in2_label=$(< "$5""$3"/in2_label)
 			if [ "$in2_label" == "vout1" ]; then
-				ln -sf "$5""$3"/in2_input $power_path/"$2"_volt_out
+				psu_connect_power_sensor "$5""$3"/in2 "$2"_volt_out
 			fi
 		fi
-		ln -sf "$5""$3"/power1_input $power_path/"$2"_power_in
-		ln -sf "$5""$3"/power2_input $power_path/"$2"_power
-		ln -sf "$5""$3"/curr1_input $power_path/"$2"_curr_in
-		ln -sf "$5""$3"/curr2_input $power_path/"$2"_curr
+		psu_connect_power_sensor "$5""$3"/power1 "$2"_power_in
+		psu_connect_power_sensor "$5""$3"/power2 "$2"_power
+		psu_connect_power_sensor "$5""$3"/curr1 "$2"_curr_in
+		psu_connect_power_sensor "$5""$3"/curr2 "$2"_curr
 
 		if [ ! -f $config_path/"$2"_i2c_addr ]; then
 			exit 0
@@ -758,7 +801,7 @@ else
 			check_n_unlink $thermal_path/psu"$i"_pwr_status
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
-    		check_n_unlink $system_path/lc"$i"_active
+			check_n_unlink $system_path/lc"$i"_active
 			check_n_unlink $system_path/lc"$i"_powered
 			check_n_unlink $system_path/lc"$i"_present
 			check_n_unlink $system_path/lc"$i"_ready
@@ -822,18 +865,18 @@ else
 		check_n_unlink $thermal_path/"$2"_temp2
 		check_n_unlink $thermal_path/"$2"_temp2_max
 		check_n_unlink $thermal_path/"$2"_temp2_max_alarm
+		check_n_unlink $thermal_path/"$2"_fan1_speed_get
 		check_n_unlink $alarm_path/"$2"_fan1_alarm
 		check_n_unlink $alarm_path/"$2"_power1_alarm
-		check_n_unlink $thermal_path/"$2"_fan1_speed_get
 
 		# Remove power attributes
-		check_n_unlink $power_path/"$2"_volt_in
-		check_n_unlink $power_path/"$2"_volt
-		check_n_unlink $power_path/"$2"_volt_out2
-		check_n_unlink $power_path/"$2"_power_in
-		check_n_unlink $power_path/"$2"_power
-		check_n_unlink $power_path/"$2"_curr_in
-		check_n_unlink $power_path/"$2"_curr
+		psu_disconnect_power_sensor "$2"_volt_in
+		psu_disconnect_power_sensor "$2"_volt
+		psu_disconnect_power_sensor "$2"_volt_out2
+		psu_disconnect_power_sensor "$2"_power_in
+		psu_disconnect_power_sensor "$2"_power
+		psu_disconnect_power_sensor "$2"_curr_in
+		psu_disconnect_power_sensor "$2"_curr
 
 		rm -f $eeprom_path/"$2"_vpd
 	fi
