@@ -1,6 +1,6 @@
 #!/bin/bash
-########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+################################################################################
+# Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -271,7 +271,7 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	max11603 0x64 6 \
 	24c32 0x51 8 \
 	tmp102 0x49 12 \
-	tmp421 0x48 14 \
+	tmp421 0x1f 14 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)

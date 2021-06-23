@@ -178,7 +178,7 @@ if [ "$1" == "add" ]; then
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
 	fi
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] || [ "$2" == "pcisw_amb" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -682,7 +682,7 @@ elif [ "$1" == "change" ]; then
 		fi
 	fi
 else
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] || [ "$2" == "pcisw_amb" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
