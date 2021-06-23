@@ -1,13 +1,14 @@
-From 80650f0263185cc09a57769899238e7ff04fe361 Mon Sep 17 00:00:00 2001
+From 8a091584bebf31c97b530dc12bae9ce35e24d2c7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Tue, 22 Jun 2021 17:48:33 +0000
+Date: Wed, 23 Jun 2021 17:23:06 +0000
 Subject: [PATCH backport/bringup 4.19 2/2] squash to: net: mlxsw: Extend mlxsw
  driver with bring-up fixes
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/net/ethernet/mellanox/mlxsw/core_env.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ drivers/net/ethernet/mellanox/mlxsw/core_env.c   | 2 +-
+ drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 8 ++------
+ 2 files changed, 3 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
 index 39111620f..faae6fe3c 100644
@@ -22,6 +23,25 @@ index 39111620f..faae6fe3c 100644
  }
  EXPORT_SYMBOL(mlxsw_env_sensor_map_create);
  
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 04ab383ca..73c753050 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -373,12 +373,8 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
+ 	struct mlxsw_hwmon_dev *mlxsw_hwmon_dev;
+ 
+ 	mlxsw_hwmon_dev = mlxsw_hwmon_attr->mlxsw_hwmon_dev;
+-	if (strlen(mlxsw_hwmon_dev->name))
+-		return sprintf(buf, "%s front panel %03u\n", mlxsw_hwmon_dev->name,
+-			       mlxsw_hwmon_attr->type_index);
+-	else
+-		return sprintf(buf, "front panel %03u\n",
+-			       mlxsw_hwmon_attr->type_index);
++
++	return sprintf(buf, "front panel %03u\n", mlxsw_hwmon_attr->type_index);
+ }
+ 
+ static ssize_t
 -- 
 2.20.1
 

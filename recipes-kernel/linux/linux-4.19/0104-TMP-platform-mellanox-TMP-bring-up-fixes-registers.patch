@@ -1,17 +1,17 @@
-From ff02f15b3f2640c030dc5c454e7acc7dd44bba4c Mon Sep 17 00:00:00 2001
+From 8fa89c6ae2482c2ab83b00030a52341051e9294e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Tue, 22 Jun 2021 17:47:32 +0000
+Date: Wed, 23 Jun 2021 17:22:42 +0000
 Subject: [PATCH backport/bringup 4.19 1/2] platform: mellanox: TMP bring-up
  fixes (registers)
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlxreg-lc.c | 14 +++++++-------
+ drivers/platform/mellanox/mlxreg-lc.c | 16 ++++++++--------
  drivers/platform/x86/mlx-platform.c   | 17 +++++++++--------
- 2 files changed, 16 insertions(+), 15 deletions(-)
+ 2 files changed, 17 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
-index 133e3c90b..99bd363b8 100644
+index 133e3c90b..20796cde6 100644
 --- a/drivers/platform/mellanox/mlxreg-lc.c
 +++ b/drivers/platform/mellanox/mlxreg-lc.c
 @@ -602,11 +602,10 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
@@ -36,14 +36,16 @@ index 133e3c90b..99bd363b8 100644
  	if (err)
  		goto mlxreg_lc_regmap_read_power_fail;
  
-@@ -684,12 +683,13 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
+@@ -683,13 +682,14 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
+ 		goto mlxreg_lc_regmap_read_sync_fail;
  
  	/* Power on line card if necessary. */
- 	if (regval & mlxreg_lc->data->mask && mlxreg_lc->state & MLXREG_LC_SYNCED) {
+-	if (regval & mlxreg_lc->data->mask && mlxreg_lc->state & MLXREG_LC_SYNCED) {
 -		err = mlxreg_lc_power_on_off(mlxreg_lc, 1);
 -		if (err)
 -			goto mlxreg_lc_regmap_power_on_off_fail;
 -
++	if (regval & mlxreg_lc->data->mask) {
  		mlxreg_lc->state |= MLXREG_LC_SYNCED;
  		mlxreg_lc_state_update(mlxreg_lc, MLXREG_LC_SYNCED, 1);
 +		if (mlxreg_lc->state & ~MLXREG_LC_POWERED) {
