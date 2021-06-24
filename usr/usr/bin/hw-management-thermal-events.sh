@@ -196,7 +196,7 @@ if [ "$1" == "add" ]; then
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
 		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
-			ln -sf "$3""$4"/temp1_input $thermal_path/pciesw_amb
+			ln -sf "$3""$4"/temp2_input $thermal_path/pciesw_amb
 		else
 			ln -sf "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
