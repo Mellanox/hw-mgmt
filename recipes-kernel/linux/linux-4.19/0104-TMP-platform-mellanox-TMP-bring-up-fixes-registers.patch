@@ -1,20 +1,44 @@
-From 8fa89c6ae2482c2ab83b00030a52341051e9294e Mon Sep 17 00:00:00 2001
+From fcc5461cb73dd0ad778c68a4c243e1a1e507c76e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Wed, 23 Jun 2021 17:22:42 +0000
+Date: Mon, 28 Jun 2021 09:37:29 +0000
 Subject: [PATCH backport/bringup 4.19 1/2] platform: mellanox: TMP bring-up
  fixes (registers)
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlxreg-lc.c | 16 ++++++++--------
- drivers/platform/x86/mlx-platform.c   | 17 +++++++++--------
- 2 files changed, 17 insertions(+), 16 deletions(-)
+ drivers/platform/mellanox/mlxreg-hotplug.c |  2 +-
+ drivers/platform/mellanox/mlxreg-lc.c      | 25 ++++++++++++----------
+ drivers/platform/x86/mlx-platform.c        | 23 +++++++++++++-------
+ 3 files changed, 30 insertions(+), 20 deletions(-)
 
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index 5deffeadf..fff3bc76d 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -121,7 +121,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
+ 	 */
+ 	if (data->hpdev.nr < 0)
+ 		return 0;
+-dev_info(priv->dev, "label %s action %d kind %d\n", data->label, data->hpdev.action, kind);
++
+ 	pdata = dev_get_platdata(&priv->pdev->dev);
+ 	switch (data->hpdev.action) {
+ 	case MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION:
 diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
-index 133e3c90b..20796cde6 100644
+index 133e3c90b..3ce644c03 100644
 --- a/drivers/platform/mellanox/mlxreg-lc.c
 +++ b/drivers/platform/mellanox/mlxreg-lc.c
-@@ -602,11 +602,10 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
+@@ -565,9 +565,6 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
+ 	struct mlxreg_lc *mlxreg_lc = handle;
+ 	int err = 0;
+ 
+-	dev_info(mlxreg_lc->dev, "linecard#%d state %d event kind %d action %d\n",
+-		 mlxreg_lc->data->slot, mlxreg_lc->state, kind, action);
+-
+ 	if (!(mlxreg_lc->state & MLXREG_LC_INITIALIZED))
+ 		return 0;
+ 
+@@ -602,11 +599,10 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
  							      mlxreg_lc->main_devs_num);
  			if (err)
  				return err;
@@ -27,7 +51,7 @@ index 133e3c90b..20796cde6 100644
  		} else {
  			mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->main_devs,
  							 mlxreg_lc->main_devs_num);
-@@ -664,7 +663,7 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
+@@ -664,7 +660,7 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
  	}
  
  	/* Verify if line card is powered. */
@@ -36,7 +60,7 @@ index 133e3c90b..20796cde6 100644
  	if (err)
  		goto mlxreg_lc_regmap_read_power_fail;
  
-@@ -683,13 +682,14 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
+@@ -683,13 +679,14 @@ static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent,
  		goto mlxreg_lc_regmap_read_sync_fail;
  
  	/* Power on line card if necessary. */
@@ -56,8 +80,21 @@ index 133e3c90b..20796cde6 100644
  	}
  
  	mlxreg_lc_state_update(mlxreg_lc, MLXREG_LC_INITIALIZED, 1);
+@@ -876,6 +873,12 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
+ 	struct mlxreg_core_data *data = dev_get_platdata(&pdev->dev);
+ 	struct mlxreg_lc *mlxreg_lc = platform_get_drvdata(pdev);
+ 
++	/* Clear event notification callback. */
++	if (data->notifier) {
++		data->notifier->user_handler = NULL;
++		data->notifier->handle = NULL;
++	}
++
+ 	/* Destroy static I2C device feeding by main power. */
+ 	mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->main_devs,
+ 					 mlxreg_lc->main_devs_num);
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index c94cbff4b..62c703abb 100644
+index c94cbff4b..deb175523 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -1324,6 +1324,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pr_items_data[] = {
@@ -140,6 +177,19 @@ index c94cbff4b..62c703abb 100644
  		.hpdev.brdinfo = &mlxplat_mlxcpld_lc_i2c_dev[7],
  		.hpdev.nr = MLXPLAT_CPLD_NR_LC_SET(7),
  		.hpdev.action = MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION,
+@@ -3580,6 +3581,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(7),
+ 		.mode = 0644,
+ 	},
++	{
++		.label = "os_ready",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "jtag_enable",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE,
 -- 
 2.20.1
 

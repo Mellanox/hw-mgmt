@@ -1,6 +1,6 @@
-From 283d6cd4d2493386281cb3232afba62b78d9c5f2 Mon Sep 17 00:00:00 2001
+From ef6ac2ab3251d3c8f0880d6672bef3374846b953 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Thu, 24 Jun 2021 21:32:55 +0000
+Date: Mon, 28 Jun 2021 09:37:51 +0000
 Subject: [PATCH backport/bringup 4.19 2/2] squash to: net: mlxsw: Extend mlxsw
  driver with bring-up fixes
 
