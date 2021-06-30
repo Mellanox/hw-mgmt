@@ -1,6 +1,6 @@
-From ef6ac2ab3251d3c8f0880d6672bef3374846b953 Mon Sep 17 00:00:00 2001
+From f2ba2dc975f9a3803907d38bd622d9256d88ec42 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Mon, 28 Jun 2021 09:37:51 +0000
+Date: Wed, 30 Jun 2021 06:49:22 +0000
 Subject: [PATCH backport/bringup 4.19 2/2] squash to: net: mlxsw: Extend mlxsw
  driver with bring-up fixes
 
@@ -24,7 +24,7 @@ index 39111620f..faae6fe3c 100644
  EXPORT_SYMBOL(mlxsw_env_sensor_map_create);
  
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
-index 04ab383ca..55009dd50 100644
+index 04ab383ca..f28cea6ff 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
 @@ -371,14 +371,13 @@ mlxsw_hwmon_module_temp_label_show(struct device *dev,
@@ -40,7 +40,7 @@ index 04ab383ca..55009dd50 100644
 -	else
 -		return sprintf(buf, "front panel %03u\n",
 -			       mlxsw_hwmon_attr->type_index);
-+		index -= 1;
++		index += 1;
 +
 +	return sprintf(buf, "front panel %03u\n", index);
  }
