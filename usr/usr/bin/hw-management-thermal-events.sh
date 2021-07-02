@@ -186,6 +186,7 @@ psu_connect_power_sensor()
 	if [ -f "$sysfs_sensor_path"_input ];
 	then
 		ln -sf "$sysfs_sensor_path"_input "$power_path"/"$sensor_name"
+		touch "$power_path"/"$sensor_name"_capability
 		for attr_name in ${psu_sensor_attr_list[*]}
 		do
 			sysfs_sensor_attr_path="$sysfs_sensor_path"_$attr_name
