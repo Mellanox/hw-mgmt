@@ -1,0 +1,199 @@
+From 8de9e656e03fed263077cb5a450e885bdf9478f7 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 5 Jul 2021 11:34:28 +0000
+Subject: [PATCH backport/bringup 4.19 3/3] platform: mellanox: TMP bring-up
+ fixes (reset cuase)
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/busses/i2c-mlxcpld.c      |  6 +--
+ drivers/platform/mellanox/mlxreg-lc.c |  5 +--
+ drivers/platform/x86/mlx-platform.c   | 60 +++++++++++++++++++--------
+ 3 files changed, 47 insertions(+), 24 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
+index 9b14e2bfa..56aa424fd 100644
+--- a/drivers/i2c/busses/i2c-mlxcpld.c
++++ b/drivers/i2c/busses/i2c-mlxcpld.c
+@@ -49,7 +49,7 @@
+ #define MLXCPLD_LPCI2C_NACK_IND		2
+ 
+ #define MLXCPLD_I2C_FREQ_1000KHZ_SET	0x04
+-#define MLXCPLD_I2C_FREQ_400KHZ_SET	0x0f
++#define MLXCPLD_I2C_FREQ_400KHZ_SET	0x0c
+ #define MLXCPLD_I2C_FREQ_100KHZ_SET	0x42
+ 
+ enum mlxcpld_i2c_frequency {
+@@ -324,9 +324,9 @@ static int mlxcpld_i2c_wait_for_tc(struct mlxcpld_i2c_priv *priv)
+ 		if (priv->smbus_block && (val & MLXCPLD_I2C_SMBUS_BLK_BIT)) {
+ 			mlxcpld_i2c_read_comm(priv, MLXCPLD_LPCI2C_NUM_DAT_REG,
+ 					      &datalen, 1);
+-			if (unlikely(datalen > (I2C_SMBUS_BLOCK_MAX + 1))) {
++			if (unlikely(datalen > I2C_SMBUS_BLOCK_MAX)) {
+ 				dev_err(priv->dev, "Incorrect smbus block read message len\n");
+-				return -E2BIG;
++				return -EPROTO;
+ 			}
+ 		} else {
+ 			datalen = priv->xfer.data_len;
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 3ce644c03..ea1e0aa79 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -43,7 +43,7 @@ enum mlxreg_lc_type {
+  *
+  * @MLXREG_LC_INITIALIZED: line card is initialized;
+  * @MLXREG_LC_POWERED: line card is powered;
+- * @MLXREG_LC_SYNCED: line card is syncronized between hardware and firmware;
++ * @MLXREG_LC_SYNCED: line card is synchronized between hardware and firmware;
+  */
+ enum mlxreg_lc_state {
+ 	MLXREG_LC_INITIALIZED = BIT(0),
+@@ -154,7 +154,6 @@ static const struct regmap_config mlxreg_lc_regmap_conf = {
+ 	.val_bits = 8,
+ 	.max_register = MLXREG_LC_REG_MAX,
+ 	.cache_type = REGCACHE_FLAT,
+-	.val_format_endian = REGMAP_ENDIAN_BIG,
+ 	.writeable_reg = mlxreg_lc_writeable_reg,
+ 	.readable_reg = mlxreg_lc_readable_reg,
+ 	.volatile_reg = mlxreg_lc_volatile_reg,
+@@ -342,7 +341,7 @@ static struct mlxreg_core_data mlxreg_lc_io_data[] = {
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "lc_pwr_en",
++		.label = "reset_line_card_pwr_en",
+ 		.reg = MLXREG_LC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(7),
+ 		.mode = 0444,
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index deb175523..6ac66c0b2 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -3347,11 +3347,17 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_aux_pwr_or_ref",
++		.label = "reset_aux_pwr_or_fu",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "reset_mgmt_dc_dc_pwr_fail",
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "reset_from_comex",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+@@ -3359,21 +3365,33 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_from_asic",
++		.label = "reset_sys_comex_bios",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_swb_wd",
++		.label = "reset_swb",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_asic_thermal",
+-		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(7),
++		.label = "reset_sw_reset",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_from_main_brd",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_aux_pwr_or_reload",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0444,
+ 	},
+ 	{
+@@ -3395,47 +3413,53 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_comex_wd",
++		.label = "reset_pwr_off_from_carrier",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mask = GENMASK(7, 0) & ~BIT(7),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_voltmon_upgrade_fail",
++		.label = "reset_swb_wd",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(0),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_system",
+-		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(1),
++		.label = "reset_swb_aux_pwr_or_fu",
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_sw_pwr_off",
++		.label = "reset_swb_dc_dc_pwr_fail",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mask = GENMASK(7, 0) & ~BIT(3),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_comex_thermal",
++		.label = "reset_swb_12v_fail",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mask = GENMASK(7, 0) & ~BIT(4),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_reload_bios",
++		.label = "reset_system",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0444,
+ 	},
+ 	{
+-		.label = "reset_ac_pwr_fail",
++		.label = "reset_from_mgmt",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "reset_thermal_pciesw",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "bios_safe_mode",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
+-- 
+2.20.1
+
