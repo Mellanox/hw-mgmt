@@ -1,0 +1,45 @@
+From 2e14a2ba92e1ffbe7137bd09509049fe982dab1d Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 6 Jul 2021 07:44:17 +0000
+Subject: [PATCH backport v5.10.43 42/43] i2c: mlxcpld: Fix criteria for
+ frequency setting
+
+Value for getting frequency capability wrongly has been taken from
+register offset instead of register value.
+
+Fixes: 66b0c2846ba8de ("i2c: mlxcpld: Add support for I2C bus frequency setting")
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/hwmon/pmbus/mp2975.c     | 2 +-
+ drivers/i2c/busses/i2c-mlxcpld.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/hwmon/pmbus/mp2975.c b/drivers/hwmon/pmbus/mp2975.c
+index 60fbdb371332..74060bc477cf 100644
+--- a/drivers/hwmon/pmbus/mp2975.c
++++ b/drivers/hwmon/pmbus/mp2975.c
+@@ -54,7 +54,7 @@
+ 
+ #define MP2975_RAIL2_FUNC	(PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT | \
+ 				 PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | \
+-				 PMBUS_PHASE_VIRTUAL)
++				 PMBUS_HAVE_POUT | PMBUS_PHASE_VIRTUAL)
+ 
+ struct mp2975_data {
+ 	struct pmbus_driver_info info;
+diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
+index 4e0b7c2882ce..6d41c3db8a2b 100644
+--- a/drivers/i2c/busses/i2c-mlxcpld.c
++++ b/drivers/i2c/busses/i2c-mlxcpld.c
+@@ -495,7 +495,7 @@ mlxcpld_i2c_set_frequency(struct mlxcpld_i2c_priv *priv,
+ 		return err;
+ 
+ 	/* Set frequency only if it is not 100KHz, which is default. */
+-	switch ((data->reg & data->mask) >> data->bit) {
++	switch ((regval & data->mask) >> data->bit) {
+ 	case MLXCPLD_I2C_FREQ_1000KHZ:
+ 		freq = MLXCPLD_I2C_FREQ_1000KHZ_SET;
+ 		break;
+-- 
+2.20.1
+
