@@ -265,6 +265,17 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
 			24c32 0x51 8)
+			
+mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6C 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x53 7 \
+			24c32 0x51 8)
 
 msn4800_base_connect_table=( mp2975 0x62 6 \
 	mp2975 0x64 5 \
@@ -744,7 +755,7 @@ msn46xx_specific()
 	if [ $res -eq 0 ]; then
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
-			1)
+			1|3)
 				connect_msn4700_msn4600_A1
 			;;
 			*)
@@ -792,7 +803,25 @@ msn3510_specific()
 
 mqm97xx_specific()
 {
-	connect_table=(${mqm97xx_base_connect_table[@]})
+	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
+
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			3)
+				connect_table=(${mqm97xx_rev1_base_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+				;;
+			*)
+				connect_table=(${mqm97xx_base_connect_table[@]})
+				;;
+		esac
+	else
+		connect_table=(${mqm97xx_base_connect_table[@]})
+	fi
+
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -802,7 +831,6 @@ mqm97xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 }
 
 mqm87xx_rev1_specific()
