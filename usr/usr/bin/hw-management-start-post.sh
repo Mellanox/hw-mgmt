@@ -40,6 +40,7 @@ hw_management_path=/var/run/hw-management
 config_path=$hw_management_path/config
 system_path=$hw_management_path/system
 thermal_path=/var/run/hw-management/thermal
+CPLD3_VER_DEF="0"
  
 handle_cpld_versions()
 {
@@ -97,7 +98,23 @@ case $board in
 		;;
 esac
 
-timeout 6 bash -c 'until [  -L $system_path/cpld1_version ]; do sleep 1; done'
+timeout 6 bash -c 'until [ -L $system_path/cpld1_version ]; do sleep 1; done'
+
+# MLNX-ONLY. Read cpld3 version from SXD driver
+if [ -f $config_path/cpld_port ];
+then
+    cpld=$(< $config_path/cpld_port)
+    if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ];
+    then
+        # check if sxd_access_reg_msci.py exists
+        if [ -x "$(command -v sxd_read_cpld_ver.py)" ]; then
+            cmd="sleep 15;  sxd_read_cpld_ver.py -i 2 | grep Version |  cut -d ":" -f2 > $system_path/cpld3_version"
+            eval "${cmd}" &>/dev/null & disown;
+        fi
+        echo $CPLD3_VER_DEF > $system_path/cpld3_version
+    fi
+fi
+
 handle_cpld_versions $cpld_num
 # Do not set for fixed fans systems. For fixed fans systems fan_drwr_num set in system specific init function.
 if [ ! -f $config_path/fixed_fans_system ]; then
