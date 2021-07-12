@@ -358,7 +358,7 @@ function asic_cpld_add_handler()
 		if [ "$cpld" == "cpld1" ]; then
 			ln -sf "${ASIC_I2C_PATH}"/cpld1_version $system_path/cpld3_version
 		fi
-		if [ "$cpld" == "cpld3" ]; then
+		if [ "$cpld" == "cpld3" ] && [ -f "${ASIC_I2C_PATH}"/cpld3_version ]; then
 			ln -sf "${ASIC_I2C_PATH}"/cpld3_version $system_path/cpld3_version
 		fi
 	fi
