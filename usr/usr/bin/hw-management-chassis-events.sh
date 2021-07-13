@@ -31,22 +31,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-hw_management_path=/var/run/hw-management
-environment_path=$hw_management_path/environment
-alarm_path=$hw_management_path/alarm
-eeprom_path=$hw_management_path/eeprom
-led_path=$hw_management_path/led
-system_path=$hw_management_path/system
-sfp_path=$hw_management_path/sfp
-watchdog_path=$hw_management_path/watchdog
-config_path=$hw_management_path/config
-events_path=$hw_management_path/events
-thermal_path=$hw_management_path/thermal
+source hw-management-helper.sh
+
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
-i2c_bus_max=10
-lc_i2c_bus_min=34
-lc_i2c_bus_max=43
-i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
 i2c_bus_def_off_eeprom_psu=4
@@ -64,8 +51,6 @@ psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
 eeprom_name=''
 sfp_counter=0
-LOCKFILE="/var/run/hw-management-chassis.lock"
-udev_ready=$hw_management_path/.udev_ready
 fan_dir_offset_in_vpd_eeprom_pn=0x48
 # 46 - F, 52 - R
 fan_direction_exhaust=46
@@ -74,15 +59,10 @@ linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "therma
 mlxreg_lc_addr=32
 lc_max_num=8
 
-log_err()
-{
-	logger -t hw-management -p daemon.err "$@"
-}
+set -x
+echo $@
+exec 3>&1 4>&2 >>/tmp/chassis_events_log 2>&1
 
-log_info()
-{
-	logger -t hw-management -p daemon.info "$@"
-}
 
 # Voltmon sensors by label mapping:
 #                   dummy   voltmon1      voltmon2       voltmon3
@@ -158,44 +138,6 @@ create_linecard_i2c_links()
 destroy_linecard_i2c_links()
 {
 	rm -rf /dev/lc"$1"
-}
-
-find_i2c_bus()
-{
-	# Find physical bus number of Mellanox I2C controller. The default
-	# number is 1, but it could be assigned to others id numbers on
-	# systems with different CPU types.
-	for ((i=1; i<i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "i2c-mlxcpld" ]; then
-				i2c_bus_offset=$((i-1))
-				return
-			fi
-		fi
-	done
-
-	log_err "i2c-mlxcpld driver is not loaded"
-	exit 0
-}
-
-find_linecard_bus()
-{
-	# Find base i2c bus number of Mellanox line card.
-	for ((i=lc_i2c_bus_min; i<lc_i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "mlxreg-lc" ]; then
-				linecard_bus_offset=$i
-				return
-			fi
-		fi
-	done
-
-	log_err "mlxreg-lc driver is not loaded"
-	exit 0
 }
 
 find_linecard_num()
@@ -325,18 +267,6 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
 	fi
-}
-
-lock_service_state_change()
-{
-	exec {LOCKFD}>${LOCKFILE}
-	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
-}
-
-unlock_service_state_change()
-{
-	/usr/bin/flock -u ${LOCKFD}
 }
 
 function create_sfp_symbolic_links()
@@ -474,25 +404,13 @@ if [ "$1" == "add" ]; then
 			find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 			sensor_id=$?
 			if [ ! $sensor_id -eq 0 ]; then
-				if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
-				fi
-				if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
-				fi
+    			check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
+				check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
 			fi
-			if [ -f "$3""$4"/curr"$i"_input ]; then
-				ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
-			fi
-			if [ -f "$3""$4"/power"$i"_input ]; then
-				ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
-			fi
-			if [ -f "$3""$4"/curr"$i"_alarm ]; then
-				ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
-			fi
-			if [ -f "$3""$4"/power"$i"_alarm ]; then
-				ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
-			fi
+			check_n_link "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
+			check_n_link "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
+			check_n_link "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
+			check_n_link "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
 		done
 	fi
 	if [ "$2" == "led" ]; then
@@ -635,9 +553,7 @@ if [ "$1" == "add" ]; then
 				ln -sf "$3""$4"/timeout ${watchdog_path}/"${wd_sub}"/timeout
 				ln -sf "$3""$4"/identity ${watchdog_path}/"${wd_sub}"/identity
 				ln -sf "$3""$4"/state ${watchdog_path}/"${wd_sub}"/state
-				if [ -f "$3""$4"/timeleft ]; then
-					ln -sf "$3""$4"/timeleft ${watchdog_path}/"${wd_sub}"/timeleft
-				fi
+				check_n_link "$3""$4"/timeleft ${watchdog_path}/"${wd_sub}"/timeleft
 				;;
 			*)
 				;;
@@ -687,9 +603,7 @@ else
 		fi
 		unlink $environment_path/"$2"_"$5"_voltage_scale
 		for i in {0..7}; do
-			if [ -L $environment_path/"$2"_"$5"_raw_"$i" ]; then
-				unlink $environment_path/"$2"_"$5"_raw_"$i"
-			fi
+			check_n_unlink $environment_path/"$2"_"$5"_raw_"$i"
 		done
 	fi
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
@@ -723,24 +637,12 @@ else
 			fi
 		fi
 		for i in {1..3}; do
-			if [ -L $environment_path/"$2"_in"$i"_input ]; then
-				unlink $environment_path/"$2"_in"$i"_input
-			fi
-			if [ -L $environment_path/"$2"_curr"$i"_input ]; then
-				unlink $environment_path/"$2"_curr"$i"_input
-			fi
-			if [ -L $environment_path/"$2"_power"$i"_input ]; then
-				unlink $environment_path/"$2"_power"$i"_input
-			fi
-			if [ -L $alarm_path/"$2"_in"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_in"$i"_alarm
-			fi
-			if [ -L $alarm_path/"$2"_curr"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_curr"$i"_alarm
-			fi
-			if [ -L $alarm_path/"$2"_power"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_power"$i"_alarm
-			fi
+			check_n_unlink $environment_path/"$2"_in"$i"_input
+			check_n_unlink $environment_path/"$2"_curr"$i"_input
+			check_n_unlink $environment_path/"$2"_power"$i"_input
+			check_n_unlink $alarm_path/"$2"_in"$i"_alarm
+			check_n_unlink $alarm_path/"$2"_curr"$i"_alarm
+			check_n_unlink $alarm_path/"$2"_power"$i"_alarm
 		done
 	fi
 	if [ "$2" == "led" ]; then
@@ -789,9 +691,7 @@ else
 		if [ -d $system_path ]; then
 			for attrname in $system_path/*; do
 				attrname=$(basename "${attrname}")
-				if [ -L $system_path/"$attrname" ]; then
-					unlink $system_path/"$attrname"
-				fi
+				check_n_unlink $system_path/"$attrname"
 			done
 		fi
 	fi

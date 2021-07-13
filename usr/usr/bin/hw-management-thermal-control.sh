@@ -71,11 +71,13 @@
 # All the sensors and statuses are exposed through the sysfs interface for the
 # user space application access.
 
+source hw-management-helper.sh
+
+set -x
+echo $@
+exec 3>&1 4>&2 >>/tmp/thermal_controll_log 2>&1
+
 # Paths to thermal sensors, device present states, thermal zone and cooling device
-hw_management_path=/var/run/hw-management
-thermal_path=$hw_management_path/thermal
-config_path=$hw_management_path/config
-system_path=$hw_management_path/system
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
