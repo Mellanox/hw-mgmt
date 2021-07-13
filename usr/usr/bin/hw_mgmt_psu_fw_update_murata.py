@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# pylint: disable=line-too-long
+# pylint: disable=C0103
 ########################################################################
 # Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
 #
@@ -42,7 +44,8 @@ Murata PSU FW update tool.
 
 '''
 
-import sys, time, argparse
+import time
+import argparse
 from textwrap import wrap
 
 import hw_mgmt_psu_fw_update_common as hw_mgmt_pmbus
@@ -53,6 +56,9 @@ bootloader_status_addr = 0xFB
 
 
 def read_murata_secondary_revision(i2c_bus, i2c_addr):
+    """
+    @summary: Read Murata PSU secondary revision.
+    """
     hw_mgmt_pmbus.pmbus_page(i2c_bus, i2c_addr, 1)
     ret = hw_mgmt_pmbus.pmbus_read_block(i2c_bus, i2c_addr, 0x9b)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
@@ -63,11 +69,17 @@ def read_murata_secondary_revision(i2c_bus, i2c_addr):
 
 
 def power_supply_reset(i2c_bus, i2c_addr):
+    """
+    @summary: send PSU reset.
+    """
     data = [0xf8, 0xaf]
-    hw_mgmt_pmbus.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    hw_mgmt_pmbus.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 def end_of_file(i2c_bus, i2c_addr):
+    """
+    @summary: send PSU end of file.
+    """
     data = [0xfa, 0x44, 0x01, 0x00]
     data.extend([0] * 32)
     data.extend([0x00, 0xc1])
@@ -75,6 +87,9 @@ def end_of_file(i2c_bus, i2c_addr):
 
 
 def check_power_supply_status(i2c_bus, i2c_addr):
+    """
+    @summary: check power supply status.
+    """
     ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, ps_status_addr, 3)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         # print("check_power_supply_status: {}".format(ret))
@@ -99,6 +114,9 @@ upgrade_status_dict = {
 
 
 def poll_upgrade_status(i2c_bus, i2c_addr):
+    """
+    @summary: poll upgrade status.
+    """
     ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, upgrade_status_addr, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upgrade_status = upgrade_status_dict.get(int(ret, 16), "POLL_STATUS_UNDEFINED")
@@ -107,6 +125,9 @@ def poll_upgrade_status(i2c_bus, i2c_addr):
 
 
 def test_poll_upgrade_status(i2c_bus, i2c_addr):
+    """
+    @summary: poll upgrade status with 3 reties.
+    """
     retry = 0
     while True:
         upgrade_status = poll_upgrade_status(i2c_bus, i2c_addr)
@@ -115,7 +136,7 @@ def test_poll_upgrade_status(i2c_bus, i2c_addr):
         time.sleep(0.3)
         retry += 1
 
-    if (upgrade_status != "POLL_STATUS_SUCCSESS"):
+    if upgrade_status != "POLL_STATUS_SUCCSESS":
         print("PSU FW upgrade failed.")
         exit(1)
 
@@ -134,19 +155,28 @@ bootloader_status_dict = {
 
 
 def bootloader_status(i2c_bus, i2c_addr):
+    """
+    @summary: read bootloader status.
+    """
     ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, bootloader_status_addr, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
-        bootloader_status = bootloader_status_dict.get(int(ret, 16))
-        print(bootloader_status)
-        return bootloader_status
+        bl_status = bootloader_status_dict.get(int(ret, 16))
+        print(bl_status)
+        return bl_status
 
 
 def two_complement_checksum(data):
-    return (-(sum(c for c in data) % 256) & 0xFF)
+    """
+    @summary: calculate two complement checksum.
+    """
+    return -(sum(c for c in data) % 256) & 0xFF
 
 
 def upgrade_data_command(i2c_bus, i2c_addr, data):
-    send_data = [0xfa, 0x44, 0x0, 0x0 ]
+    """
+    @summary: send upgrade data command.
+    """
+    send_data = [0xfa, 0x44, 0x0, 0x0]
     send_data.extend(data)
     res_chksum = two_complement_checksum(send_data)
     send_data.extend([0x0, res_chksum])
@@ -155,6 +185,9 @@ def upgrade_data_command(i2c_bus, i2c_addr, data):
 
 
 def burn_fw_file(i2c_bus, i2c_addr, fw_filename):
+    """
+    @summary: burn FW file.
+    """
     data_flag = 0
     with open(fw_filename) as fp:
         for line in fp:
@@ -181,6 +214,9 @@ microtype_dict = {
 
 
 def enter_bootload_mode(i2c_bus, i2c_addr):
+    """
+    @summary: enter bootload mode.
+    """
     data = [0xfa, 0x42]
     data.extend([microtype_dict["MICROTYPE_SECONDARY"]])
     data.extend([0x44, 0x41, 0x54, 0x50])
@@ -191,9 +227,11 @@ bootloader_i2c_addr = 0x60
 
 
 def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
-
+    """
+    @summary: Murata PSU update.
+    """
     # If coninue_update skip entering to boot_mode.
-    if(continue_update != True):
+    if continue_update != True:
         # 1. Read current firmware revision using command the READ_MFG_FW_REVISION.
         read_murata_secondary_revision(i2c_bus, i2c_addr)
 
@@ -218,7 +256,7 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
         # 5a. Send the Host POWER_DOWN, BUSY or SUCCESS.
 
         if poll_upgrade_status(i2c_bus, bootloader_i2c_addr) != "POLL_STATUS_SUCCSESS":
-            print("failed to enter boot mode");
+            print("failed to enter boot mode")
             exit(1)
 
     # 6. Send the PAGE command to get the microcontroller ready for the data dump.
@@ -241,9 +279,9 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
         #     do if IN-SYSTEM PROGRAMMING fails).
 
     if poll_upgrade_status(i2c_bus, bootloader_i2c_addr) == "POLL_STATUS_NOTACTIVE":
-        print("checksum test passes, the target microcontroller will leave BOOTLOAD Mode");
+        print("checksum test passes, the target microcontroller will leave BOOTLOAD Mode")
     else:
-        print("checksum test fails, the target microcontroller remains in BOOTLOAD Mode");
+        print("checksum test fails, the target microcontroller remains in BOOTLOAD Mode")
         exit(1)
 
     # 11. Repeat steps 1-9 to upgrade remaining microcontrollers.
@@ -259,7 +297,7 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
     read_murata_secondary_revision(i2c_bus, i2c_addr)
 
 
-def main(argv):
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required arguments')
     required.add_argument('-i', "--input_file", required=True)
@@ -278,8 +316,3 @@ def main(argv):
     # burn_fw_file(i2c_bus, i2c_addr)
 
     murata_update(args.i2c_bus, args.i2c_addr, False, args.input_file)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
-
