@@ -32,14 +32,11 @@
 #
 
 # hw-management script that is executed at the end of hw-management start.
+source hw-management-helper.sh
 
 # Local constants and paths.
 max_cpld=4
 max_fan_drwr=8
-hw_management_path=/var/run/hw-management
-config_path=$hw_management_path/config
-system_path=$hw_management_path/system
-thermal_path=/var/run/hw-management/thermal
 CPLD3_VER_DEF="0"
  
 handle_cpld_versions()
