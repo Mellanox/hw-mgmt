@@ -48,7 +48,8 @@ import time
 import argparse
 from textwrap import wrap
 
-import hw_mgmt_psu_fw_update_common as hw_mgmt_pmbus
+import hw_mgmt_psu_fw_update_common as psu_upd_cmn
+
 
 ps_status_addr = 0xE0
 upgrade_status_addr = 0xFA
@@ -59,10 +60,10 @@ def read_murata_secondary_revision(i2c_bus, i2c_addr):
     """
     @summary: Read Murata PSU secondary revision.
     """
-    hw_mgmt_pmbus.pmbus_page(i2c_bus, i2c_addr, 1)
-    ret = hw_mgmt_pmbus.pmbus_read_block(i2c_bus, i2c_addr, 0x9b)
+    psu_upd_cmn.pmbus_page(i2c_bus, i2c_addr, 1)
+    ret = psu_upd_cmn.pmbus_read_block(i2c_bus, i2c_addr, 0x9b)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
-        hw_mgmt_pmbus.pmbus_page(i2c_bus, i2c_addr, 0)
+        psu_upd_cmn.pmbus_page(i2c_bus, i2c_addr, 0)
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
         print(ascii_str)
         return ascii_str
@@ -73,7 +74,7 @@ def power_supply_reset(i2c_bus, i2c_addr):
     @summary: send PSU reset.
     """
     data = [0xf8, 0xaf]
-    hw_mgmt_pmbus.pmbus_write(i2c_bus, i2c_addr, data)
+    psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
 
 
 def end_of_file(i2c_bus, i2c_addr):
@@ -83,14 +84,14 @@ def end_of_file(i2c_bus, i2c_addr):
     data = [0xfa, 0x44, 0x01, 0x00]
     data.extend([0] * 32)
     data.extend([0x00, 0xc1])
-    hw_mgmt_pmbus.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
 
 
 def check_power_supply_status(i2c_bus, i2c_addr):
     """
     @summary: check power supply status.
     """
-    ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, ps_status_addr, 3)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, ps_status_addr, 3)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         # print("check_power_supply_status: {}".format(ret))
         ps_status = [int(i, 16) for i in ret.split()]
@@ -117,7 +118,7 @@ def poll_upgrade_status(i2c_bus, i2c_addr):
     """
     @summary: poll upgrade status.
     """
-    ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, upgrade_status_addr, 1)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, upgrade_status_addr, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upgrade_status = upgrade_status_dict.get(int(ret, 16), "POLL_STATUS_UNDEFINED")
         # print(upgrade_status)
@@ -158,7 +159,7 @@ def bootloader_status(i2c_bus, i2c_addr):
     """
     @summary: read bootloader status.
     """
-    ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, bootloader_status_addr, 1)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, bootloader_status_addr, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         bl_status = bootloader_status_dict.get(int(ret, 16))
         print(bl_status)
@@ -181,7 +182,7 @@ def upgrade_data_command(i2c_bus, i2c_addr, data):
     res_chksum = two_complement_checksum(send_data)
     send_data.extend([0x0, res_chksum])
     # print(send_data)
-    hw_mgmt_pmbus.pmbus_write_nopec(i2c_bus, i2c_addr, send_data)
+    psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, send_data)
 
 
 def burn_fw_file(i2c_bus, i2c_addr, fw_filename):
@@ -190,7 +191,9 @@ def burn_fw_file(i2c_bus, i2c_addr, fw_filename):
     """
     data_flag = 0
     with open(fw_filename) as fp:
-        for line in fp:
+        lines = fp.readlines()
+        for number, line in enumerate(lines):
+            psu_upd_cmn.progress_bar(((number+1)*100)/len(lines), 100)
             if "[data]" in line:
                 data_flag = 1
                 continue
@@ -201,9 +204,9 @@ def burn_fw_file(i2c_bus, i2c_addr, fw_filename):
                 data_str = data[0].rstrip("\n")
                 data_arr = [int(i, 16) for i in wrap(data_str, 2)]
                 # print(data_str)
-                # print(data_arr)
                 upgrade_data_command(i2c_bus, i2c_addr, data_arr)
                 test_poll_upgrade_status(i2c_bus, i2c_addr)
+        print("\nSend FW Done.")
 
 
 microtype_dict = {
@@ -220,7 +223,7 @@ def enter_bootload_mode(i2c_bus, i2c_addr):
     data = [0xfa, 0x42]
     data.extend([microtype_dict["MICROTYPE_SECONDARY"]])
     data.extend([0x44, 0x41, 0x54, 0x50])
-    hw_mgmt_pmbus.pmbus_write(i2c_bus, i2c_addr, data)
+    psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 bootloader_i2c_addr = 0x60
@@ -260,7 +263,7 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
             exit(1)
 
     # 6. Send the PAGE command to get the microcontroller ready for the data dump.
-    hw_mgmt_pmbus.pmbus_page_nopec(i2c_bus, bootloader_i2c_addr, 0x01)
+    psu_upd_cmn.pmbus_page_nopec(i2c_bus, bootloader_i2c_addr, 0x01)
 
     # 7. For each line in the app file.
     burn_fw_file(i2c_bus, bootloader_i2c_addr, fw_filename)
@@ -303,9 +306,11 @@ if __name__ == '__main__':
     required.add_argument('-i', "--input_file", required=True)
     required.add_argument('-b', "--i2c_bus", type=int, default=0, required=True)
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
+    parser.add_argument('-p', "--proceed", type=bool, nargs='?',
+                        const=True, default=False)
     args = parser.parse_args()
 
-    print('Input args "', args.input_file, args.i2c_bus, args.i2c_addr)
+    #print('Input args "', args.input_file, args.i2c_bus, args.i2c_addr)
     # read_mfr_id(i2c_bus, i2c_adr)
     # read_mfr_model(i2c_bus, i2c_adr)
     # read_mfr_revision(i2c_bus, i2c_adr)
@@ -315,4 +320,7 @@ if __name__ == '__main__':
     # bootloader_status(i2c_bus, i2c_adr)
     # burn_fw_file(i2c_bus, i2c_addr)
 
-    murata_update(args.i2c_bus, args.i2c_addr, False, args.input_file)
+
+    psu_upd_cmn.check_psu_redundancy(args.proceed, args.i2c_addr)
+
+    murata_update(args.i2c_bus, args.i2c_addr, args.proceed, args.input_file)
