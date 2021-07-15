@@ -46,8 +46,9 @@ Delta PSU FW update tool.
 import time
 import array
 import argparse
+import os
 
-import hw_mgmt_psu_fw_update_common as hw_mgmt_pmbus
+import hw_mgmt_psu_fw_update_common as psu_upd_cmn
 
 MFR_FWUPLOAD_MODE = 0xd6
 MFR_FWUPLOAD = 0xd7
@@ -59,7 +60,7 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_REVISION.
     """
-    ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())
         print(ascii_str)
@@ -81,7 +82,7 @@ def read_mfr_fw_upload_status(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_UPLOAD_STATUS.
     """
-    ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_STATUS, 1)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_STATUS, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upload_status = UPLOAD_STATUS_DICT.get(int(ret, 16))
         print(upload_status)
@@ -98,7 +99,7 @@ def read_mfr_fw_upload_mode(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_UPLOAD_MODE.
     """
-    ret = hw_mgmt_pmbus.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_MODE, 1)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_MODE, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upload_mode = UPLOAD_MODE_DICT.get(int(ret, 16))
         print(upload_mode)
@@ -111,7 +112,7 @@ def write_mfr_fw_upload_mode(i2c_bus, i2c_addr, mode):
     """
     data = [MFR_FWUPLOAD_MODE]
     data.extend([mode])
-    hw_mgmt_pmbus.pmbus_write(i2c_bus, i2c_addr, data)
+    psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 def write_mfr_fw_upload(i2c_bus, i2c_addr, data_in):
@@ -120,7 +121,7 @@ def write_mfr_fw_upload(i2c_bus, i2c_addr, data_in):
     """
     data = [MFR_FWUPLOAD]
     data.extend(data_in)
-    hw_mgmt_pmbus.pmbus_write(i2c_bus, i2c_addr, data)
+    psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 FW_HEADER = {
@@ -148,6 +149,7 @@ def delta_fw_file_burn(i2c_bus, i2c_addr, fw_filename):
     """
     @summary: Burn Delta fw file.
     """
+    fw_filesize = os.path.getsize(fw_filename)
     with open(fw_filename, "rb") as fw_file:
         while True:
             byte_array = array.array('B')
@@ -155,11 +157,14 @@ def delta_fw_file_burn(i2c_bus, i2c_addr, fw_filename):
                 byte_array.fromfile(fw_file, FW_HEADER["block_size"])
             except EOFError:
                 break
+            psu_upd_cmn.progress_bar((fw_file.tell()*100)/fw_filesize, 100)
+
             data_list = [FW_HEADER["block_size"]]
             data_list.extend(byte_array.tolist())
             write_mfr_fw_upload(i2c_bus, i2c_addr, data_list)
             # Wait delay
             time.sleep(FW_HEADER["write_time"] * 0.001)
+        print("\nSend FW Done.")
 
 
 def update_delta(i2c_bus, i2c_addr, fw_filename):
@@ -229,10 +234,10 @@ if __name__ == '__main__':
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
     args = parser.parse_args()
 
-    print('Input args "', args.input_file, args.i2c_bus, args.i2c_addr)
+    psu_upd_cmn.pmbus_read_mfr_id(args.i2c_bus, args.i2c_addr)
+    psu_upd_cmn.pmbus_read_mfr_model(args.i2c_bus, args.i2c_addr)
+    psu_upd_cmn.pmbus_read_mfr_revision(args.i2c_bus, args.i2c_addr)
 
-    hw_mgmt_pmbus.pmbus_read_mfr_id(args.i2c_bus, args.i2c_addr)
-    hw_mgmt_pmbus.pmbus_read_mfr_model(args.i2c_bus, args.i2c_addr)
-    hw_mgmt_pmbus.pmbus_read_mfr_revision(args.i2c_bus, args.i2c_addr)
+    psu_upd_cmn.check_psu_redundancy(False, args.i2c_addr)
 
     update_delta(args.i2c_bus, args.i2c_addr, args.input_file)

@@ -191,3 +191,27 @@ def pmbus_read_mfr_revision(i2c_bus, i2c_addr):
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
         print(ascii_str)
         return ascii_str
+
+def progress_bar(progress, total):
+    """
+    @summary: print progress bar.
+    """
+    print '\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress),
+
+
+def check_psu_redundancy(proceed, ignore_addr):
+    """
+    @summary: Check PSU redundancy.
+    """
+    psu_num = os.popen("cat /var/run/hw-management/config/hotplug_psus").read()
+    for i in range(1, int(psu_num)+1):
+        psu_dc = os.popen("cat /var/run/hw-management/thermal/psu{}_pwr_status".format(i)).read()
+        psu_i2c_addr = os.popen("cat /var/run/hw-management/config/psu{}_i2c_addr".format(i)).read()
+        if int(psu_dc) != 1:
+            if proceed and ignore_addr == int(psu_i2c_addr, 16):
+                print("The previous update is in progress, so ignore PSU{} {} is powered OFF.".format(i, psu_i2c_addr[:-1]))
+                continue
+            print("PSU{} {} powered OFF, PSU redundancy checkup failed. PSU count: {}".format(i, psu_i2c_addr[:-1], int(psu_num)))
+            exit(-1)
+    return 0
+
