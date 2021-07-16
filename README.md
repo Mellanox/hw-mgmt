@@ -23,6 +23,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN3700
 - MSN3700S
 - MSN3800
+- MSN4410
 - MSN4700
 - MSN4600C
 - MSN4600
