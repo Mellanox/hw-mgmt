@@ -44,16 +44,18 @@ Murata PSU FW update tool.
 
 '''
 
+import os
+import re
 import time
 import argparse
 from textwrap import wrap
 
 import hw_mgmt_psu_fw_update_common as psu_upd_cmn
 
-
-ps_status_addr = 0xE0
-upgrade_status_addr = 0xFA
-bootloader_status_addr = 0xFB
+PS_STATUS_ADDR = 0xE0
+UPGRADE_STATUS_ADDR = 0xFA
+BOOTLOADER_STATUS_ADDR = 0xFB
+BOOTLOADER_I2C_ADDR = 0x60
 
 
 def read_murata_secondary_revision(i2c_bus, i2c_addr):
@@ -74,7 +76,10 @@ def power_supply_reset(i2c_bus, i2c_addr):
     @summary: send PSU reset.
     """
     data = [0xf8, 0xaf]
-    psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    if i2c_addr == BOOTLOADER_I2C_ADDR:
+        psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    else:
+        psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 def end_of_file(i2c_bus, i2c_addr):
@@ -84,14 +89,17 @@ def end_of_file(i2c_bus, i2c_addr):
     data = [0xfa, 0x44, 0x01, 0x00]
     data.extend([0] * 32)
     data.extend([0x00, 0xc1])
-    psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    if i2c_addr == BOOTLOADER_I2C_ADDR:
+        psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    else:
+        psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 def check_power_supply_status(i2c_bus, i2c_addr):
     """
     @summary: check power supply status.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, ps_status_addr, 3)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, PS_STATUS_ADDR, 3)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         # print("check_power_supply_status: {}".format(ret))
         ps_status = [int(i, 16) for i in ret.split()]
@@ -118,7 +126,7 @@ def poll_upgrade_status(i2c_bus, i2c_addr):
     """
     @summary: poll upgrade status.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, upgrade_status_addr, 1)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, UPGRADE_STATUS_ADDR, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upgrade_status = upgrade_status_dict.get(int(ret, 16), "POLL_STATUS_UNDEFINED")
         # print(upgrade_status)
@@ -159,7 +167,7 @@ def bootloader_status(i2c_bus, i2c_addr):
     """
     @summary: read bootloader status.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, bootloader_status_addr, 1)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, BOOTLOADER_STATUS_ADDR, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         bl_status = bootloader_status_dict.get(int(ret, 16))
         print(bl_status)
@@ -223,20 +231,21 @@ def enter_bootload_mode(i2c_bus, i2c_addr):
     data = [0xfa, 0x42]
     data.extend([microtype_dict["MICROTYPE_SECONDARY"]])
     data.extend([0x44, 0x41, 0x54, 0x50])
-    psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
-
-
-bootloader_i2c_addr = 0x60
+    if i2c_addr == BOOTLOADER_I2C_ADDR:
+        psu_upd_cmn.pmbus_write_nopec(i2c_bus, i2c_addr, data)
+    else:
+        psu_upd_cmn.pmbus_write(i2c_bus, i2c_addr, data)
 
 
 def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
     """
     @summary: Murata PSU update.
     """
+    current_fw_rev = ""
     # If coninue_update skip entering to boot_mode.
     if continue_update != True:
         # 1. Read current firmware revision using command the READ_MFG_FW_REVISION.
-        read_murata_secondary_revision(i2c_bus, i2c_addr)
+        current_fw_rev = read_murata_secondary_revision(i2c_bus, i2c_addr)
 
         check_power_supply_status(i2c_bus, i2c_addr)
 
@@ -254,25 +263,29 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
 
         # 4. Wait typically for 1 second to allow the Power Supply to enter Bootload Mode.
         time.sleep(1)
+    else:
+        # Erase, since previous update failed.
+        enter_bootload_mode(args.i2c_bus, BOOTLOADER_I2C_ADDR)
+        time.sleep(2)
 
     # 5. Send the POLL_UPGRADE_STATUS command for successful entry into Bootload Mode.
         # 5a. Send the Host POWER_DOWN, BUSY or SUCCESS.
 
-        if poll_upgrade_status(i2c_bus, bootloader_i2c_addr) != "POLL_STATUS_SUCCSESS":
-            print("failed to enter boot mode")
-            exit(1)
+    if poll_upgrade_status(i2c_bus, BOOTLOADER_I2C_ADDR) != "POLL_STATUS_SUCCSESS":
+        print("failed to enter boot mode")
+        exit(1)
 
     # 6. Send the PAGE command to get the microcontroller ready for the data dump.
-    psu_upd_cmn.pmbus_page_nopec(i2c_bus, bootloader_i2c_addr, 0x01)
+    psu_upd_cmn.pmbus_page_nopec(i2c_bus, BOOTLOADER_I2C_ADDR, 0x01)
 
     # 7. For each line in the app file.
-    burn_fw_file(i2c_bus, bootloader_i2c_addr, fw_filename)
+    burn_fw_file(i2c_bus, BOOTLOADER_I2C_ADDR, fw_filename)
 
     # 8. Send the END_OF_FILE command to the Power Supply.
-    end_of_file(i2c_bus, bootloader_i2c_addr)
+    end_of_file(i2c_bus, BOOTLOADER_I2C_ADDR)
 
     # 9. Wait typically for 1 second to allow the Power Supply to enter Bootload Mode.
-    time.sleep(1)
+    time.sleep(2)
 
     # 10. Send the POLL_UPGRADE_STATUS command for a successful transaction.
         # 10a. The target microcontroller will do a soft reset and conducts a checksum test of the upgraded firmware.
@@ -281,7 +294,7 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
         #     SUCCESS. The SUCCESS response refers to successfully entering BOOTLOAD Mode. (Read Section: What to
         #     do if IN-SYSTEM PROGRAMMING fails).
 
-    if poll_upgrade_status(i2c_bus, bootloader_i2c_addr) == "POLL_STATUS_NOTACTIVE":
+    if poll_upgrade_status(i2c_bus, BOOTLOADER_I2C_ADDR) == "POLL_STATUS_NOTACTIVE":
         print("checksum test passes, the target microcontroller will leave BOOTLOAD Mode")
     else:
         print("checksum test fails, the target microcontroller remains in BOOTLOAD Mode")
@@ -290,14 +303,40 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename):
     # 11. Repeat steps 1-9 to upgrade remaining microcontrollers.
     # Now we updating only secondary, so nothing todo here.
     # 12. Upgrading is complete, send the POWER_SUPPLY_RESET command.
-    power_supply_reset(i2c_bus, bootloader_i2c_addr)
+    power_supply_reset(i2c_bus, BOOTLOADER_I2C_ADDR)
         # 12a. The Power Supply will send all microcontrollers a soft reset command. This will allow all the
         #    microcontrollers to restart together.
         # 12b. The Power Supply will leave Bootload Mode and change its PMBus address back to the address for Normal Operation.
         # 12c. After restart, the power supply will begin to deliver power again.
     time.sleep(2)
     # 13. To confirm the Power Supply is running upgraded firmware, send the READ_MFG_FW_REVISION command.
-    read_murata_secondary_revision(i2c_bus, i2c_addr)
+    new_fw_rev = read_murata_secondary_revision(i2c_bus, i2c_addr)
+    if new_fw_rev != current_fw_rev:
+        print("FW Update successfull.")
+        exit(0)
+    else:
+        print("FW version not changed.")
+        exit(1)
+
+
+def detect_address_60(i2c_bus, proceed):
+    """
+    @summary: Check if address 0x60 ocupied.
+    """
+    i2c_detect = os.popen("i2cdetect -y {}".format(i2c_bus)).read()
+    addr_60 = re.findall(r'60: (..)', i2c_detect)
+    if addr_60 and addr_60[0] == "60":
+        print("i2c address 0x60 ocupied.")
+        addr_70 = re.findall(r'70: (..)', i2c_detect)
+        if addr_70 and addr_70[0] == "70":
+            if not proceed:
+                print("i2c address 0x70 also ocupied, may be psu FW update in progress. Use -p to countinue update.")
+                exit(1)
+            else:
+                print("proceed update.")
+        else:
+            print("i2c address 0x70 free, may be psu FW update in progress. Use -c to force cpld remap from adress 0x60 to 0x70.")
+            exit(1)
 
 
 if __name__ == '__main__':
@@ -307,6 +346,10 @@ if __name__ == '__main__':
     required.add_argument('-b', "--i2c_bus", type=int, default=0, required=True)
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
     parser.add_argument('-p', "--proceed", type=bool, nargs='?',
+                        const=True, default=False)
+    parser.add_argument('-c', "--cpld_remap", type=bool, nargs='?',
+                        const=True, default=False)
+    parser.add_argument('-r', "--reset_and_exit", type=bool, nargs='?',
                         const=True, default=False)
     args = parser.parse_args()
 
@@ -320,6 +363,16 @@ if __name__ == '__main__':
     # bootloader_status(i2c_bus, i2c_adr)
     # burn_fw_file(i2c_bus, i2c_addr)
 
+
+    if args.reset_and_exit:
+        power_supply_reset(args.i2c_bus, args.i2c_addr)
+        print("Send reset command i2c_bus {}, i2c_addr {}".format(args.i2c_bus, args.i2c_addr))
+        exit(0)
+
+    if args.cpld_remap:
+        os.popen("iorw -w -b 0x2537 -l 1 -v 0x80").read()
+
+    detect_address_60(args.i2c_bus, args.proceed)
 
     psu_upd_cmn.check_psu_redundancy(args.proceed, args.i2c_addr)
 

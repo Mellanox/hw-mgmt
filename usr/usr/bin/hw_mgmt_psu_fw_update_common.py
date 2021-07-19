@@ -196,6 +196,7 @@ def progress_bar(progress, total):
     """
     @summary: print progress bar.
     """
+    # for python 3: print('\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress), end(''))
     print '\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress),
 
 
