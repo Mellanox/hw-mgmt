@@ -628,7 +628,7 @@ mqmxxx_msn37x_msn34x_specific()
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
-	echo 23000 > $config_path/psu_fan_max
+	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
