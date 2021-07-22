@@ -1,0 +1,190 @@
+From 2ddbe8f40087dacaa4dbbcac322656f4985b89b8 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 22 Jul 2021 11:14:16 +0000
+Subject: [PATCH backport v4.19 1/1] platform: mellanox: TMP bring-up fixes
+ (reset cuase)
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_thermal.c    | 15 +++++++--------
+ drivers/net/ethernet/mellanox/mlxsw/i2c.c         |  7 -------
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c     |  1 -
+ drivers/platform/x86/mlx-platform.c               | 10 +++++++++-
+ 4 files changed, 16 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index e29cf346d..9d6a97fe6 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -90,7 +90,6 @@ struct mlxsw_thermal;
+ struct mlxsw_thermal_area;
+ 
+ struct mlxsw_thermal_module {
+-	char tz_name[THERMAL_NAME_LENGTH];
+ 	struct mlxsw_thermal *parent;
+ 	struct mlxsw_thermal_area *area;
+ 	struct thermal_zone_device *tzdev;
+@@ -520,7 +519,7 @@ static int mlxsw_thermal_module_mode_set(struct thermal_zone_device *tzdev,
+ 
+ static void
+ mlxsw_thermal_module_temp_and_thresholds_get(struct mlxsw_core *core,
+-					     u16 slot_index, u16 sensor_index,
++					     u8 slot_index, u16 sensor_index,
+ 					     int *p_temp, int *p_crit_temp,
+ 					     int *p_emerg_temp)
+ {
+@@ -834,7 +833,7 @@ mlxsw_thermal_module_tz_init(struct mlxsw_thermal_module *module_tz)
+ 							module_tz,
+ 							&mlxsw_thermal_module_ops,
+ 							&mlxsw_thermal_params, 0,
+-							0/*module_tz->parent->polling_delay*/);
++							module_tz->parent->polling_delay);
+ 	if (IS_ERR(module_tz->tzdev)) {
+ 		err = PTR_ERR(module_tz->tzdev);
+ 		return err;
+@@ -952,21 +951,21 @@ mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal,
+ static int
+ mlxsw_thermal_gearbox_tz_init(struct mlxsw_thermal_module *gearbox_tz)
+ {
+-	/*char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];*/
++	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
+ 
+ 	if (gearbox_tz->slot_index)
+-		snprintf(gearbox_tz->tz_name, sizeof(gearbox_tz->tz_name), "mlxsw-lc%d-gearbox%d",
++		snprintf(tz_name, sizeof(tz_name), "mlxsw-lc%d-gearbox%d",
+ 			 gearbox_tz->slot_index, gearbox_tz->module + 1);
+ 	else
+-		snprintf(gearbox_tz->tz_name, sizeof(gearbox_tz->tz_name), "mlxsw-gearbox%d",
++		snprintf(tz_name, sizeof(tz_name), "mlxsw-gearbox%d",
+ 			 gearbox_tz->module + 1);
+-	gearbox_tz->tzdev = thermal_zone_device_register(gearbox_tz->tz_name,
++	gearbox_tz->tzdev = thermal_zone_device_register(tz_name,
+ 						MLXSW_THERMAL_NUM_TRIPS,
+ 						MLXSW_THERMAL_TRIP_MASK,
+ 						gearbox_tz,
+ 						&mlxsw_thermal_gearbox_ops,
+ 						&mlxsw_thermal_params, 0,
+-						0/*gearbox_tz->parent->polling_delay*/);
++						gearbox_tz->parent->polling_delay);
+ 	if (IS_ERR(gearbox_tz->tzdev))
+ 		return PTR_ERR(gearbox_tz->tzdev);
+ 
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+index e6a0e7890..c50535184 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
+@@ -75,7 +75,6 @@
+  * @sys_event_handler: system events handler callback;
+  * @irq: IRQ line number;
+  * @irq_unhandled_count: number of unhandled interrupts;
+- * @access_prohibited: access to device is prohibited during remove;
+  */
+ struct mlxsw_i2c {
+ 	struct {
+@@ -95,7 +94,6 @@ struct mlxsw_i2c {
+ 	void (*sys_event_handler)(struct mlxsw_core *mlxsw_core);
+ 	int irq;
+ 	atomic_t irq_unhandled_count;
+-	int access_prohibited;
+ };
+ 
+ #define MLXSW_I2C_READ_MSG(_client, _addr_buf, _buf, _len) {	\
+@@ -510,10 +508,6 @@ static int mlxsw_i2c_cmd_exec(void *bus_priv, u16 opcode, u8 opcode_mod,
+ {
+ 	struct mlxsw_i2c *mlxsw_i2c = bus_priv;
+ 
+-	if (mlxsw_i2c->access_prohibited) {
+-dev_info(mlxsw_i2c->bus_info.dev, "Access prohibited\n");
+-		return -EBUSY;}
+-
+ 	return mlxsw_i2c_cmd(mlxsw_i2c->dev, opcode, in_mod, in_mbox_size,
+ 			     in_mbox, out_mbox_size, out_mbox, status);
+ }
+@@ -780,7 +774,6 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
+ {
+ 	struct mlxsw_i2c *mlxsw_i2c = i2c_get_clientdata(client);
+ 
+-	mlxsw_i2c->access_prohibited = 1;
+ 	atomic_set(&mlxsw_i2c->irq_unhandled_count, MLXSW_I2C_WORK_CLOSED);
+ 	mlxsw_i2c_event_handler_unregister(mlxsw_i2c);
+ 	mlxsw_core_bus_device_unregister(mlxsw_i2c->core, false);
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 14868ebe0..27bc0c4bd 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -229,7 +229,6 @@ static void mlxsw_m_port_remove(struct mlxsw_m_area *mlxsw_m_area, u8 local_port
+ 	off = mlxsw_m_area->module_off;
+ 	port_to_area = off ? local_port % off : local_port;
+ 	mlxsw_m_port = mlxsw_m_area->ports[port_to_area];
+-
+ 	mlxsw_core_port_clear(mlxsw_m->core, local_port, mlxsw_m);
+ 	unregister_netdev(mlxsw_m_port->dev); /* This calls ndo_stop */
+ 	mlxsw_m_area->ports[port_to_area] = NULL;
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 5edd996ab..0b74831be 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -3347,36 +3347,42 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(3),
+ 		.mode = 0444,
+ 	},
++/*
+ 	{
+ 		.label = "reset_from_comex",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(4),
+ 		.mode = 0444,
+ 	},
++*/
+ 	{
+ 		.label = "reset_sys_comex_bios",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0444,
+ 	},
++/*
+ 	{
+ 		.label = "reset_swb",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0444,
+ 	},
++*/
+ 	{
+ 		.label = "reset_sw_reset",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(0),
+ 		.mode = 0444,
+ 	},
++/*
+ 	{
+ 		.label = "reset_from_main_brd",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(1),
+ 		.mode = 0444,
+ 	},
++*/
+ 	{
+ 		.label = "reset_aux_pwr_or_reload",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
+@@ -3437,14 +3443,16 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mode = 0444,
+ 	},
++/*
+ 	{
+ 		.label = "reset_from_mgmt",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0444,
+ 	},
++*/
+ 	{
+-		.label = "reset_thermal_pciesw",
++		.label = "reset_thermal_spc_or_pciesw",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
+ 		.mask = GENMASK(7, 0) & ~BIT(7),
+ 		.mode = 0444,
+-- 
+2.20.1
+
