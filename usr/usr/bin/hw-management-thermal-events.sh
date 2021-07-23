@@ -683,15 +683,18 @@ if [ "$1" == "add" ]; then
 			else
 				# Add PSU FAN speed info.
 				if [ -f $config_path/psu_fan_max ]; then
-					echo -ne MAX_RPM: >> $eeprom_path/"$2"_vpd
+					echo -ne "MAX_RPM: " >> $eeprom_path/"$2"_vpd
 					cat $config_path/psu_fan_max >> $eeprom_path/"$2"_vpd
 				fi
 				if [ -f $config_path/psu_fan_min ]; then
-					echo -ne MIN_RPM: >> $eeprom_path/"$2"_vpd
+					echo -ne "MIN_RPM: " >> $eeprom_path/"$2"_vpd
 					cat $config_path/psu_fan_min >> $eeprom_path/"$2"_vpd
 				fi
 			fi
 		fi
+		# Expose min/max psu fan speed per psu from vpd to attributes.
+		grep MIN_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_min
+		grep MAX_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_max
 
 	fi
 	if [ "$2" == "sxcore" ]; then
