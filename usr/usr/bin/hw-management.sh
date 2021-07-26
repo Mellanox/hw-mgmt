@@ -278,7 +278,7 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
-			24c32 0x51 8)
+			24c512 0x51 8)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
