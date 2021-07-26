@@ -1263,6 +1263,7 @@ do_chip_up_down()
 		# Chip up / down operations are to be performed for ASIC virtual address 0x37.
 		i2c_asic_addr_name=0037
 		i2c_asic_addr=0x37
+		i2c_asic_bus_default=3
 		;;
 	*)
 		;;
