@@ -597,6 +597,12 @@ if [ "$1" == "add" ]; then
 		# Expose min/max psu fan speed per psu from vpd to attributes.
 		grep MIN_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_min
 		grep MAX_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_max
+		ps_min_rpm=$(<"$thermal_path"/"$2"_fan_min)
+		ps_max_rpm=$(< "$thermal_path"/"$2"_fan_max)
+		if [ "$ps_min_rpm" -eq 0 ]; then
+			ps_min_rpm=$(((ps_max_rpm*20)/100))
+			echo $ps_min_rpm > "$thermal_path"/"$2"_fan_min
+		fi
 
 	fi
 	if [ "$2" == "sxcore" ]; then
