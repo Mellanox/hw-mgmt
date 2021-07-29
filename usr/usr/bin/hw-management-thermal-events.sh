@@ -671,6 +671,13 @@ if [ "$1" == "add" ]; then
 			echo 1 > $config_path/"$2"_eeprom_us
 		fi
 
+		# Set default PSU FAN speed from config, it will be overwitten by values from VPD.
+		if [ -f $config_path/psu_fan_min ]; then
+			cat $config_path/psu_fan_min > "$thermal_path"/"$2"_fan_min
+		fi
+		if [ -f $config_path/psu_fan_max ]; then
+			cat $config_path/psu_fan_max > "$thermal_path"/"$2"_fan_max
+		fi
 		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$2"_vpd
@@ -680,6 +687,7 @@ if [ "$1" == "add" ]; then
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
 				echo "Failed to read PSU VPD" > $eeprom_path/"$2"_vpd
+				exit 0
 			else
 				# Add PSU FAN speed info.
 				if [ -f $config_path/psu_fan_max ]; then
