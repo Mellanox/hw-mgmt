@@ -737,10 +737,12 @@ else
 			check_n_unlink $tpath/module"$j"_temp_crit
 			check_n_unlink $tpath/module"$j"_temp_emergency
 		done
-		find "$tpath" -type l -name '*_temp_input' -exec rm {} +
-		find "$tpath" -type l -name '*_temp_fault' -exec rm {} +
-		find "$tpath" -type l -name '*_temp_crit' -exec rm {} +
-		find "$tpath" -type l -name '*_temp_emergency' -exec rm {} +
+		rm -f "$tpath/gearbox*_temp_input"
+		rm -f "$tpath/module*_temp_input"
+		rm -f "$tpath/module*_temp_fault"
+		rm -f "$tpath/module*_temp_crit"
+		rm -f "$tpath/module*_temp_emergency"
+
 		echo 0 > $cpath/module_counter
 		echo 0 > $cpath/gearbox_counter
 
