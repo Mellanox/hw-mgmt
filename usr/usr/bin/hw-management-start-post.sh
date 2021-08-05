@@ -98,20 +98,32 @@ case $board in
 		;;
 esac
 
-timeout 6 bash -c 'until [ -L $system_path/cpld1_version ]; do sleep 1; done'
+timeout 20 bash -c 'until [ -L /var/run/hw-management/system/cpld1_version ]; do sleep 1; done'
+sleep 1
 
-# MLNX-ONLY. Read cpld3 version from SXD driver
+# Read cpld3 version with the mlxreg from mft package
 if [ -f $config_path/cpld_port ];
 then
     cpld=$(< $config_path/cpld_port)
     if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ];
     then
-        # check if sxd_access_reg_msci.py exists
-        if [ -x "$(command -v sxd_read_cpld_ver.py)" ]; then
-            cmd="sleep 15;  sxd_read_cpld_ver.py -i 2 | grep Version |  cut -d ":" -f2 > $system_path/cpld3_version"
-            eval "${cmd}" &>/dev/null & disown;
+        ver_dec=$CPLD3_VER_DEF
+        # check if mlxreg exists
+        if [ -x "$(command -v mlxreg)" ];
+        then
+            lsmod | grep mst_pci >/dev/null 2>&1
+            if [  $? -ne 0 ];
+            then
+                mst start  >/dev/null 2>&1
+                sleep 2
+            fi
+            cmd='mlxreg --reg_name MSCI  -d /dev/mst/mt52100_pciconf0 -g -i "index=2" | grep version | cut -d "|" -f2'
+            ver_hex=$(eval $cmd)
+            if [ ! -z "$ver_hex" ]; then
+               ver_dec=$(printf "%d" $ver_hex)
+            fi
         fi
-        echo $CPLD3_VER_DEF > $system_path/cpld3_version
+        echo "$ver_dec" > $system_path/cpld3_version
     fi
 fi
 
