@@ -279,6 +279,8 @@ if [ "$1" == "add" ]; then
 			tpath="$thermal_path"
 			min_module_ind=$min_module_gbox_ind
 			max_module_ind=$max_module_gbox_ind
+			echo 0 > "$cpath"/gearbox_counter
+			echo 0 > "$cpath"/module_counter
 		fi
 
 		name=$(< "$3""$4"/name)
