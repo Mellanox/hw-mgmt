@@ -1,7 +1,7 @@
-From c27dd49db6df38b5c43dd1a239b97f4bd3539bf3 Mon Sep 17 00:00:00 2001
+From 7253d88dc083df95d81b37ae37b785bb5965b103 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 18 Jul 2021 19:19:05 +0000
-Subject: [PATCH backport v4.19 099/104] mlxsw: minimal: Extend internal
+Date: Mon, 9 Aug 2021 15:19:24 +0000
+Subject: [PATCH v4.19 backport 100/108] mlxsw: minimal: Extend internal
  structures to support port areas
 
 Introduce intermediate level for ports area. Currently all ports are
@@ -28,7 +28,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 65 insertions(+), 38 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 7c0751aa21b2..4068162025cf 100644
+index 7c0751aa2..b02c47063 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -21,19 +21,29 @@ static const char mlxsw_m_driver_name[] = "mlxsw_minimal";
@@ -131,7 +131,7 @@ index 7c0751aa21b2..4068162025cf 100644
  	netif_carrier_off(dev);
  	mlxsw_m_port_switchdev_init(mlxsw_m_port);
 -	mlxsw_m->ports[local_port] = mlxsw_m_port;
-+	mlxsw_m_area->ports[module] = mlxsw_m_port;
++	mlxsw_m_area->ports[local_port] = mlxsw_m_port;
  	err = register_netdev(dev);
  	if (err) {
  		dev_err(mlxsw_m->bus_info->dev, "Port %d: Failed to register netdev\n",
@@ -140,7 +140,7 @@ index 7c0751aa21b2..4068162025cf 100644
  
  err_register_netdev:
 -	mlxsw_m->ports[local_port] = NULL;
-+	mlxsw_m_area->ports[module] = NULL;
++	mlxsw_m_area->ports[local_port] = NULL;
  	mlxsw_m_port_switchdev_fini(mlxsw_m_port);
  	free_netdev(dev);
  err_dev_addr_get:

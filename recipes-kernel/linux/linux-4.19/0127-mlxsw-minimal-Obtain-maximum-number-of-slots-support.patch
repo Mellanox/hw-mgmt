@@ -1,7 +1,7 @@
-From f3f91faa503bc2ad66a0a72f78f1c4eb4e180077 Mon Sep 17 00:00:00 2001
+From 5bfdfab6eeed801b2571ef0ac63d940d02761d99 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 18 Jul 2021 20:36:48 +0000
-Subject: [PATCH backport v4.19 102/104] mlxsw: minimal: Obtain maximum number
+Date: Mon, 9 Aug 2021 15:24:35 +0000
+Subject: [PATCH v4.19 backport 103/108] mlxsw: minimal: Obtain maximum number
  of slots supported by system
 
 Obtain maximum slot number by query MGPIR register with 'slot_index'
@@ -10,14 +10,14 @@ card number during initialization.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/net/ethernet/mellanox/mlxsw/minimal.c | 5 +++++
- 1 file changed, 5 insertions(+)
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 99bb8eb792d3..eab2a216c00c 100644
+index b1788f720..56251f0ef 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-@@ -249,6 +249,11 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index
+@@ -249,6 +249,14 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index
  	if (err)
  		return err;
  
@@ -25,6 +25,9 @@ index 99bb8eb792d3..eab2a216c00c 100644
 +	if (!slot_index)
 +		mlxsw_m->max_modules_per_slot =
 +			mlxsw_reg_mgpir_max_modules_per_slot_get(mgpir_pl);
++	else
++		mlxsw_m_area->module_off = (slot_index - 1) *
++					   mlxsw_m->max_modules_per_slot;
 +
  	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
  			       &mlxsw_m_area->max_ports, NULL);
