@@ -543,6 +543,7 @@ if [ "$1" == "add" ]; then
 			modprobe mlxsw_minimal
 		fi
 		if [ ! -f /etc/init.d/sxdkernel ]; then
+			sleep 3
 			/usr/bin/hw-management.sh chipup
 		fi
 	fi
@@ -729,6 +730,7 @@ elif [ "$1" == "change" ]; then
 				modprobe mlxsw_minimal
 			fi
 			if [ ! -f /etc/init.d/sxdkernel ]; then
+				sleep 3
 				/usr/bin/hw-management.sh chipup
 			fi
 		elif [ "$3" == "down" ]; then
@@ -737,6 +739,7 @@ elif [ "$1" == "change" ]; then
 			asic_health=$(< "$4""$5"/asic1)
 			if [ "$asic_health" -eq 2 ]; then
 				if [ ! -f /etc/init.d/sxdkernel ]; then
+					sleep 3
 					/usr/bin/hw-management.sh chipup
 				fi
 			else
