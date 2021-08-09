@@ -98,7 +98,7 @@ case $board in
 		;;
 esac
 
-timeout 20 bash -c 'until [ -L /var/run/hw-management/system/cpld1_version ]; do sleep 1; done'
+timeout 6 bash -c 'until [ -L $system_path/cpld1_version ]; do sleep 1; done'
 
 # MLNX-ONLY. Read cpld3 version from SXD driver
 if [ -f $config_path/cpld_port ];
