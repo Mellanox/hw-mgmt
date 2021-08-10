@@ -463,6 +463,7 @@ set_jtag_gpio()
 
 get_fixed_fans_direction()
 {
+	timeout 5 bash -c 'until [ -L /var/run/hw-management/eeprom/vpd_info ]; do sleep 0.2; done'
 	sanity_offset=$(grep MLNX $eeprom_path/vpd_info -b -a -o | cut -f1 -d:)
 	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
 	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
