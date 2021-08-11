@@ -1,0 +1,88 @@
+From 0cdaf50abc7cdff392b964e5b6225f2dc2304669 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 18 Jul 2021 19:19:50 +0000
+Subject: [PATCH backport v4.19 100/104] mlxsw: minimal: Extend port creation
+ APIs with slot index argument
+
+Extend mlxsw_m_port_create() and mlxsw_m_ports_create() with
+'slot_index' argument. The purpose is to associate line card slot
+location with the ports found on this line card.
+
+For main board it'll always be zero, for line cards it'll be set to the
+physical slot number at which line card is located. For now the slot
+index is always 0.
+That is, ports are still not instantiated from line cards.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 4068162025cf..eb856936d8f9 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -156,14 +156,15 @@ static int mlxsw_m_fw_rev_validate(struct mlxsw_m *mlxsw_m)
+ }
+ 
+ static int
+-mlxsw_m_port_create(struct mlxsw_m_area *mlxsw_m_area, u8 local_port, u8 module)
++mlxsw_m_port_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index,
++		    u8 local_port, u8 module)
+ {
+ 	struct mlxsw_m *mlxsw_m = mlxsw_m_area->mlxsw_m;
+ 	struct mlxsw_m_port *mlxsw_m_port;
+ 	struct net_device *dev;
+ 	int err;
+ 
+-	err = mlxsw_core_port_init(mlxsw_m->core, local_port, 0);
++	err = mlxsw_core_port_init(mlxsw_m->core, local_port, slot_index);
+ 	if (err) {
+ 		dev_err(mlxsw_m->bus_info->dev, "Port %d: Failed to init core port\n",
+ 			local_port);
+@@ -180,6 +181,7 @@ mlxsw_m_port_create(struct mlxsw_m_area *mlxsw_m_area, u8 local_port, u8 module)
+ 	mlxsw_m_port = netdev_priv(dev);
+ 	mlxsw_m_port->dev = dev;
+ 	mlxsw_m_port->mlxsw_m_area = mlxsw_m_area;
++	mlxsw_m_port->slot_index = slot_index;
+ 	mlxsw_m_port->local_port = local_port;
+ 	mlxsw_m_port->module = module;
+ 
+@@ -229,14 +231,14 @@ static void mlxsw_m_port_remove(struct mlxsw_m_area *mlxsw_m_area, u8 local_port
+ 	mlxsw_core_port_fini(mlxsw_m->core, local_port);
+ }
+ 
+-static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area)
++static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index)
+ {
+ 	struct mlxsw_m *mlxsw_m = mlxsw_m_area->mlxsw_m;
+ 	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+ 	int i;
+ 	int err;
+ 
+-	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
++	mlxsw_reg_mgpir_pack(mgpir_pl, slot_index);
+ 	err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(mgpir), mgpir_pl);
+ 	if (err)
+ 		return err;
+@@ -261,7 +263,7 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area)
+ 	/* Create port objects for each valid entry */
+ 	for (i = 0; i < mlxsw_m_area->max_ports; i++) {
+ 		mlxsw_m_area->module_to_port[i] = i;
+-		err = mlxsw_m_port_create(mlxsw_m_area,
++		err = mlxsw_m_port_create(mlxsw_m_area, slot_index,
+ 					  mlxsw_m_area->module_to_port[i], i);
+ 		if (err)
+ 			goto err_module_to_port_create;
+@@ -311,7 +313,7 @@ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+ 	if (err)
+ 		return err;
+ 
+-	err = mlxsw_m_ports_create(mlxsw_m->main);
++	err = mlxsw_m_ports_create(mlxsw_m->main, 0);
+ 	if (err) {
+ 		dev_err(mlxsw_m->bus_info->dev, "Failed to create ports\n");
+ 		return err;
+-- 
+2.20.1
+

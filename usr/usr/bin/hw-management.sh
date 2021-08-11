@@ -1,6 +1,6 @@
 #!/bin/bash
-########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+################################################################################
+# Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -72,6 +72,7 @@ thermal_type_t8=8
 thermal_type_t9=9
 thermal_type_t10=10
 thermal_type_def=0
+thermal_type_full=100
 
 thermal_type=$thermal_type_def
 max_tachos=14
@@ -82,6 +83,8 @@ i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
+psu3_i2c_addr=0x5b
+psu4_i2c_addr=0x5a
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
@@ -277,15 +280,16 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 			24c32 0x53 7 \
 			24c512 0x51 8)
 
-msn4800_base_connect_table=( mp2975 0x62 6 \
+msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
 	mp2975 0x66 5 \
 	mp2975 0x68 5 \
 	mp2975 0x6a 5 \
 	max11603 0x6d 6 \
 	max11603 0x64 6 \
-	tmp102 0x49 7 \
 	24c32 0x51 8 \
+	tmp102 0x49 12 \
+	tmp421 0x1f 14 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
@@ -920,6 +924,7 @@ msn48xx_specific()
 	local cpu_bus_offset=51
 	connect_table=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
+	thermal_type=$thermal_type_full
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
@@ -931,6 +936,10 @@ msn48xx_specific()
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
+	echo 14 > $config_path/pcie_default_i2c_bus
+	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
+	# TMP for BU
+	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
 check_system()
@@ -1132,6 +1141,8 @@ set_config_data()
 {
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
 	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
+	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
@@ -1294,8 +1305,10 @@ do_chip_up_down()
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 	VMOD0011)
-		# Chip up / down operations are to be performed automatically.
-		return
+		# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+		i2c_asic_addr_name=0037
+		i2c_asic_addr=0x37
+		i2c_asic_bus_default=3
 		;;
 	*)
 		;;

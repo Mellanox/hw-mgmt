@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+# Copyright (c) 2018 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -44,14 +44,11 @@ events_path=$hw_management_path/events
 thermal_path=$hw_management_path/thermal
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_max=10
-lc_i2c_bus_min=34
-lc_i2c_bus_max=43
 i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
-i2c_bus_modular_off_eeprom_psu=5
 i2c_bus_def_off_eeprom_fan1=11
 i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
@@ -114,12 +111,22 @@ find_sensor_by_label()
     return 0
 }
 
+linecard_i2c_parent_bus_offset=( \
+	34 1 \
+	35 2 \
+	36 3 \
+	37 4 \
+	38 5 \
+	39 6 \
+	40 7 \
+	41 8)
+
 linecard_i2c_busses=( \
 	"vr" \
 	"a2d" \
 	"hotswap" \
-	"ini" \
 	"fru" \
+	"ini" \
 	"fpga1" \
 	"gearbox00" \
 	"gearbox01" \
@@ -144,8 +151,12 @@ linecard_i2c_busses=( \
 
 create_linecard_i2c_links()
 {
-	local counter
-	mkdir /dev/lc"$1"
+	local counter=0
+
+	if [ ! -d /dev/lc"$1" ]; then
+		mkdir /dev/lc"$1"
+	fi
+
         list=$(find /sys/class/i2c-adapter/i2c-"$2"/ -maxdepth 1  -name '*i2c-*' ! -name i2c-dev ! -name i2c-"$2" -exec bash -c 'name=$(basename $0); name="${name:4}"; echo "$name" ' {} \;)
         list_sorted=`for name in "$list"; do echo "$name"; done | sort -V`
 	for name in $list_sorted; do
@@ -180,45 +191,60 @@ find_i2c_bus()
 	exit 0
 }
 
-find_linecard_bus()
+find_linecard_match()
 {
-	# Find base i2c bus number of Mellanox line card.
-	for ((i=lc_i2c_bus_min; i<lc_i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i/$i-00"$mlxreg_lc_addr"
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "mlxreg-lc" ]; then
-				linecard_bus_offset=$i
-				return
-			fi
+	local input_bus_num
+	local lc_bus_offset
+	local lc_bus_num
+	local lc_num
+	local size
+
+	input_bus_num="$1"
+	i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+	size=${#linecard_i2c_parent_bus_offset[@]}
+	for ((i=0; i<size; i+=2)); do
+		lc_bus_offset="${linecard_i2c_parent_bus_offset[i]}"
+		lc_num="${linecard_i2c_parent_bus_offset[$((i+1))]}"
+		lc_bus_num=$((lc_bus_offset+i2c_bus_offset))
+		if [ "$lc_bus_num" -eq "$input_bus_num" ]; then
+			create_linecard_i2c_links "$lc_num" "$input_bus_num"
+			return
 		fi
 	done
-
-	log_err "mlxreg-lc driver is not loaded"
-	exit 0
 }
 
 find_linecard_num()
 {
-	input_bus_num="$1"
-	find_linecard_bus "$input_bus_num"
-	max_lc_bus_num=$((linecard_bus_offset+lc_max_num))
-	# Check line card bus range.
-	if [ "$input_bus_num" -le "$max_lc_bus_num" ] &&
-	   [ "$input_bus_num" -ge "$linecard_bus_offset" ]; then
-		linecard_num=$((input_bus_num-linecard_bus_offset+1))
-		# Check line card num range.
-		if [ "$linecard_num" -le "$lc_max_num" ] &&
-		   [ "$linecard_num" -ge 1 ]; then
-			return
-		else
-			log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
-			exit 0
+	local input_bus_num="$1"
+	local lc_bus_offset
+	local lc_bus_num
+	local lc_num
+	local size
+
+	# Find base i2c bus number of line card.
+	folder=/sys/bus/i2c/devices/i2c-"$input_bus_num"/"$input_bus_num"-00"$mlxreg_lc_addr"
+	if [ -d $folder ]; then
+		name=$(cut $folder/name -d' ' -f 1)
+		if [ "$name" == "mlxreg-lc" ]; then
+			i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+			size=${#linecard_i2c_parent_bus_offset[@]}
+			for ((i=0; i<size; i+=2)); do
+				lc_bus_offset="${linecard_i2c_parent_bus_offset[i]}"
+				linecard_num="${linecard_i2c_parent_bus_offset[$((i+1))]}"
+				lc_bus_num=$((lc_bus_offset+i2c_bus_offset))
+				if [ "$lc_bus_num" -eq "$input_bus_num" ]; then
+					if [ "$linecard_num" -le "$lc_max_num" ] &&
+					   [ "$linecard_num" -ge 1 ]; then
+						return
+					else
+						log_err "Line card number out of range. $linecard_num Expected range: 1 - $lc_max_num."
+						exit 0
+					fi
+				fi
+			done
 		fi
-	else
-		log_err "Line card bus number out of range. $input_bus_num Expected range: $linecard_bus_offset - $max_lc_bus_num."
-		exit 0
 	fi
+
 	log_err "mlxreg-lc driver is not loaded"
 	exit 0
 }
@@ -232,8 +258,7 @@ find_eeprom_name()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_modular_off_eeprom_psu" ]; then
+		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 		if [ "$addr" = "$psu1_i2c_addr" ]; then
 			eeprom_name=psu1_info
 		elif [ "$addr" = "$psu2_i2c_addr" ]; then
@@ -258,6 +283,8 @@ find_eeprom_name()
 	else
 		# Wait to allow line card symbolic links creation.
 		local find_retry=0
+		find_linecard_num "$4"
+		find_linecard_match "$4"
 		lc_dev=$3
 		while [ ! $(find -L /dev/lc* -samefile /dev/"$lc_dev") ] && [ $find_retry -lt 3 ]; do sleep 1; done;
 		symlink=$(find -L /dev/lc* -samefile /dev/"$lc_dev")
@@ -274,8 +301,7 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_modular_off_eeprom_psu" ]; then
+		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 		if [ "$addr" = "$psu1_i2c_addr" ]; then
 			eeprom_name=psu1_info
 		elif [ "$addr" = "$psu2_i2c_addr" ]; then
@@ -305,8 +331,7 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_modular_off_eeprom_psu" ]; then
+		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 		if [ "$addr" = "$psu1_i2c_addr" ]; then
 			eeprom_name=psu1_info
 		elif [ "$addr" = "$psu2_i2c_addr" ]; then
@@ -402,16 +427,44 @@ function set_fan_direction()
 	esac
 }
 
+function set_lc_fpga_combined_version()
+{
+	lc_path="$1"
+	# Set linecard FPGA combined version.
+	if [ -L "$lc_path"/system/fpga1_pn ]; then
+		fpga_pn=$(cat "$lc_path"/system/fpga1_pn)
+	fi
+	if [ -L "$lc_path"/system/fpga1_version ]; then
+		fpga_ver=$(cat "$lc_path"/system/fpga1_version)
+	fi
+	if [ -L "$lc_path"/system/fpga1_version_min ]; then
+		fpga_ver_min=$(cat "$lc_path"/system/fpga1_version_min)
+	fi
+	str=$(printf "FPGA%06d_REV%02d%02d" "$fpga_pn" "$fpga_ver" "$fpga_ver_min")
+	echo "$str" > "$lc_path"/system/fpga
+}
+
 function handle_hotplug_event()
 {
 	local attribute
 	local event
+	local lc_path
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
 	
 	if [ -f $events_path/"$attribute" ]; then
 		echo "$event" > $events_path/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
+
+		case "$attribute" in
+		lc*_active)
+			linecard=`echo ${attribute:0:3}`
+			lc_path="$hw_management_path"/"$linecard"
+			set_lc_fpga_combined_version "$lc_path"
+			;;
+		*)
+			;;
+		esac
 	fi
 	set_fan_direction "$attribute" "$event"
 }
@@ -529,6 +582,7 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
+		linecard=0
 		# Detect if it belongs to line card or to main board.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
 		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
@@ -541,6 +595,7 @@ if [ "$1" == "add" ]; then
 			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
 			find_linecard_num "$input_bus_num"
 			system_path="$hw_management_path"/lc"$linecard_num"/system
+			linecard="$linecard_num"
 			;;
 		esac
 		# Allow to driver insertion off all the attributes.
@@ -561,6 +616,48 @@ if [ "$1" == "add" ]; then
 				set_fan_direction fan"${i}" 1
 			fi
 		done
+
+		# Handle linecard.
+		if [ "$linecard" -ne 0 ]; then
+			lc_path="$hw_management_path"/lc"$linecard"
+
+			if [ ! -d "$lc_path"/config ]; then
+				mkdir "$lc_path"/config
+			fi
+			config=$(< "$lc_path"/system/config)
+			case "$config" in
+			0)
+				echo 16 > "$lc_path"/config/port_num
+				echo 1 > "$lc_path"/config/cpld_num
+				echo 1 > "$lc_path"/config/fpga_num
+				echo 4 > "$lc_path"/config/gearbox_num
+				echo 1 > "$lc_path"/config/gearbox_mgr_num
+				;;
+			1)
+				echo 8 > "$lc_path"/config/port_num
+				echo 1 > "$lc_path"/config/cpld_num
+				echo 1 > "$lc_path"/config/fpga_num
+				;;
+			*)
+				;;
+			esac
+
+			# Set linecard CPLD combined version.
+			if [ -L "$lc_path"/system/cpld1_pn ]; then
+				cpld_pn=$(cat "$lc_path"/system/cpld1_pn)
+			fi
+			if [ -L "$lc_path"/system/cpld1_version ]; then
+				cpld_ver=$(cat "$lc_path"/system/cpld1_version)
+			fi
+			if [ -L "$lc_path"/system/cpld1_version_min ]; then
+				cpld_ver_min=$(cat "$lc_path"/system/cpld1_version_min)
+			fi
+			str=$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+			echo "$str" > "$lc_path"/system/cpld
+
+			# Set linecard FPGA combined version.
+			set_lc_fpga_combined_version "$lc_path"
+		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
 		busdir="$3""$4"
@@ -572,10 +669,10 @@ if [ "$1" == "add" ]; then
 		# Get parent bus for line card EEPROM - skip two folders.
 		parentdir=$(dirname "$busdir")
 		parentbus=$(basename "$parentdir")
-		find_eeprom_name "$bus" "$addr" "$parentbus"
 		# Detect if it belongs to line card or to main board.
 		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		find_eeprom_name "$bus" "$addr" "$parentbus" "$input_bus_num"
 		if [ -d "$driver_dir" ]; then
 			driver_name=$(< "$driver_dir"/name)
 			if [ "$driver_name" == "mlxreg-lc" ]; then
@@ -659,7 +756,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Create line card i2c mux symbolic link infrastructure
 	if [ "$2" == "lc_topo" ]; then
-		create_linecard_i2c_links "$3" "$4"
+		log_info "I2C infrastucture for line card $3 is created."
 	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
