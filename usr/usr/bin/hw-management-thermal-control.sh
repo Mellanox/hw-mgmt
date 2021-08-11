@@ -72,10 +72,8 @@
 # user space application access.
 
 # Paths to thermal sensors, device present states, thermal zone and cooling device
-hw_management_path=/var/run/hw-management
-thermal_path=$hw_management_path/thermal
-config_path=$hw_management_path/config
-system_path=$hw_management_path/system
+source hw-management-helpers.sh
+
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
@@ -909,7 +907,7 @@ set_pwm_min_threshold()
 init_system_dynamic_minimum_db()
 {
 	case $system_thermal_type in
-	1)
+	$thermal_type_t1)
 		# Config FAN minimal speed setting for class t1
 		config_p2c_dir_trust "${p2c_dir_trust_t1[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t1[@]}"
@@ -918,7 +916,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t1[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t1[@]}"
 		;;
-	2)
+	$thermal_type_t2)
 		# Config FAN minimal speed setting for class t2
 		config_p2c_dir_trust "${p2c_dir_trust_t2[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t2[@]}"
@@ -927,7 +925,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t2[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t2[@]}"
 		;;
-	3)
+	$thermal_type_t3)
 		# Config FAN minimal speed setting for class t3
 		config_p2c_dir_trust "${p2c_dir_trust_t3[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t3[@]}"
@@ -936,7 +934,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t3[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t3[@]}"
 		;;
-	4)
+	$thermal_type_t4)
 		# Config FAN minimal speed setting for class t4
 		config_p2c_dir_trust "${p2c_dir_trust_t4[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t4[@]}"
@@ -945,7 +943,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t4[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t4[@]}"
 		;;
-	5)
+	$thermal_type_t5)
 		# Config FAN minimal speed setting for class t5
 		config_p2c_dir_trust "${p2c_dir_trust_t5[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t5[@]}"
@@ -954,7 +952,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t5[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t5[@]}"
 		;;
-	6)
+	$thermal_type_t6)
 		# Config FAN minimal speed setting for class t6
 		config_p2c_dir_trust "${p2c_dir_trust_t6[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t6[@]}"
@@ -963,7 +961,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t6[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t6[@]}"
 		;;
-	7)
+	$thermal_type_t7)
 		# Config FAN minimal speed setting for class t7
 		config_p2c_dir_trust "${p2c_dir_trust_t7[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t7[@]}"
@@ -972,7 +970,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t7[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t7[@]}"
 		;;
-	8)
+	$thermal_type_t8)
 		# Config FAN minimal speed setting for class t8
 		config_p2c_dir_trust "${p2c_dir_trust_t8[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t8[@]}"
@@ -981,7 +979,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t8[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t8[@]}"
 		;;
-	9)
+	$thermal_type_t9)
 		# Config FAN minimal speed setting for class t9
 		config_p2c_dir_trust "${p2c_dir_trust_t9[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t9[@]}"
@@ -990,7 +988,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t9[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t9[@]}"
 		;;
-	10)
+	$thermal_type_t10)
 		# Config FAN minimal speed setting for class t10
 		config_p2c_dir_trust "${p2c_dir_trust_t10[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_t10[@]}"
@@ -999,7 +997,7 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t10[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t10[@]}"
 		;;
-	100)
+	$thermal_type_full)
 		# Config FAN default minimal speed setting
 		config_p2c_dir_trust "${p2c_dir_trust_def[@]}"
 		config_p2c_dir_untrust "${p2c_dir_untrust_def[@]}"
