@@ -32,17 +32,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+source hw-management-helpers.sh
+
 # Local variables
-hw_management_path=/var/run/hw-management
-thermal_path=$hw_management_path/thermal
-eeprom_path=$hw_management_path/eeprom
-power_path=$hw_management_path/power
-alarm_path=$hw_management_path/alarm
-config_path=$hw_management_path/config
-system_path=$hw_management_path/system
 fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
-events_path=$hw_management_path/events
 max_psus=4
 max_tachos=14
 max_lcs=8
@@ -50,73 +44,10 @@ min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
-i2c_bus_max=10
-i2c_bus_offset=0
 i2c_asic_bus_default=2
 pciesw_i2c_bus=0
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
-LOCKFILE="/var/run/hw-management-thermal.lock"
-udev_ready=$hw_management_path/.udev_ready
-IVB_CPU=0x63A
-RNG_CPU=0x64D
-BDW_CPU=0x656
-CFL_CPU=0x69E
-cpu_type=
-
-log_err()
-{
-	logger -t hw-management -p daemon.err "$@"
-}
-
-log_info()
-{
-	logger -t hw-management -p daemon.info "$@"
-}
-
-find_i2c_bus()
-{
-	# Find physical bus number of Mellanox I2C controller. The default
-	# number is 1, but it could be assigned to others id numbers on
-	# systems with different CPU types.
-	for ((i=1; i<i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "i2c-mlxcpld" ]; then
-				i2c_bus_offset=$((i-1))
-				return
-			fi
-		fi
-	done
-
-	log_err "i2c-mlxcpld driver is not loaded"
-	exit 0
-}
-
-check_cpu_type()
-{
-	if [ ! -f $config_path/cpu_type ]; then
-		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
-		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
-		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
-		echo $cpu_type > $config_path/cpu_type
-	else
-		cpu_type=$(cat $config_path/cpu_type)
-	fi
-}
-
-lock_service_state_change()
-{
-	exec {LOCKFD}>${LOCKFILE}
-	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
-}
-
-unlock_service_state_change()
-{
-	/usr/bin/flock -u ${LOCKFD}
-}
 
 # Get line card number by module 'sysfs' device path
 # $1 - sys device path in, example: /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-3/3-0037/hwmon/hwmon<n>/
@@ -170,29 +101,6 @@ get_lc_id_tz()
 		return 0
 	else
 		return "${BASH_REMATCH[1]}"
-	fi
-}
-
-# Check if file exists and create soft link
-# $1 - file path
-# $2 - link path
-# return none
-check_n_link()
-{
-	if [ -f "$1" ];
-	then
-		ln -sf "$1" "$2"
-	fi
-}
-
-# Check if link exists and unlink it
-# $1 - link path
-# return none
-check_n_unlink()
-{
-	if [ -L "$1" ];
-	then
-		unlink "$1"
 	fi
 }
 
