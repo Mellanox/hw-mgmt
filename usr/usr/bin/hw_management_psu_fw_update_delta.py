@@ -48,7 +48,7 @@ import array
 import argparse
 import os
 
-import hw_mgmt_psu_fw_update_common as psu_upd_cmn
+import hw_management_psu_fw_update_common as psu_upd_cmn
 
 MFR_FWUPLOAD_MODE = 0xd6
 MFR_FWUPLOAD = 0xd7

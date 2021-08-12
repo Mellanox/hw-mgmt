@@ -50,7 +50,7 @@ import time
 import argparse
 from textwrap import wrap
 
-import hw_mgmt_psu_fw_update_common as psu_upd_cmn
+import hw_management_psu_fw_update_common as psu_upd_cmn
 
 PS_STATUS_ADDR = 0xE0
 UPGRADE_STATUS_ADDR = 0xFA
