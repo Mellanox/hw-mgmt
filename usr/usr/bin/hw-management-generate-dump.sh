@@ -1,6 +1,6 @@
 #!/bin/sh
-########################################################################
-# Copyright (c) 2020 Mellanox Technologies. All rights reserved.
+##################################################################################
+# Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -42,11 +42,14 @@ MODE=$1
 dump_cmd () {
 	cmd=$1
 	output_fname=$2
+	timeout=$3
 	cmd_name=${cmd%% *}
 
 	if [ -x "$(command -v $cmd_name)" ];
 	then
-		eval $cmd > $DUMP_FOLDER/$output_fname
+		# ignore shellcheck message SC2016. Arguments should be single-quoted (')
+		run_cmd="$cmd > $DUMP_FOLDER/$output_fname"
+		timeout "$timeout" bash -c "$run_cmd"
 	fi
 }
 
@@ -56,14 +59,15 @@ mkdir $DUMP_FOLDER
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
-    find -L $HW_MGMT_FOLDER -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val  2> /dev/null
+    run_cmd="find -L $HW_MGMT_FOLDER -maxdepth 4 -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null"
+    timeout 60 bash -c "$run_cmd"
 fi
 
 if [ -z $MODE ] || [ $MODE != "compact" ]; then
 	[ -f var/log/syslog ] && cp /var/log/syslog $DUMP_FOLDER
 	[ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
-	dump_cmd "journalctl" "journalctl"
-	dump_cmd "sx_sdk --version" "sx_sdk_ver"
+	dump_cmd "journalctl" "journalctl" "30"
+	dump_cmd "sx_sdk --version" "sx_sdk_ver"10""
 fi
 
 uname -a > $DUMP_FOLDER/sys_version
@@ -80,14 +84,18 @@ if [ -f "/sys/kernel/debug/regmap/mlxplat/access" ]; then
     cat /sys/kernel/debug/regmap/mlxplat/access > $DUMP_FOLDER/access
 fi
 
-dump_cmd "dmesg" "dmesg"
-dump_cmd "dmidecode -t1 -t2 -t 11" "dmidecode"
-dump_cmd "lsmod" "lsmod"
-dump_cmd "lspci -vvv" "lspci"
-dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top"
-dump_cmd "lshw" "lshw"
-dump_cmd "sensors" "sensors"
-dump_cmd "iio_info" "iio_info"
+dump_cmd "dmesg" "dmesg" "10"
+dump_cmd "dmidecode -t1 -t2 -t 11" "dmidecode" "3"
+dump_cmd "lsmod" "lsmod" "3"
+dump_cmd "lspci -vvv" "lspci" "5"
+dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
+dump_cmd "sensors" "sensors" "20"
+dump_cmd "iio_info" "iio_info" "5"
+
+if [ -x "$(command -v i2cdetect)" ];   then
+    run_cmd="for i in {0..17} ; do i2cdetect -y $i 2>/dev/null; done > $DUMP_FOLDER/i2c_scan"
+    timeout 60 bash -c "$run_cmd"
+fi
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
