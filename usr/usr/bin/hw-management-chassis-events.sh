@@ -31,20 +31,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-hw_management_path=/var/run/hw-management
-environment_path=$hw_management_path/environment
-alarm_path=$hw_management_path/alarm
-eeprom_path=$hw_management_path/eeprom
-led_path=$hw_management_path/led
-system_path=$hw_management_path/system
-sfp_path=$hw_management_path/sfp
-watchdog_path=$hw_management_path/watchdog
-config_path=$hw_management_path/config
-events_path=$hw_management_path/events
-thermal_path=$hw_management_path/thermal
+source hw-management-helpers.sh
+
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
-i2c_bus_max=10
-i2c_bus_offset=0
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
 i2c_bus_def_off_eeprom_psu=4
@@ -61,7 +50,6 @@ psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
 eeprom_name=''
 sfp_counter=0
-LOCKFILE="/var/run/hw-management-chassis.lock"
 udev_ready=$hw_management_path/.udev_ready
 fan_dir_offset_in_vpd_eeprom_pn=0x48
 # 46 - F, 52 - R
@@ -71,15 +59,6 @@ linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "therma
 mlxreg_lc_addr=32
 lc_max_num=8
 
-log_err()
-{
-	logger -t hw-management -p daemon.err "$@"
-}
-
-log_info()
-{
-	logger -t hw-management -p daemon.info "$@"
-}
 
 # Voltmon sensors by label mapping:
 #                   dummy   voltmon1      voltmon2       voltmon3
@@ -169,26 +148,6 @@ create_linecard_i2c_links()
 destroy_linecard_i2c_links()
 {
 	rm -rf /dev/lc"$1"
-}
-
-find_i2c_bus()
-{
-	# Find physical bus number of Mellanox I2C controller. The default
-	# number is 1, but it could be assigned to others id numbers on
-	# systems with different CPU types.
-	for ((i=1; i<i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "i2c-mlxcpld" ]; then
-				i2c_bus_offset=$((i-1))
-				return
-			fi
-		fi
-	done
-
-	log_err "i2c-mlxcpld driver is not loaded"
-	exit 0
 }
 
 find_linecard_match()
@@ -350,18 +309,6 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
 	fi
-}
-
-lock_service_state_change()
-{
-	exec {LOCKFD}>${LOCKFILE}
-	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
-}
-
-unlock_service_state_change()
-{
-	/usr/bin/flock -u ${LOCKFD}
 }
 
 function create_sfp_symbolic_links()
