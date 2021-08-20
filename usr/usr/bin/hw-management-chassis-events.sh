@@ -641,8 +641,11 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
-		ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
-		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+		drv_name=$(< "$busdir"/name)
+		if [[ $drv_name == *"24c"* ]]; then
+			ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
+			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+		fi
 		case $eeprom_name in
 		fan*_info)
 			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
@@ -840,9 +843,10 @@ else
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		busdir="$3""$4"
 		# Detect if it belongs to line card or to main board.
-		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
-		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		input_bus_num=$(echo "$busdir" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$busdir" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 		if [ -d "$driver_dir" ]; then
 			driver_name=$(< "$driver_dir"/name)
 			if [ "$driver_name" == "mlxreg-lc" ]; then
@@ -855,14 +859,16 @@ else
 				fi
 			fi
 		fi
-		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
 		addr="0x${busfolder: -2}"
 		find_eeprom_name_on_remove "$bus" "$addr"
-		unlink $eeprom_path/$eeprom_name
+		drv_name=$(< "$busdir"/name)
+		if [[ $drv_name != *"24c"* ]]; then
+			unlink $eeprom_path/$eeprom_name
+		fi
 		case "$eeprom_name" in
 			fan*)
 				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
