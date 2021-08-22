@@ -1,0 +1,73 @@
+From aae52f2f583f56bac993cc387fb62085567a788f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 18 Jul 2021 20:22:17 +0000
+Subject: [PATCH backport v4.19 101/104] mlxsw: minimal: Add indexation for
+ modules on for line card
+
+The modules on modular system with replaceable line cards are counted
+from 1 to 128, while line card can be equipped with maximum 16 modules.
+Module index #i in line card at slot #n is calculated as following:
+line card.
+
+Thus, all the modules found on line card will have pre-allocated index
+range independently from the number of modules supported by specific
+line card type (16, 8, 4). This index is to be used for MAC address
+assignment.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index eb856936d8f9..99bb8eb792d3 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -39,6 +39,7 @@ struct mlxsw_m_area {
+ 	struct mlxsw_m_port **ports;
+ 	int *module_to_port;
+ 	u8 max_ports;
++	u8 module_off;
+ };
+ 
+ struct mlxsw_m_port {
+@@ -124,7 +125,8 @@ mlxsw_m_port_dev_addr_get(struct mlxsw_m_port *mlxsw_m_port)
+ 	 * to be such it does not overflow when adding local_port
+ 	 * value.
+ 	 */
+-	dev->dev_addr[ETH_ALEN - 1] = mlxsw_m_port->module + 1;
++	dev->dev_addr[ETH_ALEN - 1] = mlxsw_m_port->module + 1 +
++				      mlxsw_m_area->module_off;
+ 	return 0;
+ }
+ 
+@@ -221,11 +223,15 @@ static void mlxsw_m_port_remove(struct mlxsw_m_area *mlxsw_m_area, u8 local_port
+ {
+ 	struct mlxsw_m *mlxsw_m = mlxsw_m_area->mlxsw_m;
+ 	struct mlxsw_m_port *mlxsw_m_port;
++	u8 port_to_area, off;
+ 
+-	mlxsw_m_port = mlxsw_m_area->ports[local_port];
++	/* Map local port to area index. */
++	off = mlxsw_m_area->module_off;
++	port_to_area = off ? local_port % off : local_port;
++	mlxsw_m_port = mlxsw_m_area->ports[port_to_area];
+ 	mlxsw_core_port_clear(mlxsw_m->core, local_port, mlxsw_m);
+ 	unregister_netdev(mlxsw_m_port->dev); /* This calls ndo_stop */
+-	mlxsw_m_area->ports[local_port] = NULL;
++	mlxsw_m_area->ports[port_to_area] = NULL;
+ 	mlxsw_m_port_switchdev_fini(mlxsw_m_port);
+ 	free_netdev(mlxsw_m_port->dev);
+ 	mlxsw_core_port_fini(mlxsw_m->core, local_port);
+@@ -262,7 +268,7 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index
+ 
+ 	/* Create port objects for each valid entry */
+ 	for (i = 0; i < mlxsw_m_area->max_ports; i++) {
+-		mlxsw_m_area->module_to_port[i] = i;
++		mlxsw_m_area->module_to_port[i] = i + mlxsw_m_area->module_off;
+ 		err = mlxsw_m_port_create(mlxsw_m_area, slot_index,
+ 					  mlxsw_m_area->module_to_port[i], i);
+ 		if (err)
+-- 
+2.20.1
+

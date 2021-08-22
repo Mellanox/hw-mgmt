@@ -1,7 +1,7 @@
 #!/bin/bash
 
-########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+###########################################################################
+# Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -32,17 +32,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+source hw-management-helpers.sh
+
 # Local variables
-hw_management_path=/var/run/hw-management
-thermal_path=$hw_management_path/thermal
-eeprom_path=$hw_management_path/eeprom
-power_path=$hw_management_path/power
-alarm_path=$hw_management_path/alarm
-config_path=$hw_management_path/config
-system_path=$hw_management_path/system
 fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
-events_path=$hw_management_path/events
 max_psus=4
 max_tachos=14
 max_lcs=8
@@ -50,72 +44,10 @@ min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
-i2c_bus_max=10
-i2c_bus_offset=0
 i2c_asic_bus_default=2
+pciesw_i2c_bus=0
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
-LOCKFILE="/var/run/hw-management-thermal.lock"
-udev_ready=$hw_management_path/.udev_ready
-IVB_CPU=0x63A
-RNG_CPU=0x64D
-BDW_CPU=0x656
-CFL_CPU=0x69E
-cpu_type=
-
-log_err()
-{
-	logger -t hw-management -p daemon.err "$@"
-}
-
-log_info()
-{
-	logger -t hw-management -p daemon.info "$@"
-}
-
-find_i2c_bus()
-{
-	# Find physical bus number of Mellanox I2C controller. The default
-	# number is 1, but it could be assigned to others id numbers on
-	# systems with different CPU types.
-	for ((i=1; i<i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "i2c-mlxcpld" ]; then
-				i2c_bus_offset=$((i-1))
-				return
-			fi
-		fi
-	done
-
-	log_err "i2c-mlxcpld driver is not loaded"
-	exit 0
-}
-
-check_cpu_type()
-{
-	if [ ! -f $config_path/cpu_type ]; then
-		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
-		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
-		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
-		echo $cpu_type > $config_path/cpu_type
-	else
-		cpu_type=$(cat $config_path/cpu_type)
-	fi
-}
-
-lock_service_state_change()
-{
-	exec {LOCKFD}>${LOCKFILE}
-	/usr/bin/flock -x ${LOCKFD}
-	trap "/usr/bin/flock -u ${LOCKFD}" EXIT SIGINT SIGQUIT SIGTERM
-}
-
-unlock_service_state_change()
-{
-	/usr/bin/flock -u ${LOCKFD}
-}
 
 # Get line card number by module 'sysfs' device path
 # $1 - sys device path in, example: /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-3/3-0037/hwmon/hwmon<n>/
@@ -124,13 +56,37 @@ get_lc_id_hwmon()
 {
 	sysfs_path=$1
 	name=$(< "$sysfs_path"/name)
-	regex="mlxsw-lc([0-9]+)"
+	regex="linecard#([0-9]+)"
 	[[ $name =~ $regex ]]
 	if [[ -z "${BASH_REMATCH[1]}" ]]; then
 		return 0
 	else
 		return "${BASH_REMATCH[1]}"
 	fi
+}
+
+set_lc_id_hwmon()
+{
+	sysfs_path=$1
+	cpath=$2
+	hwmon=$(basename "$sysfs_path")
+	echo $hwmon > "$cpath/hwmon"
+}
+
+get_lc_id_from_hwmon()
+{
+	sysfs_path=$1
+	hwmon=$(basename "$sysfs_path")
+	lc_num=$(< $config_path/hotplug_linecards)
+	for ((i = 1; i <= $lc_num; i++ )); do
+		if [ -d $hw_management_path/lc"$i" ]; then
+			hwmon_lc=$(< "$hw_management_path/lc$i/config/hwmon")
+			if [ "$hwmon" == "$hwmon_lc" ]; then
+				return "$i"
+			fi
+		fi
+	done
+	return 0
 }
 
 # Get line card number from tz name
@@ -145,29 +101,6 @@ get_lc_id_tz()
 		return 0
 	else
 		return "${BASH_REMATCH[1]}"
-	fi
-}
-
-# Check if file exists and create soft link
-# $1 - file path
-# $2 - link path
-# return none
-check_n_link()
-{
-	if [ -f "$1" ];
-	then
-		ln -sf "$1" "$2"
-	fi
-}
-
-# Check if link exists and unlink it
-# $1 - link path
-# return none
-check_n_unlink()
-{
-	if [ -L "$1" ];
-	then
-		unlink "$1"
 	fi
 }
 
@@ -218,12 +151,16 @@ if [ "$1" == "add" ]; then
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
 	fi
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] || [ "$2" == "pcisw_amb" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
+		if [ -f $config_path/pcie_default_i2c_bus ]; then
+			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
+			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -231,6 +168,8 @@ if [ "$1" == "add" ]; then
 			ln -sf "$3""$4"/temp1_input $thermal_path/comex_amb
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
+		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
+			ln -sf "$3""$4"/temp2_input $thermal_path/pciesw_amb
 		else
 			ln -sf "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
@@ -239,15 +178,18 @@ if [ "$1" == "add" ]; then
 		get_lc_id_hwmon "$3$4"
 		lc_number=$?
 		if [ "$lc_number" -ne 0 ]; then
-			cpath="$hw_management_path/lc$lc_id/config"
-			tpath="$hw_management_path/lc$lc_id/thermal"
+			cpath="$hw_management_path/lc$lc_number/config"
+			tpath="$hw_management_path/lc$lc_number/thermal"
 			min_module_ind=$min_lc_thermal_ind
 			max_module_ind=$max_lc_thermal_ind
+			set_lc_id_hwmon "$3$4" "$cpath"
 		else
 			cpath="$config_path"
 			tpath="$thermal_path"
 			min_module_ind=$min_module_gbox_ind
 			max_module_ind=$max_module_gbox_ind
+			echo 0 > "$cpath"/gearbox_counter
+			echo 0 > "$cpath"/module_counter
 		fi
 
 		name=$(< "$3""$4"/name)
@@ -284,13 +226,19 @@ if [ "$1" == "add" ]; then
 				fi
 			done
 		fi
-		if [ "$name" == "mlxsw" ] ||  [ "$name" == "mlxsw-lc" ] ; then
+
+		lcmatch=`echo $name | cut -d"#" -f1`
+		if [ "$name" == "mlxsw" ] || [ "$lcmatch" == "linecard" ]; then
 			for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
 				if [ -f "$3""$4"/temp"$i"_input ]; then
 					label=$(< "$3""$4"/temp"$i"_label)
 					case $label in
 					*front*)
-						j=$((i-1))
+						if [ "$name" == "mlxsw" ]; then
+							j=$((i-1))
+						else
+							j="$i"
+						fi
 						ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
 						ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
 						ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
@@ -299,6 +247,11 @@ if [ "$1" == "add" ]; then
 						[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
 						module_counter=$((module_counter+1))
 						echo "$module_counter" > "$cpath"/module_counter
+						if [ "$lcmatch" == "linecard" ]; then
+							chassis_module_counter=$(< "$config_path"/module_counter)
+							chassis_module_counter=$((chassis_module_counter+1))
+							echo "$chassis_module_counter " > "$config_path"/module_counter
+						fi
 						unlock_service_state_change
 						;;
 					*gear*)
@@ -306,6 +259,11 @@ if [ "$1" == "add" ]; then
 						[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
 						gearbox_counter=$((gearbox_counter+1))
 						echo "$gearbox_counter" > "$cpath"/gearbox_counter
+						if [ "$lcmatch" == "linecard" ]; then
+							chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
+							chassis_gearbox_counter=$((chassis_gearbox_counter+1))
+							echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+						fi
 						unlock_service_state_change
 						ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
 						;;
@@ -316,6 +274,7 @@ if [ "$1" == "add" ]; then
 			done
 		fi
 	fi
+
 	if [ "$2" == "regfan" ]; then
 		name=$(< "$3""$4"/name)
 		echo "$name" > $config_path/cooling_name
@@ -373,6 +332,10 @@ if [ "$1" == "add" ]; then
 				if [ ! -f $thermal_path/"$zonetype"/temp_trip_crit ]; then
 					echo 120000 > $thermal_path/"$zonename"/temp_trip_crit
 				fi
+			fi
+			# Invoke user thermal governor if exist.
+			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
+				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
 		fi
 	fi
@@ -489,6 +452,7 @@ if [ "$1" == "add" ]; then
 			modprobe mlxsw_minimal
 		fi
 		if [ ! -f /etc/init.d/sxdkernel ]; then
+			sleep 3
 			/usr/bin/hw-management.sh chipup
 		fi
 	fi
@@ -603,7 +567,7 @@ if [ "$1" == "add" ]; then
 		fi
 
 		psu_addr=$(< $config_path/"$2"_i2c_addr)
-		psu_eeprom_addr=$((${psu_addr:2:2}-8))
+		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 		eeprom_name=$2_info
 		eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
@@ -619,6 +583,13 @@ if [ "$1" == "add" ]; then
 			echo 1 > $config_path/"$2"_eeprom_us
 		fi
 
+		# Set default PSU FAN speed from config, it will be overwitten by values from VPD.
+		if [ -f $config_path/psu_fan_min ]; then
+			cat $config_path/psu_fan_min > "$thermal_path"/"$2"_fan_min
+		fi
+		if [ -f $config_path/psu_fan_max ]; then
+			cat $config_path/psu_fan_max > "$thermal_path"/"$2"_fan_max
+		fi
 		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$2"_vpd
@@ -628,17 +599,27 @@ if [ "$1" == "add" ]; then
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
 				echo "Failed to read PSU VPD" > $eeprom_path/"$2"_vpd
+				exit 0
 			else
 				# Add PSU FAN speed info.
 				if [ -f $config_path/psu_fan_max ]; then
-					echo -ne MAX_RPM: >> $eeprom_path/"$2"_vpd
+					echo -ne "MAX_RPM: " >> $eeprom_path/"$2"_vpd
 					cat $config_path/psu_fan_max >> $eeprom_path/"$2"_vpd
 				fi
 				if [ -f $config_path/psu_fan_min ]; then
-					echo -ne MIN_RPM: >> $eeprom_path/"$2"_vpd
+					echo -ne "MIN_RPM: " >> $eeprom_path/"$2"_vpd
 					cat $config_path/psu_fan_min >> $eeprom_path/"$2"_vpd
 				fi
 			fi
+		fi
+		# Expose min/max psu fan speed per psu from vpd to attributes.
+		grep MIN_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_min
+		grep MAX_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_max
+		ps_min_rpm=$(<"$thermal_path"/"$2"_fan_min)
+		ps_max_rpm=$(< "$thermal_path"/"$2"_fan_max)
+		if [ "$ps_min_rpm" -eq 0 ]; then
+			ps_min_rpm=$(((ps_max_rpm*20)/100))
+			echo $ps_min_rpm > "$thermal_path"/"$2"_fan_min
 		fi
 
 	fi
@@ -658,6 +639,7 @@ elif [ "$1" == "change" ]; then
 				modprobe mlxsw_minimal
 			fi
 			if [ ! -f /etc/init.d/sxdkernel ]; then
+				sleep 3
 				/usr/bin/hw-management.sh chipup
 			fi
 		elif [ "$3" == "down" ]; then
@@ -666,6 +648,7 @@ elif [ "$1" == "change" ]; then
 			asic_health=$(< "$4""$5"/asic1)
 			if [ "$asic_health" -eq 2 ]; then
 				if [ ! -f /etc/init.d/sxdkernel ]; then
+					sleep 3
 					/usr/bin/hw-management.sh chipup
 				fi
 			else
@@ -674,12 +657,16 @@ elif [ "$1" == "change" ]; then
 		fi
 	fi
 else
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ]; then
+	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] || [ "$2" == "pcisw_amb" ]; then
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
+		if [ -f $config_path/pcie_default_i2c_bus ]; then
+			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
+			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -687,6 +674,8 @@ else
 			unlink $thermal_path/comex_amb
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
+		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
+			unlink $thermal_path/pciesw_amb
 		else
 			unlink $thermal_path/$
 		fi
@@ -696,35 +685,63 @@ else
 		if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
 			exit 0
 		fi
-		
-		get_lc_id_hwmon "$3$4"
-		lc_id$?		
+		get_lc_id_from_hwmon "$3$4"
+		lc_id=$?
 		if [ "$lc_id" -ne 0 ]; then
 			cpath="$hw_management_path/lc$lc_id/config"
 			tpath="$hw_management_path/lc$lc_id/thermal"
+			max_module_ind=$(< $cpath/module_counter)
+			max_ind="$max_lc_thermal_ind"
+			min_ind=1
 		else
 			cpath="$config_path"
 			tpath="$thermal_path"
+			max_ind="$max_module_gbox_ind"
+			min_ind=2
 		fi
 		
-		for ((i=max_module_gbox_ind; i>=2; i-=1)); do
-			j=$((i-1))
+		for ((i=$max_ind; i>=$min_ind; i-=1)); do
+			if [ "$lc_id" -ne 0 ]; then
+				j="$i"
+				k=$((i-max_module_ind))
+			else
+				j=$((i-1))
+			fi
 			if [ -L $tpath/module"$j"_temp_input ]; then
 				unlink $tpath/module"$j"_temp_input
 				lock_service_state_change
 				[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
 				module_counter=$((module_counter-1))
 				echo $module_counter > "$cpath"/module_counter
+				if [ "$lc_id" -ne 0 ]; then
+					chassis_module_counter=$(< "$config_path"/module_counter)
+					chassis_module_counter=$((chassis_module_counter-1))
+					echo "$chassis_module_counter" > "$config_path"/module_counter
+				fi
+				unlock_service_state_change
+			elif [ -L $tpath/gearbox"$k"_temp_input ]; then
+				unlink $tpath/gearbox"$j"_temp_input
+				lock_service_state_change
+				[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
+				gearbox_counter=$((gearbox_counter-1))
+				echo $gearbox_counter > "$cpath"/gearbox_counter
+				if [ "$lc_id" -ne 0 ]; then
+					chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
+					chassis_gearbox_counter=$((chassis_gearbox_counter-1))
+					echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+				fi
 				unlock_service_state_change
 			fi
 			check_n_unlink $tpath/module"$j"_temp_fault
 			check_n_unlink $tpath/module"$j"_temp_crit
 			check_n_unlink $tpath/module"$j"_temp_emergency
 		done
-		find "$tpath" -type l -name '*_temp_input' -exec rm {} +
-		find "$tpath" -type l -name '*_temp_fault' -exec rm {} +
-		find "$tpath" -type l -name '*_temp_crit' -exec rm {} +
-		find "$tpath" -type l -name '*_temp_emergency' -exec rm {} +
+		rm -f "$tpath/gearbox*_temp_input"
+		rm -f "$tpath/module*_temp_input"
+		rm -f "$tpath/module*_temp_fault"
+		rm -f "$tpath/module*_temp_crit"
+		rm -f "$tpath/module*_temp_emergency"
+
 		echo 0 > $cpath/module_counter
 		echo 0 > $cpath/gearbox_counter
 
@@ -779,7 +796,7 @@ else
 				rm -rf $tpath/mlxsw-module"$i"
 			fi
 			if [ -d $tpath/mlxsw-gearbox"$i" ]; then
-				rm -rf $tpath/mlxsw-gerabox"$i"
+				rm -rf $tpath/mlxsw-gearbox"$i"
 			fi
 		done
 		if [ "$lc_id" -ne 0 ]; then
@@ -852,7 +869,7 @@ else
 
 		if [ -L $eeprom_path/"$2"_info ] && [ -f $config_path/"$2"_eeprom_us ]; then
 			psu_addr=$(< $config_path/"$2"_i2c_addr)
-			psu_eeprom_addr=$((${psu_addr:2:2}-8))
+			psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-"$bus"/device/delete_device
 			unlink $eeprom_path/"$2"_info
 			rm -rf $config_path/"$2"_eeprom_us

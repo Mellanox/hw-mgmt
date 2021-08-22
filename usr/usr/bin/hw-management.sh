@@ -1,6 +1,6 @@
 #!/bin/bash
-########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+################################################################################
+# Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -57,31 +57,20 @@
 #	  been loaded.
 #
 
+source hw-management-helpers.sh
 # Local constants and variables
 
-# Thermal type constants
-thermal_type_t1=1
-thermal_type_t2=2
-thermal_type_t3=3
-thermal_type_t4=4
-thermal_type_t4=4
-thermal_type_t5=5
-thermal_type_t6=6
-thermal_type_t7=7
-thermal_type_t8=8
-thermal_type_t9=9
-thermal_type_t10=10
-thermal_type_def=0
-
 thermal_type=$thermal_type_def
+
 max_tachos=14
-i2c_bus_max=10
-i2c_bus_offset=0
+
 i2c_asic_bus_default=2
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
+psu3_i2c_addr=0x5b
+psu4_i2c_addr=0x5a
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
@@ -91,33 +80,12 @@ hotplug_pwrs=2
 hotplug_linecards=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
-hw_management_path=/var/run/hw-management
-thermal_path=$hw_management_path/thermal
-config_path=$hw_management_path/config
-environment_path=$hw_management_path/environment
-power_path=$hw_management_path/power
-alarm_path=$hw_management_path/alarm
-eeprom_path=$hw_management_path/eeprom
-led_path=$hw_management_path/led
-system_path=$hw_management_path/system
-sfp_path=$hw_management_path/sfp
-watchdog_path=$hw_management_path/watchdog
-events_path=$hw_management_path/events
-jtag_path=$hw_management_path/jtag
 lm_sensors_configs_path="/etc/hw-management-sensors"
 LOCKFILE="/var/run/hw-management.lock"
 udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
-# CPU Family + CPU Model should idintify exact CPU architecture
-# IVB - Ivy-Bridge; RNG - Atom Rangeley
-# BDW - Broadwell-DE; CFL - Coffee Lake
-IVB_CPU=0x63A
-RNG_CPU=0x64D
-BDW_CPU=0x656
-CFL_CPU=0x69E
-cpu_type=
 pn_sanity_offset=62
 fan_dir_pn_offset=11
 # 46 - F, 52 - R
@@ -271,36 +239,27 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
-			mp2975 0x6C 5 \
+			mp2975 0x6c 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x53 7 \
-			24c32 0x51 8)
+			24c512 0x51 8)
 
-msn4800_base_connect_table=( mp2975 0x62 6 \
+msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
 	mp2975 0x66 5 \
 	mp2975 0x68 5 \
 	mp2975 0x6a 5 \
 	max11603 0x6d 6 \
 	max11603 0x64 6 \
-	tmp102 0x49 7 \
 	24c32 0x51 8 \
+	tmp102 0x49 12 \
+	tmp421 0x1f 14 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
 
 ACTION=$1
-
-log_err()
-{
-	logger -t hw-management -p daemon.err "$@"
-}
-
-log_info()
-{
-	logger -t hw-management -p daemon.info "$@"
-}
 
 is_module()
 {
@@ -463,6 +422,7 @@ set_jtag_gpio()
 
 get_fixed_fans_direction()
 {
+	timeout 5 bash -c 'until [ -L /var/run/hw-management/eeprom/vpd_info ]; do sleep 0.2; done'
 	sanity_offset=$(grep MLNX $eeprom_path/vpd_info -b -a -o | cut -f1 -d:)
 	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
 	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
@@ -624,7 +584,7 @@ mqmxxx_msn37x_msn34x_specific()
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
-	echo 23000 > $config_path/psu_fan_max
+	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
@@ -902,23 +862,12 @@ msn_spc3_common()
 	esac
 }
 
-check_cpu_type()
-{
-	if [ ! -f $config_path/cpu_type ]; then
-		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
-		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
-		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
-		echo $cpu_type > $config_path/cpu_type
-	else
-		cpu_type=$(cat $config_path/cpu_type)
-	fi
-}
-
 msn48xx_specific()
 {
 	local cpu_bus_offset=51
 	connect_table=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
+	thermal_type=$thermal_type_full
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
@@ -930,6 +879,10 @@ msn48xx_specific()
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
+	echo 14 > $config_path/pcie_default_i2c_bus
+	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
+	# TMP for BU
+	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
 check_system()
@@ -1036,27 +989,6 @@ check_system()
 	esac
 }
 
-find_i2c_bus()
-{
-	# Find physical bus number of Mellanox I2C controller. The default
-	# number is 1, but it could be assigned to others id numbers on
-	# systems with different CPU types.
-	for ((i=1; i<i2c_bus_max; i++)); do
-		folder=/sys/bus/i2c/devices/i2c-$i
-		if [ -d $folder ]; then
-			name=$(cut $folder/name -d' ' -f 1)
-			if [ "$name" == "i2c-mlxcpld" ]; then
-				i2c_bus_offset=$((i-1))
-				echo $i2c_bus_offset > $config_path/i2c_bus_offset
-				return
-			fi
-		fi
-	done
-
-	log_err "i2c-mlxcpld driver is not loaded"
-	exit 0
-}
-
 connect_device()
 {
 	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
@@ -1131,6 +1063,8 @@ set_config_data()
 {
 	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
 	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
+	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
+	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
@@ -1274,18 +1208,6 @@ do_stop()
 	fi
 }
 
-function lock_service_state_change()
-{
-	exec {LOCKFD}>${LOCKFILE}
-	/usr/bin/flock -x ${LOCKFD}
-	trap '/usr/bin/flock -u ${LOCKFD}' EXIT SIGINT SIGQUIT SIGTERM
-}
-
-function unlock_service_state_change()
-{
-	/usr/bin/flock -u ${LOCKFD}
-}
-
 do_chip_up_down()
 {
 	action=$1
@@ -1293,8 +1215,10 @@ do_chip_up_down()
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 	VMOD0011)
-		# Chip up / down operations are to be performed automatically.
-		return
+		# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+		i2c_asic_addr_name=0037
+		i2c_asic_addr=0x37
+		i2c_asic_bus_default=3
 		;;
 	*)
 		;;
