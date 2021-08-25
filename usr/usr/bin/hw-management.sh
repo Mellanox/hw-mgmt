@@ -801,6 +801,7 @@ mqm97xx_specific()
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
+	hotplug_fans=7
 	echo 29500 > $config_path/fan_max_speed
 	echo 5000 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
