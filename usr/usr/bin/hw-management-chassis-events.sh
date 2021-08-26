@@ -479,6 +479,8 @@ if [ "$1" == "add" ]; then
 				fi
 				if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
+				elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
+					ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$2"_in"$i"_alarm
 				fi
 			fi
 			if [ -f "$3""$4"/curr"$i"_input ]; then
