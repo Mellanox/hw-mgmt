@@ -549,7 +549,17 @@ msn27xx_msb_msx_specific()
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
 	echo 9 > $config_path/fan_inversed
-	echo 3 > $config_path/cpld_num
+
+	product=$(< /sys/devices/virtual/dmi/id/product_name)
+	case $product in
+		MSB78*)
+			echo 2 > $config_path/cpld_num
+		;;
+		*)
+			echo 3 > $config_path/cpld_num
+		;;
+	esac
+
 	echo cpld3 > $config_path/cpld_port
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
@@ -831,7 +841,7 @@ msn_spc2_common()
 	res=$?
 	if [ $res -eq 0 ]; then
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-	else 
+	else
 		sys_ver=0
 	fi
 

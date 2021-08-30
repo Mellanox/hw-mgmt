@@ -281,36 +281,6 @@ find_eeprom_name_on_remove()
 	fi
 }
 
-find_eeprom_name_on_remove()
-{
-	bus=$1
-	addr=$2
-	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		eeprom_name=vpd_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
-		eeprom_name=cpu_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		if [ "$addr" = "$psu1_i2c_addr" ]; then
-			eeprom_name=psu1_info
-		elif [ "$addr" = "$psu2_i2c_addr" ]; then
-			eeprom_name=psu2_info
-		elif [ "$addr" = "$psu3_i2c_addr" ]; then
-			eeprom_name=psu3_info
-		elif [ "$addr" = "$psu4_i2c_addr" ]; then
-			eeprom_name=psu4_info
-		fi
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan1" ]; then
-		eeprom_name=fan1_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan2" ]; then
-		eeprom_name=fan2_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan3" ]; then
-		eeprom_name=fan3_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
-		eeprom_name=fan4_info
-	fi
-}
-
 function create_sfp_symbolic_links()
 {
 	local event_path="${1}"
