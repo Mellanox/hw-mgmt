@@ -1280,7 +1280,7 @@ do_chip_up_down()
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
 			set_i2c_bus_frequency_400KHz
-			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
+#			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
