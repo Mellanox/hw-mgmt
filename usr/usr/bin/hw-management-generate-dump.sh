@@ -66,8 +66,8 @@ fi
 if [ -z $MODE ] || [ $MODE != "compact" ]; then
 	[ -f var/log/syslog ] && cp /var/log/syslog $DUMP_FOLDER
 	[ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
-	dump_cmd "journalctl" "journalctl"
-	dump_cmd "sx_sdk --version" "sx_sdk_ver"
+	dump_cmd "journalctl" "journalctl" "45"
+	dump_cmd "sx_sdk --version" "sx_sdk_ver" "10"
 fi
 
 uname -a > $DUMP_FOLDER/sys_version

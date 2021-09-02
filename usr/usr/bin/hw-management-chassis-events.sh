@@ -530,9 +530,11 @@ if [ "$1" == "add" ]; then
 			done
 		fi
 		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
-			status=$(< $thermal_path/fan"$i"_status)
-			if [ "$status" -eq 1 ]; then
-				set_fan_direction fan"${i}" 1
+			if [ -L $thermal_path/fan"$i"_status ]; then
+				status=$(< $thermal_path/fan"$i"_status)
+				if [ "$status" -eq 1 ]; then
+					set_fan_direction fan"${i}" 1
+				fi
 			fi
 		done
 
