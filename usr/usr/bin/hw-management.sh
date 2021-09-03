@@ -256,6 +256,19 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 			24c32 0x53 7 \
 			24c512 0x51 8)
 
+mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6b 5 \
+			mp2975 0x6c 5 \
+			mp2975 0x6e 5 \
+			adt75 0x49 7 \
+			adt75 0x4a 7 \
+			24c32 0x53 7 \
+			24c512 0x51 8)
+
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
 	mp2975 0x66 5 \
@@ -797,6 +810,10 @@ mqm97xx_specific()
 				;;
 			1)
 				connect_table=(${mqm97xx_rev1_base_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+				;;
+			7)
+				connect_table=(${mqm97xx_power_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			*)
