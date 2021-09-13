@@ -73,14 +73,14 @@ index 348613d6f3f7..cbda7be7d9ff 100644
 +	{
 +		.label = "fan7:green",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED6_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
 +		.bit = BIT(6),
 +	},
 +	{
 +		.label = "fan7:orange",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED6_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
 +		.bit = BIT(6),
 +	},
