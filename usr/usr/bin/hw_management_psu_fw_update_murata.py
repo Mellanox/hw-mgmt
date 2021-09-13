@@ -325,19 +325,18 @@ def detect_address_60(i2c_bus, proceed):
     """
     i2c_detect = os.popen("i2cdetect -y {}".format(i2c_bus)).read()
     addr_60 = re.findall(r'60: (..)', i2c_detect)
-    if addr_60 and addr_60[0] == "60":
-        print("i2c address 0x60 ocupied.")
-        addr_70 = re.findall(r'70: (..)', i2c_detect)
-        if addr_70 and addr_70[0] == "70":
-            if not proceed:
+    if not proceed:
+        if addr_60 and addr_60[0] == "60":
+            print("i2c address 0x60 ocupied.")
+            addr_70 = re.findall(r'70: (..)', i2c_detect)
+            if addr_70 and addr_70[0] == "70":
                 print("i2c address 0x70 also ocupied, may be psu FW update in progress. Use -p to countinue update.")
                 exit(1)
             else:
-                print("proceed update.")
-        else:
-            print("i2c address 0x70 free, may be psu FW update in progress. Use -c to force cpld remap from adress 0x60 to 0x70.")
-            exit(1)
-
+                print("i2c address 0x70 free, may be psu FW update in progress. Use -c to force cpld remap from adress 0x60 to 0x70.")
+                exit(1)
+    else:
+        print("proceed update.")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
