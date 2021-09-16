@@ -103,6 +103,7 @@ gearbox_counter=0
 lc_counter=0
 temp_grow_hyst=0
 temp_fall_hyst=2000
+last_cpu_temp=0
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
@@ -1277,6 +1278,11 @@ do
 			continue
 		fi
 	fi
+
+	# Control cooling devices according to CPU temperature trends.
+	hw_management_cpu_thermal.py -t $last_cpu_temp
+	last_cpu_temp=$?
+
 	# Validate thermal configuration.
 	validate_thermal_configuration
 	if [ $? -ne 0 ]; then
