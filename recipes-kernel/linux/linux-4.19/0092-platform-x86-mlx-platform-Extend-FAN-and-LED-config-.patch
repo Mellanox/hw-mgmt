@@ -87,7 +87,7 @@ index c7a04dcbe86c..c215f4f403bd 100644
  	{
  		.label = "uid:blue",
  		.reg = MLXPLAT_CPLD_LPC_REG_LED5_OFFSET,
-@@ -3528,6 +3552,20 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+@@ -3517,6 +3541,20 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
  		.bit = BIT(3),
  	},
