@@ -123,6 +123,12 @@ Kernel-4.19
 |0130-pinctrl-intel-Allow-to-request-locked-pads.patch                   | 1bd231538c21d1cd691e71cbeeb4100fabc58068   |                                                 |                                                              |
 |0131-pinctrl-intel-Actually-disable-Tx-and-Rx-buffers-on-.patch         | e8873c0afd34beb67ec492cd648dd0095b911f65   |                                                 |                                                              |
 |0132-i2c-mlxcpld-check-correct-size-of-maximum-RECV_LEN-p.patch         | 597911287fcd13c3a4b4aa3e0a52b33d431e0a8e   |                                                 |                                                              |
+|0133-platform-x86-mlx-platform-Extend-FAN-platform-data-d.patch         |                                            |                                                 |                                                              |
+|0134-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch         | Accepted for hwmon-next                    |                                                 |                                                              |
+|0135-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-P.patch         | Accepted for hwmon-next                    |                                                 |                                                              |
+|0136-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch         | Accepted for hwmon-next                    |                                                 |                                                              |
+|0137-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch         | Accepted for hwmon-next                    |                                                 |                                                              |
+|0138-platform-x86-mlx-platform-Add-support-for-multiply-c.patch         |                                            |                                                 |                                                              |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.10
