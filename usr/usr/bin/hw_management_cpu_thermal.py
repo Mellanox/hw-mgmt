@@ -44,18 +44,15 @@ Control cooling devices according to CPU temperature trends
 
 '''
 
-import os
 import argparse
 
-#import pydevd;pydevd.settrace('10.209.100.69', port=5678)
-
 HWMGMT_THERMAL_PATH = "/var/run/hw-management/thermal"
+CPU_COOLING_STATE = "cooling2_cur_state"
 
 MAX_COOLING_STATE = 10
 MIN_COOLING_STATE = 2
 TEMP_HIGH = 95
 TEMP_LOW = 80
-
 
 def set_cooling_state(cstate):
     """
@@ -63,8 +60,13 @@ def set_cooling_state(cstate):
     @param cstate: cooling state to set.
     @return: Last set cooling state.
     """
-    os.popen("echo {} > {}/cooling2_cur_state".format(cstate, HWMGMT_THERMAL_PATH))
-    return int(cstate)
+    try:
+        with open("{}/{}".format(HWMGMT_THERMAL_PATH, CPU_COOLING_STATE), 'w+') as f:
+            cstate = f.write(str(cstate))
+    except:
+        pass
+
+    return cstate
 
 def get_cooling_state():
     """
@@ -73,10 +75,14 @@ def get_cooling_state():
     """
     cstate = MIN_COOLING_STATE
 
-    with open("{}/cooling2_cur_state".format(HWMGMT_THERMAL_PATH), 'r') as f:
-        cstate = f.read()
+    try:
+        with open("{}/{}".format(HWMGMT_THERMAL_PATH, CPU_COOLING_STATE), 'r') as f:
+            cstate = f.read()
+            cstate = int(cstate, 10)
+    except:
+        pass
 
-    return int(cstate)
+    return cstate
 
 def read_cpu_temp():
     """
@@ -85,13 +91,15 @@ def read_cpu_temp():
     """
     cpu_temp = TEMP_HIGH
 
-    with open("{}/cpu_pack".format(HWMGMT_THERMAL_PATH), 'r') as f:
-        cpu_temp = f.read()
-
-    if int(cpu_temp) > 1000:
-        cpu_temp = int(cpu_temp)/1000
-    else:
-        cpu_temp = int(cpu_temp)
+    try:
+        with open("{}/cpu_pack".format(HWMGMT_THERMAL_PATH), 'r') as f:
+            cpu_temp = f.read()
+            if int(cpu_temp, 10) > 1000:
+                cpu_temp = int(cpu_temp, 10)/1000
+            else:
+                cpu_temp = int(cpu_temp, 10)
+    except:
+        pass
 
     return cpu_temp
 

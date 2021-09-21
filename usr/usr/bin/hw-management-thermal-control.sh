@@ -90,7 +90,7 @@ wait_for_config=120
 # Input parameters for the system thermal class, the number of tachometers, the
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
-polling_time_def=60
+polling_time_def=3
 cooling_level_update_state=2
 
 # Local constants
@@ -104,6 +104,7 @@ lc_counter=0
 temp_grow_hyst=0
 temp_fall_hyst=2000
 last_cpu_temp=0
+common_loop=20
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
@@ -1256,7 +1257,18 @@ while true
 do
 	/bin/sleep $polling_time &
 	wait $!
+
+	# Control cooling devices according to CPU temperature trends.
+	hw_management_cpu_thermal.py -t $last_cpu_temp
+	last_cpu_temp=$?
 	
+	cpu_loop=$((cpu_loop+1))
+	if [ "$cpu_loop" -le "$common_loop" ]; then
+		continue
+	else
+		cpu_loop=1
+	fi
+
 	# Verify if cooling state required update.
 	update_dynamic_min_pwm
 	# Check if thermal algorithm is suspended.
@@ -1278,10 +1290,6 @@ do
 			continue
 		fi
 	fi
-
-	# Control cooling devices according to CPU temperature trends.
-	hw_management_cpu_thermal.py -t $last_cpu_temp
-	last_cpu_temp=$?
 
 	# Validate thermal configuration.
 	validate_thermal_configuration
