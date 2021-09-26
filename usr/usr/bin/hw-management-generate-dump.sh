@@ -36,6 +36,7 @@
 
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 
 MODE=$1
 
@@ -75,14 +76,25 @@ mkdir $DUMP_FOLDER/bin/
 cp /usr/bin/hw-management* $DUMP_FOLDER/bin/
 cat /etc/os-release >> $DUMP_FOLDER/sys_version
 cat /proc/interrupts > $DUMP_FOLDER/interrupts
+case $board_type in
+VMOD0014)
+	if [ -f "/sys/kernel/debug/regmap/2-0041/registers" ]; then
+		cat /sys/kernel/debug/regmap/2-0041/registers > $DUMP_FOLDER/registers
+	fi
+	if [ -f "/sys/kernel/debug/regmap/2-0041/access" ]; then
+		cat /sys/kernel/debug/regmap/2-0041/access > $DUMP_FOLDER/access
+	fi
+	;;
+*)
+	if [ -f "/sys/kernel/debug/regmap/mlxplat/registers" ]; then
+		cat /sys/kernel/debug/regmap/mlxplat/registers > $DUMP_FOLDER/registers
+	fi
 
-if [ -f "/sys/kernel/debug/regmap/mlxplat/registers" ]; then
-    cat /sys/kernel/debug/regmap/mlxplat/registers > $DUMP_FOLDER/registers
-fi
-
-if [ -f "/sys/kernel/debug/regmap/mlxplat/access" ]; then
-    cat /sys/kernel/debug/regmap/mlxplat/access > $DUMP_FOLDER/access
-fi
+	if [ -f "/sys/kernel/debug/regmap/mlxplat/access" ]; then
+		 cat /sys/kernel/debug/regmap/mlxplat/access > $DUMP_FOLDER/access
+	fi
+	;;
+esac
 
 dump_cmd "dmesg" "dmesg" "10"
 dump_cmd "dmidecode -t1 -t2 -t 11" "dmidecode" "3"

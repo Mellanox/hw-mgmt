@@ -39,6 +39,8 @@
 #              Waits in loop until hw-management service can be started.
 #              Report start of hw-management service to console and logger.
 
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
+
 if systemctl is-active --quiet hw-management; then
         echo "Error: HW management service is already active."
         logger -t hw-management -p daemon.error "HW management service is already active."
@@ -49,9 +51,19 @@ if [ -d /var/run/hw-management ]; then
 	rm -fr /var/run/hw-management
 fi
 
-while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
-do
-	sleep 1
-done
+case $board_type in
+VMOD0014)
+	while [ ! -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]
+	do
+		sleep 1
+	done
+	;;
+*)
+	while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
+	do
+		sleep 1
+	done
+	;;
+esac
 echo "Start Chassis HW management service."
 logger -t hw-management -p daemon.notice "Start Chassis HW management service."
