@@ -520,6 +520,10 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		if [[ $sku == "HI138" ]]; then
+			exit 0
+		fi
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# PSU unit FAN speed set
