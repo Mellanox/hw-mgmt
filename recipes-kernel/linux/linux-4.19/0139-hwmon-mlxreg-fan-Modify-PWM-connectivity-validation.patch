@@ -1,6 +1,6 @@
-From 34c2c0dc8c350b562c3cf46364a91840df346d9f Mon Sep 17 00:00:00 2001
+From 36fa2d31164cc1ef1cf4336f432e92d10769f94b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sat, 25 Sep 2021 09:14:02 +0000
+Date: Mon, 27 Sep 2021 08:35:37 +0000
 Subject: [PATCH backport v.4.19 1/1] hwmon: (mlxreg-fan) Modify PWM
  connectivity validation
 
@@ -12,11 +12,11 @@ supposed to be 0xff.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/hwmon/mlxreg-fan.c | 11 ++++++++---
- 1 file changed, 8 insertions(+), 3 deletions(-)
+ drivers/hwmon/mlxreg-fan.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 0413cdd8ed2d..b6fef9dddc0d 100644
+index 0413cdd8e..7d6c2d930 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -513,9 +513,14 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,
@@ -37,6 +37,15 @@ index 0413cdd8ed2d..b6fef9dddc0d 100644
  
  			fan->pwm[pwm_num].reg = data->reg;
  			fan->pwm[pwm_num].connected = true;
+@@ -599,6 +604,8 @@ static int mlxreg_fan_cooling_config(struct device *dev, struct mlxreg_fan *fan)
+ 		for (j = MLXREG_FAN_SPEED_MIN_LEVEL; j <= MLXREG_FAN_MAX_STATE; j++)
+ 			pwm->cooling_levels[j] = j;
+ 	}
++
++	return 0;
+ thermal_cooling_device_register_fail:
+ 	for (i = i - 1; i >= 0; i--) {
+ 		if (fan->pwm[i].cdev)
 -- 
 2.20.1
 
