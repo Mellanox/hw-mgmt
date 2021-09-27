@@ -1,0 +1,53 @@
+From bca742ff8a4927a05cd5b74e6a12388d90a955cc Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Mon, 27 Sep 2021 13:34:04 +0000
+Subject: [PATCH 4/6] hwmon: powr1220: Add support for Lattice's POWR1014 power
+ manager IC
+
+This patch adds support for Lattice's POWR1014 power manager IC.
+Read access to all the ADCs on the chip are supported through
+the hwmon sysfs files.
+
+The main difference of POWR1014 compared to POWR1220 is amount
+of VMON input lines: 10 on POWR1014 and 12 lines on POWR1220.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/hwmon/powr1220.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/hwmon/powr1220.c b/drivers/hwmon/powr1220.c
+index 470873485..415c5f738 100644
+--- a/drivers/hwmon/powr1220.c
++++ b/drivers/hwmon/powr1220.c
+@@ -31,7 +31,7 @@
+ #define ADC_STEP_MV			2
+ #define ADC_MAX_LOW_MEASUREMENT_MV	2000
+ 
+-enum chips { powr1220 };
++enum chips { powr1220, powr1014 };
+ 
+ enum powr1220_regs {
+ 	VMON_STATUS0,
+@@ -296,6 +296,7 @@ static const struct hwmon_chip_info powr1220_chip_info = {
+ 
+ static const struct i2c_device_id powr1220_ids[] = {
+ 	{ "powr1220", powr1220, },
++	{ "powr1014", powr1014, },
+ 	{ }
+ };
+ 
+@@ -315,8 +316,8 @@ static int powr1220_probe(struct i2c_client *client,
+ 
+ 	id = i2c_match_id(powr1220_ids, client);
+ 	switch (id->driver_data) {
+-	case powr1220:
+-		data->max_channels = 12;
++	case powr1014:
++		data->max_channels = 10;
+ 		break;
+ 	default:
+ 		data->max_channels = 12;
+-- 
+2.20.1
+
