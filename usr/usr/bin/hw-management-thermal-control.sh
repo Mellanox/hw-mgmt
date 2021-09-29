@@ -108,6 +108,8 @@ common_loop=20
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
+# TMP for Buffalo BU
+psu_fan_speed_full=(0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64)
 
 # Thermal tables for the minimum FAN setting per system time. It contains
 # entries with ambient temperature threshold values and relevant minimum
@@ -659,6 +661,16 @@ thermal_periodic_report()
 			set_cur_state=$cooling
 		fi
 	fi
+	# TMP for Buffalo BU
+	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0011)
+		ps_fan_speed=${psu_fan_speed_full[$f5]}
+		;;
+	*)
+		ps_fan_speed=${psu_fan_speed[$f5]}
+		;;
+	esac
 	ps_fan_speed=${psu_fan_speed[$f5]}
 	f5=$((f5*10))
 	f6=$((set_cur_state*10))
@@ -782,6 +794,16 @@ update_psu_fan_speed()
 				addr=$(< $config_path/psu"$i"_i2c_addr)
 				command=$(< $fan_command)
 				entry=$(< $thermal_path/cooling_cur_state)
+				# TMP for Buffalo BU
+				board_type=$(< /sys/devices/virtual/dmi/id/board_name)
+				case $board in
+				VMOD0011)
+					speed=${psu_fan_speed_full[$entry]}
+				;;
+				*)
+					speed=${psu_fan_speed[$entry]}
+					;;
+				esac
 				speed=${psu_fan_speed[$entry]}
 				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
 			fi
