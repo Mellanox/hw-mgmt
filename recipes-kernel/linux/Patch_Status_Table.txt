@@ -130,6 +130,8 @@ Kernel-4.19
 |0137-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch         |                                            | Accepted for hwmon-next                         | Modular SN4800                                               |
 |0138-platform-x86-mlx-platform-Add-support-for-multiply-c.patch         |                                            | pending approval                                | Modular SN4800                                               |
 |0139-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch          |                                            |                                                 | Modular SN4800                                               |
+|0140-hwmon-mlxreg-fan-Rename-cooling-devices.patch                      |                                            |                                                 | Modular SN4800                                               |
+|0141-mlxsw-core_thermal-Rename-cooling-devices.patch                    |                                            |                                                 | Modular SN4800                                               |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.10
