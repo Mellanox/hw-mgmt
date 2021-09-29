@@ -1282,6 +1282,7 @@ do_start()
 	set_config_data
 	get_asic_bus
 	create_event_files
+	hw-management-i2c-gpio-expander.sh
 	connect_platform
 	sleep 1
 	/usr/bin/hw-management-start-post.sh
