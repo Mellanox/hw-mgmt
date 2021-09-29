@@ -76,6 +76,10 @@ RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 
+board_type=$(< /sys/devices/virtual/dmi/id/board_name)
+product=$(< /sys/devices/virtual/dmi/id/product_name)
+sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+
 log_err()
 {
     logger -t hw-management -p daemon.err "$@"
