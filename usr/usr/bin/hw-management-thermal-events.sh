@@ -347,7 +347,7 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "cooling_device" ]; then
 		coolingtype=$(< "$3""$4"/type)
 		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ]; then
+		   [ "$coolingtype" == "mlxreg_fan0" ]; then
 			ln -sf "$3""$4"/cur_state $thermal_path/cooling_cur_state
 			# Set FAN to full speed until thermal control is started.
 			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
