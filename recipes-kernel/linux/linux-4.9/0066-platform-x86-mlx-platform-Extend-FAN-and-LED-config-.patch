@@ -109,14 +109,14 @@ index c1d1a78..cd6c168 100644
 +	{
 +		.label = "fan7:orange",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED6_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
++		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
 +		.bit = BIT(6),
 +	},
 +	{
  		.label = "uid:blue",
  		.reg = MLXPLAT_CPLD_LPC_REG_LED5_OFFSET,
- 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
+ 		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
 @@ -1906,6 +1931,20 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
  		.bit = BIT(3),
  	},

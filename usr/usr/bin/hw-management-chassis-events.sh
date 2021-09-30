@@ -48,6 +48,7 @@ psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
+lc_iio_dev_name_def="iio:device0"
 eeprom_name=''
 sfp_counter=0
 udev_ready=$hw_management_path/.udev_ready
@@ -281,36 +282,6 @@ find_eeprom_name_on_remove()
 	fi
 }
 
-find_eeprom_name_on_remove()
-{
-	bus=$1
-	addr=$2
-	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		eeprom_name=vpd_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
-		eeprom_name=cpu_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
-		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		if [ "$addr" = "$psu1_i2c_addr" ]; then
-			eeprom_name=psu1_info
-		elif [ "$addr" = "$psu2_i2c_addr" ]; then
-			eeprom_name=psu2_info
-		elif [ "$addr" = "$psu3_i2c_addr" ]; then
-			eeprom_name=psu3_info
-		elif [ "$addr" = "$psu4_i2c_addr" ]; then
-			eeprom_name=psu4_info
-		fi
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan1" ]; then
-		eeprom_name=fan1_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan2" ]; then
-		eeprom_name=fan2_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan3" ]; then
-		eeprom_name=fan3_info
-	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
-		eeprom_name=fan4_info
-	fi
-}
-
 function create_sfp_symbolic_links()
 {
 	local event_path="${1}"
@@ -423,6 +394,7 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "a2d" ]; then
 		# Detect if it belongs to line card or to main board.
+		iio_name=$5
 		input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 		if [ -d "$driver_dir" ]; then
@@ -431,12 +403,13 @@ if [ "$1" == "add" ]; then
 				# Line card event, replace output folder.
 				find_linecard_num "$input_bus_num"
 				environment_path="$hw_management_path"/lc"$linecard_num"/environment
+				iio_name=$lc_iio_dev_name_def
 			fi
 		fi
-		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$5"_voltage_scale
+		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
-				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$5"_raw_"$i"
+				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
 			fi
 		done
 	fi
@@ -479,6 +452,8 @@ if [ "$1" == "add" ]; then
 				fi
 				if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
+				elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
+					ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$2"_in"$i"_alarm
 				fi
 			fi
 			if [ -f "$3""$4"/curr"$i"_input ]; then
@@ -558,9 +533,11 @@ if [ "$1" == "add" ]; then
 			done
 		fi
 		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
-			status=$(< $thermal_path/fan"$i"_status)
-			if [ "$status" -eq 1 ]; then
-				set_fan_direction fan"${i}" 1
+			if [ -L $thermal_path/fan"$i"_status ]; then
+				status=$(< $thermal_path/fan"$i"_status)
+				if [ "$status" -eq 1 ]; then
+					set_fan_direction fan"${i}" 1
+				fi
 			fi
 		done
 
@@ -641,8 +618,11 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
-		ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
-		chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+		drv_name=$(< "$busdir"/name)
+		if [[ $drv_name == *"24c"* ]]; then
+			ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
+			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+		fi
 		case $eeprom_name in
 		fan*_info)
 			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
@@ -840,9 +820,10 @@ else
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		busdir="$3""$4"
 		# Detect if it belongs to line card or to main board.
-		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
-		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
+		input_bus_num=$(echo "$busdir" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
+		driver_dir=$(echo "$busdir" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 		if [ -d "$driver_dir" ]; then
 			driver_name=$(< "$driver_dir"/name)
 			if [ "$driver_name" == "mlxreg-lc" ]; then
@@ -855,14 +836,16 @@ else
 				fi
 			fi
 		fi
-		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
 		addr="0x${busfolder: -2}"
 		find_eeprom_name_on_remove "$bus" "$addr"
-		unlink $eeprom_path/$eeprom_name
+		drv_name=$(< "$busdir"/name)
+		if [[ $drv_name != *"24c"* ]]; then
+			unlink $eeprom_path/$eeprom_name
+		fi
 		case "$eeprom_name" in
 			fan*)
 				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)

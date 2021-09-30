@@ -95,7 +95,7 @@ case $board in
 		;;
 esac
 
-timeout 20 bash -c 'until [ -L /var/run/hw-management/system/cpld1_version ]; do sleep 1; done'
+timeout 60 bash -c 'until [ -L /var/run/hw-management/system/cpld1_version ]; do sleep 1; done'
 sleep 1
 
 # Read cpld3 version with the mlxreg from mft package
