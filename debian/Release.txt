@@ -1,5 +1,5 @@
 ================================================================================
-- V.7.0010.4000
+- V.7.0020.1000
 -Tue, 28 Sep 2021
 --------------------------------------------------------------------------------
 - New Features
@@ -8,10 +8,12 @@
     o	Add support for controling cooling devices according to CPU temperature trends
 
 - Bug fixes
-    o	Chassis events: Add filter to prevent wrong eeprom showing up.
+    o	Chassis events: Add filter to show only eeprom of type "24cxx" (sys eeprom , comex eeprom).
     o	System msb78*: Fix cpld_num to 2 instead of 3 (faulty)  -  /var/run/hw-management/config/cpld_num
     o	System msn3800: On systems with 4 CPLDs , fix cpld4 reading. 
     o	Fan{x}_status was not verified to exist before fan_direction was set.
+    
+- For detailed patch list: Please view https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.1000_BR/recipes-kernel/linux/Patch_Status_Table.txt
 
 - Known issues and limitations:
     o This version disables system reset in thermal algorithm
