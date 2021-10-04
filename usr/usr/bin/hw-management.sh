@@ -268,6 +268,17 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c32 0x53 7 \
 			24c512 0x51 8)
+			
+e3597_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x22 5 \
+			mp2975 0x23 5 \
+			mp2975 0x24 5 \
+			mp2975 0x25 5 \
+			mp2975 0x2d 5 \
+			mp2975 0x2c 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
@@ -852,6 +863,23 @@ mqm87xx_rev1_specific()
 	get_i2c_bus_frequency_default
 }
 
+e3597_specific()
+{
+	connect_table=(${e3597_base_connect_table[@]})
+	add_cpu_board_to_connection_table
+
+	thermal_type=$thermal_type_def
+	max_tachos=14
+	hotplug_fans=7
+	# TODO set correct PSU/case FAN speed
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+}
+
 msn_spc2_common()
 {
 	regio_path=$(find_regio_sysfs_path)
@@ -898,6 +926,9 @@ msn_spc3_common()
 		;;
 		HI130)
 			mqm97xx_specific
+		;;
+		HI132)
+			e3597_specific
 		;;
 		*)
 			msn47xx_specific
