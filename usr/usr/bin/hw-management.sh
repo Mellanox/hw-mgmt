@@ -444,8 +444,10 @@ set_jtag_gpio()
 			mkdir $jtag_path
 		fi
 
-		if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
-			ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+		if [ "$board_type" != "VMOD0014" ]; then
+			if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+				ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+			fi
 		fi
 	fi
 
