@@ -416,7 +416,8 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
-	   [ "$2" == "voltmon7" ] ||
+	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
+	   [ "$2" == "voltmon13" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
@@ -723,7 +724,8 @@ else
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
-	   [ "$2" == "voltmon7" ] ||
+	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
+	   [ "$2" == "voltmon13" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
