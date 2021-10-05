@@ -304,15 +304,6 @@ find_eeprom_name_on_remove()
 			fi
 			;;
 		esac
-		if [ "$addr" = "$psu1_i2c_addr" ]; then
-			eeprom_name=psu1_info
-		elif [ "$addr" = "$psu2_i2c_addr" ]; then
-			eeprom_name=psu2_info
-		elif [ "$addr" = "$psu3_i2c_addr" ]; then
-			eeprom_name=psu3_info
-		elif [ "$addr" = "$psu4_i2c_addr" ]; then
-			eeprom_name=psu4_info
-		fi
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan1" ]; then
 		eeprom_name=fan1_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan2" ]; then
