@@ -1,0 +1,34 @@
+From 676b45af5a595ab6529029924d94d736bdd1a8f3 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 21 Sep 2021 11:30:07 +0000
+Subject: [PATCH backport 4.19 4/5] hwmon: (mlxreg-fan): Fix out of bounds read
+ on array fan->pwm
+
+Array fan->pwm[] is MLXREG_FAN_MAX_PWM elements in size, however
+the for-loop has a off-by-one error causing index i to be out of
+range causing an out of bounds read on the array. Fix this by
+replacing the <= operator with < in the for-loop.
+
+Addresses-Coverity: ("Out-of-bounds read")
+Fixes: 35edbaab3bbf ("hwmon: (mlxreg-fan) Extend driver to support multiply cooling devices")
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+---
+ drivers/hwmon/mlxreg-fan.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
+index 5aa00a85acb4..0413cdd8ed2d 100644
+--- a/drivers/hwmon/mlxreg-fan.c
++++ b/drivers/hwmon/mlxreg-fan.c
+@@ -579,7 +579,7 @@ static int mlxreg_fan_cooling_config(struct device *dev, struct mlxreg_fan *fan)
+ {
+ 	int i, j, err;
+ 
+-	for (i = 0; i <= MLXREG_FAN_MAX_PWM; i++) {
++	for (i = 0; i < MLXREG_FAN_MAX_PWM; i++) {
+ 		struct mlxreg_fan_pwm *pwm = &fan->pwm[i];
+ 
+ 		if (!pwm->connected)
+-- 
+2.20.1
+

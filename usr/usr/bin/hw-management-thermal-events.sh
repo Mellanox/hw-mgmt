@@ -39,6 +39,7 @@ fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
 max_psus=4
 max_tachos=14
+max_pwm=4
 max_lcs=8
 min_module_gbox_ind=2
 max_module_gbox_ind=160
@@ -119,6 +120,7 @@ psu_connect_power_sensor()
 	if [ -f "$sysfs_sensor_path"_input ];
 	then
 		ln -sf "$sysfs_sensor_path"_input "$power_path"/"$sensor_name"
+		touch "$power_path"/"$sensor_name"_capability
 		for attr_name in ${psu_sensor_attr_list[*]}
 		do
 			sysfs_sensor_attr_path="$sysfs_sensor_path"_$attr_name
@@ -279,6 +281,11 @@ if [ "$1" == "add" ]; then
 		name=$(< "$3""$4"/name)
 		echo "$name" > $config_path/cooling_name
 		ln -sf "$3""$4"/pwm1 $thermal_path/pwm1
+		for ((i=1; i<=max_pwm; i+=1)); do
+			if [ -f "$3""$4"/pwm"$i" ]; then
+				ln -sf "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
+			fi
+		done
 		if [ -f $config_path/fan_inversed ]; then
 			inv=$(< $config_path/fan_inversed)
 		fi
@@ -294,7 +301,7 @@ if [ "$1" == "add" ]; then
 				ln -sf "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
 				check_n_link $config_path/fan_min_speed $thermal_path/fan"$j"_min
 				check_n_link $config_path/fan_max_speed $thermal_path/fan"$j"_max
-				#save max_tachos to config
+				# Save max_tachos to config.
 				echo $i > $config_path/max_tachos
 			fi
 		done
@@ -342,11 +349,20 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "cooling_device" ]; then
 		coolingtype=$(< "$3""$4"/type)
 		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ]; then
+		   [ "$coolingtype" == "mlxreg_fan0" ]; then
 			ln -sf "$3""$4"/cur_state $thermal_path/cooling_cur_state
 			# Set FAN to full speed until thermal control is started.
 			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
 			log_info "FAN speed is set to full speed"
+		fi
+		if [ "$coolingtype" == "mlxreg_fan1" ]; then
+			ln -sf "$3""$4"/cur_state $thermal_path/cooling1_cur_state
+		fi
+		if [ "$coolingtype" == "mlxreg_fan2" ]; then
+			ln -sf "$3""$4"/cur_state $thermal_path/cooling2_cur_state
+		fi
+		if [ "$coolingtype" == "mlxreg_fan3" ]; then
+			ln -sf "$3""$4"/cur_state $thermal_path/cooling3_cur_state
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
@@ -765,9 +781,11 @@ else
 		fi
 	fi
 	if [ "$2" == "regfan" ]; then
-		if [ -L $thermal_path/pwm1 ]; then
-			unlink $thermal_path/pwm1
-		fi
+		for ((i=1; i<=max_pwm; i+=1)); do
+			if [ -L $thermal_path/pwm"$i" ]; then
+				unlink $thermal_path/pwm"$i"
+			fi
+		done
 		for ((i=1; i<=max_tachos; i+=1)); do
 			check_n_unlink $thermal_path/fan"$i"_fault
 			check_n_unlink $thermal_path/fan"$i"_speed_get
@@ -810,6 +828,9 @@ else
 	fi
 	if [ "$2" == "cooling_device" ]; then
 		check_n_unlink $thermal_path/cooling_cur_state
+		check_n_unlink $thermal_path/cooling1_cur_state
+		check_n_unlink $thermal_path/cooling2_cur_state
+		check_n_unlink $thermal_path/cooling3_cur_state
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for ((i=1; i<=max_tachos; i+=1)); do
