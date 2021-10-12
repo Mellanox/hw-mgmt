@@ -43,7 +43,7 @@ Description:
 Common functions and helpers function for NVidia PSU FW update tool.
 
 '''
-
+from __future__ import print_function
 import os
 import time
 
@@ -169,7 +169,7 @@ def pmbus_read_mfr_id(i2c_bus, i2c_addr):
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
         print(ascii_str)
         return ascii_str
-
+    return ''
 
 def pmbus_read_mfr_model(i2c_bus, i2c_addr):
     """
@@ -180,7 +180,7 @@ def pmbus_read_mfr_model(i2c_bus, i2c_addr):
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
         print(ascii_str)
         return ascii_str
-
+    return ''
 
 def pmbus_read_mfr_revision(i2c_bus, i2c_addr):
     """
@@ -191,14 +191,13 @@ def pmbus_read_mfr_revision(i2c_bus, i2c_addr):
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
         print(ascii_str)
         return ascii_str
+    return ''
 
 def progress_bar(progress, total):
     """
     @summary: print progress bar.
     """
-    # for python 3: print('\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress), end(''))
-    print '\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress),
-
+    print('\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress), end=(''))
 
 def check_psu_redundancy(proceed, ignore_addr):
     """
@@ -215,4 +214,3 @@ def check_psu_redundancy(proceed, ignore_addr):
             print("PSU{} {} powered OFF, PSU redundancy checkup failed. PSU count: {}".format(i, psu_i2c_addr[:-1], int(psu_num)))
             exit(-1)
     return 0
-
