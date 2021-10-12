@@ -1265,6 +1265,13 @@ thermal_control_preinit()
 	suspend_thermal=0
 }
 
+sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+case $sku in
+	HI138)
+	exit 0
+	;;
+esac
+
 rm -rf $config_path/periodic_report
 log_notice "Mellanox thermal control is started"
 # Wait for thermal configuration.
