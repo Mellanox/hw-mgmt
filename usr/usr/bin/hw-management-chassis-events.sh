@@ -59,6 +59,18 @@ linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "therma
 mlxreg_lc_addr=32
 lc_max_num=8
 
+if [ "$board_type" == "VMOD0014" ]; then
+	i2c_bus_max=14
+	psu1_i2c_addr=0x50
+	psu2_i2c_addr=0x50
+	i2c_bus_def_off_eeprom_vpd=2
+	i2c_bus_def_off_eeprom_psu=3
+	i2c_bus_alt_off_eeprom_psu=4
+	i2c_bus_def_off_eeprom_fan1=10
+	i2c_bus_def_off_eeprom_fan2=11
+	i2c_bus_def_off_eeprom_fan3=12
+	i2c_bus_def_off_eeprom_fan4=13
+fi
 
 # Voltmon sensors by label mapping:
 #                   dummy   voltmon1      voltmon2       voltmon3
@@ -218,15 +230,26 @@ find_eeprom_name()
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
 		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		if [ "$addr" = "$psu1_i2c_addr" ]; then
-			eeprom_name=psu1_info
-		elif [ "$addr" = "$psu2_i2c_addr" ]; then
-			eeprom_name=psu2_info
-		elif [ "$addr" = "$psu3_i2c_addr" ]; then
-			eeprom_name=psu3_info
-		elif [ "$addr" = "$psu4_i2c_addr" ]; then
-			eeprom_name=psu4_info
-		fi
+		case $board_type in
+		VMOD0014)
+			if [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ]; then
+				eeprom_name=psu1_info
+			elif [ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
+				eeprom_name=psu2_info
+			fi
+			;;
+		*)
+			if [ "$addr" = "$psu1_i2c_addr" ]; then
+				eeprom_name=psu1_info
+			elif [ "$addr" = "$psu2_i2c_addr" ]; then
+				eeprom_name=psu2_info
+			elif [ "$addr" = "$psu3_i2c_addr" ]; then
+				eeprom_name=psu3_info
+			elif [ "$addr" = "$psu4_i2c_addr" ]; then
+				eeprom_name=psu4_info
+			fi
+			;;
+		esac
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan1" ]; then
 		eeprom_name=fan1_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan2" ]; then
@@ -261,15 +284,26 @@ find_eeprom_name_on_remove()
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
 		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		if [ "$addr" = "$psu1_i2c_addr" ]; then
-			eeprom_name=psu1_info
-		elif [ "$addr" = "$psu2_i2c_addr" ]; then
-			eeprom_name=psu2_info
-		elif [ "$addr" = "$psu3_i2c_addr" ]; then
-			eeprom_name=psu3_info
-		elif [ "$addr" = "$psu4_i2c_addr" ]; then
-			eeprom_name=psu4_info
-		fi
+		case $board_type in
+		VMOD0014)
+			if [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ]; then
+				eeprom_name=psu1_info
+			elif [ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
+				eeprom_name=psu2_info
+			fi
+			;;
+		*)
+			if [ "$addr" = "$psu1_i2c_addr" ]; then
+				eeprom_name=psu1_info
+			elif [ "$addr" = "$psu2_i2c_addr" ]; then
+				eeprom_name=psu2_info
+			elif [ "$addr" = "$psu3_i2c_addr" ]; then
+				eeprom_name=psu3_info
+			elif [ "$addr" = "$psu4_i2c_addr" ]; then
+				eeprom_name=psu4_info
+			fi
+			;;
+		esac
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan1" ]; then
 		eeprom_name=fan1_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan2" ]; then
@@ -440,32 +474,52 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
-		for i in {1..3}; do
-			find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
-			sensor_id=$?
-			if [ ! $sensor_id -eq 0 ]; then
-				if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
+		case $board_type in
+		VMOD0014)
+			# For SN2201 indexes are from 0 to 9.
+			for i in {0..9}; do 
+				check_n_link "$3""$4"/in"$i"_input $environment_path/"$2"_in"$i"_input
+
+				check_n_link "$3""$4"/in"$i"_alarm $alarm_path/"$2"_in"$i"_alarm
+
+				check_n_link "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
+
+				check_n_link "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
+
+				check_n_link "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
+
+				check_n_link "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
+			done
+			;;
+		*)
+			for i in {1..3}; do
+				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
+				sensor_id=$?
+				if [ ! $sensor_id -eq 0 ]; then
+					if [ -f "$3""$4"/in"$sensor_id"_input ]; then
+						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
+					fi
+					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
+						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
+					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
+						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$2"_in"$i"_alarm
+					fi
 				fi
-				if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
-				elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$2"_in"$i"_alarm
+				if [ -f "$3""$4"/curr"$i"_input ]; then
+					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
 				fi
-			fi
-			if [ -f "$3""$4"/curr"$i"_input ]; then
-				ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
-			fi
-			if [ -f "$3""$4"/power"$i"_input ]; then
-				ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
-			fi
-			if [ -f "$3""$4"/curr"$i"_alarm ]; then
-				ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
-			fi
-			if [ -f "$3""$4"/power"$i"_alarm ]; then
-				ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
-			fi
-		done
+				if [ -f "$3""$4"/power"$i"_input ]; then
+					ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
+				fi
+				if [ -f "$3""$4"/curr"$i"_alarm ]; then
+					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
+				fi
+				if [ -f "$3""$4"/power"$i"_alarm ]; then
+					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
+				fi
+			done
+			;;
+		esac
 	fi
 	if [ "$2" == "led" ]; then
 		# Detect if it belongs to line card or to main board.
@@ -743,7 +797,8 @@ else
 				fi
 			fi
 		fi
-		for i in {1..3}; do
+		# For SN2201 indexes are from 0 to 9.
+		for i in {0..9}; do
 			if [ -L $environment_path/"$2"_in"$i"_input ]; then
 				unlink $environment_path/"$2"_in"$i"_input
 			fi

@@ -1,6 +1,6 @@
-#!/bin/sh
-##################################################################################
-# Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#!/bin/bash
+
+# Copyright (c) 2018 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,40 +30,41 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-
-# Description: hw-management pre execution script.
-#              Checks if service is already running. Just in case, it should
-#              be done internally by systemd.
-#              Check if by some reason /var/run/hw-management exist.
-#              If yes, remove it.
-#              Waits in loop until hw-management service can be started.
-#              Report start of hw-management service to console and logger.
+# Description: performs board specific I2C-GPIO expander initialisation.
+#
 
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 
-if systemctl is-active --quiet hw-management; then
-        echo "Error: HW management service is already active."
-        logger -t hw-management -p daemon.error "HW management service is already active."
-        exit 1
-fi
-
-if [ -d /var/run/hw-management ]; then
-	rm -fr /var/run/hw-management
-fi
-
-case $board_type in
-VMOD0014)
-	while [ ! -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]
+if [ "$board_type" == "VMOD0014" ]; then
+	# TODO Verify on system if it's really required
+	# Wait for PCA9555 to start.
+	while [ ! -e /sys/class/gpio/gpiochip342 ]
 	do
 		sleep 1
 	done
-	;;
-*)
-	while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
-	do
-		sleep 1
+
+	for gpio_num in $(seq 342 357); do
+		if [ ! -e /sys/class/gpio/gpio"$gpio_num"/value ]; then
+			echo "$gpio_num" > /sys/class/gpio/export
+		fi
 	done
-	;;
-esac
-echo "Start Chassis HW management service."
-logger -t hw-management -p daemon.notice "Start Chassis HW management service."
+
+	echo "in" > /sys/class/gpio/gpio342/direction
+	echo "out" > /sys/class/gpio/gpio343/direction
+	echo "out" > /sys/class/gpio/gpio344/direction
+	echo "in" > /sys/class/gpio/gpio345/direction
+	echo "in" > /sys/class/gpio/gpio346/direction
+	echo "in" > /sys/class/gpio/gpio347/direction
+	echo "in" > /sys/class/gpio/gpio348/direction
+	echo "out" > /sys/class/gpio/gpio349/direction
+	echo "out" > /sys/class/gpio/gpio350/direction
+	echo "out" > /sys/class/gpio/gpio351/direction
+	echo "out" > /sys/class/gpio/gpio352/direction
+	echo "out" > /sys/class/gpio/gpio353/direction
+	echo "out" > /sys/class/gpio/gpio354/direction
+	echo "out" > /sys/class/gpio/gpio355/direction
+	echo "out" > /sys/class/gpio/gpio356/direction
+	echo "out" > /sys/class/gpio/gpio357/direction
+fi
+
+exit 0

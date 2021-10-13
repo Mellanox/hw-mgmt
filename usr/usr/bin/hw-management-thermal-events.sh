@@ -49,6 +49,11 @@ pciesw_i2c_bus=0
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
 
+if [ "$board_type" == "VMOD0014" ]; then
+	i2c_bus_max=14
+	i2c_asic_bus_default=6
+fi
+
 # Get line card number by module 'sysfs' device path
 # $1 - sys device path in, example: /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-3/3-0037/hwmon/hwmon<n>/
 # return line card number 1..8 or 0 in ASIC case
@@ -341,7 +346,8 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "cooling_device" ]; then
 		coolingtype=$(< "$3""$4"/type)
 		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ]; then
+		   [ "$coolingtype" == "mlxreg_fan" ] ||
+		   [ "$coolingtype" == "emc2305" ]; then 
 			ln -sf "$3""$4"/cur_state $thermal_path/cooling_cur_state
 			# Set FAN to full speed until thermal control is started.
 			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
@@ -455,8 +461,9 @@ if [ "$1" == "add" ]; then
 			/usr/bin/hw-management.sh chipup
 		fi
 	fi
+	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
-		for i in {1..9}; do
+		for i in {1..14}; do
 			if [ -f "$3""$4"/temp"$i"_input ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
@@ -492,6 +499,10 @@ if [ "$1" == "add" ]; then
 			$CFL_CPU)
 				sodimm1_addr='0-001c'
 				sodimm2_addr='@(0-001a|0-001e)'
+			;;
+			$DNV_CPU)
+				sodimm1_addr='0-0018'
+				sodimm2_addr='0-001a'
 			;;
 			*)
 				exit 0
@@ -568,11 +579,19 @@ if [ "$1" == "add" ]; then
 		psu_addr=$(< $config_path/"$2"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 		eeprom_name=$2_info
-		eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+		if [ "$board_type" == "VMOD0014" ]; then
+			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+		else
+			eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+		fi
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
 		if [ $? -eq 0 ] && [ ! -L $eeprom_path/"$2"_info ] && [ ! -f "$eeprom_file" ]; then
-			psu_eeprom_type="24c32"
+			if [ "$board_type" == "VMOD0014" ]; then
+				psu_eeprom_type="24c02"
+			else
+				psu_eeprom_type="24c32"
+			fi
 			if [ -f $config_path/psu_eeprom_type ]; then
 				psu_eeprom_type=$(< "$config_path"/psu_eeprom_type)
 			fi
@@ -837,7 +856,8 @@ else
 		unlink $thermal_path/cpu_pack_crit
 		unlink $thermal_path/cpu_pack_max
 		unlink $alarm_path/cpu_pack_crit_alarm
-		for i in {1..8}; do
+		# Max index of SN2201 cputemp is 14.
+		for i in {1..14}; do
 			if [ -L $thermal_path/cpu_core"$i" ]; then
 				j=$((i+1))
 				unlink $thermal_path/cpu_core"$j"
@@ -872,7 +892,6 @@ else
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-"$bus"/device/delete_device
 			unlink $eeprom_path/"$2"_info
 			rm -rf $config_path/"$2"_eeprom_us
-
 		fi
 		# Remove thermal attributes
 		check_n_unlink $thermal_path/"$2"_temp

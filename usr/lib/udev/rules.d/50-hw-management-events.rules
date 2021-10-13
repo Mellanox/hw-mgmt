@@ -54,6 +54,13 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pcisw_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pcisw_amb %S %p"
 
+# SN2201 ambient temperatures (tmp75, tmp1075).
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add port_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm port_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-7/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add fan_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-7/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm fan_amb %S %p"
+
 # CPU temperature
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/coretemp.0/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cputemp %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/coretemp.0/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cputemp %S %p"
@@ -69,6 +76,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
+
+# SN2201 switch - ASIC and ports temperatures and faults (I2C).
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
 
 # Switch - FAN tachometers and ASIC and ports temperatures and faults (PCI).
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:*/0000:*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
@@ -94,12 +105,22 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu4 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu4 %p %k %S %n"
 
+# SN2201 PS units power cables when power source is connected.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-3/3-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-3/3-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-4/4-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu2 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-4/4-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu2 %p %k %S %n"
+
 # Hotplug devices statuses.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm hotplug %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p"
+
+# SN2201 hotplug devices statuses.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm hotplug %S %p"
 
 # Hotpug events
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 0"
@@ -254,13 +275,32 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC8_VERIFIED}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC8_VERIFIED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 1"
 
+# SN2201 hotpug events.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU2 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU2}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU2 1"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR2 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR2}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR2 1"
+
 # mlxreg fan device.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add regfan %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-fan/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm regfan %S %p"
 
+# SN2201 fan device.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-004d/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add regfan %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-004d/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm regfan %S %p"
+
 # Register space attributes
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add regio %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
+
+# SN2201 register space attributes.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
 
 # LED
 SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
@@ -327,6 +367,16 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add comex_voltmon1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm comex_voltmon1 %S %p"
 
+# SN2201 voltage controllers 1. powr1014, 2. ir35223, 3. ads1015.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0040/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0040/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-2/*-0049", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon3 %S %p"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-2/*-0049", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon3 %S %p"
+
 # IIO (max1363)
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add a2d %S %p %k"
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"
@@ -343,6 +393,9 @@ SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="remove", RUN+="/usr/bin/hw-manageme
 
 SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+
+SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
 
 # WATCHDOG
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add watchdog %S %p"
