@@ -535,17 +535,28 @@ msn24xx_specific()
 	connect_table=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t1
-	max_tachos=8
-	hotplug_fans=4
-	echo 21000 > $config_path/fan_max_speed
-	echo 5400 > $config_path/fan_min_speed
-	echo 18000 > $config_path/psu_fan_max
-	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI138)
+			hotplug_fans=0
+			max_tachos=0
+		;;
+		*)
+			thermal_type=$thermal_type_t1
+			max_tachos=8
+			hotplug_fans=4
+			echo 21000 > $config_path/fan_max_speed
+			echo 5400 > $config_path/fan_min_speed
+			echo 18000 > $config_path/psu_fan_max
+			echo 2000 > $config_path/psu_fan_min
+			echo 9 > $config_path/fan_inversed
+			echo 24c02 > $config_path/psu_eeprom_type
+			;;
+	esac
+
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
-	echo 24c02 > $config_path/psu_eeprom_type
+
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 }
 
@@ -554,14 +565,24 @@ msn27xx_msb_msx_specific()
 	connect_table=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t1
-	max_tachos=8
-	hotplug_fans=4
-	echo 25000 > $config_path/fan_max_speed
-	echo 1500 > $config_path/fan_min_speed
-	echo 18000 > $config_path/psu_fan_max
-	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI138)
+			hotplug_fans=0
+			max_tachos=0
+		;;
+		*)
+			thermal_type=$thermal_type_t1
+			max_tachos=8
+			hotplug_fans=4
+			echo 25000 > $config_path/fan_max_speed
+			echo 1500 > $config_path/fan_min_speed
+			echo 18000 > $config_path/psu_fan_max
+			echo 2000 > $config_path/psu_fan_min
+			echo 9 > $config_path/fan_inversed
+			echo 24c02 > $config_path/psu_eeprom_type
+			;;
+	esac
 
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
@@ -574,7 +595,7 @@ msn27xx_msb_msx_specific()
 	esac
 
 	echo cpld3 > $config_path/cpld_port
-	echo 24c02 > $config_path/psu_eeprom_type
+
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }

@@ -98,8 +98,9 @@ LC_FRU_ITEMS_FORMAT = {2 : {'type_name': "PRODUCT_NAME_VPD_FIELD", "format": "{}
                        11: {'type_name': "CHSUM_FIELD", "format": ">I"}
                       }
 
+bin_decode = lambda val: val.decode('ascii').rstrip('\x00') if isinstance(val,bytes) else val
+
 def parse_packed_data(data, data_format, fields):
-    
     '''
     @summary: converting binary packed data to dictionary
     @param data: binary data array
@@ -109,8 +110,8 @@ def parse_packed_data(data, data_format, fields):
     '''
     struct_size = struct.calcsize(data_format)
     unpack_res = struct.unpack(data_format, data[:struct_size])
-    res_dict = dict(zip(fields, unpack_res))
-    for key, val in res_dict.items():
+    res_dict = dict(list(zip(fields, unpack_res)))
+    for key, val in list(res_dict.items()):
         if isinstance(val, str):
             res_dict[key] = val.split('\x00', 1)[0]
 
@@ -148,8 +149,9 @@ def parse_fru_bin(data):
 	    'ver': 1}
     '''
     fru_dict, offset = parse_packed_data(data, FRU_SANITY_FORMAT, FRU_SANITY_FORMAT_FIELDS)
-    if 'TlvInfo' not in fru_dict['tlv_header'] and fru_dict['ver'] not in SUPPORTED_FRU_VER:
-        print "Not supported FRU format"
+    tlv_header = bin_decode(fru_dict['tlv_header'])
+    if 'TlvInfo' not in tlv_header and fru_dict['ver'] not in SUPPORTED_FRU_VER:
+        print("Not supported FRU format")
         return None
 
     fru_dict['items'] = []
@@ -158,8 +160,8 @@ def parse_fru_bin(data):
     while pos < fru_dict['total_len'] + offset:
         blk_header, header_size = fru_get_tlv_header(data[pos:])
         pos += header_size
-        if blk_header['type'] not in LC_FRU_ITEMS_FORMAT.keys():
-            print "Not supported item type {}".format(blk_header['type'])
+        if blk_header['type'] not in list(LC_FRU_ITEMS_FORMAT.keys()):
+            print("Not supported item type {}".format(blk_header['type']))
             continue
         item = LC_FRU_ITEMS_FORMAT[blk_header['type']]
         item_format = item['format'].format(blk_header['size'])
@@ -171,6 +173,7 @@ def parse_fru_bin(data):
             val = val.split('\x00', 1)[0]
         elif 'I' in item_format:
             val = hex(val).upper()
+        val = bin_decode(val)
         fru_dict['items'].append([item['type_name'], val])
         fru_dict['items_dict'][item['type_name']] = val
         pos += blk_header['size']
@@ -184,7 +187,7 @@ def dump_fru(fru_dict):
     @return: None
     """
     for item in fru_dict['items']:
-        print "{}: {}".format(item[0], item[1])
+        print("{}: {}".format(item[0], item[1]))
 
 def save_fru(fru_dict, out_filename):
     """
@@ -196,9 +199,9 @@ def save_fru(fru_dict, out_filename):
     try:
         out_file = open(out_filename, 'w+')
     except IOError as err:
-        print "I/O error({0}): {1} with log file {2}".format(err.errno,
+        print("I/O error({0}): {1} with log file {2}".format(err.errno,
                                                              err.strerror,
-                                                             out_filename)
+                                                             out_filename))
     for item in fru_dict['items']:
         out_file.write("{}: {}\n".format(item[0], item[1]))
 
@@ -242,26 +245,26 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.version:
-        print "This is FRU converting tool. Version {}".format(VERSION)
+        print("This is FRU converting tool. Version {}".format(VERSION))
         sys.exit(0)
 
     if not args.input:
-        print "Input file not specified"
+        print("Input file not specified")
         sys.exit(1)
 
     fru_data_bin = load_fru_bin(args.input)
     if not fru_data_bin:
-        print "Input file read error."
+        print("Input file read error.")
         sys.exit(1)
 
     fru_data_dict = parse_fru_bin(fru_data_bin)
     if not fru_data_dict:
-        print "FRU parse error or wrong FRU file contents."
+        print("FRU parse error or wrong FRU file contents.")
         sys.exit(1)
 
     if check_crc32(fru_data_bin[ : fru_data_dict['total_len']+7],
                    fru_data_dict['items_dict']['CHSUM_FIELD'][2:]):
-        print "CRC32 error."
+        print("CRC32 error.")
         sys.exit(1)
 
     if args.output:

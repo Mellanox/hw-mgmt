@@ -21,22 +21,22 @@ msci_command = args.command
 
 retcode = 0
 if args.strict != 0:
-    print "[+] MSCI example start"
-    print "[+] Initializing register access"
+    print("[+] MSCI example start")
+    print("[+] Initializing register access")
 
 for i in range(0, args.retry):
-    print "Reading MSCI reg try: {}".format(i)
+    print("Reading MSCI reg try: {}".format(i))
     if i != 0:
-        print "wait {}sec".format(POLL_TIME)
+        print("wait {}sec".format(POLL_TIME))
         time.sleep(POLL_TIME)
 
     if not os.path.isfile("/dev/shm/dpt"):
-        print "DPT not initialised. Wait some more time ..."
+        print("DPT not initialised. Wait some more time ...")
         continue
 
     rc = sxd_access_reg_init(0, None, 4)
     if rc != 0:
-        print "Failed to initializing register access.\nPlease check that SDK is running."
+        print("Failed to initializing register access.\nPlease check that SDK is running.")
         retcode = errno.EACCES
         continue
 
@@ -50,18 +50,18 @@ for i in range(0, args.retry):
     msci.index = args.index
 
     if args.strict != 0:
-        print "[+] Querying meta cmd ({})".format(msci_command)
+        print("[+] Querying meta cmd ({})".format(msci_command))
     rc = sxd_access_reg_msci(msci, meta, 1, None, None)
     if rc != 0:
         retcode = rc
-        print "Failed to query MSCI register, rc: %d" % (rc)
+        print("Failed to query MSCI register, rc: %d" % (rc))
         continue
 
     if args.strict != 0:
-        print "[+] Version:{}".format(msci.version)
-        print "[+] MSCI example end"
+        print("[+] Version:{}".format(msci.version))
+        print("[+] MSCI example end")
     else:
-        print "Version:{}".format(msci.version)
+        print("Version:{}".format(msci.version))
     retcode = 0
     break
 
