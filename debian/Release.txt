@@ -3,11 +3,11 @@
 -Su , 17 Oct 2021
 --------------------------------------------------------------------------------
 - New Features
-    o	Add support for Sugon msn2410 ES
+    o	Add support for SGN2410 ES
 
 - Bug fixes
-    o	Fix mlxi2c show cpld_pn to not be limited showing only values smaller than 256
-    o	Fix Python scripts to be compatible with python2.7/python3 versions
+    o	$bsp_path/system/cpld_pn sysfs showing wrong values for values larger than 255. 
+    o	Python scripts compatible only with python2.7 and not python3.
     
 - For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.1100_BR/recipes-kernel/linux/Patch_Status_Table.txt
 
