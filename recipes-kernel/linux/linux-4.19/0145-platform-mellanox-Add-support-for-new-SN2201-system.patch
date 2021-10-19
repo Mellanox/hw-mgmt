@@ -1,7 +1,7 @@
-From c70c5109de46444d676dbffb8c369e083d270beb Mon Sep 17 00:00:00 2001
+From 0e3b98ff79278c70f6680ab46a98b66686ac08c1 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Mon, 27 Sep 2021 13:38:18 +0000
-Subject: [PATCH backport 4.19/Alligator 06/10] platform/mellanox: Add support
+Subject: [PATCH backport 4.19/Alligator 5/9] platform/mellanox: Add support
  for new SN2201 system
 
 The SN2201 is a highly integrated for one rack unit system with
@@ -19,8 +19,8 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig       |   17 +
  drivers/platform/mellanox/Makefile      |    1 +
- drivers/platform/mellanox/nvsw-sn2201.c | 1212 +++++++++++++++++++++++
- 3 files changed, 1230 insertions(+)
+ drivers/platform/mellanox/nvsw-sn2201.c | 1112 +++++++++++++++++++++++
+ 3 files changed, 1130 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-sn2201.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -60,10 +60,10 @@ index 1108858ed..42cd316d8 100644
 +obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
 new file mode 100644
-index 000000000..6b4f368fb
+index 000000000..59ed5ac02
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1212 @@
+@@ -0,0 +1,1112 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -130,9 +130,6 @@ index 000000000..6b4f368fb
 +#define NVSW_SN2201_RST_CAUSE2_OFFSET               0x37
 +#define NVSW_SN2201_REG_MAX                         0x38
 +
-+#define NVSW_SN2201_DEFER_TIME	(msecs_to_jiffies(10))
-+#define NVSW_SN2201_DEFER_COUNT	20
-+
 +/* Number of physical I2C busses. */
 +#define NVSW_SN2201_PHY_I2C_BUS_NUM		2
 +/* Number of main mux channels. */
@@ -191,8 +188,6 @@ index 000000000..6b4f368fb
 + * @main_mux_devs_num: number of I2C devices for main mux;
 + * @cpld_devs: I2C devices for cpld;
 + * @cpld_devs_num: number of I2C devices for cpld;
-+ * @main_mux_dwork: delayed work for the devices which connected to main mux;
-+ * @main_mux_dwork_counter: delayed work re-try counter;
 + * @main_mux_deferred_nr: I2C adapter number must be exist prior creating devices execution;
 + */
 +struct nvsw_sn2201 {
@@ -211,21 +206,7 @@ index 000000000..6b4f368fb
 +	int main_mux_devs_num;
 +	struct mlxreg_hotplug_device *cpld_devs;
 +	int cpld_devs_num;
-+	struct delayed_work main_mux_dwork;
-+	int main_mux_dwork_counter;
 +	int main_mux_deferred_nr;
-+};
-+
-+struct nvsw_sn2201_kobj {
-+	const char *kname;
-+	struct kobj_type ktype;
-+	struct kobject kobj;
-+};
-+
-+static struct nvsw_sn2201_kobj nvsw_sn2201_kobjs[] = {
-+	{
-+		.kname = "nvsw_sn2201_fan",
-+	},
 +};
 +
 +static bool nvsw_sn2201_writeable_reg(struct device *dev, unsigned int reg)
@@ -580,7 +561,6 @@ index 000000000..6b4f368fb
 +	},
 +	{
 +		I2C_BOARD_INFO("emc2305", 0x4d),
-+		.of_node =  &nvsw_sn2201_fan_device_node,
 +	},
 +	{
 +		I2C_BOARD_INFO("lm75", 0x49),
@@ -851,7 +831,7 @@ index 000000000..6b4f368fb
 +	struct mlxreg_hotplug_device *dev = devs;
 +	int i;
 +
-+	/* Create I2C device for SN2201 static devices. */
++	/* Create I2C static devices. */
 +	for (i = 0; i < size; i++, dev++) {
 +		dev->client = i2c_new_device(dev->adapter, dev->brdinfo);
 +		if (IS_ERR(dev->client)) {
@@ -893,54 +873,37 @@ index 000000000..6b4f368fb
 +	}
 +}
 +
-+static void nvsw_sn2201_main_mux_work(struct work_struct *work)
++static int nvsw_sn2201_config_post_init(struct nvsw_sn2201 *nvsw_sn2201)
 +{
 +	struct mlxreg_hotplug_device *sn2201_dev;
-+	struct nvsw_sn2201 *nvsw_sn2201;
 +	struct i2c_adapter *adap;
 +	struct device *dev;
 +	int i, j, err;
 +
-+	nvsw_sn2201 = container_of(work, struct nvsw_sn2201, main_mux_dwork.work);
 +	dev = nvsw_sn2201->dev;
-+
 +	adap = i2c_get_adapter(nvsw_sn2201->main_mux_deferred_nr);
 +	if (!adap) {
 +		dev_err(dev, "Failed to get adapter for bus %d\n",
 +			nvsw_sn2201->main_mux_deferred_nr);
-+		cancel_delayed_work(&nvsw_sn2201->main_mux_dwork);
-+		if (nvsw_sn2201->main_mux_dwork_counter++ < NVSW_SN2201_DEFER_COUNT)
-+			schedule_delayed_work(&nvsw_sn2201->main_mux_dwork,
-+					      NVSW_SN2201_DEFER_TIME);
-+		else
-+			dev_err(dev, "Failed to get adapter for bus %d\n",
-+				nvsw_sn2201->main_mux_deferred_nr);
-+		return;
++		return -ENODEV;
 +	}
 +	i2c_put_adapter(adap);
-+	cancel_delayed_work(&nvsw_sn2201->main_mux_dwork);
 +
-+	/* Create SN2201 static devices. */
-+	nvsw_sn2201->sn2201_devs = devm_kmemdup(dev, nvsw_sn2201_static_brdinfo,
-+						sizeof(nvsw_sn2201_static_brdinfo), GFP_KERNEL);
-+	if (!nvsw_sn2201->sn2201_devs) {
-+		dev_err(dev, "Failed to allocate memory for static devices\n");
-+		return;
-+	}
-+	nvsw_sn2201->sn2201_devs_num = ARRAY_SIZE(nvsw_sn2201_static_brdinfo);
-+
-+	/* Update I2C devices adapter. */
++	/* Update board info. */
 +	sn2201_dev = nvsw_sn2201->sn2201_devs;
 +	for (i = 0, j = 0; i < nvsw_sn2201->sn2201_devs_num; i++, sn2201_dev++) {
-+		if (sn2201_dev->brdinfo->of_node)
-+			sn2201_dev->brdinfo->of_node->kobj = nvsw_sn2201_kobjs[j++].kobj;
 +		sn2201_dev->adapter = i2c_get_adapter(sn2201_dev->nr);
++		if (!sn2201_dev->adapter)
++			return -ENODEV;
++		i2c_put_adapter(sn2201_dev->adapter);
 +	}
 +
 +	err = nvsw_sn2201_create_static_devices(nvsw_sn2201, nvsw_sn2201->sn2201_devs,
 +						nvsw_sn2201->sn2201_devs_num);
 +	if (err)
 +		dev_err(dev, "Failed to create static devices\n");
++
++	return err;
 +}
 +
 +static int nvsw_sn2201_config_init(struct nvsw_sn2201 *nvsw_sn2201, void *regmap)
@@ -993,7 +956,8 @@ index 000000000..6b4f368fb
 +		}
 +	}
 +
-+	return 0;
++	return nvsw_sn2201_config_post_init(nvsw_sn2201);
++
 +fail_register_hotplug:
 +	if (nvsw_sn2201->led)
 +		platform_device_unregister(nvsw_sn2201->led);
@@ -1024,28 +988,14 @@ index 000000000..6b4f368fb
 +	void *regmap;
 +	int i, err;
 +
-+	/* Create main mux first. */
-+	nvsw_sn2201->main_mux_deferred_nr = NVSW_SN2201_MAIN_MUX_DEFER_NR;
-+	nvsw_sn2201->main_mux_devs = devm_kmemdup(nvsw_sn2201->dev, nvsw_sn2201_main_mux_brdinfo,
-+						  sizeof(nvsw_sn2201_main_mux_brdinfo), GFP_KERNEL);
-+	if (!nvsw_sn2201->main_mux_devs) {
-+		dev_err(nvsw_sn2201->dev, "Failed to allocate memory for main mux device\n");
-+		return -ENOMEM;
-+	}
-+	nvsw_sn2201->cpld_devs = devm_kmemdup(nvsw_sn2201->dev, nvsw_sn2201_cpld_brdinfo,
-+					      sizeof(nvsw_sn2201_cpld_brdinfo), GFP_KERNEL);
-+	if (!nvsw_sn2201->cpld_devs) {
-+		dev_err(nvsw_sn2201->dev, "Failed to allocate memory for cpld device\n");
-+		return -ENOMEM;
-+	}
-+
++	/* Create main mux. */
 +	nvsw_sn2201->main_mux_devs->adapter = i2c_get_adapter(nvsw_sn2201->main_mux_devs->nr);
 +	if (!nvsw_sn2201->main_mux_devs->adapter) {
 +		err = -ENODEV;
 +		dev_err(nvsw_sn2201->dev, "Failed to get adapter for bus %d\n",
 +			nvsw_sn2201->cpld_devs->nr);
 +		goto i2c_get_adapter_main_fail;
-+	}
++	} 
 +
 +	nvsw_sn2201->main_mux_devs_num = ARRAY_SIZE(nvsw_sn2201_main_mux_brdinfo);
 +	err = nvsw_sn2201_create_static_devices(nvsw_sn2201, nvsw_sn2201->main_mux_devs,
@@ -1053,11 +1003,7 @@ index 000000000..6b4f368fb
 +	if (err) {
 +		dev_err(nvsw_sn2201->dev, "Failed to create main mux devices\n");
 +		goto nvsw_sn2201_create_static_devices_fail;
-+	}
-+
-+	/* Create SN2201 static devices. */
-+	INIT_DELAYED_WORK(&nvsw_sn2201->main_mux_dwork, nvsw_sn2201_main_mux_work);
-+	schedule_delayed_work(&nvsw_sn2201->main_mux_dwork, NVSW_SN2201_DEFER_TIME);
++	} 
 +
 +	nvsw_sn2201->cpld_devs->adapter = i2c_get_adapter(nvsw_sn2201->cpld_devs->nr);
 +	if (!nvsw_sn2201->cpld_devs->adapter) {
@@ -1067,7 +1013,7 @@ index 000000000..6b4f368fb
 +		goto i2c_get_adapter_fail;
 +	}
 +
-+	/* Create CPLD device for SN2201. */
++	/* Create CPLD device. */
 +	nvsw_sn2201->cpld_devs->client = i2c_new_dummy(nvsw_sn2201->cpld_devs->adapter,
 +						       NVSW_SN2201_CPLD_I2CADDR);
 +	if (IS_ERR(nvsw_sn2201->cpld_devs->client)) {
@@ -1162,71 +1108,26 @@ index 000000000..6b4f368fb
 +		platform_device_unregister(nvsw_sn2201->pdev_i2c);
 +}
 +
-+static int nvsw_sn2201_kobject_init(struct device *dev)
-+{
-+	int i, err;
-+
-+	for (i = 0; i < ARRAY_SIZE(nvsw_sn2201_kobjs); i++) {
-+		err = kobject_init_and_add(&nvsw_sn2201_kobjs[i].kobj,
-+					   &nvsw_sn2201_kobjs[i].ktype,
-+					   NULL, nvsw_sn2201_kobjs[i].kname);
-+		if (err) {
-+			dev_err(dev, "Failed to initialize kobject %s\n",
-+				nvsw_sn2201_kobjs[i].kname);
-+			goto kobject_init_and_add_fail;
-+		}
-+	}
-+
-+	return 0;
-+
-+kobject_init_and_add_fail:
-+	for (i = i - 1; i >= 0; i--) {
-+		kobject_del(&nvsw_sn2201_kobjs[i].kobj);
-+		kobject_put(&nvsw_sn2201_kobjs[i].kobj);
-+	}
-+	return err;
-+}
-+
-+static void nvsw_sn2201_kobject_exit(void)
-+{
-+	int i;
-+
-+	for (i = ARRAY_SIZE(nvsw_sn2201_kobjs) - 1; i >= 0; i++) {
-+		kobject_del(&nvsw_sn2201_kobjs[i].kobj);
-+		kobject_put(&nvsw_sn2201_kobjs[i].kobj);
-+	}
-+}
-+
 +static int nvsw_sn2201_probe(struct platform_device *pdev)
 +{
 +	struct nvsw_sn2201 *nvsw_sn2201;
-+	int err;
-+
-+	err = nvsw_sn2201_kobject_init(&pdev->dev);
-+	if (err)
-+		return err;
 +
 +	nvsw_sn2201 = devm_kzalloc(&pdev->dev, sizeof(*nvsw_sn2201), GFP_KERNEL);
-+	if (!nvsw_sn2201) {
-+		err = -ENOMEM;
-+		goto devm_kzalloc_fail;
-+	}
++	if (!nvsw_sn2201)
++		return -ENOMEM;
 +
 +	nvsw_sn2201->dev = &pdev->dev;
 +	platform_set_drvdata(pdev, nvsw_sn2201);
 +	platform_device_add_resources(pdev, nvsw_sn2201_lpc_io_resources,
 +				      ARRAY_SIZE(nvsw_sn2201_lpc_io_resources));
 +
-+	err = nvsw_sn2201_config_pre_init(nvsw_sn2201);
-+	if (err)
-+		goto nvsw_sn2201_config_pre_init_fail;
++	nvsw_sn2201->main_mux_deferred_nr = NVSW_SN2201_MAIN_MUX_DEFER_NR;
++	nvsw_sn2201->main_mux_devs = nvsw_sn2201_main_mux_brdinfo;
++	nvsw_sn2201->cpld_devs = nvsw_sn2201_cpld_brdinfo;
++	nvsw_sn2201->sn2201_devs = nvsw_sn2201_static_brdinfo;
++	nvsw_sn2201->sn2201_devs_num = ARRAY_SIZE(nvsw_sn2201_static_brdinfo);
 +
-+	return 0;
-+
-+nvsw_sn2201_config_pre_init_fail:
-+devm_kzalloc_fail:
-+	nvsw_sn2201_kobject_exit();
-+	return err;
++	return nvsw_sn2201_config_pre_init(nvsw_sn2201);
 +}
 +
 +static int nvsw_sn2201_remove(struct platform_device *pdev)
@@ -1249,7 +1150,6 @@ index 000000000..6b4f368fb
 +					   nvsw_sn2201->main_mux_devs_num);
 +
 +	nvsw_sn2201_config_post_exit(nvsw_sn2201);
-+	nvsw_sn2201_kobject_exit();
 +
 +	return 0;
 +}

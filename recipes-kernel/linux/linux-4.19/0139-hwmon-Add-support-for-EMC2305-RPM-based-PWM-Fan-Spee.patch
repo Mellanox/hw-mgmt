@@ -1,4 +1,4 @@
-From 7c16455dd8ff9254dfc851cf48f61b8b631ee526 Mon Sep 17 00:00:00 2001
+From e887f64ef5b358a425204cc7dc5b1be57f321502 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Mon, 27 Sep 2021 13:26:11 +0000
 Subject: [PATCH backport 4.19/Alligator 1/9] hwmon: Add support for EMC2305
@@ -23,8 +23,8 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
  Documentation/hwmon/emc2305.rst |  63 ++++
  drivers/hwmon/Kconfig           |  12 +
  drivers/hwmon/Makefile          |   1 +
- drivers/hwmon/emc2305.c         | 518 ++++++++++++++++++++++++++++++++
- 4 files changed, 594 insertions(+)
+ drivers/hwmon/emc2305.c         | 521 ++++++++++++++++++++++++++++++++
+ 4 files changed, 597 insertions(+)
  create mode 100644 Documentation/hwmon/emc2305.rst
  create mode 100644 drivers/hwmon/emc2305.c
 
@@ -134,16 +134,15 @@ index 93f7f41ea..35338c047 100644
  obj-$(CONFIG_SENSORS_F71882FG)	+= f71882fg.o
 diff --git a/drivers/hwmon/emc2305.c b/drivers/hwmon/emc2305.c
 new file mode 100644
-index 000000000..5a36ef819
+index 000000000..0625c7c3b
 --- /dev/null
 +++ b/drivers/hwmon/emc2305.c
-@@ -0,0 +1,518 @@
+@@ -0,0 +1,521 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Hardware monitoring driver for EMC2305 fan controller
 + *
-+ * Copyright (C) 2021 Nvidia Technologies Ltd and Delta Networks, Inc.,
-+ All rights reserved
++ * Copyright (C) 2021 Nvidia Technologies Ltd and Delta Networks, Inc.
 + */
 +
 +#include <linux/err.h>
@@ -188,11 +187,17 @@ index 000000000..5a36ef819
 +	EMC2301 = 0x37,
 +};
 +
-+static const struct i2c_device_id emc2305_id[] = {
++static const struct i2c_device_id emc2305_ids[] = {
 +	{ "emc2305", 0 },
 +	{ }
 +};
-+MODULE_DEVICE_TABLE(i2c, emc2305_id);
++MODULE_DEVICE_TABLE(i2c, emc2305_ids);
++
++static const struct of_device_id emc2305_dt_ids[] = {
++	{ .compatible = "smsc,emc2305" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, emc2305_dt_ids);
 +
 +struct emc2305_data {
 +	struct thermal_cooling_device *cdev;
@@ -583,7 +588,7 @@ index 000000000..5a36ef819
 +	max_state = EMC2305_FAN_MAX_STATE;
 +	max_pwm = EMC2305_FAN_MAX;
 +	min_pwm = EMC2305_FAN_MIN;
-+	if (!dev->of_node) {
++	if (dev->of_node) {
 +		ret = emc2305_get_tz_of(dev, &min_pwm, &max_pwm, &max_state);
 +		if (ret < 0)
 +			return ret;
@@ -623,19 +628,16 @@ index 000000000..5a36ef819
 +	return 0;
 +
 +emc2305_set_tz_fail:
-+	hwmon_device_unregister(data->hwmon_dev);
 +hwmon_device_register_with_info_fail:
 +	return ret;
 +}
 +
 +static int emc2305_remove(struct i2c_client *client)
 +{
-+	struct emc2305_data *data = i2c_get_clientdata(client);
 +	struct device *dev = &client->dev;
 +
 +	if (IS_REACHABLE(CONFIG_THERMAL))
 +		emc2305_unset_tz(dev);
-+	hwmon_device_unregister(data->hwmon_dev);
 +	return 0;
 +}
 +
@@ -643,10 +645,11 @@ index 000000000..5a36ef819
 +	.class  = I2C_CLASS_HWMON,
 +	.driver = {
 +		.name = "emc2305",
++		.of_match_table = emc2305_dt_ids,
 +	},
 +	.probe    = emc2305_probe,
 +	.remove	  = emc2305_remove,
-+	.id_table = emc2305_id,
++	.id_table = emc2305_ids,
 +	.address_list = emc2305_normal_i2c,
 +};
 +
