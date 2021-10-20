@@ -90,7 +90,7 @@ wait_for_config=120
 # Input parameters for the system thermal class, the number of tachometers, the
 # number of replicable power supply units and for sensors polling time (seconds)
 system_thermal_type_def=1
-polling_time_def=60
+polling_time_def=3
 cooling_level_update_state=2
 
 # Local constants
@@ -103,9 +103,13 @@ gearbox_counter=0
 lc_counter=0
 temp_grow_hyst=0
 temp_fall_hyst=2000
+last_cpu_temp=0
+common_loop=20
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
+# TMP for Buffalo BU
+psu_fan_speed_full=(0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64)
 
 # Thermal tables for the minimum FAN setting per system time. It contains
 # entries with ambient temperature threshold values and relevant minimum
@@ -666,6 +670,16 @@ thermal_periodic_report()
 			set_cur_state=$cooling
 		fi
 	fi
+	# TMP for Buffalo BU
+	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0011)
+		ps_fan_speed=${psu_fan_speed_full[$f5]}
+		;;
+	*)
+		ps_fan_speed=${psu_fan_speed[$f5]}
+		;;
+	esac
 	ps_fan_speed=${psu_fan_speed[$f5]}
 	f5=$((f5*10))
 	f6=$((set_cur_state*10))
@@ -789,6 +803,16 @@ update_psu_fan_speed()
 				addr=$(< $config_path/psu"$i"_i2c_addr)
 				command=$(< $fan_command)
 				entry=$(< $thermal_path/cooling_cur_state)
+				# TMP for Buffalo BU
+				board_type=$(< /sys/devices/virtual/dmi/id/board_name)
+				case $board in
+				VMOD0011)
+					speed=${psu_fan_speed_full[$entry]}
+				;;
+				*)
+					speed=${psu_fan_speed[$entry]}
+					;;
+				esac
 				speed=${psu_fan_speed[$entry]}
 				# SN2201 sets psu fan speed in percentage mode.
 				if [ "$board_type" == "VMOD0014" ]; then
@@ -1263,6 +1287,13 @@ thermal_control_preinit()
 	suspend_thermal=0
 }
 
+sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+case $sku in
+	HI138)
+	exit 0
+	;;
+esac
+
 rm -rf $config_path/periodic_report
 log_notice "Mellanox thermal control is started"
 # Wait for thermal configuration.
@@ -1277,7 +1308,18 @@ while true
 do
 	/bin/sleep $polling_time &
 	wait $!
+
+	# Control cooling devices according to CPU temperature trends.
+	hw_management_cpu_thermal.py -t $last_cpu_temp
+	last_cpu_temp=$?
 	
+	cpu_loop=$((cpu_loop+1))
+	if [ "$cpu_loop" -le "$common_loop" ]; then
+		continue
+	else
+		cpu_loop=1
+	fi
+
 	# Verify if cooling state required update.
 	update_dynamic_min_pwm
 	# Check if thermal algorithm is suspended.
@@ -1299,6 +1341,7 @@ do
 			continue
 		fi
 	fi
+
 	# Validate thermal configuration.
 	validate_thermal_configuration
 	if [ $? -ne 0 ]; then

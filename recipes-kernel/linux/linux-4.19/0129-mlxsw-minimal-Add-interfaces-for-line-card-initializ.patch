@@ -1,8 +1,8 @@
-From e9b029123f1254486faf42567b33cfdd1b627e17 Mon Sep 17 00:00:00 2001
+From d3dca533a7a54ffffb65b0a542be37164c7e44cb Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 19 Jul 2021 16:49:20 +0000
-Subject: [PATCH backport v4.19 104/104] mlxsw: minimal: Add interfaces for
- line card initialization and de-initialization
+Subject: [PATCH backport v.4.19 4/4] mlxsw: minimal: Add interfaces for line
+ card initialization and de-initialization
 
 Add callback functions for line card 'netdevice' objects initialization
 and de-initialization. Each line card is associated with the set of
@@ -18,10 +18,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 124 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index cf2a4562abc8..dffbbc9e25f4 100644
+index 903c67253..f36358470 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-@@ -328,6 +328,121 @@ static void mlxsw_m_sys_event_handler(struct mlxsw_core *mlxsw_core)
+@@ -335,6 +335,121 @@ static void mlxsw_m_sys_event_handler(struct mlxsw_core *mlxsw_core)
  	}
  }
  
@@ -143,7 +143,7 @@ index cf2a4562abc8..dffbbc9e25f4 100644
  static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
  			const struct mlxsw_bus_info *mlxsw_bus_info)
  {
-@@ -352,13 +467,22 @@ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
+@@ -359,13 +474,22 @@ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
  		return err;
  	}
  

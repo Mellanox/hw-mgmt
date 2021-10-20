@@ -590,17 +590,28 @@ msn24xx_specific()
 	connect_table=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t1
-	max_tachos=8
-	hotplug_fans=4
-	echo 21000 > $config_path/fan_max_speed
-	echo 5400 > $config_path/fan_min_speed
-	echo 18000 > $config_path/psu_fan_max
-	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI138)
+			hotplug_fans=0
+			max_tachos=0
+		;;
+		*)
+			thermal_type=$thermal_type_t1
+			max_tachos=8
+			hotplug_fans=4
+			echo 21000 > $config_path/fan_max_speed
+			echo 5400 > $config_path/fan_min_speed
+			echo 18000 > $config_path/psu_fan_max
+			echo 2000 > $config_path/psu_fan_min
+			echo 9 > $config_path/fan_inversed
+			echo 24c02 > $config_path/psu_eeprom_type
+			;;
+	esac
+
 	echo 3 > $config_path/cpld_num
 	echo cpld3 > $config_path/cpld_port
-	echo 24c02 > $config_path/psu_eeprom_type
+
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 }
 
@@ -609,14 +620,24 @@ msn27xx_msb_msx_specific()
 	connect_table=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t1
-	max_tachos=8
-	hotplug_fans=4
-	echo 25000 > $config_path/fan_max_speed
-	echo 1500 > $config_path/fan_min_speed
-	echo 18000 > $config_path/psu_fan_max
-	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI138)
+			hotplug_fans=0
+			max_tachos=0
+		;;
+		*)
+			thermal_type=$thermal_type_t1
+			max_tachos=8
+			hotplug_fans=4
+			echo 25000 > $config_path/fan_max_speed
+			echo 1500 > $config_path/fan_min_speed
+			echo 18000 > $config_path/psu_fan_max
+			echo 2000 > $config_path/psu_fan_min
+			echo 9 > $config_path/fan_inversed
+			echo 24c02 > $config_path/psu_eeprom_type
+			;;
+	esac
 
 	product=$(< /sys/devices/virtual/dmi/id/product_name)
 	case $product in
@@ -629,7 +650,7 @@ msn27xx_msb_msx_specific()
 	esac
 
 	echo cpld3 > $config_path/cpld_port
-	echo 24c02 > $config_path/psu_eeprom_type
+
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
@@ -965,7 +986,7 @@ msn48xx_specific()
 	local cpu_bus_offset=51
 	connect_table=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
-	thermal_type=$thermal_type_full
+	thermal_type=$thermal_type_def
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
@@ -979,7 +1000,7 @@ msn48xx_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
-	# TMP for BU
+	# TMP for Buffalo BU
 	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
@@ -1186,7 +1207,16 @@ set_config_data()
 	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
 	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
 	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
-	echo $fan_psu_default > $config_path/fan_psu_default
+	# TMP for Buffalo BU
+	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0011)
+		echo 0x64 > $config_path/fan_psu_default
+		;;
+	*)
+		echo $fan_psu_default > $config_path/fan_psu_default
+		;;
+	esac
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay

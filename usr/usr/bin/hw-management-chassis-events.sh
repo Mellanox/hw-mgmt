@@ -48,6 +48,7 @@ psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
+lc_iio_dev_name_def="iio:device0"
 eeprom_name=''
 sfp_counter=0
 udev_ready=$hw_management_path/.udev_ready
@@ -427,6 +428,7 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "a2d" ]; then
 		# Detect if it belongs to line card or to main board.
+		iio_name=$5
 		input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 		if [ -d "$driver_dir" ]; then
@@ -435,12 +437,13 @@ if [ "$1" == "add" ]; then
 				# Line card event, replace output folder.
 				find_linecard_num "$input_bus_num"
 				environment_path="$hw_management_path"/lc"$linecard_num"/environment
+				iio_name=$lc_iio_dev_name_def
 			fi
 		fi
-		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$5"_voltage_scale
+		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
-				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$5"_raw_"$i"
+				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
 			fi
 		done
 	fi
@@ -676,6 +679,10 @@ if [ "$1" == "add" ]; then
 		fi
 		case $eeprom_name in
 		fan*_info)
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI138" ]]; then
+				exit 0
+			fi
 			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
 			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
 			case $fan_direction in

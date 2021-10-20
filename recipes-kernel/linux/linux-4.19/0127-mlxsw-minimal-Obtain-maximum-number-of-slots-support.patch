@@ -1,8 +1,8 @@
-From 5bfdfab6eeed801b2571ef0ac63d940d02761d99 Mon Sep 17 00:00:00 2001
+From 0fe6324515531410b291c6734434cd6b89e77155 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 9 Aug 2021 15:24:35 +0000
-Subject: [PATCH v4.19 backport 103/108] mlxsw: minimal: Obtain maximum number
- of slots supported by system
+Subject: [PATCH backport v.4.19 2/4] mlxsw: minimal: Obtain maximum number of
+ slots supported by system
 
 Obtain maximum slot number by query MGPIR register with 'slot_index'
 zero. This info is to be used to pre-allocate memory for maximum line
@@ -14,10 +14,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index b1788f720..56251f0ef 100644
+index e5b1bc90b..599ccf89d 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-@@ -249,6 +249,14 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index
+@@ -253,6 +253,14 @@ static int mlxsw_m_ports_create(struct mlxsw_m_area *mlxsw_m_area, u8 slot_index
  	if (err)
  		return err;
  
