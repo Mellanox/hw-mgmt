@@ -1,4 +1,4 @@
-From 0e3b98ff79278c70f6680ab46a98b66686ac08c1 Mon Sep 17 00:00:00 2001
+From 116450c9239079e2212d14bbc0fe6f7b70e34e4e Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Mon, 27 Sep 2021 13:38:18 +0000
 Subject: [PATCH backport 4.19/Alligator 5/9] platform/mellanox: Add support
@@ -19,8 +19,8 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig       |   17 +
  drivers/platform/mellanox/Makefile      |    1 +
- drivers/platform/mellanox/nvsw-sn2201.c | 1112 +++++++++++++++++++++++
- 3 files changed, 1130 insertions(+)
+ drivers/platform/mellanox/nvsw-sn2201.c | 1087 +++++++++++++++++++++++
+ 3 files changed, 1105 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-sn2201.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -60,10 +60,10 @@ index 1108858ed..42cd316d8 100644
 +obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
 new file mode 100644
-index 000000000..59ed5ac02
+index 000000000..1a2103778
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1112 @@
+@@ -0,0 +1,1087 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -512,31 +512,6 @@ index 000000000..59ed5ac02
 +	.counter = ARRAY_SIZE(nvsw_sn2201_items),
 +	.cell = NVSW_SN2201_SYS_INT_STATUS_OFFSET,
 +	.mask = NVSW_SN2201_CPLD_AGGR_MASK_DEF,
-+};
-+
-+static struct property nvsw_sn2201_fan_pwm_max_prop = {
-+	.name = "emc2305,max-pwm",
-+	.length = 4,
-+	.value = "255",
-+};
-+
-+static struct property nvsw_sn2201_fan_pwm_min_prop = {
-+	.name = "emc2305,min-pwm",
-+	.length = 2,
-+	.value = "0",
-+	.next = &nvsw_sn2201_fan_pwm_max_prop,
-+};
-+
-+static struct property nvsw_sn2201_fan_cooling_levels_prop = {
-+	.name = "emc2305,cooling-levels",
-+	.length = 3,
-+	.value = "10",
-+	.next = &nvsw_sn2201_fan_pwm_min_prop,
-+};
-+
-+static struct device_node nvsw_sn2201_fan_device_node = {
-+	.name = "emc2305",
-+	.properties = &nvsw_sn2201_fan_cooling_levels_prop,
 +};
 +
 +/* SN2201 static devices. */
