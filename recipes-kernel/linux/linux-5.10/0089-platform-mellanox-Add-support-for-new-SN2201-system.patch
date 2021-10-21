@@ -1,4 +1,4 @@
-From f91a5a9bee9ffa0b53b8cb57bc83ebe957fcc98d Mon Sep 17 00:00:00 2001
+From 3412f66019d123483648cf0536140d0f5eee1d93 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sat, 9 Oct 2021 09:05:43 +0000
 Subject: [PATCH backport 5.10/Alligator 8/9] platform/mellanox: Add support
@@ -19,8 +19,8 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig       |   18 +
  drivers/platform/mellanox/Makefile      |    1 +
- drivers/platform/mellanox/nvsw-sn2201.c | 1112 +++++++++++++++++++++++
- 3 files changed, 1131 insertions(+)
+ drivers/platform/mellanox/nvsw-sn2201.c | 1087 +++++++++++++++++++++++
+ 3 files changed, 1106 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-sn2201.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -54,17 +54,17 @@ diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Make
 index e47b6b064..6af37ee88 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -8,3 +8,4 @@
- obj-$(CONFIG_MLXREG_HOTPLUG)   += mlxreg-hotplug.o
+@@ -8,3 +8,4 @@ obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
+ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 +obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
 new file mode 100644
-index 000000000..25f6d0645
+index 000000000..06a257ee1
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1112 @@
+@@ -0,0 +1,1087 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -513,31 +513,6 @@ index 000000000..25f6d0645
 +	.counter = ARRAY_SIZE(nvsw_sn2201_items),
 +	.cell = NVSW_SN2201_SYS_INT_STATUS_OFFSET,
 +	.mask = NVSW_SN2201_CPLD_AGGR_MASK_DEF,
-+};
-+
-+static struct property nvsw_sn2201_fan_pwm_max_prop = {
-+	.name = "emc2305,max-pwm",
-+	.length = 4,
-+	.value = "255",
-+};
-+
-+static struct property nvsw_sn2201_fan_pwm_min_prop = {
-+	.name = "emc2305,min-pwm",
-+	.length = 2,
-+	.value = "0",
-+	.next = &nvsw_sn2201_fan_pwm_max_prop,
-+};
-+
-+static struct property nvsw_sn2201_fan_cooling_levels_prop = {
-+	.name = "emc2305,cooling-levels",
-+	.length = 3,
-+	.value = "10",
-+	.next = &nvsw_sn2201_fan_pwm_min_prop,
-+};
-+
-+static struct device_node nvsw_sn2201_fan_device_node = {
-+	.name = "emc2305",
-+	.properties = &nvsw_sn2201_fan_cooling_levels_prop,
 +};
 +
 +/* SN2201 static devices. */
