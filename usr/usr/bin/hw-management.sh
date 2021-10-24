@@ -1129,6 +1129,8 @@ check_system()
 			esac
 			;;
 	esac
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 }
 
 connect_device()
@@ -1290,7 +1292,6 @@ create_symbolic_links()
 	if [ ! -h $power_path/pwr_sys ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
-	touch $udev_ready
 }
 
 remove_symbolic_links()
@@ -1306,14 +1307,13 @@ do_start()
 {
 	create_symbolic_links
 	check_system
-	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
-	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
+	get_asic_bus
+	touch $udev_ready
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
 	set_config_data
-	get_asic_bus
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform

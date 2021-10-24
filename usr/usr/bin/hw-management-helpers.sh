@@ -79,8 +79,6 @@ BDW_CPU=0x656
 CFL_CPU=0x69E
 DNV_CPU=0x65F
 
-board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-
 log_err()
 {
     logger -t hw-management -p daemon.err "$@"
