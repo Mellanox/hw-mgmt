@@ -674,6 +674,19 @@ msn3420_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
+msn_xh3000_specific()
+{
+	connect_table=(${mqm8700_base_connect_table[@]})
+	add_cpu_board_to_connection_table
+	hotplug_fans=0
+	max_tachos=0
+	tune_thermal_type=1
+	thermal_type=$thermal_type_t5
+	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	get_i2c_bus_frequency_default
+}
+
 msn38xx_specific()
 {
 	connect_table=(${msn3800_base_connect_table[@]})
@@ -928,6 +941,9 @@ msn_spc2_common()
 					mqmxxx_msn37x_msn34x_specific
 					;;
 			esac
+			;;
+		HI139)
+			msn_xh3000_specific
 			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific

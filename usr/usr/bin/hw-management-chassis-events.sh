@@ -627,7 +627,7 @@ if [ "$1" == "add" ]; then
 		case $eeprom_name in
 		fan*_info)
 			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-			if [[ $sku == "HI138" ]]; then
+			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
 			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
