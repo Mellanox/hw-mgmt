@@ -58,7 +58,7 @@ handle_cpld_versions()
 		if [ -L $system_path/cpld"$i"_pn ]; then
 			cpld_pn=$(cat $system_path/cpld"$i"_pn)
 		fi
-		if [ -L $system_path/cpld"$i"_version ]; then
+		if [ -f $system_path/cpld"$i"_version ]; then
 			cpld_ver=$(cat $system_path/cpld"$i"_version)
 		fi
 		if [ -L $system_path/cpld"$i"_version_min ]; then

@@ -59,6 +59,7 @@ thermal_type_t7=7
 thermal_type_t8=8
 thermal_type_t9=9
 thermal_type_t10=10
+thermal_type_t11=11
 thermal_type_def=0
 thermal_type_full=100
 
@@ -71,10 +72,12 @@ cpu_type=
 # CPU Family + CPU Model should idintify exact CPU architecture
 # IVB - Ivy-Bridge; RNG - Atom Rangeley
 # BDW - Broadwell-DE; CFL - Coffee Lake
+# DNV - Denverton;
 IVB_CPU=0x63A
 RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
+DNV_CPU=0x65F
 
 log_err()
 {
@@ -114,27 +117,7 @@ find_i2c_bus()
         fi
     done
 
-    log_err "i2c-mlxcpld driver is not loaded"
-    exit 0
-}
-
-find_i2c_bus()
-{
-    # Find physical bus number of Mellanox I2C controller. The default
-    # number is 1, but it could be assigned to others id numbers on
-    # systems with different CPU types.
-    for ((i=1; i<i2c_bus_max; i++)); do
-        folder=/sys/bus/i2c/devices/i2c-$i
-        if [ -d $folder ]; then
-            name=$(cut $folder/name -d' ' -f 1)
-            if [ "$name" == "i2c-mlxcpld" ]; then
-                i2c_bus_offset=$((i-1))
-                return
-            fi
-        fi
-    done
-
-    log_err "i2c-mlxcpld driver is not loaded"
+    log_err "I2C infrastructure is not created"
     exit 0
 }
 
