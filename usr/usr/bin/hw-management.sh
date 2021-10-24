@@ -920,15 +920,15 @@ msn_spc2_common()
 			msn3510_specific
 			;;
 		HI100)
-    		case $sys_ver in
-                2)
-                    mqm87xx_rev1_specific
-                ;;
-                *)
-                    mqmxxx_msn37x_msn34x_specific
-                ;;
-            esac
-            ;;
+			case $sys_ver in
+				2)
+					mqm87xx_rev1_specific
+					;;
+				*)
+					mqmxxx_msn37x_msn34x_specific
+					;;
+			esac
+			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
 			;;
