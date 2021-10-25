@@ -543,7 +543,7 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
 		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		if [[ $sku == "HI138" ]]; then
+		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 			exit 0
 		fi
 		find_i2c_bus
