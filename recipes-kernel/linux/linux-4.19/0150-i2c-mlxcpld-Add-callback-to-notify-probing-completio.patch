@@ -23,7 +23,7 @@ index 56aa424fd..fb451d42a 100644
  		goto mlxcpld_i2_probe_failed;
  
 +	/* Notify caller when adapter is added. */
-+	if (pdata->completion_notify)
++	if (pdata && pdata->completion_notify)
 +		pdata->completion_notify(pdata->handle, mlxcpld_i2c_adapter.nr);
 +
  	return 0;
