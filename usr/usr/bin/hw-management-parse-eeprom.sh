@@ -98,7 +98,7 @@ function do_conv ( )
 	fi
 
 	tmp_eeprom_path=$(mktemp)
-
+	sync
 	cp "$eeprom_path" "${tmp_eeprom_path}"
 	eeprom_path="${tmp_eeprom_path}"
 

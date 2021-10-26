@@ -296,6 +296,12 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 
 ACTION=$1
 
+if [ "$board_type" == "VMOD0014" ]; then
+	i2c_bus_max=14
+	psu1_i2c_addr=0x58
+	psu2_i2c_addr=0x58
+fi
+
 is_module()
 {
         /sbin/lsmod | grep -w "$1" > /dev/null
@@ -333,15 +339,30 @@ function restore_i2c_bus_frequency_default()
 function find_regio_sysfs_path()
 {
 	# Find hwmon{n} sysfs path for regio device
-	for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
-		if [ -d "$path" ]; then
-			name=$(cut "$path"/name -d' ' -f 1)
-			if [ "$name" == "mlxreg_io" ]; then
-				echo "$path"
-				return 0
+	case $board_type in 
+	VMOD0014)
+		for path in /sys/devices/pci0000:00/*/NVSN2201:*/mlxreg-io/hwmon/hwmon*; do
+			if [ -d "$path" ]; then
+				name=$(cut "$path"/name -d' ' -f 1)
+				if [ "$name" == "mlxreg_io" ]; then
+					echo "$path"
+					return 0
+				fi
 			fi
-		fi
-	done
+		done
+		;;
+	*)
+		for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
+			if [ -d "$path" ]; then
+				name=$(cut "$path"/name -d' ' -f 1)
+				if [ "$name" == "mlxreg_io" ]; then
+					echo "$path"
+					return 0
+				fi
+			fi
+		done
+		;;
+	esac
 
 	log_err "mlxreg_io is not loaded"
 	return 1
@@ -413,6 +434,12 @@ set_jtag_gpio()
 			jtag_tms=130
 			jtag_tck=131
 			;;
+		$DNV_CPU)
+			jtag_tck=87
+			jtag_tms=88
+			jtag_tdo=86
+			jtag_tdi=89
+			;;
 		*)
 			return 0
 			;;
@@ -428,12 +455,19 @@ set_jtag_gpio()
 			mkdir $jtag_path
 		fi
 
-		if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
-			ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+		if [ "$board_type" != "VMOD0014" ]; then
+			if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+				ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+			fi
 		fi
 	fi
 
-	gpiobase=$(</sys/class/gpio/gpiochip*/base)
+	# Gpiochip358 is used for CPU GPIO and gpiochip342 is used for PCA9555 Extender in SN2201. 
+	if [ "$board_type" == "VMOD0014" ]; then
+		gpiobase=$(</sys/class/gpio/gpiochip358/base)
+	else
+		gpiobase=$(</sys/class/gpio/gpiochip*/base)
+	fi
 
 	gpio_tck=$((gpiobase+jtag_tck))
 	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
@@ -447,11 +481,32 @@ set_jtag_gpio()
 	gpio_tdi=$((gpiobase+jtag_tdi))
 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
 
+	# In SN2201 system. 
+	# GPIO0 for CPU request to reset the Main Board I2C Mux.
+	# GPIO1 for CPU control the CPU Board MUX when doing the ISP programming. 
+	# GPIO13 for CPU request Main Board JTAG control signal. 
+	if [ "$board_type" == "VMOD0014" ]; then
+		mux_reset=27
+		jtag_mux_en=33
+		jtag_ena=60
+		gpio_mux_rst=$((gpiobase+mux_reset))
+		gpio_jtag_mux_en=$((gpiobase+jtag_mux_en))
+		gpio_jtag_enable=$((gpiobase+jtag_ena))
+		echo $gpio_mux_rst > /sys/class/gpio/"$export_unexport"
+		echo $gpio_jtag_mux_en > /sys/class/gpio/"$export_unexport"
+		echo $gpio_jtag_enable > /sys/class/gpio/"$export_unexport"
+	fi
+
 	if [ "$export_unexport" == "export" ]; then
 		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
 		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
 		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
 		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
+		if [ "$board_type" == "VMOD0014" ]; then
+			check_n_link /sys/class/gpio/gpio$gpio_mux_rst/value $system_path/mux_reset
+			check_n_link /sys/class/gpio/gpio$gpio_jtag_mux_en/value $jtag_path/jtag_mux_en
+			check_n_link /sys/class/gpio/gpio$gpio_jtag_enable/value $jtag_path/jtag_enable
+		fi
 	fi
 }
 
@@ -996,6 +1051,23 @@ msn48xx_specific()
 	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
+sn2201_specific()
+{
+	local cpu_bus_offset=51
+	echo 2 > $config_path/cpld_num
+	thermal_type=$thermal_type_t11
+	i2c_asic_bus_default=6
+	hotplug_fans=4
+	hotplug_pwrs=2
+	hotplug_psus=2
+	echo 22000 > $config_path/fan_max_speed
+	echo 960 > $config_path/fan_min_speed
+	echo 16000 > $config_path/psu_fan_max
+	echo 2500 > $config_path/psu_fan_min
+	i2cget -f -y 1 0x3d 0x01 > $system_path/cpld2_version
+	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
+}
+
 check_system()
 {
 	check_cpu_type
@@ -1028,6 +1100,9 @@ check_system()
 			;;
 		VMOD0011)
 			msn48xx_specific
+			;;
+		VMOD0014)
+			sn2201_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -1071,6 +1146,9 @@ check_system()
 				MQM87*)
 					mqm87xx_specific
 					;;
+				SN2201*)
+					sn2201_specific
+					;;
 				*)
 					# Check marginal system, system without SMBIOS customization,
 					# only on old types of Mellanox switches.
@@ -1098,6 +1176,8 @@ check_system()
 			esac
 			;;
 	esac
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 }
 
 connect_device()
@@ -1259,7 +1339,6 @@ create_symbolic_links()
 	if [ ! -h $power_path/pwr_sys ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
-	touch $udev_ready
 }
 
 remove_symbolic_links()
@@ -1275,15 +1354,15 @@ do_start()
 {
 	create_symbolic_links
 	check_system
-	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
-	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
+	get_asic_bus
+	touch $udev_ready
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
 	set_config_data
-	get_asic_bus
 	create_event_files
+	hw-management-i2c-gpio-expander.sh
 	connect_platform
 	sleep 1
 	/usr/bin/hw-management-start-post.sh
