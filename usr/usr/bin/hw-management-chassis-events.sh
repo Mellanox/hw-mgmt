@@ -32,6 +32,7 @@
 #
 
 source hw-management-helpers.sh
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_def_off_eeprom_vpd=8

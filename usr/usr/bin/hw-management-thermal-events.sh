@@ -33,6 +33,7 @@
 #
 
 source hw-management-helpers.sh
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 
 # Local variables
 fan_command=$config_path/fan_command

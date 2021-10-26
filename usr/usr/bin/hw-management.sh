@@ -58,6 +58,7 @@
 #
 
 source hw-management-helpers.sh
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 # Local constants and variables
 
 thermal_type=$thermal_type_def
@@ -1241,8 +1242,7 @@ set_config_data()
 	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
 	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
 	# TMP for Buffalo BU
-	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+	case $board_type in
 	VMOD0011)
 		echo 0x64 > $config_path/fan_psu_default
 		;;
