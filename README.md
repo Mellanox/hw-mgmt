@@ -28,6 +28,9 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN4600C
 - MSN4600
 - MQM9700
+- MSN4800
+- SGN2410
+- SN2201
 
 ## Supported Kernel versions:
 - 4.9.xx
@@ -157,6 +160,8 @@ CONFIG_NVSW_SN2201=m
 CONFIG_OF=y
 CONFIG_I2C_MUX_PCA954x=m
 CONFIG_GPIO_PCA953X=m
+CONFIG_SENSORS_POWR1220=m
+CONFIG_TI_ADS1015=m
 CONFIG_SECURITY_LOCKDOWN_LSM=y (if kernel version >= v5.4)
 CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y (if kernel version >= v5.4)
 CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y (if kernel version >= v5.4)
