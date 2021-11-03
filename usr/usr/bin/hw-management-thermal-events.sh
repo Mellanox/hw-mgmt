@@ -183,103 +183,106 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "switch" ]; then
-		get_lc_id_hwmon "$3$4"
-		lc_number=$?
-		if [ "$lc_number" -ne 0 ]; then
-			cpath="$hw_management_path/lc$lc_number/config"
-			tpath="$hw_management_path/lc$lc_number/thermal"
-			min_module_ind=$min_lc_thermal_ind
-			max_module_ind=$max_lc_thermal_ind
-			set_lc_id_hwmon "$3$4" "$cpath"
-		else
-			cpath="$config_path"
-			tpath="$thermal_path"
-			min_module_ind=$min_module_gbox_ind
-			max_module_ind=$max_module_gbox_ind
-			echo 0 > "$cpath"/gearbox_counter
-			echo 0 > "$cpath"/module_counter
-		fi
-
 		name=$(< "$3""$4"/name)
-		if [ ! -f "$cpath/gearbox_counter" ]; then
-			echo 0 > "$cpath"/gearbox_counter
-		fi
-		if [ ! -f "$cpath/module_counter" ]; then
-			echo 0 > "$cpath"/module_counter
-		fi
-
-		if [ "$name" == "mlxsw" ]; then
-			ln -sf "$3""$4"/temp1_input "$tpath"/asic
-			if [ -f "$3""$4"/pwm1 ]; then
-				ln -sf "$3""$4"/pwm1 "$tpath"/pwm1
-				echo "$name" > "$cpath"/cooling_name
+		if [[ $name != *"nvme"* ]]; then
+			get_lc_id_hwmon "$3$4"
+			lc_number=$?
+			if [ "$lc_number" -ne 0 ]; then
+				cpath="$hw_management_path/lc$lc_number/config"
+				tpath="$hw_management_path/lc$lc_number/thermal"
+				min_module_ind=$min_lc_thermal_ind
+				max_module_ind=$max_lc_thermal_ind
+				set_lc_id_hwmon "$3$4" "$cpath"
+			else
+				cpath="$config_path"
+				tpath="$thermal_path"
+				min_module_ind=$min_module_gbox_ind
+				max_module_ind=$max_module_gbox_ind
+				echo 0 > "$cpath"/gearbox_counter
+				echo 0 > "$cpath"/module_counter
 			fi
-			if [ -f "$cpath"/fan_inversed ]; then
-				inv=$(< "$cpath"/fan_inversed)
-			fi
-			for ((i=1; i<=max_tachos; i+=1)); do
-				if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
-					j=$i
-				else
-					j=$((inv - i))
-				fi
-				if [ -f "$3""$4"/fan"$i"_input ]; then
-					ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
-					ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
-					ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
-					check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
-					check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
-					# Save max_tachos to config
-					echo $i > "$cpath"/max_tachos
-				fi
-			done
-		fi
 
-		lcmatch=`echo $name | cut -d"#" -f1`
-		if [ "$name" == "mlxsw" ] || [ "$lcmatch" == "linecard" ]; then
-			for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
-				if [ -f "$3""$4"/temp"$i"_input ]; then
-					label=$(< "$3""$4"/temp"$i"_label)
-					case $label in
-					*front*)
-						if [ "$name" == "mlxsw" ]; then
-							j=$((i-1))
-						else
-							j="$i"
-						fi
-						ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
-						ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
-						ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
-						ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
-						lock_service_state_change
-						[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
-						module_counter=$((module_counter+1))
-						echo "$module_counter" > "$cpath"/module_counter
-						if [ "$lcmatch" == "linecard" ]; then
-							chassis_module_counter=$(< "$config_path"/module_counter)
-							chassis_module_counter=$((chassis_module_counter+1))
-							echo "$chassis_module_counter " > "$config_path"/module_counter
-						fi
-						unlock_service_state_change
-						;;
-					*gear*)
-						lock_service_state_change
-						[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
-						gearbox_counter=$((gearbox_counter+1))
-						echo "$gearbox_counter" > "$cpath"/gearbox_counter
-						if [ "$lcmatch" == "linecard" ]; then
-							chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-							chassis_gearbox_counter=$((chassis_gearbox_counter+1))
-							echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
-						fi
-						unlock_service_state_change
-						ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
-						;;
-					*)
-						;;
-					esac
+			if [ ! -f "$cpath/gearbox_counter" ]; then
+				echo 0 > "$cpath"/gearbox_counter
+			fi
+			if [ ! -f "$cpath/module_counter" ]; then
+				echo 0 > "$cpath"/module_counter
+			fi
+
+			if [ "$name" == "mlxsw" ]; then
+				ln -sf "$3$4" $cpath/asic_hwmon
+				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				if [ -f "$3""$4"/pwm1 ]; then
+					ln -sf "$3""$4"/pwm1 "$tpath"/pwm1
+					echo "$name" > "$cpath"/cooling_name
 				fi
-			done
+				if [ -f "$cpath"/fan_inversed ]; then
+					inv=$(< "$cpath"/fan_inversed)
+				fi
+				for ((i=1; i<=max_tachos; i+=1)); do
+					if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
+						j=$i
+					else
+						j=$((inv - i))
+					fi
+					if [ -f "$3""$4"/fan"$i"_input ]; then
+						ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
+						ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
+						ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
+						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
+						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
+						# Save max_tachos to config
+						echo $i > "$cpath"/max_tachos
+					fi
+				done
+			fi
+
+			lcmatch=`echo $name | cut -d"#" -f1`
+			if [ "$name" == "mlxsw" ] || [ "$lcmatch" == "linecard" ]; then
+				for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
+					if [ -f "$3""$4"/temp"$i"_input ]; then
+						label=$(< "$3""$4"/temp"$i"_label)
+						case $label in
+						*front*)
+							if [ "$name" == "mlxsw" ]; then
+								j=$((i-1))
+							else
+								j="$i"
+							fi
+							ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
+							ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
+							ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
+							ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
+							lock_service_state_change
+							[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
+							module_counter=$((module_counter+1))
+							echo "$module_counter" > "$cpath"/module_counter
+							if [ "$lcmatch" == "linecard" ]; then
+								chassis_module_counter=$(< "$config_path"/module_counter)
+								chassis_module_counter=$((chassis_module_counter+1))
+								echo "$chassis_module_counter " > "$config_path"/module_counter
+							fi
+							unlock_service_state_change
+							;;
+						*gear*)
+							lock_service_state_change
+							[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
+							gearbox_counter=$((gearbox_counter+1))
+							echo "$gearbox_counter" > "$cpath"/gearbox_counter
+							if [ "$lcmatch" == "linecard" ]; then
+								chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
+								chassis_gearbox_counter=$((chassis_gearbox_counter+1))
+								echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+							fi
+							unlock_service_state_change
+							ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							;;
+						*)
+							;;
+						esac
+					fi
+				done
+			fi
 		fi
 	fi
 
@@ -722,86 +725,92 @@ else
 		fi
 	fi
 	if [ "$2" == "switch" ]; then
-		[ -f "$config_path/stopping" ] && stopping=$(< $config_path/stopping)
-		if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
-			exit 0
-		fi
-		get_lc_id_from_hwmon "$3$4"
-		lc_id=$?
-		if [ "$lc_id" -ne 0 ]; then
-			cpath="$hw_management_path/lc$lc_id/config"
-			tpath="$hw_management_path/lc$lc_id/thermal"
-			max_module_ind=$(< $cpath/module_counter)
-			max_ind="$max_lc_thermal_ind"
-			min_ind=1
-		else
-			cpath="$config_path"
-			tpath="$thermal_path"
-			max_ind="$max_module_gbox_ind"
-			min_ind=2
-		fi
-		
-		for ((i=$max_ind; i>=$min_ind; i-=1)); do
+		name=$(< "$3""$4"/name)
+		if [[ $name != *"nvme"* ]]; then
+			[ -f "$config_path/stopping" ] && stopping=$(< $config_path/stopping)
+			if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
+				exit 0
+			fi
+			get_lc_id_from_hwmon "$3$4"
+			lc_id=$?
 			if [ "$lc_id" -ne 0 ]; then
-				j="$i"
-				k=$((i-max_module_ind))
+				cpath="$hw_management_path/lc$lc_id/config"
+				tpath="$hw_management_path/lc$lc_id/thermal"
+				max_module_ind=$(< $cpath/module_counter)
+				max_ind="$max_lc_thermal_ind"
+				min_ind=1
 			else
-				j=$((i-1))
+				cpath="$config_path"
+				tpath="$thermal_path"
+				max_ind="$max_module_gbox_ind"
+				min_ind=2
 			fi
-			if [ -L $tpath/module"$j"_temp_input ]; then
-				unlink $tpath/module"$j"_temp_input
-				lock_service_state_change
-				[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
-				module_counter=$((module_counter-1))
-				echo $module_counter > "$cpath"/module_counter
-				if [ "$lc_id" -ne 0 ]; then
-					chassis_module_counter=$(< "$config_path"/module_counter)
-					chassis_module_counter=$((chassis_module_counter-1))
-					echo "$chassis_module_counter" > "$config_path"/module_counter
-				fi
-				unlock_service_state_change
-			elif [ -L $tpath/gearbox"$k"_temp_input ]; then
-				unlink $tpath/gearbox"$j"_temp_input
-				lock_service_state_change
-				[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
-				gearbox_counter=$((gearbox_counter-1))
-				echo $gearbox_counter > "$cpath"/gearbox_counter
-				if [ "$lc_id" -ne 0 ]; then
-					chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-					chassis_gearbox_counter=$((chassis_gearbox_counter-1))
-					echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
-				fi
-				unlock_service_state_change
-			fi
-			check_n_unlink $tpath/module"$j"_temp_fault
-			check_n_unlink $tpath/module"$j"_temp_crit
-			check_n_unlink $tpath/module"$j"_temp_emergency
-		done
-		rm -f "$tpath/gearbox*_temp_input"
-		rm -f "$tpath/module*_temp_input"
-		rm -f "$tpath/module*_temp_fault"
-		rm -f "$tpath/module*_temp_crit"
-		rm -f "$tpath/module*_temp_emergency"
 
-		echo 0 > $cpath/module_counter
-		echo 0 > $cpath/gearbox_counter
-
-		if [ "$lc_id" -ne 0 ]; then
-			exit 0
-		fi
-		check_n_unlink $thermal_path/asic
-		name=$(< $$config_path/cooling_name)
-		if [ "$name" == "mlxsw" ]; then
-			if [ -L $thermal_path/pwm1 ]; then
-				unlink $thermal_path/pwm1
-			fi
-			for ((i=1; i<=max_tachos; i+=1)); do
-				check_n_unlink $thermal_path/fan"$i"_fault
-				check_n_unlink $thermal_path/fan"$i"_speed_get
-				check_n_unlink $thermal_path/fan"$j"_min
-				check_n_unlink $thermal_path/fan"$j"_max
+			for ((i=$max_ind; i>=$min_ind; i-=1)); do
+				if [ "$lc_id" -ne 0 ]; then
+					j="$i"
+					k=$((i-max_module_ind))
+				else
+					j=$((i-1))
+				fi
+				if [ -L $tpath/module"$j"_temp_input ]; then
+					unlink $tpath/module"$j"_temp_input
+					lock_service_state_change
+					[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
+					module_counter=$((module_counter-1))
+					echo $module_counter > "$cpath"/module_counter
+					if [ "$lc_id" -ne 0 ]; then
+						chassis_module_counter=$(< "$config_path"/module_counter)
+						chassis_module_counter=$((chassis_module_counter-1))
+						echo "$chassis_module_counter" > "$config_path"/module_counter
+					fi
+					unlock_service_state_change
+				elif [ -L $tpath/gearbox"$k"_temp_input ]; then
+					unlink $tpath/gearbox"$j"_temp_input
+					lock_service_state_change
+					[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
+					gearbox_counter=$((gearbox_counter-1))
+					echo $gearbox_counter > "$cpath"/gearbox_counter
+					if [ "$lc_id" -ne 0 ]; then
+						chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
+						chassis_gearbox_counter=$((chassis_gearbox_counter-1))
+						echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+					fi
+					unlock_service_state_change
+				fi
+				check_n_unlink $tpath/module"$j"_temp_fault
+				check_n_unlink $tpath/module"$j"_temp_crit
+				check_n_unlink $tpath/module"$j"_temp_emergency
 			done
-			check_n_unlink $thermal_path/pwm1
+			rm -f "$tpath/gearbox*_temp_input"
+			rm -f "$tpath/module*_temp_input"
+			rm -f "$tpath/module*_temp_fault"
+			rm -f "$tpath/module*_temp_crit"
+			rm -f "$tpath/module*_temp_emergency"
+
+			echo 0 > $cpath/module_counter
+			echo 0 > $cpath/gearbox_counter
+			if [ -L $cpath/asic_hwmon ]; then
+				unlink $cpath/asic_hwmon
+			fi
+
+			if [ "$lc_id" -ne 0 ]; then
+				exit 0
+			fi
+			check_n_unlink $thermal_path/asic
+			name=$(< $$config_path/cooling_name)
+			if [ "$name" == "mlxsw" ]; then
+				if [ -L $thermal_path/pwm1 ]; then
+					unlink $thermal_path/pwm1
+				fi
+				for ((i=1; i<=max_tachos; i+=1)); do
+					check_n_unlink $thermal_path/fan"$i"_fault
+					check_n_unlink $thermal_path/fan"$i"_speed_get
+					check_n_unlink $thermal_path/fan"$j"_min
+					check_n_unlink $thermal_path/fan"$j"_max
+				done
+				check_n_unlink $thermal_path/pwm1
+			fi
 		fi
 	fi
 	if [ "$2" == "regfan" ]; then
