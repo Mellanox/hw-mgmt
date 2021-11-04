@@ -672,7 +672,7 @@ thermal_periodic_report()
 	fi
 	# TMP for Buffalo BU
 	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+	case $board_type in
 	VMOD0011)
 		ps_fan_speed=${psu_fan_speed_full[$f5]}
 		;;
@@ -805,7 +805,7 @@ update_psu_fan_speed()
 				entry=$(< $thermal_path/cooling_cur_state)
 				# TMP for Buffalo BU
 				board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-				case $board in
+				case $board_type in
 				VMOD0011)
 					speed=${psu_fan_speed_full[$entry]}
 				;;
