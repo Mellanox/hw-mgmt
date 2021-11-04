@@ -23,7 +23,7 @@ index a1a5ef04e..1c429796c 100644
 @@ -41,6 +41,7 @@
  /* External cooling devices, allowed for binding to mlxsw thermal zones. */
  static char * const mlxsw_thermal_external_allowed_cdev[] = {
- 	"mlxreg_fan",
+ 	"mlxreg_fan0",
 +	"emc2305",
  };
  
