@@ -286,8 +286,8 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x66 5 \
 	mp2975 0x68 5 \
 	mp2975 0x6a 5 \
-	max11603 0x6d 6 \
-	max11603 0x64 6 \
+	max11603 0x6d 7 \
+	max11603 0x64 7 \
 	24c32 0x51 8 \
 	tmp102 0x49 12 \
 	tmp421 0x1f 14 \
