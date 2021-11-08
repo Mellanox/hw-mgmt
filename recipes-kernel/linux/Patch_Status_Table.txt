@@ -145,6 +145,7 @@ Kernel-4.19
 |0152-mlxsw-core-Extend-external-cooling-device-whitelist-.patch         |                                            |                                                 | SN2201                                                       |
 |0153-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch         |                                            |                                                 | SN2201                                                       |
 |0154-platform-x86-mlx-platform-Add-support-for-new-system.patch         |                                            |                                                 | XH3000/blade                                                 |
+|0155-Squash-to-commit-16d59a4882b8-mlxsw-core-Add-APIs-fo.patch         |                                            |                                                 | Squash 0117-mlxsw-core-Add-APIs-for-thermal-sensor-mapping   |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.10
