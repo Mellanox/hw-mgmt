@@ -1289,7 +1289,8 @@ thermal_control_preinit()
 
 sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 case $sku in
-	HI138)
+	HI138|HI132)
+	log_notice "Mellanox thermal control not supported by this platform:" $sku
 	exit 0
 	;;
 esac

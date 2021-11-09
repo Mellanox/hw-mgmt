@@ -469,12 +469,14 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		check_n_link "$3""$4"/uevent $config_path/port_config_done
-		asic_health=$(< "$3""$4"/asic1)
+        asic_health=0
+		if [ -f "$3""$4"/asic1 ]; then
+			asic_health=$(< "$3""$4"/asic1)
+        fi
 		if [ "$asic_health" -ne 2 ]; then
 			exit 0
 		fi
 		find_i2c_bus
-		bus=$((i2c_asic_bus_default+i2c_bus_offset))
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
@@ -689,7 +691,10 @@ elif [ "$1" == "change" ]; then
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown
 		else
-			asic_health=$(< "$4""$5"/asic1)
+			asic_health=0
+			if [ -f "$3""$4"/asic1 ]; then
+				asic_health=$(< "$4""$5"/asic1)
+			fi
 			if [ "$asic_health" -eq 2 ]; then
 				if [ ! -f /etc/init.d/sxdkernel ]; then
 					sleep 3
@@ -791,9 +796,8 @@ else
 
 			echo 0 > $cpath/module_counter
 			echo 0 > $cpath/gearbox_counter
-			if [ -L $cpath/asic_hwmon ]; then
-				unlink $cpath/asic_hwmon
-			fi
+
+			check_n_unlink $cpath/asic_hwmon
 
 			if [ "$lc_id" -ne 0 ]; then
 				exit 0
@@ -801,9 +805,7 @@ else
 			check_n_unlink $thermal_path/asic
 			name=$(< $$config_path/cooling_name)
 			if [ "$name" == "mlxsw" ]; then
-				if [ -L $thermal_path/pwm1 ]; then
-					unlink $thermal_path/pwm1
-				fi
+				check_n_unlink $thermal_path/pwm1
 				for ((i=1; i<=max_tachos; i+=1)); do
 					check_n_unlink $thermal_path/fan"$i"_fault
 					check_n_unlink $thermal_path/fan"$i"_speed_get
