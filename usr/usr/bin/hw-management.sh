@@ -275,8 +275,8 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x23 5 \
 			mp2975 0x24 5 \
 			mp2975 0x25 5 \
-			mp2975 0x2d 5 \
-			mp2975 0x2c 5 \
+			mp2975 0x26 5 \
+			mp2975 0x27 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
@@ -1242,7 +1242,7 @@ create_event_files()
 
 get_asic_bus()
 {
-	if [ $i2c_asic_addr -ne 0xff ]; then
+	if [[ $i2c_asic_addr -eq 0xff ]]; then
 		log_err "This operation not supporting with current ASIC type"
 		return 0
 	fi
@@ -1359,7 +1359,7 @@ do_start()
 {
 	create_symbolic_links
 	check_system
-	if [ $i2c_asic_addr -ne 0xff ]; then
+	if [[ $i2c_asic_addr -ne 0xff ]]; then
 		get_asic_bus
 	fi
 	touch $udev_ready
@@ -1417,10 +1417,10 @@ do_stop()
 do_chip_up_down()
 {
 	action=$1
-	
-	if [ $i2c_asic_addr -ne 0xff ]; then
+	# Add ASIC device.
+	if [[ $i2c_asic_addr -eq 0xff ]]; then
 		log_info "Current ASIC type does not support this operation type"
-		exit 0
+		return 0
 	fi
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
