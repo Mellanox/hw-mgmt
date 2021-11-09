@@ -961,6 +961,7 @@ e3597_specific()
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
+	i2c_asic_addr=0xff
 	# TODO set correct PSU/case FAN speed
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1241,6 +1242,10 @@ create_event_files()
 
 get_asic_bus()
 {
+	if [ $i2c_asic_addr -ne 0xff ]; then
+		log_err "This operation not supporting with current ASIC type"
+		return 0
+	fi
 	if [ ! -f $config_path/asic_bus ]; then
 		find_i2c_bus
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -1354,7 +1359,9 @@ do_start()
 {
 	create_symbolic_links
 	check_system
-	get_asic_bus
+	if [ $i2c_asic_addr -ne 0xff ]; then
+		get_asic_bus
+	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
@@ -1410,7 +1417,11 @@ do_stop()
 do_chip_up_down()
 {
 	action=$1
-
+	
+	if [ $i2c_asic_addr -ne 0xff ]; then
+		log_info "Current ASIC type does not support this operation type"
+		exit 0
+	fi
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 	VMOD0011)
