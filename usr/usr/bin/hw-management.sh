@@ -275,8 +275,8 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x23 5 \
 			mp2975 0x24 5 \
 			mp2975 0x25 5 \
-			mp2975 0x2d 5 \
-			mp2975 0x2c 5 \
+			mp2975 0x26 5 \
+			mp2975 0x27 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
