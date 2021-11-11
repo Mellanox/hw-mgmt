@@ -497,30 +497,38 @@ if [ "$1" == "add" ]; then
 			done
 			;;
 		*)
+			prefix=$2
+			# TMP workaround until dictionary is implemented.
+			dev_addr=$(echo "$4" | xargs dirname | xargs dirname | xargs basename )
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
+				prefix="voltmon6"
+			fi
+						
 			for i in {1..3}; do
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
 					if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
+						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
 					fi
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
+						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$2"_in"$i"_alarm
+						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					fi
 				fi
 				if [ -f "$3""$4"/curr"$i"_input ]; then
-					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
+					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
 				fi
 				if [ -f "$3""$4"/power"$i"_input ]; then
-					ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
+					ln -sf "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
 				fi
 				if [ -f "$3""$4"/curr"$i"_alarm ]; then
-					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
+					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
 				fi
 				if [ -f "$3""$4"/power"$i"_alarm ]; then
-					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
+					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
 				fi
 			done
 			;;
