@@ -75,7 +75,7 @@ if [ "$board_type" == "VMOD0014" ]; then
 fi
 
 # Voltmon sensors by label mapping:
-#                   dummy   voltmon1      voltmon2       voltmon3
+#                   dummy   inpu11        inpu12         inpu13
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
 CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
 POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
@@ -397,6 +397,58 @@ function set_lc_fpga_combined_version()
 	echo "$str" > "$lc_path"/system/fpga
 }
 
+function connect_voltmon()
+{
+	rule_system_type=$5
+	# If rule per system type
+	if [[ "$rule_system_type" != "" ]]; then
+		# Compare rule system type
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		if [[ "$sku" != "$rule_system_type" ]]; then
+			# this rule not relevant for current system type
+			return 0
+		else
+			# Remove all links which possible was created with
+			# udev rule without system type specification
+			rm -rf "$environment_path"/"$2"_*
+		fi
+	else
+		# Check if sensor already connected by udev rule duplication
+		if [ -f "$environment_path"/"$2"_in1_input ]; then
+			return 0
+		fi
+	fi
+
+	for i in {1..3}; do
+		find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
+		sensor_id=$?
+
+		if [ ! $sensor_id -eq 0 ]; then
+			if [ -f "$3""$4"/in"$sensor_id"_input ]; then
+				ln -sf "$3""$4"/in"$sensor_id"_input "$environment_path"/"$2"_in"$i"_input
+			fi
+			if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
+				ln -sf "$3""$4"/in"$sensor_id"_alarm "$alarm_path"/"$2"_in"$i"_alarm
+			elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
+				ln -sf "$3""$4"/in"$sensor_id"_crit_alarm "$alarm_path"/"$2"_in"$i"_alarm
+			fi
+		fi
+		if [ -f "$3""$4"/curr"$i"_input ]; then
+			ln -sf "$3""$4"/curr"$i"_input "$environment_path"/"$2"_curr"$i"_input
+		fi
+		if [ -f "$3""$4"/power"$i"_input ]; then
+			ln -sf "$3""$4"/power"$i"_input "$environment_path"/"$2"_power"$i"_input
+		fi
+		if [ -f "$3""$4"/curr"$i"_alarm ]; then
+			ln -sf "$3""$4"/curr"$i"_alarm "$alarm_path"/"$2"_curr"$i"_alarm
+		fi
+		if [ -f "$3""$4"/power"$i"_alarm ]; then
+			ln -sf "$3""$4"/power"$i"_alarm "$alarm_path"/"$2"_power"$i"_alarm
+		fi
+	done
+}
+
+
 function handle_hotplug_event()
 {
 	local attribute
@@ -497,32 +549,9 @@ if [ "$1" == "add" ]; then
 			done
 			;;
 		*)
-			for i in {1..3}; do
-				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
-					if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
-					fi
-					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
-					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$2"_in"$i"_alarm
-					fi
-				fi
-				if [ -f "$3""$4"/curr"$i"_input ]; then
-					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
-				fi
-				if [ -f "$3""$4"/power"$i"_input ]; then
-					ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
-				fi
-				if [ -f "$3""$4"/curr"$i"_alarm ]; then
-					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
-				fi
-				if [ -f "$3""$4"/power"$i"_alarm ]; then
-					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
-				fi
-			done
+			lock_service_state_change
+			connect_voltmon "$1" "$2" "$3" "$4" "$5"
+			unlock_service_state_change
 			;;
 		esac
 	fi
