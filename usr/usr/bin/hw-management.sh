@@ -1448,6 +1448,7 @@ do_chip_up_down()
 			sleep "$chipdown_delay"
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
 		fi
+		echo 0 > $config_path/sfp_counter
 		unlock_service_state_change
 		;;
 	1)

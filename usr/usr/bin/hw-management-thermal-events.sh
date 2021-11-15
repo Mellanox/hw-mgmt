@@ -767,8 +767,10 @@ else
 					echo $module_counter > "$cpath"/module_counter
 					if [ "$lc_id" -ne 0 ]; then
 						chassis_module_counter=$(< "$config_path"/module_counter)
-						chassis_module_counter=$((chassis_module_counter-1))
-						echo "$chassis_module_counter" > "$config_path"/module_counter
+						if [ "$chassis_module_counter" -ne 0 ]; then
+							chassis_module_counter=$((chassis_module_counter-1))
+							echo "$chassis_module_counter" > "$config_path"/module_counter
+						fi
 					fi
 					unlock_service_state_change
 				elif [ -L $tpath/gearbox"$k"_temp_input ]; then
@@ -779,8 +781,10 @@ else
 					echo $gearbox_counter > "$cpath"/gearbox_counter
 					if [ "$lc_id" -ne 0 ]; then
 						chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-						chassis_gearbox_counter=$((chassis_gearbox_counter-1))
-						echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+						if [ "$chassis_gearbox_counter" -ne 0 ]; then
+							chassis_gearbox_counter=$((chassis_gearbox_counter-1))
+							echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+						fi
 					fi
 					unlock_service_state_change
 				fi
