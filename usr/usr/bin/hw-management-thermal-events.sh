@@ -158,8 +158,8 @@ if [ "$1" == "add" ]; then
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
 	fi
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] ||
-	   [ "$2" == "pcisw_amb" ] || [ "$2" == "lr1_amb" ]; then
+	case "$2" in
+		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -181,7 +181,8 @@ if [ "$1" == "add" ]; then
 		else
 			ln -sf "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
-	fi
+		;;
+	esac
 	if [ "$2" == "switch" ]; then
 		name=$(< "$3""$4"/name)
 		if [[ $name != *"nvme"* ]]; then
@@ -706,8 +707,8 @@ elif [ "$1" == "change" ]; then
 		fi
 	fi
 else
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] ||
-	   [ "$2" == "pcisw_amb" ] || [ "$2" == "lr1_amb" ]; then
+	case "$2" in
+		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -729,7 +730,8 @@ else
 		else
 			unlink $thermal_path/$
 		fi
-	fi
+		;;
+	esac
 	if [ "$2" == "switch" ]; then
 		name=$(< "$3""$4"/name)
 		if [[ $name != *"nvme"* ]]; then
