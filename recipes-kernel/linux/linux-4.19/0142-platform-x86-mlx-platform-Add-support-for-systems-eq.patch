@@ -501,6 +501,10 @@ index 143cb4f..9e11b21 100644
 +	},
 +};
 +
+<<<<<<< FETCH_HEAD
+=======
++
+>>>>>>> HEAD~2
 +/* static struct mlxreg_core_data mlxplat_mlxcpld_asic_thermal_items_data[] = {
 +	{
 +		.label = "asic1_therm_warn",
@@ -513,9 +517,15 @@ index 143cb4f..9e11b21 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
 +		.mask = BIT(3),
 +		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+<<<<<<< FETCH_HEAD
  	},
  };
  
+=======
++	},
++};
++
+>>>>>>> HEAD~2
 +static struct mlxreg_core_data mlxplat_mlxcpld_asic2_thermal_items_data[] = {
 +	{
 +		.label = "asic2_therm_warn",
