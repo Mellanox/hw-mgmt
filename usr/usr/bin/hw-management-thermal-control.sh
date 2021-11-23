@@ -103,6 +103,7 @@ gearbox_counter=0
 lc_counter=0
 temp_grow_hyst=0
 temp_fall_hyst=2000
+temp_tz_hyst=5000
 last_cpu_temp=0
 common_loop=20
 
@@ -417,9 +418,13 @@ unk_dir_untrust_t11=(45000 16  $max_amb 16)
 
 # Local variables
 report_counter=120
+audit_trigger=10
+audit_count=0
 fan_max_state=10
 fan_dynamic_min=12
 fan_dynamic_min_last=12
+fan_norm_trip_low_limit=2
+fan_high_trip_low_limit=4
 temperature_ambient_last=0
 untrusted_sensor=0
 p2c_dir=0
@@ -772,6 +777,7 @@ set_fan_to_full_speed()
 {
 	set_cur_state=$((cooling_set_max_state-fan_max_state))
 	echo $cooling_set_max_state > $cooling_cur_state
+	audit_count=0
 }
 
 get_psu_presence()
@@ -1071,19 +1077,29 @@ set_default_pwm()
 	echo $set_cur_state > $cooling_cur_state
 	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
+	audit_count=0
+	# Suspend - set state to 1.
 	cooling_level_update_state=1
 	log_info "FAN speed is set to $cur_state percent up to full speed"
 }
 
 set_dynamic_min_pwm()
 {
+	trip_low_limit=$1
+
 	if [ "$cooling_level_update_state" -eq 1 ]; then
+		# Fan was set to full speed because of suspend or removed unit.
+		# Move to state 2.
 		cooling_level_update_state=2
 	fi
 
 	set_cur_state=$((fan_dynamic_min-fan_max_state))
 	echo "$fan_dynamic_min" > $cooling_cur_state
-	echo "$set_cur_state" > $cooling_cur_state
+	if [ "$set_cur_state" -ge "$trip_low_limit" ]; then
+		echo "$set_cur_state" > $cooling_cur_state
+	else
+		echo "$trip_low_limit" > $cooling_cur_state
+	fi
 	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
 	log_info "FAN speed is set to $cur_state percent up to dynamic minimum"
@@ -1092,8 +1108,10 @@ set_dynamic_min_pwm()
 update_dynamic_min_pwm()
 {
 	if [ "$cooling_level_update_state" -eq 2 ]; then
+		# Fan in state 2 after init, resume or after some missed unit
+		# was inserted back. Move to normal state 0.
 		cooling_level_update_state=0
-		set_dynamic_min_pwm
+		check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
 	fi
 }
 
@@ -1106,12 +1124,14 @@ check_trip_min_vs_current_temp_per_type()
 	subsys_path=$1
 	dev_type=$2
 	dev_count=$3
+	zone=$4
 	
 	for ((i=1; i<=dev_count; i+=1)); do
 		if [ -f $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp ]; then
-			trip_high=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_high)
+			trip=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_"$zone")
+			trip=$((trip-temp_tz_hyst))
 			temp_now=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp)
-			if [ "$temp_now" -gt 0 ] && [ "$trip_high" -le  "$temp_now" ]; then
+			if [ "$temp_now" -gt 0 ] && [ "$trip" -le  "$temp_now" ]; then
 				return 1
 			fi
 		fi
@@ -1121,12 +1141,15 @@ check_trip_min_vs_current_temp_per_type()
 
 check_trip_min_vs_current_temp()
 {
-	check_trip_min_vs_current_temp_per_type "" "module" $module_counter
+	zone=$1
+	trip_low_limit=$2
+
+	check_trip_min_vs_current_temp_per_type "" "module" $module_counter $zone
 	if [ "$?" -ne 0 ]; then
 		return
 	fi
 
-	check_trip_min_vs_current_temp_per_type "" "gearbox" $gearbox_counter
+	check_trip_min_vs_current_temp_per_type "" "gearbox" $gearbox_counter $zone
 	if [ "$?" -ne 0 ]; then
 		return
 	fi
@@ -1148,10 +1171,12 @@ check_trip_min_vs_current_temp()
 			fi
 		done
 	fi
-	trip_high=$(< $temp_trip_high)
+	trip=$(< /var/run/hw-management/thermal/mlxsw/temp_trip_"$zone")
+	trip=$((trip-temp_tz_hyst))
 	temp_now=$(< $tz_temp)
-	if [ "$trip_high" -gt  "$temp_now" ]; then
-		set_dynamic_min_pwm
+	if [ "$trip" -gt "$temp_now" ]; then
+		set_dynamic_min_pwm $trip_low_limit
+		cooling_level_updated=1
 	fi
 }
 
@@ -1206,7 +1231,7 @@ enable_disable_zones_set_pwm()
 	1)
 		set_pwm_min_threshold
 		fan_dynamic_min_last=$fan_dynamic_min
-		set_dynamic_min_pwm
+		check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
 		;;
 	*)
 		set_default_pwm
@@ -1284,6 +1309,7 @@ thermal_control_preinit()
 	fan_dynamic_min_init=$((fan_dynamic_min_init*10))
 	echo $fan_dynamic_min_init > $thermal_path/fan_dynamic_min
 	count=0
+	audit_count=0
 	suspend_thermal=0
 }
 
@@ -1321,8 +1347,6 @@ do
 		cpu_loop=1
 	fi
 
-	# Verify if cooling state required update.
-	update_dynamic_min_pwm
 	# Check if thermal algorithm is suspended.
 	[ -f "$config_path/suspend" ] && suspend=$(< $config_path/suspend)
 	if [ "$suspend" ] && [ "$suspend" != "$suspend_thermal" ]; then
@@ -1353,6 +1377,8 @@ do
 	# presence of untrusted optical cables or presence of any cables
 	# with untrusted temperature sensing.
 	set_pwm_min_threshold
+	# Verify if cooling state required update.
+	update_dynamic_min_pwm
 	# Update PS unit fan speed
 	update_psu_fan_speed
 	# If one of PS units is out disable thermal zone and set PWM to the
@@ -1368,13 +1394,17 @@ do
 		full_speed=$pwm_max
 		continue
 	fi
-	# Update cooling levels of FAN If dynamic minimum has been changed
+	# Update cooling levels of FAN if dynamic minimum has been changed
 	# since the last time.
 	if [ "$fan_dynamic_min" -ne "$fan_dynamic_min_last" ]; then
 		log_info "fan_dynamic_min changed $fan_dynamic_min_last => $fan_dynamic_min"
 		log_info "due to temp change to $temperature_ambient_last"
 		echo "$fan_dynamic_min" > $cooling_cur_state
-		echo $set_cur_state > $cooling_cur_state
+		cooling=$(< $cooling_cur_state)
+		if [ "$set_cur_state" -ge "$cooling" ]; then
+			echo $set_cur_state > $cooling_cur_state
+			log_info "Cooling current state is set to $set_cur_state"
+		fi
 		fan_from=$((fan_dynamic_min_last-fan_max_state))
 		fan_from=$((fan_from*10))
 		fan_to=$((fan_dynamic_min-fan_max_state))
@@ -1386,13 +1416,32 @@ do
 		fan_dynamic_min_last=$fan_dynamic_min
 		echo $fan_to > $thermal_path/fan_dynamic_min
 	fi
-	# Arrange FAN and update if necessary (f.e. in case when some unit is inserted back).
+	# Arrange FAN and update if necessary (f.e. in case when some unit was
+	# inserted back or dynamic minimim has been changed down.
 	if [ "$full_speed" -eq "$pwm_max" ] || [ "$handle_dynamic_trend" -eq 1 ]; then
-		check_trip_min_vs_current_temp
+		check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
 		full_speed=$pwm_noact
 		handle_dynamic_trend=0
 	fi
 
+	# Periodic audit for fan speed reducing.
+	audit_count=$((audit_count+1))
+	if [ "$audit_count" -ge "$audit_trigger" ]; then
+		cooling_min=$((fan_dynamic_min-fan_max_state))
+		cooling=$(< $cooling_cur_state)
+		if [ "$cooling_min" -le  "$cooling" ]; then
+			cooling_level_updated=0
+			# Test for normal thermal zones.
+			check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
+			if [ "$cooling_level_updated" -eq 0 ]; then
+				# Test for high thermal zones.
+				check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
+			fi
+		fi
+		audit_count=0
+	fi
+
+	# Periodic log report.
 	count=$((count+1))
 	[ -f "$config_path/periodic_report" ] && periodic_report=$(< $config_path/periodic_report)
 	if [ "$count" -ge "$periodic_report" ]; then
