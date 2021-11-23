@@ -763,6 +763,10 @@ elif [ "$1" == "mv" ]; then
 		create_sfp_symbolic_links "${3}${4}"
 	fi
 elif [ "$1" == "hotplug-event" ]; then
+	# Don't process udev events until service is started and directories are created
+	if [ ! -f ${udev_ready} ]; then
+		exit 0
+	fi
 	handle_hotplug_event "${2}" "${3}"
 else
 	if [ "$2" == "a2d" ]; then
