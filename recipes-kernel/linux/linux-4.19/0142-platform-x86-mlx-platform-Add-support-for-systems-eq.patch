@@ -587,14 +587,14 @@ index 143cb4f..9e11b21 100644
  	{
 +		.label = "asic1_reset",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
-+		.mask = GENMASK(3, 0) & ~BIT(0),
-+		.mode = 0644,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0200,
 +	},
 +	{
 +		.label = "asic2_reset",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
-+		.bit = GENMASK(2, 0),
-+		.mode = 0444,
++		.bit = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0200,
 +	},
 +	{
  		.label = "reset_long_pb",
