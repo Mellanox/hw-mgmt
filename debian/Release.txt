@@ -3,16 +3,18 @@
 -Su , 17 Oct 2021
 --------------------------------------------------------------------------------
 - New Features
-    o	Add support for SN2201 ES
+    o	Add support for SN2201 for internal BU.
 
 - Bug fixes  
-    o   sn4800: update parsing for line card INI (eeprom)
-    o   sn4800: fix sensor config file for Comex CFL voltage regulator sensor mp2975 (sensors)
-    o   sn4800: fix A2D topology 
-    o   sn4800: fix event for 'mlxreg_fan' device.
-    o   sn4800: fix MTECR register access after PRM Architecture change.
-    o   sn4600: fix sensor config file (add pout2)
-    o   sb7800: fix cpld3 version reading.
+    o	sn4800: update parsing for line card INI (eeprom)
+    o	sn4800: fix sensor config file for Comex CFL voltage regulator sensor mp2975 (sensors)
+    o	sn4800: fix event for 'mlxreg_fan' device.
+    o	sn4800: fix reading access (temperature) to gearboxes (MTECR register access after PRM Architecture change).
+    o	sn4600: modify sensor config file for sensors (add pout2)
+    o	sb7800: fix cpld3 version reading.
+    o	General: fix and avoid errors at bsp init at system-udev
+    o	General: fix possible thermal shutdown due to lock in normal mode (instead of high).
+
     
 - For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.1200_BR/recipes-kernel/linux/Patch_Status_Table.txt
 
