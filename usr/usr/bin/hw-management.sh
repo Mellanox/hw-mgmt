@@ -58,6 +58,7 @@
 #
 
 source hw-management-helpers.sh
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 # Local constants and variables
 
 thermal_type=$thermal_type_def
@@ -268,14 +269,25 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c32 0x53 7 \
 			24c512 0x51 8)
+			
+e3597_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x22 5 \
+			mp2975 0x23 5 \
+			mp2975 0x24 5 \
+			mp2975 0x25 5 \
+			mp2975 0x26 5 \
+			mp2975 0x27 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
 	mp2975 0x66 5 \
 	mp2975 0x68 5 \
 	mp2975 0x6a 5 \
-	max11603 0x6d 6 \
-	max11603 0x64 6 \
+	max11603 0x6d 7 \
+	max11603 0x64 7 \
 	24c32 0x51 8 \
 	tmp102 0x49 12 \
 	tmp421 0x1f 14 \
@@ -284,6 +296,12 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	24c32 0x51 45)
 
 ACTION=$1
+
+if [ "$board_type" == "VMOD0014" ]; then
+	i2c_bus_max=14
+	psu1_i2c_addr=0x58
+	psu2_i2c_addr=0x58
+fi
 
 is_module()
 {
@@ -322,15 +340,30 @@ function restore_i2c_bus_frequency_default()
 function find_regio_sysfs_path()
 {
 	# Find hwmon{n} sysfs path for regio device
-	for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
-		if [ -d "$path" ]; then
-			name=$(cut "$path"/name -d' ' -f 1)
-			if [ "$name" == "mlxreg_io" ]; then
-				echo "$path"
-				return 0
+	case $board_type in 
+	VMOD0014)
+		for path in /sys/devices/pci0000:00/*/NVSN2201:*/mlxreg-io/hwmon/hwmon*; do
+			if [ -d "$path" ]; then
+				name=$(cut "$path"/name -d' ' -f 1)
+				if [ "$name" == "mlxreg_io" ]; then
+					echo "$path"
+					return 0
+				fi
 			fi
-		fi
-	done
+		done
+		;;
+	*)
+		for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
+			if [ -d "$path" ]; then
+				name=$(cut "$path"/name -d' ' -f 1)
+				if [ "$name" == "mlxreg_io" ]; then
+					echo "$path"
+					return 0
+				fi
+			fi
+		done
+		;;
+	esac
 
 	log_err "mlxreg_io is not loaded"
 	return 1
@@ -402,6 +435,12 @@ set_jtag_gpio()
 			jtag_tms=130
 			jtag_tck=131
 			;;
+		$DNV_CPU)
+			jtag_tck=87
+			jtag_tms=88
+			jtag_tdo=86
+			jtag_tdi=89
+			;;
 		*)
 			return 0
 			;;
@@ -417,12 +456,19 @@ set_jtag_gpio()
 			mkdir $jtag_path
 		fi
 
-		if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
-			ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+		if [ "$board_type" != "VMOD0014" ]; then
+			if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+				ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+			fi
 		fi
 	fi
 
-	gpiobase=$(</sys/class/gpio/gpiochip*/base)
+	# Gpiochip358 is used for CPU GPIO and gpiochip342 is used for PCA9555 Extender in SN2201. 
+	if [ "$board_type" == "VMOD0014" ]; then
+		gpiobase=$(</sys/class/gpio/gpiochip358/base)
+	else
+		gpiobase=$(</sys/class/gpio/gpiochip*/base)
+	fi
 
 	gpio_tck=$((gpiobase+jtag_tck))
 	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
@@ -436,11 +482,32 @@ set_jtag_gpio()
 	gpio_tdi=$((gpiobase+jtag_tdi))
 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
 
+	# In SN2201 system. 
+	# GPIO0 for CPU request to reset the Main Board I2C Mux.
+	# GPIO1 for CPU control the CPU Board MUX when doing the ISP programming. 
+	# GPIO13 for CPU request Main Board JTAG control signal. 
+	if [ "$board_type" == "VMOD0014" ]; then
+		mux_reset=27
+		jtag_mux_en=33
+		jtag_ena=60
+		gpio_mux_rst=$((gpiobase+mux_reset))
+		gpio_jtag_mux_en=$((gpiobase+jtag_mux_en))
+		gpio_jtag_enable=$((gpiobase+jtag_ena))
+		echo $gpio_mux_rst > /sys/class/gpio/"$export_unexport"
+		echo $gpio_jtag_mux_en > /sys/class/gpio/"$export_unexport"
+		echo $gpio_jtag_enable > /sys/class/gpio/"$export_unexport"
+	fi
+
 	if [ "$export_unexport" == "export" ]; then
 		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
 		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
 		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
 		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
+		if [ "$board_type" == "VMOD0014" ]; then
+			check_n_link /sys/class/gpio/gpio$gpio_mux_rst/value $system_path/mux_reset
+			check_n_link /sys/class/gpio/gpio$gpio_jtag_mux_en/value $jtag_path/jtag_mux_en
+			check_n_link /sys/class/gpio/gpio$gpio_jtag_enable/value $jtag_path/jtag_enable
+		fi
 	fi
 }
 
@@ -663,6 +730,19 @@ msn3420_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
+msn_xh3000_specific()
+{
+	connect_table=(${mqm8700_base_connect_table[@]})
+	add_cpu_board_to_connection_table
+	hotplug_fans=0
+	max_tachos=0
+	tune_thermal_type=1
+	thermal_type=$thermal_type_t5
+	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	get_i2c_bus_frequency_default
+}
+
 msn38xx_specific()
 {
 	connect_table=(${msn3800_base_connect_table[@]})
@@ -873,6 +953,24 @@ mqm87xx_rev1_specific()
 	get_i2c_bus_frequency_default
 }
 
+e3597_specific()
+{
+	connect_table=(${e3597_base_connect_table[@]})
+	add_cpu_board_to_connection_table
+
+	thermal_type=$thermal_type_def
+	max_tachos=14
+	hotplug_fans=7
+	i2c_asic_addr=0xff
+	# TODO set correct PSU/case FAN speed
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+}
+
 msn_spc2_common()
 {
 	regio_path=$(find_regio_sysfs_path)
@@ -892,15 +990,18 @@ msn_spc2_common()
 			msn3510_specific
 			;;
 		HI100)
-    		case $sys_ver in
-                2)
-                    mqm87xx_rev1_specific
-                ;;
-                *)
-                    mqmxxx_msn37x_msn34x_specific
-                ;;
-            esac
-            ;;
+			case $sys_ver in
+				2)
+					mqm87xx_rev1_specific
+					;;
+				*)
+					mqmxxx_msn37x_msn34x_specific
+					;;
+			esac
+			;;
+		HI139)
+			msn_xh3000_specific
+			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
 			;;
@@ -919,6 +1020,9 @@ msn_spc3_common()
 		;;
 		HI130)
 			mqm97xx_specific
+		;;
+		HI132)
+			e3597_specific
 		;;
 		*)
 			msn47xx_specific
@@ -947,6 +1051,23 @@ msn48xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	# TMP for Buffalo BU
 	iorw -b 0x2004 -w -l1 -v0x3f
+}
+
+sn2201_specific()
+{
+	local cpu_bus_offset=51
+	echo 2 > $config_path/cpld_num
+	thermal_type=$thermal_type_t11
+	i2c_asic_bus_default=6
+	hotplug_fans=4
+	hotplug_pwrs=2
+	hotplug_psus=2
+	echo 22000 > $config_path/fan_max_speed
+	echo 960 > $config_path/fan_min_speed
+	echo 16000 > $config_path/psu_fan_max
+	echo 2500 > $config_path/psu_fan_min
+	i2cget -f -y 1 0x3d 0x01 > $system_path/cpld2_version
+	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
 check_system()
@@ -981,6 +1102,9 @@ check_system()
 			;;
 		VMOD0011)
 			msn48xx_specific
+			;;
+		VMOD0014)
+			sn2201_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -1024,6 +1148,9 @@ check_system()
 				MQM87*)
 					mqm87xx_specific
 					;;
+				SN2201*)
+					sn2201_specific
+					;;
 				*)
 					# Check marginal system, system without SMBIOS customization,
 					# only on old types of Mellanox switches.
@@ -1051,6 +1178,8 @@ check_system()
 			esac
 			;;
 	esac
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 }
 
 connect_device()
@@ -1113,6 +1242,10 @@ create_event_files()
 
 get_asic_bus()
 {
+	if [[ $i2c_asic_addr -eq 0xff ]]; then
+		log_err "This operation not supporting with current ASIC type"
+		return 0
+	fi
 	if [ ! -f $config_path/asic_bus ]; then
 		find_i2c_bus
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -1130,8 +1263,7 @@ set_config_data()
 	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
 	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
 	# TMP for Buffalo BU
-	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+	case $board_type in
 	VMOD0011)
 		echo 0x64 > $config_path/fan_psu_default
 		;;
@@ -1212,7 +1344,6 @@ create_symbolic_links()
 	if [ ! -h $power_path/pwr_sys ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
-	touch $udev_ready
 }
 
 remove_symbolic_links()
@@ -1228,15 +1359,17 @@ do_start()
 {
 	create_symbolic_links
 	check_system
-	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
-	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
+	if [[ $i2c_asic_addr -ne 0xff ]]; then
+		get_asic_bus
+	fi
+	touch $udev_ready
 	depmod -a 2>/dev/null
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
 	set_config_data
-	get_asic_bus
 	create_event_files
+	hw-management-i2c-gpio-expander.sh
 	connect_platform
 	sleep 1
 	/usr/bin/hw-management-start-post.sh
@@ -1284,7 +1417,11 @@ do_stop()
 do_chip_up_down()
 {
 	action=$1
-
+	# Add ASIC device.
+	if [[ $i2c_asic_addr -eq 0xff ]]; then
+		log_info "Current ASIC type does not support this operation type"
+		return 0
+	fi
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 	VMOD0011)
@@ -1311,6 +1448,7 @@ do_chip_up_down()
 			sleep "$chipdown_delay"
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
 		fi
+		echo 0 > $config_path/sfp_counter
 		unlock_service_state_change
 		;;
 	1)

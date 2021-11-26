@@ -44,8 +44,8 @@ f_names_layout1=("SANITY" "SN_VPD_FIELD" "RSRVD" "EFT_REV" "PN_VPD_FIELD" "REV_V
 f_length_layout2=(24 20 4)
 f_names_layout2=("SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD")
 
-f_length_layout3=(2 2 2 2)
-f_names_layout3=("MAJOR_INI_VERSION" "MINOR_INI_VERSION" "RSRVD" "CARD_TYPE")
+f_length_layout3=(2 2 1 3)
+f_names_layout3=("MINOR_INI_VERSION" "HW_REVISION" "CARD_TYPE" "RSRVD")
 
 base_offsets=(137 160 0 0)
 
@@ -98,7 +98,7 @@ function do_conv ( )
 	fi
 
 	tmp_eeprom_path=$(mktemp)
-
+	sync
 	cp "$eeprom_path" "${tmp_eeprom_path}"
 	eeprom_path="${tmp_eeprom_path}"
 
@@ -148,13 +148,16 @@ function do_conv ( )
 			[ "${f_names[$i]}" == "MFR_NAME" ] || \
 			[ "${f_names[$i]}" == "FEED" ] || \
 			[ "${f_names[$i]}" == "EFT_REV" ]; then
-				# Print as ASCII.
-				echo -ne "${cur_val}" | xxd -r -p | tr -d '\0'
+			# Print as ASCII.
+			echo -ne "${cur_val}" | xxd -r -p | tr -d '\0'
 		elif [ "${f_names[$i]}" == "CAPACITY" ] || \
-			[ "${f_names[$i]}" == "MAJOR_INI_VERSION" ] || \
-			[ "${f_names[$i]}" == "MINOR_INI_VERSION" ] || \
 			[ "${f_names[$i]}" == "CARD_TYPE" ]; then
 			# Print in DEC.
+			echo -ne "$((0x$cur_val))"
+		elif [ "${f_names[$i]}" == "HW_REVISION" ] || \
+			[ "${f_names[$i]}" == "MINOR_INI_VERSION" ]; then
+			# Print in DEC with Endian coversion.
+			cur_val=`echo ${cur_val:2:2}${cur_val:0:2}`
 			echo -ne "$((0x$cur_val))"
 		else
 			# Print as HEX.

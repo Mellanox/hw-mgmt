@@ -58,7 +58,7 @@ handle_cpld_versions()
 		if [ -L $system_path/cpld"$i"_pn ]; then
 			cpld_pn=$(cat $system_path/cpld"$i"_pn)
 		fi
-		if [ -L $system_path/cpld"$i"_version ]; then
+		if [ -f $system_path/cpld"$i"_version ]; then
 			cpld_ver=$(cat $system_path/cpld"$i"_version)
 		fi
 		if [ -L $system_path/cpld"$i"_version_min ]; then
@@ -114,7 +114,8 @@ then
                 mst start  >/dev/null 2>&1
                 sleep 2
             fi
-            cmd='mlxreg --reg_name MSCI  -d /dev/mst/mt52100_pciconf0 -g -i "index=2" | grep version | cut -d "|" -f2'
+            mt_dev=$(find /dev/mst -name *00_pciconf0)
+            cmd='mlxreg --reg_name MSCI  -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
             ver_hex=$(eval $cmd)
             if [ ! -z "$ver_hex" ]; then
                ver_dec=$(printf "%d" $ver_hex)

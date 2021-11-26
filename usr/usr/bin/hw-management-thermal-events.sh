@@ -33,6 +33,7 @@
 #
 
 source hw-management-helpers.sh
+board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 
 # Local variables
 fan_command=$config_path/fan_command
@@ -49,6 +50,11 @@ i2c_asic_bus_default=2
 pciesw_i2c_bus=0
 i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
+
+if [ "$board_type" == "VMOD0014" ]; then
+	i2c_bus_max=14
+	i2c_asic_bus_default=6
+fi
 
 # Get line card number by module 'sysfs' device path
 # $1 - sys device path in, example: /sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-3/3-0037/hwmon/hwmon<n>/
@@ -174,105 +180,109 @@ if [ "$1" == "add" ]; then
 		else
 			ln -sf "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
-	fi
+		;;
+	esac
 	if [ "$2" == "switch" ]; then
-		get_lc_id_hwmon "$3$4"
-		lc_number=$?
-		if [ "$lc_number" -ne 0 ]; then
-			cpath="$hw_management_path/lc$lc_number/config"
-			tpath="$hw_management_path/lc$lc_number/thermal"
-			min_module_ind=$min_lc_thermal_ind
-			max_module_ind=$max_lc_thermal_ind
-			set_lc_id_hwmon "$3$4" "$cpath"
-		else
-			cpath="$config_path"
-			tpath="$thermal_path"
-			min_module_ind=$min_module_gbox_ind
-			max_module_ind=$max_module_gbox_ind
-			echo 0 > "$cpath"/gearbox_counter
-			echo 0 > "$cpath"/module_counter
-		fi
-
 		name=$(< "$3""$4"/name)
-		if [ ! -f "$cpath/gearbox_counter" ]; then
-			echo 0 > "$cpath"/gearbox_counter
-		fi
-		if [ ! -f "$cpath/module_counter" ]; then
-			echo 0 > "$cpath"/module_counter
-		fi
-
-		if [ "$name" == "mlxsw" ]; then
-			ln -sf "$3""$4"/temp1_input "$tpath"/asic
-			if [ -f "$3""$4"/pwm1 ]; then
-				ln -sf "$3""$4"/pwm1 "$tpath"/pwm1
-				echo "$name" > "$cpath"/cooling_name
+		if [[ $name != *"nvme"* ]]; then
+			get_lc_id_hwmon "$3$4"
+			lc_number=$?
+			if [ "$lc_number" -ne 0 ]; then
+				cpath="$hw_management_path/lc$lc_number/config"
+				tpath="$hw_management_path/lc$lc_number/thermal"
+				min_module_ind=$min_lc_thermal_ind
+				max_module_ind=$max_lc_thermal_ind
+				set_lc_id_hwmon "$3$4" "$cpath"
+			else
+				cpath="$config_path"
+				tpath="$thermal_path"
+				min_module_ind=$min_module_gbox_ind
+				max_module_ind=$max_module_gbox_ind
+				echo 0 > "$cpath"/gearbox_counter
+				echo 0 > "$cpath"/module_counter
 			fi
-			if [ -f "$cpath"/fan_inversed ]; then
-				inv=$(< "$cpath"/fan_inversed)
-			fi
-			for ((i=1; i<=max_tachos; i+=1)); do
-				if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
-					j=$i
-				else
-					j=$((inv - i))
-				fi
-				if [ -f "$3""$4"/fan"$i"_input ]; then
-					ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
-					ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
-					ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
-					check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
-					check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
-					# Save max_tachos to config
-					echo $i > "$cpath"/max_tachos
-				fi
-			done
-		fi
 
-		lcmatch=`echo $name | cut -d"#" -f1`
-		if [ "$name" == "mlxsw" ] || [ "$lcmatch" == "linecard" ]; then
-			for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
-				if [ -f "$3""$4"/temp"$i"_input ]; then
-					label=$(< "$3""$4"/temp"$i"_label)
-					case $label in
-					*front*)
-						if [ "$name" == "mlxsw" ]; then
-							j=$((i-1))
-						else
-							j="$i"
-						fi
-						ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
-						ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
-						ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
-						ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
-						lock_service_state_change
-						[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
-						module_counter=$((module_counter+1))
-						echo "$module_counter" > "$cpath"/module_counter
-						if [ "$lcmatch" == "linecard" ]; then
-							chassis_module_counter=$(< "$config_path"/module_counter)
-							chassis_module_counter=$((chassis_module_counter+1))
-							echo "$chassis_module_counter " > "$config_path"/module_counter
-						fi
-						unlock_service_state_change
-						;;
-					*gear*)
-						lock_service_state_change
-						[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
-						gearbox_counter=$((gearbox_counter+1))
-						echo "$gearbox_counter" > "$cpath"/gearbox_counter
-						if [ "$lcmatch" == "linecard" ]; then
-							chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-							chassis_gearbox_counter=$((chassis_gearbox_counter+1))
-							echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
-						fi
-						unlock_service_state_change
-						ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
-						;;
-					*)
-						;;
-					esac
+			if [ ! -f "$cpath/gearbox_counter" ]; then
+				echo 0 > "$cpath"/gearbox_counter
+			fi
+			if [ ! -f "$cpath/module_counter" ]; then
+				echo 0 > "$cpath"/module_counter
+			fi
+
+			if [ "$name" == "mlxsw" ]; then
+				ln -sf "$3$4" $cpath/asic_hwmon
+				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				if [ -f "$3""$4"/pwm1 ]; then
+					ln -sf "$3""$4"/pwm1 "$tpath"/pwm1
+					echo "$name" > "$cpath"/cooling_name
 				fi
-			done
+				if [ -f "$cpath"/fan_inversed ]; then
+					inv=$(< "$cpath"/fan_inversed)
+				fi
+				for ((i=1; i<=max_tachos; i+=1)); do
+					if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
+						j=$i
+					else
+						j=$((inv - i))
+					fi
+					if [ -f "$3""$4"/fan"$i"_input ]; then
+						ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
+						ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
+						ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
+						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
+						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
+						# Save max_tachos to config
+						echo $i > "$cpath"/max_tachos
+					fi
+				done
+			fi
+
+			lcmatch=`echo $name | cut -d"#" -f1`
+			if [ "$name" == "mlxsw" ] || [ "$lcmatch" == "linecard" ]; then
+				for ((i=min_module_ind; i<=max_module_ind; i+=1)); do
+					if [ -f "$3""$4"/temp"$i"_input ]; then
+						label=$(< "$3""$4"/temp"$i"_label)
+						case $label in
+						*front*)
+							if [ "$name" == "mlxsw" ]; then
+								j=$((i-1))
+							else
+								j="$i"
+							fi
+							ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
+							ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
+							ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
+							ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
+							lock_service_state_change
+							[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
+							module_counter=$((module_counter+1))
+							echo "$module_counter" > "$cpath"/module_counter
+							if [ "$lcmatch" == "linecard" ]; then
+								chassis_module_counter=$(< "$config_path"/module_counter)
+								chassis_module_counter=$((chassis_module_counter+1))
+								echo "$chassis_module_counter " > "$config_path"/module_counter
+							fi
+							unlock_service_state_change
+							;;
+						*gear*)
+							lock_service_state_change
+							[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
+							gearbox_counter=$((gearbox_counter+1))
+							echo "$gearbox_counter" > "$cpath"/gearbox_counter
+							if [ "$lcmatch" == "linecard" ]; then
+								chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
+								chassis_gearbox_counter=$((chassis_gearbox_counter+1))
+								echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+							fi
+							unlock_service_state_change
+							ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							;;
+						*)
+							;;
+						esac
+					fi
+				done
+			fi
 		fi
 	fi
 
@@ -348,7 +358,9 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "cooling_device" ]; then
 		coolingtype=$(< "$3""$4"/type)
 		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan0" ]; then
+		   [ "$coolingtype" == "mlxreg_fan" ] ||
+		   [ "$coolingtype" == "mlxreg_fan0" ] ||
+		   [ "$coolingtype" == "emc2305" ]; then
 			ln -sf "$3""$4"/cur_state $thermal_path/cooling_cur_state
 			# Set FAN to full speed until thermal control is started.
 			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
@@ -457,12 +469,14 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		check_n_link "$3""$4"/uevent $config_path/port_config_done
-		asic_health=$(< "$3""$4"/asic1)
+		asic_health=0
+		if [ -f "$3""$4"/asic1 ]; then
+			asic_health=$(< "$3""$4"/asic1)
+		fi
 		if [ "$asic_health" -ne 2 ]; then
 			exit 0
 		fi
 		find_i2c_bus
-		bus=$((i2c_asic_bus_default+i2c_bus_offset))
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
@@ -471,8 +485,9 @@ if [ "$1" == "add" ]; then
 			/usr/bin/hw-management.sh chipup
 		fi
 	fi
+	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
-		for i in {1..9}; do
+		for i in {1..14}; do
 			if [ -f "$3""$4"/temp"$i"_input ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
@@ -509,6 +524,10 @@ if [ "$1" == "add" ]; then
 				sodimm1_addr='0-001c'
 				sodimm2_addr='@(0-001a|0-001e)'
 			;;
+			$DNV_CPU)
+				sodimm1_addr='0-0018'
+				sodimm2_addr='0-001a'
+			;;
 			*)
 				exit 0
 			;;
@@ -531,7 +550,7 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
 		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		if [[ $sku == "HI138" ]]; then
+		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 			exit 0
 		fi
 		find_i2c_bus
@@ -588,11 +607,19 @@ if [ "$1" == "add" ]; then
 		psu_addr=$(< $config_path/"$2"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 		eeprom_name=$2_info
-		eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+		if [ "$board_type" == "VMOD0014" ]; then
+			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+		else
+			eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+		fi
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
 		if [ $? -eq 0 ] && [ ! -L $eeprom_path/"$2"_info ] && [ ! -f "$eeprom_file" ]; then
-			psu_eeprom_type="24c32"
+			if [ "$board_type" == "VMOD0014" ]; then
+				psu_eeprom_type="24c02"
+			else
+				psu_eeprom_type="24c32"
+			fi
 			if [ -f $config_path/psu_eeprom_type ]; then
 				psu_eeprom_type=$(< "$config_path"/psu_eeprom_type)
 			fi
@@ -664,7 +691,10 @@ elif [ "$1" == "change" ]; then
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown
 		else
-			asic_health=$(< "$4""$5"/asic1)
+			asic_health=0
+			if [ -f "$3""$4"/asic1 ]; then
+				asic_health=$(< "$4""$5"/asic1)
+			fi
 			if [ "$asic_health" -eq 2 ]; then
 				if [ ! -f /etc/init.d/sxdkernel ]; then
 					sleep 3
@@ -676,7 +706,8 @@ elif [ "$1" == "change" ]; then
 		fi
 	fi
 else
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] || [ "$2" == "pcisw_amb" ]; then
+	case "$2" in
+		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -698,88 +729,96 @@ else
 		else
 			unlink $thermal_path/$
 		fi
-	fi
+		;;
+	esac
 	if [ "$2" == "switch" ]; then
-		[ -f "$config_path/stopping" ] && stopping=$(< $config_path/stopping)
-		if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
-			exit 0
-		fi
-		get_lc_id_from_hwmon "$3$4"
-		lc_id=$?
-		if [ "$lc_id" -ne 0 ]; then
-			cpath="$hw_management_path/lc$lc_id/config"
-			tpath="$hw_management_path/lc$lc_id/thermal"
-			max_module_ind=$(< $cpath/module_counter)
-			max_ind="$max_lc_thermal_ind"
-			min_ind=1
-		else
-			cpath="$config_path"
-			tpath="$thermal_path"
-			max_ind="$max_module_gbox_ind"
-			min_ind=2
-		fi
-		
-		for ((i=$max_ind; i>=$min_ind; i-=1)); do
+		name=$(< "$3""$4"/name)
+		if [[ $name != *"nvme"* ]]; then
+			[ -f "$config_path/stopping" ] && stopping=$(< $config_path/stopping)
+			if [ "$stopping" ] &&  [ "$stopping" = "1" ]; then
+				exit 0
+			fi
+			get_lc_id_from_hwmon "$3$4"
+			lc_id=$?
 			if [ "$lc_id" -ne 0 ]; then
-				j="$i"
-				k=$((i-max_module_ind))
+				cpath="$hw_management_path/lc$lc_id/config"
+				tpath="$hw_management_path/lc$lc_id/thermal"
+				max_module_ind=$(< $cpath/module_counter)
+				max_ind="$max_lc_thermal_ind"
+				min_ind=1
 			else
-				j=$((i-1))
+				cpath="$config_path"
+				tpath="$thermal_path"
+				max_ind="$max_module_gbox_ind"
+				min_ind=2
 			fi
-			if [ -L $tpath/module"$j"_temp_input ]; then
-				unlink $tpath/module"$j"_temp_input
-				lock_service_state_change
-				[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
-				module_counter=$((module_counter-1))
-				echo $module_counter > "$cpath"/module_counter
-				if [ "$lc_id" -ne 0 ]; then
-					chassis_module_counter=$(< "$config_path"/module_counter)
-					chassis_module_counter=$((chassis_module_counter-1))
-					echo "$chassis_module_counter" > "$config_path"/module_counter
-				fi
-				unlock_service_state_change
-			elif [ -L $tpath/gearbox"$k"_temp_input ]; then
-				unlink $tpath/gearbox"$j"_temp_input
-				lock_service_state_change
-				[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
-				gearbox_counter=$((gearbox_counter-1))
-				echo $gearbox_counter > "$cpath"/gearbox_counter
-				if [ "$lc_id" -ne 0 ]; then
-					chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-					chassis_gearbox_counter=$((chassis_gearbox_counter-1))
-					echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
-				fi
-				unlock_service_state_change
-			fi
-			check_n_unlink $tpath/module"$j"_temp_fault
-			check_n_unlink $tpath/module"$j"_temp_crit
-			check_n_unlink $tpath/module"$j"_temp_emergency
-		done
-		rm -f "$tpath/gearbox*_temp_input"
-		rm -f "$tpath/module*_temp_input"
-		rm -f "$tpath/module*_temp_fault"
-		rm -f "$tpath/module*_temp_crit"
-		rm -f "$tpath/module*_temp_emergency"
 
-		echo 0 > $cpath/module_counter
-		echo 0 > $cpath/gearbox_counter
-
-		if [ "$lc_id" -ne 0 ]; then
-			exit 0
-		fi
-		check_n_unlink $thermal_path/asic
-		name=$(< $$config_path/cooling_name)
-		if [ "$name" == "mlxsw" ]; then
-			if [ -L $thermal_path/pwm1 ]; then
-				unlink $thermal_path/pwm1
-			fi
-			for ((i=1; i<=max_tachos; i+=1)); do
-				check_n_unlink $thermal_path/fan"$i"_fault
-				check_n_unlink $thermal_path/fan"$i"_speed_get
-				check_n_unlink $thermal_path/fan"$j"_min
-				check_n_unlink $thermal_path/fan"$j"_max
+			for ((i=$max_ind; i>=$min_ind; i-=1)); do
+				if [ "$lc_id" -ne 0 ]; then
+					j="$i"
+					k=$((i-max_module_ind))
+				else
+					j=$((i-1))
+				fi
+				if [ -L $tpath/module"$j"_temp_input ]; then
+					unlink $tpath/module"$j"_temp_input
+					lock_service_state_change
+					[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
+					module_counter=$((module_counter-1))
+					echo $module_counter > "$cpath"/module_counter
+					if [ "$lc_id" -ne 0 ]; then
+						chassis_module_counter=$(< "$config_path"/module_counter)
+						if [ "$chassis_module_counter" -ne 0 ]; then
+							chassis_module_counter=$((chassis_module_counter-1))
+							echo "$chassis_module_counter" > "$config_path"/module_counter
+						fi
+					fi
+					unlock_service_state_change
+				elif [ -L $tpath/gearbox"$k"_temp_input ]; then
+					unlink $tpath/gearbox"$j"_temp_input
+					lock_service_state_change
+					[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
+					gearbox_counter=$((gearbox_counter-1))
+					echo $gearbox_counter > "$cpath"/gearbox_counter
+					if [ "$lc_id" -ne 0 ]; then
+						chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
+						if [ "$chassis_gearbox_counter" -ne 0 ]; then
+							chassis_gearbox_counter=$((chassis_gearbox_counter-1))
+							echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+						fi
+					fi
+					unlock_service_state_change
+				fi
+				check_n_unlink $tpath/module"$j"_temp_fault
+				check_n_unlink $tpath/module"$j"_temp_crit
+				check_n_unlink $tpath/module"$j"_temp_emergency
 			done
-			check_n_unlink $thermal_path/pwm1
+			rm -f "$tpath/gearbox*_temp_input"
+			rm -f "$tpath/module*_temp_input"
+			rm -f "$tpath/module*_temp_fault"
+			rm -f "$tpath/module*_temp_crit"
+			rm -f "$tpath/module*_temp_emergency"
+
+			echo 0 > $cpath/module_counter
+			echo 0 > $cpath/gearbox_counter
+
+			check_n_unlink $cpath/asic_hwmon
+
+			if [ "$lc_id" -ne 0 ]; then
+				exit 0
+			fi
+			check_n_unlink $thermal_path/asic
+			name=$(< $$config_path/cooling_name)
+			if [ "$name" == "mlxsw" ]; then
+				check_n_unlink $thermal_path/pwm1
+				for ((i=1; i<=max_tachos; i+=1)); do
+					check_n_unlink $thermal_path/fan"$i"_fault
+					check_n_unlink $thermal_path/fan"$i"_speed_get
+					check_n_unlink $thermal_path/fan"$j"_min
+					check_n_unlink $thermal_path/fan"$j"_max
+				done
+				check_n_unlink $thermal_path/pwm1
+			fi
 		fi
 	fi
 	if [ "$2" == "regfan" ]; then
@@ -862,7 +901,8 @@ else
 		unlink $thermal_path/cpu_pack_crit
 		unlink $thermal_path/cpu_pack_max
 		unlink $alarm_path/cpu_pack_crit_alarm
-		for i in {1..8}; do
+		# Max index of SN2201 cputemp is 14.
+		for i in {1..14}; do
 			if [ -L $thermal_path/cpu_core"$i" ]; then
 				j=$((i+1))
 				unlink $thermal_path/cpu_core"$j"
@@ -897,7 +937,6 @@ else
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-"$bus"/device/delete_device
 			unlink $eeprom_path/"$2"_info
 			rm -rf $config_path/"$2"_eeprom_us
-
 		fi
 		# Remove thermal attributes
 		check_n_unlink $thermal_path/"$2"_temp

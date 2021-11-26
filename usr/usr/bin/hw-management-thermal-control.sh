@@ -404,7 +404,16 @@ c2p_dir_untrust_t10=(35000 12 40000 15 $max_amb 15)
 unk_dir_trust_t10=(35000 12 40000 15 $max_amb 15)
 unk_dir_untrust_t10=(35000 12 40000 15 $max_amb 15)
 
-
+# Class t11 for SN2201. 
+# Use the default thermal class temporary. 
+# It should be updated once get the correct value.
+# For Test, need update.
+p2c_dir_trust_t11=(45000 16  $max_amb 16)
+p2c_dir_untrust_t11=(45000 16  $max_amb 16)
+c2p_dir_trust_t11=(45000 16  $max_amb 16)
+c2p_dir_untrust_t11=(45000 16  $max_amb 16)
+unk_dir_trust_t11=(45000 16  $max_amb 16)
+unk_dir_untrust_t11=(45000 16  $max_amb 16)
 
 # Local variables
 report_counter=120
@@ -663,7 +672,7 @@ thermal_periodic_report()
 	fi
 	# TMP for Buffalo BU
 	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+	case $board_type in
 	VMOD0011)
 		ps_fan_speed=${psu_fan_speed_full[$f5]}
 		;;
@@ -796,7 +805,7 @@ update_psu_fan_speed()
 				entry=$(< $thermal_path/cooling_cur_state)
 				# TMP for Buffalo BU
 				board_type=$(< /sys/devices/virtual/dmi/id/board_name)
-				case $board in
+				case $board_type in
 				VMOD0011)
 					speed=${psu_fan_speed_full[$entry]}
 				;;
@@ -805,6 +814,10 @@ update_psu_fan_speed()
 					;;
 				esac
 				speed=${psu_fan_speed[$entry]}
+				# SN2201 sets psu fan speed in percentage mode.
+				if [ "$board_type" == "VMOD0014" ]; then
+					i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
+				fi
 				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
 			fi
 		fi
@@ -1020,6 +1033,15 @@ init_system_dynamic_minimum_db()
 		config_c2p_dir_untrust "${c2p_dir_untrust_t10[@]}"
 		config_unk_dir_trust "${unk_dir_trust_t10[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t10[@]}"
+		;;
+	$thermal_type_t11)
+		# Config FAN minimal speed setting for class t11
+		config_p2c_dir_trust "${p2c_dir_trust_t11[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t11[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t11[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t11[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t11[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t11[@]}"
 		;;
 	$thermal_type_full)
 		# Config FAN default minimal speed setting
@@ -1267,7 +1289,8 @@ thermal_control_preinit()
 
 sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 case $sku in
-	HI138)
+	HI138|HI132)
+	log_notice "Mellanox thermal control not supported by this platform:" $sku
 	exit 0
 	;;
 esac
