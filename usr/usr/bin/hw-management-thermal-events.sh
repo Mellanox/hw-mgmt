@@ -158,7 +158,8 @@ if [ "$1" == "add" ]; then
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
 	fi
-	if [ "$2" == "fan_amb" ] || [ "$2" == "port_amb" ] || [ "$2" == "pcisw_amb" ]; then
+	case "$2" in
+		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
