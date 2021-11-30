@@ -1066,7 +1066,9 @@ sn2201_specific()
 	echo 960 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
 	echo 2500 > $config_path/psu_fan_min
-	i2cget -f -y 1 0x3d 0x01 > $system_path/cpld2_version
+	cpld2=$(i2cget -f -y 1 0x3d 0x01)
+	cpld2=${cpld2:2}
+	echo $(( 16#$cpld2 )) > $system_path/cpld2_version
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
