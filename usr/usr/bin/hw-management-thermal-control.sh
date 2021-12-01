@@ -86,6 +86,7 @@ tz_temp=$thermal_path/mlxsw/thermal_zone_temp
 temp_trip_norm=$thermal_path/mlxsw/temp_trip_norm
 temp_trip_high=$thermal_path/mlxsw/temp_trip_high
 cooling_cur_state=$thermal_path/cooling_cur_state
+cooling_max_state=$thermal_path/cooling_max_state
 wait_for_config=120
 
 # Input parameters for the system thermal class, the number of tachometers, the
@@ -1289,6 +1290,19 @@ if [ -z "$thermal_delay" ]; then
 	wait $!
 fi
 
+asic_hot_vs_cooling_sanity()
+{
+	trip=$(< /var/run/hw-management/thermal/mlxsw/temp_trip_hot)
+	trip=$((trip+temp_tz_hyst))
+	temp_now=$(< $tz_temp)
+	cooling=$(< $cooling_cur_state)
+	cooling_max=$(< $cooling_max_state)
+	if [ "$temp_now" -gt "$trip" ] && [ "$cooling" -lt "$cooling_max" ]; then
+		log_info "FAN speed level is changed from $cooling to $cooling_max, because ASIC temparture $temp_now"
+		echo "$cooling_max" > $cooling_cur_state
+	fi
+}
+
 init_service_params()
 {
 	if [ -f $config_path/thermal_type ]; then
@@ -1407,6 +1421,8 @@ do
 	if [ $? -ne 0 ]; then
 		continue
 	fi
+	# Perform sanity check for ASI temparture versus fan speed.
+	asic_hot_vs_cooling_sanity
 	# Set PWM minimal limit.
 	# Set dynamic FAN speed minimum, depending on ambient temperature,
 	# presence of untrusted optical cables or presence of any cables
