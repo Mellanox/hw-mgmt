@@ -60,6 +60,7 @@ thermal_type_t8=8
 thermal_type_t9=9
 thermal_type_t10=10
 thermal_type_t11=11
+thermal_type_t12=12
 thermal_type_def=0
 thermal_type_full=100
 
