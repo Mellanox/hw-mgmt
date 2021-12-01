@@ -362,19 +362,23 @@ if [ "$1" == "add" ]; then
 		   [ "$coolingtype" == "mlxreg_fan" ] ||
 		   [ "$coolingtype" == "mlxreg_fan0" ] ||
 		   [ "$coolingtype" == "emc2305" ]; then
-			ln -sf "$3""$4"/cur_state $thermal_path/cooling_cur_state
+			check_n_link "$3""$4"/cur_state $thermal_path/cooling_cur_state
+			check_n_link "$3""$4"/max_state $thermal_path/cooling_max_state
 			# Set FAN to full speed until thermal control is started.
 			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
 			log_info "FAN speed is set to full speed"
 		fi
 		if [ "$coolingtype" == "mlxreg_fan1" ]; then
-			ln -sf "$3""$4"/cur_state $thermal_path/cooling1_cur_state
+			check_n_link "$3""$4"/cur_state $thermal_path/cooling1_cur_state
+			check_n_link "$3""$4"/max_state $thermal_path/cooling1_max_state
 		fi
 		if [ "$coolingtype" == "mlxreg_fan2" ]; then
-			ln -sf "$3""$4"/cur_state $thermal_path/cooling2_cur_state
+			check_n_link "$3""$4"/cur_state $thermal_path/cooling2_cur_state
+			check_n_link "$3""$4"/max_state $thermal_path/cooling2_max_state
 		fi
 		if [ "$coolingtype" == "mlxreg_fan3" ]; then
-			ln -sf "$3""$4"/cur_state $thermal_path/cooling3_cur_state
+			check_n_link "$3""$4"/cur_state $thermal_path/cooling3_cur_state
+			check_n_link "$3""$4"/max_state $thermal_path/cooling3_max_state
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
@@ -870,9 +874,13 @@ else
 	fi
 	if [ "$2" == "cooling_device" ]; then
 		check_n_unlink $thermal_path/cooling_cur_state
+		check_n_unlink $thermal_path/cooling_max_state
 		check_n_unlink $thermal_path/cooling1_cur_state
+		check_n_unlink $thermal_path/cooling1_max_state
 		check_n_unlink $thermal_path/cooling2_cur_state
+		check_n_unlink $thermal_path/cooling2_max_state
 		check_n_unlink $thermal_path/cooling3_cur_state
+		check_n_unlink $thermal_path/cooling3_max_state
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for ((i=1; i<=max_tachos; i+=1)); do
