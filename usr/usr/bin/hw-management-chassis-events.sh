@@ -32,11 +32,10 @@
 #
 
 source hw-management-helpers.sh
-board_type=`cat /sys/devices/virtual/dmi/id/board_name`
+board_type=$(< $board_type_file)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_def_off_eeprom_vpd=8
-i2c_bus_def_off_eeprom_cpu=$(< $config_path/i2c_bus_def_off_eeprom_cpu)
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
 i2c_bus_def_off_eeprom_fan1=11
@@ -44,15 +43,12 @@ i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
 i2c_bus_def_off_eeprom_mgmt=45
-i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
 lc_iio_dev_name_def="iio:device0"
 eeprom_name=''
-sfp_counter=0
-udev_ready=$hw_management_path/.udev_ready
 fan_dir_offset_in_vpd_eeprom_pn=0x48
 # 46 - F, 52 - R
 fan_direction_exhaust=46
@@ -226,6 +222,7 @@ find_eeprom_name()
 {
 	bus=$1
 	addr=$2
+	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
 		eeprom_name=vpd_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
@@ -280,6 +277,7 @@ find_eeprom_name_on_remove()
 {
 	bus=$1
 	addr=$2
+	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
 		eeprom_name=vpd_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
@@ -457,6 +455,7 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
+			i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 			busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 			busfolder=$(basename "$busdir")
@@ -756,9 +755,7 @@ if [ "$1" == "add" ]; then
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
-		[ -f "$config_path/sfp_counter" ] && sfp_counter=$(< $config_path/sfp_counter)
-		sfp_counter=$((sfp_counter+1))
-		echo $sfp_counter > $config_path/sfp_counter
+		change_file_counter $config_path/sfp_counter 1
 		unlock_service_state_change
 		create_sfp_symbolic_links "${3}${4}"
 	fi
@@ -797,6 +794,7 @@ else
 	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
 			find_i2c_bus
+			i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 			busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 			busfolder=$(basename "$busdir")
@@ -947,11 +945,7 @@ else
 	fi
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
-		[ -f "$config_path/sfp_counter" ] && sfp_counter=$(< $config_path/sfp_counter)
-		if [ "$sfp_counter" -gt 0 ]; then
-			sfp_counter=$((sfp_counter-1))
-			echo $sfp_counter > $config_path/sfp_counter
-		fi
+		change_file_counter $config_path/sfp_counter -1
 		unlock_service_state_change
 		rm -rf ${sfp_path}/*_status
 	fi

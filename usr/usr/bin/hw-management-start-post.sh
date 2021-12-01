@@ -43,15 +43,9 @@ handle_cpld_versions()
 {
 	cpld_num_loc="${1}"
 	if [ "$cpld_num_loc" -lt "$max_cpld" ]; then
-		if [ -L $system_path/cpld"$max_cpld"_version ]; then
-			unlink $system_path/cpld"$max_cpld"_version
-		fi
-		if [ -L $system_path/cpld"$max_cpld"_pn ]; then
-			unlink $system_path/cpld"$max_cpld"_pn
-		fi
-		if [ -L $system_path/cpld"$max_cpld"_version_min ]; then
-			unlink $system_path/cpld"$max_cpld"_version_min
-		fi
+		check_n_unlink $system_path/cpld"$max_cpld"_version
+		check_n_unlink $system_path/cpld"$max_cpld"_pn
+		check_n_unlink $system_path/cpld"$max_cpld"_version_min
 	fi
 
 	for ((i=1; i<=cpld_num_loc; i+=1)); do

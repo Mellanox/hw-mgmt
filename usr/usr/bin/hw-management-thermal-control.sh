@@ -75,6 +75,7 @@
 # Paths to thermal sensors, device present states, thermal zone and cooling device
 source hw-management-helpers.sh
 
+board_type=$(< $board_type_file)
 temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
@@ -704,7 +705,6 @@ thermal_periodic_report()
 		fi
 	fi
 	# TMP for Buffalo BU
-	board_type=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board_type in
 	VMOD0011)
 		ps_fan_speed=${psu_fan_speed_full[$f5]}
@@ -838,7 +838,6 @@ update_psu_fan_speed()
 				command=$(< $fan_command)
 				entry=$(< $thermal_path/cooling_cur_state)
 				# TMP for Buffalo BU
-				board_type=$(< /sys/devices/virtual/dmi/id/board_name)
 				case $board_type in
 				VMOD0011)
 					speed=${psu_fan_speed_full[$entry]}

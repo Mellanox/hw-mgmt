@@ -46,6 +46,9 @@ jtag_path=$hw_management_path/jtag
 power_path=$hw_management_path/power
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
+board_type_file=/sys/devices/virtual/dmi/id/board_name
+i2c_bus_def_off_eeprom_cpu_file=$config_path/i2c_bus_def_off_eeprom_cpu
+i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
 
 # Thermal type constants
 thermal_type_t1=1
@@ -64,6 +67,8 @@ thermal_type_t12=12
 thermal_type_def=0
 thermal_type_full=100
 
+max_tachos=14
+i2c_asic_bus_default=2
 i2c_bus_max=10
 lc_i2c_bus_min=34
 lc_i2c_bus_max=43
@@ -156,3 +161,20 @@ check_n_unlink()
         unlink "$1"
     fi
 }
+
+# Read int val from file, inc it by val and save back
+# value can negative
+# $1 - counter file name
+# $2 - value to add (can be < 0)
+change_file_counter()
+{
+	file_name=$1
+	val=$2
+	[ -f "$file_name" ] && counter=$(< $file_name)
+	counter=$((counter+val))
+	if [ $counter -lt 0 ]; then
+		counter=0
+	fi
+	echo $counter > $file_name
+}
+
