@@ -869,7 +869,7 @@ msn46xx_specific()
 		echo 2235 > $config_path/fan_min_speed
 	# this is MSN4600
 	else
-		thermal_type=$thermal_type_def
+		thermal_type=$thermal_type_t12
 		echo 19500 > $config_path/fan_max_speed
 		echo 2800 > $config_path/fan_min_speed
 	fi
