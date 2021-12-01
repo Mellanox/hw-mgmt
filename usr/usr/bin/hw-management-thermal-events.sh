@@ -33,22 +33,19 @@
 #
 
 source hw-management-helpers.sh
-board_type=`cat /sys/devices/virtual/dmi/id/board_name`
+board_type=$(< $board_type_file)
 
 # Local variables
 fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
 max_psus=4
-max_tachos=14
 max_pwm=4
 max_lcs=8
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
-i2c_asic_bus_default=2
 pciesw_i2c_bus=0
-i2c_comex_mon_bus_default=$(< $config_path/i2c_comex_mon_bus_default)
 fan_full_speed_code=20
 
 if [ "$board_type" == "VMOD0014" ]; then
@@ -164,6 +161,7 @@ if [ "$1" == "add" ]; then
 		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
+		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -257,25 +255,17 @@ if [ "$1" == "add" ]; then
 							ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
 							ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
 							lock_service_state_change
-							[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
-							module_counter=$((module_counter+1))
-							echo "$module_counter" > "$cpath"/module_counter
+							change_file_counter "$cpath"/module_counter 1
 							if [ "$lcmatch" == "linecard" ]; then
-								chassis_module_counter=$(< "$config_path"/module_counter)
-								chassis_module_counter=$((chassis_module_counter+1))
-								echo "$chassis_module_counter " > "$config_path"/module_counter
+								change_file_counter "$config_path"/module_counter 1
 							fi
 							unlock_service_state_change
 							;;
 						*gear*)
 							lock_service_state_change
-							[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
-							gearbox_counter=$((gearbox_counter+1))
-							echo "$gearbox_counter" > "$cpath"/gearbox_counter
+							change_file_counter "$cpath"/gearbox_counter 1
 							if [ "$lcmatch" == "linecard" ]; then
-								chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-								chassis_gearbox_counter=$((chassis_gearbox_counter+1))
-								echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
+								change_file_counter "$config_path"/gearbox_counter 1
 							fi
 							unlock_service_state_change
 							ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
@@ -294,9 +284,7 @@ if [ "$1" == "add" ]; then
 		echo "$name" > $config_path/cooling_name
 		ln -sf "$3""$4"/pwm1 $thermal_path/pwm1
 		for ((i=1; i<=max_pwm; i+=1)); do
-			if [ -f "$3""$4"/pwm"$i" ]; then
-				ln -sf "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
-			fi
+			check_n_link "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
 		done
 		if [ -f $config_path/fan_inversed ]; then
 			inv=$(< $config_path/fan_inversed)
@@ -417,8 +405,6 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/lc"$i"_active
 				fi
 			fi
-		done
-		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_powered ]; then
 				ln -sf "$3""$4"/lc"$i"_powered $system_path/lc"$i"_powered
 				event=$(< $system_path/lc"$i"_powered)
@@ -426,8 +412,6 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/lc"$i"_powered
 				fi
 			fi
-		done
-		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_present ]; then
 				ln -sf "$3""$4"/lc"$i"_present $system_path/lc"$i"_present
 				event=$(< $system_path/lc"$i"_present)
@@ -435,8 +419,6 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/lc"$i"_present
 				fi
 			fi
-		done
-		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_ready ]; then
 				ln -sf "$3""$4"/lc"$i"_ready $system_path/lc"$i"_ready
 				event=$(< $system_path/lc"$i"_ready)
@@ -444,8 +426,6 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/lc"$i"_ready
 				fi
 			fi
-		done
-		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_shutdown ]; then
 				ln -sf "$3""$4"/lc"$i"_shutdown $system_path/lc"$i"_shutdown
 				event=$(< $system_path/lc"$i"_shutdown)
@@ -453,8 +433,6 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/lc"$i"_shutdown
 				fi
 			fi
-		done
-		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_synced ]; then
 				ln -sf "$3""$4"/lc"$i"_synced $system_path/lc"$i"_synced
 				event=$(< $system_path/lc"$i"_synced)
@@ -462,8 +440,6 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/lc"$i"_synced
 				fi
 			fi
-		done
-		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_verified ]; then
 				ln -sf "$3""$4"/lc"$i"_verified $system_path/lc"$i"_verified
 				event=$(< $system_path/lc"$i"_verified)
@@ -561,6 +537,7 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		find_i2c_bus
+		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# PSU unit FAN speed set
 		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
@@ -580,15 +557,15 @@ if [ "$1" == "add" ]; then
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$2"_i2c_bus
 		# Add thermal attributes
-		ln -sf "$5""$3"/temp1_input $thermal_path/"$2"_temp
-		ln -sf "$5""$3"/temp1_max $thermal_path/"$2"_temp_max
-		ln -sf "$5""$3"/temp1_max_alarm $thermal_path/"$2"_temp_max_alarm
+		check_n_link "$5""$3"/temp1_input $thermal_path/"$2"_temp
+		check_n_link "$5""$3"/temp1_max $thermal_path/"$2"_temp_max
+		check_n_link "$5""$3"/temp1_max_alarm $thermal_path/"$2"_temp_max_alarm
 		check_n_link "$5""$3"/temp2_input $thermal_path/"$2"_temp2
 		check_n_link "$5""$3"/temp2_max $thermal_path/"$2"_temp2_max
 		check_n_link "$5""$3"/temp2_max_alarm $thermal_path/"$2"_temp2_max_alarm
 		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$2"_fan1_alarm
 		check_n_link "$5""$3"/power1_alarm $alarm_path/"$2"_power1_alarm
-		ln -sf "$5""$3"/fan1_input $thermal_path/"$2"_fan1_speed_get
+		check_n_link "$5""$3"/fan1_input $thermal_path/"$2"_fan1_speed_get
 
 		# Add PSU power attributes
 		psu_connect_power_sensor "$5""$3"/in1 "$2"_volt_in
@@ -717,6 +694,7 @@ else
 		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
+		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -770,29 +748,17 @@ else
 				if [ -L $tpath/module"$j"_temp_input ]; then
 					unlink $tpath/module"$j"_temp_input
 					lock_service_state_change
-					[ -f "$cpath/module_counter" ] && module_counter=$(< "$cpath"/module_counter)
-					module_counter=$((module_counter-1))
-					echo $module_counter > "$cpath"/module_counter
+					change_file_counter "$cpath"/module_counter -1
 					if [ "$lc_id" -ne 0 ]; then
-						chassis_module_counter=$(< "$config_path"/module_counter)
-						if [ "$chassis_module_counter" -ne 0 ]; then
-							chassis_module_counter=$((chassis_module_counter-1))
-							echo "$chassis_module_counter" > "$config_path"/module_counter
-						fi
+						change_file_counter "$config_path"/module_counter -1
 					fi
 					unlock_service_state_change
 				elif [ -L $tpath/gearbox"$k"_temp_input ]; then
 					unlink $tpath/gearbox"$j"_temp_input
 					lock_service_state_change
-					[ -f "$cpath/gearbox_counter" ] && gearbox_counter=$(< "$cpath"/gearbox_counter)
-					gearbox_counter=$((gearbox_counter-1))
-					echo $gearbox_counter > "$cpath"/gearbox_counter
+					change_file_counter "$cpath"/gearbox_counter -1
 					if [ "$lc_id" -ne 0 ]; then
-						chassis_gearbox_counter=$(< "$config_path"/gearbox_counter)
-						if [ "$chassis_gearbox_counter" -ne 0 ]; then
-							chassis_gearbox_counter=$((chassis_gearbox_counter-1))
-							echo "$chassis_gearbox_counter" > "$config_path"/gearbox_counter
-						fi
+						change_file_counter "$config_path"/gearbox_counter -1
 					fi
 					unlock_service_state_change
 				fi
@@ -932,6 +898,7 @@ else
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
 		find_i2c_bus
+		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# PSU unit FAN speed set
 		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
