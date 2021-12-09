@@ -108,6 +108,7 @@ temp_fall_hyst=2000
 temp_tz_hyst=5000
 last_cpu_temp=0
 common_loop=20
+cooling_level_updated=0
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
@@ -1114,7 +1115,7 @@ set_default_pwm()
 	cur_state=$((set_cur_state*10))
 	echo $cur_state > $thermal_path/fan_dynamic_min
 	audit_count=0
-	# Suspend - set state to 1.
+	# Suspend - set internal state to 1.
 	cooling_level_update_state=1
 	log_info "FAN speed is set to $cur_state percent up to full speed"
 }
@@ -1124,30 +1125,39 @@ set_dynamic_min_pwm()
 	trip_low_limit=$1
 
 	if [ "$cooling_level_update_state" -eq 1 ]; then
-		# Fan was set to full speed because of suspend or removed unit.
-		# Move to state 2.
+		# Fan was set to full speed because of suspend.
+		# Move to internal state 2 and handle like after full speed.
 		cooling_level_update_state=2
 	fi
 
 	set_cur_state=$((fan_dynamic_min-fan_max_state))
-	echo "$fan_dynamic_min" > $cooling_cur_state
-	if [ "$set_cur_state" -ge "$trip_low_limit" ]; then
-		echo "$set_cur_state" > $cooling_cur_state
-	else
-		echo "$trip_low_limit" > $cooling_cur_state
+	cur_cooling=$(< $cooling_cur_state)
+	if [ "$fan_dynamic_min" -ne "$cur_cooling" ]; then
+		echo "$fan_dynamic_min" > $cooling_cur_state
 	fi
-	cur_state=$((set_cur_state*10))
-	echo $cur_state > $thermal_path/fan_dynamic_min
-	log_info "FAN speed is set to $cur_state percent up to dynamic minimum"
+	if [ "$set_cur_state" -ge "$trip_low_limit" ]; then
+		set_cooling=$set_cur_state
+	else
+		set_cooling=$trip_low_limit
+	fi
+	if [ "$set_cooling" -lt "$cur_cooling" ]; then
+		echo "$set_cooling" > $cooling_cur_state
+		cur_cooling=$((cur_cooling*10))
+		cur_state=$((set_cur_state*10))
+		cooling=$(< $cooling_cur_state)
+		cooling=$((cooling*10))
+		echo $cur_state > $thermal_path/fan_dynamic_min
+		log_info "FAN speed changed from $cur_cooling% to $cooling% (dynamic minimum $cur_state%)"
+	fi
 }
 
 update_dynamic_min_pwm()
 {
 	if [ "$cooling_level_update_state" -eq 2 ]; then
 		# Fan in state 2 after init, resume or after some missed unit
-		# was inserted back. Move to normal state 0.
+		# was inserted back. Move to normal internal state 0.
+		check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
 		cooling_level_update_state=0
-		check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
 	fi
 }
 
