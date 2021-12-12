@@ -54,6 +54,8 @@ fan_full_speed_code=20
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
 	i2c_asic_bus_default=6
+	max_tachos=4
+	max_pwm=1
 fi
 
 # Get line card number by module 'sysfs' device path
