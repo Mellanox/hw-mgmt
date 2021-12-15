@@ -1486,7 +1486,8 @@ do
 	fi
 
 	# Periodic audit for fan speed reducing.
-	audit_count=$((audit_count+1))
+	# TMP: Temporary disable audit. Uncomment line below in next release.
+	# audit_count=$((audit_count+1))
 	if [ "$audit_count" -ge "$audit_trigger" ]; then
 		cooling_min=$((fan_dynamic_min-fan_max_state))
 		cooling=$(< $cooling_cur_state)
