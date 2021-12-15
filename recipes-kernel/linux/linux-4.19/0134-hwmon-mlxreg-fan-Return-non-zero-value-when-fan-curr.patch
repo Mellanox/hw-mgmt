@@ -109,7 +109,7 @@ index 943cb09e8583..6cb55db67be4 100644
 -		/* Return non-zero value in case only configuration is perfromed through sysfs. */
  		if (state < cur_state)
 -			return 1;
-+			return config;
++			return 0;
  
  		state = cur_state;
  	}
@@ -119,7 +119,7 @@ index 943cb09e8583..6cb55db67be4 100644
  	}
 -	/* Return non-zero value if current state has been enforced through sysfs. */
 -	return (config) ? 1 : 0;
-+	return config;
++	return 0;
  }
  
  static const struct thermal_cooling_device_ops mlxreg_fan_cooling_ops = {
