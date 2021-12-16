@@ -1,7 +1,7 @@
-From e1aa22efa1e662778a8dd6d5f3fdf1697a3eeb20 Mon Sep 17 00:00:00 2001
+From 2ab7d64da8f21bafbf203c9ac5d2c8375a5bec88 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 7 Feb 2021 22:59:53 +0200
-Subject: [PATCH backport v5.10.43 67/67] platform/mellanox: Add dedicated
+Subject: [PATCH backport for v5.10 67/97] platform/mellanox: Add dedicated
  match for system type QMB8700 (downstream)
 
 Use dedicated match function for QMB8700 system in order to work-around
@@ -17,10 +17,10 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 353 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 7d00d7f58ff1..dd3c34d332a4 100644
+index 950d90e6412a..614b9f5c673f 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -194,6 +194,7 @@
+@@ -201,6 +201,7 @@
  #define MLXPLAT_CPLD_FAN_MASK		GENMASK(3, 0)
  #define MLXPLAT_CPLD_ASIC_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_FAN_NG_MASK	GENMASK(6, 0)
@@ -28,7 +28,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  #define MLXPLAT_CPLD_LED_LO_NIBBLE_MASK	GENMASK(7, 4)
  #define MLXPLAT_CPLD_LED_HI_NIBBLE_MASK	GENMASK(3, 0)
  #define MLXPLAT_CPLD_VOLTREG_UPD_MASK	GENMASK(5, 4)
-@@ -942,6 +943,57 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_fan_items_data[] = {
+@@ -949,6 +950,57 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_fan_items_data[] = {
  	},
  };
  
@@ -86,7 +86,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  static struct mlxreg_core_item mlxplat_mlxcpld_default_ng_items[] = {
  	{
  		.data = mlxplat_mlxcpld_default_ng_psu_items_data,
-@@ -981,6 +1033,45 @@ static struct mlxreg_core_item mlxplat_mlxcpld_default_ng_items[] = {
+@@ -988,6 +1040,45 @@ static struct mlxreg_core_item mlxplat_mlxcpld_default_ng_items[] = {
  	},
  };
  
@@ -132,7 +132,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_ng_data = {
  	.items = mlxplat_mlxcpld_default_ng_items,
-@@ -991,6 +1082,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_ng_data = {
+@@ -998,6 +1089,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_ng_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
@@ -149,7 +149,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  /* Platform hotplug extended system family data */
  static struct mlxreg_core_data mlxplat_mlxcpld_ext_psu_items_data[] = {
  	{
-@@ -2423,6 +2524,124 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
+@@ -2430,6 +2531,124 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_modular_led_data),
  };
  
@@ -274,7 +274,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  /* Platform register access default */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_regs_io_data[] = {
  	{
-@@ -3615,6 +3834,107 @@ static struct mlxreg_core_platform_data mlxplat_default_fan_data = {
+@@ -3592,6 +3811,107 @@ static struct mlxreg_core_platform_data mlxplat_default_fan_data = {
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
  };
  
@@ -382,7 +382,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  /* Watchdog type1: hardware implementation version1
   * (MSN2700, MSN2410, MSN2740, MSN2100 and MSN2140 systems).
   */
-@@ -4464,6 +4784,32 @@ static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
+@@ -4461,6 +4781,32 @@ static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
  	return 1;
  }
  
@@ -415,7 +415,7 @@ index 7d00d7f58ff1..dd3c34d332a4 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_matched,
-@@ -4489,6 +4835,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -4486,6 +4832,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0004"),
  		},
  	},
