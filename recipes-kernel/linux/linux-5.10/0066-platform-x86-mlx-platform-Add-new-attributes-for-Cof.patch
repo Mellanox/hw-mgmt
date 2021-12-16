@@ -1,7 +1,7 @@
-From f54e80793cde1791a4de6044e6b452923d5b7943 Mon Sep 17 00:00:00 2001
+From e5f841a7335664c1790db05745c40613e08c9d85 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 13 Jul 2021 15:20:13 +0000
-Subject: [PATCH backport v5.10.43 66/67] platform/x86: mlx-platform: Add new
+Subject: [PATCH backport for v5.10 66/97] platform/x86: mlx-platform: Add new
  attributes for CoffeeLake COMEx based systems
 
 Add new attributes for systems equipped with CoffeeLake COMEx module to
@@ -25,10 +25,10 @@ Reviewed-by: Michael <michaelsh@nvidia.com>
  1 file changed, 24 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index cbda7be7d9ff..7d00d7f58ff1 100644
+index 681b49fe4176..950d90e6412a 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -2910,6 +2910,30 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -2917,6 +2917,30 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.bit = GENMASK(7, 0),
  		.mode = 0444,
  	},
