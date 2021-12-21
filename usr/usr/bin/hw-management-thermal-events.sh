@@ -475,7 +475,12 @@ if [ "$1" == "add" ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
 				else
-					id=$((i-2))
+					if [ "$board_type" != "VMOD0014" ]; then
+						id=$((i - 2))
+					else
+					# Denverton CPU on SN2201 has CPU Core numbers 6, 12 instead 0, 1
+						id=$((((i - 2) / 6) - 1))
+					fi
 					name="core$id"
 				fi
 				ln -sf "$3""$4"/temp"$i"_input $thermal_path/cpu_$name
