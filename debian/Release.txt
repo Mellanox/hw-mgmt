@@ -3,16 +3,20 @@
 -Tus , 21 Dec 2021
 --------------------------------------------------------------------------------
 - New Features
-    o	Add support for E3597 Wolf ES
+    o	Add support for E3597 ES
+    o	sn4600:  adding dynamic minimum support
+    o	General:  thermal: Enhancing thermal algo to set fans to 100% when ASIC reach critical threshold regardless of current thermal zone setting
 
 - Bug fixes  
-    o	sn2201:   udev: fan_amb applied over wrong device.
-    o	sn2201:   fan controller mismatch for max_pwm and max_tachos
-    o	sn2201:   CPLD2 version showing hex instead of decimal 
-    o	sn4600:   missing dynamic minimum support
-    o	General:  thermal: ASIC temperature going “hot”on init
-    o	General:  thermal: dynamic minimum criteria for setting to “normal” is not enough strict.  
-    o	General : rules: missing generic rule for netdevice in kernel 5.10
+    o	sn2201:  udev: fan_amb temp was wrong /unreadable due insufficient device mapping .
+    o	sn2201:  fan controller mismatch for max_pwm and max_tachos
+    o	sn2201:  CPLD2 version showing hex instead of decimal 
+    o	General : rules: netdevice attribute formatting wrongly coupled with MAC address last byte instead of port name
+    o	General:  thermal: dynamic minimum criteria for setting to “normal” thermal zone is in some cases not strict enough 
+	
+	*Kernel 4.19
+    o	patches 4.19:  remove return of non zero value when setting cooling_cur_state to avoid the set request being retried by user space
+    	Add patch 0134-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch
 
     o	For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.1300_BR/recipes-kernel/linux/Patch_Status_Table.txt
 
