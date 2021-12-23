@@ -58,14 +58,11 @@
 #
 
 source hw-management-helpers.sh
-board_type=`cat /sys/devices/virtual/dmi/id/board_name`
+board_type=$(< $board_type_file)
 # Local constants and variables
 
 thermal_type=$thermal_type_def
 
-max_tachos=14
-
-i2c_asic_bus_default=2
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
@@ -82,8 +79,6 @@ hotplug_linecards=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
-LOCKFILE="/var/run/hw-management.lock"
-udev_ready=$hw_management_path/.udev_ready
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
@@ -305,9 +300,9 @@ fi
 
 is_module()
 {
-        /sbin/lsmod | grep -w "$1" > /dev/null
-        RC=$?
-        return $RC
+    /sbin/lsmod | grep -w "$1" > /dev/null
+    RC=$?
+    return $RC
 }
 
 function get_i2c_bus_frequency_default()
@@ -869,7 +864,7 @@ msn46xx_specific()
 		echo 2235 > $config_path/fan_min_speed
 	# this is MSN4600
 	else
-		thermal_type=$thermal_type_def
+		thermal_type=$thermal_type_t12
 		echo 19500 > $config_path/fan_max_speed
 		echo 2800 > $config_path/fan_min_speed
 	fi
@@ -1066,7 +1061,9 @@ sn2201_specific()
 	echo 960 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
 	echo 2500 > $config_path/psu_fan_min
-	i2cget -f -y 1 0x3d 0x01 > $system_path/cpld2_version
+	cpld2=$(i2cget -f -y 1 0x3d 0x01)
+	cpld2=${cpld2:2}
+	echo $(( 16#$cpld2 )) > $system_path/cpld2_version
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 

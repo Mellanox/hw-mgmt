@@ -1,7 +1,7 @@
-From 380be81bf997d8cdd98cbb91fe4215419f8148da Mon Sep 17 00:00:00 2001
+From ebca6bd4556732e90536f78c5efcfb33ec6256be Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 8 Jul 2021 09:44:28 +0000
-Subject: [PATCH backport v5.10.43 52/67] hwmon: (mlxreg-fan) Return non-zero
+Subject: [PATCH backport for v5.10 52/97] hwmon: (mlxreg-fan) Return non-zero
  value when fan current state is enforced from sysfs
 
 Fan speed minimum can be enforced from sysfs. For example, setting
@@ -68,47 +68,50 @@ Here is the trace from KASAN:
 Fixes: 65afb4c8e7e4: (hwmon: (mlxreg-fan) Add support for Mellanox FAN driver)
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/hwmon/mlxreg-fan.c | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ drivers/hwmon/mlxreg-fan.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 116681fde33d..13e73f05b9cb 100644
+index 116681fde33d..689233edff9d 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
-@@ -315,6 +315,7 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
- {
+@@ -316,7 +316,7 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
  	struct mlxreg_fan *fan = cdev->devdata;
  	unsigned long cur_state;
-+	bool config = false;
  	u32 regval;
- 	int i;
+-	int i;
++	int i, config = 0;
  	int err;
-@@ -329,6 +330,7 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
+ 
+ 	/*
+@@ -329,6 +329,12 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
  	 * overwritten.
  	 */
  	if (state >= MLXREG_FAN_SPEED_MIN && state <= MLXREG_FAN_SPEED_MAX) {
-+		config = true;
++		/*
++		 * This is configuration change, which is only supported through sysfs.
++		 * For configuration non-zero value is to be returned to avoid thermal
++		 * statistics update.
++		 */
++		config = 0; /*1*/;
  		state -= MLXREG_FAN_MAX_STATE;
  		for (i = 0; i < state; i++)
  			fan->cooling_levels[i] = state;
-@@ -342,8 +344,9 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
- 		}
+@@ -343,7 +349,7 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
  
  		cur_state = MLXREG_FAN_PWM_DUTY2STATE(regval);
-+		/* Return non-zero value in case only configuration is perfromed through sysfs. */
  		if (state < cur_state)
 -			return 0;
-+			return 1;
++			return config;
  
  		state = cur_state;
  	}
-@@ -359,7 +362,8 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
+@@ -359,7 +365,7 @@ static int mlxreg_fan_set_cur_state(struct thermal_cooling_device *cdev,
  		dev_err(fan->dev, "Failed to write PWM duty\n");
  		return err;
  	}
 -	return 0;
-+	/* Return non-zero value if current state has been enforced through sysfs. */
-+	return (config) ? 1 : 0;
++	return config;
  }
  
  static const struct thermal_cooling_device_ops mlxreg_fan_cooling_ops = {

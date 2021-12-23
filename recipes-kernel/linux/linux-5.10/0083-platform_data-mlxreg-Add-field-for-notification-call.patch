@@ -1,8 +1,8 @@
-From 23fea39fe3aad86dc5b444002f2358aed9d82376 Mon Sep 17 00:00:00 2001
+From 9ce4ea44f8db74363373893c5f958eea22c85574 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 7 Oct 2021 19:02:55 +0000
-Subject: [PATCH backport 5.10/Alligator 2/9] platform_data/mlxreg: Add field
- for notification callback
+Subject: [PATCH backport for v5.10 83/97] platform_data/mlxreg: Add field for
+ notification callback
 
 Add notification callback to inform caller that platform driver probing
 has been completed. It allows to caller to perform some initialization
@@ -14,7 +14,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 4 insertions(+)
 
 diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
-index 40185f9d7..a6bd74e29 100644
+index 40185f9d7c14..a6bd74e29b6b 100644
 --- a/include/linux/platform_data/mlxreg.h
 +++ b/include/linux/platform_data/mlxreg.h
 @@ -216,6 +216,8 @@ struct mlxreg_core_platform_data {

@@ -1,7 +1,7 @@
-From 27cf01593498fca71f3eb9c896931c57bb339495 Mon Sep 17 00:00:00 2001
+From b9608ecd90edc2da45a38ec20e67f92643053a49 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Wed, 18 Aug 2021 10:13:47 +0300
-Subject: [PATCH backport v.4.19 13/13] ethtool: Add transceiver module
+Subject: [PATCH backport for v5.10 80/97] ethtool: Add transceiver module
  extended states
 
 Add an extended state and two extended sub-states to describe link
@@ -30,8 +30,8 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
 ---
  Documentation/networking/ethtool-netlink.rst | 12 ++++++++++++
  include/linux/ethtool.h                      |  1 +
- include/uapi/linux/ethtool.h                 |  7 +++++++
- 3 files changed, 20 insertions(+)
+ include/uapi/linux/ethtool.h                 |  1 +
+ 3 files changed, 14 insertions(+)
 
 diff --git a/Documentation/networking/ethtool-netlink.rst b/Documentation/networking/ethtool-netlink.rst
 index 9de7c5a4baef..9403a0f7e52a 100644
@@ -76,7 +76,7 @@ index 2b2c65f7e753..e43e864404ad 100644
  	};
  };
 diff --git a/include/uapi/linux/ethtool.h b/include/uapi/linux/ethtool.h
-index ffcbc3df4ab1..d47883810114 100644
+index 7a799291514b..1a58c194b215 100644
 --- a/include/uapi/linux/ethtool.h
 +++ b/include/uapi/linux/ethtool.h
 @@ -593,6 +593,7 @@ enum ethtool_link_ext_state {
@@ -85,19 +85,6 @@ index ffcbc3df4ab1..d47883810114 100644
  	ETHTOOL_LINK_EXT_STATE_OVERHEAT,
 +	ETHTOOL_LINK_EXT_STATE_MODULE,
  };
- 
- /**
-@@ -649,6 +650,12 @@ enum ethtool_link_ext_substate_cable_issue {
- 	ETHTOOL_LINK_EXT_SUBSTATE_CI_CABLE_TEST_FAILURE,
- };
- 
-+/* More information in addition to ETHTOOL_LINK_EXT_STATE_MODULE. */
-+enum ethtool_link_ext_substate_module {
-+	ETHTOOL_LINK_EXT_SUBSTATE_MODULE_LOW_POWER_MODE = 1,
-+	ETHTOOL_LINK_EXT_SUBSTATE_MODULE_CMIS_NOT_READY,
-+};
-+
- #define ETH_GSTRING_LEN		32
  
  /**
 -- 
