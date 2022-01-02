@@ -730,6 +730,8 @@ msn_xh3000_specific()
 	connect_table=(${mqm8700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	hotplug_fans=0
+	hotplug_psus=0
+	hotplug_pwrs=0
 	max_tachos=0
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
