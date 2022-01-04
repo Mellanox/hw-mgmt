@@ -50,6 +50,7 @@ import os
 
 import hw_management_psu_fw_update_common as psu_upd_cmn
 
+TOOL_VERSION = '1.0'
 MFR_FWUPLOAD_MODE = 0xd6
 MFR_FWUPLOAD = 0xd7
 MFR_FWUPLOAD_STATUS = 0xd2
@@ -63,7 +64,6 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
     ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())
-        print(ascii_str)
         return ascii_str
 
 
@@ -173,6 +173,7 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
     """
     # Validate we need update FW
     current_fw_rev = read_mfr_fw_revision(i2c_bus, i2c_addr)
+    print(current_fw_rev)
 
     retry_cnt = 0
     while True:
@@ -210,8 +211,9 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
             time.sleep(120)
             # Check FW revision changed. if no - fail.
             new_fw_rev = read_mfr_fw_revision(i2c_bus, i2c_addr)
+            print(current_fw_rev)
             if new_fw_rev != current_fw_rev:
-                print("FW Update successfull.")
+                print("FW Update successful.")
                 exit(0)
             else:
                 print("FW version not changed.")
@@ -229,10 +231,22 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required arguments')
-    required.add_argument('-i', "--input_file", required=True)
+    parser.add_argument('-i', "--input_file", required=False)
     required.add_argument('-b', "--i2c_bus", type=int, default=0, required=True)
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
+    required.add_argument('-v', "--version", type=bool, nargs='?',
+                        const=True, default=False)
     args = parser.parse_args()
+
+    if args.version:
+        print("Delta FW update tool version:{}".format(TOOL_VERSION))
+        fw_rev = read_mfr_fw_revision(args.i2c_bus, args.i2c_addr)
+        print("PSU FW version:{} (BUS:{}, Addr:{})".format(fw_rev, args.i2c_bus, args.i2c_addr))
+        exit(0)
+
+    if not vars(args)['input_file']:
+        parser.error('The --input_file(-i) is required')
+        exit(1)
 
     psu_upd_cmn.pmbus_read_mfr_id(args.i2c_bus, args.i2c_addr)
     psu_upd_cmn.pmbus_read_mfr_model(args.i2c_bus, args.i2c_addr)

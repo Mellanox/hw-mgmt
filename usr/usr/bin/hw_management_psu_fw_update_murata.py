@@ -37,13 +37,12 @@
 Created on June 15, 2021
 
 Author: Mykola Kostenok <c_mykolak@nvidia.com>
-Version: 0.1
+Version: 1.0
 
 Description:
 Murata PSU FW update tool.
 
 '''
-
 import os
 import re
 import time
@@ -52,6 +51,7 @@ from textwrap import wrap
 
 import hw_management_psu_fw_update_common as psu_upd_cmn
 
+TOOL_VERSION = '1.0'
 PS_STATUS_ADDR = 0xE0
 UPGRADE_STATUS_ADDR = 0xFA
 BOOTLOADER_STATUS_ADDR = 0xFB
@@ -71,7 +71,6 @@ def read_murata_fw_revision(i2c_bus, i2c_addr, primary):
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         psu_upd_cmn.pmbus_page(i2c_bus, i2c_addr, 0)
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
-        print(ascii_str)
         return ascii_str
 
 
@@ -255,6 +254,7 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
     if continue_update != True:
         # 1. Read current firmware revision using command the READ_MFG_FW_REVISION.
         current_fw_rev = read_murata_fw_revision(i2c_bus, i2c_addr, primary)
+        print(current_fw_rev)
 
         check_power_supply_status(i2c_bus, i2c_addr)
 
@@ -320,8 +320,10 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
     time.sleep(2)
     # 13. To confirm the Power Supply is running upgraded firmware, send the READ_MFG_FW_REVISION command.
     new_fw_rev = read_murata_fw_revision(i2c_bus, i2c_addr, primary)
+    print(new_fw_rev)
+    
     if new_fw_rev != current_fw_rev:
-        print("FW Update successfull.")
+        print("FW Update successful.")
         exit(0)
     else:
         print("FW version not changed.")
@@ -350,7 +352,7 @@ def detect_address_60(i2c_bus, proceed):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required arguments')
-    required.add_argument('-i', "--input_file", required=True)
+    parser.add_argument('-i', "--input_file")
     required.add_argument('-b', "--i2c_bus", type=int, default=0, required=True)
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
     parser.add_argument('-p', "--proceed", type=bool, nargs='?',
@@ -363,6 +365,8 @@ if __name__ == '__main__':
                         const=True, default=False)
     parser.add_argument('-S', "--skip_redundancy_check", type=bool, nargs='?',
                         const=True, default=False)
+    parser.add_argument('-v', "--version", type=bool, nargs='?',
+                        const=True, default=False)
     args = parser.parse_args()
 
     #print('Input args "', args.input_file, args.i2c_bus, args.i2c_addr)
@@ -374,12 +378,23 @@ if __name__ == '__main__':
     # poll_upgrade_status(i2c_bus, i2c_adr)
     # bootloader_status(i2c_bus, i2c_adr)
     # burn_fw_file(i2c_bus, i2c_addr)
-
+    if args.version:
+        print("Murrata FW update tool version:{}".format(TOOL_VERSION))
+        fw_rev = read_murata_fw_revision(args.i2c_bus, args.i2c_addr, args.primary)
+        print("PSU FW version:{} (BUS:{}, Addr:{}, primary:{})".format(fw_rev,
+                                                                       args.i2c_bus, 
+                                                                       args.i2c_addr,
+                                                                       args.primary))
+        exit(0)
 
     if args.reset_and_exit:
         power_supply_reset(args.i2c_bus, args.i2c_addr)
         print("Send reset command i2c_bus {}, i2c_addr {}".format(args.i2c_bus, args.i2c_addr))
         exit(0)
+
+    if not vars(args)['input_file']:
+        parser.error('The --input_file(-i) is required')
+        exit(1)
 
     if args.cpld_remap:
         os.popen("iorw -w -b 0x2537 -l 1 -v 0x80").read()
