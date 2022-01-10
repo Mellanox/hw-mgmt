@@ -44,6 +44,7 @@ events_path=$hw_management_path/events
 thermal_path=$hw_management_path/thermal
 jtag_path=$hw_management_path/jtag
 power_path=$hw_management_path/power
+fw_path=$hw_management_path/firmware
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
 board_type_file=/sys/devices/virtual/dmi/id/board_name
