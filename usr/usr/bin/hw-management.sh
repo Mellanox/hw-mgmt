@@ -1337,6 +1337,9 @@ create_symbolic_links()
 	if [ ! -d $events_path ]; then
 		mkdir $events_path
 	fi
+	if [ ! -d $fw_path ]; then
+		mkdir $fw_path
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
