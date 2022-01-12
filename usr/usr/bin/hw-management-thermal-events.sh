@@ -660,18 +660,12 @@ if [ "$1" == "add" ]; then
 		# PSU FW VER
 		mfr=$(grep MFR_NAME $eeprom_path/"$2"_vpd | awk '{print $2}')
 		if echo $mfr | grep -iq "Murata"; then
-			ps_ver=$(hw_management_psu_fw_update_murata.py -b $bus -a $psu_addr -v |
-				grep PSU | awk '{print $3}' | awk -F: '{print $2}')
-			echo $ps_ver > $fw_path/"$2"_fw
-			ps_ver=$(hw_management_psu_fw_update_murata.py -P -b $bus -a $psu_addr -v |
-				grep PSU | awk '{print $3}' | awk -F: '{print $2}')
-			echo $ps_ver > $fw_path/"$2"_fw_primary
+			hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr > $fw_path/"$2"_fw
+			hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr -P > $fw_path/"$2"_fw_primary
 		elif echo $mfr | grep -iq "Delta"; then
 			# Skip SN2201, FW update is not supported on this system
 			if [ "$board_type" != "VMOD0014" ]; then
-				ps_ver=$(hw_management_psu_fw_update_delta.py -b $bus -a $psu_addr -v |
-					grep PSU | awk '{print $3}' | awk -F: '{print $2}')
-				echo $ps_ver > $fw_path/"$2"_fw
+				hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr > $fw_path/"$2"_fw
 			fi
 		fi
 
