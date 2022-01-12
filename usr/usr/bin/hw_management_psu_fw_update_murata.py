@@ -379,12 +379,8 @@ if __name__ == '__main__':
     # bootloader_status(i2c_bus, i2c_adr)
     # burn_fw_file(i2c_bus, i2c_addr)
     if args.version:
-        print("Murrata FW update tool version:{}".format(TOOL_VERSION))
         fw_rev = read_murata_fw_revision(args.i2c_bus, args.i2c_addr, args.primary)
-        print("PSU FW version:{} (BUS:{}, Addr:{}, primary:{})".format(fw_rev,
-                                                                       args.i2c_bus, 
-                                                                       args.i2c_addr,
-                                                                       args.primary))
+        print(fw_rev)
         exit(0)
 
     if args.reset_and_exit:

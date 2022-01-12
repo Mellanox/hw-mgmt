@@ -239,9 +239,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.version:
-        print("Delta FW update tool version:{}".format(TOOL_VERSION))
         fw_rev = read_mfr_fw_revision(args.i2c_bus, args.i2c_addr)
-        print("PSU FW version:{} (BUS:{}, Addr:{})".format(fw_rev, args.i2c_bus, args.i2c_addr))
+        print(fw_rev)
         exit(0)
 
     if not vars(args)['input_file']:
