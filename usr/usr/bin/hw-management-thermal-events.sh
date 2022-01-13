@@ -659,14 +659,24 @@ if [ "$1" == "add" ]; then
 
 		# PSU FW VER
 		mfr=$(grep MFR_NAME $eeprom_path/"$2"_vpd | awk '{print $2}')
+		cap=$(grep CAPACITY $eeprom_path/"$2"_vpd | awk '{print $2}')
 		if echo $mfr | grep -iq "Murata"; then
-			hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr > $fw_path/"$2"_fw
-			hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr -P > $fw_path/"$2"_fw_primary
-		elif echo $mfr | grep -iq "Delta"; then
-			# Skip SN2201, FW update is not supported on this system
-			if [ "$board_type" != "VMOD0014" ]; then
-				hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr > $fw_path/"$2"_fw
+			# Support FW update only for specific Murata PSU capacities
+			fw_ver="N/A"
+			fw_primary_ver="N/A"
+			if [ "$cap" == "1500" -o "$cap" == "2000" ]; then
+				fw_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr)
+				fw_primary_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr -P)
 			fi
+			echo $fw_ver > $fw_path/"$2"_fw_ver
+			echo $fw_primary_ver > $fw_path/"$2"_fw_primary_ver
+		elif echo $mfr | grep -iq "Delta"; then
+			# Support FW update only for specific Delta PSU capacities
+			fw_ver="N/A"
+			if [ "$cap" == "550" ]; then
+				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+			fi
+			echo $fw_ver > $fw_path/"$2"_fw_ver
 		fi
 
 	fi
