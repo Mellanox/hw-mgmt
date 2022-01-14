@@ -70,7 +70,7 @@ thermal_type_full=100
 
 max_tachos=14
 i2c_asic_bus_default=2
-i2c_bus_max=10
+i2c_bus_max=26
 lc_i2c_bus_min=34
 lc_i2c_bus_max=43
 i2c_bus_offset=0
@@ -179,3 +179,30 @@ change_file_counter()
 	echo $counter > $file_name
 }
 
+connect_device()
+{
+	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
+		addr=$(echo "$2" | tail -c +3)
+		bus=$(($3+i2c_bus_offset))
+		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
+		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
+		fi
+	fi
+
+	return 0
+}
+
+disconnect_device()
+{
+	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
+		addr=$(echo "$1" | tail -c +3)
+		bus=$(($2+i2c_bus_offset))
+		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
+		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		fi
+	fi
+
+	return 0
+}

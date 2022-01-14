@@ -264,7 +264,7 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c32 0x53 7 \
 			24c512 0x51 8)
-			
+
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x22 5 \
 			mp2975 0x23 5 \
@@ -276,6 +276,18 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
+p4697_base_connect_table=(    max11603 0x6d 7 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
+p4697_asic_i2c_bus_connect_table=(  mp2975 0x23 18 voltmon1 \
+			mp2975 0x25 18 voltmon2 \
+			mp2975 0x27 18 voltmon3 \
+			mp2975 0x23 23 voltmon4 \
+			mp2975 0x25 23 voltmon5 \
+			mp2975 0x27 23 voltmon6)
+  
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
 	mp2975 0x66 5 \
@@ -552,6 +564,21 @@ add_cpu_board_to_connection_table()
 	fi
 
 	connect_table+=(${cpu_connection_table[@]})
+}
+
+add_i2c_dynamic_bus_dev_connection_table()
+{
+	connection_table=("$@")
+	dynamic_i2cbus_connection_table=""
+
+	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devs
+	for ((i=0; i<${#connection_table[@]}; i+=4)); do
+		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
+		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
+		dynamic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
+	done
+
+	connect_table+=(${dynamic_i2cbus_connection_table[@]})
 }
 
 msn274x_specific()
@@ -965,6 +992,26 @@ e3597_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/e3597_sensors.conf"
+}
+
+p4697_specific()
+{
+	connect_table=(${p4697_base_connect_table[@]})
+
+	add_i2c_dynamic_bus_dev_connection_table "${p4697_asic_i2c_bus_connect_table[@]}"
+	add_cpu_board_to_connection_table
+
+	thermal_type=$thermal_type_def
+	max_tachos=14
+	hotplug_fans=7
+	i2c_asic_addr=0xff
+
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 }
 
@@ -1020,6 +1067,9 @@ msn_spc3_common()
 		;;
 		HI132)
 			e3597_specific
+		;;
+		HI142)
+			p4697_specific
 		;;
 		*)
 			msn47xx_specific
@@ -1150,6 +1200,9 @@ check_system()
 				SN2201*)
 					sn2201_specific
 					;;
+				P4697)
+					p4697_specific
+					;;
 				*)
 					# Check marginal system, system without SMBIOS customization,
 					# only on old types of Mellanox switches.
@@ -1179,34 +1232,6 @@ check_system()
 	esac
 	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
-}
-
-connect_device()
-{
-	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
-		addr=$(echo "$2" | tail -c +3)
-		bus=$(($3+i2c_bus_offset))
-		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
-		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
-			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-		fi
-	fi
-
-	return 0
-}
-
-disconnect_device()
-{
-	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
-		addr=$(echo "$1" | tail -c +3)
-		bus=$(($2+i2c_bus_offset))
-		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
-		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
-			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
-		fi
-	fi
-
-	return 0
 }
 
 create_event_files()

@@ -401,6 +401,20 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-002e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon13 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-002e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon13 %S %p"
 
+# Kong ASICs i2c buses 18..26
+SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-[1-2][0-9]", DRIVERS="nvidia", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add i2c_bus %S %p"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-[1-2][0-9]", DRIVERS="nvidia", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove i2c_bus %S %p"
+
+# Kong voltmon
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-0023/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-0023/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-0025/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-0025/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-0027/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-0027/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
+
 # SN2201 voltage controllers 1. powr1014, 2. ir35223
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
