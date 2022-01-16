@@ -234,6 +234,8 @@ if __name__ == '__main__':
     parser.add_argument('-i', "--input_file", required=False)
     required.add_argument('-b', "--i2c_bus", type=int, default=0, required=True)
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
+    parser.add_argument('-S', "--skip_redundancy_check", type=bool, nargs='?',
+                        const=True, default=False)
     required.add_argument('-v', "--version", type=bool, nargs='?',
                         const=True, default=False)
     args = parser.parse_args()
@@ -251,6 +253,7 @@ if __name__ == '__main__':
     psu_upd_cmn.pmbus_read_mfr_model(args.i2c_bus, args.i2c_addr)
     psu_upd_cmn.pmbus_read_mfr_revision(args.i2c_bus, args.i2c_addr)
 
-    psu_upd_cmn.check_psu_redundancy(False, args.i2c_addr)
+    if not args.skip_redundancy_check:
+        psu_upd_cmn.check_psu_redundancy(False, args.i2c_addr)
 
     update_delta(args.i2c_bus, args.i2c_addr, args.input_file)
