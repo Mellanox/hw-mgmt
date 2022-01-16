@@ -309,6 +309,10 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
         print("checksum test fails, the target microcontroller remains in BOOTLOAD Mode")
         exit(1)
 
+    if args.skip_redundancy_check:
+         print("Not checking FW version after update. Use -v option after power cycle.")
+         exit(0)
+
     # 11. Repeat steps 1-9 to upgrade remaining microcontrollers.
     # Now we updating only secondary, so nothing todo here.
     # 12. Upgrading is complete, send the POWER_SUPPLY_RESET command.
