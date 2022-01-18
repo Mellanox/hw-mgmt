@@ -264,11 +264,12 @@ if [ "$1" == "add" ]; then
 						*gear*)
 							lock_service_state_change
 							change_file_counter "$cpath"/gearbox_counter 1
+							gearbox_counter=`cat "$cpath"/gearbox_counter`
 							if [ "$lcmatch" == "linecard" ]; then
 								change_file_counter "$config_path"/gearbox_counter 1
 							fi
-							unlock_service_state_change
 							ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							unlock_service_state_change
 							;;
 						*)
 							;;
