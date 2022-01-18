@@ -410,15 +410,28 @@ unk_dir_trust_t10=(35000 12 40000 15 $max_amb 15)
 unk_dir_untrust_t10=(35000 12 40000 15 $max_amb 15)
 
 # Class t11 for SN2201. 
-# Use the default thermal class temporary. 
-# It should be updated once get the correct value.
-# For Test, need update.
-p2c_dir_trust_t11=(45000 16  $max_amb 16)
-p2c_dir_untrust_t11=(45000 16  $max_amb 16)
-c2p_dir_trust_t11=(45000 16  $max_amb 16)
-c2p_dir_untrust_t11=(45000 16  $max_amb 16)
-unk_dir_trust_t11=(45000 16  $max_amb 16)
-unk_dir_untrust_t11=(45000 16  $max_amb 16)
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		30	30	30	30	30	30
+#  0-5		30	30	30	30	30	30
+#  5-10		30	30	30	30	30	30
+# 10-15		30	30	30	30	30	30
+# 15-20		30	40	30	30	30	40
+# 20-25		30	50	30	40	30	50
+# 25-30		30	60	30	50	30	60
+# 30-35		40	70	30	60	40	70
+# 35-40		50	80	40	70	50	80
+# 40-45		60	90	50	80	60	90
+
+p2c_dir_trust_t11=(30000 13 35000 14 40000 15 45000 16 $max_amb 16)
+p2c_dir_untrust_t11=(15000 13 20000 14 25000 15 30000 16 35000 17 40000 18 45000 19 $max_amb 19)
+c2p_dir_trust_t11=(35000 13 40000 14 45000 15 $max_amb 15)
+c2p_dir_untrust_t11=(20000 13 25000 14 30000 15 35000 16 40000 17 45000 18 $max_amb 18)
+unk_dir_trust_t11=(30000 13 35000 14 40000 15 45000 16 $max_amb 16)
+unk_dir_untrust_t11=(15000 13 20000 14 25000 15 30000 16 35000 17 40000 18 45000 19 $max_amb 19)
 
 # Class t12 for MSN4600
 # Direction	P2C		C2P		Unknown
