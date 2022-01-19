@@ -743,6 +743,12 @@ index 000000000..1a2103778
 +		.mode = 0644,
 +	},
 +	{
++		.label = "pwr_cycle",
++		.reg = NVSW_SN2201_PSU_CTRL_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0644,
++	},
++	{
 +		.label = "asic_health",
 +		.reg = NVSW_SN2201_SYS_STATUS_OFFSET,
 +		.mask = GENMASK(4, 3),
@@ -764,12 +770,6 @@ index 000000000..1a2103778
 +	{
 +		.label = "mac_reset",
 +		.reg = NVSW_SN2201_SYS_RST_STATUS_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(2),
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "pwr_cycle",
-+		.reg = NVSW_SN2201_RST_SW_CTRL_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0644,
 +	},
@@ -1288,6 +1288,5 @@ index 000000000..1a2103778
 +MODULE_DESCRIPTION("Nvidia sn2201 platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
 +MODULE_ALIAS("platform:nvsw-sn2201");
--- 
+--
 2.20.1
-
