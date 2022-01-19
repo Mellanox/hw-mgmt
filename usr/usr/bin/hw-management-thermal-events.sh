@@ -464,7 +464,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		if [ ! -f /etc/init.d/sxdkernel ]; then
+		if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 			sleep 3
 			/usr/bin/hw-management.sh chipup
 		fi
@@ -696,7 +696,7 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -f /etc/init.d/sxdkernel ]; then
+			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup
 			fi
@@ -708,7 +708,7 @@ elif [ "$1" == "change" ]; then
 				asic_health=$(< "$4""$5"/asic1)
 			fi
 			if [ "$asic_health" -eq 2 ]; then
-				if [ ! -f /etc/init.d/sxdkernel ]; then
+				if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 					sleep 3
 					/usr/bin/hw-management.sh chipup
 				fi
