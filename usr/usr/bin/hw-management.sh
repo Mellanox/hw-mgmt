@@ -317,19 +317,41 @@ function set_i2c_bus_frequency_400KHz()
 {
 	# Speed-up ASIC I2C driver probing by setting I2C frequency to 400KHz.
 	# Relevant only to particular system types.
-	if [ -f $config_path/default_i2c_freq ]; then
-		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
-	fi
+	board=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0001)
+	VMOD0002)
+	VMOD0003)
+	VMOD0004)
+	VMOD0005)
+		if [ -f $config_path/default_i2c_freq ]; then
+			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
+		fi
+		;;
+	default:
+		;;
+	easc
 }
 
 function restore_i2c_bus_frequency_default()
 {
 	# Restore I2C base frequency to the default value.
 	# Relevant only to particular system types.
-	if [ -f $config_path/default_i2c_freq ]; then
-		i2c_freq=$(< $config_path/default_i2c_freq)
-		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
-	fi
+	board=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0001)
+	VMOD0002)
+	VMOD0003)
+	VMOD0004)
+	VMOD0005)
+		if [ -f $config_path/default_i2c_freq ]; then
+			i2c_freq=$(< $config_path/default_i2c_freq)
+			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
+		fi
+		;;
+	default:
+		;;
+	easc
 }
 
 function find_regio_sysfs_path()
@@ -1448,7 +1470,9 @@ do_chip_up_down()
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
+			set_i2c_bus_frequency_400KHz
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
+			restore_i2c_bus_frequency_default
 		fi
 		echo 0 > $config_path/sfp_counter
 		unlock_service_state_change
