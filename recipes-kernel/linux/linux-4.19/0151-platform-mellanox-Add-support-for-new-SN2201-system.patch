@@ -487,28 +487,28 @@ index 000000000..1a2103778
 +		.reg = NVSW_SN2201_FAN_PRSNT_STATUS_OFFSET,
 +		.mask = BIT(0),
 +		.hpdev.brdinfo = &nvsw_sn2201_fan_devices[0],
-+		.hpdev.nr = NVSW_SN2201_FAN_MUX_CH0_NR,
++		.hpdev.nr = NVSW_SN2201_NR_NONE,
 +	},
 +	{
 +		.label = "fan2",
 +		.reg = NVSW_SN2201_FAN_PRSNT_STATUS_OFFSET,
 +		.mask = BIT(1),
 +		.hpdev.brdinfo = &nvsw_sn2201_fan_devices[1],
-+		.hpdev.nr = NVSW_SN2201_FAN_MUX_CH1_NR,
++		.hpdev.nr = NVSW_SN2201_NR_NONE,
 +	},
 +	{
 +		.label = "fan3",
 +		.reg = NVSW_SN2201_FAN_PRSNT_STATUS_OFFSET,
 +		.mask = BIT(2),
 +		.hpdev.brdinfo = &nvsw_sn2201_fan_devices[2],
-+		.hpdev.nr = NVSW_SN2201_FAN_MUX_CH2_NR,
++		.hpdev.nr = NVSW_SN2201_NR_NONE,
 +	},
 +	{
 +		.label = "fan4",
 +		.reg = NVSW_SN2201_FAN_PRSNT_STATUS_OFFSET,
 +		.mask = BIT(3),
 +		.hpdev.brdinfo = &nvsw_sn2201_fan_devices[3],
-+		.hpdev.nr = NVSW_SN2201_FAN_MUX_CH3_NR,
++		.hpdev.nr = NVSW_SN2201_NR_NONE,
 +	},
 +};
 +

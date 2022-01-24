@@ -285,6 +285,15 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC8_VERIFIED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 1"
 
 # SN2201 hotpug events.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN2 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN2}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN2 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN3}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN3 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN3}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN3 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN4 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN4}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN4 1"
+
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU2 0"
