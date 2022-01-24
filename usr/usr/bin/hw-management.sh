@@ -50,6 +50,10 @@
 #  SN38*|SN37*|SN34*|SN35*
 #  SN47*
 #  QM97*
+#  E3597
+#  SN2201
+#  XH3000
+#  P2317
 # Available options:
 # start	- load the kernel drivers required for chassis hardware management,
 #	  connect drivers to devices.
@@ -1083,6 +1087,15 @@ sn2201_specific()
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
+p2317_specific()
+{
+	echo 1 > "$config_path"/cpld_num
+	# Set time out for Global Write Protect in msec.
+	echo 2000 > "$config_path"/global_wp_timeout
+	echo 100 > "$config_path"/global_wp_wait_step
+	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
+}
+
 check_system()
 {
 	check_cpu_type
@@ -1118,6 +1131,9 @@ check_system()
 			;;
 		VMOD0014)
 			sn2201_specific
+			;;
+		VMOD0019)
+			p2317_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
