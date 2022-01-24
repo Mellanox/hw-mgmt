@@ -395,6 +395,75 @@ function set_lc_fpga_combined_version()
 	echo "$str" > "$lc_path"/system/fpga
 }
 
+connect_device()
+{
+	local addr=$2
+	local bus=$3
+	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$bus"-00"$addr" ] &&
+		   [ ! -d /sys/bus/i2c/devices/"$bus"-000"$addr" ]; then
+			echo "$1" "$addr" > /sys/bus/i2c/devices/i2c-"$bus"/new_device
+		fi
+	fi
+}
+
+disconnect_device()
+{
+	local addr=$2
+	local bus=$3
+	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
+		if [ -d /sys/bus/i2c/devices/"$bus"-00"$addr" ] ||
+		   [ -d /sys/bus/i2c/devices/"$bus"-000"$addr" ]; then
+			echo "$1" > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
+		fi
+	fi
+}
+
+function handle_hotplug_fan_event()
+{
+	local attribute=$1
+	local event=$2
+	local bus=
+	local addr=
+
+	case "$board_type" in
+	VMOD0014)
+		case $attribute in
+		fan1)
+			bus=$i2c_bus_def_off_eeprom_fan1
+			addr=0x50
+			;;
+		fan2)
+			bus=$i2c_bus_def_off_eeprom_fan2
+			addr=0x51
+			;;
+		fan3)
+			bus=$i2c_bus_def_off_eeprom_fan3
+			addr=0x52
+			;;
+		fan4)
+			bus=$i2c_bus_def_off_eeprom_fan4
+			addr=0x53
+			;;
+		*)
+			;;
+		esac
+		eeprom_type=24c02
+		if [ "$event" -eq 1 ]; then
+			connect_device "$eeprom_type" "$addr" "$bus"
+		else
+			disconnect_device "$eeprom_type" "$addr" "$bus"
+		fi
+		;;
+	*)
+		;;
+	esac
+
+	if [ "$event" -eq 1 ]; then
+		set_fan_direction "$attribute" "$event"
+	fi
+}
+
 function handle_hotplug_event()
 {
 	local attribute
@@ -403,21 +472,23 @@ function handle_hotplug_event()
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
 	
-	if [ -f $events_path/"$attribute" ]; then
-		echo "$event" > $events_path/"$attribute"
+	if [ -f "$events_path"/"$attribute" ]; then
+		echo "$event" > "$events_path"/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
-
-		case "$attribute" in
-		lc*_active)
-			linecard=`echo ${attribute:0:3}`
-			lc_path="$hw_management_path"/"$linecard"
-			set_lc_fpga_combined_version "$lc_path"
-			;;
-		*)
-			;;
-		esac
 	fi
-	set_fan_direction "$attribute" "$event"
+
+	case "$attribute" in
+	lc*_active)
+		linecard=$(echo ${attribute:0:3})
+		lc_path="$hw_management_path"/"$linecard"
+		set_lc_fpga_combined_version "$lc_path"
+		;;
+	fan*)
+		handle_hotplug_fan_event "$attribute" "$event"
+		;;
+	*)
+		;;
+	esac
 }
 
 if [ "$1" == "add" ]; then
