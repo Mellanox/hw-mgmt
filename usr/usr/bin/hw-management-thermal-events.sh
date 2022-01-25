@@ -687,6 +687,26 @@ if [ "$1" == "add" ]; then
 		fi
 		/usr/bin/hw-management.sh chipup
 	fi
+	if [ "$2" == "nvme_temp" ]; then
+		dev_name=$(cat "$3""$4"/name)
+		if [ "$dev_name" == "nvme" ]; then
+			for i in {1..4}; do
+				if [ -f "$3""$4"/temp"$i"_input ]; then
+					label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
+					name=$(echo "$label" | awk '{print tolower($0)}')
+					ln -sf "$3""$4"/temp"$i"_input "$thermal_path"/"$dev_name"_"$name"
+					# Make links only to 1st sensor - Composite temperature.
+					# Normaslized composite temperature values are taken to thermal management.
+					if [ "$i" -eq 1 ]; then
+						ln -sf "$3""$4"/temp"$i"_alarm "$thermal_path"/"$dev_name"_"$name"_alarm
+						ln -sf "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
+						ln -sf "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
+						ln -sf "$3""$4"/temp"$i"_min "$thermal_path"/"$dev_name"_"$name"_min
+					fi
+				fi
+			done
+		fi
+	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
