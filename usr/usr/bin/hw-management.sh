@@ -1242,7 +1242,7 @@ create_event_files()
 	fi
 	if [ $hotplug_linecards -ne 0 ]; then
 		for ((i=1; i<=hotplug_linecards; i+=1)); do
-			touch $events_path/lc"$i"_prsnt
+			touch $events_path/lc"$i"_present
 			touch $events_path/lc"$i"_verified
 			touch $events_path/lc"$i"_powered
 			touch $events_path/lc"$i"_ready
