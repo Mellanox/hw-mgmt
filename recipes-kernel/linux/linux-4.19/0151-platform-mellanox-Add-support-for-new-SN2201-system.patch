@@ -63,7 +63,7 @@ new file mode 100644
 index 000000000..1a2103778
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1224 @@
+@@ -0,0 +1,1221 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -586,9 +586,6 @@ index 000000000..1a2103778
 +		I2C_BOARD_INFO("24c02", 0x57),
 +	},
 +	{
-+		I2C_BOARD_INFO("lm75", 0x4a),
-+	},
-+	{
 +		I2C_BOARD_INFO("lm75", 0x4b),
 +	},
 +	{
@@ -792,31 +789,31 @@ index 000000000..1a2103778
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_aux_pwr_or_ref",
++		.label = "reset_aux_pwr_or_fu",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_pwr_fail",
++		.label = "reset_dc_pwr_fail",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_sw_reset",
++		.label = "reset_sw",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_fw_reset",
++		.label = "reset_fw",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_hotswap_or_wd",
++		.label = "reset_wd",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
@@ -1284,7 +1281,7 @@ index 000000000..1a2103778
 +
 +module_platform_driver(nvsw_sn2201_driver);
 +
-+MODULE_AUTHOR("Claud Chang <claud.chang@deltaww.com>");
++MODULE_AUTHOR("Nvidia");
 +MODULE_DESCRIPTION("Nvidia sn2201 platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
 +MODULE_ALIAS("platform:nvsw-sn2201");
