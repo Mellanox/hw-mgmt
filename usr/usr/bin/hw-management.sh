@@ -1083,6 +1083,16 @@ sn2201_specific()
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
+p2317_specific()
+{
+	add_cpu_board_to_connection_table
+	echo 1 > $config_path/cpld_num
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
+}
+
 check_system()
 {
 	check_cpu_type
@@ -1115,6 +1125,9 @@ check_system()
 			;;
 		VMOD0011)
 			msn48xx_specific
+			;;
+		VMOD0012)
+			p2317_specific
 			;;
 		VMOD0014)
 			sn2201_specific

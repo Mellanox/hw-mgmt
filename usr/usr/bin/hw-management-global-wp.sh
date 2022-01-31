@@ -73,7 +73,7 @@ do_global_wp_release_restore()
 			echo 0 > "$system_path"/global_wp_request
 			return 0
 		;;
-		*)			
+		*)
 			return 1
 		;;
 		esac
@@ -94,7 +94,7 @@ case $ACTION in
 release|restore)
 	lock_service_state_change
 	do_global_wp_release_restore "$ACTION"
-    	ret=$?
+	ret=$?
 	unlock_service_state_change
 	exit $ret
 	;;
