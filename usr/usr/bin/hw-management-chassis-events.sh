@@ -357,6 +357,9 @@ function set_fan_direction()
 	event=$2
 	case $attribute in
 	fan*)
+		if [ -f $config_path/fan_dir_eeprom ]; then
+			return
+		fi
 		fan_dir=$(< $system_path/fan_dir)
 		fandirhex=$(printf "%x\n" "$fan_dir")
 		fan_bit_index=$(( ${attribute:3} - 1 ))
@@ -763,7 +766,12 @@ if [ "$1" == "add" ]; then
 			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
-			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
+			if [ "$board_type" == "VMOD0014" ]; then
+				fan_dir_offset=0x8
+			else
+				fan_dir_offset=$fan_dir_offset_in_vpd_eeprom_pn
+			fi
+			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
 			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
 			case $fan_direction in
 			$fan_direction_exhaust)
