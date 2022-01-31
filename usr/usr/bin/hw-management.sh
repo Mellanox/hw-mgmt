@@ -1077,6 +1077,7 @@ sn2201_specific()
 	hotplug_fans=4
 	hotplug_pwrs=2
 	hotplug_psus=2
+	echo 1 > $config_path/fan_dir_eeprom
 	echo 22000 > $config_path/fan_max_speed
 	echo 960 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
