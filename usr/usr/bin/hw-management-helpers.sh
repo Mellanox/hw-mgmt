@@ -70,6 +70,7 @@ thermal_type_full=100
 
 max_tachos=14
 i2c_asic_bus_default=2
+i2c_asic2_bus_default=3
 i2c_bus_max=10
 lc_i2c_bus_min=34
 lc_i2c_bus_max=43

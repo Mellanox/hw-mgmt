@@ -685,7 +685,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		/usr/bin/hw-management.sh chipup
+		/usr/bin/hw-management.sh chipup "$4/$5"
 	fi
 	if [ "$2" == "nvme_temp" ]; then
 		dev_name=$(cat "$3""$4"/name)
@@ -988,6 +988,6 @@ else
 		rm -f $eeprom_path/"$2"_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
-		/usr/bin/hw-management.sh chipdown
+		/usr/bin/hw-management.sh chipdown "$4/$5"
 	fi
 fi

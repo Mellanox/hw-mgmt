@@ -87,6 +87,10 @@ fan_dir_pn_offset=11
 # 46 - F, 52 - R
 fan_direction_exhaust=46
 fan_direction_intake=52
+# ASIC PCIe Ids.
+spc3_pci_id=cf70
+spc4_pci_id=cf80
+quantum2_pci_id=d2f2
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -1276,8 +1280,33 @@ get_asic_bus()
 		find_i2c_bus
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
 		echo $asic_bus > $config_path/asic_bus
+		echo $asic_bus > $config_path/asic1_i2c_bus_id
 	else
 		asic_bus=$(cat $config_path/asic_bus)
+	fi
+	return $((asic_bus))
+}
+
+get_asic2_bus()
+{
+	if [[ $i2c_asic_addr -eq 0xff ]]; then
+		log_err "This operation not supporting with current ASIC type"
+		return 0
+	fi
+	if [ ! -f "$config_path/asic_num" ]; then
+		return 0
+	fi
+	asic_num=$(< $config_path/asic_num)
+	if [ "$asic_num" -eq 1 ]; then
+		return 0
+	fi
+	i2c_asic_bus=$i2c_asic2_bus_default
+	if [ ! -f $config_path/asic2_i2c_bus_id ]; then
+		find_i2c_bus
+		asic_bus=$((i2c_asic_bus+i2c_bus_offset))
+		echo $asic_bus > $config_path/asic2_i2c_bus_id
+	else
+		asic_bus=$(cat $config_path/asic2_i2c_bus_id)
 	fi
 	return $((asic_bus))
 }
@@ -1384,12 +1413,93 @@ remove_symbolic_links()
 	fi
 }
 
+set_asic_pci_id()
+{
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	# Get ASIC PCI Ids.
+	case $sku in
+	HI122|HI123|HI124|HI126)
+		asic_pci_id=$spc3_pci_id
+		;;
+	HI130|HI140|HI141)
+		asic_pci_id=$quantum2_pci_id
+		;;
+	HI144|HI147)
+		asic_pci_id=$spc4_pci_id
+		;;
+	HI131|HI142)
+		echo 2 > "$config_path"/asic_num
+		return
+		;;
+	HI143)
+		echo 4 > "$config_path"/asic_num
+		return
+		;;
+	*)
+		echo 1 > "$config_path"/asic_num
+		return
+		;;
+	esac
+
+	asics=`lspci -nn | grep $asic_pci_id | awk '{print $1}'`
+	case $sku in
+	HI140)
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`   # 2-nd for ASIC1 because it appears first
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo 2 > "$config_path"/asic_num
+		;;
+	HI141)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo 2 > "$config_path"/asic_num
+		;;
+	HI144|HI147)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo 1 > "$config_path"/asic_num
+		;;
+	*)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo 1 > "$config_path"/asic_num
+		;;
+	esac
+
+	return
+}
+
+map_asic_pci_to_i2c_bus()
+{
+	if [ -z "$1" ]; then
+		return 0
+	fi
+	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
+	if [ "$asic_num" ] && [ "$asic_num" -gt 1 ]; then
+		pci_bus=`basename $1`
+		pci_bus="${pci_bus:5}"
+		for ((i=1; i<=asic_num; i+=1)); do
+			bus=$(< $config_path/asic"$i"_pci_bus_id)
+			if [ "$bus" == "$pci_bus" ]; then
+				i2c_bus=$(< $config_path/asic"$i"_i2c_bus_id)
+				return "$i2c_bus"
+			fi
+		done
+	fi
+	return 0
+}
+
 do_start()
 {
 	create_symbolic_links
 	check_system
+	set_asic_pci_id
 	if [[ $i2c_asic_addr -ne 0xff ]]; then
 		get_asic_bus
+		get_asic2_bus
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
@@ -1446,6 +1556,7 @@ do_stop()
 do_chip_up_down()
 {
 	action=$1
+	pci_bus=$2
 	# Add ASIC device.
 	if [[ $i2c_asic_addr -eq 0xff ]]; then
 		log_info "Current ASIC type does not support this operation type"
@@ -1462,6 +1573,14 @@ do_chip_up_down()
 	*)
 		;;
 	esac
+
+	map_asic_pci_to_i2c_bus $pci_bus
+	bus=$?
+	# TMP: Use this mapping for getting bus below. Modify it as:
+	#if [ $bus -eq 0 ]; the
+	#	get_asic_bus
+	#	bus=$?
+	#fi
 
 	# Add ASIC device.
 	get_asic_bus
@@ -1560,7 +1679,7 @@ case $ACTION in
 	stop)
 		if [ -d /var/run/hw-management ]; then
 			echo 1 > $config_path/stopping
-			do_chip_up_down 0
+			do_chip_up_down 0 "$2"
 			do_stop
 		fi
 	;;
@@ -1571,7 +1690,7 @@ case $ACTION in
 	;;
 	chipdown)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 0
+			do_chip_up_down 0 "$2"
 		fi
 	;;
 	chipupen)
