@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -293,6 +293,38 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
+
+mqm9510_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6c 5 \
+			max11603 0x6d 6 \
+			mp2975 0x62 6 \
+			mp2888 0x66 6 \
+			mp2975 0x68 6 \
+			mp2975 0x6a 6 \
+			mp2975 0x6c 6 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
+mqm9520_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6c 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8 \
+			max11603 0x6d 13 \
+			mp2975 0x62 13 \
+			mp2888 0x66 13 \
+			mp2975 0x68 13 \
+			mp2975 0x6a 13 \
+			mp2975 0x6c 13)
 
 ACTION=$1
 
@@ -952,6 +984,33 @@ mqm97xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+mqm9510_specific()
+{
+	local cpu_bus_offset=18
+	connect_table=(${mqm9510_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
+	thermal_type=$thermal_type_def
+	echo 11000 > $config_path/fan_max_speed
+	echo 2235 > $config_path/fan_min_speed
+	max_tachos=2
+	hotplug_fans=2
+	echo 4 > $config_path/cpld_num
+}
+
+mqm9520_specific()
+{
+	local cpu_bus_offset=18
+	connect_table=(${mqm9520_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
+	i2c_asic2_bus_default=10
+	thermal_type=$thermal_type_def
+	echo 11000 > $config_path/fan_max_speed
+	echo 2235 > $config_path/fan_min_speed
+	max_tachos=2
+	hotplug_fans=2
+	echo 4 > $config_path/cpld_num
+}
+
 mqm87xx_rev1_specific()
 {
 	connect_table=(${mqm8700_rev1_base_connect_table[@]})
@@ -1038,6 +1097,12 @@ msn_spc3_common()
 		;;
 		HI132)
 			e3597_specific
+		;;
+		HI140)
+			mqm9520_specific
+		;;
+		HI141)
+			mqm9510_specific
 		;;
 		*)
 			msn47xx_specific
