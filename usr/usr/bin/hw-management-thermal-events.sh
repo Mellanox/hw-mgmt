@@ -453,21 +453,27 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		check_n_link "$3""$4"/uevent $config_path/port_config_done
-		asic_health=0
-		if [ -f "$3""$4"/asic1 ]; then
-			asic_health=$(< "$3""$4"/asic1)
+		if [ ! -f "$config_path/asic_num" ]; then
+			asic_num=1
+		else
+			asic_num=$(< $config_path/asic_num)
 		fi
-		if [ "$asic_health" -ne 2 ]; then
-			exit 0
-		fi
-		find_i2c_bus
-		if [ ! -d /sys/module/mlxsw_minimal ]; then
-			modprobe mlxsw_minimal
-		fi
-		if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
-			sleep 3
-			/usr/bin/hw-management.sh chipup
-		fi
+		for ((i=1; i<=asic_num; i+=1)); do
+			asic_health=0
+			if [ -f "$3""$4"/asic"$i" ]; then
+				asic_health=$(< "$3""$4"/asic"$i")
+			fi
+			if [ "$asic_health" -ne 2 ]; then
+				exit 0
+			fi
+			if [ ! -d /sys/module/mlxsw_minimal ]; then
+				modprobe mlxsw_minimal
+			fi
+			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
+				sleep 3
+				/usr/bin/hw-management.sh chipup "$i"
+			fi
+		done
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -685,7 +691,7 @@ if [ "$1" == "add" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		/usr/bin/hw-management.sh chipup "$4/$5"
+		/usr/bin/hw-management.sh chipup 0 "$4/$5"
 	fi
 	if [ "$2" == "nvme_temp" ]; then
 		dev_name=$(cat "$3""$4"/name)
@@ -712,16 +718,21 @@ elif [ "$1" == "change" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
+		asic_index="$6"
+		asic_num=$(< $config_path/asic_num)
+		if [ "$asic_num" -lt "$asic_index" ]; then
+			exit 0
+		fi
 		if [ "$3" == "up" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
 			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 				sleep 3
-				/usr/bin/hw-management.sh chipup
+				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
-			/usr/bin/hw-management.sh chipdown
+			/usr/bin/hw-management.sh chipdown "$asic_index"
 		else
 			asic_health=0
 			if [ -f "$3""$4"/asic1 ]; then
@@ -730,10 +741,10 @@ elif [ "$1" == "change" ]; then
 			if [ "$asic_health" -eq 2 ]; then
 				if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 					sleep 3
-					/usr/bin/hw-management.sh chipup
+					/usr/bin/hw-management.sh chipup "$asic_index"
 				fi
 			else
-				/usr/bin/hw-management.sh chipdown
+				/usr/bin/hw-management.sh chipdown "$asic_index"
 			fi
 		fi
 	fi
@@ -919,7 +930,14 @@ else
 			exit 0
 		fi
 		check_n_unlink $config_path/port_config_done
-		/usr/bin/hw-management.sh chipdown
+		if [ ! -f "$config_path/asic_num" ]; then
+			asic_num=1
+		else
+			asic_num=$(< $config_path/asic_num)
+		fi
+		for ((i=1; i<=asic_num; i+=1)); do
+			/usr/bin/hw-management.sh chipdown "$i"
+		done
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
@@ -988,6 +1006,6 @@ else
 		rm -f $eeprom_path/"$2"_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
-		/usr/bin/hw-management.sh chipdown "$4/$5"
+		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 	fi
 fi
