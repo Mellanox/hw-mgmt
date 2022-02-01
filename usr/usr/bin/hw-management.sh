@@ -231,7 +231,6 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x6C 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x53 7 \
 			24c32 0x51 8)
 
 mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
@@ -242,7 +241,6 @@ mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x6c 5 \
 			adt75 0x49 7 \
 			adt75 0x4a 7 \
-			24c32 0x53 7 \
 			24c512 0x51 8)
 
 mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
@@ -266,7 +264,6 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x6e 5 \
 			adt75 0x49 7 \
 			adt75 0x4a 7 \
-			24c32 0x53 7 \
 			24c512 0x51 8)
 			
 e3597_base_connect_table=(    max11603 0x6d 5 \
@@ -1042,7 +1039,7 @@ e3597_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/e3597_sensors.conf"
 }
 
 msn_spc2_common()
