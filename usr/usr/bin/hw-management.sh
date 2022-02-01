@@ -1621,7 +1621,8 @@ do_stop()
 do_chip_up_down()
 {
 	action=$1
-	pci_bus=$2
+	asic_index=$2
+	pci_bus=$3
 	# Add ASIC device.
 	if [[ $i2c_asic_addr -eq 0xff ]]; then
 		log_info "Current ASIC type does not support this operation type"
@@ -1641,12 +1642,17 @@ do_chip_up_down()
 
 	map_asic_pci_to_i2c_bus $pci_bus
 	bus=$?
-	# TMP: Use this mapping for getting bus below. Modify it as:
+	# TMP: Use this mapping for getting bus below. Modify it as following.
 	#if [ $bus -eq 0 ]; the
-	#	get_asic_bus
+	#	# Add ASIC device.
+	#	if [ asic_index -eq 1 ]; then
+	#		get_asic_bus
+	#	else
+	#		get_asic2_bus
+	#	fi
 	#	bus=$?
 	#fi
-
+	# Remove three line below after TMP is uncommented.
 	# Add ASIC device.
 	get_asic_bus
 	bus=$?
@@ -1744,18 +1750,25 @@ case $ACTION in
 	stop)
 		if [ -d /var/run/hw-management ]; then
 			echo 1 > $config_path/stopping
-			do_chip_up_down 0 "$2"
+			if [ ! -f "$config_path/asic_num" ]; then
+				asic_num=1
+			else
+				asic_num=$(< $config_path/asic_num)
+			fi
+			for ((i=1; i<=asic_num; i+=1)); do
+				do_chip_up_down 0 "$i"
+			done
 			do_stop
 		fi
 	;;
 	chipup)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 1 "$2"
+			do_chip_up_down 1 "$2" "$3"
 		fi
 	;;
 	chipdown)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 0 "$2"
+			do_chip_up_down 0 "$2" "$3"
 		fi
 	;;
 	chipupen)
