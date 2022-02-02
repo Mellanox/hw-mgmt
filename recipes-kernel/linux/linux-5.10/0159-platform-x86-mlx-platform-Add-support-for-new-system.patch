@@ -1,7 +1,7 @@
-From 714e439b96a0aa350cf197f0b8050685b37942e8 Mon Sep 17 00:00:00 2001
+From 3ec991a1cf23be46d3268d5ee91e72f4f457d058 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Sun, 24 Oct 2021 16:26:40 +0000
-Subject: [PATCH platform-next 3/3] platform/x86: mlx-platform: Add support for
+Subject: [PATCH platform-next 3/4] platform/x86: mlx-platform: Add support for
  new system XH3000
 
 Add support for new system type XH3000, which is a water cooling
@@ -17,7 +17,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 51 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 750194921..b4809a6b5 100644
+index 683f32a0c..13d2888d7 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -2226,6 +2226,25 @@ static struct mlxreg_core_platform_data mlxplat_default_led_wc_data = {
@@ -46,7 +46,7 @@ index 750194921..b4809a6b5 100644
  /* Platform led MSN21xx system family data */
  static struct mlxreg_core_data mlxplat_mlxcpld_msn21xx_led_data[] = {
  	{
-@@ -4786,6 +4805,31 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
+@@ -4793,6 +4812,31 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
  	return 1;
  }
  
@@ -78,7 +78,7 @@ index 750194921..b4809a6b5 100644
  static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -5032,6 +5076,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -5039,6 +5083,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_PRODUCT_NAME, "MQM8700"),
  		},
  	},
