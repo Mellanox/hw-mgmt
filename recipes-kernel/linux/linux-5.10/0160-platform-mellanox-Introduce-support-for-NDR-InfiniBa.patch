@@ -1,4 +1,4 @@
-From 749fa62eefbde783814252f6310911b51619209c Mon Sep 17 00:00:00 2001
+From 28232d1973607a4f3c73bdd9d1a377d3860151ba Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 27 Jan 2022 15:07:28 +0200
 Subject: [PATCH platform-next 4/4] platform: mellanox: Introduce support for
@@ -28,11 +28,11 @@ different I2C mux topology and extended LED and hotplug configuration.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 255 ++++++++++++++++++++++++++++
- 1 file changed, 255 insertions(+)
+ drivers/platform/x86/mlx-platform.c | 257 ++++++++++++++++++++++++++++
+ 1 file changed, 257 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index b4809a6b5..6472a9cca 100644
+index 13d2888d7..7079e1492 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -105,6 +105,9 @@
@@ -45,7 +45,15 @@ index b4809a6b5..6472a9cca 100644
  #define MLXPLAT_CPLD_LPC_REG_LC_PWR_ON		0xb2
  #define MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET	0xc7
  #define MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET	0xc8
-@@ -210,6 +213,7 @@
+@@ -198,6 +201,7 @@
+ 					 MLXPLAT_CPLD_AGGR_MASK_LC_SDWN)
+ #define MLXPLAT_CPLD_LOW_AGGR_MASK_LOW	0xc1
+ #define MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2	BIT(2)
++#define MLXPLAT_CPLD_LOW_AGGR_MASK_LEAK	BIT(4)
+ #define MLXPLAT_CPLD_LOW_AGGR_MASK_I2C	BIT(6)
+ #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
+ #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
+@@ -210,6 +214,7 @@
  #define MLXPLAT_CPLD_LED_LO_NIBBLE_MASK	GENMASK(7, 4)
  #define MLXPLAT_CPLD_LED_HI_NIBBLE_MASK	GENMASK(3, 0)
  #define MLXPLAT_CPLD_VOLTREG_UPD_MASK	GENMASK(5, 4)
@@ -53,7 +61,7 @@ index b4809a6b5..6472a9cca 100644
  #define MLXPLAT_CPLD_I2C_CAP_BIT	0x04
  #define MLXPLAT_CPLD_I2C_CAP_MASK	GENMASK(5, MLXPLAT_CPLD_I2C_CAP_BIT)
  
-@@ -239,6 +243,7 @@
+@@ -239,6 +244,7 @@
  #define MLXPLAT_CPLD_CH2_ETH_MODULAR		3
  #define MLXPLAT_CPLD_CH3_ETH_MODULAR		43
  #define MLXPLAT_CPLD_CH4_ETH_MODULAR		51
@@ -61,7 +69,7 @@ index b4809a6b5..6472a9cca 100644
  
  /* Number of LPC attached MUX platform devices */
  #define MLXPLAT_CPLD_LPC_MUX_DEVS		4
-@@ -456,6 +461,34 @@ static struct i2c_mux_reg_platform_data mlxplat_modular_mux_data[] = {
+@@ -456,6 +462,34 @@ static struct i2c_mux_reg_platform_data mlxplat_modular_mux_data[] = {
  	},
  };
  
@@ -96,7 +104,7 @@ index b4809a6b5..6472a9cca 100644
  /* Platform hotplug devices */
  static struct i2c_board_info mlxplat_mlxcpld_pwr[] = {
  	{
-@@ -2128,6 +2161,85 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_modular_data = {
+@@ -2128,6 +2162,86 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_modular_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
@@ -176,13 +184,14 @@ index b4809a6b5..6472a9cca 100644
 +	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
 +	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
 +	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
-+	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
++	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2 |
++		    MLXPLAT_CPLD_LOW_AGGR_MASK_LEAK,
 +};
 +
  /* Platform led default data */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
  	{
-@@ -2657,6 +2769,106 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
+@@ -2657,6 +2771,106 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_modular_led_data),
  };
  
@@ -289,7 +298,7 @@ index b4809a6b5..6472a9cca 100644
  /* Platform led data for QMB8700 system */
  static struct mlxreg_core_data mlxplat_mlxcpld_qmb8700_led_data[] = {
  	{
-@@ -4338,6 +4550,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -4345,6 +4559,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SN_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -298,7 +307,7 @@ index b4809a6b5..6472a9cca 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET:
-@@ -4443,6 +4657,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -4450,6 +4666,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -308,7 +317,7 @@ index b4809a6b5..6472a9cca 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET:
-@@ -4573,6 +4790,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -4580,6 +4799,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -318,7 +327,7 @@ index b4809a6b5..6472a9cca 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TLEFT_OFFSET:
-@@ -5037,6 +5257,27 @@ static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
+@@ -5044,6 +5266,27 @@ static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
  	return 1;
  }
  
@@ -346,7 +355,7 @@ index b4809a6b5..6472a9cca 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -5101,6 +5342,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -5108,6 +5351,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0009"),
  		},
  	},

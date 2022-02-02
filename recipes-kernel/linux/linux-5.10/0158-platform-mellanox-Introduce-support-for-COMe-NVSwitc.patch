@@ -1,7 +1,7 @@
-From 1ccf578fca0399c7787cbd82998633f7547ebe75 Mon Sep 17 00:00:00 2001
+From 7b689a778e93d94e808362b8342663b23ae4c063 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 26 Jan 2022 20:34:32 +0200
-Subject: [PATCH platform-next 2/2] platform: mellanox: Introduce support for
+Subject: [PATCH platform-next 2/4] platform: mellanox: Introduce support for
  COMe NVSwitch management module for Vulcan chassis
 
 The Vulcan is chassis containing Nvidia's Hopper dGPU (GH100), NVswitch
@@ -19,7 +19,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 31 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 8b3e5192e..750194921 100644
+index 68783c489..683f32a0c 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -3242,6 +3242,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
@@ -35,7 +35,7 @@ index 8b3e5192e..750194921 100644
  	{
  		.label = "asic_health",
  		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
-@@ -4942,6 +4948,25 @@ static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
+@@ -4949,6 +4955,25 @@ static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
  	return 1;
  }
  
@@ -61,7 +61,7 @@ index 8b3e5192e..750194921 100644
  static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -5037,6 +5062,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -5044,6 +5069,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0011"),
  		},
  	},
