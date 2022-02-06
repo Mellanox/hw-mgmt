@@ -35,13 +35,21 @@ source hw-management-helpers.sh
 
 do_global_wp_release_restore()
 {
+	action="$1"
+	file="$2"
+	command="$3"
+	param1="$4"
+	param2="$5"
+	param3="$6"
+	param4="$7"
+
 	if [ ! -L "$system_path"/global_wp_request ] || [ ! -L "$system_path"/global_wp_response ]; then
 		return 1
 	fi
 	[ -f "$config_path"/global_wp_timeout ] && global_wp_timeout=$(< "$config_path"/global_wp_timeout);
 	[ -f "$config_path"/global_wp_wait_step ] && global_wp_wait_step=$(< "$config_path"/global_wp_wait_step);
 	if [ "$global_wp_wait_step" -gt 0 ] && [ "$global_wp_timeout" -gt 0 ]; then
-		case $1 in
+		case "$action" in
 		release)
 			while [ "$global_wp_timeout" -gt 0 ]
 			do
@@ -61,10 +69,25 @@ do_global_wp_release_restore()
 					continue
 				fi
 
+				if [ "$command" != "" ]; then
+					# Execute user command for flashing device.
+					"$command" "$param1" "$param2" "$param3" "$param4" "$file"
+					rc=$?
+					if [ $rc -eq 0 ]; then
+						log_info "$command completed."
+					else
+						global_wp_response=$(< "$system_path"/global_wp_response)
+						if [ "$global_wp_response" != 1 ]; then
+							log_info "$command failed - Global WP grant has been removed by remote end."
+						fi
+					fi
+				fi
+
 				# Clear Global Write Protection request.
 				echo 0 > "$system_path"/global_wp_request
-				return 0
+				return "$rc"
 			done
+			log_info "Failed to request Global WP grant."
 			return 1
 		;;
 
@@ -86,15 +109,38 @@ Usage: $(basename "$0") [Options]
 Options:
 	release		Request to remove Global Write Protect to
 			to get grant for flashing of burnable component.
+			Perform flashing.
+			Restore Global Write Protect.
+			Parameters:
+			- 2 - file to be flashed.
+			- 3 - command to be executed.
+			- 4 - 7 - optional parameters for command to be
+				executed.
+			If no parameters are specified - command is used
+			only for getting grant.
 	restore		Request to restore Global Write Protect after
 			device flashing is completed.
 "
-
-case $ACTION in
+global_wp_pid=$$
+action="$1"
+case $action in
 release|restore)
+	if [ "$3" != "" ] && [ "$2" != "" ]; then
+		log_info "Wrong command format."
+		echo "$__usage"
+		exit 1
+	fi
+
 	lock_service_state_change
-	do_global_wp_release_restore "$ACTION"
+	# Only one Global WP process can be activated.
+	if [ -f /var/run/hw-management-global-wp.pid ]; then
+		log_info "Global WP process is already running."
+		exit 1
+	fi
+	echo "$global_wp_pid" > /var/run/hw-management-global-wp.pid
+	do_global_wp_release_restore "$action" "$2" "$3" "$4" "$5" "$6" "$7"
 	ret=$?
+	rm /var/run/hw-management-global-wp.pid
 	unlock_service_state_change
 	exit $ret
 	;;
