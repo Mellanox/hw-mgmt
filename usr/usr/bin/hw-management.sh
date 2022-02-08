@@ -69,6 +69,7 @@ psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 psu3_i2c_addr=0x5b
 psu4_i2c_addr=0x5a
+psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
@@ -1190,6 +1191,7 @@ msn48xx_specific()
 	echo 4 > $config_path/cpld_num
 	hotplug_pwrs=4
 	hotplug_psus=4
+	psu_count=4
 	i2c_asic_bus_default=3
 	echo 22000 > $config_path/fan_max_speed
 	echo 3000 > $config_path/fan_min_speed
@@ -1422,10 +1424,11 @@ get_asic2_bus()
 
 set_config_data()
 {
-	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
-	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
-	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
-	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
+	for ((idx=1; idx<=psu_count; idx+=1)); do
+		psu_i2c_addr=psu"$idx"_i2c_addr
+		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
+	done
+
 	# TMP for Buffalo BU
 	case $board_type in
 	VMOD0011)
