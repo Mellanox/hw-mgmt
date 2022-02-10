@@ -63,7 +63,7 @@ new file mode 100644
 index 000000000..1a2103778
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1221 @@
+@@ -0,0 +1,1227 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -90,6 +90,8 @@ index 000000000..1a2103778
 +#define NVSW_SN2201_BOARD_ID_OFFSET                 0x01
 +#define NVSW_SN2201_CPLD_VER_OFFSET                 0x02
 +#define NVSW_SN2201_CPLD_ID_OFFSET                  0x03
++#define NVSW_SN2201_CPLD_PN_OFFSET                  0x06
++#define NVSW_SN2201_CPLD_PN1_OFFSET                 0x07
 +#define NVSW_SN2201_PSU_CTRL_OFFSET                 0x0A
 +#define NVSW_SN2201_QSFP28_STATUS_OFFSET            0x0B
 +#define NVSW_SN2201_QSFP28_INT_STATUS_OFFSET        0x0C
@@ -262,6 +264,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_BOARD_ID_OFFSET:
 +	case NVSW_SN2201_CPLD_VER_OFFSET:
 +	case NVSW_SN2201_CPLD_ID_OFFSET:
++	case NVSW_SN2201_CPLD_PN_OFFSET:
++	case NVSW_SN2201_CPLD_PN1_OFFSET:
 +	case NVSW_SN2201_PSU_CTRL_OFFSET:
 +	case NVSW_SN2201_QSFP28_STATUS_OFFSET:
 +	case NVSW_SN2201_QSFP28_INT_STATUS_OFFSET:
@@ -312,6 +316,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_BOARD_ID_OFFSET:
 +	case NVSW_SN2201_CPLD_VER_OFFSET:
 +	case NVSW_SN2201_CPLD_ID_OFFSET:
++	case NVSW_SN2201_CPLD_PN_OFFSET:
++	case NVSW_SN2201_CPLD_PN1_OFFSET:
 +	case NVSW_SN2201_PSU_CTRL_OFFSET:
 +	case NVSW_SN2201_QSFP28_STATUS_OFFSET:
 +	case NVSW_SN2201_QSFP28_INT_STATUS_OFFSET:
@@ -723,8 +729,8 @@ index 000000000..1a2103778
 +	},
 +	{
 +		.label = "cpld1_pn",
-+		.reg = NVSW_SN2201_CPLD_ID_OFFSET,
-+		.bit = GENMASK(7, 0),
++		.reg = NVSW_SN2201_CPLD_PN_OFFSET,
++		.bit = GENMASK(15, 0),
 +		.mode = 0444,
 +	},
 +	{

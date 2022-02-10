@@ -1220,6 +1220,13 @@ sn2201_specific()
 	cpld2=$(i2cget -f -y 1 0x3d 0x01)
 	cpld2=${cpld2:2}
 	echo $(( 16#$cpld2 )) > $system_path/cpld2_version
+	cpld2_pn=$(i2cget -f -y 1 0x3d 0x21)
+	cpld2_pn=${cpld2_pn:2}
+	cpld2_pn=$(( 16#$cpld2_pn ))
+	cpld2_pn1=$(i2cget -f -y 1 0x3d 0x22)
+	cpld2_pn1=${cpld2_pn1:2}
+	cpld2_pn1=$(( 16#$cpld2_pn1 ))
+	echo $cpld2_pn1$cpld2_pn > $system_path/cpld2_pn
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
