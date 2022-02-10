@@ -49,7 +49,7 @@ handle_cpld_versions()
 	fi
 
 	for ((i=1; i<=cpld_num_loc; i+=1)); do
-		if [ -L $system_path/cpld"$i"_pn ]; then
+		if [ -f $system_path/cpld"$i"_pn ]; then
 			cpld_pn=$(cat $system_path/cpld"$i"_pn)
 		fi
 		if [ -f $system_path/cpld"$i"_version ]; then
