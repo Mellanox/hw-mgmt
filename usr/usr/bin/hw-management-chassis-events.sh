@@ -575,7 +575,16 @@ if [ "$1" == "add" ]; then
 				iio_name=$lc_iio_dev_name_def
 			fi
 		fi
-		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
+		# ADS1015 used on SN2201 has scale for every input
+		if [ "$board_type" == "VMOD0014" ]; then
+			for i in {0..7}; do
+				if [ -f "$3""$4"/in_voltage"$i"_scale ]; then
+					ln -sf "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
+				fi
+			done
+		else
+			ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
+		fi
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
 				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
@@ -929,7 +938,15 @@ else
 				environment_path="$hw_management_path"/lc"$linecard_num"/environment
 			fi
 		fi
-		unlink $environment_path/"$2"_"$5"_voltage_scale
+		if [ "$board_type" == "VMOD0014" ]; then
+			for i in {0..7}; do
+				if [ -L $environment_path/"$2"_"$5"_voltage_scale_"$i" ]; then
+					unlink $environment_path/"$2"_"$5"_voltage_scale_"$i"
+				fi
+			done
+		else
+			unlink $environment_path/"$2"_"$5"_voltage_scale
+		fi
 		for i in {0..7}; do
 			if [ -L $environment_path/"$2"_"$5"_raw_"$i" ]; then
 				unlink $environment_path/"$2"_"$5"_raw_"$i"
