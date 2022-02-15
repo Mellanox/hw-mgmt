@@ -77,6 +77,7 @@ hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
 hotplug_linecards=0
+erot_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
@@ -121,6 +122,11 @@ cpu_type1_connection_table=(	max11603 0x6d 15 \
 cpu_type2_connection_table=(	max11603 0x6d 15 \
 			mp2975 0x6b 15 \
 			24c32 0x50 16)
+
+# CoffeeLake CPU with 16ch i2c mux.
+cpu_type2_mux16_connection_table=(	max11603 0x6d 23 \
+			mp2975 0x6b 23 \
+			24c32 0x50 24)
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -287,12 +293,12 @@ p4697_base_rev1_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_asic_i2c_bus_connect_table=(  mp2975 0x23 18 voltmon1 \
-			mp2975 0x24 18 voltmon2 \
-			mp2975 0x27 18 voltmon3 \
-			mp2975 0x23 23 voltmon4 \
-			mp2975 0x24 23 voltmon5 \
-			mp2975 0x27 23 voltmon6)
+p4697_asic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
+			mp2975 0x24 26 voltmon2 \
+			mp2975 0x27 26 voltmon3 \
+			mp2975 0x23 31 voltmon4 \
+			mp2975 0x24 31 voltmon5 \
+			mp2975 0x27 31 voltmon6)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
@@ -600,6 +606,11 @@ add_cpu_board_to_connection_table()
 			;;
 		$CFL_CPU)
 			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [ $sku == HI142 ];
+			then
+				cpu_connection_table=( ${cpu_type2_mux16_connection_table[@]} )
+			fi
 			;;
 		*)
 			log_err "$product is not supported"
@@ -1101,6 +1112,7 @@ p4697_specific()
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
+	erot_count=2
 	i2c_asic_addr=0xff
 
 	echo 25000 > $config_path/fan_max_speed
@@ -1384,6 +1396,12 @@ create_event_files()
 			touch $events_path/lc"$i"_synced
 			touch $events_path/lc"$i"_active
 			touch $events_path/lc"$i"_shutdown
+		done
+	fi
+	if [ $erot_count -ne 0 ]; then
+		for ((i=1; i<=erot_count; i+=1)); do
+			touch $events_path/erot"$i"_error
+			touch $events_path/erot"$i"_ap
 		done
 	fi
 }
