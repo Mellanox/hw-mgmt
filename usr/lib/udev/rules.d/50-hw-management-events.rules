@@ -290,6 +290,15 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE 1"
 
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_AP}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_AP 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_AP}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_AP 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_AP}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_AP 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_AP}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_AP 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_ERROR}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_ERROR 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_ERROR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_ERROR 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_ERROR}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_ERROR 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_ERROR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_ERROR 1"
+
 # SN2201 hotpug events.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 1"
