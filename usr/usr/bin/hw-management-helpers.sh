@@ -114,12 +114,17 @@ find_i2c_bus()
     # Find physical bus number of Mellanox I2C controller. The default
     # number is 1, but it could be assigned to others id numbers on
     # systems with different CPU types.
+    if [ -f $config_path/i2c_bus_offset ]; then
+        i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+        return
+    fi
     for ((i=1; i<i2c_bus_max; i++)); do
         folder=/sys/bus/i2c/devices/i2c-$i
         if [ -d $folder ]; then
             name=$(cut $folder/name -d' ' -f 1)
             if [ "$name" == "i2c-mlxcpld" ]; then
                 i2c_bus_offset=$((i-1))
+                echo $i2c_bus_offset > $config_path/i2c_bus_offset
                 return
             fi
         fi
@@ -182,12 +187,14 @@ change_file_counter()
 
 connect_device()
 {
+	find_i2c_bus
 	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
 		addr=$(echo "$2" | tail -c +3)
 		bus=$(($3+i2c_bus_offset))
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
+			return $?
 		fi
 	fi
 
@@ -196,12 +203,14 @@ connect_device()
 
 disconnect_device()
 {
+	find_i2c_bus
 	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
 		addr=$(echo "$1" | tail -c +3)
 		bus=$(($2+i2c_bus_offset))
 		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
+			return $?
 		fi
 	fi
 

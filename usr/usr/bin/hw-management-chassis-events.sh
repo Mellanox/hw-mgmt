@@ -398,30 +398,6 @@ function set_lc_fpga_combined_version()
 	echo "$str" > "$lc_path"/system/fpga
 }
 
-connect_device()
-{
-	local addr=$2
-	local bus=$3
-	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
-		if [ ! -d /sys/bus/i2c/devices/"$bus"-00"$addr" ] &&
-		   [ ! -d /sys/bus/i2c/devices/"$bus"-000"$addr" ]; then
-			echo "$1" "$addr" > /sys/bus/i2c/devices/i2c-"$bus"/new_device
-		fi
-	fi
-}
-
-disconnect_device()
-{
-	local addr=$2
-	local bus=$3
-	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
-		if [ -d /sys/bus/i2c/devices/"$bus"-00"$addr" ] ||
-		   [ -d /sys/bus/i2c/devices/"$bus"-000"$addr" ]; then
-			echo "$1" > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
-		fi
-	fi
-}
-
 function handle_hotplug_fan_event()
 {
 	local attribute=$1
@@ -455,7 +431,7 @@ function handle_hotplug_fan_event()
 		if [ "$event" -eq 1 ]; then
 			connect_device "$eeprom_type" "$addr" "$bus"
 		else
-			disconnect_device "$eeprom_type" "$addr" "$bus"
+			disconnect_device "$addr" "$bus"
 		fi
 		;;
 	*)
