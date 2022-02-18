@@ -1,4 +1,140 @@
 ================================================================================
+- V.7.0020.2000
+-Tus , 15 Feb 2022
+--------------------------------------------------------------------------------
+- New Features
+    o	sn2201: add support for watchdog , pwr_dwn, pwr_cycle attributes			
+    o	sn2201: add thermal control definition table
+    o	sn2201: add fan hot-plug event
+    o	sn2201: add missing fan direction indication  
+    o	sn2201: add CPLD PN report
+	*Kernel 4.9
+	0151-platform-mellanox-Add-support-for-new-SN2201-system.patch
+	*Kernel 5.10
+	0089-platform-mellanox-Add-support-for-new-SN2201-system.patch 
+				
+    o	sn4800: add support for line card: therml, hwmon, cable info, environment, minimal driver
+	*Kernel 5.10
+	0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch
+	0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch
+	0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch
+	0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch
+	0103-mlxsw-core-Remove-unnecessary-asserts.patch               
+	0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch
+	0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch
+	0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch
+	0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch
+	0108-mlxsw-reg-Extend-PMMP-register-with-new-slot-number-.patch
+	0109-mlxsw-reg-Extend-MGPIR-register-with-new-slot-fields.patch
+	0110-mlxsw-core_env-Pass-slot-index-during-PMAOS-register.patch
+	0111-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch
+	0112-mlxsw-core-Extend-interfaces-for-cable-info-access-w.patch
+	0113-mlxsw-core-Extend-port-module-data-structures-for-li.patch
+	0114-mlxsw-core-Move-port-module-events-enablement-to-a-s.patch
+	0115-mlxsw-core_hwmon-Split-gearbox-initialization.patch       
+	0116-mlxsw-core_hwmon-Extend-internal-structures-to-suppo.patch
+	0117-mlxsw-core_hwmon-Introduce-slot-parameter-in-hwmon-i.patch
+	0118-mlxsw-core_hwmon-Extend-hwmon-device-with-gearbox-ma.patch
+	0119-mlxsw-core_thermal-Extend-internal-structures-to-sup.patch
+	0120-mlxsw-core_thermal-Split-gearbox-initialization.patch     
+	0121-mlxsw-core_thermal-Extend-thermal-area-with-gearbox-.patch
+	0122-mlxsw-core_thermal-Add-line-card-id-prefix-to-line-c.patch
+	0123-mlxsw-core_thermal-Use-exact-name-of-cooling-devices.patch
+	0124-mlxsw-core_thermal-Use-common-define-for-thermal-zon.patch
+	0125-devlink-add-support-to-create-line-card-and-expose-t.patch
+	0126-devlink-implement-line-card-provisioning.patch            
+	0127-devlink-implement-line-card-active-state.patch            
+	0128-devlink-add-port-to-line-card-relationship-set.patch      
+	0129-devlink-introduce-linecard-info-get-message.patch         
+	0130-devlink-introduce-linecard-info-get-message.patch         
+	0131-mlxsw-reg-Add-Ports-Mapping-event-Configuration-Regi.patch
+	0132-mlxsw-reg-Add-Management-DownStream-Device-Query-Reg.patch
+	0133-mlxsw-reg-Add-Management-DownStream-Device-Control-R.patch
+	0134-mlxsw-reg-Add-Management-Binary-Code-Transfer-Regist.patch
+	0135-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch
+	0136-mlxsw-core_linecards-Implement-line-card-activation-.patch
+	0137-mlxsw-core-Extend-driver-ops-by-remove-selected-port.patch
+	0138-mlxsw-spectrum-Add-port-to-linecard-mapping.patch         
+	0139-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch
+	0140-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch      
+	0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch
+	0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch
+	0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch
+	0144-mlxsw-core-Introduce-flash-update-components.patch        
+	0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch
+	0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch
+	0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch
+	0148-mlxsw-core-Add-interfaces-for-line-card-initializati.patch
+	0149-mlxsw-core_thermal-Add-interfaces-for-line-card-init.patch
+	0150-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch
+	0151-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch
+        0152-mlxsw-core-Extend-bus-init-function-with-event-handl.patch
+        0153-mlxsw-i2c-Add-support-for-system-events-handling.patch    
+        0154-mlxsw-core-Export-line-card-API.patch                     
+        0155-mlxsw-minimal-Add-system-event-handler.patch              
+        0156-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch
+					
+    o   xh3000:  hw-mgmt: Add support for linux kernel 5.10 
+	*Kernel 5.10
+	0159-platform-x86-mlx-platform-Add-support-for-new-system.patch
+	
+    o   hw-mgmt: add to PSU FW upgrade tool command to only show current FW version
+    o   hw-mgmt: add to PSU FW upgrade tool support for single-PSU-in-the-system FW upgrade.
+    o   hw-mgmt: add attribute /firmware to show FW version of restricted upgradable PSUs only
+    o   hw-mgmt: add NVME temperature reports attributes (_alarm/_crit/_min/_max)
+
+- Bug fixes  
+    o   sn2201: issue of Intel CPU Denverton cores appearing as 6,12 instead of 0,1
+    o   sn2201: sensor ADS1015 driver (voltmon) was deprecated in 5.10 (changed to TI’s driver)
+    o   sn2201: incorrect device id of powr1014 (power controller) in 5.10
+	*Kernel 5.10
+	0086-hwmon-powr1220-Add-support-for-Lattice-s-POWR1014-po.patch
+				
+    o   sn2201: removed thermal sensor 0x4a at DVT systems (used to be at EVT system)
+	*Kernel 4.19
+	0151-platform-mellanox-Add-support-for-new-SN2201-system.patch
+	*Kernel 5.10
+	0089-platform-mellanox-Add-support-for-new-SN2201-system.patch 
+				
+    o   sn2201: incorrect A2D scales
+    o   qm9700: unnecessary EEPROM 7-0053 in system definition (used to be in initial mqm9700 version)
+    o   sn4800: broken index for gearbox temperature symbolic link
+    o   xh3000: wrong number of hotplug PSUs on system
+    o   psu: redundant i2c_addr attributes being created for psu  3 & 4 in system having only 2 psus.
+    o   hw-mgmt: in SPC1/2 i2c driver removal is too slow vs. ASIC reset causing non-functional log errors
+
+    o   For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.2000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0020.1300
 -Tus , 21 Dec 2021
 --------------------------------------------------------------------------------

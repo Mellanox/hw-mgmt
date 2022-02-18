@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2018-2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -69,6 +69,7 @@ psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 psu3_i2c_addr=0x5b
 psu4_i2c_addr=0x5a
+psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
 chipup_delay_default=0
@@ -76,6 +77,7 @@ hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
 hotplug_linecards=0
+erot_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
@@ -87,6 +89,10 @@ fan_dir_pn_offset=11
 # 46 - F, 52 - R
 fan_direction_exhaust=46
 fan_direction_intake=52
+# ASIC PCIe Ids.
+spc3_pci_id=cf70
+spc4_pci_id=cf80
+quantum2_pci_id=d2f2
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -116,6 +122,11 @@ cpu_type1_connection_table=(	max11603 0x6d 15 \
 cpu_type2_connection_table=(	max11603 0x6d 15 \
 			mp2975 0x6b 15 \
 			24c32 0x50 16)
+
+# CoffeeLake CPU with 16ch i2c mux.
+cpu_type2_mux16_connection_table=(	max11603 0x6d 23 \
+			mp2975 0x6b 23 \
+			24c32 0x50 24)
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -227,7 +238,6 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x6C 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x53 7 \
 			24c32 0x51 8)
 
 mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
@@ -238,7 +248,6 @@ mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x6c 5 \
 			adt75 0x49 7 \
 			adt75 0x4a 7 \
-			24c32 0x53 7 \
 			24c512 0x51 8)
 
 mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
@@ -249,7 +258,6 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x6c 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x53 7 \
 			24c512 0x51 8)
 
 mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
@@ -262,9 +270,8 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x6e 5 \
 			adt75 0x49 7 \
 			adt75 0x4a 7 \
-			24c32 0x53 7 \
 			24c512 0x51 8)
-			
+
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			mp2975 0x22 5 \
 			mp2975 0x23 5 \
@@ -275,6 +282,23 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
+
+p4697_base_connect_table=(    max11603 0x6d 5 \
+			adt75 0x49 7 \
+			adt75 0x4a 7 \
+			24c512 0x51 8)
+
+p4697_base_rev1_connect_table=(    max11603 0x6d 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
+p4697_asic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
+			mp2975 0x24 26 voltmon2 \
+			mp2975 0x27 26 voltmon3 \
+			mp2975 0x23 31 voltmon4 \
+			mp2975 0x24 31 voltmon5 \
+			mp2975 0x27 31 voltmon6)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
@@ -289,6 +313,38 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	max11603 0x6d 43 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
+
+mqm9510_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6c 5 \
+			max11603 0x6d 6 \
+			mp2975 0x62 6 \
+			mp2888 0x66 6 \
+			mp2975 0x68 6 \
+			mp2975 0x6a 6 \
+			mp2975 0x6c 6 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
+mqm9520_base_connect_table=(    max11603 0x6d 5 \
+			mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6c 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c512 0x51 8 \
+			max11603 0x6d 13 \
+			mp2975 0x62 13 \
+			mp2888 0x66 13 \
+			mp2975 0x68 13 \
+			mp2975 0x6a 13 \
+			mp2975 0x6c 13)
 
 ACTION=$1
 
@@ -317,19 +373,33 @@ function set_i2c_bus_frequency_400KHz()
 {
 	# Speed-up ASIC I2C driver probing by setting I2C frequency to 400KHz.
 	# Relevant only to particular system types.
-	if [ -f $config_path/default_i2c_freq ]; then
-		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
-	fi
+	board=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005)
+		if [ -f $config_path/default_i2c_freq ]; then
+			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
+		fi
+		;;
+	*)
+		;;
+	esac
 }
 
 function restore_i2c_bus_frequency_default()
 {
 	# Restore I2C base frequency to the default value.
 	# Relevant only to particular system types.
-	if [ -f $config_path/default_i2c_freq ]; then
-		i2c_freq=$(< $config_path/default_i2c_freq)
-		/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
-	fi
+	board=$(< /sys/devices/virtual/dmi/id/board_name)
+	case $board in
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005)
+		if [ -f $config_path/default_i2c_freq ]; then
+			i2c_freq=$(< $config_path/default_i2c_freq)
+			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
+		fi
+		;;
+	*)
+		;;
+	esac
 }
 
 function find_regio_sysfs_path()
@@ -536,6 +606,11 @@ add_cpu_board_to_connection_table()
 			;;
 		$CFL_CPU)
 			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [ $sku == HI142 ];
+			then
+				cpu_connection_table=( ${cpu_type2_mux16_connection_table[@]} )
+			fi
 			;;
 		*)
 			log_err "$product is not supported"
@@ -552,6 +627,21 @@ add_cpu_board_to_connection_table()
 	fi
 
 	connect_table+=(${cpu_connection_table[@]})
+}
+
+add_asic_i2c_bus_dev_connection_table()
+{
+	connection_table=("$@")
+	asic_i2cbus_connection_table=""
+
+	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devs
+	for ((i=0; i<${#connection_table[@]}; i+=4)); do
+		asic_i2cbus_connection_table[$i]="${connection_table[i]}"
+		asic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
+		asic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
+	done
+
+	connect_table+=(${asic_i2cbus_connection_table[@]})
 }
 
 msn274x_specific()
@@ -730,6 +820,8 @@ msn_xh3000_specific()
 	connect_table=(${mqm8700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	hotplug_fans=0
+	hotplug_psus=0
+	hotplug_pwrs=0
 	max_tachos=0
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
@@ -932,6 +1024,33 @@ mqm97xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+mqm9510_specific()
+{
+	local cpu_bus_offset=18
+	connect_table=(${mqm9510_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
+	thermal_type=$thermal_type_def
+	echo 11000 > $config_path/fan_max_speed
+	echo 2235 > $config_path/fan_min_speed
+	max_tachos=2
+	hotplug_fans=2
+	echo 4 > $config_path/cpld_num
+}
+
+mqm9520_specific()
+{
+	local cpu_bus_offset=18
+	connect_table=(${mqm9520_base_connect_table[@]})
+	add_cpu_board_to_connection_table $cpu_bus_offset
+	i2c_asic2_bus_default=10
+	thermal_type=$thermal_type_def
+	echo 11000 > $config_path/fan_max_speed
+	echo 2235 > $config_path/fan_min_speed
+	max_tachos=2
+	hotplug_fans=2
+	echo 4 > $config_path/cpld_num
+}
+
 mqm87xx_rev1_specific()
 {
 	connect_table=(${mqm8700_rev1_base_connect_table[@]})
@@ -963,7 +1082,45 @@ e3597_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/e3597_sensors.conf"
+}
+
+p4697_specific()
+{
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			0)
+				connect_table=(${p4697_base_connect_table[@]})
+				;;
+			1)
+				connect_table=(${p4697_rev1_base_connect_table[@]})
+				;;
+			*)
+				connect_table=(${p4697_base_connect_table[@]})
+				;;
+		esac
+	else
+		connect_table=(${p4697_base_connect_table[@]})
+	fi
+
+	add_asic_i2c_bus_dev_connection_table "${p4697_asic_i2c_bus_connect_table[@]}"
+	add_cpu_board_to_connection_table
+
+	thermal_type=$thermal_type_def
+	max_tachos=14
+	hotplug_fans=7
+	erot_count=2
+	i2c_asic_addr=0xff
+
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/e4597_sensors.conf"
 }
 
 msn_spc2_common()
@@ -1019,6 +1176,15 @@ msn_spc3_common()
 		HI132)
 			e3597_specific
 		;;
+		HI140)
+			mqm9520_specific
+		;;
+		HI141)
+			mqm9510_specific
+		;;
+		HI142)
+			p4697_specific
+		;;
 		*)
 			msn47xx_specific
 		;;
@@ -1037,6 +1203,7 @@ msn48xx_specific()
 	echo 4 > $config_path/cpld_num
 	hotplug_pwrs=4
 	hotplug_psus=4
+	psu_count=4
 	i2c_asic_bus_default=3
 	echo 22000 > $config_path/fan_max_speed
 	echo 3000 > $config_path/fan_min_speed
@@ -1057,6 +1224,7 @@ sn2201_specific()
 	hotplug_fans=4
 	hotplug_pwrs=2
 	hotplug_psus=2
+	echo 1 > $config_path/fan_dir_eeprom
 	echo 22000 > $config_path/fan_max_speed
 	echo 960 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
@@ -1064,7 +1232,24 @@ sn2201_specific()
 	cpld2=$(i2cget -f -y 1 0x3d 0x01)
 	cpld2=${cpld2:2}
 	echo $(( 16#$cpld2 )) > $system_path/cpld2_version
+	cpld2_pn=$(i2cget -f -y 1 0x3d 0x21)
+	cpld2_pn=${cpld2_pn:2}
+	cpld2_pn=$(( 16#$cpld2_pn ))
+	cpld2_pn1=$(i2cget -f -y 1 0x3d 0x22)
+	cpld2_pn1=${cpld2_pn1:2}
+	cpld2_pn1=$(( 16#$cpld2_pn1 ))
+	echo $cpld2_pn1$cpld2_pn > $system_path/cpld2_pn
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
+}
+
+p2317_specific()
+{
+	add_cpu_board_to_connection_table
+	echo 1 > $config_path/cpld_num
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
 }
 
 check_system()
@@ -1099,6 +1284,9 @@ check_system()
 			;;
 		VMOD0011)
 			msn48xx_specific
+			;;
+		VMOD0012)
+			p2317_specific
 			;;
 		VMOD0014)
 			sn2201_specific
@@ -1148,6 +1336,9 @@ check_system()
 				SN2201*)
 					sn2201_specific
 					;;
+				P4697)
+					p4697_specific
+					;;
 				*)
 					# Check marginal system, system without SMBIOS customization,
 					# only on old types of Mellanox switches.
@@ -1179,34 +1370,6 @@ check_system()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 }
 
-connect_device()
-{
-	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
-		addr=$(echo "$2" | tail -c +3)
-		bus=$(($3+i2c_bus_offset))
-		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
-		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
-			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-		fi
-	fi
-
-	return 0
-}
-
-disconnect_device()
-{
-	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
-		addr=$(echo "$1" | tail -c +3)
-		bus=$(($2+i2c_bus_offset))
-		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
-		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
-			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
-		fi
-	fi
-
-	return 0
-}
-
 create_event_files()
 {
 	if [ $hotplug_psus -ne 0 ]; then
@@ -1226,13 +1389,19 @@ create_event_files()
 	fi
 	if [ $hotplug_linecards -ne 0 ]; then
 		for ((i=1; i<=hotplug_linecards; i+=1)); do
-			touch $events_path/lc"$i"_prsnt
+			touch $events_path/lc"$i"_present
 			touch $events_path/lc"$i"_verified
 			touch $events_path/lc"$i"_powered
 			touch $events_path/lc"$i"_ready
 			touch $events_path/lc"$i"_synced
 			touch $events_path/lc"$i"_active
 			touch $events_path/lc"$i"_shutdown
+		done
+	fi
+	if [ $erot_count -ne 0 ]; then
+		for ((i=1; i<=erot_count; i+=1)); do
+			touch $events_path/erot"$i"_error
+			touch $events_path/erot"$i"_ap
 		done
 	fi
 }
@@ -1247,18 +1416,44 @@ get_asic_bus()
 		find_i2c_bus
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
 		echo $asic_bus > $config_path/asic_bus
+		echo $asic_bus > $config_path/asic1_i2c_bus_id
 	else
 		asic_bus=$(cat $config_path/asic_bus)
 	fi
 	return $((asic_bus))
 }
 
+get_asic2_bus()
+{
+	if [[ $i2c_asic_addr -eq 0xff ]]; then
+		log_err "This operation not supporting with current ASIC type"
+		return 0
+	fi
+	if [ ! -f "$config_path/asic_num" ]; then
+		return 0
+	fi
+	asic_num=$(< $config_path/asic_num)
+	if [ "$asic_num" -eq 1 ]; then
+		return 0
+	fi
+	i2c_asic_bus=$i2c_asic2_bus_default
+	if [ ! -f $config_path/asic2_i2c_bus_id ]; then
+		find_i2c_bus
+		asic_bus=$((i2c_asic_bus+i2c_bus_offset))
+		echo $asic_bus > $config_path/asic2_i2c_bus_id
+	else
+		asic_bus=$(cat $config_path/asic2_i2c_bus_id)
+	fi
+	return $((asic_bus))
+}
+
 set_config_data()
 {
-	echo $psu1_i2c_addr > $config_path/psu1_i2c_addr
-	echo $psu2_i2c_addr > $config_path/psu2_i2c_addr
-	echo $psu3_i2c_addr > $config_path/psu3_i2c_addr
-	echo $psu4_i2c_addr > $config_path/psu4_i2c_addr
+	for ((idx=1; idx<=psu_count; idx+=1)); do
+		psu_i2c_addr=psu"$idx"_i2c_addr
+		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
+	done
+
 	# TMP for Buffalo BU
 	case $board_type in
 	VMOD0011)
@@ -1335,6 +1530,9 @@ create_symbolic_links()
 	if [ ! -d $events_path ]; then
 		mkdir $events_path
 	fi
+	if [ ! -d $fw_path ]; then
+		mkdir $fw_path
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
@@ -1352,12 +1550,93 @@ remove_symbolic_links()
 	fi
 }
 
+set_asic_pci_id()
+{
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	# Get ASIC PCI Ids.
+	case $sku in
+	HI122|HI123|HI124|HI126)
+		asic_pci_id=$spc3_pci_id
+		;;
+	HI130|HI140|HI141)
+		asic_pci_id=$quantum2_pci_id
+		;;
+	HI144|HI147)
+		asic_pci_id=$spc4_pci_id
+		;;
+	HI131|HI142)
+		echo 2 > "$config_path"/asic_num
+		return
+		;;
+	HI143)
+		echo 4 > "$config_path"/asic_num
+		return
+		;;
+	*)
+		echo 1 > "$config_path"/asic_num
+		return
+		;;
+	esac
+
+	asics=`lspci -nn | grep $asic_pci_id | awk '{print $1}'`
+	case $sku in
+	HI140)
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`   # 2-nd for ASIC1 because it appears first
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo 2 > "$config_path"/asic_num
+		;;
+	HI141)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo 2 > "$config_path"/asic_num
+		;;
+	HI144|HI147)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo 1 > "$config_path"/asic_num
+		;;
+	*)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo 1 > "$config_path"/asic_num
+		;;
+	esac
+
+	return
+}
+
+map_asic_pci_to_i2c_bus()
+{
+	if [ -z "$1" ]; then
+		return 0
+	fi
+	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
+	if [ "$asic_num" ] && [ "$asic_num" -gt 1 ]; then
+		pci_bus=`basename $1`
+		pci_bus="${pci_bus:5}"
+		for ((i=1; i<=asic_num; i+=1)); do
+			bus=$(< $config_path/asic"$i"_pci_bus_id)
+			if [ "$bus" == "$pci_bus" ]; then
+				i2c_bus=$(< $config_path/asic"$i"_i2c_bus_id)
+				return "$i2c_bus"
+			fi
+		done
+	fi
+	return 0
+}
+
 do_start()
 {
 	create_symbolic_links
 	check_system
+	set_asic_pci_id
 	if [[ $i2c_asic_addr -ne 0xff ]]; then
 		get_asic_bus
+		get_asic2_bus
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
@@ -1414,6 +1693,8 @@ do_stop()
 do_chip_up_down()
 {
 	action=$1
+	asic_index=$2
+	pci_bus=$3
 	# Add ASIC device.
 	if [[ $i2c_asic_addr -eq 0xff ]]; then
 		log_info "Current ASIC type does not support this operation type"
@@ -1431,6 +1712,19 @@ do_chip_up_down()
 		;;
 	esac
 
+	map_asic_pci_to_i2c_bus $pci_bus
+	bus=$?
+	# TMP: Use this mapping for getting bus below. Modify it as following.
+	#if [ $bus -eq 0 ]; the
+	#	# Add ASIC device.
+	#	if [ asic_index -eq 1 ]; then
+	#		get_asic_bus
+	#	else
+	#		get_asic2_bus
+	#	fi
+	#	bus=$?
+	#fi
+	# Remove three line below after TMP is uncommented.
 	# Add ASIC device.
 	get_asic_bus
 	bus=$?
@@ -1443,7 +1737,9 @@ do_chip_up_down()
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
+			set_i2c_bus_frequency_400KHz
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
+			restore_i2c_bus_frequency_default
 		fi
 		echo 0 > $config_path/sfp_counter
 		unlock_service_state_change
@@ -1526,18 +1822,25 @@ case $ACTION in
 	stop)
 		if [ -d /var/run/hw-management ]; then
 			echo 1 > $config_path/stopping
-			do_chip_up_down 0
+			if [ ! -f "$config_path/asic_num" ]; then
+				asic_num=1
+			else
+				asic_num=$(< $config_path/asic_num)
+			fi
+			for ((i=1; i<=asic_num; i+=1)); do
+				do_chip_up_down 0 "$i"
+			done
 			do_stop
 		fi
 	;;
 	chipup)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 1 "$2"
+			do_chip_up_down 1 "$2" "$3"
 		fi
 	;;
 	chipdown)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 0
+			do_chip_up_down 0 "$2" "$3"
 		fi
 	;;
 	chipupen)

@@ -41,6 +41,7 @@ fan_psu_default=$config_path/fan_psu_default
 max_psus=4
 max_pwm=4
 max_lcs=8
+max_erots=2
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
@@ -264,11 +265,12 @@ if [ "$1" == "add" ]; then
 						*gear*)
 							lock_service_state_change
 							change_file_counter "$cpath"/gearbox_counter 1
+							gearbox_counter=`cat "$cpath"/gearbox_counter`
 							if [ "$lcmatch" == "linecard" ]; then
 								change_file_counter "$config_path"/gearbox_counter 1
 							fi
-							unlock_service_state_change
 							ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							unlock_service_state_change
 							;;
 						*)
 							;;
@@ -448,25 +450,47 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		done
+		for ((i=1; i<=max_erots; i+=1)); do
+			if [ -f "$3""$4"/erot"$i"_ap ]; then
+				ln -sf "$3""$4"/erot"$i"_ap $system_path/erot"$i"_ap
+				event=$(< $system_path/erot"$i"_ap)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/erot"$i"_ap
+				fi
+			fi
+			if [ -f "$3""$4"/erot"$i"_error ]; then
+				ln -sf "$3""$4"/erot"$i"_error $system_path/erot"$i"_error
+				event=$(< $system_path/erot"$i"_error)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/erot"$i"_error
+				fi
+			fi
+		done
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
 		check_n_link "$3""$4"/uevent $config_path/port_config_done
-		asic_health=0
-		if [ -f "$3""$4"/asic1 ]; then
-			asic_health=$(< "$3""$4"/asic1)
+		if [ ! -f "$config_path/asic_num" ]; then
+			asic_num=1
+		else
+			asic_num=$(< $config_path/asic_num)
 		fi
-		if [ "$asic_health" -ne 2 ]; then
-			exit 0
-		fi
-		find_i2c_bus
-		if [ ! -d /sys/module/mlxsw_minimal ]; then
-			modprobe mlxsw_minimal
-		fi
-		if [ ! -f /etc/init.d/sxdkernel ]; then
-			sleep 3
-			/usr/bin/hw-management.sh chipup
-		fi
+		for ((i=1; i<=asic_num; i+=1)); do
+			asic_health=0
+			if [ -f "$3""$4"/asic"$i" ]; then
+				asic_health=$(< "$3""$4"/asic"$i")
+			fi
+			if [ "$asic_health" -ne 2 ]; then
+				exit 0
+			fi
+			if [ ! -d /sys/module/mlxsw_minimal ]; then
+				modprobe mlxsw_minimal
+			fi
+			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
+				sleep 3
+				/usr/bin/hw-management.sh chipup "$i"
+			fi
+		done
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -475,7 +499,12 @@ if [ "$1" == "add" ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
 				else
-					id=$((i-2))
+					if [ "$board_type" != "VMOD0014" ]; then
+						id=$((i - 2))
+					else
+					# Denverton CPU on SN2201 has CPU Core numbers 6, 12 instead 0, 1
+						id=$((((i - 2) / 6) - 1))
+					fi
 					name="core$id"
 				fi
 				ln -sf "$3""$4"/temp"$i"_input $thermal_path/cpu_$name
@@ -652,40 +681,87 @@ if [ "$1" == "add" ]; then
 			echo $ps_min_rpm > "$thermal_path"/"$2"_fan_min
 		fi
 
+		# PSU FW VER
+		mfr=$(grep MFR_NAME $eeprom_path/"$2"_vpd | awk '{print $2}')
+		cap=$(grep CAPACITY $eeprom_path/"$2"_vpd | awk '{print $2}')
+		if echo $mfr | grep -iq "Murata"; then
+			# Support FW update only for specific Murata PSU capacities
+			fw_ver="N/A"
+			fw_primary_ver="N/A"
+			if [ "$cap" == "1500" -o "$cap" == "2000" ]; then
+				fw_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr)
+				fw_primary_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr -P)
+			fi
+			echo $fw_ver > $fw_path/"$2"_fw_ver
+			echo $fw_primary_ver > $fw_path/"$2"_fw_primary_ver
+		elif echo $mfr | grep -iq "Delta"; then
+			# Support FW update only for specific Delta PSU capacities
+			fw_ver="N/A"
+			if [ "$cap" == "550" ]; then
+				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+			fi
+			echo $fw_ver > $fw_path/"$2"_fw_ver
+		fi
+
 	fi
 	if [ "$2" == "sxcore" ]; then
 		if [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
-		/usr/bin/hw-management.sh chipup
+		/usr/bin/hw-management.sh chipup 0 "$4/$5"
+	fi
+	if [ "$2" == "nvme_temp" ]; then
+		dev_name=$(cat "$3""$4"/name)
+		if [ "$dev_name" == "nvme" ]; then
+			for i in {1..4}; do
+				if [ -f "$3""$4"/temp"$i"_input ]; then
+					label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
+					name=$(echo "$label" | awk '{print tolower($0)}')
+					ln -sf "$3""$4"/temp"$i"_input "$thermal_path"/"$dev_name"_"$name"
+					# Make links only to 1st sensor - Composite temperature.
+					# Normaslized composite temperature values are taken to thermal management.
+					if [ "$i" -eq 1 ]; then
+						ln -sf "$3""$4"/temp"$i"_alarm "$thermal_path"/"$dev_name"_"$name"_alarm
+						ln -sf "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
+						ln -sf "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
+						ln -sf "$3""$4"/temp"$i"_min "$thermal_path"/"$dev_name"_"$name"_min
+					fi
+				fi
+			done
+		fi
 	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
+		asic_index="$6"
+		asic_num=$(< $config_path/asic_num)
+		if [ "$asic_num" -lt "$asic_index" ]; then
+			exit 0
+		fi
 		if [ "$3" == "up" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -f /etc/init.d/sxdkernel ]; then
+			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 				sleep 3
-				/usr/bin/hw-management.sh chipup
+				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
-			/usr/bin/hw-management.sh chipdown
+			/usr/bin/hw-management.sh chipdown "$asic_index"
 		else
 			asic_health=0
 			if [ -f "$3""$4"/asic1 ]; then
 				asic_health=$(< "$4""$5"/asic1)
 			fi
 			if [ "$asic_health" -eq 2 ]; then
-				if [ ! -f /etc/init.d/sxdkernel ]; then
+				if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
 					sleep 3
-					/usr/bin/hw-management.sh chipup
+					/usr/bin/hw-management.sh chipup "$asic_index"
 				fi
 			else
-				/usr/bin/hw-management.sh chipdown
+				/usr/bin/hw-management.sh chipdown "$asic_index"
 			fi
 		fi
 	fi
@@ -867,11 +943,22 @@ else
 			check_n_unlink $system_path/lc"$i"_synced
 			check_n_unlink $system_path/lc"$i"_verified
 		done
+		for ((i=1; i<=max_erots; i+=1)); do
+			check_n_unlink $system_path/erot"$i"_ap
+			check_n_unlink $system_path/erot"$i"_error
+		done
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
 		check_n_unlink $config_path/port_config_done
-		/usr/bin/hw-management.sh chipdown
+		if [ ! -f "$config_path/asic_num" ]; then
+			asic_num=1
+		else
+			asic_num=$(< $config_path/asic_num)
+		fi
+		for ((i=1; i<=asic_num; i+=1)); do
+			/usr/bin/hw-management.sh chipdown "$i"
+		done
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
@@ -940,6 +1027,6 @@ else
 		rm -f $eeprom_path/"$2"_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
-		/usr/bin/hw-management.sh chipdown
+		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 	fi
 fi

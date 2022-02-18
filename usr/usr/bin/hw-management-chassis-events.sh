@@ -71,13 +71,13 @@ if [ "$board_type" == "VMOD0014" ]; then
 fi
 
 # Voltmon sensors by label mapping:
-#                   dummy   voltmon1      voltmon2       voltmon3
+#                   dummy   sensor1       sensor2        sensor3
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
 CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
 POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
 
 # Find sensor index which label matching to mask.
-# $1 - patch to sensor in sysfs
+# $1 - path to sensor in sysfs
 # $2 - sensor type ('in', 'curr', 'power'...)
 # $3 - mask to matching  label
 # return sensor index if match is found or 0 if match not found
@@ -357,6 +357,9 @@ function set_fan_direction()
 	event=$2
 	case $attribute in
 	fan*)
+		if [ -f $config_path/fan_dir_eeprom ]; then
+			return
+		fi
 		fan_dir=$(< $system_path/fan_dir)
 		fandirhex=$(printf "%x\n" "$fan_dir")
 		fan_bit_index=$(( ${attribute:3} - 1 ))
@@ -395,6 +398,51 @@ function set_lc_fpga_combined_version()
 	echo "$str" > "$lc_path"/system/fpga
 }
 
+function handle_hotplug_fan_event()
+{
+	local attribute=$1
+	local event=$2
+	local bus=
+	local addr=
+
+	case "$board_type" in
+	VMOD0014)
+		case $attribute in
+		fan1)
+			bus=$i2c_bus_def_off_eeprom_fan1
+			addr=0x50
+			;;
+		fan2)
+			bus=$i2c_bus_def_off_eeprom_fan2
+			addr=0x51
+			;;
+		fan3)
+			bus=$i2c_bus_def_off_eeprom_fan3
+			addr=0x52
+			;;
+		fan4)
+			bus=$i2c_bus_def_off_eeprom_fan4
+			addr=0x53
+			;;
+		*)
+			;;
+		esac
+		eeprom_type=24c02
+		if [ "$event" -eq 1 ]; then
+			connect_device "$eeprom_type" "$addr" "$bus"
+		else
+			disconnect_device "$addr" "$bus"
+		fi
+		;;
+	*)
+		;;
+	esac
+
+	if [ "$event" -eq 1 ]; then
+		set_fan_direction "$attribute" "$event"
+	fi
+}
+
 function handle_hotplug_event()
 {
 	local attribute
@@ -403,21 +451,109 @@ function handle_hotplug_event()
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
 	
-	if [ -f $events_path/"$attribute" ]; then
-		echo "$event" > $events_path/"$attribute"
+	if [ -f "$events_path"/"$attribute" ]; then
+		echo "$event" > "$events_path"/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
-
-		case "$attribute" in
-		lc*_active)
-			linecard=`echo ${attribute:0:3}`
-			lc_path="$hw_management_path"/"$linecard"
-			set_lc_fpga_combined_version "$lc_path"
-			;;
-		*)
-			;;
-		esac
 	fi
-	set_fan_direction "$attribute" "$event"
+
+	case "$attribute" in
+	lc*_active)
+		linecard=$(echo ${attribute:0:3})
+		lc_path="$hw_management_path"/"$linecard"
+		set_lc_fpga_combined_version "$lc_path"
+		;;
+	fan*)
+		handle_hotplug_fan_event "$attribute" "$event"
+		;;
+	*)
+		;;
+	esac
+}
+
+function handle_i2cbus_dev_action()
+{
+	i2c_busdev_path=$1
+	i2c_busdev_action=$2
+
+	if [ ! -f $config_path/i2c_bus_connect_devs ];
+	then
+		return
+	fi
+
+	i2cbus_regex="i2c-([0-9]+)$"
+	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
+	if [[ -z "${BASH_REMATCH[1]}" ]]; then
+		return
+	else
+		i2cbus="${BASH_REMATCH[1]}"
+	fi
+
+	# load i2c devices list which should be connected on demand
+	declare -a asic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devs))"
+
+	# go over all devices and check if they should be connected to the current i2c bus
+	for ((i=0; i<${#asic_i2c_bus_connect_table[@]}; i+=4)); do
+		if [ $i2cbus == "${asic_i2c_bus_connect_table[i+2]}" ];
+		then
+			if [ "$i2c_busdev_action" == "add" ]; then
+				connect_device "${asic_i2c_bus_connect_table[i]}" "${asic_i2c_bus_connect_table[i+1]}" \
+					"${asic_i2c_bus_connect_table[i+2]}"
+			elif [ "$i2c_busdev_action" == "remove" ]; then
+				diconnect_device "${asic_i2c_bus_connect_table[i]}" "${asic_i2c_bus_connect_table[i+1]}" \
+					"${asic_i2c_bus_connect_table[i+2]}"
+			fi
+		fi
+	done
+}
+
+# Get voltmon sensor prefix, like voltmon{id}.
+# For name voltmonX returning name based on $config_path/i2c_bus_connect_devs file
+# for other names - just return voltmon{id} string
+# $1 - voltmon name (voltmon1,voltmon2, voltmon10, voltmonX)
+# $2 - path to sensor in sysfs
+
+# return sensor index if match is found or 0 if match not found
+function get_i2c_voltmon_prefix()
+{
+	voltmon_name=$1
+	path=$2
+
+	# Check if we need to create voltmon name based on names in i2c_bus_connect_devs
+	if [ "$voltmon_name" != "voltmon_nameX" ];
+	then
+		echo "$voltmon_name"
+		return
+	fi
+
+	if [ ! -f $config_path/i2c_bus_connect_devs ];
+	then
+		log_info "Can't find" "$config_path"/i2c_bus_connect_devs " database required for name assign for sensor" "$path"
+		echo "$voltmon_name"
+		return
+	fi
+
+	# load i2c devices list which should be connected on demand
+	declare -a asic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devs))"
+
+	i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
+	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
+	if [ "${#BASH_REMATCH[1]}" == 3 ]; then
+		echo "$voltmon_name"
+		return
+	else
+		i2cbus="${BASH_REMATCH[1]}"
+		i2caddr="${BASH_REMATCH[2]}"
+	fi
+
+	for ((i=0; i<${#asic_i2c_bus_connect_table[@]}; i+=4)); do
+		if [ $i2cbus == "${asic_i2c_bus_connect_table[i+2]}" ] && [ $i2addr == "${asic_i2c_bus_connect_table[i+1]}" ] ;
+		then
+			voltmon_name="${asic_i2c_bus_connect_table[i+3]}"
+			break
+		fi
+	done
+
+	echo "$voltmon_name"
 }
 
 if [ "$1" == "add" ]; then
@@ -439,7 +575,16 @@ if [ "$1" == "add" ]; then
 				iio_name=$lc_iio_dev_name_def
 			fi
 		fi
-		ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
+		# ADS1015 used on SN2201 has scale for every input
+		if [ "$board_type" == "VMOD0014" ]; then
+			for i in {0..7}; do
+				if [ -f "$3""$4"/in_voltage"$i"_scale ]; then
+					ln -sf "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
+				fi
+			done
+		else
+			ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
+		fi
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
 				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
@@ -450,7 +595,7 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
 	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
-	   [ "$2" == "voltmon13" ] ||
+	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
@@ -496,14 +641,18 @@ if [ "$1" == "add" ]; then
 			done
 			;;
 		*)
-			prefix=$2
+			# get voltmon prefix.
+			# for voltmon[0..100] name will not change - just return it
+			# for voltmonX we try to get name based on dev id/bus and system connect table
+			prefix=$(get_i2c_voltmon_prefix "$2" "$4")
+
 			# TMP workaround until dictionary is implemented.
 			dev_addr=$(echo "$4" | xargs dirname | xargs dirname | xargs basename )
 			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			if [[ $sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
 				prefix="voltmon6"
 			fi
-						
+
 			for i in {1..3}; do
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
@@ -692,7 +841,12 @@ if [ "$1" == "add" ]; then
 			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
-			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset_in_vpd_eeprom_pn $eeprom_path/$eeprom_name)
+			if [ "$board_type" == "VMOD0014" ]; then
+				fan_dir_offset=0x8
+			else
+				fan_dir_offset=$fan_dir_offset_in_vpd_eeprom_pn
+			fi
+			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
 			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
 			case $fan_direction in
 			$fan_direction_exhaust)
@@ -752,6 +906,12 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "lc_topo" ]; then
 		log_info "I2C infrastucture for line card $3 is created."
 	fi
+
+	# Create i2c bus
+	if [ "$2" == "i2c_bus" ]; then
+		log_info "I2C bus $4 connected."
+		handle_i2cbus_dev_action $4 "add"
+	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
@@ -778,7 +938,15 @@ else
 				environment_path="$hw_management_path"/lc"$linecard_num"/environment
 			fi
 		fi
-		unlink $environment_path/"$2"_"$5"_voltage_scale
+		if [ "$board_type" == "VMOD0014" ]; then
+			for i in {0..7}; do
+				if [ -L $environment_path/"$2"_"$5"_voltage_scale_"$i" ]; then
+					unlink $environment_path/"$2"_"$5"_voltage_scale_"$i"
+				fi
+			done
+		else
+			unlink $environment_path/"$2"_"$5"_voltage_scale
+		fi
 		for i in {0..7}; do
 			if [ -L $environment_path/"$2"_"$5"_raw_"$i" ]; then
 				unlink $environment_path/"$2"_"$5"_raw_"$i"
@@ -962,5 +1130,11 @@ else
 	# Destroy line card i2c mux symbolic link infrastructure
 	if [ "$2" == "lc_topo" ]; then
 		destroy_linecard_i2c_links "$3"
+	fi
+
+	# Removed i2c bus
+	if [ "$2" == "i2c_bus" ]; then
+		log_info "I2C bus $4 connected."
+		handle_i2cbus_dev_action $4 "remove"
 	fi
 fi

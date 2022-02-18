@@ -16,11 +16,11 @@ could be longer.
 
 Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/hwmon/powr1220.c | 25 ++++++++++++++++++++-----
- 1 file changed, 20 insertions(+), 5 deletions(-)
+ drivers/hwmon/powr1220.c | 27 +++++++++++++++++++++------
+ 1 file changed, 21 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/hwmon/powr1220.c b/drivers/hwmon/powr1220.c
-index dc5098dcc..e28fe8f03 100644
+index 1b833781e89d..84f1508f1cbd 100644
 --- a/drivers/hwmon/powr1220.c
 +++ b/drivers/hwmon/powr1220.c
 @@ -22,6 +22,8 @@
@@ -89,14 +89,16 @@ index dc5098dcc..e28fe8f03 100644
  	mutex_init(&data->update_lock);
  	data->client = client;
  
-@@ -294,6 +308,7 @@ static int powr1220_probe(struct i2c_client *client)
+@@ -293,7 +307,8 @@ static int powr1220_probe(struct i2c_client *client)
+ }
  
  static const struct i2c_device_id powr1220_ids[] = {
- 	{ "powr1220", 0, },
-+	{ "powr1014", 0, },
+-	{ "powr1220", 0, },
++	{ "powr1220", powr1220, },
++	{ "powr1014", powr1014, },
  	{ }
  };
  
 -- 
-2.20.1
+2.14.1
 
