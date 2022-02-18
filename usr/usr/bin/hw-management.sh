@@ -273,15 +273,16 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			24c512 0x51 8)
 
 e3597_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x22 5 \
-			mp2975 0x23 5 \
-			mp2975 0x24 5 \
-			mp2975 0x25 5 \
-			mp2975 0x26 5 \
-			mp2975 0x27 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
+			
+e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
+			mp2975 0x23 5  voltmon2 \
+			mp2975 0x24 5  voltmon3 \
+			mp2975 0x25 5  voltmon4 \
+			mp2975 0x26 5  voltmon5 \
+			mp2975 0x27 5  voltmon6)
 
 p4697_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x49 7 \
@@ -293,7 +294,7 @@ p4697_base_rev1_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_asic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
+p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
 			mp2975 0x24 26 voltmon2 \
 			mp2975 0x27 26 voltmon3 \
 			mp2975 0x23 31 voltmon4 \
@@ -629,19 +630,19 @@ add_cpu_board_to_connection_table()
 	connect_table+=(${cpu_connection_table[@]})
 }
 
-add_asic_i2c_bus_dev_connection_table()
+add_i2c_dynamic_bus_dev_connection_table()
 {
 	connection_table=("$@")
-	asic_i2cbus_connection_table=""
+	dynamic_i2cbus_connection_table=""
 
-	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devs
+	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devices
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
-		asic_i2cbus_connection_table[$i]="${connection_table[i]}"
-		asic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
-		asic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
+		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
+		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
+		dynamic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
 	done
 
-	connect_table+=(${asic_i2cbus_connection_table[@]})
+	connect_table+=(${dynamic_i2cbus_connection_table[@]})
 }
 
 msn274x_specific()
@@ -1070,6 +1071,7 @@ mqm87xx_rev1_specific()
 e3597_specific()
 {
 	connect_table=(${e3597_base_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${e3597_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -1106,7 +1108,7 @@ p4697_specific()
 		connect_table=(${p4697_base_connect_table[@]})
 	fi
 
-	add_asic_i2c_bus_dev_connection_table "${p4697_asic_i2c_bus_connect_table[@]}"
+	add_i2c_dynamic_bus_dev_connection_table "${p4697_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -1120,7 +1122,7 @@ p4697_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/e4597_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/p4697_sensors.conf"
 }
 
 msn_spc2_common()
