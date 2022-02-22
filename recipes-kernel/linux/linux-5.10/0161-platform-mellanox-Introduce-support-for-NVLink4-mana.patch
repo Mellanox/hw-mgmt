@@ -174,7 +174,7 @@ index 9914e5035..499762db1 100644
 +		.bit = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0644,
 +	},
-+
++	{
 +		.label = "erot1_recovery",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
 +		.bit = GENMASK(7, 0) & ~BIT(6),
