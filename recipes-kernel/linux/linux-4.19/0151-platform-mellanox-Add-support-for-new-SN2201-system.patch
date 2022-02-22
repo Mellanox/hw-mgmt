@@ -63,7 +63,7 @@ new file mode 100644
 index 000000000..1a2103778
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1227 @@
+@@ -0,0 +1,1232 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -89,15 +89,16 @@ index 000000000..1a2103778
 +#define NVSW_SN2201_HW_VER_ID_OFFSET                0x00
 +#define NVSW_SN2201_BOARD_ID_OFFSET                 0x01
 +#define NVSW_SN2201_CPLD_VER_OFFSET                 0x02
-+#define NVSW_SN2201_CPLD_ID_OFFSET                  0x03
-+#define NVSW_SN2201_CPLD_PN_OFFSET                  0x06
-+#define NVSW_SN2201_CPLD_PN1_OFFSET                 0x07
-+#define NVSW_SN2201_PSU_CTRL_OFFSET                 0x0A
-+#define NVSW_SN2201_QSFP28_STATUS_OFFSET            0x0B
-+#define NVSW_SN2201_QSFP28_INT_STATUS_OFFSET        0x0C
-+#define NVSW_SN2201_QSFP28_LP_STATUS_OFFSET         0x0D
-+#define NVSW_SN2201_QSFP28_RST_STATUS_OFFSET        0x0E
-+#define NVSW_SN2201_SYS_STATUS_OFFSET               0x0F
++#define NVSW_SN2201_CPLD_MVER_OFFSET                0x03
++#define NVSW_SN2201_CPLD_ID_OFFSET                  0x04
++#define NVSW_SN2201_CPLD_PN_OFFSET                  0x05
++#define NVSW_SN2201_CPLD_PN1_OFFSET                 0x06
++#define NVSW_SN2201_PSU_CTRL_OFFSET                 0x0a
++#define NVSW_SN2201_QSFP28_STATUS_OFFSET            0x0b
++#define NVSW_SN2201_QSFP28_INT_STATUS_OFFSET        0x0c
++#define NVSW_SN2201_QSFP28_LP_STATUS_OFFSET         0x0d
++#define NVSW_SN2201_QSFP28_RST_STATUS_OFFSET        0x0e
++#define NVSW_SN2201_SYS_STATUS_OFFSET               0x0f
 +#define NVSW_SN2201_FRONT_SYS_LED_CTRL_OFFSET       0x10
 +#define NVSW_SN2201_FRONT_FAN_LED_CTRL_OFFSET       0x11
 +#define NVSW_SN2201_FRONT_PSU_LED_CTRL_OFFSET       0x12
@@ -112,9 +113,9 @@ index 000000000..1a2103778
 +#define NVSW_SN2201_THML_STATUS_OFFSET              0x27
 +#define NVSW_SN2201_THML_EVENT_OFFSET               0x28
 +#define NVSW_SN2201_THML_MASK_OFFSET                0x29
-+#define NVSW_SN2201_PS_ALT_STATUS_OFFSET            0x2A
-+#define NVSW_SN2201_PS_ALT_EVENT_OFFSET             0x2B
-+#define NVSW_SN2201_PS_ALT_MASK_OFFSET              0x2C
++#define NVSW_SN2201_PS_ALT_STATUS_OFFSET            0x2a
++#define NVSW_SN2201_PS_ALT_EVENT_OFFSET             0x2b
++#define NVSW_SN2201_PS_ALT_MASK_OFFSET              0x2c
 +#define NVSW_SN2201_PS_PRSNT_STATUS_OFFSET          0x30
 +#define NVSW_SN2201_PS_PRSNT_EVENT_OFFSET           0x31
 +#define NVSW_SN2201_PS_PRSNT_MASK_OFFSET            0x32
@@ -124,9 +125,9 @@ index 000000000..1a2103778
 +#define NVSW_SN2201_RST_CAUSE1_OFFSET               0x36
 +#define NVSW_SN2201_RST_CAUSE2_OFFSET               0x37
 +#define NVSW_SN2201_RST_SW_CTRL_OFFSET              0x38
-+#define NVSW_SN2201_FAN_PRSNT_STATUS_OFFSET         0x3A
-+#define NVSW_SN2201_FAN_PRSNT_EVENT_OFFSET          0x3B
-+#define NVSW_SN2201_FAN_PRSNT_MASK_OFFSET           0x3C
++#define NVSW_SN2201_FAN_PRSNT_STATUS_OFFSET         0x3a
++#define NVSW_SN2201_FAN_PRSNT_EVENT_OFFSET          0x3b
++#define NVSW_SN2201_FAN_PRSNT_MASK_OFFSET           0x3c
 +#define NVSW_SN2201_WD_TMR_OFFSET_LSB               0x40
 +#define NVSW_SN2201_WD_TMR_OFFSET_MSB               0x41
 +#define NVSW_SN2201_WD_ACT_OFFSET                   0x42
@@ -263,6 +264,7 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_HW_VER_ID_OFFSET:
 +	case NVSW_SN2201_BOARD_ID_OFFSET:
 +	case NVSW_SN2201_CPLD_VER_OFFSET:
++	case NVSW_SN2201_CPLD_MVER_OFFSET:
 +	case NVSW_SN2201_CPLD_ID_OFFSET:
 +	case NVSW_SN2201_CPLD_PN_OFFSET:
 +	case NVSW_SN2201_CPLD_PN1_OFFSET:
@@ -315,6 +317,7 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_HW_VER_ID_OFFSET:
 +	case NVSW_SN2201_BOARD_ID_OFFSET:
 +	case NVSW_SN2201_CPLD_VER_OFFSET:
++	case NVSW_SN2201_CPLD_MVER_OFFSET:
 +	case NVSW_SN2201_CPLD_ID_OFFSET:
 +	case NVSW_SN2201_CPLD_PN_OFFSET:
 +	case NVSW_SN2201_CPLD_PN1_OFFSET:
@@ -643,11 +646,11 @@ index 000000000..1a2103778
 +	},
 +	{
 +		.brdinfo = &nvsw_sn2201_static_devices[4],
-+		.nr = NVSW_SN2201_MAIN_MUX_CH0_NR,
++		.nr = NVSW_SN2201_MAIN_MUX_CH3_NR,
 +	},
 +	{
 +		.brdinfo = &nvsw_sn2201_static_devices[5],
-+		.nr = NVSW_SN2201_MAIN_MUX_CH3_NR,
++		.nr = NVSW_SN2201_MAIN_MUX_CH5_NR,
 +	},
 +	{
 +		.brdinfo = &nvsw_sn2201_static_devices[6],
@@ -659,7 +662,7 @@ index 000000000..1a2103778
 +	},
 +	{
 +		.brdinfo = &nvsw_sn2201_static_devices[8],
-+		.nr = NVSW_SN2201_MAIN_MUX_CH5_NR,
++		.nr = NVSW_SN2201_MAIN_MUX_CH6_NR,
 +	},
 +	{
 +		.brdinfo = &nvsw_sn2201_static_devices[9],
@@ -667,10 +670,6 @@ index 000000000..1a2103778
 +	},
 +	{
 +		.brdinfo = &nvsw_sn2201_static_devices[10],
-+		.nr = NVSW_SN2201_MAIN_MUX_CH6_NR,
-+	},
-+	{
-+		.brdinfo = &nvsw_sn2201_static_devices[11],
 +		.nr = NVSW_SN2201_MAIN_MUX_CH7_NR,
 +	},
 +};
@@ -724,6 +723,12 @@ index 000000000..1a2103778
 +	{
 +		.label = "cpld1_version",
 +		.reg = NVSW_SN2201_CPLD_VER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld1_version_min",
++		.reg = NVSW_SN2201_CPLD_MVER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
 +	},
@@ -801,25 +806,25 @@ index 000000000..1a2103778
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_dc_pwr_fail",
++		.label = "reset_swb_dc_dc_pwr_fail",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_sw",
++		.label = "reset_sw_reset",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_fw",
++		.label = "reset_fw_reset",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_wd",
++		.label = "reset_swb_wd",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
@@ -843,7 +848,7 @@ index 000000000..1a2103778
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_cpu_pwr_fail",
++		.label = "reset_cpu_pwr_fail_thermal",
 +		.reg = NVSW_SN2201_RST_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
