@@ -1231,9 +1231,12 @@ sn2201_specific()
 	echo 960 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
 	echo 2500 > $config_path/psu_fan_min
-	cpld2=$(i2cget -f -y 1 0x3d 0x01)
-	cpld2=${cpld2:2}
-	echo $(( 16#$cpld2 )) > $system_path/cpld2_version
+	cpld2_ver=$(i2cget -f -y 1 0x3d 0x01)
+	cpld2_ver=${cpld2_ver:2}
+	echo $(( 16#$cpld2_ver )) > $system_path/cpld2_version
+	cpld2_mver=$(i2cget -f -y 1 0x3d 0x02)
+	cpld2_mver=${cpld2_mver:2}
+	echo $(( 16#$cpld2_mver )) > $system_path/cpld2_version_min
 	cpld2_pn=$(i2cget -f -y 1 0x3d 0x21)
 	cpld2_pn=${cpld2_pn:2}
 	cpld2_pn=$(( 16#$cpld2_pn ))
