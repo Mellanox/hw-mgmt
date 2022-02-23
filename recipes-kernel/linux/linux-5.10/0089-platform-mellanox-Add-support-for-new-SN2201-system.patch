@@ -64,7 +64,7 @@ new file mode 100644
 index 000000000..06a257ee1
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1232 @@
+@@ -0,0 +1,1225 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -138,8 +138,6 @@ index 000000000..06a257ee1
 +#define NVSW_SN2201_PHY_I2C_BUS_NUM		2
 +/* Number of main mux channels. */
 +#define NVSW_SN2201_MAIN_MUX_CHNL_NUM		8
-+/* Number of fan tray mux channels. */
-+#define NVSW_SN2201_FAN_TRAY_MUX_CHNL_NUM	4
 +
 +#define NVSW_SN2201_MAIN_NR			0
 +#define NVSW_SN2201_MAIN_MUX_NR			1
@@ -150,15 +148,9 @@ index 000000000..06a257ee1
 +#define NVSW_SN2201_MAIN_MUX_CH1_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 1)
 +#define NVSW_SN2201_MAIN_MUX_CH2_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 2)
 +#define NVSW_SN2201_MAIN_MUX_CH3_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 3)
-+#define NVSW_SN2201_MAIN_MUX_CH4_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 4)
 +#define NVSW_SN2201_MAIN_MUX_CH5_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 5)
 +#define NVSW_SN2201_MAIN_MUX_CH6_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 6)
 +#define NVSW_SN2201_MAIN_MUX_CH7_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 7)
-+
-+#define NVSW_SN2201_FAN_MUX_CH0_NR	(NVSW_SN2201_MAIN_MUX_CH7_NR + 1)
-+#define NVSW_SN2201_FAN_MUX_CH1_NR	(NVSW_SN2201_MAIN_MUX_CH7_NR + 2)
-+#define NVSW_SN2201_FAN_MUX_CH2_NR	(NVSW_SN2201_MAIN_MUX_CH7_NR + 3)
-+#define NVSW_SN2201_FAN_MUX_CH3_NR	(NVSW_SN2201_MAIN_MUX_CH7_NR + 4)
 +
 +#define NVSW_SN2201_CPLD_NR		NVSW_SN2201_MAIN_MUX_CH0_NR
 +#define NVSW_SN2201_NR_NONE		-1
@@ -166,7 +158,7 @@ index 000000000..06a257ee1
 +/* Masks for aggregation, PSU presence and power, ASIC events
 + * in CPLD related registers.
 + */
-+#define NVSW_SN2201_CPLD_AGGR_ASIC_MASK_DEF	0xE0
++#define NVSW_SN2201_CPLD_AGGR_ASIC_MASK_DEF	0xe0
 +#define NVSW_SN2201_CPLD_AGGR_PSU_MASK_DEF	0x04
 +#define NVSW_SN2201_CPLD_AGGR_PWR_MASK_DEF	0x02
 +#define NVSW_SN2201_CPLD_AGGR_FAN_MASK_DEF	0x10
@@ -738,6 +730,7 @@ index 000000000..06a257ee1
 +		.reg = NVSW_SN2201_CPLD_PN_OFFSET,
 +		.bit = GENMASK(15, 0),
 +		.mode = 0444,
++		.regnum = 2,
 +	},
 +	{
 +		.label = "psu1_on",
