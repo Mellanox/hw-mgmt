@@ -315,37 +315,33 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
 
-mqm9510_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 \
-			max11603 0x6d 6 \
-			mp2975 0x62 6 \
-			mp2888 0x66 6 \
-			mp2975 0x68 6 \
-			mp2975 0x6a 6 \
-			mp2975 0x6c 6 \
-			tmp102 0x49 7 \
-			tmp102 0x4a 7 \
-			24c512 0x51 8)
+mqm9510_base_connect_table=( \
+	tmp102 0x4a 7 \
+	24c512 0x51 8)
 
-mqm9520_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 \
-			tmp102 0x49 7 \
-			tmp102 0x4a 7 \
-			24c512 0x51 8 \
-			max11603 0x6d 13 \
-			mp2975 0x62 13 \
-			mp2888 0x66 13 \
-			mp2975 0x68 13 \
-			mp2975 0x6a 13 \
-			mp2975 0x6c 13)
+mqm9510_dynamic_i2c_bus_connect_table=( \
+	mp2888 0x62 5 \
+	mp2888 0x66 5 \
+	mp2888 0x68 5 \
+	mp2888 0x6c 5 \
+	mp2888 0x62 6 \
+	mp2888 0x66 6 \
+	mp2888 0x68 6 \
+	mp2888 0x6c 6)
+
+mqm9520_base_connect_table=( \
+	tmp102 0x49 7 \
+	tmp102 0x4a 7 \
+	24c512 0x51 8)
+
+mqm9520_dynamic_i2c_bus_connect_table=( \
+	mp2888 0x66 5  \
+	mp2888 0x68 5  \
+	mp2888 0x6c 5  \
+	mp2888 0x62 13 \
+	mp2888 0x66 13 \
+	mp2888 0x68 13 \
+	mp2888 0x6c 13)
 
 ACTION=$1
 
@@ -1029,6 +1025,7 @@ mqm9510_specific()
 {
 	local cpu_bus_offset=18
 	connect_table=(${mqm9510_base_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
@@ -1042,6 +1039,7 @@ mqm9520_specific()
 {
 	local cpu_bus_offset=18
 	connect_table=(${mqm9520_base_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	i2c_asic2_bus_default=10
 	thermal_type=$thermal_type_def
