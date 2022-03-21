@@ -613,6 +613,18 @@ if [ "$1" == "add" ]; then
 		psu_connect_power_sensor "$5""$3"/curr1 "$2"_curr_in
 		psu_connect_power_sensor "$5""$3"/curr2 "$2"_curr
 
+		# Allow modification for some PSU thresholds through 'sensors'
+		# utilities 'sets instruction.
+		if [ -f "$5""$3"/in3_lcrit ]; then
+			chmod 644 "$5""$3"/in3_lcrit
+		fi
+		if [ -f "$5""$3"/in3_min ]; then
+			chmod 644 "$5""$3"/in3_min
+		fi
+		if [ -f "$5""$3"/in3_max ]; then
+			chmod 644 "$5""$3"/in3_max
+		fi
+
 		if [ ! -f $config_path/"$2"_i2c_addr ]; then
 			exit 0
 		fi
