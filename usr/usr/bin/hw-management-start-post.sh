@@ -37,7 +37,7 @@ source hw-management-helpers.sh
 # Local constants and paths.
 max_cpld=4
 max_fan_drwr=8
-CPLD3_VER_DEF="0"
+start=$1
  
 handle_cpld_versions()
 {
@@ -101,35 +101,15 @@ esac
 timeout 60 bash -c 'until [ -L /var/run/hw-management/system/cpld1_version ]; do sleep 1; done'
 sleep 1
 
-# Read cpld3 version with the mlxreg from mft package
-if [ -f $config_path/cpld_port ];
-then
-    cpld=$(< $config_path/cpld_port)
-    if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ];
-    then
-        ver_dec=$CPLD3_VER_DEF
-        # check if mlxreg exists
-        if [ -x "$(command -v mlxreg)" ];
-        then
-            lsmod | grep mst_pci >/dev/null 2>&1
-            if [  $? -ne 0 ];
-            then
-                mst start  >/dev/null 2>&1
-                sleep 2
-            fi
-            mt_dev=$(find /dev/mst -name *00_pciconf0)
-            cmd='mlxreg --reg_name MSCI  -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
-            ver_hex=$(eval $cmd)
-            if [ ! -z "$ver_hex" ]; then
-               ver_dec=$(printf "%d" $ver_hex)
-            fi
-        fi
-        echo "$ver_dec" > $system_path/cpld3_version
-    fi
+if [ -f $config_path/cpld_port ]; then
+	create_cpld3_version
 fi
 
-handle_cpld_versions $cpld_num
-# Do not set for fixed fans systems. For fixed fans systems fan_drwr_num set in system specific init function.
-if [ ! -f $config_path/fixed_fans_system ]; then
-	set_fan_drwr_num
+if [ "$start" == "1" ]; then
+	handle_cpld_versions $cpld_num
+
+	# Do not set for fixed fans systems. For fixed fans systems fan_drwr_num set in system specific init function.
+	if [ ! -f $config_path/fixed_fans_system ]; then
+		set_fan_drwr_num
+	fi
 fi

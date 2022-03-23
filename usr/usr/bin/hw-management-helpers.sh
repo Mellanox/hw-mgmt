@@ -216,3 +216,29 @@ disconnect_device()
 
 	return 0
 }
+
+# Read cpld3 version with the mlxreg from mft package
+create_cpld3_version()
+{
+	CPLD3_VER_DEF="0"
+
+	cpld=$(< $config_path/cpld_port)
+	if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ]; then
+		ver_dec=$CPLD3_VER_DEF
+		# check if mlxreg exists
+		if [ -x "$(command -v mlxreg)" ]; then
+			lsmod | grep mst_pci >/dev/null 2>&1
+			if [  $? -ne 0 ]; then
+				mst start  >/dev/null 2>&1
+				sleep 2
+			fi
+			mt_dev=$(find /dev/mst -name *00_pciconf0)
+			cmd='mlxreg --reg_name MSCI -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
+			ver_hex=$(eval $cmd)
+			if [ ! -z "$ver_hex" ]; then
+				ver_dec=$(printf "%d" $ver_hex)
+			fi
+		fi
+		echo "$ver_dec" > $system_path/cpld3_version
+	fi
+}

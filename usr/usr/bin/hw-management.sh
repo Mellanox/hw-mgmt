@@ -1648,7 +1648,7 @@ do_start()
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
 	sleep 1
-	/usr/bin/hw-management-start-post.sh
+	/usr/bin/hw-management-start-post.sh 1
 
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
@@ -1760,6 +1760,7 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
+			/usr/bin/hw-management-start-post.sh 0
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
