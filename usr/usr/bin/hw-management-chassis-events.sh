@@ -340,17 +340,6 @@ function asic_cpld_add_handler()
 	fi
 }
 
-function asic_cpld_remove_handler()
-{
-	if [ -f "$config_path/cpld_port" ]; then
-		if [ -L $system_path/cpld3_version ]; then
-			unlink $system_path/cpld3_version
-		else
-			rm -rf $system_path/cpld3_version
-		fi
-	fi
-}
-
 function set_fan_direction()
 {
 	attribute=$1
@@ -1097,9 +1086,6 @@ else
 			*)
 				;;
 		esac
-	fi
-	if [ "$2" == "cpld" ]; then
-		asic_cpld_remove_handler
 	fi
 	if [ "$2" == "watchdog" ]; then
 	wd_type=$(< "$3""$4"/identity)
