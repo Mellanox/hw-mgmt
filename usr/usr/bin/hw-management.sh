@@ -1671,6 +1671,7 @@ do_start()
 		if [ -f $config_path/fixed_fans_dir ]; then
 			for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
 				cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
+				echo 1 > $thermal_path/fan"$i"_status
 			done
 		fi
 	fi
