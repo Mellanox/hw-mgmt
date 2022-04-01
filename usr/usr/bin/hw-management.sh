@@ -1285,11 +1285,11 @@ check_system()
 		VMOD0011)
 			msn48xx_specific
 			;;
-		VMOD0012)
-			p2317_specific
-			;;
 		VMOD0014)
 			sn2201_specific
+			;;
+		VMOD0015)
+			p2317_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
