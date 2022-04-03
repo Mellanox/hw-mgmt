@@ -498,10 +498,10 @@ set_jtag_gpio()
 			jtag_tck=131
 			;;
 		$DNV_CPU)
+			jtag_tdi=86
 			jtag_tck=87
 			jtag_tms=88
-			jtag_tdo=86
-			jtag_tdi=89
+			jtag_tdo=89
 			;;
 		*)
 			return 0
