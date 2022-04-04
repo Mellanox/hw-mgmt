@@ -125,7 +125,7 @@ global_wp_pid=$$
 action="$1"
 case $action in
 release|restore)
-	if [ "$3" != "" ] && [ "$2" != "" ]; then
+	if [ "$3" == "" ] || [ "$2" == "" ]; then
 		log_info "Wrong command format."
 		echo "$__usage"
 		exit 1
