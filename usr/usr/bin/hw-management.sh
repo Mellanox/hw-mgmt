@@ -1249,6 +1249,8 @@ p2317_specific()
 	hotplug_fans=0
 	hotplug_pwrs=0
 	hotplug_psus=0
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
 	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
 }
 
