@@ -27,7 +27,7 @@ jobs:
         composer install -o -q
         
     - name: build artifacts
-      run: docker_build/build.sh
+      run: ./docker_build/build.sh
 
     - name: Zip Folder
       run: zip -r ${{ github.event.repository.name }}.zip . -x ".git/*" ".github/*" "phpcs.xml" "composer.json" "composer.lock" ".gitignore"
