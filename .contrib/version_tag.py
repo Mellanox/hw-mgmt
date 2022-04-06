@@ -20,13 +20,18 @@ def shell_cmd(command):
 
 # 1. get branch name before current
 branch_list = shell_cmd('git branch -r | grep -E ".*origin/V.7.[0-9]+.[0-9]+_BR$"').splitlines()
-matching = [branch_list.index(s) for s in branch_list if args.branch in s]
-if not matching:
+
+match = False
+for idx in range(len(branch_list)):
+    result = re.match(r'.*origin/{0}$'.format(args.branch), branch_list[idx])
+    if result:
+        match = True
+        break
+
+if not match:
     sys.exit(1)
 
-idx = matching[0]
-if idx >= 1:
-    branch = branch_list[idx-1]
+branch = branch_list[idx-1]
 
 if not branch or len(branch) <= 5:
     sys.exit(1)
@@ -58,4 +63,3 @@ else:
 new_tag = "{}{:02d}".format(tag_branch, new_tag_idx)
 print(new_tag)
 sys.exit(0)
-
