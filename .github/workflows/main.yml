@@ -19,6 +19,6 @@ jobs:
       with:
         fetch-depth: 0
     - run: |
-          changelog=$(git log -1 --name-only  --pretty="")
+          changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog")
           echo "$changelog"
   
