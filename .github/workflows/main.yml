@@ -27,6 +27,7 @@ jobs:
         git config user.email github-actions@github.com
         git add debian/changelog
         git commit --amend --no-edit
+        git push -f
         echo $(git log -1 --name-only)
         echo $(git status)
         
@@ -35,4 +36,5 @@ jobs:
         git tag $new_tag
         echo $(git log -1 --name-only)
         echo $(git status)
-        git push -f --tags
+        git push --tags
+        git push --tags
