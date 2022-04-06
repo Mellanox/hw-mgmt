@@ -18,7 +18,7 @@ jobs:
         echo "new_tag=$new_tag" >> $GITHUB_ENV
         echo $(git log -1 --name-only)
         echo $(git status)
-        changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog" || echo "changelog not updated in this commit")
+        changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog" || exit 0")
         if [ ! -z "$changelog" ]; then exit 0; fi
         echo "Updating changelog..."
         sed -i "s/\(.*mlnx.\)V.[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
