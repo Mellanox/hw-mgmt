@@ -26,4 +26,4 @@ jobs:
         git add debian/changelog
         git tag $new_tag
         git commit --amend --no-edit
-        git push --follow-tags -f --tags
+        git push -f --tags
