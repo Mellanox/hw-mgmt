@@ -12,9 +12,11 @@ jobs:
         fetch-depth: 0
     - run: |
        git fetch --tags
+       git branch -r | grep -E ".*origin/V.7.[0-9]+.[0-9]+_BR$"
        commit=$(git rev-parse HEAD)
        current_branch=$(git rev-parse --abbrev-ref HEAD)
-       new=$(./.contrib/version_tag.py -b $current_branch)
+       #new=$(./.contrib/version_tag.py -b $current_branch)
+       new="V.7.0020.2088"
        echo "new tag:" $new
        echo ::set-env name=new_tag::$new
 
