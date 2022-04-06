@@ -11,21 +11,19 @@ jobs:
       with:
         fetch-depth: 0
     - run: |     
+        current_branch=$(git rev-parse --abbrev-ref HEAD)
+        new_tag=$(./.contrib/version_tag.py -b $current_branch)
+        echo "Branch: $current_branch"
+        echo Tag: "$new_tag"
+        echo "new_tag=$new_tag" >> $GITHUB_ENV
         changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog" || echo "changelog not updated in this commit")
         if [ -z "$changelog" ]; then exit 0; fi
-        current_branch=$(git rev-parse --abbrev-ref HEAD)
-        echo "Branch: $current_branch"
-        new_tag=$(./.contrib/version_tag.py -b $current_branch)
-        echo "new_tag=$new_tag" >> $GITHUB_ENV
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        echo Tag: "$new_tag"
         sed -i "s/\(.*mlnx.\)V.[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
         sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
         git add debian/changelog
         git commit --amend --no-edit
         git push -f
-  
+
     - name: Tag commit
       uses: tvdias/github-tagger@v0.0.1
       with:
