@@ -30,4 +30,4 @@ jobs:
       uses: tvdias/github-tagger@v0.0.1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        tag: "$new_tag"
+        tag: ${{ env.new_tag }}
