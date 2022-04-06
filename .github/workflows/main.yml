@@ -20,7 +20,7 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
         echo Tag: "$new_tag"
-        sed -i "s/\(.*mlnx.\)[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
+        sed -i "s/\(.*mlnx.\)V.[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
         sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
         git add debian/changelog
         git commit --amend --no-edit
@@ -30,4 +30,4 @@ jobs:
       uses: tvdias/github-tagger@v0.0.1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        tag: "${{ env.new_tag }}"
+        tag: "$new_tag"
