@@ -21,4 +21,4 @@ jobs:
     - run: |
           changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog")
           echo "$changelog"
-          if [ -z "$changelog" ]; then exit 0; fi 
+  
