@@ -29,6 +29,8 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
         last_tag="${{ env.new_tag }}"
+        echo Tag1: "${{ env.new_tag }}"
+        echo Tag2: "$last_tag"
         sed -i "s/\(.*mlnx.\)[0-9.]*)\(.*\)/\1"$last_tag")\2/g" debian/changelog
         sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
         git add debian/changelog
