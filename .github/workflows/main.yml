@@ -14,7 +14,7 @@ jobs:
        git fetch --tags
        commit=$(git rev-parse HEAD)
        current_branch=$(git rev-parse --abbrev-ref HEAD)
-       new=$(version_tag.py -b $current_branch)
+       new=$(./.contrib/version_tag.py -b $current_branch)
        echo "new tag:" $new
        echo ::set-env name=new_tag::$new
 
