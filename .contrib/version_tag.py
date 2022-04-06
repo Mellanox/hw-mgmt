@@ -20,7 +20,7 @@ def shell_cmd(command):
 
 # 1. get branch name before current
 branch_list = shell_cmd('git branch -r | grep -E ".*origin/V.7.[0-9]+.[0-9]+_BR$"').splitlines()
-print branch_list
+print (branch_list)
 sys.exit(0)
 
 match = False
