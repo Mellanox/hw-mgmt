@@ -16,6 +16,7 @@ jobs:
         echo "Branch: $current_branch"
         echo Tag: "$new_tag"
         echo "new_tag=$new_tag" >> $GITHUB_ENV
+        echo $(git log -1 --name-only)
         changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog" || echo "changelog not updated in this commit")
         if [ -z "$changelog" ]; then exit 0; fi
         echo "Updating changelog..."
