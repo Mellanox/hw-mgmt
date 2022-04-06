@@ -24,11 +24,6 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
         git add debian/changelog
+        git tag $new_tag
         git commit --amend --no-edit
-        git push -f
-
-    - name: Tag commit
-      uses: tvdias/github-tagger@v0.0.1
-      with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        tag: ${{ env.new_tag }}
+        git push --follow-tags -f --tags
