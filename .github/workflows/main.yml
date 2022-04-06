@@ -21,8 +21,4 @@ jobs:
     - run: |
           changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog")
           echo "$changelog"
-          if [ -z "$changelog" ]; then exit 0; fi
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          last_tag=$(git describe --tags | cut -c 3-)
-          echo "$last_tag"         
+          if [ -z "$changelog" ]; then exit 0; fi 
