@@ -18,12 +18,8 @@ jobs:
        git branch -r | grep -E ".*origin/V.7.[0-9]+.[0-9]+_BR$"
        commit=$(git rev-parse HEAD)
        new="V.7.0020.2088"
-       echo "new tag:" $new
-       echo ::set-env name=new_tag::$new
-       
-       env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
-   
+       echo "new_tag=$new" >> $GITHUB_ENV
+          
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
