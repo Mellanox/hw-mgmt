@@ -71,7 +71,7 @@ do_global_wp_release_restore()
 
 				if [ "$command" != "" ]; then
 					# Execute user command for flashing device.
-					"$command" "$param1" "$param2" "$param3" "$param4" "$file"
+					"$command" "$param1" $param2 $param3 $param4 "$file"
 					rc=$?
 					if [ $rc -eq 0 ]; then
 						log_info "$command completed."
