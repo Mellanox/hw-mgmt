@@ -4,27 +4,21 @@ on:
   release:
     types:
       - created
-
 jobs:
-  build:
+  rpm_build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: rpm utility install, and build from spec file
+      - name: Checkout hw-management git repository
+        uses: actions/checkout@v3
+      - name: rpm utility install, and build from spec file
         run: |
           sudo apt-get install rpm
           cd rpm
           chmod a+x ./gen_rpm.sh
           ./gen_rpm.sh
-
-    - name: Zip Folder
-      run: zip -r ${{ github.event.repository.name }}.zip . -x ".git/*" ".github/*" ".gitignore" "CI" ""
-
-    - name: Archive the built rpm package
+      - name: Archive the built rpm package
         uses: actions/upload-artifact@v3
         with:
           name: hw-management-rpm
           path: |
-            rpm/*.rpm, ${{ github.event.repository.name }}.zip 
+            rpm/*.rpm     
