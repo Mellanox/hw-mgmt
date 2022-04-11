@@ -2,10 +2,7 @@ name: Bump version
 on:
   push:
     branches:
-        fetch-depth: 0
 
-    - name: Bump tag and update changelog
-      run: |   
       - V.7.*_BR
 jobs:
   build:
@@ -13,6 +10,10 @@ jobs:
     steps:    
     - uses: actions/checkout@v3
       with:
+        fetch-depth: 0
+
+    - name: Bump tag and update changelog
+      run: |   
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
         git config user.name "$GITHUB_ACTOR"
         current_branch=$(git rev-parse --abbrev-ref HEAD)
