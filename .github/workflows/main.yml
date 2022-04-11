@@ -30,7 +30,8 @@ jobs:
         git push -f
         echo $(git log -1 --name-only)
         echo $(git status)
-        
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_ADMIN }}
         
     - run: |    
         git tag $new_tag
