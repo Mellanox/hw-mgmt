@@ -10,32 +10,32 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    - run: |     
-        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-        git config user.name "$GITHUB_ACTOR"
-        current_branch=$(git rev-parse --abbrev-ref HEAD)
-        new_tag=$(./.contrib/version_tag.py -b $current_branch)
-        echo "Branch: $current_branch"
-        echo Tag: "$new_tag"
-        echo "new_tag=$new_tag" >> $GITHUB_ENV
-        echo $(git log -1 --name-only)
-        echo $(git status)
-        changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog" || rc=$?)
-        if [ ! -z "$changelog" ]; then exit 0; fi
-        echo "Updating changelog..."
-        sed -i "s/\(.*mlnx.\)V.[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
-        sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
-        git add debian/changelog
-        git commit --amend --no-edit
-        git push -f
-        echo $(git log -1 --name-only)
-        echo $(git status)
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_OLEKSANDR }}
         
+    - run: |     
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config user.name "$GITHUB_ACTOR"
+          current_branch=$(git rev-parse --abbrev-ref HEAD)
+          new_tag=$(./.contrib/version_tag.py -b $current_branch)
+          echo "Branch: $current_branch"
+          echo Tag: "$new_tag"
+          echo "new_tag=$new_tag" >> $GITHUB_ENV
+          echo $(git log -1 --name-only)
+          echo $(git status)
+          changelog=$(git log -1 --name-only --pretty="" | grep "debian/changelog" || rc=$?)
+          if [ ! -z "$changelog" ]; then exit 0; fi
+          echo "Updating changelog..."
+          sed -i "s/\(.*mlnx.\)V.[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
+          sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
+          git add debian/changelog
+          git commit --amend --no-edit
+          git push -f
+          echo $(git log -1 --name-only)
+          echo $(git status)
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_OLEKSANDR }}
+          
     - run: |    
         git tag $new_tag
         echo $(git log -1 --name-only)
         echo $(git status)
-        git push --tags
         git push --tags
