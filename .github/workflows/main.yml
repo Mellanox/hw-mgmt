@@ -33,12 +33,11 @@ jobs:
         git push -f
         echo $(git log -1 --name-only)
         echo $(git status)
+      continue-on-error: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_OLEKSANDR }}
     - name: set tag
       run: |    
         new_tag=${{ env.GITHUB_NEW_TAG }}
         git tag $new_tag
-        echo $(git log -1 --name-only)
-        echo $$new_tag
         git push --tags
