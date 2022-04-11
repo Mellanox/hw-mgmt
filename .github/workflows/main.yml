@@ -20,6 +20,7 @@ jobs:
         echo Tag: "$new_tag"
         echo "GITHUB_NEW_TAG=$new_tag" >> $GITHUB_ENV
     - name: Update chengelog 
+      run: |   
         changelog=$(git  log -1 --name-only --pretty="" | grep "debian/changelog" || rc=$?)
         if [ ! -z "$changelog" ]; then exit 0; fi
         new_tag=${{ env.GITHUB_NEW_TAG }}
