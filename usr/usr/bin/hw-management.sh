@@ -343,6 +343,8 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 	mp2888 0x68 13 voltmon6 \
 	mp2888 0x6c 13 voltmon7 )
 
+p2317_connect_table=(	24c32 0x51 8)
+
 ACTION=$1
 
 if [ "$board_type" == "VMOD0014" ]; then
@@ -1244,6 +1246,7 @@ sn2201_specific()
 
 p2317_specific()
 {
+	connect_table=(${p2317_connect_table[@]})
 	add_cpu_board_to_connection_table
 	echo 1 > $config_path/cpld_num
 	hotplug_fans=0
