@@ -300,6 +300,15 @@ Kernel-5.10
 |0154-mlxsw-core-Export-line-card-API.patch                              |                                            | In internal review                              | Modular SN4800                                               |
 |0155-mlxsw-minimal-Add-system-event-handler.patch                       |                                            | In internal review                              | Modular SN4800                                               |
 |0156-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch         |                                            | In internal review                              | Modular SN4800                                               |
+|0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch         |                                            |                                                 | NVlink                                                       |
+|0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patc          |                                            |                                                 | NVlink                                                       |
+|0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch         |                                            |                                                 | NVlink                                                       |
+|0160-platform-mellanox-Introduce-support-for-COMe-NVSwitc.patch         |                                            |                                                 | NVlink                                                       |
+|0161-platform-x86-mlx-platform-Add-support-for-new-system.patch         |                                            |                                                 | NVlink                                                       |
+|0162-platform-mellanox-Introduce-support-for-NDR-InfiniBa.patch         |                                            |                                                 | IB MQM9510/MQM9520                                           |
+|0163-platform-mellanox-Introduce-support-for-NVLink4-mana.patch         |                                            |                                                 | NVlink                                                       |
+|0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch         |                                            |                                                 | NVlink                                                       |
+|0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch         |                                            | In internal review                              |                                                              |
  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
