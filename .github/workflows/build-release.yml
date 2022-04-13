@@ -1,0 +1,33 @@
+# This is an action script to build and attach the packages to a release
+name: Build hw-management release artifacts
+
+on: 
+  push:
+    tags:
+    - '*'
+    
+jobs:
+  rpm_build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install build packages
+        run: |
+          sudo apt-get install rpm
+          sudo apt-get install devscripts build-essential lintian dh-make
+      - name: Build deb & rpm packages
+        run: |
+          debuild -us -uc -d
+          cd rpm
+          chmod a+x ./gen_rpm.sh
+          ./gen_rpm.sh
+          
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ../*.deb
+            rpm/*.rpm
