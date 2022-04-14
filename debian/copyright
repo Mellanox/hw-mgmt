@@ -3,7 +3,7 @@ Upstream-Name: hw-management
 Source: <https://github.com/Mellanox/hw-mgmt>
 
 Files: *
-Copyright: Copyright (c) 2020 Mellanox Technologies. All rights reserved.
+Copyright: Copyright (c) 2020-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved
 License: GPL-2
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
