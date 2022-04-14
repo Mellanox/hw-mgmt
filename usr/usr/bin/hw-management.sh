@@ -1213,6 +1213,7 @@ msn48xx_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
+	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
 	# TMP for Buffalo BU
 	iorw -b 0x2004 -w -l1 -v0x3f
 }
@@ -1666,6 +1667,9 @@ do_start()
 	# Information for thermal control service
 	echo $thermal_type > $config_path/thermal_type
 
+	if [ -v "lm_sensors_config_lc" ] && [ -f $lm_sensors_config_lc ]; then
+		ln -sf $lm_sensors_config_lc $config_path/lm_sensors_config_lc
+	fi
 	if [ -v "lm_sensors_config" ] && [ -f $lm_sensors_config ]; then
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
