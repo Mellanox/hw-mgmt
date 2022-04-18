@@ -7,7 +7,7 @@
        *Kernel 4.19
        patches 4.19:  0156-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  
        *Kernel 5.10
-       patches 5.10: l0162-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  
+       patches 5.10:  0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  
     o  sn2201:  Add CPLD Minimal version for main and CPU board CPLDs
 
 - Bug fixes  
