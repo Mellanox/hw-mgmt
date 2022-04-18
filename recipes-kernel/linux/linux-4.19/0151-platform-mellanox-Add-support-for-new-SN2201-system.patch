@@ -63,7 +63,7 @@ new file mode 100644
 index 000000000..1a2103778
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1211 @@
+@@ -0,0 +1,1259 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -130,6 +130,8 @@ index 000000000..1a2103778
 +#define NVSW_SN2201_WD_TMR_OFFSET_LSB               0x40
 +#define NVSW_SN2201_WD_TMR_OFFSET_MSB               0x41
 +#define NVSW_SN2201_WD_ACT_OFFSET                   0x42
++#define NVSW_SN2201_FAN_LED1_CTRL_OFFSET            0x50
++#define NVSW_SN2201_FAN_LED2_CTRL_OFFSET            0x51
 +#define NVSW_SN2201_REG_MAX                         0x43
 +
 +/* Number of physical I2C busses. */
@@ -243,6 +245,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
 +	case NVSW_SN2201_WD_ACT_OFFSET:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -295,6 +299,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
 +	case NVSW_SN2201_WD_ACT_OFFSET:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -346,6 +352,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_FAN_PRSNT_MASK_OFFSET:
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -688,6 +696,46 @@ index 000000000..1a2103778
 +		.label = "uid:blue",
 +		.reg = NVSW_SN2201_FRONT_UID_LED_CTRL_OFFSET,
 +		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan1:green",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan1:orange",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan2:green",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan2:orange",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan3:green",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan3:orange",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan4:green",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan4:orange",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
 +	},
 +};
 +
@@ -1094,7 +1142,7 @@ index 000000000..1a2103778
 +		dev_err(nvsw_sn2201->dev, "Failed to get adapter for bus %d\n",
 +			nvsw_sn2201->cpld_devs->nr);
 +		goto i2c_get_adapter_main_fail;
-+	} 
++	}
 +
 +	nvsw_sn2201->main_mux_devs_num = ARRAY_SIZE(nvsw_sn2201_main_mux_brdinfo);
 +	err = nvsw_sn2201_create_static_devices(nvsw_sn2201, nvsw_sn2201->main_mux_devs,
@@ -1102,7 +1150,7 @@ index 000000000..1a2103778
 +	if (err) {
 +		dev_err(nvsw_sn2201->dev, "Failed to create main mux devices\n");
 +		goto nvsw_sn2201_create_static_devices_fail;
-+	} 
++	}
 +
 +	nvsw_sn2201->cpld_devs->adapter = i2c_get_adapter(nvsw_sn2201->cpld_devs->nr);
 +	if (!nvsw_sn2201->cpld_devs->adapter) {
@@ -1114,7 +1162,7 @@ index 000000000..1a2103778
 +
 +	/* Create CPLD device. */
 +	nvsw_sn2201->cpld_devs->client = i2c_new_dummy(nvsw_sn2201->cpld_devs->adapter,
-+						       NVSW_SN2201_CPLD_I2CADDR);
++							      NVSW_SN2201_CPLD_I2CADDR);
 +	if (IS_ERR(nvsw_sn2201->cpld_devs->client)) {
 +		err = PTR_ERR(nvsw_sn2201->cpld_devs->client);
 +		dev_err(nvsw_sn2201->dev, "Failed to create %s cpld device at bus %d at addr 0x%02x\n",

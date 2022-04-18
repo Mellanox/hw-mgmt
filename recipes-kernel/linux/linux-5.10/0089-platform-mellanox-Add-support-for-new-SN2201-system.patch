@@ -64,7 +64,7 @@ new file mode 100644
 index 000000000..06a257ee1
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1211 @@
+@@ -0,0 +1,1259 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
@@ -131,6 +131,8 @@ index 000000000..06a257ee1
 +#define NVSW_SN2201_WD_TMR_OFFSET_LSB               0x40
 +#define NVSW_SN2201_WD_TMR_OFFSET_MSB               0x41
 +#define NVSW_SN2201_WD_ACT_OFFSET                   0x42
++#define NVSW_SN2201_FAN_LED1_CTRL_OFFSET            0x50
++#define NVSW_SN2201_FAN_LED2_CTRL_OFFSET            0x51
 +#define NVSW_SN2201_REG_MAX                         0x43
 +
 +/* Number of physical I2C busses. */
@@ -244,6 +246,8 @@ index 000000000..06a257ee1
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
 +	case NVSW_SN2201_WD_ACT_OFFSET:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -296,6 +300,8 @@ index 000000000..06a257ee1
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
 +	case NVSW_SN2201_WD_ACT_OFFSET:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -347,6 +353,8 @@ index 000000000..06a257ee1
 +	case NVSW_SN2201_FAN_PRSNT_MASK_OFFSET:
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -689,6 +697,46 @@ index 000000000..06a257ee1
 +		.label = "uid:blue",
 +		.reg = NVSW_SN2201_FRONT_UID_LED_CTRL_OFFSET,
 +		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan1:green",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan1:orange",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan2:green",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan2:orange",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan3:green",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan3:orange",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan4:green",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan4:orange",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
 +	},
 +};
 +
