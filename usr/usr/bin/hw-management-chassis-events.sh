@@ -340,17 +340,6 @@ function asic_cpld_add_handler()
 	fi
 }
 
-function asic_cpld_remove_handler()
-{
-	if [ -f "$config_path/cpld_port" ]; then
-		if [ -L $system_path/cpld3_version ]; then
-			unlink $system_path/cpld3_version
-		else
-			rm -rf $system_path/cpld3_version
-		fi
-	fi
-}
-
 function set_fan_direction()
 {
 	attribute=$1
@@ -470,16 +459,22 @@ function handle_hotplug_event()
 	esac
 }
 
+# Handle i2c bus add/remove.
+# If we have some devices which should be connected to this bus - do it.
+# $1 - i2c bus full address.
+# $2 - i2c bus action type add/remove.
 function handle_i2cbus_dev_action()
 {
 	i2c_busdev_path=$1
 	i2c_busdev_action=$2
 
-	if [ ! -f $config_path/i2c_bus_connect_devs ];
+	# Check if we have devices list which should be connected to dynamic i2c buses.
+	if [ ! -f $config_path/i2c_bus_connect_devices ];
 	then
 		return
 	fi
 
+	# Extract i2c bus index.
 	i2cbus_regex="i2c-([0-9]+)$"
 	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
 	if [[ -z "${BASH_REMATCH[1]}" ]]; then
@@ -488,70 +483,70 @@ function handle_i2cbus_dev_action()
 		i2cbus="${BASH_REMATCH[1]}"
 	fi
 
-	# load i2c devices list which should be connected on demand
-	declare -a asic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devs))"
+	# Load i2c devices list which should be connected on demand..
+	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
 
-	# go over all devices and check if they should be connected to the current i2c bus
-	for ((i=0; i<${#asic_i2c_bus_connect_table[@]}; i+=4)); do
-		if [ $i2cbus == "${asic_i2c_bus_connect_table[i+2]}" ];
+	# Go over all devices and check if they should be connected to the current i2c bus.
+	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
+		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
 		then
 			if [ "$i2c_busdev_action" == "add" ]; then
-				connect_device "${asic_i2c_bus_connect_table[i]}" "${asic_i2c_bus_connect_table[i+1]}" \
-					"${asic_i2c_bus_connect_table[i+2]}"
+				connect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
+					"${dynamic_i2c_bus_connect_table[i+2]}"
 			elif [ "$i2c_busdev_action" == "remove" ]; then
-				diconnect_device "${asic_i2c_bus_connect_table[i]}" "${asic_i2c_bus_connect_table[i+1]}" \
-					"${asic_i2c_bus_connect_table[i+2]}"
+				diconnect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
+					"${dynamic_i2c_bus_connect_table[i+2]}"
 			fi
 		fi
 	done
 }
 
-# Get voltmon sensor prefix, like voltmon{id}.
-# For name voltmonX returning name based on $config_path/i2c_bus_connect_devs file
-# for other names - just return voltmon{id} string
-# $1 - voltmon name (voltmon1,voltmon2, voltmon10, voltmonX)
+# Get voltmon sensor name prefix, like voltmon{id}.
+# For name voltmonX returning name based on $config_path/i2c_bus_connect_devices file.
+# For other names - just return voltmon{id} string.
+# $1 - voltmon name (voltmon1, voltmon2, voltmon10, voltmonX)
 # $2 - path to sensor in sysfs
-
-# return sensor index if match is found or 0 if match not found
+# return sensor index if match is found or 0 if match not found.
 function get_i2c_voltmon_prefix()
 {
 	voltmon_name=$1
-	path=$2
-
-	# Check if we need to create voltmon name based on names in i2c_bus_connect_devs
-	if [ "$voltmon_name" != "voltmon_nameX" ];
+	i2c_busdev_path=$2
+	
+	# Check if we have devices list which can be connected with name translation.
+	if [  -f $config_path/i2c_bus_connect_devices ];
 	then
-		echo "$voltmon_name"
-		return
-	fi
-
-	if [ ! -f $config_path/i2c_bus_connect_devs ];
-	then
-		log_info "Can't find" "$config_path"/i2c_bus_connect_devs " database required for name assign for sensor" "$path"
-		echo "$voltmon_name"
-		return
-	fi
-
-	# load i2c devices list which should be connected on demand
-	declare -a asic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devs))"
-
-	i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
-	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
-	if [ "${#BASH_REMATCH[1]}" == 3 ]; then
-		echo "$voltmon_name"
-		return
-	else
-		i2cbus="${BASH_REMATCH[1]}"
-		i2caddr="${BASH_REMATCH[2]}"
-	fi
-
-	for ((i=0; i<${#asic_i2c_bus_connect_table[@]}; i+=4)); do
-		if [ $i2cbus == "${asic_i2c_bus_connect_table[i+2]}" ] && [ $i2addr == "${asic_i2c_bus_connect_table[i+1]}" ] ;
-		then
-			voltmon_name="${asic_i2c_bus_connect_table[i+3]}"
-			break
+		# Load i2c devices list which should be connected on demand.
+		declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+	
+		# extract i2c bud/dev addr from device sysfs path
+		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
+		[[ $i2c_busdev_path =~ $i2cbus_regex ]]
+		if [ "${#BASH_REMATCH[1]}" == 3 ]; then
+			echo "$voltmon_name"
+			return
+		else
+			i2cbus="${BASH_REMATCH[1]}"
+			i2caddr="${BASH_REMATCH[2]}"
 		fi
-	done
+	
+		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
+			# match device by i2c bus/addr
+			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2addr == "${dynamic_i2c_bus_connect_table[i+1]}" ] ;
+			then
+				voltmon_name="${dynamic_i2c_bus_connect_table[i+3]}"
+				echo "$voltmon_name"
+				return
+			fi
+		done
+	fi
+
+	# we not matched i2c device with dev_list file or file not exist
+	# returning passed "voltmon{1..100}" name or "undefined" in case if passed 'voltmon_nameX"
+	if [ "$voltmon_name" == "voltmon_nameX" ];
+	then
+		voltmon_name="undefined"
+		return	
+	fi
 
 	echo "$voltmon_name"
 }
@@ -641,10 +636,14 @@ if [ "$1" == "add" ]; then
 			done
 			;;
 		*)
-			# get voltmon prefix.
-			# for voltmon[0..100] name will not change - just return it
-			# for voltmonX we try to get name based on dev id/bus and system connect table
+			# Get i2c voltmon prefix.
+			# For voltmon[0..100] name will not change - just return it.
+			# For voltmonX we will try to get name based on dev id/bus and system connect table.
 			prefix=$(get_i2c_voltmon_prefix "$2" "$4")
+			if [[ $prefix == "undefined" ]];
+			then
+				exit
+			fi
 
 			# TMP workaround until dictionary is implemented.
 			dev_addr=$(echo "$4" | xargs dirname | xargs dirname | xargs basename )
@@ -907,7 +906,7 @@ if [ "$1" == "add" ]; then
 		log_info "I2C infrastucture for line card $3 is created."
 	fi
 
-	# Create i2c bus
+	# Create i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
 		log_info "I2C bus $4 connected."
 		handle_i2cbus_dev_action $4 "add"
@@ -957,7 +956,7 @@ else
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
 	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
-	   [ "$2" == "voltmon13" ] ||
+	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
 		if [ "$2" == "comex_voltmon1" ]; then
@@ -1098,9 +1097,6 @@ else
 				;;
 		esac
 	fi
-	if [ "$2" == "cpld" ]; then
-		asic_cpld_remove_handler
-	fi
 	if [ "$2" == "watchdog" ]; then
 	wd_type=$(< "$3""$4"/identity)
 		case $wd_type in
@@ -1132,7 +1128,7 @@ else
 		destroy_linecard_i2c_links "$3"
 	fi
 
-	# Removed i2c bus
+	# Removed i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
 		log_info "I2C bus $4 connected."
 		handle_i2cbus_dev_action $4 "remove"

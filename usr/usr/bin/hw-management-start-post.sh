@@ -1,6 +1,6 @@
 #!/bin/bash
 ##################################################################################
-# Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -55,7 +55,7 @@ handle_cpld_versions()
 		if [ -f $system_path/cpld"$i"_version ]; then
 			cpld_ver=$(cat $system_path/cpld"$i"_version)
 		fi
-		if [ -L $system_path/cpld"$i"_version_min ]; then
+		if [ -f $system_path/cpld"$i"_version_min ]; then
 			cpld_ver_min=$(cat $system_path/cpld"$i"_version_min)
 		fi
 		if [ -z "$str" ]; then
@@ -84,6 +84,15 @@ cpld_num=$(cat $config_path/cpld_num)
 case $board in
 	VMOD0001|VMOD0003)
 		cpld_num=$((cpld_num-1))
+		;;
+	VMOD0015)
+		# Special case to inform external node (BMC) that system ready
+		# for telemetry communication.
+		if [ ! -L $system_path/comm_chnl_ready ]; then
+			log_err "Missed attrubute comm_chnl_ready."
+		else
+			echo 1 > $system_path/comm_chnl_ready
+		fi
 		;;
 	*)
 		;;

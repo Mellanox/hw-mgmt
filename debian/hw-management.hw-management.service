@@ -8,6 +8,7 @@ RemainAfterExit=true
 ExecStartPre=-/bin/sh -c "/usr/bin/hw-management-ready.sh"
 ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
+ExecStopPost=/bin/sleep 3
 
 [Install]
 WantedBy=multi-user.target

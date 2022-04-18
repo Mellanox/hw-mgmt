@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -287,9 +287,11 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC8_VERIFIED}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC8_VERIFIED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC8_VERIFIED 1"
 
+# Leakage event.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE 1"
 
+# External Root of Trust devices events.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_AP}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_AP 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_AP}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_AP 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_AP}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_AP 0"
@@ -298,6 +300,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT1_ERROR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT1_ERROR 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_ERROR}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_ERROR 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{EROT2_ERROR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event EROT2_ERROR 1"
+
+# Global Write Protect Grant event.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{GLOBAL_WP_GRANT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event GWP 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{GLOBAL_WP_GRANT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event GWP 1"
 
 # SN2201 hotpug events.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 0"

@@ -273,15 +273,16 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			24c512 0x51 8)
 
 e3597_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x22 5 \
-			mp2975 0x23 5 \
-			mp2975 0x24 5 \
-			mp2975 0x25 5 \
-			mp2975 0x26 5 \
-			mp2975 0x27 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
+			
+e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
+			mp2975 0x23 5  voltmon2 \
+			mp2975 0x24 5  voltmon3 \
+			mp2975 0x25 5  voltmon4 \
+			mp2975 0x26 5  voltmon5 \
+			mp2975 0x27 5  voltmon6)
 
 p4697_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x49 7 \
@@ -293,7 +294,7 @@ p4697_base_rev1_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_asic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
+p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
 			mp2975 0x24 26 voltmon2 \
 			mp2975 0x27 26 voltmon3 \
 			mp2975 0x23 31 voltmon4 \
@@ -314,37 +315,35 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	tmp102 0x4a 44 \
 	24c32 0x51 45)
 
-mqm9510_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 \
-			max11603 0x6d 6 \
-			mp2975 0x62 6 \
-			mp2888 0x66 6 \
-			mp2975 0x68 6 \
-			mp2975 0x6a 6 \
-			mp2975 0x6c 6 \
-			tmp102 0x49 7 \
-			tmp102 0x4a 7 \
-			24c512 0x51 8)
+mqm9510_base_connect_table=( \
+	tmp102 0x4a 7 \
+	24c512 0x51 8)
 
-mqm9520_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 \
-			tmp102 0x49 7 \
-			tmp102 0x4a 7 \
-			24c512 0x51 8 \
-			max11603 0x6d 13 \
-			mp2975 0x62 13 \
-			mp2888 0x66 13 \
-			mp2975 0x68 13 \
-			mp2975 0x6a 13 \
-			mp2975 0x6c 13)
+mqm9510_dynamic_i2c_bus_connect_table=( \
+	mp2888 0x62 5 voltmon1 \
+	mp2888 0x66 5 voltmon2 \
+	mp2888 0x68 5 voltmon3 \
+	mp2888 0x6c 5 voltmon4 \
+	mp2888 0x62 6 voltmon5 \
+	mp2888 0x66 6 voltmon6 \
+	mp2888 0x68 6 voltmon7 \
+	mp2888 0x6c 6 voltmon8)
+
+mqm9520_base_connect_table=( \
+	tmp102 0x49 7 \
+	tmp102 0x4a 7 \
+	24c512 0x51 8)
+
+mqm9520_dynamic_i2c_bus_connect_table=( \
+	mp2888 0x66 5  voltmon1 \
+	mp2888 0x68 5  voltmon2 \
+	mp2888 0x6c 5  voltmon3 \
+	mp2888 0x62 13 voltmon4 \
+	mp2888 0x66 13 voltmon5 \
+	mp2888 0x68 13 voltmon6 \
+	mp2888 0x6c 13 voltmon7 )
+
+p2317_connect_table=(	24c32 0x51 8)
 
 ACTION=$1
 
@@ -501,10 +500,10 @@ set_jtag_gpio()
 			jtag_tck=131
 			;;
 		$DNV_CPU)
+			jtag_tdi=86
 			jtag_tck=87
 			jtag_tms=88
-			jtag_tdo=86
-			jtag_tdi=89
+			jtag_tdo=89
 			;;
 		*)
 			return 0
@@ -629,19 +628,19 @@ add_cpu_board_to_connection_table()
 	connect_table+=(${cpu_connection_table[@]})
 }
 
-add_asic_i2c_bus_dev_connection_table()
+add_i2c_dynamic_bus_dev_connection_table()
 {
 	connection_table=("$@")
-	asic_i2cbus_connection_table=""
+	dynamic_i2cbus_connection_table=""
 
-	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devs
+	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devices
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
-		asic_i2cbus_connection_table[$i]="${connection_table[i]}"
-		asic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
-		asic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
+		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
+		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
+		dynamic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
 	done
 
-	connect_table+=(${asic_i2cbus_connection_table[@]})
+	connect_table+=(${dynamic_i2cbus_connection_table[@]})
 }
 
 msn274x_specific()
@@ -1028,6 +1027,7 @@ mqm9510_specific()
 {
 	local cpu_bus_offset=18
 	connect_table=(${mqm9510_base_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
@@ -1041,6 +1041,7 @@ mqm9520_specific()
 {
 	local cpu_bus_offset=18
 	connect_table=(${mqm9520_base_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	i2c_asic2_bus_default=10
 	thermal_type=$thermal_type_def
@@ -1070,6 +1071,7 @@ mqm87xx_rev1_specific()
 e3597_specific()
 {
 	connect_table=(${e3597_base_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${e3597_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -1106,7 +1108,7 @@ p4697_specific()
 		connect_table=(${p4697_base_connect_table[@]})
 	fi
 
-	add_asic_i2c_bus_dev_connection_table "${p4697_asic_i2c_bus_connect_table[@]}"
+	add_i2c_dynamic_bus_dev_connection_table "${p4697_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -1120,7 +1122,7 @@ p4697_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/e4597_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/p4697_sensors.conf"
 }
 
 msn_spc2_common()
@@ -1211,6 +1213,7 @@ msn48xx_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
+	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
 	# TMP for Buffalo BU
 	iorw -b 0x2004 -w -l1 -v0x3f
 }
@@ -1229,26 +1232,29 @@ sn2201_specific()
 	echo 960 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
 	echo 2500 > $config_path/psu_fan_min
-	cpld2=$(i2cget -f -y 1 0x3d 0x01)
-	cpld2=${cpld2:2}
-	echo $(( 16#$cpld2 )) > $system_path/cpld2_version
-	cpld2_pn=$(i2cget -f -y 1 0x3d 0x21)
-	cpld2_pn=${cpld2_pn:2}
+	cpld2_ver=$(i2cget -f -y 1 0x3d 0x01)
+	cpld2_ver=${cpld2_ver:2}
+	echo $(( 16#$cpld2_ver )) > $system_path/cpld2_version
+	cpld2_mver=$(i2cget -f -y 1 0x3d 0x02)
+	cpld2_mver=${cpld2_mver:2}
+	echo $(( 16#$cpld2_mver )) > $system_path/cpld2_version_min
+	cpld2_pn=$(i2cget -f -y 1 0x3d 0x21 w)
+	cpld2_pn=${cpld2_pn:3}
 	cpld2_pn=$(( 16#$cpld2_pn ))
-	cpld2_pn1=$(i2cget -f -y 1 0x3d 0x22)
-	cpld2_pn1=${cpld2_pn1:2}
-	cpld2_pn1=$(( 16#$cpld2_pn1 ))
-	echo $cpld2_pn1$cpld2_pn > $system_path/cpld2_pn
+	echo $cpld2_pn > $system_path/cpld2_pn
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
 p2317_specific()
 {
+	connect_table=(${p2317_connect_table[@]})
 	add_cpu_board_to_connection_table
 	echo 1 > $config_path/cpld_num
 	hotplug_fans=0
 	hotplug_pwrs=0
 	hotplug_psus=0
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
 	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
 }
 
@@ -1285,11 +1291,11 @@ check_system()
 		VMOD0011)
 			msn48xx_specific
 			;;
-		VMOD0012)
-			p2317_specific
-			;;
 		VMOD0014)
 			sn2201_specific
+			;;
+		VMOD0015)
+			p2317_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -1661,6 +1667,9 @@ do_start()
 	# Information for thermal control service
 	echo $thermal_type > $config_path/thermal_type
 
+	if [ -v "lm_sensors_config_lc" ] && [ -f $lm_sensors_config_lc ]; then
+		ln -sf $lm_sensors_config_lc $config_path/lm_sensors_config_lc
+	fi
 	if [ -v "lm_sensors_config" ] && [ -f $lm_sensors_config ]; then
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
@@ -1671,6 +1680,7 @@ do_start()
 		if [ -f $config_path/fixed_fans_dir ]; then
 			for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
 				cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
+				echo 1 > $thermal_path/fan"$i"_status
 			done
 		fi
 	fi
