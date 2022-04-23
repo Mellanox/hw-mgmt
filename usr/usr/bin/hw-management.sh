@@ -289,7 +289,7 @@ p4697_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_base_rev1_connect_table=(    max11603 0x6d 5 \
+p4697_rev1_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
@@ -1089,6 +1089,8 @@ e3597_specific()
 
 p4697_specific()
 {
+	local cpu_bus_offset=18
+
 	regio_path=$(find_regio_sysfs_path)
 	res=$?
 	if [ $res -eq 0 ]; then
@@ -1108,15 +1110,16 @@ p4697_specific()
 		connect_table=(${p4697_base_connect_table[@]})
 	fi
 
+	add_cpu_board_to_connection_table $cpu_bus_offset
 	add_i2c_dynamic_bus_dev_connection_table "${p4697_dynamic_i2c_bus_connect_table[@]}"
-	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	erot_count=2
 	i2c_asic_addr=0xff
-
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
