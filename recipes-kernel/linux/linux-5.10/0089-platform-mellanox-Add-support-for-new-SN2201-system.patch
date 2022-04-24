@@ -133,7 +133,7 @@ index 000000000..06a257ee1
 +#define NVSW_SN2201_WD_ACT_OFFSET                   0x42
 +#define NVSW_SN2201_FAN_LED1_CTRL_OFFSET            0x50
 +#define NVSW_SN2201_FAN_LED2_CTRL_OFFSET            0x51
-+#define NVSW_SN2201_REG_MAX                         0x43
++#define NVSW_SN2201_REG_MAX                         0x52
 +
 +/* Number of physical I2C busses. */
 +#define NVSW_SN2201_PHY_I2C_BUS_NUM		2
