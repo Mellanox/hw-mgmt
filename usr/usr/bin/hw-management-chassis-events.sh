@@ -552,6 +552,7 @@ function get_i2c_voltmon_prefix()
 }
 
 if [ "$1" == "add" ]; then
+
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
