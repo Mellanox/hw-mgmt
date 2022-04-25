@@ -285,7 +285,7 @@ index 9914e50..39a2a17 100644
 +	mlxplat_hotplug = &mlxplat_mlxcpld_nvlink_switch_data;
 +	mlxplat_hotplug->deferred_nr =
 +		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
-+	mlxplat_led = &mlxplat_ndr_ib_modular_led_data;
++	mlxplat_led = &mlxplat_default_ng_led_data;
 +	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
 +	mlxplat_fan = &mlxplat_default_fan_data;
 +	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
