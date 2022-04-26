@@ -55,7 +55,7 @@ do_global_wp_release_restore()
 			do
 				# Request to disable Global Write Protection.
 				# Write Global Write Protection request.
-				echo 1 > "$system_path"/global_wp_request
+				echo 0 > "$system_path"/global_wp_request
 
 				# Validate if request to disable Global Write Protection was accepted.
 				sleep 0.1 &
@@ -64,7 +64,7 @@ do_global_wp_release_restore()
 				# Validate if request to disable Global Write Protection was accepted.
 				# Read Global Write Protection response.
 				global_wp_response=$(< "$system_path"/global_wp_response)
-				if [ "$global_wp_response" != 1 ]; then
+				if [ "$global_wp_response" != 0 ]; then
 					global_wp_timeout=$((global_wp_timeout-global_wp_wait_step))
 					continue
 				fi
@@ -77,14 +77,14 @@ do_global_wp_release_restore()
 						log_info "$command completed."
 					else
 						global_wp_response=$(< "$system_path"/global_wp_response)
-						if [ "$global_wp_response" != 1 ]; then
+						if [ "$global_wp_response" != 0 ]; then
 							log_info "$command failed - Global WP grant has been removed by remote end."
 						fi
 					fi
 				fi
 
 				# Clear Global Write Protection request.
-				echo 0 > "$system_path"/global_wp_request
+				echo 1 > "$system_path"/global_wp_request
 				return "$rc"
 			done
 			log_info "Failed to request Global WP grant."
@@ -93,7 +93,7 @@ do_global_wp_release_restore()
 
 		restore)
 			# Clear Global Write Protection request.
-			echo 0 > "$system_path"/global_wp_request
+			echo 1 > "$system_path"/global_wp_request
 			return 0
 		;;
 		*)

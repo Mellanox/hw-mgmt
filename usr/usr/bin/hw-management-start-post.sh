@@ -92,6 +92,7 @@ case $board in
 			log_err "Missed attrubute comm_chnl_ready."
 		else
 			echo 1 > $system_path/comm_chnl_ready
+			log_info "Communication channel is ready"
 		fi
 		;;
 	*)
