@@ -63,6 +63,7 @@ board_type=$(< $board_type_file)
 
 thermal_type=$thermal_type_def
 
+asic_control=1
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
@@ -1077,7 +1078,7 @@ e3597_specific()
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
-	i2c_asic_addr=0xff
+	asic_control=0
 	# TODO set correct PSU/case FAN speed
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1116,7 +1117,7 @@ p4697_specific()
 	max_tachos=14
 	hotplug_fans=7
 	erot_count=2
-	i2c_asic_addr=0xff
+	asic_control=0
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 25000 > $config_path/fan_max_speed
@@ -1416,10 +1417,6 @@ create_event_files()
 
 get_asic_bus()
 {
-	if [[ $i2c_asic_addr -eq 0xff ]]; then
-		log_err "This operation not supporting with current ASIC type"
-		return 0
-	fi
 	if [ ! -f $config_path/asic_bus ]; then
 		find_i2c_bus
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -1433,10 +1430,6 @@ get_asic_bus()
 
 get_asic2_bus()
 {
-	if [[ $i2c_asic_addr -eq 0xff ]]; then
-		log_err "This operation not supporting with current ASIC type"
-		return 0
-	fi
 	if [ ! -f "$config_path/asic_num" ]; then
 		return 0
 	fi
@@ -1547,6 +1540,13 @@ create_symbolic_links()
 	if [ ! -h $power_path/pwr_sys ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
+
+	if [ ! -f "$thermal_path/gearbox_counter" ]; then
+	    echo 0 > "$thermal_path"/gearbox_counter
+	fi
+	if [ ! -f "$thermal_path/module_counter" ]; then
+		echo 0 > "$thermal_path"/module_counter
+	fi
 }
 
 remove_symbolic_links()
@@ -1560,6 +1560,9 @@ remove_symbolic_links()
 
 set_asic_pci_id()
 {
+	if [ ! -f "$config_path"/asic_control ]; then
+		echo $asic_control > "$config_path"/asic_control
+	fi
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	# Get ASIC PCI Ids.
 	case $sku in
@@ -1642,7 +1645,9 @@ do_start()
 	create_symbolic_links
 	check_system
 	set_asic_pci_id
-	if [[ $i2c_asic_addr -ne 0xff ]]; then
+
+	asic_control=$(< $config_path/asic_control) 
+	if [[ $asic_control -ne 0 ]]; then
 		get_asic_bus
 		get_asic2_bus
 	fi
@@ -1707,8 +1712,10 @@ do_chip_up_down()
 	action=$1
 	asic_index=$2
 	pci_bus=$3
+
+	asic_control=$(< $config_path/asic_control)
 	# Add ASIC device.
-	if [[ $i2c_asic_addr -eq 0xff ]]; then
+	if [[ $asic_control -eq 0 ]]; then
 		log_info "Current ASIC type does not support this operation type"
 		return 0
 	fi
