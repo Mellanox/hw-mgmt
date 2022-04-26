@@ -94,6 +94,8 @@ fan_direction_intake=52
 spc3_pci_id=cf70
 spc4_pci_id=cf80
 quantum2_pci_id=d2f2
+nv3_pci_id=1af1
+nv4_pci_id=22a3
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -1575,13 +1577,14 @@ set_asic_pci_id()
 	HI144|HI147)
 		asic_pci_id=$spc4_pci_id
 		;;
-	HI131|HI142)
-		echo 2 > "$config_path"/asic_num
-		return
+	HI131)
+		asic_pci_id=$nv3_pci_id
+		;;
+	HI142)
+		asic_pci_id=$nv4_pci_id
 		;;
 	HI143)
-		echo 4 > "$config_path"/asic_num
-		return
+		asic_pci_id=$nv4_pci_id
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num
@@ -1598,12 +1601,23 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI141)
+	HI131|HI141|142)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
+		;;
+	HI143)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
 		;;
 	HI144|HI147)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
