@@ -297,12 +297,12 @@ p4697_rev1_base_connect_table=(    max11603 0x6d 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x23 28 voltmon1 \
-			mp2975 0x24 28 voltmon2 \
-			mp2975 0x27 28 voltmon3 \
-			mp2975 0x23 33 voltmon4 \
-			mp2975 0x24 33 voltmon5 \
-			mp2975 0x27 33 voltmon6)
+p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x62 26 voltmon1 \
+			mp2975 0x65 26 voltmon2 \
+			mp2975 0x67 26 voltmon3 \
+			mp2975 0x62 31 voltmon4 \
+			mp2975 0x65 31 voltmon5 \
+			mp2975 0x67 31 voltmon6)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
@@ -1727,7 +1727,9 @@ do_chip_up_down()
 	asic_index=$2
 	pci_bus=$3
 
-	asic_control=$(< $config_path/asic_control)
+	if [ -f "$config_path"/asic_control ]; then
+		asic_control=$(< $config_path/asic_control)
+	fi
 	# Add ASIC device.
 	if [[ $asic_control -eq 0 ]]; then
 		log_info "Current ASIC type does not support this operation type"
