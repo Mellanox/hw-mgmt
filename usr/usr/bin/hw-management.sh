@@ -1543,11 +1543,14 @@ create_symbolic_links()
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
 
-	if [ ! -f "$thermal_path/gearbox_counter" ]; then
-	    echo 0 > "$thermal_path"/gearbox_counter
+	if [ ! -f "$config_path/gearbox_counter" ]; then
+		echo 0 > "$config_path"/gearbox_counter
 	fi
-	if [ ! -f "$thermal_path/module_counter" ]; then
-		echo 0 > "$thermal_path"/module_counter
+	if [ ! -f "$config_path/module_counter" ]; then
+		echo 0 > "$config_path"/module_counter
+	fi
+	if [ ! -f "$config_path/sfp_counter" ]; then
+		echo 0 > "$config_path"/sfp_counter
 	fi
 }
 
@@ -1601,7 +1604,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|142)
+	HI131|HI141|HI142)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
