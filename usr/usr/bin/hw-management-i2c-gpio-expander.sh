@@ -65,6 +65,14 @@ if [ "$board_type" == "VMOD0014" ]; then
 	echo "out" > /sys/class/gpio/gpio355/direction
 	echo "out" > /sys/class/gpio/gpio356/direction
 	echo "out" > /sys/class/gpio/gpio357/direction
+
+	# Initialize fantray LED value.
+	for gpio_num in $(seq 350 357); do
+		if [ -e /sys/class/gpio/gpio"$gpio_num"/active_low ]; then
+			echo 1 > /sys/class/gpio/gpio"$gpio_num"/active_low
+		fi
+		echo 0 > /sys/class/gpio/gpio"$gpio_num"/value
+	done
 fi
 
 exit 0
