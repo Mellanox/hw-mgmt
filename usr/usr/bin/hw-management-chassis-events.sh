@@ -459,6 +459,45 @@ function handle_hotplug_event()
 	esac
 }
 
+function handle_fantray_led_event()
+{
+	local fan_idx
+	local color
+	local event
+	local gpio_path
+	local gpio_pin_green
+	local gpio_pin_orange
+	fan_idx=$(echo "$1" | cut -d':' -f2 | cut -d'n' -f2)
+	color=$(echo "$1" | cut -d':' -f3)
+	event=$2
+	gpio_path=/sys/class/gpio
+
+	gpio_pin_green=$((350 + 2*(fan_idx - 1)))
+	gpio_pin_orange=$((351 + 2*(fan_idx - 1)))
+	case "$color" in
+	green)
+		if [ "$event" -eq "0" ]; then
+			echo 0 > $gpio_path/gpio"$gpio_pin_orange"/value
+			echo 0 > $gpio_path/gpio"$gpio_pin_green"/value
+		else
+			echo 0 > $gpio_path/gpio"$gpio_pin_orange"/value
+			echo 1 > $gpio_path/gpio"$gpio_pin_green"/value
+		fi
+		;;
+	orange)
+		if [ "$event" -eq "0" ]; then
+			echo 0 > $gpio_path/gpio"$gpio_pin_green"/value
+			echo 0 > $gpio_path/gpio"$gpio_pin_orange"/value
+		else
+			echo 0 > $gpio_path/gpio"$gpio_pin_green"/value
+			echo 1 > $gpio_path/gpio"$gpio_pin_orange"/value
+		fi
+		;;
+	*)
+		;;
+	esac
+}
+
 # Handle i2c bus add/remove.
 # If we have some devices which should be connected to this bus - do it.
 # $1 - i2c bus full address.
@@ -928,6 +967,18 @@ elif [ "$1" == "hotplug-event" ]; then
 		exit 0
 	fi
 	handle_hotplug_event "${2}" "${3}"
+elif [ "$1" == "fantray-led-event" ]; then
+	# Don't process udev events until service is started and directories are created.
+	if [ ! -f "${udev_ready}" ]; then
+		exit 0
+	fi
+	case "$board_type" in
+	VMOD0014)
+		handle_fantray_led_event "${2}" "${3}"
+		;;
+	*)
+		;;
+	esac
 else
 	if [ "$2" == "a2d" ]; then
 		# Detect if it belongs to line card or to main board.
