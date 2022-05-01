@@ -589,7 +589,6 @@ function get_i2c_voltmon_prefix()
 	if [ "$voltmon_name" == "voltmonX" ];
 	then
 		voltmon_name="undefined"
-		return
 	fi
 
 	echo "$voltmon_name"
