@@ -308,9 +308,9 @@ p4697_rev1_base_connect_table=(    max11603 0x6d 7 \
 p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x62 26 voltmon1 \
 			mp2975 0x65 26 voltmon2 \
 			mp2975 0x67 26 voltmon3 \
-			mp2975 0x62 31 voltmon4 \
-			mp2975 0x65 31 voltmon5 \
-			mp2975 0x67 31 voltmon6)
+			mp2975 0x62 27 voltmon4 \
+			mp2975 0x65 27 voltmon5 \
+			mp2975 0x67 27 voltmon6)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \

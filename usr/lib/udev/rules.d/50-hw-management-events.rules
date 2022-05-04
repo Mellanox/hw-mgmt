@@ -432,8 +432,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-002e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon13 %S %p"
 
 # Kong ASICs i2c buses 18..25
-SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-[0-9][0-9]", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add i2c_bus %S %p"
-SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-[0-9][0-9]", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove i2c_bus %S %p"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:*.*/0000:0[1-4]:00.0/i2c-[0-9][0-9]", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add i2c_bus %S %p"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:*.*/0000:0[1-4]:00.0/i2c-[0-9][0-9]", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove i2c_bus %S %p"
 
 # Kong voltmon
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:01.*/0000:0[1-4]:00.0/i2c-*/i2c-*/*-002[3-7]/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"

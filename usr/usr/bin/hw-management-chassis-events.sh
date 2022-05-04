@@ -516,7 +516,7 @@ function handle_i2cbus_dev_action()
 	# Extract i2c bus index.
 	i2cbus_regex="i2c-([0-9]+)$"
 	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
-	if [[ "${BASH_REMATCH[@]}" != 2 ]]; then
+	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
 		return
 	else
 		i2cbus="${BASH_REMATCH[1]}"
@@ -524,7 +524,9 @@ function handle_i2cbus_dev_action()
 
 	# Load i2c devices list which should be connected on demand..
 	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-
+	
+	# wait till i2c driver fully init
+	sleep 15
 	# Go over all devices and check if they should be connected to the current i2c bus.
 	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
 		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
