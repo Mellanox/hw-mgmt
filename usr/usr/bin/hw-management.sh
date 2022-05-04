@@ -188,6 +188,12 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
+sn3750sx_secured_connect_table=(	mp2975 0x62 5 \
+			mp2975 0x66 5 \
+			tmp102 0x49 7 \
+			adt75 0x4a 7 \
+			24c512 0x51 8)
+
 msn3420_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
@@ -830,6 +836,24 @@ mqmxxx_msn37x_msn34x_specific()
 	get_i2c_bus_frequency_default
 }
 
+sn3750sx_specific()
+{
+	connect_table=(${sn3750sx_secured_connect_table[@]})
+
+	add_cpu_board_to_connection_table
+
+	tune_thermal_type=1
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 25000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/sn3750sx_sensors.conf"
+	get_i2c_bus_frequency_default
+}
+
 msn3420_specific()
 {
 	connect_table=(${msn3420_base_connect_table[@]})
@@ -1190,6 +1214,9 @@ msn_spc2_common()
 			;;
 		HI139)
 			msn_xh3000_specific
+			;;
+		HI146)
+			sn3750sx_specific
 			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
