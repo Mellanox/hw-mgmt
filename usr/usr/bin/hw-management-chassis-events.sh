@@ -516,7 +516,7 @@ function handle_i2cbus_dev_action()
 	# Extract i2c bus index.
 	i2cbus_regex="i2c-([0-9]+)$"
 	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
-	if [[ "${BASH_REMATCH[@]}" != 2 ]]; then
+	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
 		return
 	else
 		i2cbus="${BASH_REMATCH[1]}"
@@ -524,7 +524,9 @@ function handle_i2cbus_dev_action()
 
 	# Load i2c devices list which should be connected on demand..
 	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-
+	
+	# wait till i2c driver fully init
+	sleep 20
 	# Go over all devices and check if they should be connected to the current i2c bus.
 	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
 		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
@@ -1013,6 +1015,8 @@ else
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
+		set -x
+		exec 3>&1 4>&2 >>/tmp/log 2>&1
 		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
 		if [[ $prefix == "undefined" ]];
 		then
@@ -1045,23 +1049,23 @@ else
 		fi
 		# For SN2201 indexes are from 0 to 9.
 		for i in {0..9}; do
-			if [ -L $environment_path/"$2"_in"$i"_input ]; then
-				unlink $environment_path/"$2"_in"$i"_input
+			if [ -L $environment_path/"$prefix"_in"$i"_input ]; then
+				unlink $environment_path/"$prefix"_in"$i"_input
 			fi
-			if [ -L $environment_path/"$2"_curr"$i"_input ]; then
-				unlink $environment_path/"$2"_curr"$i"_input
+			if [ -L $environment_path/"$prefix"_curr"$i"_input ]; then
+				unlink $environment_path/"$prefix"_curr"$i"_input
 			fi
-			if [ -L $environment_path/"$2"_power"$i"_input ]; then
-				unlink $environment_path/"$2"_power"$i"_input
+			if [ -L $environment_path/"$prefix"_power"$i"_input ]; then
+				unlink $environment_path/"$prefix"_power"$i"_input
 			fi
-			if [ -L $alarm_path/"$2"_in"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_in"$i"_alarm
+			if [ -L $alarm_path/"$prefix"_in"$i"_alarm ]; then
+				unlink $alarm_path/"$prefix"_in"$i"_alarm
 			fi
-			if [ -L $alarm_path/"$2"_curr"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_curr"$i"_alarm
+			if [ -L $alarm_path/"$prefix"_curr"$i"_alarm ]; then
+				unlink $alarm_path/"$prefix"_curr"$i"_alarm
 			fi
-			if [ -L $alarm_path/"$2"_power"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_power"$i"_alarm
+			if [ -L $alarm_path/"$prefix"_power"$i"_alarm ]; then
+				unlink $alarm_path/"$prefix"_power"$i"_alarm
 			fi
 		done
 	fi
@@ -1189,7 +1193,7 @@ else
 
 	# Removed i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
-		log_info "I2C bus $4 connected."
+		log_info "I2C bus $4 removed."
 		handle_i2cbus_dev_action $4 "remove"
 	fi
 fi
