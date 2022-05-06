@@ -109,6 +109,7 @@ nv4_pci_id=22a3
 # configured as modules.
 
 base_cpu_bus_offset=10
+connect_table=()
 
 #
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
@@ -187,6 +188,14 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
+
+msn37xx_A1_connect_table=(tmp102 0x49 7 \
+			tmp102 0x49 7 \
+			adt75 0x4a 7 \
+			24c512 0x51 8)
+
+msn37xx_A1_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2975 0x66 5 voltmon2)
 
 sn3750sx_secured_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x66 5 \
@@ -684,7 +693,7 @@ add_i2c_dynamic_bus_dev_connection_table()
 
 msn274x_specific()
 {
-	connect_table=(${msn2740_base_connect_table[@]})
+	connect_table+=(${msn2740_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t3
@@ -702,7 +711,7 @@ msn274x_specific()
 
 msn21xx_specific()
 {
-	connect_table=(${msn2100_base_connect_table[@]})
+	connect_table+=(${msn2100_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t2
@@ -722,7 +731,7 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	connect_table=(${msn2700_base_connect_table[@]})
+	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -752,7 +761,7 @@ msn24xx_specific()
 
 msn27xx_msb_msx_specific()
 {
-	connect_table=(${msn2700_base_connect_table[@]})
+	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -792,7 +801,7 @@ msn27xx_msb_msx_specific()
 
 msn201x_specific()
 {
-	connect_table=(${msn2010_base_connect_table[@]})
+	connect_table+=(${msn2010_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t4
@@ -810,19 +819,50 @@ msn201x_specific()
 	echo 1 > $config_path/fixed_fans_system
 }
 
+connect_msn3700()
+{
+	local voltmon_connection_table=( )
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			6|2)
+					# msn3700/msn3700C respin A1
+					connect_table+=(${msn37xx_A1_connect_tablev[@]})
+					voltmon_connection_table=(${msn37xx_A1_voltmon_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/msn3700_A1_sensors.conf"
+			;;
+			*)
+					connect_table+=(${mqm8700_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+			;;
+		esac
+	else
+		connect_table+=(${mqm8700_base_connect_table[@]})
+	fi
+	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
+}
+
 mqmxxx_msn37x_msn34x_specific()
 {
+	add_cpu_board_to_connection_table
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI136)
-			connect_table=(${msn37xx_secured_connect_table[@]})
+			# msn3700C-S
+			connect_table+=(${msn37xx_secured_connect_table[@]})
+		;;
+		HI112|HI116)
+			# msn3700/msn3700C
+			connect_msn3700
 		;;
 		*)
-			connect_table=(${mqm8700_base_connect_table[@]})
+			connect_table+=(${mqm8700_base_connect_table[@]})
 		;;
 	esac
-
-	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
@@ -832,13 +872,12 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
 
 sn3750sx_specific()
 {
-	connect_table=(${sn3750sx_secured_connect_table[@]})
+	connect_table+=(${sn3750sx_secured_connect_table[@]})
 
 	add_cpu_board_to_connection_table
 
@@ -856,7 +895,7 @@ sn3750sx_specific()
 
 msn3420_specific()
 {
-	connect_table=(${msn3420_base_connect_table[@]})
+	connect_table+=(${msn3420_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t9
@@ -873,7 +912,7 @@ msn3420_specific()
 
 msn_xh3000_specific()
 {
-	connect_table=(${mqm8700_base_connect_table[@]})
+	connect_table+=(${mqm8700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	hotplug_fans=0
 	hotplug_psus=0
@@ -888,7 +927,7 @@ msn_xh3000_specific()
 
 msn38xx_specific()
 {
-	connect_table=(${msn3800_base_connect_table[@]})
+	connect_table+=(${msn3800_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t7
@@ -906,7 +945,7 @@ msn24102_specific()
 {
 	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
@@ -928,7 +967,7 @@ msn27002_msb78002_specific()
 {
 	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
@@ -947,14 +986,14 @@ msn27002_msb78002_specific()
 
 connect_msn4700_msn4600()
 {
-	connect_table=(${msn4700_msn4600_base_connect_table[@]})
+	connect_table+=(${msn4700_msn4600_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
 {
-	connect_table=(${msn4700_msn4600_A1_base_connect_table[@]})
+	connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 }
@@ -1026,7 +1065,7 @@ msn46xx_specific()
 
 msn3510_specific()
 {
-	connect_table=(${msn3510_base_connect_table[@]})
+	connect_table+=(${msn3510_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -1049,23 +1088,23 @@ mqm97xx_specific()
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			0)
-				connect_table=(${mqm97xx_rev0_base_connect_table[@]})
+				connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			1)
-				connect_table=(${mqm97xx_rev1_base_connect_table[@]})
+				connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			7)
-				connect_table=(${mqm97xx_power_base_connect_table[@]})
+				connect_table+=(${mqm97xx_power_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			*)
-				connect_table=(${mqm97xx_base_connect_table[@]})
+				connect_table+=(${mqm97xx_base_connect_table[@]})
 				;;
 		esac
 	else
-		connect_table=(${mqm97xx_base_connect_table[@]})
+		connect_table+=(${mqm97xx_base_connect_table[@]})
 	fi
 
 	add_cpu_board_to_connection_table
@@ -1083,7 +1122,7 @@ mqm97xx_specific()
 mqm9510_specific()
 {
 	local cpu_bus_offset=18
-	connect_table=(${mqm9510_base_connect_table[@]})
+	connect_table+=(${mqm9510_base_connect_table[@]})
 	add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	thermal_type=$thermal_type_def
@@ -1097,7 +1136,7 @@ mqm9510_specific()
 mqm9520_specific()
 {
 	local cpu_bus_offset=18
-	connect_table=(${mqm9520_base_connect_table[@]})
+	connect_table+=(${mqm9520_base_connect_table[@]})
 	add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	i2c_asic2_bus_default=10
@@ -1111,7 +1150,7 @@ mqm9520_specific()
 
 mqm87xx_rev1_specific()
 {
-	connect_table=(${mqm8700_rev1_base_connect_table[@]})
+	connect_table+=(${mqm8700_rev1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t5
@@ -1127,7 +1166,7 @@ mqm87xx_rev1_specific()
 
 e3597_specific()
 {
-	connect_table=(${e3597_base_connect_table[@]})
+	connect_table+=(${e3597_base_connect_table[@]})
 	add_i2c_dynamic_bus_dev_connection_table "${e3597_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
@@ -1153,17 +1192,17 @@ p4697_specific()
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			0)
-				connect_table=(${p4697_base_connect_table[@]})
+				connect_table+=(${p4697_base_connect_table[@]})
 				;;
 			1)
-				connect_table=(${p4697_rev1_base_connect_table[@]})
+				connect_table+=(${p4697_rev1_base_connect_table[@]})
 				;;
 			*)
-				connect_table=(${p4697_base_connect_table[@]})
+				connect_table+=(${p4697_base_connect_table[@]})
 				;;
 		esac
 	else
-		connect_table=(${p4697_base_connect_table[@]})
+		connect_table+=(${p4697_base_connect_table[@]})
 	fi
 
 	add_cpu_board_to_connection_table $cpu_bus_offset
@@ -1258,7 +1297,7 @@ msn_spc3_common()
 msn48xx_specific()
 {
 	local cpu_bus_offset=51
-	connect_table=(${msn4800_base_connect_table[@]})
+	connect_table+=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	thermal_type=$thermal_type_def
 	hotplug_linecards=8
@@ -1309,7 +1348,7 @@ sn2201_specific()
 
 p2317_specific()
 {
-	connect_table=(${p2317_connect_table[@]})
+	connect_table+=(${p2317_connect_table[@]})
 	add_cpu_board_to_connection_table
 	echo 1 > $config_path/cpld_num
 	hotplug_fans=0
