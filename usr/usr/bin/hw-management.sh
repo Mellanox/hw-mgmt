@@ -844,26 +844,6 @@ connect_msn3700()
 	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
 }
 
-connect_mqm8700()
-{
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			2)
-				# mqm8700 rev1
-				connect_table+=(${mqm8700_rev1_base_connect_table[@]})
-			;;
-			*)
-				connect_table+=(${mqm8700_base_connect_table[@]})
-			;;
-		esac
-	else
-		connect_table+=(${mqm8700_base_connect_table[@]})
-	fi
-}
-
 mqmxxx_msn37x_msn34x_specific()
 {
 	add_cpu_board_to_connection_table
