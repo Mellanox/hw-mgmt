@@ -256,8 +256,7 @@ msn3510_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-mqm97xx_base_connect_table=(	max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_base_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
@@ -266,8 +265,7 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_rev0_base_connect_table=(	mp2975 0x62 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
@@ -276,8 +274,7 @@ mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_rev1_base_connect_table=(	mp2975 0x62 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
