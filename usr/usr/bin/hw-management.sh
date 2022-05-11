@@ -366,7 +366,7 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 	mp2888 0x68 13 voltmon6 \
 	mp2888 0x6c 13 voltmon7 )
 
-p2317_connect_table=(	24c32 0x51 8)
+p2317_connect_table=(	24c512 0x51 8)
 
 ACTION=$1
 
