@@ -120,7 +120,11 @@ cpu_type0_connection_table=(	max11603 0x6d 15 \
 #
 # Broadwell CPU, mostly used on SPC2/SPC3 systems.
 #
-cpu_type1_connection_table=(tmp102 0x49 15 \
+cpu_type1_connection_table=( max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			24c32 0x50 16)
+
+cpu_type1_a1_connection_table=(	tmp102 0x49 15 \
 			24c32 0x50 16)
 
 cpu_type1_tps_voltmon_connection_table=( tps53679 0x58 15 comex_voltmon1 \
@@ -635,15 +639,21 @@ add_cpu_board_to_connection_table()
 			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
-			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 			case $HW_REV in
+				0|3)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+				;;
 				1|5)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type1_mps_voltmon_connection_table[@]} )
 				;;
 				2|4)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type1_xpds_voltmon_connection_table[@]} )
 				;;
 				*)
+					cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
 				;;
 			esac
@@ -843,7 +853,6 @@ connect_msn3700()
 
 mqmxxx_msn37x_msn34x_specific()
 {
-	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -860,6 +869,7 @@ mqmxxx_msn37x_msn34x_specific()
 			connect_table+=(${mqm8700_base_connect_table[@]})
 		;;
 	esac
+	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
