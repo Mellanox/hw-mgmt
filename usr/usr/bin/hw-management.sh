@@ -120,7 +120,15 @@ cpu_type0_connection_table=(	max11603 0x6d 15 \
 #
 # Broadwell CPU, mostly used on SPC2/SPC3 systems.
 #
-cpu_type1_connection_table=(tmp102 0x49 15 \
+cpu_type1_A2D_connection_table=( max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			24c32 0x50 16)
+
+cpu_type1_connection_table=( max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			24c32 0x50 16)
+
+cpu_type1_a1_connection_table=(	tmp102 0x49 15 \
 			24c32 0x50 16)
 
 cpu_type1_tps_voltmon_connection_table=( tps53679 0x58 15 comex_voltmon1 \
@@ -170,6 +178,12 @@ msn2010_base_connect_table=(	max11603 0x6d 5 \
 
 mqm8700_base_connect_table=(	max11603 0x64 5 \
 			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8)
+
+msn37xx_connect_table=( tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
@@ -302,7 +316,7 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
-			
+
 e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
 			mp2975 0x23 5  voltmon2 \
 			mp2975 0x24 5  voltmon3 \
@@ -622,9 +636,9 @@ get_fixed_fans_direction()
 # $1 - cpu bus offset.
 add_cpu_board_to_connection_table()
 {
-	local cpu_connection_table=( )
-	local cpu_voltmon_connection_table=( )
-	local HW_REV=0
+	local cpu_connection_table=()
+	local cpu_voltmon_connection_table=()
+	local HW_REV=255
 
 	regio_path=$(find_regio_sysfs_path)
 	if [ $? -eq 0 ]; then
@@ -638,15 +652,31 @@ add_cpu_board_to_connection_table()
 			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
-			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 			case $HW_REV in
+				0|3)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+				;;
 				1|5)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type1_mps_voltmon_connection_table[@]} )
 				;;
 				2|4)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type1_xpds_voltmon_connection_table[@]} )
 				;;
 				*)
+					# COMEX BWD regular version not support HW_REV register
+					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+					case $sku in
+						HI116)
+							#Anaconda 100/200 removed A2D from BWD
+							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+							;;
+						*)
+							cpu_connection_table=( ${cpu_type1_A2D_connection_table[@]} )
+							;;
+					esac
 					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
 				;;
 			esac
@@ -679,9 +709,9 @@ add_cpu_board_to_connection_table()
 add_i2c_dynamic_bus_dev_connection_table()
 {
 	connection_table=("$@")
-	dynamic_i2cbus_connection_table=""
+	dynamic_i2cbus_connection_table=()
 
-	echo "${connection_table[@]}" >> $config_path/i2c_bus_connect_devices
+	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
 		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
 		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
@@ -821,7 +851,7 @@ msn201x_specific()
 
 connect_msn3700()
 {
-	local voltmon_connection_table=( )
+	local voltmon_connection_table=()
 	regio_path=$(find_regio_sysfs_path)
 	res=$?
 	if [ $res -eq 0 ]; then
@@ -829,24 +859,23 @@ connect_msn3700()
 		case $sys_ver in
 			6|2)
 					# msn3700/msn3700C respin A1
-					connect_table+=(${msn37xx_A1_connect_tablev[@]})
+					connect_table+=(${msn37xx_A1_connect_table[@]})
 					voltmon_connection_table=(${msn37xx_A1_voltmon_connect_table[@]})
 					lm_sensors_config="$lm_sensors_configs_path/msn3700_A1_sensors.conf"
 			;;
 			*)
-					connect_table+=(${mqm8700_base_connect_table[@]})
+					connect_table+=(${msn37xx_connect_table[@]})
 					lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 			;;
 		esac
 	else
-		connect_table+=(${mqm8700_base_connect_table[@]})
+		connect_table+=(${msn37xx_connect_table[@]})
 	fi
 	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
 }
 
 mqmxxx_msn37x_msn34x_specific()
 {
-	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -863,6 +892,7 @@ mqmxxx_msn37x_msn34x_specific()
 			connect_table+=(${mqm8700_base_connect_table[@]})
 		;;
 	esac
+	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
