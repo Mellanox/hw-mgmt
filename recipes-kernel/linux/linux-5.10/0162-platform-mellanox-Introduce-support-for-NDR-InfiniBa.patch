@@ -1,8 +1,9 @@
-From 9ea1de6d105fe177f253e487a89c7c914bc5b6de Mon Sep 17 00:00:00 2001
+From 468e502c204c495bfc0fc3748ec8e284011b3f29 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 27 Jan 2022 15:07:28 +0200
-Subject: [PATCH platform-next 4/5] platform: mellanox: Introduce support for
- NDR InfiniBand modular chassis
+Subject: [PATCH 1/4] platform: mellanox: Introduce support for NDR InfiniBand
+ modular chassis
+X-NVConfidentiality: public
 
 Add support for MQM9510-N leaf and MQM9520-N spine blades for two
 flavors of NDR InfiniBand chassis:
@@ -28,11 +29,11 @@ different I2C mux topology and extended LED and hotplug configuration.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 259 ++++++++++++++++++++++++++++++++++++
- 1 file changed, 259 insertions(+)
+ drivers/platform/x86/mlx-platform.c | 231 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 231 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 170efd392..2add6b778 100644
+index 170efd392..24e50a311 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -108,6 +108,9 @@
@@ -193,7 +194,7 @@ index 170efd392..2add6b778 100644
  /* Platform led default data */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
  	{
-@@ -2693,6 +2809,106 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
+@@ -2693,6 +2809,78 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_modular_led_data),
  };
  
@@ -248,34 +249,6 @@ index 170efd392..2add6b778 100644
 +		.bit = BIT(1),
 +	},
 +	{
-+		.label = "fan3:green",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(2),
-+	},
-+	{
-+		.label = "fan3:orange",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(2),
-+	},
-+	{
-+		.label = "fan4:green",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(3),
-+	},
-+	{
-+		.label = "fan4:orange",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(3),
-+	},
-+	{
 +		.label = "uid:blue",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED5_OFFSET,
 +		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
@@ -300,7 +273,7 @@ index 170efd392..2add6b778 100644
  /* Platform led data for QMB8700 system */
  static struct mlxreg_core_data mlxplat_mlxcpld_qmb8700_led_data[] = {
  	{
-@@ -4574,6 +4790,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -4574,6 +4762,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SN_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -309,7 +282,7 @@ index 170efd392..2add6b778 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET:
-@@ -4682,6 +4900,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -4682,6 +4872,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -319,7 +292,7 @@ index 170efd392..2add6b778 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET:
-@@ -4815,6 +5036,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -4815,6 +5008,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -329,7 +302,7 @@ index 170efd392..2add6b778 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TLEFT_OFFSET:
-@@ -5282,6 +5506,27 @@ static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
+@@ -5282,6 +5478,27 @@ static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
  	return 1;
  }
  
@@ -357,7 +330,7 @@ index 170efd392..2add6b778 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -5346,6 +5591,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -5346,6 +5563,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0009"),
  		},
  	},
@@ -379,5 +352,5 @@ index 170efd392..2add6b778 100644
  		.callback = mlxplat_dmi_ng400_matched,
  		.matches = {
 -- 
-2.20.1
+2.14.1
 
