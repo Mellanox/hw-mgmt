@@ -1520,6 +1520,14 @@ create_event_files()
 	fi
 }
 
+enable_vpd_wp()
+{
+	if [ -e "$system_path"/vpd_wp ]; then
+		echo 1 > $system_path/vpd_wp
+		log_info "Enabled VPD WP"
+	fi
+}
+
 get_asic_bus()
 {
 	if [ ! -f $config_path/asic_bus ]; then
@@ -1781,6 +1789,7 @@ do_start()
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
 	sleep 1
+	enable_vpd_wp
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
