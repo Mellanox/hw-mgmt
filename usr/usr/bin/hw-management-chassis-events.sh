@@ -1015,8 +1015,6 @@ else
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
-		set -x
-		exec 3>&1 4>&2 >>/tmp/log 2>&1
 		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
 		if [[ $prefix == "undefined" ]];
 		then
