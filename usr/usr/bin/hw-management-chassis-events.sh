@@ -47,6 +47,7 @@ psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
+line_card_bus_off=33
 lc_iio_dev_name_def="iio:device0"
 eeprom_name=''
 fan_dir_offset_in_vpd_eeprom_pn=0x48
@@ -214,7 +215,6 @@ find_linecard_num()
 		fi
 	fi
 
-	log_err "mlxreg-lc driver is not loaded"
 	exit 0
 }
 
@@ -1178,8 +1178,8 @@ else
 	fi
 	# Clear lc folders upon line card udev rm event.
 	if [ "$2" == "linecard" ]; then
-		input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
-		find_linecard_num "$input_bus_num"
+		input_bus_num=$(echo "$3""$4" | xargs dirname | cut -d"-" -f3)
+		linecard_num=$((input_bus_num-line_card_bus_off))
 		# Clean line card folders.
 		if [ -d "$hw_management_path"/lc"$linecard_num" ]; then
 			find "$hw_management_path"/lc"$linecard_num" -type l -exec unlink {} \;
