@@ -401,7 +401,7 @@ function set_i2c_bus_frequency_400KHz()
 	# Relevant only to particular system types.
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
-	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005)
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
 		if [ -f $config_path/default_i2c_freq ]; then
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
 		fi
@@ -417,7 +417,7 @@ function restore_i2c_bus_frequency_default()
 	# Relevant only to particular system types.
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
-	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005)
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
 		if [ -f $config_path/default_i2c_freq ]; then
 			i2c_freq=$(< $config_path/default_i2c_freq)
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
@@ -989,6 +989,7 @@ msn27002_msb78002_specific()
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
+	get_i2c_bus_frequency_default
 }
 
 connect_msn4700_msn4600()
