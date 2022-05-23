@@ -114,7 +114,7 @@ connect_table=()
 #
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
 #
-cpu_type0_connection_table=(	max11603 0x6d 15 \
+cpu_type0_connection_table=( max11603 0x6d 15 \
 			24c32 0x51 16)
 
 #
@@ -141,7 +141,6 @@ cpu_type1_xpde_voltmon_connection_table=(	xdpe12284 0x62 15 comex_voltmon1 \
 cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
-
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -289,7 +288,7 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
-			
+
 e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
 			mp2975 0x23 5  voltmon2 \
 			mp2975 0x24 5  voltmon3 \
