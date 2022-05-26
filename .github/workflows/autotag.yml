@@ -2,7 +2,7 @@ name: Update version
 on:
   push:
     branches:
-      - V.7.*_BR
+      - V.7.00[1-5][0-9]_[0-9][0-9]00_BR
 jobs:
   build:
     runs-on: ubuntu-latest
