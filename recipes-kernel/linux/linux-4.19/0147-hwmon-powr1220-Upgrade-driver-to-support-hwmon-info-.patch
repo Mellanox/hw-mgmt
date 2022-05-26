@@ -1,7 +1,18 @@
-From c379b881592ca922830d6f0cc91491e07cee5a3f Mon Sep 17 00:00:00 2001
+From 15b1c188f8cf2ff9f296c9781d1e4fc061aaf371 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
-Date: Mon, 27 Sep 2021 13:31:27 +0000
-Subject: [PATCH 3/6] hwmon: powr1220: Upgrade driver to support hwmon info
+Date: Tue, 18 Jan 2022 09:56:09 +0200
+Subject: [PATCH] hwmon: (powr1220) Cosmetic changes
+
+Update code alignments.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+Link: https://lore.kernel.org/r/20220118075611.10665-2-michaelsh@nvidia.com
+Signed-off-by: Guenter Roeck <linux@roeck-us.net>
+---
+From 915d4664b7158d8d0f44da810186742c69300f02 Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Tue, 18 Jan 2022 09:56:10 +0200
+Subject: [PATCH] hwmon: (powr1220) Upgrade driver to support hwmon info
  infrastructure
 
 Reduce code by using devm_hwmon_device_register_with_groups() API by
@@ -10,42 +21,14 @@ The motivation is to reduce code and to allow easy support for similar
 devices by the same driver.
 
 Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+Link: https://lore.kernel.org/r/20220118075611.10665-3-michaelsh@nvidia.com
+Signed-off-by: Guenter Roeck <linux@roeck-us.net>
 ---
- drivers/hwmon/powr1220.c | 298 +++++++++++++++++----------------------
- 1 file changed, 128 insertions(+), 170 deletions(-)
-
 diff --git a/drivers/hwmon/powr1220.c b/drivers/hwmon/powr1220.c
-index 3014e4ac7..470873485 100644
 --- a/drivers/hwmon/powr1220.c
 +++ b/drivers/hwmon/powr1220.c
-@@ -31,6 +31,8 @@
- #define ADC_STEP_MV			2
- #define ADC_MAX_LOW_MEASUREMENT_MV	2000
- 
-+enum chips { powr1220 };
-+
- enum powr1220_regs {
- 	VMON_STATUS0,
- 	VMON_STATUS1,
-@@ -82,7 +84,9 @@ enum powr1220_adc_values {
- 
- struct powr1220_data {
- 	struct i2c_client *client;
-+	/* mutex for update */
- 	struct mutex update_lock;
-+	u8 max_channels;
- 	bool adc_valid[MAX_POWR1220_ADC_VALUES];
- 	 /* the next value is in jiffies */
- 	unsigned long adc_last_updated[MAX_POWR1220_ADC_VALUES];
-@@ -113,14 +117,14 @@ static const char * const input_names[] = {
- static int powr1220_read_adc(struct device *dev, int ch_num)
- {
- 	struct powr1220_data *data = dev_get_drvdata(dev);
-+	int adc_range = 0;
- 	int reading;
- 	int result;
--	int adc_range = 0;
- 
+@@ -120,7 +120,7 @@
  	mutex_lock(&data->update_lock);
  
  	if (time_after(jiffies, data->adc_last_updated[ch_num] + HZ) ||
@@ -54,7 +37,7 @@ index 3014e4ac7..470873485 100644
  		/*
  		 * figure out if we need to use the attenuator for
  		 * high inputs or inputs that we don't yet have a measurement
-@@ -128,12 +132,12 @@ static int powr1220_read_adc(struct device *dev, int ch_num)
+@@ -128,12 +128,12 @@
  		 * max reading.
  		 */
  		if (data->adc_maxes[ch_num] > ADC_MAX_LOW_MEASUREMENT_MV ||
@@ -69,20 +52,7 @@ index 3014e4ac7..470873485 100644
  		if (result)
  			goto exit;
  
-@@ -141,7 +145,7 @@ static int powr1220_read_adc(struct device *dev, int ch_num)
- 		 * wait at least Tconvert time (200 us) for the
- 		 * conversion to complete
- 		 */
--		udelay(200);
-+		usleep_range(200, 400);
- 
- 		/* get the ADC reading */
- 		result = i2c_smbus_read_byte_data(data->client, ADC_VALUE_LOW);
-@@ -172,182 +176,132 @@ static int powr1220_read_adc(struct device *dev, int ch_num)
- 
- exit:
- 	mutex_unlock(&data->update_lock);
--
+@@ -176,175 +176,117 @@
  	return result;
  }
  
@@ -98,9 +68,6 @@ index 3014e4ac7..470873485 100644
 -
 -	if (adc_val < 0)
 -		return adc_val;
-+	if (((struct powr1220_data *)data)->max_channels <= channel)
-+		return 0;
-+
 +	switch (type) {
 +	case hwmon_in:
 +		switch (attr) {
@@ -111,7 +78,7 @@ index 3014e4ac7..470873485 100644
 +		default:
 +			break;
 +		}
-+
++		break;
 +	default:
 +		break;
 +	}
@@ -157,7 +124,8 @@ index 3014e4ac7..470873485 100644
 -	struct sensor_device_attribute *attr = to_sensor_dev_attr(dev_attr);
 +	struct powr1220_data *data = dev_get_drvdata(dev);
 +	int ret;
-+
+ 
+-	return sprintf(buf, "%s\n", input_names[attr->index]);
 +	switch (type) {
 +	case hwmon_in:
 +		switch (attr) {
@@ -176,10 +144,6 @@ index 3014e4ac7..470873485 100644
 +		break;
 +	default:
 +		return -EOPNOTSUPP;
-+	}
- 
--	return sprintf(buf, "%s\n", input_names[attr->index]);
-+	return 0;
  }
  
 -static SENSOR_DEVICE_ATTR(in0_input, S_IRUGO, powr1220_show_voltage, NULL,
@@ -314,6 +278,9 @@ index 3014e4ac7..470873485 100644
 -	&sensor_dev_attr_in11_label.dev_attr.attr,
 -	&sensor_dev_attr_in12_label.dev_attr.attr,
 -	&sensor_dev_attr_in13_label.dev_attr.attr,
++	return 0;
++}
++
 +#define HWMON_CHANNEL_INFO(stype, ...)	\
 +	(&(struct hwmon_channel_info) {	\
 +		.type = hwmon_##stype,	\
@@ -348,61 +315,25 @@ index 3014e4ac7..470873485 100644
 +	.read_string = powr1220_read_string,
 +	.is_visible = powr1220_is_visible,
 +};
- 
++
 +static const struct hwmon_chip_info powr1220_chip_info = {
 +	.ops = &powr1220_hwmon_ops,
 +	.info = powr1220_info,
 +};
-+
-+static const struct i2c_device_id powr1220_ids[] = {
-+	{ "powr1220", powr1220, },
-+	{ }
-+};
-+
-+MODULE_DEVICE_TABLE(i2c, powr1220_ids);
- static int powr1220_probe(struct i2c_client *client,
--		const struct i2c_device_id *id)
-+			  const struct i2c_device_id *id)
- {
- 	struct powr1220_data *data;
- 	struct device *hwmon_dev;
-@@ -359,22 +313,26 @@ static int powr1220_probe(struct i2c_client *client,
- 	if (!data)
- 		return -ENOMEM;
  
-+	id = i2c_match_id(powr1220_ids, client);
-+	switch (id->driver_data) {
-+	case powr1220:
-+		data->max_channels = 12;
-+		break;
-+	default:
-+		data->max_channels = 12;
-+		break;
-+	}
-+
+ static int powr1220_probe(struct i2c_client *client,
+ 		const struct i2c_device_id *id)
+@@ -362,8 +304,11 @@
  	mutex_init(&data->update_lock);
  	data->client = client;
  
 -	hwmon_dev = devm_hwmon_device_register_with_groups(&client->dev,
 -			client->name, data, powr1220_groups);
--
 +	hwmon_dev = devm_hwmon_device_register_with_info(&client->dev,
-+							 client->name, data,
++							 client->name,
++							 data,
 +							 &powr1220_chip_info,
 +							 NULL);
+ 
  	return PTR_ERR_OR_ZERO(hwmon_dev);
  }
- 
--static const struct i2c_device_id powr1220_ids[] = {
--	{ "powr1220", 0, },
--	{ }
--};
--
--MODULE_DEVICE_TABLE(i2c, powr1220_ids);
--
- static struct i2c_driver powr1220_driver = {
- 	.class		= I2C_CLASS_HWMON,
- 	.driver = {
--- 
-2.20.1
-
