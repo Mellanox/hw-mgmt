@@ -26,7 +26,7 @@ jobs:
         new_tag=${{ env.GITHUB_NEW_TAG }}
         echo "Updating changelog..."
         echo "Tag $new_tag"
-        sed -i "s/\(.*mlnx.\)V.[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
+        sed -i "s/\(.*mlnx.\)[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
         sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
         git add debian/changelog
         git commit --amend --no-edit
