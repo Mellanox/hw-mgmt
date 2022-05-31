@@ -475,12 +475,12 @@ unk_dir_untrust_t12=(5000 12 15000 13 25000 14 30000 15 35000 16 45000 17 $max_a
 # 30-35		30	50	20	20	30	50
 # 35-40		40	60	20	20	40	60
 
-p2c_dir_trust_t12=(25000 12 35000 13 40000 14 $max_amb 14 )
-p2c_dir_untrust_t12=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
-c2p_dir_trust_t12=(40000 12 $max_amb 12 )
-c2p_dir_untrust_t12=(40000 12 $max_amb 12 )
-unk_dir_trust_t12=(25000 12 35000 13 40000 14 $max_amb 14 )
-unk_dir_untrust_t12=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
+p2c_dir_trust_t13=(25000 12 35000 13 40000 14 $max_amb 14 )
+p2c_dir_untrust_t13=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
+c2p_dir_trust_t13=(40000 12 $max_amb 12 )
+c2p_dir_untrust_t13=(40000 12 $max_amb 12 )
+unk_dir_trust_t13=(25000 12 35000 13 40000 14 $max_amb 14 )
+unk_dir_untrust_t13=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
 
 # Local variables
 report_counter=120
