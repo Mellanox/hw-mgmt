@@ -41,6 +41,7 @@
 #  t7: SN38*
 #  t8: SN4600C
 #  t12: SN4600
+#  t13: SN4800
 
 # The thermal algorithm considers the next rules for FAN speed setting:
 # The minimal PWM setting is dynamic and depends on FAN direction and cable
@@ -457,6 +458,29 @@ c2p_dir_trust_t12=(15000 12 35000 13 45000 14 $max_amb 14 )
 c2p_dir_untrust_t12=(15000 12 25000 13 35000 14 45000 16 $max_amb 16 )
 unk_dir_trust_t12=(10000 12 35000 13 45000 14 $max_amb 14 )
 unk_dir_untrust_t12=(5000 12 15000 13 25000 14 30000 15 35000 16 45000 17 $max_amb 17 )
+
+# Class t13 for MSN4800
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	20	20	20	20	20
+#  5-10		20	30	20	20	20	30
+# 10-15		20	30	20	20	20	30
+# 15-20		20	30	20	20	20	30
+# 20-25		20	40	20	20	20	40
+# 25-30		30	50	20	20	30	50
+# 30-35		30	50	20	20	30	50
+# 35-40		40	60	20	20	40	60
+
+p2c_dir_trust_t12=(25000 12 35000 13 40000 14 $max_amb 14 )
+p2c_dir_untrust_t12=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
+c2p_dir_trust_t12=(40000 12 $max_amb 12 )
+c2p_dir_untrust_t12=(40000 12 $max_amb 12 )
+unk_dir_trust_t12=(25000 12 35000 13 40000 14 $max_amb 14 )
+unk_dir_untrust_t12=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
 
 # Local variables
 report_counter=120
@@ -1097,6 +1121,15 @@ init_system_dynamic_minimum_db()
 		config_c2p_dir_untrust "${c2p_dir_untrust_t12[@]}"
 		config_unk_dir_trust "${unk_dir_trust_t12[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t12[@]}"
+		;;
+	$thermal_type_t13)
+		# Config FAN minimal speed setting for class t13
+		config_p2c_dir_trust "${p2c_dir_trust_t13[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t13[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t13[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t13[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t13[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t13[@]}"
 		;;
 	$thermal_type_full)
 		# Config FAN default minimal speed setting
