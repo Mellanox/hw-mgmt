@@ -1339,7 +1339,7 @@ msn48xx_specific()
 	hotplug_psus=4
 	psu_count=4
 	i2c_asic_bus_default=3
-	echo 22000 > $config_path/fan_max_speed
+	echo 18000 > $config_path/fan_max_speed
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
