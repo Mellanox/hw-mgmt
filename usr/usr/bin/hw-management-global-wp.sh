@@ -103,6 +103,53 @@ do_global_wp_release_restore()
 	fi
 }
 
+
+do_asic_wp_release_restore()
+{
+	action="$1"
+	file="$2"
+	command="$3"
+	param1="$4"
+	param2="$5"
+	param3="$6"
+	param4="$7"
+	
+	if [ ! -L "$system_path"/erot1_wp ] || [ ! -L "$system_path"/erot2_wp ]; then
+		return 1
+	fi
+	
+	case "$action" in
+		release)
+			echo 0 > "$system_path"/erot1_wp
+			echo 0 > "$system_path"/erot2_wp
+			
+			if [ "$command" != "" ]; then
+				# Execute user command for flashing device.
+				"$command" "$param1" $param2 $param3 $param4 "$file"
+				rc=$?
+				if [ $rc -eq 0 ]; then
+					log_info "$command completed."
+				else
+					log_info "$command failed."
+				fi
+			fi
+			echo 1 > "$system_path"/erot1_wp
+			echo 1 > "$system_path"/erot2_wp
+			return "$rc"
+			;;
+
+		restore)
+			# Clear Global Write Protection request.
+			echo 1 > "$system_path"/erot1_wp
+			echo 1 > "$system_path"/erot2_wp
+			return 0
+		;;
+		*)
+			return 1
+		;;
+	esac
+}
+
 __usage="
 Usage: $(basename "$0") [Options]
 
@@ -138,7 +185,13 @@ release|restore)
 		exit 1
 	fi
 	echo "$global_wp_pid" > /var/run/hw-management-global-wp.pid
-	do_global_wp_release_restore "$action" "$2" "$3" "$4" "$5" "$6" "$7"
+	# systems without global WP but with ASIC WP
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	if [ "$sku" == "HI142" ]; then
+		do_asic_wp_release_restore "$action" "$2" "$3" "$4" "$5" "$6" "$7"
+	else
+		do_global_wp_release_restore "$action" "$2" "$3" "$4" "$5" "$6" "$7"
+	fi
 	ret=$?
 	rm /var/run/hw-management-global-wp.pid
 	unlock_service_state_change
@@ -150,4 +203,3 @@ release|restore)
 	;;
 esac
 exit 0
-
