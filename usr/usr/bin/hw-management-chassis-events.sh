@@ -472,8 +472,13 @@ function handle_fantray_led_event()
 	event=$2
 	gpio_path=/sys/class/gpio
 
-	gpio_pin_green=$((350 + 2*(fan_idx - 1)))
-	gpio_pin_orange=$((351 + 2*(fan_idx - 1)))
+	if [ -e "$config_path"/i2c_gpiobase ]; then
+		gpiobase=$(<"$config_path"/i2c_gpiobase)
+	else
+		return
+	fi
+	gpio_pin_green=$((gpiobase + 8 + 2*(fan_idx - 1)))
+	gpio_pin_orange=$((gpiobase + 9 + 2*(fan_idx - 1)))
 	case "$color" in
 	green)
 		if [ "$event" -eq "0" ]; then
