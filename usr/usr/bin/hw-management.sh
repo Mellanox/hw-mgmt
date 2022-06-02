@@ -567,9 +567,21 @@ set_jtag_gpio()
 		fi
 	fi
 
-	# Gpiochip358 is used for CPU GPIO and gpiochip342 is used for PCA9555 Extender in SN2201. 
+	# SN2201 has 2 gpiochips: CPU/PCH GPIO and PCA9555 Extender.
+	# CPU GPIOs are used for JTAG bit-banging.
 	if [ "$board_type" == "VMOD0014" ]; then
-		gpiobase=$(</sys/class/gpio/gpiochip358/base)
+		for gpiochip in /sys/class/gpio/*; do
+			if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
+				gpiolabel=$(<"$gpiochip"/label)
+				if [ "$gpiolabel" == "INTC3000:00" ]; then
+					gpiobase=$(<"$gpiochip"/base)
+					break
+				fi
+			fi
+		done
+		if [ -z "$gpiobase" ]; then
+			log_err "CPU GPIO chip was not found"
+		fi
 	else
 		gpiobase=$(</sys/class/gpio/gpiochip*/base)
 	fi
