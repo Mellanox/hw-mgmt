@@ -1524,34 +1524,34 @@ create_event_files()
 {
 	if [ $hotplug_psus -ne 0 ]; then
 		for ((i=1; i<=hotplug_psus; i+=1)); do
-			touch $events_path/psu$i
+			check_n_init $events_path/psu$i 0
 		done
 	fi
 	if [ $hotplug_pwrs -ne 0 ]; then
 		for ((i=1; i<=hotplug_pwrs; i+=1)); do
-			touch $events_path/pwr$i
+			check_n_init $events_path/pwr$i 0
 		done
 	fi
 	if [ $hotplug_fans -ne 0 ]; then
 		for ((i=1; i<=hotplug_fans; i+=1)); do
-			touch $events_path/fan$i
+			check_n_init $events_path/fan$i 0
 		done
 	fi
 	if [ $hotplug_linecards -ne 0 ]; then
 		for ((i=1; i<=hotplug_linecards; i+=1)); do
-			touch $events_path/lc"$i"_present
-			touch $events_path/lc"$i"_verified
-			touch $events_path/lc"$i"_powered
-			touch $events_path/lc"$i"_ready
-			touch $events_path/lc"$i"_synced
-			touch $events_path/lc"$i"_active
-			touch $events_path/lc"$i"_shutdown
+			check_n_init $events_path/lc"$i"_present 0
+			check_n_init $events_path/lc"$i"_verified 0
+			check_n_init $events_path/lc"$i"_powered 0
+			check_n_init $events_path/lc"$i"_ready 0
+			check_n_init $events_path/lc"$i"_synced 0
+			check_n_init $events_path/lc"$i"_active 0
+			check_n_init $events_path/lc"$i"_shutdown 0
 		done
 	fi
 	if [ $erot_count -ne 0 ]; then
 		for ((i=1; i<=erot_count; i+=1)); do
-			touch $events_path/erot"$i"_error
-			touch $events_path/erot"$i"_ap
+			check_n_init  $events_path/erot"$i"_error 0
+			check_n_init $events_path/erot"$i"_ap 0
 		done
 	fi
 }
