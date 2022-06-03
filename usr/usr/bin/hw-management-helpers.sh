@@ -170,6 +170,17 @@ check_n_unlink()
     fi
 }
 
+# Check if file not exists and create it
+# $1 - file path
+# $2 - default value
+# return none
+check_n_init()
+{
+	if [ ! -f $1 ]; then
+		echo $2 > $1
+	fi
+}
+
 # Read int val from file, inc it by val and save back
 # value can negative
 # $1 - counter file name
