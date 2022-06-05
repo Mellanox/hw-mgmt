@@ -1,9 +1,8 @@
-From 939c2cd85915a31ce1bb5f812f840dc594af3096 Mon Sep 17 00:00:00 2001
+From 984b5910647d74193c7517a623a3aa45d47a41bb Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 27 Jan 2022 15:07:28 +0200
-Subject: [PATCH 1/5] platform: mellanox: Introduce support for NDR InfiniBand
- modular chassis
-X-NVConfidentiality: public
+Subject: [PATCH platform backport v5.10 06/10] platform: mellanox: Introduce
+ support for NDR InfiniBand modular chassis
 
 Add support for MQM9510-N leaf and MQM9520-N spine blades for two
 flavors of NDR InfiniBand chassis:
@@ -29,11 +28,11 @@ different I2C mux topology and extended LED and hotplug configuration.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 424 ++++++++++++++++++++++++++++++++++++
+ drivers/platform/x86/mlx-platform.c | 424 ++++++++++++++++++++++++++++
  1 file changed, 424 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 170efd392..08d93b9a8 100644
+index 1819e0e3b..d915f2d8f 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -90,6 +90,9 @@
@@ -573,5 +572,5 @@ index 170efd392..08d93b9a8 100644
  		.callback = mlxplat_dmi_ng400_matched,
  		.matches = {
 -- 
-2.14.1
+2.20.1
 
