@@ -1,8 +1,8 @@
-From b03f1abbe240336b11045ece1c9918543cc159e0 Mon Sep 17 00:00:00 2001
+From b9f03e961b69583c0310768075c3930795c76ff7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 26 Jan 2022 20:34:32 +0200
-Subject: [PATCH platform-next 2/5] platform: mellanox: Introduce support for
- COMe NVSwitch management module for Vulcan chassis
+Subject: [PATCH platform backport v5.10 04/10] platform: mellanox: Introduce
+ support for COMe NVSwitch management module for Vulcan chassis
 
 The Vulcan is chassis containing Nvidia's Hopper dGPU (GH100), NVswitch
 (LS10) based HGX baseboard and COMe NVSwitch management module.
@@ -20,7 +20,7 @@ Reviewed-by: Oleksandr Shamray <oleksandrs@nvidia.com>
  1 file changed, 269 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 8ef80aa89..1c529fc03 100644
+index cbe9eab34..ab26a62f8 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -67,6 +67,9 @@
