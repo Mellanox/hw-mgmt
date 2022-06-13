@@ -1358,8 +1358,6 @@ msn48xx_specific()
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
-	# TMP for Buffalo BU
-	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
 sn2201_specific()
@@ -1603,16 +1601,7 @@ set_config_data()
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
-
-	# TMP for Buffalo BU
-	case $board_type in
-	VMOD0011)
-		echo 0x64 > $config_path/fan_psu_default
-		;;
-	*)
-		echo $fan_psu_default > $config_path/fan_psu_default
-		;;
-	esac
+	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
