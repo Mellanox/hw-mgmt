@@ -360,28 +360,27 @@ mqm9510_base_connect_table=( \
 	24c512 0x51 8)
 
 mqm9510_dynamic_i2c_bus_connect_table=( \
-	mp2888 0x62 5 voltmon1 \
+	mp2975 0x62 5 voltmon1 \
 	mp2888 0x66 5 voltmon2 \
-	mp2888 0x68 5 voltmon3 \
-	mp2888 0x6c 5 voltmon4 \
-	mp2888 0x62 6 voltmon5 \
+	mp2975 0x68 5 voltmon3 \
+	mp2975 0x6c 5 voltmon4 \
+	mp2975 0x62 6 voltmon5 \
 	mp2888 0x66 6 voltmon6 \
-	mp2888 0x68 6 voltmon7 \
-	mp2888 0x6c 6 voltmon8)
+	mp2975 0x68 6 voltmon7 \
+	mp2975 0x6c 6 voltmon8 )
 
 mqm9520_base_connect_table=( \
-	tmp102 0x49 7 \
-	tmp102 0x4a 7 \
-	24c512 0x51 8)
+	24c512 0x51 8 )
 
 mqm9520_dynamic_i2c_bus_connect_table=( \
+	tmp102 0x4a 7  tmpsens1 \
+	tmp102 0x4a 15 tmpsens2 \
 	mp2888 0x66 5  voltmon1 \
-	mp2888 0x68 5  voltmon2 \
-	mp2888 0x6c 5  voltmon3 \
-	mp2888 0x62 13 voltmon4 \
-	mp2888 0x66 13 voltmon5 \
-	mp2888 0x68 13 voltmon6 \
-	mp2888 0x6c 13 voltmon7 )
+	mp2975 0x68 5  voltmon2 \
+	mp2975 0x6c 5  voltmon3 \
+	mp2888 0x66 13 voltmon4 \
+	mp2975 0x68 13 voltmon5 \
+	mp2975 0x6c 13 voltmon6 )
 
 p2317_connect_table=(	24c512 0x51 8)
 
