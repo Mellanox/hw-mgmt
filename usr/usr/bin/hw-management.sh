@@ -1,6 +1,6 @@
 #!/bin/bash
-########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+################################################################################
+# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -136,6 +136,7 @@ fan_direction_intake=52
 # configured as modules.
 
 base_cpu_bus_offset=10
+connect_table=()
 
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
 cpu_type0_connection_table=(	max11603 0x6d 15 \
@@ -249,7 +250,6 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x6C 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x53 7 \
 			24c32 0x51 8)
 
 msn4800_base_connect_table=( mp2975 0x62 6 \
@@ -483,9 +483,24 @@ add_cpu_board_to_connection_table()
 	connect_table+=(${cpu_connection_table[@]})
 }
 
+add_i2c_dynamic_bus_dev_connection_table()
+{
+	connection_table=("$@")
+	dynamic_i2cbus_connection_table=()
+
+	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
+	for ((i=0; i<${#connection_table[@]}; i+=4)); do
+		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
+		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
+		dynamic_i2cbus_connection_table[$i+2]="${connection_table[i+2]}"
+	done
+
+	connect_table+=(${dynamic_i2cbus_connection_table[@]})
+}
+
 msn274x_specific()
 {
-	connect_table=(${msn2740_base_connect_table[@]})
+	connect_table+=(${msn2740_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t3
@@ -503,7 +518,7 @@ msn274x_specific()
 
 msn21xx_specific()
 {
-	connect_table=(${msn2100_base_connect_table[@]})
+	connect_table+=(${msn2100_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t2
@@ -523,7 +538,7 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	connect_table=(${msn2700_base_connect_table[@]})
+	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t1
@@ -542,7 +557,7 @@ msn24xx_specific()
 
 msn27xx_msb_msx_specific()
 {
-	connect_table=(${msn2700_base_connect_table[@]})
+	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t1
@@ -562,7 +577,7 @@ msn27xx_msb_msx_specific()
 
 msn201x_specific()
 {
-	connect_table=(${msn2010_base_connect_table[@]})
+	connect_table+=(${msn2010_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t4
@@ -582,7 +597,7 @@ msn201x_specific()
 
 mqmxxx_msn37x_msn34x_specific()
 {
-	connect_table=(${mqm8700_base_connect_table[@]})
+	connect_table+=(${mqm8700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
@@ -599,7 +614,7 @@ mqmxxx_msn37x_msn34x_specific()
 
 msn3420_specific()
 {
-	connect_table=(${msn3420_base_connect_table[@]})
+	connect_table+=(${msn3420_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t9
@@ -616,7 +631,7 @@ msn3420_specific()
 
 msn38xx_specific()
 {
-	connect_table=(${msn3800_base_connect_table[@]})
+	connect_table+=(${msn3800_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t7
@@ -634,7 +649,7 @@ msn24102_specific()
 {
 	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
@@ -656,7 +671,7 @@ msn27002_msb78002_specific()
 {
 	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
@@ -675,14 +690,14 @@ msn27002_msb78002_specific()
 
 connect_msn4700_msn4600()
 {
-	connect_table=(${msn4700_msn4600_base_connect_table[@]})
+	connect_table+=(${msn4700_msn4600_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
 {
-	connect_table=(${msn4700_msn4600_A1_base_connect_table[@]})
+	connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 }
@@ -754,7 +769,7 @@ msn46xx_specific()
 
 msn3510_specific()
 {
-	connect_table=(${msn3510_base_connect_table[@]})
+	connect_table+=(${msn3510_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -769,7 +784,7 @@ msn3510_specific()
 
 mqm97xx_specific()
 {
-	connect_table=(${mqm97xx_base_connect_table[@]})
+	connect_table+=(${mqm97xx_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -832,7 +847,7 @@ check_cpu_type()
 msn48xx_specific()
 {
 	local cpu_bus_offset=51
-	connect_table=(${msn4800_base_connect_table[@]})
+	connect_table+=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))

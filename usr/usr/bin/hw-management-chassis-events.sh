@@ -83,13 +83,13 @@ log_info()
 }
 
 # Voltmon sensors by label mapping:
-#                   dummy   voltmon1      voltmon2       voltmon3
+#                   dummy   sensor1       sensor2        sensor3
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
 CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
 POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
 
 # Find sensor index which label matching to mask.
-# $1 - patch to sensor in sysfs
+# $1 - path to sensor in sysfs
 # $2 - sensor type ('in', 'curr', 'power'...)
 # $3 - mask to matching  label
 # return sensor index if match is found or 0 if match not found
@@ -417,6 +417,104 @@ function handle_hotplug_event()
 	set_fan_direction "$attribute" "$event"
 }
 
+# Handle i2c bus add/remove.
+# If we have some devices which should be connected to this bus - do it.
+# $1 - i2c bus full address.
+# $2 - i2c bus action type add/remove.
+function handle_i2cbus_dev_action()
+{
+	i2c_busdev_path=$1
+	i2c_busdev_action=$2
+
+	# Check if we have devices list which should be connected to dynamic i2c buses.
+	if [ ! -f $config_path/i2c_bus_connect_devices ];
+	then
+		return
+	fi
+
+	# Extract i2c bus index.
+	i2cbus_regex="i2c-([0-9]+)$"
+	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
+	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
+		return
+	else
+		i2cbus="${BASH_REMATCH[1]}"
+	fi
+
+	# Load i2c devices list which should be connected on demand..
+	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+	
+	# wait till i2c driver fully init
+	sleep 20
+	# Go over all devices and check if they should be connected to the current i2c bus.
+	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
+		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
+		then
+			if [ "$i2c_busdev_action" == "add" ]; then
+				connect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
+					"${dynamic_i2c_bus_connect_table[i+2]}"
+			elif [ "$i2c_busdev_action" == "remove" ]; then
+				diconnect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
+					"${dynamic_i2c_bus_connect_table[i+2]}"
+			fi
+		fi
+	done
+}
+
+# Get voltmon sensor name prefix, like voltmon{id}.
+# For name voltmonX returning name based on $config_path/i2c_bus_connect_devices file.
+# For other names - just return voltmon{id} string.
+# $1 - voltmon name (voltmon1, voltmon2, voltmon10, voltmonX)
+# $2 - path to sensor in sysfs
+# return sensor name if match is found or undefined in other case.
+function get_i2c_voltmon_prefix()
+{
+	voltmon_name=$1
+	i2c_busdev_path=$2
+	
+	# Check if we have devices list which can be connected with name translation.
+	if [  -f $config_path/i2c_bus_connect_devices ];
+	then
+		# Load i2c devices list which should be connected on demand.
+		declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+	
+		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
+		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
+		[[ $i2c_busdev_path =~ $i2caddr_regex ]]
+		if [ "${#BASH_REMATCH[@]}" != 3 ]; then
+			# not matched
+			echo "$voltmon_name"
+			return
+		else
+			i2cbus="${BASH_REMATCH[1]}"
+			i2caddr="0x${BASH_REMATCH[2]}"
+		fi
+	
+		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
+			# match device by i2c bus/addr
+			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2caddr == "${dynamic_i2c_bus_connect_table[i+1]}" ];
+			then
+				voltmon_name="${dynamic_i2c_bus_connect_table[i+3]}"
+				if [ $voltmon_name == "NA" ]; then 
+					echo "$undefined"
+				else
+					echo "$voltmon_name"
+				fi
+				return
+			fi
+		done
+	fi
+
+	# we not matched i2c device with dev_list file or file not exist
+	# returning passed "voltmon{1..100}" name or "undefined" in case if passed 'voltmon_nameX"
+	if [ "$voltmon_name" == "voltmonX" ];
+	then
+		voltmon_name="undefined"
+	fi
+
+	echo "$voltmon_name"
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -444,10 +542,19 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
-	   [ "$2" == "voltmon7" ] ||
+	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
+	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
-		if [ "$2" == "comex_voltmon1" ]; then
+		# Get i2c voltmon prefix.
+		# For voltmon[0..100] name will not change - just return it.
+		# For voltmonX we will try to get name based on dev id/bus and system connect table.
+		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
+		if [[ $prefix == "undefined" ]];
+		then
+			exit
+		fi
+		if [ "$prefix" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 			busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
@@ -476,23 +583,25 @@ if [ "$1" == "add" ]; then
 			sensor_id=$?
 			if [ ! $sensor_id -eq 0 ]; then
 				if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$2"_in"$i"_input
+					ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
 				fi
 				if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
-					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$2"_in"$i"_alarm
+					ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
+				elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
+					ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
 				fi
 			fi
 			if [ -f "$3""$4"/curr"$i"_input ]; then
-				ln -sf "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
+				ln -sf "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
 			fi
 			if [ -f "$3""$4"/power"$i"_input ]; then
-				ln -sf "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
+				ln -sf "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
 			fi
 			if [ -f "$3""$4"/curr"$i"_alarm ]; then
-				ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
+				ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
 			fi
 			if [ -f "$3""$4"/power"$i"_alarm ]; then
-				ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
+				ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
 			fi
 		done
 	fi
@@ -662,6 +771,12 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "lc_topo" ]; then
 		create_linecard_i2c_links "$3" "$4"
 	fi
+
+	# Create i2c bus.
+	if [ "$2" == "i2c_bus" ]; then
+		log_info "I2C bus $4 connected."
+		handle_i2cbus_dev_action $4 "add"
+	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
 		lock_service_state_change
@@ -696,10 +811,16 @@ else
 	if [ "$2" == "voltmon1" ] || [ "$2" == "voltmon2" ] ||
 	   [ "$2" == "voltmon3" ] || [ "$2" == "voltmon4" ] ||
 	   [ "$2" == "voltmon5" ] || [ "$2" == "voltmon6" ] ||
-	   [ "$2" == "voltmon7" ] ||
+	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
+	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ]; then
-		if [ "$2" == "comex_voltmon1" ]; then
+		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
+		if [[ $prefix == "undefined" ]];
+		then
+			exit
+		fi
+		if [ "$prefix" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 			busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
@@ -723,24 +844,25 @@ else
 				fi
 			fi
 		fi
-		for i in {1..3}; do
-			if [ -L $environment_path/"$2"_in"$i"_input ]; then
-				unlink $environment_path/"$2"_in"$i"_input
+		# For SN2201 indexes are from 0 to 9.
+		for i in {0..9}; do
+			if [ -L $environment_path/"$prefix"_in"$i"_input ]; then
+				unlink $environment_path/"$prefix"_in"$i"_input
 			fi
-			if [ -L $environment_path/"$2"_curr"$i"_input ]; then
-				unlink $environment_path/"$2"_curr"$i"_input
+			if [ -L $environment_path/"$prefix"_curr"$i"_input ]; then
+				unlink $environment_path/"$prefix"_curr"$i"_input
 			fi
-			if [ -L $environment_path/"$2"_power"$i"_input ]; then
-				unlink $environment_path/"$2"_power"$i"_input
+			if [ -L $environment_path/"$prefix"_power"$i"_input ]; then
+				unlink $environment_path/"$prefix"_power"$i"_input
 			fi
-			if [ -L $alarm_path/"$2"_in"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_in"$i"_alarm
+			if [ -L $alarm_path/"$prefix"_in"$i"_alarm ]; then
+				unlink $alarm_path/"$prefix"_in"$i"_alarm
 			fi
-			if [ -L $alarm_path/"$2"_curr"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_curr"$i"_alarm
+			if [ -L $alarm_path/"$prefix"_curr"$i"_alarm ]; then
+				unlink $alarm_path/"$prefix"_curr"$i"_alarm
 			fi
-			if [ -L $alarm_path/"$2"_power"$i"_alarm ]; then
-				unlink $alarm_path/"$2"_power"$i"_alarm
+			if [ -L $alarm_path/"$prefix"_power"$i"_alarm ]; then
+				unlink $alarm_path/"$prefix"_power"$i"_alarm
 			fi
 		done
 	fi
@@ -868,5 +990,11 @@ else
 	# Destroy line card i2c mux symbolic link infrastructure
 	if [ "$2" == "lc_topo" ]; then
 		destroy_linecard_i2c_links "$3"
+	fi
+
+	# Removed i2c bus.
+	if [ "$2" == "i2c_bus" ]; then
+		log_info "I2C bus $4 removed."
+		handle_i2cbus_dev_action $4 "remove"
 	fi
 fi

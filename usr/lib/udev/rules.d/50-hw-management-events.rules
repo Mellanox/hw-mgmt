@@ -1,5 +1,5 @@
-########################################################################
-# Copyright (c) 2018 Mellanox Technologies. All rights reserved.
+###########################################################################
+# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -321,6 +321,11 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add comex_voltmon1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-006b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm comex_voltmon1 %S %p"
+
+# any voltmon including COMEX
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
+
 
 # IIO (max1363)
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add a2d %S %p %k"
