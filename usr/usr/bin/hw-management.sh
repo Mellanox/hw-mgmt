@@ -138,21 +138,42 @@ fan_direction_intake=52
 base_cpu_bus_offset=10
 connect_table=()
 
+#
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
+#
 cpu_type0_connection_table=(	max11603 0x6d 15 \
 			24c32 0x51 16)
 
+#
 # Broadwell CPU, mostly used on SPC2/SPC3 systems.
-cpu_type1_connection_table=(	max11603 0x6d 15 \
+#
+cpu_type1_A2D_connection_table=( max11603 0x6d 15 \
 			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
 			24c32 0x50 16)
 
-# CoffeeLake CPU.
-cpu_type2_connection_table=(	max11603 0x6d 15 \
-			mp2975 0x6b 15 \
+cpu_type1_connection_table=( max11603 0x6d 15 \
+			tmp102 0x49 15 \
 			24c32 0x50 16)
+
+cpu_type1_a1_connection_table=(	tmp102 0x49 15 \
+			24c32 0x50 16)
+
+cpu_type1_tps_voltmon_connection_table=( tps53679 0x58 15 comex_voltmon1 \
+			tps53679 0x61 15 comex_voltmon2)
+
+cpu_type1_mps_voltmon_connection_table=(	mp2975 0x6a 15 comex_voltmon1 \
+			mp2975 0x61 15 comex_voltmon2)
+
+cpu_type1_xpde_voltmon_connection_table=(	xdpe12284 0x62 15 comex_voltmon1 \
+			xdpe12284 0x64 15 comex_voltmon2)
+#
+# CoffeeLake CPU.
+#
+cpu_type2_connection_table=(	max11603 0x6d 15 \
+			24c32 0x50 16)
+
+cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
+
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -453,18 +474,57 @@ get_fixed_fans_direction()
 	esac
 }
 
+# $1 - cpu bus offset.
 add_cpu_board_to_connection_table()
 {
-	local cpu_connection_table=( )
+	local cpu_connection_table=()
+	local cpu_voltmon_connection_table=()
+	local HW_REV=255
+
+	regio_path=$(find_regio_sysfs_path)
+	if [ $? -eq 0 ]; then
+		if [ -f "$regio_path"/config3 ]; then
+			HW_REV=$(cut "$regio_path"/config3 -d' ' -f 1)
+		fi
+	fi
+
 	case $cpu_type in
 		$RNG_CPU|$IVB_CPU)
 			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
-			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+			case $HW_REV in
+				0|3)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+				;;
+				1|5)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_mps_voltmon_connection_table[@]} )
+				;;
+				2|4)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_xpds_voltmon_connection_table[@]} )
+				;;
+				*)
+					# COMEX BWD regular version not support HW_REV register
+					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+					case $sku in
+						HI116)
+							#Anaconda 100/200 removed A2D from BWD
+							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+							;;
+						*)
+							cpu_connection_table=( ${cpu_type1_A2D_connection_table[@]} )
+							;;
+					esac
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+				;;
+			esac
 			;;
 		$CFL_CPU)
 			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
@@ -478,9 +538,13 @@ add_cpu_board_to_connection_table()
 		for ((i=0; i<${#cpu_connection_table[@]}; i+=3)); do
 			cpu_connection_table[$i+2]=$(( cpu_connection_table[i+2]-base_cpu_bus_offset+cpu_bus_offset ))
 		done
+		for ((i=0; i<${#cpu_voltmon_connection_table[@]}; i+=4)); do
+			cpu_voltmon_connection_table[$i+2]=$(( cpu_voltmon_connection_table[i+2]-base_cpu_bus_offset+cpu_bus_offset ))
+		done
 	fi
 
 	connect_table+=(${cpu_connection_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${cpu_voltmon_connection_table[@]}"
 }
 
 add_i2c_dynamic_bus_dev_connection_table()
