@@ -203,12 +203,33 @@ msn2010_base_connect_table=(	max11603 0x6d 5 \
 			lm75 0x4b 7 \
 			24c32 0x51 8)
 
-mqm8700_base_connect_table=(	max11603 0x64 5 \
-			tps53679 0x70 5 \
-			tps53679 0x71 5 \
+mqm8700_connect_table=( tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8)
+
+mqm8700_A2D_connect_table=( 	max11603 0x64 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
+
+mqm8700_voltmon_connect_table=( tps53679 0x70 5 voltmon1 \
+			tps53679 0x71 5 voltmon2)
+
+mqm8700_rev1_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2975 0x66 5 voltmon2)
+
+msn37xx_secured_connect_table=(  max11603 0x64 5 \
+			tmp102 0x49 7 \ 
+			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
+msn37xx_A1_connect_table=(tmp102 0x49 7 \
+			tmp102 0x49 7 \
+			adt75 0x4a 7 \
+			24c512 0x51 8)
+
+msn37xx_A1_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2975 0x66 5 voltmon2)
 
 msn3420_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
@@ -234,8 +255,19 @@ msn27002_msn24102_msb78002_base_connect_table=( pmbus 0x27 5 \
 			max11603 0x6d 15 \
 			lm75 0x49 17)
 
-msn4700_msn4600_base_connect_table=(	max11603 0x6d 5 \
+msn4700_msn4600_base_connect_table=( max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
+			xdpe12284 0x64 5 \
+			xdpe12284 0x66 5 \
+			xdpe12284 0x68 5 \
+			xdpe12284 0x6a 5 \
+			xdpe12284 0x6c 5 \
+			xdpe12284 0x6e 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8)
+
+msn4600C_base_connect_table=( xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
 			xdpe12284 0x66 5 \
 			xdpe12284 0x68 5 \
@@ -248,6 +280,15 @@ msn4700_msn4600_base_connect_table=(	max11603 0x6d 5 \
 
 msn4700_msn4600_A1_base_connect_table=(	max11603 0x6d 5 \
 			mp2975 0x62 5 \
+			mp2975 0x64 5 \
+			mp2975 0x66 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6e 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8)
+
+msn4600C_A1_base_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
@@ -510,8 +551,8 @@ add_cpu_board_to_connection_table()
 					# COMEX BWD regular version not support HW_REV register
 					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 					case $sku in
-						HI116)
-							#Anaconda 100/200 removed A2D from BWD
+						HI116|HI112|HI124|HI100)
+    						#Anaconda 100/200 Tigon Jaguar removed A2D from BWD
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -659,9 +700,59 @@ msn201x_specific()
 	echo 1 > $config_path/fixed_fans_system
 }
 
+connect_msn3700()
+{
+	local voltmon_connection_table=()
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			6|2)
+					# msn3700/msn3700C respin A1
+					connect_table+=(${msn37xx_A1_connect_table[@]})
+					voltmon_connection_table=(${msn37xx_A1_voltmon_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/msn3700_A1_sensors.conf"
+			;;
+			*)
+					connect_table+=(${mqm8700_connect_table[@]})
+					voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+			;;
+		esac
+	else
+		connect_table+=(${mqm8700_connect_table[@]})
+		voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+	fi
+	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
+}
+
 mqmxxx_msn37x_msn34x_specific()
 {
-	connect_table+=(${mqm8700_base_connect_table[@]})
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	local voltmon_connection_table=()
+
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI136)
+			# msn3700C-S
+			connect_table+=(${msn37xx_secured_connect_table[@]})
+			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+		;;
+		HI112|HI116)
+			# msn3700/msn3700C
+			connect_msn3700
+		;;
+		HI110)
+			# Jaguar
+			connect_table+=(${mqm8700_connect_table[@]})
+			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+		;;
+		*)
+			connect_table+=(${mqm8700_A2D_connect_table[@]})
+			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+		;;
+	esac
+	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
 	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
@@ -669,10 +760,9 @@ mqmxxx_msn37x_msn34x_specific()
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
-	echo 23000 > $config_path/psu_fan_max
+	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
 
@@ -754,14 +844,26 @@ msn27002_msb78002_specific()
 
 connect_msn4700_msn4600()
 {
-	connect_table+=(${msn4700_msn4600_base_connect_table[@]})
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	if [ $sku == "HI124"]; then
+		# Tigon with removed A2D
+		connect_table+=(${msn4600C_base_connect_table[@]})
+	else
+		connect_table+=(${msn4700_msn4600_base_connect_table[@]})
+	fi
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
 {
-	connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	if [ $sku == "HI124"]; then
+		# Tigon with removed A2D
+		connect_table+=(${msn4600C_A1_base_connect_table[@]})
+	else
+		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
+	fi
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 }
@@ -861,8 +963,33 @@ mqm97xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 }
 
+mqm87xx_rev1_specific()
+{
+	connect_table+=(${mqm8700_connect_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${mqm8700_rev1_voltmon_connect_table[@]}"
+	add_cpu_board_to_connection_table
+
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	get_i2c_bus_frequency_default
+}
+
 msn_spc2_common()
 {
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+	else
+		sys_ver=0
+	fi
+
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI120)
@@ -870,6 +997,16 @@ msn_spc2_common()
 			;;
 		HI121)
 			msn3510_specific
+			;;
+		HI100)
+			case $sys_ver in
+				2)
+					mqm87xx_rev1_specific
+					;;
+				*)
+					mqmxxx_msn37x_msn34x_specific
+					;;
+			esac
 			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
