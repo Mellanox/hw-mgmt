@@ -153,6 +153,22 @@ psu_disconnect_power_sensor()
 	rm -f "$power_path"/"$sensor_name"_capability
 }
 
+sn2201_find_cpu_core_temp_ids()
+{
+	if [ -e $config_path/core0_temp_id ]; then
+		core0_temp_id=$(<$config_path/core0_temp_id)
+	else
+		tmp=$(cat /proc/cpuinfo | grep -m1 "core id" | awk '{print $4}')
+		core0_temp_id==$(($tmp+2))
+	fi
+	if [ -e $config_path/core1_temp_id ]; then
+		core1_temp_id=$(<$config_path/core1_temp_id)
+	else
+		tmp=$(cat /proc/cpuinfo | grep -m2 "core id" | tail -n1 | awk '{print $4}')
+		core1_temp_id=$(($tmp+2))
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -494,7 +510,10 @@ if [ "$1" == "add" ]; then
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
-		for i in {1..14}; do
+		if [ "$board_type" == "VMOD0014" ]; then
+			sn2201_find_cpu_core_temp_ids
+		fi
+		for i in {1..16}; do
 			if [ -f "$3""$4"/temp"$i"_input ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
@@ -502,8 +521,13 @@ if [ "$1" == "add" ]; then
 					if [ "$board_type" != "VMOD0014" ]; then
 						id=$((i - 2))
 					else
-					# Denverton CPU on SN2201 has CPU Core numbers 6, 12 instead 0, 1
-						id=$((((i - 2) / 6) - 1))
+					# Denverton CPU on SN2201 has ridicolous CPU Core numbers 6, 12 instead 0, 1
+					# These core id numbers also can differ in various CPU batches.
+						if [ "$i" == "$core0_temp_id" ]; then
+							id=0
+						elif [ "$i" == "$core1_temp_id" ]; then
+							id=1
+						fi
 					fi
 					name="core$id"
 				fi
