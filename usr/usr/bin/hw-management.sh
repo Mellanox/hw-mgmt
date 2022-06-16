@@ -59,10 +59,10 @@
 
 source hw-management-helpers.sh
 board_type=$(< $board_type_file)
+source hw-management-devtree.sh
 # Local constants and variables
 
 thermal_type=$thermal_type_def
-
 asic_control=1
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
@@ -890,21 +890,24 @@ mqmxxx_msn37x_msn34x_specific()
 {
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-	case $sku in
-		HI136)
-			# msn3700C-S
-			connect_table+=(${msn37xx_secured_connect_table[@]})
-		;;
-		HI112|HI116)
-			# msn3700/msn3700C
-			connect_msn3700
-		;;
-		*)
-			connect_table+=(${mqm8700_base_connect_table[@]})
-		;;
-	esac
-	add_cpu_board_to_connection_table
+	# Just in case tha SMBIOS devtree wasn't created
+	if [ ! -e "$devtree_file" ]; then
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+			HI136)
+				# msn3700C-S
+				connect_table+=(${msn37xx_secured_connect_table[@]})
+			;;
+			HI112|HI116)
+				# msn3700/msn3700C
+				connect_msn3700
+			;;
+			*)
+				connect_table+=(${mqm8700_base_connect_table[@]})
+			;;
+		esac
+		add_cpu_board_to_connection_table
+	fi
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
@@ -1125,32 +1128,37 @@ mqm97xx_specific()
 {
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			0)
-				connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-				;;
-			1)
-				connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-				;;
-			7)
-				connect_table+=(${mqm97xx_power_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-				;;
-			*)
-				connect_table+=(${mqm97xx_base_connect_table[@]})
-				;;
-		esac
+	if [ -e "$devtree_file" ]; then
+		# connect_table will be initialized at later step from devtree file
+		lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 	else
-		connect_table+=(${mqm97xx_base_connect_table[@]})
-	fi
+		regio_path=$(find_regio_sysfs_path)
+		res=$?
+		if [ $res -eq 0 ]; then
+			sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+			case $sys_ver in
+				0)
+					connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+					;;
+				1)
+					connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+					;;
+				7)
+					connect_table+=(${mqm97xx_power_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+					;;
+				*)
+					connect_table+=(${mqm97xx_base_connect_table[@]})
+					;;
+			esac
+		else
+			connect_table+=(${mqm97xx_base_connect_table[@]})
+		fi
 
-	add_cpu_board_to_connection_table
+		add_cpu_board_to_connection_table
+	fi
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
@@ -1404,7 +1412,6 @@ p2317_specific()
 
 check_system()
 {
-	check_cpu_type
 	# Check ODM
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
@@ -1623,12 +1630,33 @@ set_config_data()
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 }
 
+
+
 connect_platform()
 {
 	find_i2c_bus
-	for ((i=0; i<${#connect_table[@]}; i+=3)); do
+	# Check if it's new or old format of connect table
+	if [ -e "$devtree_file" ]; then
+		unset connect_table
+		declare -a connect_table=($(<"$devtree_file"))
+		# New connect table contains also device link name, e.g., fan_amb
+		dev_skip=4
+local arr_len=${#connect_table[@]}
+arr_len=$((arr_len/4))
+log_info "DBG: SMBIOS: connect platform table, number of components ${arr_len}"
+	else
+		dev_skip=3
+	fi
+	
+	for ((i=0; i<${#connect_table[@]}; i+=$dev_skip)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
+# TMP for comparison
+if [ -e "$devtree_file" ]; then
+	log_info "DBG: SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
+else
+	log_info "DBG: NOT SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
+fi
 	done
 }
 
@@ -1637,7 +1665,13 @@ disconnect_platform()
 	if [ -f $config_path/i2c_bus_offset ]; then
 		i2c_bus_offset=$(<$config_path/i2c_bus_offset)
 	fi
-	for ((i=0; i<${#connect_table[@]}; i+=3)); do
+	# Check if it's new or old format of connect table
+	if [ -e "$devtree_file" ]; then
+		dev_skip=4
+	else
+		dev_skip=3
+	fi
+	for ((i=0; i<${#connect_table[@]}; i+=$dev_skip)); do
 		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 	done
 }
@@ -1807,6 +1841,8 @@ map_asic_pci_to_i2c_bus()
 do_start()
 {
 	create_symbolic_links
+	check_cpu_type
+	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
 
