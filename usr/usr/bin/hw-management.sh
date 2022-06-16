@@ -1383,6 +1383,14 @@ sn2201_specific()
 	cpld2_pn=${cpld2_pn:3}
 	cpld2_pn=$(( 16#$cpld2_pn ))
 	echo $cpld2_pn > $system_path/cpld2_pn
+	id0=$(cat /proc/cpuinfo | grep -m1 "core id" | awk '{print $4}')
+	id0=$(($id0+2))
+	echo $id0> $config_path/core0_temp_id
+	id1=$(cat /proc/cpuinfo | grep -m2 "core id" | tail -n1 | awk '{print $4}')
+	id1=$(($id1+2))
+	echo $id1 > $config_path/core1_temp_id
+	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
+	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
