@@ -72,7 +72,7 @@ index c50535184..3b6f73e4a 100644
 +	if (status == MLXSW_CMD_STATUS_FW_ISSU ||
 +	    status == MLXSW_CMD_STATUS_RUNNING_RESET) {
 +		mlxsw_i2c->status = status;
-+		dev_info(dev, "FW status=%x(%s))\n", status, mlxsw_cmd_status_str(status));
++		dev_info(dev, "FW status=%x(%s)): Access to device is not allowed in this state\n", status, mlxsw_cmd_status_str(status));
 +		return true;
 +	}
 +	return false;
