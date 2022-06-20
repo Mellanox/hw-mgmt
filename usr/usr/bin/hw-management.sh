@@ -183,7 +183,8 @@ mqm8700_base_connect_table=(	max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn37xx_connect_table=( tps53679 0x70 5 \
+msn37xx_connect_table=( 	max11603 0x64 5 \
+			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
@@ -203,7 +204,8 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-msn37xx_A1_connect_table=(tmp102 0x49 7 \
+msn37xx_A1_connect_table=(	max11603 0x64 5 \
+			tmp102 0x49 7 \
 			tmp102 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
@@ -663,6 +665,7 @@ add_cpu_board_to_connection_table()
 			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
+			# None respin BWD version not support to read HW_REV (255).
 			case $HW_REV in
 				0|3)
 					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
@@ -680,8 +683,8 @@ add_cpu_board_to_connection_table()
 					# COMEX BWD regular version not support HW_REV register
 					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 					case $sku in
-						HI116)
-							#Anaconda 100/200 removed A2D from BWD
+						HI116|HI112|HI124|HI100)
+							#Anaconda 100/200 Tigon Jaguar
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
