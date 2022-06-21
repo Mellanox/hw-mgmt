@@ -1209,6 +1209,7 @@ mqm9510_specific()
 	max_tachos=2
 	hotplug_fans=2
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
 }
 
 mqm9520_specific()
@@ -1224,6 +1225,7 @@ mqm9520_specific()
 	max_tachos=2
 	hotplug_fans=2
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 }
 
 mqm87xx_rev1_specific()
