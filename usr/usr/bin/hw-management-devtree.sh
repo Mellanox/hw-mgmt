@@ -47,7 +47,7 @@ declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps
 
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
-declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["b"]="24c32" ["c"]="24c512")	# Recheck eerpom types
+declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["i"]="24c512")	# Just currently used EEPROMs are in this mapping
 
 declare -A pressure_arr=(["0"]="dummy" ["a"]="icp20100" ["b"]="bmp390" ["c"]="lps22")
 
@@ -68,6 +68,14 @@ declare -A comex_cfl_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 				   ["24c32_0"]="24c32 0x50 16 comex_eeprom" \
 				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
 
+declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
+				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
+				 ["tps53679_1"]="tps53679 0x71 5 voltmon2" \
+				 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
+				 ["mp2975_1"]="mp2975 0x66 5 voltmon2" \
+				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				 ["24c32_0"]="24c32 0x51 8 system_eeprom")
+
 declare -A msn3700_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_1"]="mp2975 0x66 5 voltmon2" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
@@ -77,6 +85,22 @@ declare -A msn3700_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 				 ["24c32_0"]="24c32 0x51 8 system_eeprom" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+
+declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
+					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
+					 ["xdpe12284_0"]="xdpe12284 0x64 5 voltmon2" \
+					 ["xdpe12284_0"]="xdpe12284 0x66 5 voltmon3" \
+					 ["xdpe12284_0"]="xdpe12284 0x68 5 voltmon4" \
+					 ["xdpe12284_0"]="xdpe12284 0x6a 5 voltmon5" \
+					 ["xdpe12284_0"]="xdpe12284 0x6c 5 voltmon6" \
+					 ["xdpe12284_0"]="xdpe12284 0x6e 5 voltmon7" \
+					 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
+					 ["mp2975_0"]="mp2975 0x64 5 voltmon2" \
+					 ["mp2975_0"]="mp2975 0x66 5 voltmon3" \
+					 ["mp2975_0"]="mp2975 0x6a 5 voltmon4" \
+					 ["mp2975_0"]="mp2975 0x6e 5 voltmon5" \
+					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+					 ["24c32_0"]="24c32 0x51 8 system_eeprom")
 
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon2" \
@@ -92,7 +116,7 @@ declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board
 # Actually it's located on fan board and in this way it will be passed through SMBios
-# string geenrated from Agile settings. Declare also Fan alternatives.
+# string generated from Agile settings. Thus, declare also Fan board alternatives.
 declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 7 fan_amb")
 
@@ -101,30 +125,6 @@ declare -A comex_alternatives
 declare -A swb_alternatives
 declare -A fan_alternatives
 declare -A board_alternatives
-
-devtr_check_supported_systems()
-{
-	case $board_type in
-		VMOD0005)
-#Todo add skus
-			return 0
-			;;
-		VMOD0010)
-			case $sku in
-				HI130)
-					# Just Gorilla
-					return 0
-					;;
-				*)
-					return 1
-					;;
-			esac
-			;;
-		*)
-			return 1
-			;;
-	esac
-}
 
 devtr_validate_system_ver_str()
 {
@@ -135,13 +135,13 @@ devtr_validate_system_ver_str()
 
 	substr_len=${#system_ver_arr[0]}
 	if [[ ! ${system_ver_arr[0]} =~ V[0-9] ]] || [ "$substr_len" -ne 2 ]; then
-		log_info "DBG: SMBIOS BOM string is not correct"		# TMP Dbg, return without error print, old systems
+		log_info "DBG: SMBIOS BOM string is not correct"		# TMP Dbg. return without error print, old systems
 		return 1
 	fi
 
 	arr_len=${#system_ver_arr[@]}
 	if [ "$arr_len" -lt 2 ]; then
-		log_info "DBG: SMBIOS BOM string is not correct"		# TMP Dbg, return without error print, old systems
+		log_info "DBG: SMBIOS BOM string is not correct"		# TMP Dbg. return without error print, old systems
 		return 1
 	fi
 
@@ -162,7 +162,9 @@ devtr_clean()
 	fi
 }
 
-devtr_init_alternative_arrays()
+# Check if system has SMBios BOM changes mechanism support.
+# If yes, init appropriate associative arrays.
+devtr_check_supported_system_init_alternatives()
 {
 	case $cpu_type in
 		$BDW_CPU)
@@ -176,26 +178,54 @@ devtr_init_alternative_arrays()
 			done
 			;;
 		*)
+			return 1
 			;;
 	esac
 	case $board_type in
 		VMOD0005)
-			for key in "${!msn3700_alternatives[@]}"; do
-				swb_alternatives["$key"]="${msn3700_alternatives["$key"]}"
-			done
+			case $sku in
+				HI100)	# Jaguar
+					for key in "${!mqm8700_alternatives[@]}"; do
+						swb_alternatives["$key"]="${mqm8700_alternatives["$key"]}"
+					done
+					;;
+				HI112|HI116|HI136)	# Anaconda
+					for key in "${!msn3700_alternatives[@]}"; do
+						swb_alternatives["$key"]="${msn3700_alternatives["$key"]}"
+					done
+					;;
+				*)
+					return 1
+					;;
+			esac
 			for key in "${!fan_type0_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
 			done
+			return 0
 			;;
 		VMOD0010)
-			for key in "${!mqm97xx_alternatives[@]}"; do
-				swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
-			done
+			case $sku in
+				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
+					for key in "${!msn4700_msn4600_alternatives[@]}"; do
+						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
+					done
+					;;
+				HI130)	# Gorilla
+					for key in "${!mqm97xx_alternatives[@]}"; do
+						swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
+					done
+					;;
+				*)
+					return 1
+					;;
+			esac
 			for key in "${!fan_type0_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
 			done
+			return 0
 			;;
 		*)
+			return 1
 			;;
 	esac
 }
@@ -300,11 +330,9 @@ devtr_check_board_components()
 devtr_check_smbios_device_description()
 {
 	# 1st of all check if system supports this mechanism
-	if ! devtr_check_supported_systems ; then
+	if ! devtr_check_supported_system_init_alternatives ; then
 		return 1
 	fi
-
-	devtr_init_alternative_arrays
 
 	devtr_clean
 

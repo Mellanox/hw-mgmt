@@ -1046,20 +1046,26 @@ connect_msn4700_msn4600_A1()
 
 msn47xx_specific()
 {
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			1)
-				connect_msn4700_msn4600_A1
-			;;
-			*)
-				connect_msn4700_msn4600
-			;;
-		esac
+	if [ ! -e "$devtree_file" ]; then
+		regio_path=$(find_regio_sysfs_path)
+		res=$?
+		if [ $res -eq 0 ]; then
+			sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+			case $sys_ver in
+				1)
+					connect_msn4700_msn4600_A1
+				;;
+				*)
+					connect_msn4700_msn4600
+				;;
+			esac
+		else
+			connect_msn4700_msn4600
+		fi
 	else
-		connect_msn4700_msn4600
+		# ToDo. Add differentiation of sensors file.
+		# lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	fi
 
 	thermal_type=$thermal_type_t10
@@ -1073,20 +1079,26 @@ msn47xx_specific()
 
 msn46xx_specific()
 {
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			1|3)
-				connect_msn4700_msn4600_A1
-			;;
-			*)
-				connect_msn4700_msn4600
-			;;
-		esac
+	if [ ! -e "$devtree_file" ]; then
+		regio_path=$(find_regio_sysfs_path)
+		res=$?
+		if [ $res -eq 0 ]; then
+			sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+			case $sys_ver in
+				1|3)
+					connect_msn4700_msn4600_A1
+				;;
+				*)
+					connect_msn4700_msn4600
+				;;
+			esac
+		else
+			connect_msn4700_msn4600
+		fi
 	else
-		connect_msn4700_msn4600
+		# ToDo. Add differentiation of sensors file.
+		# lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	fi
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
