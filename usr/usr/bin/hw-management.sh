@@ -1647,7 +1647,7 @@ log_info "DBG: SMBIOS: connect platform table, number of components ${arr_len}"
 	else
 		dev_skip=3
 	fi
-	
+
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_skip)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"

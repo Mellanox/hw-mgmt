@@ -108,7 +108,7 @@ devtr_check_supported_systems()
 #Todo add skus
 			return 0
 			;;
-		VMOD0010)			
+		VMOD0010)
 			case $sku in
 				HI130)
 					# Just Gorilla
@@ -185,7 +185,7 @@ devtr_init_alternative_arrays()
 			for key in "${!fan_type0_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
 			done
-			;; 
+			;;
 		VMOD0010)
 			for key in "${!mqm97xx_alternatives[@]}"; do
 				swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
@@ -253,7 +253,7 @@ devtr_check_board_components()
 				alternative_comp=${board_alternatives[$alternative_key]}
 				log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				t_cnt=$((t_cnt+1)) 
+				t_cnt=$((t_cnt+1))
 				;;
 			R)
 				component_name=${regulator_arr[$component_key]}
