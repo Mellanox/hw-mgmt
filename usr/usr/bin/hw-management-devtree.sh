@@ -65,7 +65,8 @@ declare -A comex_bdw_alternatives=(["mp2975_0"]="mp2975 0x61 15 comex_voltmon2" 
 
 declare -A comex_cfl_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
 				   ["max11603_0"]="max11603 0x6d 15 comex_a2d" \
-				   ["24c32_0"]="24c32 0x50 16 comex_eeprom")
+				   ["24c32_0"]="24c32 0x50 16 comex_eeprom" \
+				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
 
 declare -A msn3700_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_1"]="mp2975 0x66 5 voltmon2" \
