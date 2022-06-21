@@ -135,13 +135,13 @@ devtr_validate_system_ver_str()
 
 	substr_len=${#system_ver_arr[0]}
 	if [[ ! ${system_ver_arr[0]} =~ V[0-9] ]] || [ "$substr_len" -ne 2 ]; then
-		log_info "DBG: SMBIOS BOM string is not correct"		# TMP Dbg. return without error print, old systems
+		# log_info "DBG: SMBIOS BOM string is not correct"
 		return 1
 	fi
 
 	arr_len=${#system_ver_arr[@]}
 	if [ "$arr_len" -lt 2 ]; then
-		log_info "DBG: SMBIOS BOM string is not correct"		# TMP Dbg. return without error print, old systems
+		# log_info "DBG: SMBIOS BOM string is not correct"
 		return 1
 	fi
 
@@ -238,7 +238,7 @@ devtr_check_board_components()
 
 	local board_key=${comp_arr[0]:0:1}
 	local board_name=${board_arr[$board_key]}	# Optional, just for print
-	log_info "DBG: board: ${board_name}"
+	# log_info "DBG: Board: ${board_name}"
 
 	case $board_key in
 		C)
@@ -282,7 +282,7 @@ devtr_check_board_components()
 				component_name=${thermal_arr[$component_key]}
 				alternative_key="${component_name}_${t_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				log_info "DBG: ${category} component - ${alternative_comp}"
+				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				t_cnt=$((t_cnt+1))
 				;;
@@ -290,7 +290,7 @@ devtr_check_board_components()
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				log_info "DBG: ${category} component - ${alternative_comp}"
+				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				r_cnt=$((r_cnt+1))
 				;;
@@ -298,7 +298,7 @@ devtr_check_board_components()
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				log_info "DBG: ${category} component - ${alternative_comp}"
+				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				e_cnt=$((e_cnt+1))
 				;;
@@ -306,7 +306,7 @@ devtr_check_board_components()
 				component_name=${a2d_arr[$component_key]}
 				alternative_key="${component_name}_${a_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				log_info "DBG: ${category} component - ${alternative_comp}"
+				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				a_cnt=$((a_cnt+1))
 				;;
@@ -314,7 +314,7 @@ devtr_check_board_components()
 				component_name=${pressure_arr[$component_key]}
 				alternative_key="${component_name}_${p_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				log_info "DBG: ${category} component - ${alternative_comp}"
+				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				p_cnt=$((p_cnt+1))
 				;;
@@ -337,7 +337,7 @@ devtr_check_smbios_device_description()
 	devtr_clean
 
 	system_ver_str=$(<$system_ver_file)
-#	log_info "DBG: SMBios system version string: ${system_ver_str}"
+	# log_info "DBG: SMBios system version string: ${system_ver_str}"
 	devtr_validate_system_ver_str
 	rc=$?
 	if [ $rc -ne 0 ]; then
@@ -350,7 +350,7 @@ devtr_check_smbios_device_description()
 		# Skip 1st substring in system version string
 		# It's used as valid id and describes encoding version
 		# that can be changed in the future.
-#		log_info "DBG: Substring ${substr}"
+		# log_info "DBG: Substring ${substr}"
 		if [ $i -eq 0 ]; then
 			i=$((i + 1))
 			continue
