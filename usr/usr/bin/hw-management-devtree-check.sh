@@ -32,8 +32,19 @@
 #
 
 source hw-management-helpers.sh
-devtree_file="$config_path"/devtree
+source hw-management-devtree.sh
 system_ver_file=/sys/devices/virtual/dmi/id/product_version
+board_type=$(<"$board_type_file")
+cpu_type=$(<"$config_path"/cpu_type)
+
+usage()                                                                                              
+{                                                                                                    
+        printf "Usage:\\t %s <-d> | <-s> | <-p> | <-h>\n" `basename $0` 
+	printf "%s\\t display device tree\n" "-d"
+	printf "%s\\t show system version SMBIOS string\n" "-s"
+	printf "%s\\t parse SMBIOS sysver string and create devtree\n" "-p"
+	printf "%s\\t this help\n" "-h"
+}
 
 devtr_show_devtree_file()
 {
@@ -43,10 +54,15 @@ devtr_show_devtree_file()
 		local arr_len=${#devtree_table[@]}
 		arr_len=$((arr_len/4))
 		echo "Number of components in devtree: ${arr_len}"
-		printf "Number\\t\\tDevice\\tBus\\tAddress\\tName\\n"
+		printf "Number\\t\\tBus\\tAddress\\tDevice\\t\\tName\\n"
 
 		for ((i=0, j=0; i<${#devtree_table[@]}; i+=4, j+=1)); do
-			printf "Device %s:\\t%s\\t%s\\t%s\\t%s\\n" "${j}" "${devtree_table[i]}" "${devtree_table[i+1]}" "${devtree_table[i+2]}" "${devtree_table[i+3]}"
+			strlen=${#devtree_table[i]}
+			if [ "$strlen" -lt 8 ]; then
+				printf "Device %s:\\t%s\\t%s\\t%s\\t\\t%s\\n" "${j}" "${devtree_table[i+2]}" "${devtree_table[i+1]}" "${devtree_table[i]}" "${devtree_table[i+3]}"
+			else
+				printf "Device %s:\\t%s\\t%s\\t%s\\t%s\\n" "${j}" "${devtree_table[i+2]}" "${devtree_table[i+1]}" "${devtree_table[i]}" "${devtree_table[i+3]}"
+			fi
 		done
 	else
 		echo "No devicetree file"
@@ -55,9 +71,10 @@ devtr_show_devtree_file()
 
 # Script can be used as standalone for debug
 param_num=$#
+rc=0
 if [ "$param_num" -ge 1 ]; then 
 	OPTIND=1
-	optspec="dsh"
+	optspec="dsph"
 	while getopts "$optspec" optchar; do
 		case "${optchar}" in
 			d)
@@ -68,16 +85,22 @@ if [ "$param_num" -ge 1 ]; then
 				echo "Devtree SMBios string: ${smbios_sysver_str}"
 				;;
 			h)
-				echo "Usage: $0 [-d] [-s]" >&2
-				exit 0
+				usage
+				;;
+			p)
+				devtr_check_smbios_device_description
+				rc=$?
 				;;
 			*)
-				echo "Usage: $0 [-d] [-s]" >&2
-				exit 2
+				usage
+				rc=1
 				;;
 		esac
 	done
 	shift $((OPTIND-1))
+else
+	usage
+	exit 1
 fi
 
-exit 0
+exit "$rc"
