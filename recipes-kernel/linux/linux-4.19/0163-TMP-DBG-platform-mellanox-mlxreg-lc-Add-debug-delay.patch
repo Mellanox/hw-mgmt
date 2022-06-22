@@ -1,0 +1,28 @@
+From a0cc08ab028e6b7dcd746717d3dd3e9d4b01ddd2 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 19 Jun 2022 18:22:16 +0300
+Subject: [PATCH platform v4.19 2/2] TMP: DBG: platform/mellanox: mlxreg-lc:
+ Add debug delay
+
+Add debug delay prior the first access to line card.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-lc.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
+index 5d6eba080..54b236d9c 100644
+--- a/drivers/platform/mellanox/mlxreg-lc.c
++++ b/drivers/platform/mellanox/mlxreg-lc.c
+@@ -856,6 +856,7 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	/* Set default registers. */
++	mdelay(100);
+ 	for (i = 0; i < mlxreg_lc_regmap_conf.num_reg_defaults; i++) {
+ 		err = regmap_write(regmap, mlxreg_lc_regmap_default[i].reg,
+ 				   mlxreg_lc_regmap_default[i].def);
+-- 
+2.20.1
+

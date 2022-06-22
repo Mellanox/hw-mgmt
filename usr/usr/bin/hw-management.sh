@@ -183,7 +183,8 @@ mqm8700_base_connect_table=(	max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn37xx_connect_table=( tps53679 0x70 5 \
+msn37xx_connect_table=( 	max11603 0x64 5 \
+			tps53679 0x70 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
@@ -203,7 +204,8 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-msn37xx_A1_connect_table=(tmp102 0x49 7 \
+msn37xx_A1_connect_table=(	max11603 0x64 5 \
+			tmp102 0x49 7 \
 			tmp102 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
@@ -360,28 +362,27 @@ mqm9510_base_connect_table=( \
 	24c512 0x51 8)
 
 mqm9510_dynamic_i2c_bus_connect_table=( \
-	mp2888 0x62 5 voltmon1 \
+	mp2975 0x62 5 voltmon1 \
 	mp2888 0x66 5 voltmon2 \
-	mp2888 0x68 5 voltmon3 \
-	mp2888 0x6c 5 voltmon4 \
-	mp2888 0x62 6 voltmon5 \
+	mp2975 0x68 5 voltmon3 \
+	mp2975 0x6c 5 voltmon4 \
+	mp2975 0x62 6 voltmon5 \
 	mp2888 0x66 6 voltmon6 \
-	mp2888 0x68 6 voltmon7 \
-	mp2888 0x6c 6 voltmon8)
+	mp2975 0x68 6 voltmon7 \
+	mp2975 0x6c 6 voltmon8 )
 
 mqm9520_base_connect_table=( \
-	tmp102 0x49 7 \
-	tmp102 0x4a 7 \
-	24c512 0x51 8)
+	24c512 0x51 8 )
 
 mqm9520_dynamic_i2c_bus_connect_table=( \
+	tmp102 0x4a 7  tmpsens1 \
+	tmp102 0x4a 15 tmpsens2 \
 	mp2888 0x66 5  voltmon1 \
-	mp2888 0x68 5  voltmon2 \
-	mp2888 0x6c 5  voltmon3 \
-	mp2888 0x62 13 voltmon4 \
-	mp2888 0x66 13 voltmon5 \
-	mp2888 0x68 13 voltmon6 \
-	mp2888 0x6c 13 voltmon7 )
+	mp2975 0x68 5  voltmon2 \
+	mp2975 0x6c 5  voltmon3 \
+	mp2888 0x66 13 voltmon4 \
+	mp2975 0x68 13 voltmon5 \
+	mp2975 0x6c 13 voltmon6 )
 
 p2317_connect_table=(	24c512 0x51 8)
 
@@ -664,6 +665,7 @@ add_cpu_board_to_connection_table()
 			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
+			# None respin BWD version not support to read HW_REV (255).
 			case $HW_REV in
 				0|3)
 					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
@@ -681,8 +683,8 @@ add_cpu_board_to_connection_table()
 					# COMEX BWD regular version not support HW_REV register
 					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 					case $sku in
-						HI116)
-							#Anaconda 100/200 removed A2D from BWD
+						HI116|HI112|HI124|HI100)
+							#Anaconda 100/200 Tigon Jaguar
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1194,6 +1196,7 @@ mqm9510_specific()
 	max_tachos=2
 	hotplug_fans=2
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
 }
 
 mqm9520_specific()
@@ -1209,6 +1212,7 @@ mqm9520_specific()
 	max_tachos=2
 	hotplug_fans=2
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 }
 
 mqm87xx_rev1_specific()
@@ -1378,8 +1382,6 @@ msn48xx_specific()
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
-	# TMP for Buffalo BU
-	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
 sn2201_specific()
@@ -1406,6 +1408,14 @@ sn2201_specific()
 	cpld2_pn=${cpld2_pn:3}
 	cpld2_pn=$(( 16#$cpld2_pn ))
 	echo $cpld2_pn > $system_path/cpld2_pn
+	id0=$(cat /proc/cpuinfo | grep -m1 "core id" | awk '{print $4}')
+	id0=$(($id0+2))
+	echo $id0> $config_path/core0_temp_id
+	id1=$(cat /proc/cpuinfo | grep -m2 "core id" | tail -n1 | awk '{print $4}')
+	id1=$(($id1+2))
+	echo $id1 > $config_path/core1_temp_id
+	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
+	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
@@ -1622,16 +1632,7 @@ set_config_data()
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
-
-	# TMP for Buffalo BU
-	case $board_type in
-	VMOD0011)
-		echo 0x64 > $config_path/fan_psu_default
-		;;
-	*)
-		echo $fan_psu_default > $config_path/fan_psu_default
-		;;
-	esac
+	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay

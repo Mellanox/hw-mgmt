@@ -1,8 +1,8 @@
-From 94e16f81abc1f65d83a6a0fa099f75d9e3941086 Mon Sep 17 00:00:00 2001
+From 95abc792fcd4585e3c11ecee40724a141f2936aa Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Sun, 24 Oct 2021 16:26:40 +0000
-Subject: [PATCH platform-next 3/5] platform/x86: mlx-platform: Add support for
- new system XH3000
+Subject: [PATCH platform backport v5.10 05/10] platform/x86: mlx-platform: Add
+ support for new system XH3000
 
 Add support for new system type XH3000, which is a water cooling
 Ethernet switch blade equipped with 32x200G Ethernet ports.
@@ -17,7 +17,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 51 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 1c529fc03..170efd392 100644
+index ab26a62f8..1819e0e3b 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -2262,6 +2262,25 @@ static struct mlxreg_core_platform_data mlxplat_default_led_wc_data = {
