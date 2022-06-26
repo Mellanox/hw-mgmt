@@ -17,6 +17,8 @@ Kernel-4.9
 |0070-platform-mellanox-Add-dedicated-match-for-system-typ.patch         | Not relevant                               |  downstream                                     | WA for system type QMB8700 (not needed for Sonic)            |
 |0071-mlxsw-core-Remove-critical-trip-point-from-thermal-z.patch         |                                            |  applied to net-next - see note 1               | Target 5.13                                                  |
 |0072-Revert-i2c-busses-i2c-mlxcpld-Increase-transaction-p.patch         |                                            |  pending                                        |                                                              |
+|0073-platform-mellanox-mlxreg-io-Fix-read-access-of-attri.patch         |                                            |                                                 |
+|0075-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch         |                                            | downstream                                      |
 |                                                                        |                                            |                                                 |                                                              |
 |                                                                        |                                            |                                                 |                                                              |
 |                                                                        |                                            |                                                 |                                                              |
@@ -147,7 +149,13 @@ Kernel-4.19
 |0154-platform-x86-mlx-platform-Add-support-for-new-system.patch         | 4616e54795cc8183ecf2a6cef6c7a9091cb1ae56   |                                                 | XH3000/blade                                                 |
 |0155-Squash-to-commit-16d59a4882b8-mlxsw-core-Add-APIs-fo.patch         |                                            |                                                 | Squash 0117-mlxsw-core-Add-APIs-for-thermal-sensor-mapping   |
 |0156-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch         |                                            | upstreamed                                      | relevant for CFL systems only                                |
- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0157-platform-mellanox-Introduce-support-for-NDR-InfiniBa.patch         | pending                                    |                                                 | IB
+|0158-platform-mellanox-Introduce-support-for-NVLink4-mana.patch         | pending                                    |                                                 | NVLink
+|0159-leds-mlxreg-Send-udev-change-event.patch                           | downstream                                 |                                                 | SN2201
+|0159-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch         | pending                                    |                                                 | SN4800
+|0160-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch         | downstream                                 |                                                 | Sonic/ISSU
+|0161-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch         | pending                                    |                                                 |
+|0162-platform-mellanox-mlxreg-c-Fix-cleanup-on-failure-a.patch          | pending                                    |                                                 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.10
   --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -316,7 +324,13 @@ Kernel-5.10
 |0162-platform-mellanox-Introduce-support-for-NDR-InfiniBa.patch         |                                            |                                                 | IB MQM9510/MQM9520                                           |
 |0163-platform-mellanox-Introduce-support-for-NVLink4-mana.patch         |                                            |                                                 | NVlink                                                       |
 |0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch         |                                            | upstreamed                                      | relevant for CFL systems only                                |                                                      |
- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch         |                                            | pending                                         |
+|0166-leds-mlxreg-Send-udev-change-event.patch                           |                                            | SN2201 (downstream)                             |
+|0167-TMP-lan743x-Add-support-for-fixed-phy.patch                        |                                            | NVlink(Vulcan/LAN bridge) (downstream)          |
+|0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch         |                                            | IB only (downstream)                            |
+|169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch          |                                            | Sonic/ISSU (downstream)                         |
+|0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch         |                                            | pending                                         | 
+|0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch         |                                            | pending                                         | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
 © 2021 GitHub, Inc.
