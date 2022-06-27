@@ -1,8 +1,10 @@
-From 116450c9239079e2212d14bbc0fe6f7b70e34e4e Mon Sep 17 00:00:00 2001
+From 662f24826f954d49d56211822bcd7b3109287961 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
-Date: Mon, 27 Sep 2021 13:38:18 +0000
-Subject: [PATCH backport 4.19/Alligator 5/9] platform/mellanox: Add support
- for new SN2201 system
+Date: Sat, 30 Apr 2022 14:58:08 +0300
+Subject: [PATCH] platform/mellanox: Add support for new SN2201 system
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 
 The SN2201 is a highly integrated for one rack unit system with
 L3 management switches. It has 48 x 1Gbps RJ45 + 4 x 100G QSFP28
@@ -10,24 +12,38 @@ ports in a compact 1RU form factor. The system also including a
 serial port (RS-232 interface), an OOB port (1G/100M MDI interface)
 and USB ports for management functions.
 
-The processor used on SN2201 is Intel Atom Processor C Serie
+The processor used on SN2201 is Intel Atom®Processor C Series,
 C3338R which is one of the Denverton product families.
 
-System equipped with Nvidia Spectrum-1 32x100GbE Ethernet switc
+System equipped with Nvidia®Spectrum-1 32x100GbE Ethernet switch.
+
+Features:
+-  48 ports RJ45 support 10/100/1000M speed.
+-  Support 4 QSFP28 ports with 10/25/40/50/100G.
+-  A USB port is available on SN2201. This port is used for image and File
+   Management purposes - backing up and restoring images and config files
+-  Provides flow control mechanism to ensure zero packet loss.
+   Uses backpressure for half-duplex operation and IEEE802.3x
+   for full duplex operation.
+-  Cut-through and Store-and-Forward free switching mechanism.
+   By default the mode is cut-through.
+-  Standard 1U chassis height.
+-  19" rack mountable.
+-  Extensive system LED and per port LEDs.
+-  Redundant power supply.
+-  2 x AC Power Supply (one PSU is default, second PSU is optional).
 
 Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+Link: https://lore.kernel.org/r/20220430115809.54565-3-michaelsh@nvidia.com
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
 ---
- drivers/platform/mellanox/Kconfig       |   17 +
- drivers/platform/mellanox/Makefile      |    1 +
- drivers/platform/mellanox/nvsw-sn2201.c | 1087 +++++++++++++++++++++++
- 3 files changed, 1105 insertions(+)
- create mode 100644 drivers/platform/mellanox/nvsw-sn2201.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 7cdc26214..7d3aee8bb 100644
+index d4c5c170bca0..72df4b8f4dd8 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -68,4 +68,21 @@ config MLXBF_BOOTCTL
+@@ -68,4 +68,21 @@
  	  to the userspace tools, to be used in conjunction with the eMMC
  	  device driver to do necessary initial swap of the boot partition.
  
@@ -36,6 +52,7 @@ index 7cdc26214..7d3aee8bb 100644
 +	depends on REGMAP
 +	depends on HWMON
 +	depends on I2C
++	depends on REGMAP_I2C
 +	help
 +	  This driver provides support for the Nvidia SN2201 platfom.
 +	  The SN2201 is a highly integrated for one rack unit system with
@@ -47,10 +64,9 @@ index 7cdc26214..7d3aee8bb 100644
 +	  C3338R which is one of the Denverton product families.
 +	  System equipped with Nvidia®Spectrum-1 32x100GbE Ethernet switch.
 +
-+
  endif # MELLANOX_PLATFORM
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 1108858ed..42cd316d8 100644
+index a4868366ff18..04703c0416b1 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
 @@ -6,3 +6,4 @@
@@ -60,28 +76,27 @@ index 1108858ed..42cd316d8 100644
 +obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
 diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
 new file mode 100644
-index 000000000..1a2103778
+index 000000000000..0bcdc7c75007
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
-@@ -0,0 +1,1211 @@
+@@ -0,0 +1,1261 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia sn2201 driver
 + *
-+ * Copyright (C) 2021 Nvidia Technologies Ltd.
++ * Copyright (C) 2022 Nvidia Technologies Ltd.
 + */
 +
 +#include <linux/device.h>
 +#include <linux/i2c.h>
++#include <linux/interrupt.h>
++#include <linux/irq.h>
++#include <linux/gpio.h>
 +#include <linux/module.h>
-+#include <linux/of.h>
 +#include <linux/platform_data/mlxcpld.h>
 +#include <linux/platform_data/mlxreg.h>
 +#include <linux/platform_device.h>
 +#include <linux/regmap.h>
-+#include <linux/gpio.h>
-+#include <linux/irq.h>
-+#include <linux/interrupt.h>
 +
 +/* SN2201 CPLD register offset. */
 +#define NVSW_SN2201_CPLD_LPC_I2C_BASE_ADRR          0x2000
@@ -130,7 +145,9 @@ index 000000000..1a2103778
 +#define NVSW_SN2201_WD_TMR_OFFSET_LSB               0x40
 +#define NVSW_SN2201_WD_TMR_OFFSET_MSB               0x41
 +#define NVSW_SN2201_WD_ACT_OFFSET                   0x42
-+#define NVSW_SN2201_REG_MAX                         0x43
++#define NVSW_SN2201_FAN_LED1_CTRL_OFFSET            0x50
++#define NVSW_SN2201_FAN_LED2_CTRL_OFFSET            0x51
++#define NVSW_SN2201_REG_MAX                         0x52
 +
 +/* Number of physical I2C busses. */
 +#define NVSW_SN2201_PHY_I2C_BUS_NUM		2
@@ -243,6 +260,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
 +	case NVSW_SN2201_WD_ACT_OFFSET:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -295,6 +314,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
 +	case NVSW_SN2201_WD_ACT_OFFSET:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -346,6 +367,8 @@ index 000000000..1a2103778
 +	case NVSW_SN2201_FAN_PRSNT_MASK_OFFSET:
 +	case NVSW_SN2201_WD_TMR_OFFSET_LSB:
 +	case NVSW_SN2201_WD_TMR_OFFSET_MSB:
++	case NVSW_SN2201_FAN_LED1_CTRL_OFFSET:
++	case NVSW_SN2201_FAN_LED2_CTRL_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -369,7 +392,7 @@ index 000000000..1a2103778
 +	.num_reg_defaults = ARRAY_SIZE(nvsw_sn2201_regmap_default),
 +};
 +
-+/* Regions for LPC I2C controller and LPC base register space */
++/* Regions for LPC I2C controller and LPC base register space. */
 +static const struct resource nvsw_sn2201_lpc_io_resources[] = {
 +	[0] = DEFINE_RES_NAMED(NVSW_SN2201_CPLD_LPC_I2C_BASE_ADRR,
 +			       NVSW_SN2201_CPLD_LPC_IO_RANGE,
@@ -445,7 +468,7 @@ index 000000000..1a2103778
 +	},
 +};
 +
-+/* SN2201 hotplug default data */
++/* SN2201 hotplug default data. */
 +static struct mlxreg_core_data nvsw_sn2201_psu_items_data[] = {
 +	{
 +		.label = "psu1",
@@ -689,6 +712,46 @@ index 000000000..1a2103778
 +		.reg = NVSW_SN2201_FRONT_UID_LED_CTRL_OFFSET,
 +		.mask = GENMASK(7, 4),
 +	},
++	{
++		.label = "fan1:green",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan1:orange",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan2:green",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan2:orange",
++		.reg = NVSW_SN2201_FAN_LED1_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan3:green",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan3:orange",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(7, 4),
++	},
++	{
++		.label = "fan4:green",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
++	{
++		.label = "fan4:orange",
++		.reg = NVSW_SN2201_FAN_LED2_CTRL_OFFSET,
++		.mask = GENMASK(3, 0),
++	},
 +};
 +
 +static struct mlxreg_core_platform_data nvsw_sn2201_led = {
@@ -779,7 +842,7 @@ index 000000000..1a2103778
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_aux_pwr_or_fu",
++		.label = "reset_aux_pwr_or_ref",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
@@ -863,6 +926,7 @@ index 000000000..1a2103778
 +	.counter = ARRAY_SIZE(nvsw_sn2201_io_data),
 +};
 +
++/* Default watchdog data. */
 +static struct mlxreg_core_data nvsw_sn2201_wd_data[] = {
 +	{
 +		.label = "action",
@@ -957,7 +1021,7 @@ index 000000000..1a2103778
 +	struct mlxreg_hotplug_device *sn2201_dev;
 +	struct i2c_adapter *adap;
 +	struct device *dev;
-+	int i, j, err;
++	int i, err;
 +
 +	dev = nvsw_sn2201->dev;
 +	adap = i2c_get_adapter(nvsw_sn2201->main_mux_deferred_nr);
@@ -970,7 +1034,7 @@ index 000000000..1a2103778
 +
 +	/* Update board info. */
 +	sn2201_dev = nvsw_sn2201->sn2201_devs;
-+	for (i = 0, j = 0; i < nvsw_sn2201->sn2201_devs_num; i++, sn2201_dev++) {
++	for (i = 0; i < nvsw_sn2201->sn2201_devs_num; i++, sn2201_dev++) {
 +		sn2201_dev->adapter = i2c_get_adapter(sn2201_dev->nr);
 +		if (!sn2201_dev->adapter)
 +			return -ENODEV;
@@ -1081,7 +1145,15 @@ index 000000000..1a2103778
 +		platform_device_unregister(nvsw_sn2201->io_regs);
 +}
 +
-+static int nvsw_sn2201_i2c_complition_notify(void *handle, int id)
++/*
++ * Initialization is divided into two parts:
++ * - I2C main bus init.
++ * - Mux creation and attaching devices to the mux,
++ *   which assumes that the main bus is already created.
++ * This separation is required for synchronization between these two parts.
++ * Completion notify callback is used to make this flow synchronized.
++ */
++static int nvsw_sn2201_i2c_completion_notify(void *handle, int id)
 +{
 +	struct nvsw_sn2201 *nvsw_sn2201 = handle;
 +	void *regmap;
@@ -1094,7 +1166,7 @@ index 000000000..1a2103778
 +		dev_err(nvsw_sn2201->dev, "Failed to get adapter for bus %d\n",
 +			nvsw_sn2201->cpld_devs->nr);
 +		goto i2c_get_adapter_main_fail;
-+	} 
++	}
 +
 +	nvsw_sn2201->main_mux_devs_num = ARRAY_SIZE(nvsw_sn2201_main_mux_brdinfo);
 +	err = nvsw_sn2201_create_static_devices(nvsw_sn2201, nvsw_sn2201->main_mux_devs,
@@ -1102,7 +1174,7 @@ index 000000000..1a2103778
 +	if (err) {
 +		dev_err(nvsw_sn2201->dev, "Failed to create main mux devices\n");
 +		goto nvsw_sn2201_create_static_devices_fail;
-+	} 
++	}
 +
 +	nvsw_sn2201->cpld_devs->adapter = i2c_get_adapter(nvsw_sn2201->cpld_devs->nr);
 +	if (!nvsw_sn2201->cpld_devs->adapter) {
@@ -1186,7 +1258,7 @@ index 000000000..1a2103778
 +
 +	/* Register I2C controller. */
 +	nvsw_sn2201->i2c_data->handle = nvsw_sn2201;
-+	nvsw_sn2201->i2c_data->completion_notify = nvsw_sn2201_i2c_complition_notify;
++	nvsw_sn2201->i2c_data->completion_notify = nvsw_sn2201_i2c_completion_notify;
 +	nvsw_sn2201->pdev_i2c = platform_device_register_resndata(nvsw_sn2201->dev, "i2c_mlxcpld",
 +								  NVSW_SN2201_MAIN_MUX_NR,
 +								  nvsw_sn2201_lpc_res,
@@ -1197,14 +1269,6 @@ index 000000000..1a2103778
 +		return PTR_ERR(nvsw_sn2201->pdev_i2c);
 +
 +	return 0;
-+}
-+
-+static void
-+nvsw_sn2201_config_post_exit(struct nvsw_sn2201 *nvsw_sn2201)
-+{
-+	/* Unregister I2C controller. */
-+	if (nvsw_sn2201->pdev_i2c)
-+		platform_device_unregister(nvsw_sn2201->pdev_i2c);
 +}
 +
 +static int nvsw_sn2201_probe(struct platform_device *pdev)
@@ -1248,7 +1312,9 @@ index 000000000..1a2103778
 +					   nvsw_sn2201->main_mux_devs,
 +					   nvsw_sn2201->main_mux_devs_num);
 +
-+	nvsw_sn2201_config_post_exit(nvsw_sn2201);
++	/* Unregister I2C controller. */
++	if (nvsw_sn2201->pdev_i2c)
++		platform_device_unregister(nvsw_sn2201->pdev_i2c);
 +
 +	return 0;
 +}
@@ -1275,5 +1341,3 @@ index 000000000..1a2103778
 +MODULE_DESCRIPTION("Nvidia sn2201 platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
 +MODULE_ALIAS("platform:nvsw-sn2201");
---
-2.20.1

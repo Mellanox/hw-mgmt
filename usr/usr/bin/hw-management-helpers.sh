@@ -65,6 +65,7 @@ thermal_type_t9=9
 thermal_type_t10=10
 thermal_type_t11=11
 thermal_type_t12=12
+thermal_type_t13=13
 thermal_type_def=0
 thermal_type_full=100
 
@@ -167,6 +168,17 @@ check_n_unlink()
     then
         unlink "$1"
     fi
+}
+
+# Check if file not exists and create it
+# $1 - file path
+# $2 - default value
+# return none
+check_n_init()
+{
+	if [ ! -f $1 ]; then
+		echo $2 > $1
+	fi
 }
 
 # Read int val from file, inc it by val and save back

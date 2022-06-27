@@ -1,8 +1,9 @@
-From 9ea1de6d105fe177f253e487a89c7c914bc5b6de Mon Sep 17 00:00:00 2001
+From 7eb2ba41aa630a7487a2053a41272b12ed91bf54 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 27 Jan 2022 15:07:28 +0200
-Subject: [PATCH platform-next 4/5] platform: mellanox: Introduce support for
- NDR InfiniBand modular chassis
+Subject: [PATCH 1/6] platform: mellanox: Introduce support for NDR InfiniBand
+ modular chassis
+X-NVConfidentiality: public
 
 Add support for MQM9510-N leaf and MQM9520-N spine blades for two
 flavors of NDR InfiniBand chassis:
@@ -28,14 +29,24 @@ different I2C mux topology and extended LED and hotplug configuration.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 257 ++++++++++++++++++++++++++++
- 1 file changed, 257 insertions(+)
+ drivers/platform/x86/mlx-platform.c | 430 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 430 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 170efd392..9914e5035 100644
+index 1819e0e3b..01a7a1d3a 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -108,6 +108,9 @@
+@@ -90,6 +90,9 @@
+ #define MLXPLAT_CPLD_LPC_REG_FAN_OFFSET		0x88
+ #define MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET	0x89
+ #define MLXPLAT_CPLD_LPC_REG_FAN_MASK_OFFSET	0x8a
++#define MLXPLAT_CPLD_LPC_REG_LEAK2_OFFSET	0x97
++#define MLXPLAT_CPLD_LPC_REG_LEAK2_EVENT_OFFSET	0x98
++#define MLXPLAT_CPLD_LPC_REG_LEAK2_MASK_OFFSET	0x99
+ #define MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET	0x9a
+ #define MLXPLAT_CPLD_LPC_REG_LC_VR_EVENT_OFFSET	0x9b
+ #define MLXPLAT_CPLD_LPC_REG_LC_VR_MASK_OFFSET	0x9c
+@@ -108,6 +111,9 @@
  #define MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET	0xa9
  #define MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET	0xaa
  #define MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET	0xab
@@ -45,7 +56,7 @@ index 170efd392..9914e5035 100644
  #define MLXPLAT_CPLD_LPC_REG_LC_PWR_ON		0xb2
  #define MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET	0xc7
  #define MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET	0xc8
-@@ -201,6 +204,7 @@
+@@ -201,6 +207,7 @@
  					 MLXPLAT_CPLD_AGGR_MASK_LC_SDWN)
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_LOW	0xc1
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2	BIT(2)
@@ -53,15 +64,16 @@ index 170efd392..9914e5035 100644
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_I2C	BIT(6)
  #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
-@@ -214,6 +218,7 @@
+@@ -214,6 +221,8 @@
  #define MLXPLAT_CPLD_LED_HI_NIBBLE_MASK	GENMASK(3, 0)
  #define MLXPLAT_CPLD_VOLTREG_UPD_MASK	GENMASK(5, 4)
  #define MLXPLAT_CPLD_GWP_MASK		GENMASK(0, 0)
-+#define MLXPLAT_CPLD_LEAK_MASK		GENMASK(0, 0)
++#define MLXPLAT_CPLD_LEAK_MASK		GENMASK(7, 0)
++#define MLXPLAT_CPLD_LEAK_ROPE_MASK	GENMASK(0, 0)
  #define MLXPLAT_CPLD_I2C_CAP_BIT	0x04
  #define MLXPLAT_CPLD_I2C_CAP_MASK	GENMASK(5, MLXPLAT_CPLD_I2C_CAP_BIT)
  
-@@ -243,6 +248,7 @@
+@@ -243,6 +252,7 @@
  #define MLXPLAT_CPLD_CH2_ETH_MODULAR		3
  #define MLXPLAT_CPLD_CH3_ETH_MODULAR		43
  #define MLXPLAT_CPLD_CH4_ETH_MODULAR		51
@@ -69,7 +81,7 @@ index 170efd392..9914e5035 100644
  
  /* Number of LPC attached MUX platform devices */
  #define MLXPLAT_CPLD_LPC_MUX_DEVS		4
-@@ -460,6 +466,34 @@ static struct i2c_mux_reg_platform_data mlxplat_modular_mux_data[] = {
+@@ -460,6 +470,36 @@ static struct i2c_mux_reg_platform_data mlxplat_modular_mux_data[] = {
  	},
  };
  
@@ -97,6 +109,8 @@ index 170efd392..9914e5035 100644
 +		.reg = (void __iomem *)MLXPLAT_CPLD_LPC_REG2,
 +		.reg_size = 1,
 +		.idle_in_use = 1,
++		.values = mlxplat_msn21xx_channels,
++		.n_values = ARRAY_SIZE(mlxplat_msn21xx_channels),
 +	},
 +
 +};
@@ -104,21 +118,93 @@ index 170efd392..9914e5035 100644
  /* Platform hotplug devices */
  static struct i2c_board_info mlxplat_mlxcpld_pwr[] = {
  	{
-@@ -2164,6 +2198,86 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_nvlink_blade_data = {
+@@ -2164,6 +2204,246 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_nvlink_blade_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
 +/* Platform hotplug for modular IB systems family data */
-+static struct mlxreg_core_data mlxplat_mlxcpld_leakage_items_data[] = {
++static struct mlxreg_core_data mlxplat_mlxcpld_leakage_spine_items_data[] = {
 +	{
-+		.label = "leakage",
++		.label = "leakage1",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
-+		.mask = MLXPLAT_CPLD_LEAK_MASK,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage2",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(1),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage3",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(2),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage4",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(3),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage5",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(4),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage6",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(5),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage7",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(6),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage8",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(7),
 +		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
 +	},
 +};
 +
-+static struct mlxreg_core_item mlxplat_mlxcpld_ndr_ib_modular_items[] = {
++static struct mlxreg_core_data mlxplat_mlxcpld_leakage_leaf_items_data[] = {
++	{
++		.label = "leakage1",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage2",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(1),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++	{
++		.label = "leakage3",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = BIT(2),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++};
++
++static struct mlxreg_core_data mlxplat_mlxcpld_leakage_rope_items_data[] = {
++	{
++		.label = "leakage_rope",
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK2_OFFSET,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++};
++
++static struct mlxreg_core_item mlxplat_mlxcpld_leaf_ndr_ib_modular_items[] = {
 +	{
 +		.data = mlxplat_mlxcpld_ext_psu_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
@@ -167,20 +253,108 @@ index 170efd392..9914e5035 100644
 +		.health = true,
 +	},
 +	{
-+		.data = mlxplat_mlxcpld_leakage_items_data,
++		.data = mlxplat_mlxcpld_leakage_leaf_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
 +		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
 +		.mask = MLXPLAT_CPLD_LEAK_MASK,
-+		.count = ARRAY_SIZE(mlxplat_mlxcpld_leakage_items_data),
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_leakage_leaf_items_data),
++		.inversed = 0,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_leakage_rope_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK2_OFFSET,
++		.mask = MLXPLAT_CPLD_LEAK_ROPE_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_leakage_rope_items_data),
++		.inversed = 0,
++		.health = false,
++	},
++};
++
++static struct mlxreg_core_item mlxplat_mlxcpld_spine_ndr_ib_modular_items[] = {
++	{
++		.data = mlxplat_mlxcpld_ext_psu_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.mask = MLXPLAT_CPLD_PSU_EXT_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_ext_psu_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_ext_pwr_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = MLXPLAT_CPLD_PWR_EXT_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_PSU_I2C_CAP_OFFSET,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_ext_pwr_items_data),
++		.inversed = 0,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_ng_fan_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
++		.mask = MLXPLAT_CPLD_FAN_NG_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_fan_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_asic_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_asic_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_asic2_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC2_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_asic2_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++	{
++		.data = mlxplat_mlxcpld_leakage_spine_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
++		.mask = MLXPLAT_CPLD_LEAK_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_leakage_spine_items_data),
++		.inversed = 0,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_leakage_rope_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_LEAK2_OFFSET,
++		.mask = MLXPLAT_CPLD_LEAK_ROPE_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_leakage_rope_items_data),
 +		.inversed = 0,
 +		.health = false,
 +	},
 +};
 +
 +static
-+struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ndr_ib_modular_data = {
-+	.items = mlxplat_mlxcpld_ndr_ib_modular_items,
-+	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ndr_ib_modular_items),
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_leaf_ndr_ib_modular_data = {
++	.items = mlxplat_mlxcpld_leaf_ndr_ib_modular_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_leaf_ndr_ib_modular_items),
++	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
++	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
++	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
++	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2 |
++		    MLXPLAT_CPLD_LOW_AGGR_MASK_LEAK,
++};
++
++static
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_spine_ndr_ib_modular_data = {
++	.items = mlxplat_mlxcpld_spine_ndr_ib_modular_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_spine_ndr_ib_modular_items),
 +	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
 +	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
 +	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
@@ -191,7 +365,7 @@ index 170efd392..9914e5035 100644
  /* Platform led default data */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
  	{
-@@ -2693,6 +2807,106 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
+@@ -2693,6 +2973,78 @@ static struct mlxreg_core_platform_data mlxplat_modular_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_modular_led_data),
  };
  
@@ -246,34 +420,6 @@ index 170efd392..9914e5035 100644
 +		.bit = BIT(1),
 +	},
 +	{
-+		.label = "fan3:green",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(2),
-+	},
-+	{
-+		.label = "fan3:orange",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(2),
-+	},
-+	{
-+		.label = "fan4:green",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(3),
-+	},
-+	{
-+		.label = "fan4:orange",
-+		.reg = MLXPLAT_CPLD_LPC_REG_LED3_OFFSET,
-+		.mask = MLXPLAT_CPLD_LED_HI_NIBBLE_MASK,
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
-+		.bit = BIT(3),
-+	},
-+	{
 +		.label = "uid:blue",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED5_OFFSET,
 +		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK,
@@ -298,7 +444,29 @@ index 170efd392..9914e5035 100644
  /* Platform led data for QMB8700 system */
  static struct mlxreg_core_data mlxplat_mlxcpld_qmb8700_led_data[] = {
  	{
-@@ -4574,6 +4788,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -3297,6 +3649,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(4),
+ 		.mode = 0644,
+ 	},
++	{
++		.label = "leakage_status_clear",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0644,
++	},
+ 	{
+ 		.label = "asic_health",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
+@@ -4558,6 +4916,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_PWR_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_EVENT_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLC_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LC_IN_EVENT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LC_IN_MASK_OFFSET:
+@@ -4574,6 +4934,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SN_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -307,7 +475,17 @@ index 170efd392..9914e5035 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET:
-@@ -4682,6 +4898,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -4659,6 +5021,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_EVENT_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLC_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLC_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET:
+@@ -4682,6 +5047,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -317,7 +495,17 @@ index 170efd392..9914e5035 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_WP_OFFSET:
-@@ -4815,6 +5034,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -4792,6 +5160,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_EVENT_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_FAN_MASK_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_EVENT_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_LEAK2_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLC_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_AGGRLC_MASK_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET:
+@@ -4815,6 +5186,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -327,18 +515,39 @@ index 170efd392..9914e5035 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TLEFT_OFFSET:
-@@ -5282,6 +5504,27 @@ static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
+@@ -5282,6 +5656,48 @@ static int __init mlxplat_dmi_qmb8700_matched(const struct dmi_system_id *dmi)
  	return 1;
  }
  
-+static int __init mlxplat_dmi_ndr_ib_modular_matched(const struct dmi_system_id *dmi)
++static int __init mlxplat_dmi_leaf_ndr_ib_modular_matched(const struct dmi_system_id *dmi)
 +{
 +	int i;
 +
 +	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
 +	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ib_modular_mux_data);
 +	mlxplat_mux_data = mlxplat_ib_modular_mux_data;
-+	mlxplat_hotplug = &mlxplat_mlxcpld_ndr_ib_modular_data;
++	mlxplat_hotplug = &mlxplat_mlxcpld_leaf_ndr_ib_modular_data;
++	mlxplat_hotplug->deferred_nr =
++		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
++	mlxplat_led = &mlxplat_ndr_ib_modular_led_data;
++	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
++	mlxplat_fan = &mlxplat_default_fan_data;
++	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
++		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
++	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
++	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
++
++	return 1;
++}
++
++static int __init mlxplat_dmi_spine_ndr_ib_modular_matched(const struct dmi_system_id *dmi)
++{
++	int i;
++
++	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
++	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ib_modular_mux_data);
++	mlxplat_mux_data = mlxplat_ib_modular_mux_data;
++	mlxplat_hotplug = &mlxplat_mlxcpld_spine_ndr_ib_modular_data;
 +	mlxplat_hotplug->deferred_nr =
 +		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
 +	mlxplat_led = &mlxplat_ndr_ib_modular_led_data;
@@ -355,19 +564,19 @@ index 170efd392..9914e5035 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -5346,6 +5589,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -5346,6 +5762,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0009"),
  		},
  	},
 +	{
-+		.callback = mlxplat_dmi_ndr_ib_modular_matched,
++		.callback = mlxplat_dmi_spine_ndr_ib_modular_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI140"),
 +		},
 +	},
 +	{
-+		.callback = mlxplat_dmi_ndr_ib_modular_matched,
++		.callback = mlxplat_dmi_leaf_ndr_ib_modular_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI141"),
@@ -377,5 +586,5 @@ index 170efd392..9914e5035 100644
  		.callback = mlxplat_dmi_ng400_matched,
  		.matches = {
 -- 
-2.20.1
+2.14.1
 

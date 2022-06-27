@@ -41,6 +41,7 @@
 #  t7: SN38*
 #  t8: SN4600C
 #  t12: SN4600
+#  t13: SN4800
 
 # The thermal algorithm considers the next rules for FAN speed setting:
 # The minimal PWM setting is dynamic and depends on FAN direction and cable
@@ -113,8 +114,6 @@ cooling_level_updated=0
 
 # PSU fan speed vector
 psu_fan_speed=(0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x3c 0x46 0x50 0x5a 0x64)
-# TMP for Buffalo BU
-psu_fan_speed_full=(0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64 0x64)
 
 # Thermal tables for the minimum FAN setting per system time. It contains
 # entries with ambient temperature threshold values and relevant minimum
@@ -458,6 +457,29 @@ c2p_dir_untrust_t12=(15000 12 25000 13 35000 14 45000 16 $max_amb 16 )
 unk_dir_trust_t12=(10000 12 35000 13 45000 14 $max_amb 14 )
 unk_dir_untrust_t12=(5000 12 15000 13 25000 14 30000 15 35000 16 45000 17 $max_amb 17 )
 
+# Class t13 for MSN4800
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		20	20	20	20	20	20
+#  0-5		20	20	20	20	20	20
+#  5-10		20	30	20	20	20	30
+# 10-15		20	30	20	20	20	30
+# 15-20		20	30	20	20	20	30
+# 20-25		20	40	20	20	20	40
+# 25-30		30	50	20	20	30	50
+# 30-35		30	50	20	20	30	50
+# 35-40		40	60	20	20	40	60
+
+p2c_dir_trust_t13=(25000 12 35000 13 40000 14 $max_amb 14 )
+p2c_dir_untrust_t13=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
+c2p_dir_trust_t13=(40000 12 $max_amb 12 )
+c2p_dir_untrust_t13=(40000 12 $max_amb 12 )
+unk_dir_trust_t13=(25000 12 35000 13 40000 14 $max_amb 14 )
+unk_dir_untrust_t13=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
+
 # Local variables
 report_counter=120
 audit_trigger=10
@@ -717,15 +739,6 @@ thermal_periodic_report()
 			set_cur_state=$cooling
 		fi
 	fi
-	# TMP for Buffalo BU
-	case $board_type in
-	VMOD0011)
-		ps_fan_speed=${psu_fan_speed_full[$f5]}
-		;;
-	*)
-		ps_fan_speed=${psu_fan_speed[$f5]}
-		;;
-	esac
 	ps_fan_speed=${psu_fan_speed[$f5]}
 	f5=$((f5*10))
 	f6=$((set_cur_state*10))
@@ -850,15 +863,6 @@ update_psu_fan_speed()
 				addr=$(< $config_path/psu"$i"_i2c_addr)
 				command=$(< $fan_command)
 				entry=$(< $thermal_path/cooling_cur_state)
-				# TMP for Buffalo BU
-				case $board_type in
-				VMOD0011)
-					speed=${psu_fan_speed_full[$entry]}
-				;;
-				*)
-					speed=${psu_fan_speed[$entry]}
-					;;
-				esac
 				speed=${psu_fan_speed[$entry]}
 				# SN2201 sets psu fan speed in percentage mode.
 				if [ "$board_type" == "VMOD0014" ]; then
@@ -1097,6 +1101,15 @@ init_system_dynamic_minimum_db()
 		config_c2p_dir_untrust "${c2p_dir_untrust_t12[@]}"
 		config_unk_dir_trust "${unk_dir_trust_t12[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t12[@]}"
+		;;
+	$thermal_type_t13)
+		# Config FAN minimal speed setting for class t13
+		config_p2c_dir_trust "${p2c_dir_trust_t13[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_t13[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_t13[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_t13[@]}"
+		config_unk_dir_trust "${unk_dir_trust_t13[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_t13[@]}"
 		;;
 	$thermal_type_full)
 		# Config FAN default minimal speed setting

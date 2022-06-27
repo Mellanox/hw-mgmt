@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2018 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,38 +33,45 @@
 # Description: performs board specific I2C-GPIO expander initialisation.
 #
 
+source hw-management-helpers.sh
+
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 
 if [ "$board_type" == "VMOD0014" ]; then
-	# TODO Verify on system if it's really required
-	# Wait for PCA9555 to start.
-	while [ ! -e /sys/class/gpio/gpiochip342 ]
-	do
-		sleep 1
+	gpiobase=
+	for gpiochip in /sys/class/gpio/*; do
+		if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
+			gpiolabel=$(<"$gpiochip"/label)
+			if [ "$gpiolabel" == "7-0027" ]; then
+				gpiobase=$(<"$gpiochip"/base)
+				break
+			fi
+		fi
 	done
+	if [ -z "$gpiobase" ]; then
+		log_err "I2C PCA9555 GPIO was not found"
+		exit 1
+	fi
 
-	for gpio_num in $(seq 342 357); do
+	echo "$gpiobase" > $config_path/i2c_gpiobase
+	gpioend=$((gpiobase+15))
+	gpiodirs=("in" "out" "out" "in" "in" "in" "in" "out" "out" "out" "out" "out" "out" "out" "out" "out")
+	for gpio_num in $(seq "$gpiobase" "$gpioend"); do
 		if [ ! -e /sys/class/gpio/gpio"$gpio_num"/value ]; then
 			echo "$gpio_num" > /sys/class/gpio/export
+			i=$((gpio_num-gpiobase))
+			echo ${gpiodirs[$i]} > /sys/class/gpio/gpio"$gpio_num"/direction
 		fi
 	done
 
-	echo "in" > /sys/class/gpio/gpio342/direction
-	echo "out" > /sys/class/gpio/gpio343/direction
-	echo "out" > /sys/class/gpio/gpio344/direction
-	echo "in" > /sys/class/gpio/gpio345/direction
-	echo "in" > /sys/class/gpio/gpio346/direction
-	echo "in" > /sys/class/gpio/gpio347/direction
-	echo "in" > /sys/class/gpio/gpio348/direction
-	echo "out" > /sys/class/gpio/gpio349/direction
-	echo "out" > /sys/class/gpio/gpio350/direction
-	echo "out" > /sys/class/gpio/gpio351/direction
-	echo "out" > /sys/class/gpio/gpio352/direction
-	echo "out" > /sys/class/gpio/gpio353/direction
-	echo "out" > /sys/class/gpio/gpio354/direction
-	echo "out" > /sys/class/gpio/gpio355/direction
-	echo "out" > /sys/class/gpio/gpio356/direction
-	echo "out" > /sys/class/gpio/gpio357/direction
+	# Initialize fantray LED value.
+	gpioled_start=$((gpiobase+8))
+	for gpio_num in $(seq "$gpioled_start" "$gpioend"); do
+		if [ -e /sys/class/gpio/gpio"$gpio_num"/active_low ]; then
+			echo 1 > /sys/class/gpio/gpio"$gpio_num"/active_low
+		fi
+		echo 0 > /sys/class/gpio/gpio"$gpio_num"/value
+	done
 fi
 
 exit 0

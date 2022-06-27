@@ -63,6 +63,7 @@ board_type=$(< $board_type_file)
 
 thermal_type=$thermal_type_def
 
+asic_control=1
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
 psu1_i2c_addr=0x59
@@ -93,6 +94,8 @@ fan_direction_intake=52
 spc3_pci_id=cf70
 spc4_pci_id=cf80
 quantum2_pci_id=d2f2
+nv3_pci_id=1af1
+nv4_pci_id=22a3
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -106,27 +109,44 @@ quantum2_pci_id=d2f2
 # configured as modules.
 
 base_cpu_bus_offset=10
+connect_table=()
 
+#
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
+#
 cpu_type0_connection_table=(	max11603 0x6d 15 \
 			24c32 0x51 16)
 
+#
 # Broadwell CPU, mostly used on SPC2/SPC3 systems.
-cpu_type1_connection_table=(	max11603 0x6d 15 \
+#
+cpu_type1_A2D_connection_table=( max11603 0x6d 15 \
 			tmp102 0x49 15 \
-			tps53679 0x58 15 \
-			tps53679 0x61 15 \
 			24c32 0x50 16)
 
+cpu_type1_connection_table=( max11603 0x6d 15 \
+			tmp102 0x49 15 \
+			24c32 0x50 16)
+
+cpu_type1_a1_connection_table=(	tmp102 0x49 15 \
+			24c32 0x50 16)
+
+cpu_type1_tps_voltmon_connection_table=( tps53679 0x58 15 comex_voltmon1 \
+			tps53679 0x61 15 comex_voltmon2)
+
+cpu_type1_mps_voltmon_connection_table=(	mp2975 0x6a 15 comex_voltmon1 \
+			mp2975 0x61 15 comex_voltmon2)
+
+cpu_type1_xpde_voltmon_connection_table=(	xdpe12284 0x62 15 comex_voltmon1 \
+			xdpe12284 0x64 15 comex_voltmon2)
+#
 # CoffeeLake CPU.
+#
 cpu_type2_connection_table=(	max11603 0x6d 15 \
-			mp2975 0x6b 15 \
 			24c32 0x50 16)
 
-# CoffeeLake CPU with 16ch i2c mux.
-cpu_type2_mux16_connection_table=(	max11603 0x6d 23 \
-			mp2975 0x6b 23 \
-			24c32 0x50 24)
+cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
+
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -163,6 +183,13 @@ mqm8700_base_connect_table=(	max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
+msn37xx_connect_table=( 	max11603 0x64 5 \
+			tps53679 0x70 5 \
+			tps53679 0x71 5 \
+			tmp102 0x49 7 \
+			tmp102 0x4a 7 \
+			24c32 0x51 8)
+
 mqm8700_rev1_base_connect_table=(    max11603 0x64 5 \
 			mp2975 0x62 5 \
 			mp2975 0x66 5 \
@@ -175,6 +202,21 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tps53679 0x71 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
+			24c512 0x51 8)
+
+msn37xx_A1_connect_table=(	max11603 0x64 5 \
+			tmp102 0x49 7 \
+			tmp102 0x49 7 \
+			adt75 0x4a 7 \
+			24c512 0x51 8)
+
+msn37xx_A1_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2975 0x66 5 voltmon2)
+
+sn3750sx_secured_connect_table=(	mp2975 0x62 5 \
+			mp2975 0x66 5 \
+			tmp102 0x49 7 \
+			adt75 0x4a 7 \
 			24c512 0x51 8)
 
 msn3420_base_connect_table=(	max11603 0x6d 5 \
@@ -276,7 +318,7 @@ e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
-			
+
 e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
 			mp2975 0x23 5  voltmon2 \
 			mp2975 0x24 5  voltmon3 \
@@ -284,22 +326,22 @@ e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
 			mp2975 0x26 5  voltmon5 \
 			mp2975 0x27 5  voltmon6)
 
-p4697_base_connect_table=(    max11603 0x6d 5 \
+p4697_base_connect_table=(    max11603 0x6d 7 \
 			adt75 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_base_rev1_connect_table=(    max11603 0x6d 5 \
+p4697_rev1_base_connect_table=(    max11603 0x6d 7 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x23 26 voltmon1 \
-			mp2975 0x24 26 voltmon2 \
-			mp2975 0x27 26 voltmon3 \
-			mp2975 0x23 31 voltmon4 \
-			mp2975 0x24 31 voltmon5 \
-			mp2975 0x27 31 voltmon6)
+p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x62 26 voltmon1 \
+			mp2975 0x65 26 voltmon2 \
+			mp2975 0x67 26 voltmon3 \
+			mp2975 0x62 27 voltmon4 \
+			mp2975 0x65 27 voltmon5 \
+			mp2975 0x67 27 voltmon6)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
@@ -320,30 +362,29 @@ mqm9510_base_connect_table=( \
 	24c512 0x51 8)
 
 mqm9510_dynamic_i2c_bus_connect_table=( \
-	mp2888 0x62 5 voltmon1 \
+	mp2975 0x62 5 voltmon1 \
 	mp2888 0x66 5 voltmon2 \
-	mp2888 0x68 5 voltmon3 \
-	mp2888 0x6c 5 voltmon4 \
-	mp2888 0x62 6 voltmon5 \
+	mp2975 0x68 5 voltmon3 \
+	mp2975 0x6c 5 voltmon4 \
+	mp2975 0x62 6 voltmon5 \
 	mp2888 0x66 6 voltmon6 \
-	mp2888 0x68 6 voltmon7 \
-	mp2888 0x6c 6 voltmon8)
+	mp2975 0x68 6 voltmon7 \
+	mp2975 0x6c 6 voltmon8 )
 
 mqm9520_base_connect_table=( \
-	tmp102 0x49 7 \
-	tmp102 0x4a 7 \
-	24c512 0x51 8)
+	24c512 0x51 8 )
 
 mqm9520_dynamic_i2c_bus_connect_table=( \
+	tmp102 0x4a 7  tmpsens1 \
+	tmp102 0x4a 15 tmpsens2 \
 	mp2888 0x66 5  voltmon1 \
-	mp2888 0x68 5  voltmon2 \
-	mp2888 0x6c 5  voltmon3 \
-	mp2888 0x62 13 voltmon4 \
-	mp2888 0x66 13 voltmon5 \
-	mp2888 0x68 13 voltmon6 \
-	mp2888 0x6c 13 voltmon7 )
+	mp2975 0x68 5  voltmon2 \
+	mp2975 0x6c 5  voltmon3 \
+	mp2888 0x66 13 voltmon4 \
+	mp2975 0x68 13 voltmon5 \
+	mp2975 0x6c 13 voltmon6 )
 
-p2317_connect_table=(	24c32 0x51 8)
+p2317_connect_table=(	24c512 0x51 8)
 
 ACTION=$1
 
@@ -374,7 +415,7 @@ function set_i2c_bus_frequency_400KHz()
 	# Relevant only to particular system types.
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
-	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005)
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
 		if [ -f $config_path/default_i2c_freq ]; then
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
 		fi
@@ -390,7 +431,7 @@ function restore_i2c_bus_frequency_default()
 	# Relevant only to particular system types.
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
-	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005)
+	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
 		if [ -f $config_path/default_i2c_freq ]; then
 			i2c_freq=$(< $config_path/default_i2c_freq)
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
@@ -527,9 +568,21 @@ set_jtag_gpio()
 		fi
 	fi
 
-	# Gpiochip358 is used for CPU GPIO and gpiochip342 is used for PCA9555 Extender in SN2201. 
+	# SN2201 has 2 gpiochips: CPU/PCH GPIO and PCA9555 Extender.
+	# CPU GPIOs are used for JTAG bit-banging.
 	if [ "$board_type" == "VMOD0014" ]; then
-		gpiobase=$(</sys/class/gpio/gpiochip358/base)
+		for gpiochip in /sys/class/gpio/*; do
+			if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
+				gpiolabel=$(<"$gpiochip"/label)
+				if [ "$gpiolabel" == "INTC3000:00" ]; then
+					gpiobase=$(<"$gpiochip"/base)
+					break
+				fi
+			fi
+		done
+		if [ -z "$gpiobase" ]; then
+			log_err "CPU GPIO chip was not found"
+		fi
 	else
 		gpiobase=$(</sys/class/gpio/gpiochip*/base)
 	fi
@@ -593,23 +646,58 @@ get_fixed_fans_direction()
 	esac
 }
 
+# $1 - cpu bus offset.
 add_cpu_board_to_connection_table()
 {
-	local cpu_connection_table=( )
+	local cpu_connection_table=()
+	local cpu_voltmon_connection_table=()
+	local HW_REV=255
+
+	regio_path=$(find_regio_sysfs_path)
+	if [ $? -eq 0 ]; then
+		if [ -f "$regio_path"/config3 ]; then
+			HW_REV=$(cut "$regio_path"/config3 -d' ' -f 1)
+		fi
+	fi
+
 	case $cpu_type in
 		$RNG_CPU|$IVB_CPU)
 			cpu_connection_table=( ${cpu_type0_connection_table[@]} )
 			;;
 		$BDW_CPU)
-			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+			# None respin BWD version not support to read HW_REV (255).
+			case $HW_REV in
+				0|3)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+				;;
+				1|5)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_mps_voltmon_connection_table[@]} )
+				;;
+				2|4)
+					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_xpds_voltmon_connection_table[@]} )
+				;;
+				*)
+					# COMEX BWD regular version not support HW_REV register
+					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+					case $sku in
+						HI116|HI112|HI124|HI100)
+							#Anaconda 100/200 Tigon Jaguar
+							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+							;;
+						*)
+							cpu_connection_table=( ${cpu_type1_A2D_connection_table[@]} )
+							;;
+					esac
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+				;;
+			esac
 			;;
 		$CFL_CPU)
 			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-			if [ $sku == HI142 ];
-			then
-				cpu_connection_table=( ${cpu_type2_mux16_connection_table[@]} )
-			fi
+			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
@@ -623,17 +711,21 @@ add_cpu_board_to_connection_table()
 		for ((i=0; i<${#cpu_connection_table[@]}; i+=3)); do
 			cpu_connection_table[$i+2]=$(( cpu_connection_table[i+2]-base_cpu_bus_offset+cpu_bus_offset ))
 		done
+		for ((i=0; i<${#cpu_voltmon_connection_table[@]}; i+=4)); do
+			cpu_voltmon_connection_table[$i+2]=$(( cpu_voltmon_connection_table[i+2]-base_cpu_bus_offset+cpu_bus_offset ))
+		done
 	fi
 
 	connect_table+=(${cpu_connection_table[@]})
+	add_i2c_dynamic_bus_dev_connection_table "${cpu_voltmon_connection_table[@]}"
 }
 
 add_i2c_dynamic_bus_dev_connection_table()
 {
 	connection_table=("$@")
-	dynamic_i2cbus_connection_table=""
+	dynamic_i2cbus_connection_table=()
 
-	echo "${connection_table[@]}" > $config_path/i2c_bus_connect_devices
+	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
 		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
 		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
@@ -645,7 +737,7 @@ add_i2c_dynamic_bus_dev_connection_table()
 
 msn274x_specific()
 {
-	connect_table=(${msn2740_base_connect_table[@]})
+	connect_table+=(${msn2740_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t3
@@ -663,7 +755,7 @@ msn274x_specific()
 
 msn21xx_specific()
 {
-	connect_table=(${msn2100_base_connect_table[@]})
+	connect_table+=(${msn2100_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t2
@@ -683,7 +775,7 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
-	connect_table=(${msn2700_base_connect_table[@]})
+	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -713,7 +805,7 @@ msn24xx_specific()
 
 msn27xx_msb_msx_specific()
 {
-	connect_table=(${msn2700_base_connect_table[@]})
+	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -753,7 +845,7 @@ msn27xx_msb_msx_specific()
 
 msn201x_specific()
 {
-	connect_table=(${msn2010_base_connect_table[@]})
+	connect_table+=(${msn2010_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t4
@@ -771,17 +863,65 @@ msn201x_specific()
 	echo 1 > $config_path/fixed_fans_system
 }
 
+connect_msn3700()
+{
+	local voltmon_connection_table=()
+	regio_path=$(find_regio_sysfs_path)
+	res=$?
+	if [ $res -eq 0 ]; then
+		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+		case $sys_ver in
+			6|2)
+					# msn3700/msn3700C respin A1
+					connect_table+=(${msn37xx_A1_connect_table[@]})
+					voltmon_connection_table=(${msn37xx_A1_voltmon_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/msn3700_A1_sensors.conf"
+			;;
+			*)
+					connect_table+=(${msn37xx_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+			;;
+		esac
+	else
+		connect_table+=(${msn37xx_connect_table[@]})
+	fi
+	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
+}
+
 mqmxxx_msn37x_msn34x_specific()
 {
+	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI136)
-			connect_table=(${msn37xx_secured_connect_table[@]})
+			# msn3700C-S
+			connect_table+=(${msn37xx_secured_connect_table[@]})
+		;;
+		HI112|HI116)
+			# msn3700/msn3700C
+			connect_msn3700
 		;;
 		*)
-			connect_table=(${mqm8700_base_connect_table[@]})
+			connect_table+=(${mqm8700_base_connect_table[@]})
 		;;
 	esac
+	add_cpu_board_to_connection_table
+
+	tune_thermal_type=1
+	thermal_type=$thermal_type_t5
+	max_tachos=12
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 25000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	get_i2c_bus_frequency_default
+}
+
+sn3750sx_specific()
+{
+	connect_table+=(${sn3750sx_secured_connect_table[@]})
 
 	add_cpu_board_to_connection_table
 
@@ -793,13 +933,13 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/sn3750sx_sensors.conf"
 	get_i2c_bus_frequency_default
 }
 
 msn3420_specific()
 {
-	connect_table=(${msn3420_base_connect_table[@]})
+	connect_table+=(${msn3420_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t9
@@ -816,7 +956,7 @@ msn3420_specific()
 
 msn_xh3000_specific()
 {
-	connect_table=(${mqm8700_base_connect_table[@]})
+	connect_table+=(${mqm8700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	hotplug_fans=0
 	hotplug_psus=0
@@ -831,7 +971,7 @@ msn_xh3000_specific()
 
 msn38xx_specific()
 {
-	connect_table=(${msn3800_base_connect_table[@]})
+	connect_table+=(${msn3800_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t7
@@ -849,7 +989,7 @@ msn24102_specific()
 {
 	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
@@ -871,7 +1011,7 @@ msn27002_msb78002_specific()
 {
 	local cpu_bus_offset=18
 	# This system do not use auto detected cpu conection table.
-	connect_table=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
 	thermal_type=$thermal_type_t1
@@ -886,18 +1026,19 @@ msn27002_msb78002_specific()
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
+	get_i2c_bus_frequency_default
 }
 
 connect_msn4700_msn4600()
 {
-	connect_table=(${msn4700_msn4600_base_connect_table[@]})
+	connect_table+=(${msn4700_msn4600_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
 {
-	connect_table=(${msn4700_msn4600_A1_base_connect_table[@]})
+	connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 }
@@ -969,7 +1110,7 @@ msn46xx_specific()
 
 msn3510_specific()
 {
-	connect_table=(${msn3510_base_connect_table[@]})
+	connect_table+=(${msn3510_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
@@ -992,23 +1133,23 @@ mqm97xx_specific()
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			0)
-				connect_table=(${mqm97xx_rev0_base_connect_table[@]})
+				connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			1)
-				connect_table=(${mqm97xx_rev1_base_connect_table[@]})
+				connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			7)
-				connect_table=(${mqm97xx_power_base_connect_table[@]})
+				connect_table+=(${mqm97xx_power_base_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			*)
-				connect_table=(${mqm97xx_base_connect_table[@]})
+				connect_table+=(${mqm97xx_base_connect_table[@]})
 				;;
 		esac
 	else
-		connect_table=(${mqm97xx_base_connect_table[@]})
+		connect_table+=(${mqm97xx_base_connect_table[@]})
 	fi
 
 	add_cpu_board_to_connection_table
@@ -1026,7 +1167,7 @@ mqm97xx_specific()
 mqm9510_specific()
 {
 	local cpu_bus_offset=18
-	connect_table=(${mqm9510_base_connect_table[@]})
+	connect_table+=(${mqm9510_base_connect_table[@]})
 	add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	thermal_type=$thermal_type_def
@@ -1035,12 +1176,13 @@ mqm9510_specific()
 	max_tachos=2
 	hotplug_fans=2
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
 }
 
 mqm9520_specific()
 {
 	local cpu_bus_offset=18
-	connect_table=(${mqm9520_base_connect_table[@]})
+	connect_table+=(${mqm9520_base_connect_table[@]})
 	add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	i2c_asic2_bus_default=10
@@ -1050,11 +1192,12 @@ mqm9520_specific()
 	max_tachos=2
 	hotplug_fans=2
 	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 }
 
 mqm87xx_rev1_specific()
 {
-	connect_table=(${mqm8700_rev1_base_connect_table[@]})
+	connect_table+=(${mqm8700_rev1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_t5
@@ -1070,14 +1213,14 @@ mqm87xx_rev1_specific()
 
 e3597_specific()
 {
-	connect_table=(${e3597_base_connect_table[@]})
+	connect_table+=(${e3597_base_connect_table[@]})
 	add_i2c_dynamic_bus_dev_connection_table "${e3597_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
-	i2c_asic_addr=0xff
+	asic_control=0
 	# TODO set correct PSU/case FAN speed
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1089,34 +1232,36 @@ e3597_specific()
 
 p4697_specific()
 {
+	local cpu_bus_offset=18
 	regio_path=$(find_regio_sysfs_path)
 	res=$?
 	if [ $res -eq 0 ]; then
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
 			0)
-				connect_table=(${p4697_base_connect_table[@]})
+				connect_table+=(${p4697_base_connect_table[@]})
 				;;
 			1)
-				connect_table=(${p4697_rev1_base_connect_table[@]})
+				connect_table+=(${p4697_rev1_base_connect_table[@]})
 				;;
 			*)
-				connect_table=(${p4697_base_connect_table[@]})
+				connect_table+=(${p4697_base_connect_table[@]})
 				;;
 		esac
 	else
-		connect_table=(${p4697_base_connect_table[@]})
+		connect_table+=(${p4697_base_connect_table[@]})
 	fi
 
+	add_cpu_board_to_connection_table $cpu_bus_offset
 	add_i2c_dynamic_bus_dev_connection_table "${p4697_dynamic_i2c_bus_connect_table[@]}"
-	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	erot_count=2
-	i2c_asic_addr=0xff
-
+	asic_control=0
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -1155,6 +1300,9 @@ msn_spc2_common()
 			;;
 		HI139)
 			msn_xh3000_specific
+			;;
+		HI146)
+			sn3750sx_specific
 			;;
 		*)
 			mqmxxx_msn37x_msn34x_specific
@@ -1196,9 +1344,9 @@ msn_spc3_common()
 msn48xx_specific()
 {
 	local cpu_bus_offset=51
-	connect_table=(${msn4800_base_connect_table[@]})
+	connect_table+=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
-	thermal_type=$thermal_type_def
+	thermal_type=$thermal_type_t13
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
@@ -1207,15 +1355,13 @@ msn48xx_specific()
 	hotplug_psus=4
 	psu_count=4
 	i2c_asic_bus_default=3
-	echo 22000 > $config_path/fan_max_speed
+	echo 18000 > $config_path/fan_max_speed
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
-	# TMP for Buffalo BU
-	iorw -b 0x2004 -w -l1 -v0x3f
 }
 
 sn2201_specific()
@@ -1242,12 +1388,20 @@ sn2201_specific()
 	cpld2_pn=${cpld2_pn:3}
 	cpld2_pn=$(( 16#$cpld2_pn ))
 	echo $cpld2_pn > $system_path/cpld2_pn
+	id0=$(cat /proc/cpuinfo | grep -m1 "core id" | awk '{print $4}')
+	id0=$(($id0+2))
+	echo $id0> $config_path/core0_temp_id
+	id1=$(cat /proc/cpuinfo | grep -m2 "core id" | tail -n1 | awk '{print $4}')
+	id1=$(($id1+2))
+	echo $id1 > $config_path/core1_temp_id
+	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
+	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 }
 
 p2317_specific()
 {
-	connect_table=(${p2317_connect_table[@]})
+	connect_table+=(${p2317_connect_table[@]})
 	add_cpu_board_to_connection_table
 	echo 1 > $config_path/cpld_num
 	hotplug_fans=0
@@ -1380,44 +1534,48 @@ create_event_files()
 {
 	if [ $hotplug_psus -ne 0 ]; then
 		for ((i=1; i<=hotplug_psus; i+=1)); do
-			touch $events_path/psu$i
+			check_n_init $events_path/psu$i 0
 		done
 	fi
 	if [ $hotplug_pwrs -ne 0 ]; then
 		for ((i=1; i<=hotplug_pwrs; i+=1)); do
-			touch $events_path/pwr$i
+			check_n_init $events_path/pwr$i 0
 		done
 	fi
 	if [ $hotplug_fans -ne 0 ]; then
 		for ((i=1; i<=hotplug_fans; i+=1)); do
-			touch $events_path/fan$i
+			check_n_init $events_path/fan$i 0
 		done
 	fi
 	if [ $hotplug_linecards -ne 0 ]; then
 		for ((i=1; i<=hotplug_linecards; i+=1)); do
-			touch $events_path/lc"$i"_present
-			touch $events_path/lc"$i"_verified
-			touch $events_path/lc"$i"_powered
-			touch $events_path/lc"$i"_ready
-			touch $events_path/lc"$i"_synced
-			touch $events_path/lc"$i"_active
-			touch $events_path/lc"$i"_shutdown
+			check_n_init $events_path/lc"$i"_present 0
+			check_n_init $events_path/lc"$i"_verified 0
+			check_n_init $events_path/lc"$i"_powered 0
+			check_n_init $events_path/lc"$i"_ready 0
+			check_n_init $events_path/lc"$i"_synced 0
+			check_n_init $events_path/lc"$i"_active 0
+			check_n_init $events_path/lc"$i"_shutdown 0
 		done
 	fi
 	if [ $erot_count -ne 0 ]; then
 		for ((i=1; i<=erot_count; i+=1)); do
-			touch $events_path/erot"$i"_error
-			touch $events_path/erot"$i"_ap
+			check_n_init  $events_path/erot"$i"_error 0
+			check_n_init $events_path/erot"$i"_ap 0
 		done
+	fi
+}
+
+enable_vpd_wp()
+{
+	if [ -e "$system_path"/vpd_wp ]; then
+		echo 1 > $system_path/vpd_wp
+		log_info "Enabled VPD WP"
 	fi
 }
 
 get_asic_bus()
 {
-	if [[ $i2c_asic_addr -eq 0xff ]]; then
-		log_err "This operation not supporting with current ASIC type"
-		return 0
-	fi
 	if [ ! -f $config_path/asic_bus ]; then
 		find_i2c_bus
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
@@ -1431,10 +1589,6 @@ get_asic_bus()
 
 get_asic2_bus()
 {
-	if [[ $i2c_asic_addr -eq 0xff ]]; then
-		log_err "This operation not supporting with current ASIC type"
-		return 0
-	fi
 	if [ ! -f "$config_path/asic_num" ]; then
 		return 0
 	fi
@@ -1459,16 +1613,7 @@ set_config_data()
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
-
-	# TMP for Buffalo BU
-	case $board_type in
-	VMOD0011)
-		echo 0x64 > $config_path/fan_psu_default
-		;;
-	*)
-		echo $fan_psu_default > $config_path/fan_psu_default
-		;;
-	esac
+	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
@@ -1545,6 +1690,16 @@ create_symbolic_links()
 	if [ ! -h $power_path/pwr_sys ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_sys
 	fi
+
+	if [ ! -f "$config_path/gearbox_counter" ]; then
+		echo 0 > "$config_path"/gearbox_counter
+	fi
+	if [ ! -f "$config_path/module_counter" ]; then
+		echo 0 > "$config_path"/module_counter
+	fi
+	if [ ! -f "$config_path/sfp_counter" ]; then
+		echo 0 > "$config_path"/sfp_counter
+	fi
 }
 
 remove_symbolic_links()
@@ -1558,6 +1713,9 @@ remove_symbolic_links()
 
 set_asic_pci_id()
 {
+	if [ ! -f "$config_path"/asic_control ]; then
+		echo $asic_control > "$config_path"/asic_control
+	fi
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	# Get ASIC PCI Ids.
 	case $sku in
@@ -1570,13 +1728,14 @@ set_asic_pci_id()
 	HI144|HI147)
 		asic_pci_id=$spc4_pci_id
 		;;
-	HI131|HI142)
-		echo 2 > "$config_path"/asic_num
-		return
+	HI131)
+		asic_pci_id=$nv3_pci_id
+		;;
+	HI142)
+		asic_pci_id=$nv4_pci_id
 		;;
 	HI143)
-		echo 4 > "$config_path"/asic_num
-		return
+		asic_pci_id=$nv4_pci_id
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num
@@ -1593,12 +1752,23 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI141)
+	HI131|HI141|HI142)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
+		;;
+	HI143)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
 		;;
 	HI144|HI147)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
@@ -1640,7 +1810,9 @@ do_start()
 	create_symbolic_links
 	check_system
 	set_asic_pci_id
-	if [[ $i2c_asic_addr -ne 0xff ]]; then
+
+	asic_control=$(< $config_path/asic_control) 
+	if [[ $asic_control -ne 0 ]]; then
 		get_asic_bus
 		get_asic2_bus
 	fi
@@ -1654,6 +1826,7 @@ do_start()
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
 	sleep 1
+	enable_vpd_wp
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
@@ -1705,8 +1878,12 @@ do_chip_up_down()
 	action=$1
 	asic_index=$2
 	pci_bus=$3
+
+	if [ -f "$config_path"/asic_control ]; then
+		asic_control=$(< $config_path/asic_control)
+	fi
 	# Add ASIC device.
-	if [[ $i2c_asic_addr -eq 0xff ]]; then
+	if [[ $asic_control -eq 0 ]]; then
 		log_info "Current ASIC type does not support this operation type"
 		return 0
 	fi
