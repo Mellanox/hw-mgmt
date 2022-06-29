@@ -35,18 +35,12 @@
 source hw-management-helpers.sh
 
 # Local constants and paths.
-max_cpld=4
 max_fan_drwr=8
 CPLD3_VER_DEF="0"
  
 handle_cpld_versions()
 {
 	cpld_num_loc="${1}"
-	if [ "$cpld_num_loc" -lt "$max_cpld" ]; then
-		check_n_unlink $system_path/cpld"$max_cpld"_version
-		check_n_unlink $system_path/cpld"$max_cpld"_pn
-		check_n_unlink $system_path/cpld"$max_cpld"_version_min
-	fi
 
 	for ((i=1; i<=cpld_num_loc; i+=1)); do
 		if [ -f $system_path/cpld"$i"_pn ]; then
@@ -82,9 +76,6 @@ set_fan_drwr_num()
 board=$(cat /sys/devices/virtual/dmi/id/board_name)
 cpld_num=$(cat $config_path/cpld_num)
 case $board in
-	VMOD0001|VMOD0003)
-		cpld_num=$((cpld_num-1))
-		;;
 	VMOD0015)
 		# Special case to inform external node (BMC) that system ready
 		# for telemetry communication.
