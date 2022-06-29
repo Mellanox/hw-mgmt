@@ -74,9 +74,8 @@ fi
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
-CURR_SENS_LABEL=(   "none" "iin\$|iin1"   "iout\$|iout1" "iout2")
-POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1" "pout2")
-
+CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
+POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
 
 # Find sensor index which label matching to mask.
 # $1 - path to sensor in sysfs
@@ -706,31 +705,26 @@ if [ "$1" == "add" ]; then
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
-					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-
+					if [ -f "$3""$4"/in"$sensor_id"_input ]; then
+						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
+					fi
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
 						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					fi
 				fi
-
-				find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
-					check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
-					if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
-						ln -sf "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
-						ln -sf "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					fi
+				if [ -f "$3""$4"/curr"$i"_input ]; then
+					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
 				fi
-
-				find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
-				sensor_id=$?
-				if [ ! $sensor_id -eq 0 ]; then
-					check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
-					check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path//"$prefix"_power"$i"_alarm
+				if [ -f "$3""$4"/power"$i"_input ]; then
+					ln -sf "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
+				fi
+				if [ -f "$3""$4"/curr"$i"_alarm ]; then
+					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+				fi
+				if [ -f "$3""$4"/power"$i"_alarm ]; then
+					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
 				fi
 			done
 			;;
