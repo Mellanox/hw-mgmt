@@ -602,6 +602,35 @@ function get_i2c_voltmon_prefix()
 	echo "$voltmon_name"
 }
 
+function check_cpld_attrs_num()
+{
+   board=$(cat /sys/devices/virtual/dmi/id/board_name)
+   cpld_num=$(cat $config_path/cpld_num)
+   case "$board" in
+   VMOD0001|VMOD0003)
+       cpld_num=$((cpld_num-1))
+       ;;
+   *)
+       ;;
+   esac
+
+   return $cpld_num
+}
+
+function check_cpld_attrs()
+{
+    attrname="$1"
+    cpld_num="$2"
+    take=1
+
+    # Extracting the cpld number if the attribute starts with cpld<num>
+    num=`echo $attrname | grep -Po '^(cpld)\K\d+'`
+    # Seeing if the cpld index is valid for the platform
+    [[ ! -z "$num" ]] && [ $num -gt $cpld_num ] && take=0
+
+    return $take
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -786,14 +815,20 @@ if [ "$1" == "add" ]; then
 			linecard="$linecard_num"
 			;;
 		esac
-		# Allow to driver insertion off all the attributes.
+		# Allow insertion of all the attributes, but skip redundant cpld entries.
 		sleep 1
 		if [ -d "$3""$4" ]; then
+			local cpld_num
 			for attrpath in "$3""$4"/*; do
+				take=10
 				attrname=$(basename "${attrpath}")
+				check_cpld_attrs_num
+				cpld_num=$?
+				check_cpld_attrs "$attrname" "$cpld_num"
+				take=$?
 				if [ ! -d "$attrpath" ] && [ ! -L "$attrpath" ] &&
 				   [ "$attrname" != "uevent" ] &&
-				   [ "$attrname" != "name" ]; then
+				   [ "$attrname" != "name" ] && [ "$take" -ne 0 ] ; then
 					ln -sf "$3""$4"/"$attrname" $system_path/"$attrname"
 				fi
 			done
