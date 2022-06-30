@@ -74,8 +74,9 @@ fi
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
-CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
-POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
+CURR_SENS_LABEL=(   "none" "iin\$|iin1"   "iout\$|iout1" "iout2")
+POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1" "pout2")
+
 
 # Find sensor index which label matching to mask.
 # $1 - path to sensor in sysfs
@@ -601,35 +602,6 @@ function get_i2c_voltmon_prefix()
 	echo "$voltmon_name"
 }
 
-function check_cpld_attrs_num()
-{
-   board=$(cat /sys/devices/virtual/dmi/id/board_name)
-   cpld_num=$(cat $config_path/cpld_num)
-   case "$board" in
-   VMOD0001|VMOD0003)
-       cpld_num=$((cpld_num-1))
-       ;;
-   *)
-       ;;
-   esac
-
-   return $cpld_num
-}
-
-function check_cpld_attrs()
-{
-    attrname="$1"
-    cpld_num="$2"
-    take=1
-
-    # Extracting the cpld number if the attribute starts with cpld<num>
-    num=`echo $attrname | grep -Po '^(cpld)\K\d+'`
-    # Seeing if the cpld index is valid for the platform
-    [[ ! -z "$num" ]] && [ $num -gt $cpld_num ] && take=0
-
-    return $take
-}
-
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -734,26 +706,46 @@ if [ "$1" == "add" ]; then
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
-					if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-					fi
+					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
+
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
 						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					fi
 				fi
-				if [ -f "$3""$4"/curr"$i"_input ]; then
-					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
-				fi
-				if [ -f "$3""$4"/power"$i"_input ]; then
-					ln -sf "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
-				fi
-				if [ -f "$3""$4"/curr"$i"_alarm ]; then
-					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-				fi
-				if [ -f "$3""$4"/power"$i"_alarm ]; then
-					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
+				sensor_type=$(< "$3""$4"/name)
+				if [ $sensor_type == "mp2975" ]; then
+					find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
+					sensor_id=$?
+					if [ ! $sensor_id -eq 0 ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
+						if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
+							ln -sf "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+						elif [ -f "$3""$4"/curr"$sensor_id"_crit_alarm ]; then
+							ln -sf "$3""$4"/curr"$sensor_id"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+						elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
+							ln -sf "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+						fi
+					fi
+
+					find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
+					sensor_id=$?
+					if [ ! $sensor_id -eq 0 ]; then
+						check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
+						check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path//"$prefix"_power"$i"_alarm
+					fi
+				else
+					check_n_link "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
+					check_n_link "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
+					check_n_link "$3""$4"/power"$i"_alarm $alarm_path//"$prefix"_power"$i"_alarm
+					if [ -f "$3""$4"/curr"$i"_alarm ]; then
+						ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$i"_crit_alarm ]; then
+						ln -sf "$3""$4"/curr"$i"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$i"_max_alarm ]; then
+						ln -sf "$3""$4"/curr"$i"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					fi
 				fi
 			done
 			;;
@@ -809,20 +801,14 @@ if [ "$1" == "add" ]; then
 			linecard="$linecard_num"
 			;;
 		esac
-		# Allow insertion of all the attributes, but skip redundant cpld entries.
+		# Allow to driver insertion off all the attributes.
 		sleep 1
 		if [ -d "$3""$4" ]; then
-			local cpld_num
 			for attrpath in "$3""$4"/*; do
-				take=10
 				attrname=$(basename "${attrpath}")
-				check_cpld_attrs_num
-				cpld_num=$?
-				check_cpld_attrs "$attrname" "$cpld_num"
-				take=$?
 				if [ ! -d "$attrpath" ] && [ ! -L "$attrpath" ] &&
 				   [ "$attrname" != "uevent" ] &&
-				   [ "$attrname" != "name" ] && [ "$take" -ne 0 ] ; then
+				   [ "$attrname" != "name" ]; then
 					ln -sf "$3""$4"/"$attrname" $system_path/"$attrname"
 				fi
 			done
