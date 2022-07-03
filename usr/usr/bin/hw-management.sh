@@ -1895,6 +1895,18 @@ do_chip_up_down()
 		i2c_asic_addr=0x37
 		i2c_asic_bus_default=3
 		;;
+	VMOD0010)
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+		HI140|HI141)
+			# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+			i2c_asic_addr_name=0037
+			i2c_asic_addr=0x37
+			;;
+		*)
+			;;
+		esac
+		;;
 	*)
 		;;
 	esac
