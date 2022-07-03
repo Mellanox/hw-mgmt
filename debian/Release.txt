@@ -70,6 +70,7 @@
 		0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
 
     o  hw-mgmt events sysfs (e.g. $events_path/fan$i ) are created blank rather than initialized to zero value.
+    o  hw-mgmt redudent CPLD4 attribute appearing on systems
     o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.3000_BR/recipes-kernel/linux/Patch_Status_Table.txt
 
 - Known issues and limitations:
