@@ -1,4 +1,107 @@
 ================================================================================
+- V.7.0020.3000
+-Sunday , 3 July 2022
+--------------------------------------------------------------------------------
+- New Features
+    o  SN2201: Add support for managing front panel FAN LED 
+    o  SN2201: reset cause reset_aux_pwr_or_fu was renamed to reset_aux_pwr_or_ref
+    o  SN2201: Align DNI patch with already accepted driver
+       *Kernel 4.19: 
+       patches 4.19: 
+		0147-hwmon-powr1220-Upgrade-driver-to-support-hwmon-info-.patch
+		0148-hwmon-powr1220-Add-support-for-Lattice-s-POWR1014-po.patch
+		0149-platform_data-mlxreg-Add-field-for-notification-call.patch
+		0151-platform-mellanox-Add-support-for-new-SN2201-system.patch
+		0153-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch
+       *Kernel 5.10: 
+       patches 5.10: 
+		0083-platform_data-mlxreg-Add-field-for-notification-call.patch
+		0085-hwmon-powr1220-Upgrade-driver-to-support-hwmon-info-.patch
+		0086-hwmon-powr1220-Add-support-for-Lattice-s-POWR1014-po.patch
+		0089-platform-mellanox-Add-support-for-new-SN2201-system.patch
+		0090-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch
+
+    o  SN4800: Add dynamic minimum table 
+    o  SN4800: enable higher I2C frequency 400Khz
+       *Kernel 4.19
+       patches 4.19:  
+       		0161-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch                                                
+       *Kernel 5.10: 
+       patches 5.10:  
+		0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch 
+                                           
+    o  Add COMEX BRDWL respin support: Removed A2D + support MPS voltmon (in addition to TPS/XDPE) 
+    o  Add support for EEPROM/VPD write-protect on secured system with release CPLD
+    o  Add support for rpm/deb package generation
+
+- Bug fixes  
+    o  SN4800: missing proper sysfs link removal when LC is pulled out which prevents reading VPD of new LC pushed into that slot.
+    o  SN4800: wrong FAN % representation due to wrong FAN maximum speed.
+    o  SN4800:  LC insert after “insert and remove “ creating failure crash when previous insert had access error.
+       *Kernel 4.19: 
+       patches 4.19: 
+		0162-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch
+		0163-TMP-DBG-platform-mellanox-mlxreg-lc-Add-debug-delay.patch
+       *Kernel 5.10: 
+       patches 5.10: 
+		0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch
+
+    o  SN27002: when performing hw-mgmt stop start quickly – minimal driver is late to close down (due slow I2C freq) causing ASIC transaction failure.
+    o  SN2201: gpio related modules not working properly (e.g. JTAG, FAN’s LEDs) due to GPIO controller starting at different base address for different kernels.
+    o  SN2201: CORE temperature report appearing in alternating CORE IDs due Intel Denverton CPU having non consistent CORE ID numbering 
+    o  SN2201: emc2305 was capable of changing fan speed only via PWM and not via changing cooling_state.
+       *Kernel 4.19: 
+       patches 4.19: 
+		0145-hwmon-Add-support-for-EMC2305-RPM-based-PWM-Fan-Spee.patch
+       *Kernel 5.10: 
+       patches 5.10: 
+		0087-hwmon-Add-support-for-EMC2305-RPM-based-PWM-Fan-Spee.patch
+
+    o  QTM2 system: ignore error from SPAD register access (currently unused) to avoid errors in dmesg
+    o  Log errors due to I2C transaction while chip is in reset or in-service update states(ISSU) and causing sometimes chip halt
+       *Kernel 4.9: 
+       patches 4.9: 
+		0075-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
+       *Kernel 4.19: 
+       patches 4.19: 
+		0160-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
+       *Kernel 5.10: 
+       patches 5.10: 
+		0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch
+
+    o  hw-mgmt events sysfs (e.g. $events_path/fan$i ) are created blank rather than initialized to zero value.
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.3000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0020.2100
 -Thursday , 14 April 2022
 --------------------------------------------------------------------------------
