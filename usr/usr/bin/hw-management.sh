@@ -287,8 +287,8 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 
 # MQM9700 STTS751 temp sensors
 mqm97xx_rev2_base_connect_table=(    max11603 0x6d 5 \
-			STTS751 0x49 7 \
-			STTS751 0x4a 7 \
+			stts751 0x49 7 \
+			stts751 0x4a 7 \
 			24c512 0x51 8)
 
 # MQM9700 power test
@@ -297,31 +297,31 @@ mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-mqm97xx_mps_def_voltmon_connect_table=( mp2975 0x62 5 \
-			mp2975 0x64 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6C 5  )
+mqm97xx_mps_def_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2975 0x64 5 voltmon2 \
+			mp2888 0x66 5 voltmon3 \
+			mp2975 0x68 5 voltmon4 \
+			mp2975 0x6C 5 voltmon5 )
 
-mqm97xx_mps_voltmon_connect_table=( mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 )
+mqm97xx_mps_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2888 0x66 5 voltmon2 \
+			mp2975 0x68 5 voltmon3 \
+			mp2975 0x6a 5 voltmon4 \
+			mp2975 0x6c 5 voltmon5 )
 
-mqm97xx_xpde_voltmon_connect_table=( xpde152854 0x62 5 \
-			mp2888 0x66 5 \
-			xpde152854 0x68 5 \
-			xpde152854 0x6a 5 \
-			xpde152854 0x6c 5 )
+mqm97xx_xpde_voltmon_connect_table=( xpde152854 0x62 5 voltmon1 \
+			mp2888 0x66 5 voltmon2 \
+			xpde152854 0x68 5 voltmon3 \
+			xpde152854 0x6a 5 voltmon4 \
+			xpde152854 0x6c 5 voltmon5 )
 
-mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6b 5 \
-			mp2975 0x6c 5 \
-			mp2975 0x6e 5 )
+mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2888 0x66 5 voltmon2 \
+			mp2975 0x68 5 voltmon3 \
+			mp2975 0x6a 5 voltmon4 \
+			mp2975 0x6b 5 voltmon5 \
+			mp2975 0x6c 5 voltmon6 \
+			mp2975 0x6e 5 voltmon7 )
 
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
