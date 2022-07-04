@@ -94,11 +94,11 @@ declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d
 					 ["24c32_0"]="24c32 0x51 8 system_eeprom")
 
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
-				 ["mp2888_1"]="mp2888 0x66 5 voltmon2" \
-				 ["mp2975_2"]="mp2975 0x68 5 voltmon3" \
-				 ["mp2975_3"]="mp2975 0x6a 5 voltmon4" \
-				 ["mp2975_4"]="mp2975 0x6c 5 voltmon5" \
-				 ["mp2975_5"]="mp2975 0x6e 5 voltmon6" \
+				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
+				 ["mp2975_2"]="mp2975 0x68 5 voltmon4" \
+				 ["mp2975_3"]="mp2975 0x6a 5 voltmon5" \
+				 ["mp2975_4"]="mp2975 0x6c 5 voltmon6" \
+				 ["mp2975_5"]="mp2975 0x6e 5 voltmon7" \
 				 ["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
