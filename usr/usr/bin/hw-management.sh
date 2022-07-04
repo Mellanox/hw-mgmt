@@ -142,8 +142,10 @@ cpu_type1_xpde_voltmon_connection_table=(	xdpe12284 0x62 15 comex_voltmon1 \
 #
 # CoffeeLake CPU.
 #
-cpu_type2_connection_table=(	max11603 0x6d 15 \
-			24c32 0x50 16)
+cpu_type2_A2D_connection_table=(    max11603 0x6d 15 \
+            24c32 0x50 16)
+
+cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
@@ -272,8 +274,7 @@ msn3510_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-mqm97xx_base_connect_table=(	max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_base_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
@@ -282,8 +283,7 @@ mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_rev0_base_connect_table=(	mp2975 0x62 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
@@ -292,8 +292,7 @@ mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_rev1_base_connect_table=(	mp2975 0x62 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
@@ -302,8 +301,7 @@ mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
+mqm97xx_power_base_connect_table=(  mp2975 0x62 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
@@ -696,7 +694,16 @@ add_cpu_board_to_connection_table()
 			esac
 			;;
 		$CFL_CPU)
-			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			case $sku in
+				# Gorilla removed A2D from CFL
+				HI130)
+					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					;;
+				*)
+					cpu_connection_table=( ${cpu_type2_A2D_connection_table[@]} )
+					;;
+			esac
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		*)
