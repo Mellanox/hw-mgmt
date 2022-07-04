@@ -35,44 +35,8 @@
 source hw-management-helpers.sh
 
 # Local constants and paths.
-max_fan_drwr=8
 CPLD3_VER_DEF="0"
  
-handle_cpld_versions()
-{
-	cpld_num_loc="${1}"
-
-	for ((i=1; i<=cpld_num_loc; i+=1)); do
-		if [ -f $system_path/cpld"$i"_pn ]; then
-			cpld_pn=$(cat $system_path/cpld"$i"_pn)
-		fi
-		if [ -f $system_path/cpld"$i"_version ]; then
-			cpld_ver=$(cat $system_path/cpld"$i"_version)
-		fi
-		if [ -f $system_path/cpld"$i"_version_min ]; then
-			cpld_ver_min=$(cat $system_path/cpld"$i"_version_min)
-		fi
-		if [ -z "$str" ]; then
-			str=$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
-		else
-			str=$str$(printf "_CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
-		fi
-	done
-	echo "$str" > $system_path/cpld_base
-	echo "$str" > $system_path/cpld
-}
-
-set_fan_drwr_num()
-{
-	drwr_num=0
-	for ((i=1; i<=max_fan_drwr; i+=1)); do
-		if [ -L $thermal_path/fan"$i"_status ]; then
-			drwr_num=$((drwr_num+1))
-		fi
-	done
-	echo $drwr_num > $config_path/fan_drwr_num
-}
-
 board=$(cat /sys/devices/virtual/dmi/id/board_name)
 cpld_num=$(cat $config_path/cpld_num)
 case $board in
@@ -90,38 +54,3 @@ case $board in
 		;;
 esac
 
-timeout 60 bash -c 'until [ -L /var/run/hw-management/system/cpld1_version ]; do sleep 1; done'
-sleep 1
-
-# Read cpld3 version with the mlxreg from mft package
-if [ -f $config_path/cpld_port ];
-then
-    cpld=$(< $config_path/cpld_port)
-    if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ];
-    then
-        ver_dec=$CPLD3_VER_DEF
-        # check if mlxreg exists
-        if [ -x "$(command -v mlxreg)" ];
-        then
-            lsmod | grep mst_pci >/dev/null 2>&1
-            if [  $? -ne 0 ];
-            then
-                mst start  >/dev/null 2>&1
-                sleep 2
-            fi
-            mt_dev=$(find /dev/mst -name *00_pciconf0)
-            cmd='mlxreg --reg_name MSCI  -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
-            ver_hex=$(eval $cmd)
-            if [ ! -z "$ver_hex" ]; then
-               ver_dec=$(printf "%d" $ver_hex)
-            fi
-        fi
-        echo "$ver_dec" > $system_path/cpld3_version
-    fi
-fi
-
-handle_cpld_versions $cpld_num
-# Do not set for fixed fans systems. For fixed fans systems fan_drwr_num set in system specific init function.
-if [ ! -f $config_path/fixed_fans_system ]; then
-	set_fan_drwr_num
-fi
