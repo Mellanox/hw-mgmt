@@ -137,8 +137,10 @@ cpu_type1_xpde_voltmon_connection_table=(	xdpe12284 0x62 15 comex_voltmon1 \
 #
 # CoffeeLake CPU.
 #
-cpu_type2_connection_table=(	max11603 0x6d 15 \
-			24c32 0x50 16)
+cpu_type2_A2D_connection_table=(    max11603 0x6d 15 \
+            24c32 0x50 16)
+
+cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
@@ -265,47 +267,61 @@ msn3510_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
+# MQM9700 (deprecated)
 mqm97xx_base_connect_table=(	max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2975 0x64 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6C 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
+# MQM9700 adt75 temp sensors
 mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 \
 			adt75 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
+# MQM9700 tmp102 temp sensors
 mqm97xx_rev1_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
-			mp2888 0x66 5 \
-			mp2975 0x68 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6c 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
+# MQM9700 STTS751 temp sensors
+mqm97xx_rev2_base_connect_table=(    max11603 0x6d 5 \
+			STTS751 0x49 7 \
+			STTS751 0x4a 7 \
+			24c512 0x51 8)
+
+# MQM9700 power test
 mqm97xx_power_base_connect_table=(    max11603 0x6d 5 \
-			mp2975 0x62 5 \
+			adt75 0x49 7 \
+			adt75 0x4a 7 \
+			24c512 0x51 8)
+
+mqm97xx_mps_def_voltmon_connect_table=( mp2975 0x62 5 \
+			mp2975 0x64 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6C 5  )
+
+mqm97xx_mps_voltmon_connect_table=( mp2975 0x62 5 \
+			mp2888 0x66 5 \
+			mp2975 0x68 5 \
+			mp2975 0x6a 5 \
+			mp2975 0x6c 5 )
+
+mqm97xx_xpde_voltmon_connect_table=( xpde152854 0x62 5 \
+			mp2888 0x66 5 \
+			xpde152854 0x68 5 \
+			xpde152854 0x6a 5 \
+			xpde152854 0x6c 5 )
+
+mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 \
 			mp2888 0x66 5 \
 			mp2975 0x68 5 \
 			mp2975 0x6a 5 \
 			mp2975 0x6b 5 \
 			mp2975 0x6c 5 \
-			mp2975 0x6e 5 \
-			adt75 0x49 7 \
-			adt75 0x4a 7 \
-			24c512 0x51 8)
+			mp2975 0x6e 5 )
 
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
@@ -672,7 +688,16 @@ add_cpu_board_to_connection_table()
 			esac
 			;;
 		$CFL_CPU)
-			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			case $sku in
+				# MQM9700 removed A2D from CFL
+				HI130)
+					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					;;
+				*)
+					cpu_connection_table=( ${cpu_type2_A2D_connection_table[@]} )
+					;;
+			esac
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		*)
@@ -1141,33 +1166,60 @@ msn3510_specific()
 
 mqm97xx_specific()
 {
+	local voltmon_connection_table=()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
-
 	regio_path=$(find_regio_sysfs_path)
 	res=$?
 	if [ $res -eq 0 ]; then
 		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
 		case $sys_ver in
-			0)
+			0|8)
 				connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+				voltmon_connection_table=(${mqm97xx_mps_voltmon_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"					
+				
 				;;
-			1)
+			1|9)
 				connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_mps_voltmon_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			7)
 				connect_table+=(${mqm97xx_power_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_power_voltmon_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+				;;
+			10)
+				connect_table+=(${mqm97xx_rev2_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_mps_voltmon_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"		
+				;;
+			11)
+				connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+				;;
+			12)
+				connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
+				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+				;;
+			13)
+				connect_table+=(${mqm97xx_rev2_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
 				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 				;;
 			*)
 				connect_table+=(${mqm97xx_base_connect_table[@]})
+				voltmon_connection_table=(${mqm97xx_mps_def_voltmon_connect_table[@]})
 				;;
 		esac
 	else
 		connect_table+=(${mqm97xx_base_connect_table[@]})
+		voltmon_connection_table=(${mqm97xx_mps_def_voltmon_connect_table[@]})
 	fi
 
+	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
 	add_cpu_board_to_connection_table
 
 	thermal_type=$thermal_type_def
