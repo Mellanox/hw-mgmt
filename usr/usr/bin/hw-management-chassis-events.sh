@@ -630,6 +630,31 @@ function check_cpld_attrs()
     return $take
 }
 
+handle_cpld_versions()
+{
+	CPLD3_VER_DEF="0"
+	cpld_num_loc="${1}"
+
+	for ((i=1; i<=cpld_num_loc; i+=1)); do
+		if [ -f $system_path/cpld"$i"_pn ]; then
+			cpld_pn=$(cat $system_path/cpld"$i"_pn)
+		fi
+		if [ -f $system_path/cpld"$i"_version ]; then
+			cpld_ver=$(cat $system_path/cpld"$i"_version)
+		fi
+		if [ -f $system_path/cpld"$i"_version_min ]; then
+			cpld_ver_min=$(cat $system_path/cpld"$i"_version_min)
+		fi
+		if [ -z "$str" ]; then
+			str=$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+		else
+			str=$str$(printf "_CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+		fi
+	done
+	echo "$str" > $system_path/cpld_base
+	echo "$str" > $system_path/cpld
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -826,6 +851,7 @@ if [ "$1" == "add" ]; then
 					ln -sf "$3""$4"/"$attrname" $system_path/"$attrname"
 				fi
 			done
+			handle_cpld_versions "$cpld_num"
 		fi
 		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
 			if [ -L $thermal_path/fan"$i"_status ]; then

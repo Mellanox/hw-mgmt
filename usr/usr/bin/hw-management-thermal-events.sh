@@ -48,6 +48,11 @@ min_lc_thermal_ind=1
 max_lc_thermal_ind=20
 pciesw_i2c_bus=0
 fan_full_speed_code=20
+# Static variable to keep track the number of fan drawers
+fan_drwr_num=0
+# 46 - F, 52 - R
+fan_direction_exhaust=46
+fan_direction_intake=52
 
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
@@ -167,6 +172,31 @@ sn2201_find_cpu_core_temp_ids()
 		tmp=$(cat /proc/cpuinfo | grep -m2 "core id" | tail -n1 | awk '{print $4}')
 		core1_temp_id=$(($tmp+2))
 	fi
+}
+
+get_fixed_fans_direction()
+{
+	# Earlier the code was trying to read the offset of the string MLNX from
+	# /var/run/hw-management/eeprom/vpd_info and perform the fan direction
+	# offset computation like this:
+	# fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
+	# sanity_offset:     Offset of string "MLNX"
+	# pn_sanity_offset:  62
+	# fan_dir_pn_offset: 11
+	# There was a delay of ~10sec to get the 'vpd_info' to be available.
+	# This optimization directly read the fan direction from the eeprom
+	# address 0x102, using i2ctransfer command and avoids the delay.
+	fan_direction=$(i2ctransfer -f -y 8 w2@0x51 0x01 0x02 r1 | cut -d'x' -f 2)	
+	case $fan_direction in
+	$fan_direction_exhaust)
+		echo 1 > $config_path/fixed_fans_dir
+		;;
+	$fan_direction_intake)
+		echo 0 > $config_path/fixed_fans_dir
+		;;
+	*)
+		;;
+	esac
 }
 
 if [ "$1" == "add" ]; then
@@ -397,8 +427,22 @@ if [ "$1" == "add" ]; then
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/fan"$i"
 				fi
+				(( fan_drwr_num++ ))
 			fi
 		done
+
+		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
+			get_fixed_fans_direction
+			if [ -f $config_path/fixed_fans_dir ]; then
+				for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
+					cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
+					echo 1 > $thermal_path/fan"$i"_status
+				done
+			fi
+		else
+			echo $fan_drwr_num > $config_path/fan_drwr_num
+		fi
+
 		for ((i=1; i<=max_psus; i+=1)); do
 			if [ -f "$3""$4"/psu$i ]; then
 				ln -sf "$3""$4"/psu$i $thermal_path/psu"$i"_status
