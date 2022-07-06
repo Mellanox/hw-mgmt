@@ -93,7 +93,7 @@ LC_FRU_ITEMS_FORMAT = {2 : {'type_name': "PRODUCT_NAME_VPD_FIELD", "format": "{}
                        6 : {'type_name': "SW_REV_FIELD", "format": "b"},
                        7 : {'type_name': "HW_REV_FIELD", "format": "b"},
                        8 : {'type_name': "PORT_NUM_FIELD", "format": "b"},
-                       9 : {'type_name': "PORT_SPEED_FIELD", "format": "i"},
+                       9 : {'type_name': "PORT_SPEED_FIELD", "format": ">i"},
                        10: {'type_name': "MANUFACTURER_VPD_FIELD", "format": "{}s"},
                        11: {'type_name': "CHSUM_FIELD", "format": ">I"}
                       }
@@ -172,7 +172,7 @@ def parse_fru_bin(data):
         if isinstance(val, str):
             val = val.split('\x00', 1)[0]
         elif 'I' in item_format:
-            val = hex(val).upper()
+            val =  "{0:#0{1}x}".format(val,10).upper()
         val = bin_decode(val)
         fru_dict['items'].append([item['type_name'], val])
         fru_dict['items_dict'][item['type_name']] = val
