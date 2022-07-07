@@ -737,6 +737,11 @@ if [ "$1" == "add" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
 			fi
 			echo $fw_ver > $fw_path/"$2"_fw_ver
+			# Special handling for Delta 2000 fan speed command
+			if [ "$cap" == "2000" ]; then
+				i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
+				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
+			fi
 		fi
 
 	fi
