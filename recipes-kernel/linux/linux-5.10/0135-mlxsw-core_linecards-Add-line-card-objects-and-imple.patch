@@ -747,7 +747,7 @@ index 000000000000..f1a1e5cf6a5f
 +	const u8 *data;
 +	size_t size;
 +	int err;
-+
++	return 0; /* Skip for non-upstream flow. */
 +	types_info = kzalloc(sizeof(*types_info), GFP_KERNEL);
 +	if (!types_info)
 +		return -ENOMEM;
