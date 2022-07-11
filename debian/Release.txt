@@ -1,4 +1,21 @@
 ================================================================================
+- V.7.0020.3001
+-Monday , 11 July 2022
+--------------------------------------------------------------------------------
+- Bug fixes
+    o  config 3 and NVlink patches wrongly done within single patch 
+       *Kernel 4.19: 
+       patches 4.19: 
+       		0158-platform-mellanox-Add-COME-board-revision-register.patch 
+		0159-platform-mellanox-Introduce-support-for-NVLink4-mana.patch        
+       *Kernel 5.10: 
+       patches 5.10: 
+		0163-platform-mellanox-Add-COME-board-revision-register.patch 
+		0164-platform-mellanox-Introduce-support-for-NVLink4-mana.patch 
+    o  attempt to find INI file causing error
+    o  SN2201: inconsistent label name of pca9555/7-0027 gpiochip
+    o  SN4800: LC_fru parser script wrongly parsing CRC32 read from fru, and wrongly parsing port speed    
+================================================================================
 - V.7.0020.3000
 -Sunday , 3 July 2022
 --------------------------------------------------------------------------------
