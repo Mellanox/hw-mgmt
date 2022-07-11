@@ -1,5 +1,24 @@
---- a/drivers/leds/leds-mlxreg.c	2022-04-25 14:44:47.161635632 +0300
-+++ b/drivers/leds/leds-mlxreg.c	2022-04-25 14:46:32.385351169 +0300
+From 3a322660dc123b613ec0f5c49be8770a3e4c570c Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Mon, 11 Jul 2022 12:51:27 +0300
+Subject: [PATCH] DS: leds: leds-mlxreg: Send udev event from leds-mlxreg
+ driver.
+
+Add sending udev event from leds-mlxreg driver in case of color change.
+This patch will not be accepted in upstream as it provides no regular flow.
+It's done as a workaround of SN2201 limitation, difference, and in order
+to save compatibility of NOS work with sysfs attributes.
+The patch should be taken to NOSs as exceptions to the upstream procedure.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/leds/leds-mlxreg.c | 29 +++++++++++++++++++++++++++--
+ 1 file changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
+index 099ff4be291d..6241a3407ec7 100644
+--- a/drivers/leds/leds-mlxreg.c
++++ b/drivers/leds/leds-mlxreg.c
 @@ -11,6 +11,7 @@
  #include <linux/of_device.h>
  #include <linux/platform_data/mlxreg.h>
@@ -8,7 +27,7 @@
  #include <linux/regmap.h>
  
  /* Codes for LEDs. */
-@@ -144,15 +145,39 @@
+@@ -144,15 +145,39 @@ mlxreg_led_get_hw(struct mlxreg_led_data *led_data)
  	return LED_OFF;
  }
  
@@ -50,3 +69,6 @@
  }
  
  static enum led_brightness
+-- 
+2.14.1
+
