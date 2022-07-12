@@ -199,9 +199,7 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-msn37xx_A1_connect_table=(	max11603 0x64 5 \
-			tmp102 0x49 7 \
-			tmp102 0x49 7 \
+msn37xx_A1_connect_table=(	tmp102 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
