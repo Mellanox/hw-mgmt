@@ -74,8 +74,8 @@ fi
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
-CURR_SENS_LABEL=(   "none" "iin\$|iin1"   "iout\$|iout1" "iout2")
-POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1" "pout2")
+CURR_SENS_LABEL=(   "none" "iin\$|iin1"   "iout\$|iout1\$" "iout2\$")
+POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1\$" "pout2\$")
 
 
 # Find sensor index which label matching to mask.
@@ -88,15 +88,21 @@ find_sensor_by_label()
 	path=$1
 	sens_type=$2
 	label_mask=$3
-	local i=1
 	FILES=$(find "$path"/"$sens_type"*label)
+	sensor_id_regex="$path"/"$sens_type""([0-9]+)_label"
 	for label_file in $FILES
 	do
-			curr_label=$(< "$label_file")
-			if [[ $curr_label =~ $label_mask ]]; then
-				return $i
+		curr_label=$(< "$label_file")
+		if [[ $curr_label =~ $label_mask ]]; then
+			# Extracting sensor number from label name like "curr7_label"
+			[[ $label_file =~ $sensor_id_regex ]]
+			if [ "${#BASH_REMATCH[@]}" != 2 ]; then
+			    # not matched
+			    return 0
+			else
+			    return "${BASH_REMATCH[1]}"
 			fi
-			i=$((i+1))
+		fi
 	done
 	# 0 means label by 'pattern' not found.
     return 0
