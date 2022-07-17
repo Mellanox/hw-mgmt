@@ -487,7 +487,6 @@ SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-man
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm watchdog %S %p"
 
 # QSFP
-SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{phys_port_name}!="", NAME="sf$attr{phys_port_name}"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:01", KERNEL=="eth*", NAME="sfp1"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:02", KERNEL=="eth*", NAME="sfp2"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:03", KERNEL=="eth*", NAME="sfp3"
@@ -616,6 +615,7 @@ SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:7d"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:7e", KERNEL=="eth*", NAME="sfp126"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:7f", KERNEL=="eth*", NAME="sfp127"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:80", KERNEL=="eth*", NAME="sfp128"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{phys_port_name}!="", PROGRAM="/usr/bin/hw-management-if-rename.sh sf$attr{phys_port_name} %S %p", NAME="%c"
 SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlxsw_minimal", RUN+="/usr/bin/hw-management-chassis-events.sh mv sfp %S %p"
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add cpld %S %p"
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm cpld %S %p"
