@@ -105,6 +105,7 @@ nv4_pci_id=22a3
 
 base_cpu_bus_offset=10
 connect_table=()
+named_busses=()
 
 #
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
@@ -378,6 +379,10 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x6c 13 voltmon6 )
 
 p2317_connect_table=(	24c512 0x51 8)
+
+# I2C busses naming.
+cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
+msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 
 ACTION=$1
 
@@ -709,6 +714,30 @@ add_i2c_dynamic_bus_dev_connection_table()
 	done
 
 	connect_table+=(${dynamic_i2cbus_connection_table[@]})
+}
+
+add_come_named_busses()
+{
+	local come_named_busses=()
+
+	case $cpu_type in
+	$CFL_CPU)
+		come_named_busses+=( ${cfl_come_named_busses[@]} )
+		;;
+	*)
+		exit 0
+		;;
+	esac
+
+	# $1 may contain come board bus offset.
+	if [ ! -z "$1" ]; then
+		local come_board_bus_offset=$1
+		for ((i=0; i<${#come_named_busses[@]}; i+=2)); do
+			come_named_busses[$i+1]=$(( come_named_busses[i+1]-base_cpu_bus_offset+come_board_bus_offset ))
+		done
+	fi
+
+	named_busses+=(${come_named_busses[@]})
 }
 
 start_mst_for_spc1_port_cpld()
@@ -1057,6 +1086,9 @@ connect_msn4700_msn4600_A1()
 	connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+	add_come_named_busses
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 msn47xx_specific()
@@ -1162,6 +1194,9 @@ mqm97xx_specific()
 				;;
 			*)
 				connect_table+=(${mqm97xx_base_connect_table[@]})
+				named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+				add_come_named_busses
+				echo -n "${named_busses[@]}" > $config_path/named_busses
 				;;
 		esac
 	else
