@@ -1207,7 +1207,7 @@ mqm9520_specific()
 	echo 2235 > $config_path/fan_min_speed
 	max_tachos=2
 	hotplug_fans=2
-	echo 4 > $config_path/cpld_num
+	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 }
 
