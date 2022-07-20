@@ -91,6 +91,7 @@ spc4_pci_id=cf80
 quantum2_pci_id=d2f2
 nv3_pci_id=1af1
 nv4_pci_id=22a3
+leakage_count=0
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -1191,6 +1192,7 @@ mqm9510_specific()
 	echo 2235 > $config_path/fan_min_speed
 	max_tachos=2
 	hotplug_fans=2
+	leakage_count=3
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
 }
@@ -1207,6 +1209,7 @@ mqm9520_specific()
 	echo 2235 > $config_path/fan_min_speed
 	max_tachos=2
 	hotplug_fans=2
+	leakage_count=8
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 }
@@ -1580,6 +1583,13 @@ create_event_files()
 			check_n_init $events_path/erot"$i"_ap 0
 		done
 	fi
+	if [ $leakage_count -ne 0 ]; then
+		for ((i=1; i<=leakage_count; i+=1)); do
+			check_n_init $events_path/leakage$i 0
+		done
+		check_n_init $events_path/leakage_rope 0
+	fi
+
 }
 
 enable_vpd_wp()
