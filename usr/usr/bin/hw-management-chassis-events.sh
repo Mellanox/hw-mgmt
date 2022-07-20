@@ -168,6 +168,55 @@ destroy_linecard_i2c_links()
 	rm -rf /dev/lc"$1"
 }
 
+create_main_i2c_links()
+{
+	local i2c_busdev_path="$1"
+
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $board_type in
+	VMOD0010)
+		case $sku in
+		HI122)
+			# busses from 0 to 17.
+			main_i2c_busses=( \
+			"none" "none" "asic" "none" "psu" "vr" "none" "ambient" "vpd" \
+			"none" "none" "none" "none" "none" "none" "come-vr-amb" "come-fru" "none" )
+			;;
+		*)
+			return
+			;;
+		esac
+		;;
+	*)
+		return
+		;;
+	esac
+
+	i2cbus_regex="i2c-([0-9]+)$"
+	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
+	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
+		return
+	else
+		i2cbus="${BASH_REMATCH[1]}"
+	fi
+
+	if [ ! -d /dev/main ]; then
+		mkdir /dev/main
+	fi
+
+	sym_name=${main_i2c_busses[$i2cbus]}
+	if [ "$sym_name" != "none" ] && [ ! -L /dev/main/"$sym_name" ]; then
+		ln -s /dev/i2c-"$i2cbus" /dev/main/"$sym_name"
+	fi
+}
+
+destroy_main_i2c_links()
+{
+	if [ -d /dev/main ]; then
+		rm -rf /dev/main
+	fi
+}
+
 find_linecard_match()
 {
 	local input_bus_num
@@ -1042,11 +1091,14 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "lc_topo" ]; then
 		log_info "I2C infrastucture for line card $3 is created."
 	fi
-
 	# Create i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
 		log_info "I2C bus $4 connected."
 		handle_i2cbus_dev_action $4 "add"
+	fi
+	# Create i2c links.
+	if [ "$2" == "i2c_link" ]; then
+		create_main_i2c_links "$4"
 	fi
 elif [ "$1" == "mv" ]; then
 	if [ "$2" == "sfp" ]; then
@@ -1277,14 +1329,17 @@ else
 			rm -rf "$hw_management_path"/lc"$linecard_num"
 		fi
 	fi
-	# Destroy line card i2c mux symbolic link infrastructure
+	# Destroy line card i2c mux symbolic link infrastructure.
 	if [ "$2" == "lc_topo" ]; then
 		destroy_linecard_i2c_links "$3"
 	fi
-
-	# Removed i2c bus.
+	# Remove i2c bus.
 	if [ "$2" == "i2c_bus" ]; then
 		log_info "I2C bus $4 removed."
 		handle_i2cbus_dev_action $4 "remove"
+	fi
+	# Removed i2c links.
+	if [ "$2" == "i2c_link" ]; then
+		destroy_main_i2c_links
 	fi
 fi

@@ -486,6 +486,10 @@ SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="remove", RUN+="/usr/bin/hw-manageme
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add watchdog %S %p"
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm watchdog %S %p"
 
+# I2C links on main board
+SUBSYSTEM=="i2c-dev", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add i2c_link %S %p"
+SUBSYSTEM=="i2c-deb", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm i2c_link %S %p"
+
 # QSFP
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:01", KERNEL=="eth*", NAME="sfp1"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="mlxsw_minimal", ATTR{address}=="*:02", KERNEL=="eth*", NAME="sfp2"
