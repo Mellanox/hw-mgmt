@@ -1375,7 +1375,7 @@ sn2201_specific()
 	hotplug_psus=2
 	echo 1 > $config_path/fan_dir_eeprom
 	echo 22000 > $config_path/fan_max_speed
-	echo 960 > $config_path/fan_min_speed
+	echo 2200 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
 	echo 2500 > $config_path/psu_fan_min
 	cpld2_ver=$(i2cget -f -y 1 0x3d 0x01)
