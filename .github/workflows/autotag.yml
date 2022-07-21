@@ -6,7 +6,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:    
+    steps:
+    - name: Check "update_version" label is set
+      id: check_pr_labels
+      uses: shioyang/check-pr-labels-on-push-action@v1.0.3
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        labels: '["update_version"]'
+
+    - name: See result
+      run: |
+        is_label_set=${{ steps.check_pr_labels.outputs.result }}
+        echo $is_label_set
+        if [ is_label_set == "false" ]; then exit 0; fi 
+        
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
