@@ -42,7 +42,7 @@ if [ "$board_type" == "VMOD0014" ]; then
 	for gpiochip in /sys/class/gpio/*; do
 		if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
 			gpiolabel=$(<"$gpiochip"/label)
-			if [ "$gpiolabel" == "7-0027" ]; then
+			if [ "$gpiolabel" == "7-0027" ] || [ "$gpiolabel" == "pca9555" ]; then
 				gpiobase=$(<"$gpiochip"/base)
 				break
 			fi

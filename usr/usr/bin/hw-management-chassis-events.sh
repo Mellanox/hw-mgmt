@@ -74,8 +74,9 @@ fi
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
 VOLTMON_SENS_LABEL=("none" "vin\$|vin1"   "vout\$|vout1" "vout2")
-CURR_SENS_LABEL=(   "none" "iout\$|iout1" "iout2"        "none")
-POWER_SENS_LABEL=(  "none" "pout\$|pout"  "pout2"        "none")
+CURR_SENS_LABEL=(   "none" "iin\$|iin1"   "iout\$|iout1\$" "iout2\$")
+POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1\$" "pout2\$")
+
 
 # Find sensor index which label matching to mask.
 # $1 - path to sensor in sysfs
@@ -87,15 +88,21 @@ find_sensor_by_label()
 	path=$1
 	sens_type=$2
 	label_mask=$3
-	local i=1
 	FILES=$(find "$path"/"$sens_type"*label)
+	sensor_id_regex="$path"/"$sens_type""([0-9]+)_label"
 	for label_file in $FILES
 	do
-			curr_label=$(< "$label_file")
-			if [[ $curr_label =~ $label_mask ]]; then
-				return $i
+		curr_label=$(< "$label_file")
+		if [[ $curr_label =~ $label_mask ]]; then
+			# Extracting sensor number from label name like "curr7_label"
+			[[ $label_file =~ $sensor_id_regex ]]
+			if [ "${#BASH_REMATCH[@]}" != 2 ]; then
+			    # not matched
+			    return 0
+			else
+			    return "${BASH_REMATCH[1]}"
 			fi
-			i=$((i+1))
+		fi
 	done
 	# 0 means label by 'pattern' not found.
     return 0
@@ -601,6 +608,60 @@ function get_i2c_voltmon_prefix()
 	echo "$voltmon_name"
 }
 
+function check_cpld_attrs_num()
+{
+   board=$(cat /sys/devices/virtual/dmi/id/board_name)
+   cpld_num=$(cat $config_path/cpld_num)
+   case "$board" in
+   VMOD0001|VMOD0003)
+       cpld_num=$((cpld_num-1))
+       ;;
+   *)
+       ;;
+   esac
+
+   return $cpld_num
+}
+
+function check_cpld_attrs()
+{
+    attrname="$1"
+    cpld_num="$2"
+    take=1
+
+    # Extracting the cpld number if the attribute starts with cpld<num>
+    num=`echo $attrname | grep -Po '^(cpld)\K\d+'`
+    # Seeing if the cpld index is valid for the platform
+    [[ ! -z "$num" ]] && [ $num -gt $cpld_num ] && take=0
+
+    return $take
+}
+
+handle_cpld_versions()
+{
+	CPLD3_VER_DEF="0"
+	cpld_num_loc="${1}"
+
+	for ((i=1; i<=cpld_num_loc; i+=1)); do
+		if [ -f $system_path/cpld"$i"_pn ]; then
+			cpld_pn=$(cat $system_path/cpld"$i"_pn)
+		fi
+		if [ -f $system_path/cpld"$i"_version ]; then
+			cpld_ver=$(cat $system_path/cpld"$i"_version)
+		fi
+		if [ -f $system_path/cpld"$i"_version_min ]; then
+			cpld_ver_min=$(cat $system_path/cpld"$i"_version_min)
+		fi
+		if [ -z "$str" ]; then
+			str=$(printf "CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+		else
+			str=$str$(printf "_CPLD%06d_REV%02d%02d" "$cpld_pn" "$cpld_ver" "$cpld_ver_min")
+		fi
+	done
+	echo "$str" > $system_path/cpld_base
+	echo "$str" > $system_path/cpld
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -705,26 +766,46 @@ if [ "$1" == "add" ]; then
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
-					if [ -f "$3""$4"/in"$sensor_id"_input ]; then
-						ln -sf "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-					fi
+					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
+
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						ln -sf "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
 						ln -sf "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					fi
 				fi
-				if [ -f "$3""$4"/curr"$i"_input ]; then
-					ln -sf "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
-				fi
-				if [ -f "$3""$4"/power"$i"_input ]; then
-					ln -sf "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
-				fi
-				if [ -f "$3""$4"/curr"$i"_alarm ]; then
-					ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-				fi
-				if [ -f "$3""$4"/power"$i"_alarm ]; then
-					ln -sf "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
+				sensor_type=$(< "$3""$4"/name)
+				if [ $sensor_type == "mp2975" ]; then
+					find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
+					sensor_id=$?
+					if [ ! $sensor_id -eq 0 ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
+						if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
+							ln -sf "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+						elif [ -f "$3""$4"/curr"$sensor_id"_crit_alarm ]; then
+							ln -sf "$3""$4"/curr"$sensor_id"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+						elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
+							ln -sf "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+						fi
+					fi
+
+					find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
+					sensor_id=$?
+					if [ ! $sensor_id -eq 0 ]; then
+						check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
+						check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path//"$prefix"_power"$i"_alarm
+					fi
+				else
+					check_n_link "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
+					check_n_link "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
+					check_n_link "$3""$4"/power"$i"_alarm $alarm_path//"$prefix"_power"$i"_alarm
+					if [ -f "$3""$4"/curr"$i"_alarm ]; then
+						ln -sf "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$i"_crit_alarm ]; then
+						ln -sf "$3""$4"/curr"$i"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$i"_max_alarm ]; then
+						ln -sf "$3""$4"/curr"$i"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					fi
 				fi
 			done
 			;;
@@ -780,17 +861,24 @@ if [ "$1" == "add" ]; then
 			linecard="$linecard_num"
 			;;
 		esac
-		# Allow to driver insertion off all the attributes.
+		# Allow insertion of all the attributes, but skip redundant cpld entries.
 		sleep 1
 		if [ -d "$3""$4" ]; then
+			local cpld_num
 			for attrpath in "$3""$4"/*; do
+				take=10
 				attrname=$(basename "${attrpath}")
+				check_cpld_attrs_num
+				cpld_num=$?
+				check_cpld_attrs "$attrname" "$cpld_num"
+				take=$?
 				if [ ! -d "$attrpath" ] && [ ! -L "$attrpath" ] &&
 				   [ "$attrname" != "uevent" ] &&
-				   [ "$attrname" != "name" ]; then
+				   [ "$attrname" != "name" ] && [ "$take" -ne 0 ] ; then
 					ln -sf "$3""$4"/"$attrname" $system_path/"$attrname"
 				fi
 			done
+			handle_cpld_versions "$cpld_num"
 		fi
 		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
 			if [ -L $thermal_path/fan"$i"_status ]; then

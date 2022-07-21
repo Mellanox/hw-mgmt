@@ -1,0 +1,86 @@
+From 242741f0b82c9e03bd8f024c85174b53b6ff33ef Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 6 Jul 2022 17:26:41 +0300
+Subject: [PATCH 2/8] platform: mellanox: Add COME board revision register
+X-NVConfidentiality: public
+
+Add to CPLD COME board configuration register for getting a board
+revision. The value of this register is pushed by hardware through
+GPIO pins.
+The purpose of it is to expose some minor BOM changes.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index a31dd0d2a..7cabc488e 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -160,6 +160,7 @@
+ #define MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET	0xfa
+ #define MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET	0xfb
+ #define MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET	0xfc
++#define MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET	0xfd
+ #define MLXPLAT_CPLD_LPC_IO_RANGE		0x100
+ #define MLXPLAT_CPLD_LPC_I2C_CH1_OFF		0xdb
+ #define MLXPLAT_CPLD_LPC_I2C_CH2_OFF		0xda
+@@ -3753,6 +3754,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.bit = GENMASK(7, 0),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "config3",
++		.reg = MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "ufm_version",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET,
+@@ -4231,6 +4238,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
+ 		.bit = GENMASK(7, 0),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "config3",
++		.reg = MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "ufm_version",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET,
+@@ -4428,6 +4441,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_nvlink_blade_regs_io_data[] = {
+ 		.bit = GENMASK(7, 0),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "config3",
++		.reg = MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "ufm_version",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET,
+@@ -5119,6 +5138,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
+ 		return true;
+ 	}
+@@ -5256,6 +5276,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_SLOT_QTY_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
+ 		return true;
+ 	}
+-- 
+2.14.1
+

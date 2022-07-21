@@ -85,11 +85,6 @@ lm_sensors_configs_path="/etc/hw-management-sensors"
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
-pn_sanity_offset=62
-fan_dir_pn_offset=11
-# 46 - F, 52 - R
-fan_direction_exhaust=46
-fan_direction_intake=52
 # ASIC PCIe Ids.
 spc3_pci_id=cf70
 spc4_pci_id=cf80
@@ -204,9 +199,7 @@ msn37xx_secured_connect_table=(    max11603 0x64 5 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
-msn37xx_A1_connect_table=(	max11603 0x64 5 \
-			tmp102 0x49 7 \
-			tmp102 0x49 7 \
+msn37xx_A1_connect_table=(	tmp102 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
@@ -628,23 +621,6 @@ set_jtag_gpio()
 	fi
 }
 
-get_fixed_fans_direction()
-{
-	timeout 5 bash -c 'until [ -L /var/run/hw-management/eeprom/vpd_info ]; do sleep 0.2; done'
-	sanity_offset=$(grep MLNX $eeprom_path/vpd_info -b -a -o | cut -f1 -d:)
-	fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
-	fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/vpd_info)
-	case $fan_direction in
-	$fan_direction_exhaust)
-		echo 1 > $config_path/fixed_fans_dir
-		;;
-	$fan_direction_intake)
-		echo 0 > $config_path/fixed_fans_dir
-		;;
-	*)
-		;;
-	esac
-}
 
 # $1 - cpu bus offset.
 add_cpu_board_to_connection_table()
@@ -735,6 +711,41 @@ add_i2c_dynamic_bus_dev_connection_table()
 	connect_table+=(${dynamic_i2cbus_connection_table[@]})
 }
 
+start_mst_for_spc1_port_cpld()
+{
+	if [ ! -d /dev/mst ]; then
+		lsmod | grep mst_pci >/dev/null 2>&1
+		if [  $? -ne 0 ]; then
+			mst start  >/dev/null 2>&1
+		fi
+	fi
+}
+
+set_spc1_port_cpld()
+{
+	cpld=$(< $config_path/cpld_port)
+	if [ $cpld == "cpld3" ] && [ ! -f $system_path/cpld3_version ]; then
+		ver_dec=$CPLD3_VER_DEF
+		# check if mlxreg exists
+		if [ -x "$(command -v mlxreg)" ]; then
+			if [ ! -d /dev/mst ]; then
+				lsmod | grep mst_pci >/dev/null 2>&1
+				if [  $? -ne 0 ]; then
+					mst start  >/dev/null 2>&1
+					sleep 2
+				fi
+			fi
+			mt_dev=$(find /dev/mst -name *00_pciconf0)
+			cmd='mlxreg --reg_name MSCI  -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
+			ver_hex=$(eval $cmd)
+			if [ ! -z "$ver_hex" ]; then
+				ver_dec=$(printf "%d" $ver_hex)
+			fi
+		fi
+		echo "$ver_dec" > $system_path/cpld3_version
+	fi
+}
+
 msn274x_specific()
 {
 	connect_table+=(${msn2740_base_connect_table[@]})
@@ -775,6 +786,7 @@ msn21xx_specific()
 
 msn24xx_specific()
 {
+	start_mst_for_spc1_port_cpld
 	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
@@ -801,10 +813,13 @@ msn24xx_specific()
 	echo cpld3 > $config_path/cpld_port
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
+	set_spc1_port_cpld
+	cpld=$(< $config_path/cpld_port)
 }
 
 msn27xx_msb_msx_specific()
 {
+	start_mst_for_spc1_port_cpld
 	connect_table+=(${msn2700_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
@@ -838,6 +853,7 @@ msn27xx_msb_msx_specific()
 	esac
 
 	echo cpld3 > $config_path/cpld_port
+	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
@@ -1211,7 +1227,7 @@ mqm9520_specific()
 	echo 2235 > $config_path/fan_min_speed
 	max_tachos=2
 	hotplug_fans=2
-	echo 4 > $config_path/cpld_num
+	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 }
 
@@ -1395,7 +1411,7 @@ sn2201_specific()
 	hotplug_psus=2
 	echo 1 > $config_path/fan_dir_eeprom
 	echo 22000 > $config_path/fan_max_speed
-	echo 960 > $config_path/fan_min_speed
+	echo 2200 > $config_path/fan_min_speed
 	echo 16000 > $config_path/psu_fan_max
 	echo 2500 > $config_path/psu_fan_min
 	cpld2_ver=$(i2cget -f -y 1 0x3d 0x01)
@@ -1896,15 +1912,7 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
-	if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
-		get_fixed_fans_direction
-		if [ -f $config_path/fixed_fans_dir ]; then
-			for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
-				cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
-				echo 1 > $thermal_path/fan"$i"_status
-			done
-		fi
-	fi
+	log_info "Init completed."
 }
 
 do_stop()
@@ -1942,6 +1950,18 @@ do_chip_up_down()
 		i2c_asic_addr_name=0037
 		i2c_asic_addr=0x37
 		i2c_asic_bus_default=3
+		;;
+	VMOD0010)
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+		HI140|HI141)
+			# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+			i2c_asic_addr_name=0037
+			i2c_asic_addr=0x37
+			;;
+		*)
+			;;
+		esac
 		;;
 	*)
 		;;
