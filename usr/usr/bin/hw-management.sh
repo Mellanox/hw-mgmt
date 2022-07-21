@@ -908,7 +908,7 @@ mqmxxx_msn37x_msn34x_specific()
 {
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 
-	# Just in case tha SMBIOS devtree wasn't created
+	# Just in case that SMBIOS devtree wasn't created
 	if [ ! -e "$devtree_file" ]; then
 		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 		case $sku in
@@ -1203,9 +1203,11 @@ mqm97xx_specific()
 mqm9510_specific()
 {
 	local cpu_bus_offset=18
-	connect_table+=(${mqm9510_base_connect_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
-	add_cpu_board_to_connection_table $cpu_bus_offset
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${mqm9510_base_connect_table[@]})
+		add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
@@ -1218,9 +1220,11 @@ mqm9510_specific()
 mqm9520_specific()
 {
 	local cpu_bus_offset=18
-	connect_table+=(${mqm9520_base_connect_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
-	add_cpu_board_to_connection_table $cpu_bus_offset
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${mqm9520_base_connect_table[@]})
+		add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
 	i2c_asic2_bus_default=10
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
@@ -1670,9 +1674,10 @@ connect_platform()
 		declare -a connect_table=($(<"$devtree_file"))
 		# New connect table contains also device link name, e.g., fan_amb
 		dev_skip=4
-local arr_len=${#connect_table[@]}
-arr_len=$((arr_len/4))
-log_info "DBG: SMBIOS: connect platform table, number of components ${arr_len}"
+		# DBG: check number of components
+		# local arr_len=${#connect_table[@]}
+		# arr_len=$((arr_len/4))
+		# log_info "DBG: SMBIOS: connect platform table, number of components ${arr_len}"
 	else
 		dev_skip=3
 	fi
@@ -1680,12 +1685,12 @@ log_info "DBG: SMBIOS: connect platform table, number of components ${arr_len}"
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_skip)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
-# TMP for comparison
-if [ -e "$devtree_file" ]; then
-	log_info "DBG: SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
-else
-	log_info "DBG: NOT SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
-fi
+		# DBG: for comparison
+		# if [ -e "$devtree_file" ]; then
+		#	log_info "DBG: SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
+		# else
+		#	log_info "DBG: NOT SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
+		# fi
 	done
 }
 
