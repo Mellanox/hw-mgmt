@@ -91,6 +91,7 @@ spc4_pci_id=cf80
 quantum2_pci_id=d2f2
 nv3_pci_id=1af1
 nv4_pci_id=22a3
+leakage_count=0
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -104,7 +105,9 @@ nv4_pci_id=22a3
 # configured as modules.
 
 base_cpu_bus_offset=10
+ndr_cpu_bus_offset=18
 connect_table=()
+named_busses=()
 
 #
 # Ivybridge and Rangeley CPU mostly used on SPC1 systems.
@@ -378,6 +381,12 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x6c 13 voltmon6 )
 
 p2317_connect_table=(	24c512 0x51 8)
+
+# I2C busses naming.
+cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
+msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
+mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
+mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 
 ACTION=$1
 
@@ -709,6 +718,30 @@ add_i2c_dynamic_bus_dev_connection_table()
 	done
 
 	connect_table+=(${dynamic_i2cbus_connection_table[@]})
+}
+
+add_come_named_busses()
+{
+	local come_named_busses=()
+
+	case $cpu_type in
+	$CFL_CPU)
+		come_named_busses+=( ${cfl_come_named_busses[@]} )
+		;;
+	*)
+		exit 0
+		;;
+	esac
+
+	# $1 may contain come board bus offset.
+	if [ ! -z "$1" ]; then
+		local come_board_bus_offset=$1
+		for ((i=0; i<${#come_named_busses[@]}; i+=2)); do
+			come_named_busses[$i+1]=$(( come_named_busses[i+1]-base_cpu_bus_offset+come_board_bus_offset ))
+		done
+	fi
+
+	named_busses+=(${come_named_busses[@]})
 }
 
 start_mst_for_spc1_port_cpld()
@@ -1060,6 +1093,9 @@ connect_msn4700_msn4600_A1()
 	connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+	add_come_named_busses
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 msn47xx_specific()
@@ -1159,6 +1195,7 @@ mqm97xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 
 	if [ -e "$devtree_file" ]; then
+		# ToDo. Add differentiation of sensors file.
 		# connect_table will be initialized at later step from devtree file
 		lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 	else
@@ -1181,8 +1218,11 @@ mqm97xx_specific()
 					;;
 				*)
 					connect_table+=(${mqm97xx_base_connect_table[@]})
+					named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+					add_come_named_busses
+					echo -n "${named_busses[@]}" > $config_path/named_busses
 					;;
-			esac
+				esac
 		else
 			connect_table+=(${mqm97xx_base_connect_table[@]})
 		fi
@@ -1213,8 +1253,12 @@ mqm9510_specific()
 	echo 2235 > $config_path/fan_min_speed
 	max_tachos=2
 	hotplug_fans=2
+	leakage_count=3
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
+	named_busses+=(${mqm9510_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 mqm9520_specific()
@@ -1231,8 +1275,12 @@ mqm9520_specific()
 	echo 2235 > $config_path/fan_min_speed
 	max_tachos=2
 	hotplug_fans=2
+	leakage_count=8
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
+	named_busses+=(${mqm9520_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 mqm87xx_rev1_specific()
@@ -1603,6 +1651,13 @@ create_event_files()
 			check_n_init $events_path/erot"$i"_ap 0
 		done
 	fi
+	if [ $leakage_count -ne 0 ]; then
+		for ((i=1; i<=leakage_count; i+=1)); do
+			check_n_init $events_path/leakage$i 0
+		done
+		check_n_init $events_path/leakage_rope 0
+	fi
+
 }
 
 enable_vpd_wp()
@@ -1662,8 +1717,6 @@ set_config_data()
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 }
-
-
 
 connect_platform()
 {

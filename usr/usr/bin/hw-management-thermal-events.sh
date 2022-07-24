@@ -42,6 +42,7 @@ max_psus=4
 max_pwm=4
 max_lcs=8
 max_erots=2
+max_leakage=8
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
@@ -526,6 +527,22 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		done
+		for ((i=1; i<=max_leakage; i+=1)); do
+			if [ -f "$3""$4"/leakage$i ]; then
+				ln -sf "$3""$4"/leakage$i $system_path/leakage"$i"_status
+				event=$(< $system_path/leakage"$i"_status)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/leakage"$i"
+				fi
+			fi
+		done
+		if [ -f "$3""$4"/leakage_rope ]; then
+			ln -sf "$3""$4"/leakage_rope $system_path/leakage_rope_status
+			event=$(< $system_path/leakage_rope_status)
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $events_path/leakage_rope
+			fi
+		fi
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
@@ -1032,6 +1049,10 @@ else
 			check_n_unlink $system_path/erot"$i"_ap
 			check_n_unlink $system_path/erot"$i"_error
 		done
+		for ((i=1; i<=max_leakage; i+=1)); do
+			check_n_unlink $system_path/leakage"$i"_status
+		done
+		check_n_unlink $system_path/leakage_rope_status
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi

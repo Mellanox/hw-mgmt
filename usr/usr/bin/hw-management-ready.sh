@@ -58,7 +58,7 @@ VMOD0014)
 	fi
 	;;
 *)
-	if [ ! -d [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; then
+	if [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; then
 		timeout 180 bash -c 'until [ -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
 	fi
 	;;
