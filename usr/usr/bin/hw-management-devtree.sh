@@ -269,6 +269,7 @@ devtr_check_board_components()
 	local comp_arr=($(echo "$board_str" | fold -w2))
 
 	local board_key=${comp_arr[0]:0:1}
+	# ToDo: add finding of board number
 	# DBG: Show board name
 	# local board_name=${board_arr[$board_key]}
 	# log_info "DBG: Board: ${board_name}"
@@ -362,14 +363,25 @@ devtr_check_board_components()
 
 devtr_check_smbios_device_description()
 {
-	# 1st of all check if system supports this mechanism
+	system_ver_str=$(<$system_ver_file)
+	# Check if system supports this mechanism
 	if ! devtr_check_supported_system_init_alternatives ; then
 		return 1
 	fi
 
+	# Check if the call was done from standalone debug script with simualtion variables
+	if [ $# -eq 1 ]; then
+		system_ver_str="$1"
+	elif [ $# -eq 5 ]; then
+		system_ver_str="$1"
+		board_type="$2"
+		sku="$3"
+		devtree_file="$4"
+		cpu_type="$5"
+	fi
+
 	devtr_clean
 
-	system_ver_str=$(<$system_ver_file)
 	# log_info "DBG: SMBios system version string: ${system_ver_str}"
 	devtr_validate_system_ver_str
 	rc=$?
