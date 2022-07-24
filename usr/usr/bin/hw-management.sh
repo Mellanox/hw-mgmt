@@ -105,6 +105,7 @@ leakage_count=0
 # configured as modules.
 
 base_cpu_bus_offset=10
+ndr_cpu_bus_offset=18
 connect_table=()
 named_busses=()
 
@@ -384,6 +385,8 @@ p2317_connect_table=(	24c512 0x51 8)
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
+mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
+mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 
 ACTION=$1
 
@@ -1230,6 +1233,9 @@ mqm9510_specific()
 	leakage_count=3
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
+	named_busses+=(${mqm9510_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 mqm9520_specific()
@@ -1247,6 +1253,9 @@ mqm9520_specific()
 	leakage_count=8
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
+	named_busses+=(${mqm9520_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 mqm87xx_rev1_specific()
