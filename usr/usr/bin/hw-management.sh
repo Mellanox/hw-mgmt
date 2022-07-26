@@ -354,7 +354,7 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	24c32 0x51 45)
 
 mqm9510_base_connect_table=( \
-	tmp102 0x4a 7 \
+	adt75  0x4a 7 \
 	24c512 0x51 8)
 
 mqm9510_dynamic_i2c_bus_connect_table=( \
@@ -371,8 +371,8 @@ mqm9520_base_connect_table=( \
 	24c512 0x51 8 )
 
 mqm9520_dynamic_i2c_bus_connect_table=( \
-	tmp102 0x4a 7  tmpsens1 \
-	tmp102 0x4a 15 tmpsens2 \
+	adt75  0x4a 7  port_amb1 \
+	adt75  0x4a 15 port_amb2 \
 	mp2888 0x66 5  voltmon1 \
 	mp2975 0x68 5  voltmon2 \
 	mp2975 0x6c 5  voltmon3 \
