@@ -393,6 +393,13 @@ if [ "$1" == "add" ]; then
 			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
 				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
+			# Disable kernel thermal algorthm on liquid cooled systems
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI140" ]] || [[ $sku == "HI141" ]]; then
+				if [ -x /usr/bin/hw-management-liquid-cooling.sh ]; then
+					/usr/bin/hw-management-liquid-cooling.sh $tpath/"$zonetype"
+				fi
+			fi
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
