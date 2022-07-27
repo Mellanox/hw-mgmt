@@ -35,6 +35,8 @@
 
 system_ver_file=/sys/devices/virtual/dmi/id/product_version
 sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+devtr_verb_display=0
+devtree_codes_file=
 
 # Declare common associative arrays for SMBIOS System Version parsing
 declare -A board_arr=(["C"]="comex" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board")
@@ -123,6 +125,7 @@ declare -A mqm9510_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_6"]="mp2975 0x68 6 voltmon7" \
 				 ["mp2975_7"]="mp2975 0x6c 6 voltmon8" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
@@ -130,9 +133,11 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["mp2975_2"]="mp2975 0x6c 5 voltmon3" \
 				 ["mp2888_3"]="mp2888 0x66 13 voltmon4" \
 				 ["mp2975_4"]="mp2975 0x68 13 voltmon5" \
-				 ["mp2975_7"]="mp2975 0x6c 13 voltmon6" \
+				 ["mp2975_5"]="mp2975 0x6c 13 voltmon6" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb1" \
+				 ["adt75_0"]="adt75 0x4a 7 port_amb1" \
 				 ["tmp102_1"]="tmp102 0x4a 15 port_amb2" \
+				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board
@@ -155,7 +160,9 @@ devtr_validate_system_ver_str()
 
 	substr_len=${#system_ver_arr[0]}
 	if [[ ! ${system_ver_arr[0]} =~ V[0-9] ]] || [ "$substr_len" -ne 2 ]; then
-		# log_info "DBG: SMBIOS BOM string is not correct"
+		if [ $devtr_verb_display -eq 1 ]; then
+			log_info "DBG: SMBIOS BOM string is not correct"
+		fi
 		return 1
 	fi
 
@@ -168,7 +175,7 @@ devtr_validate_system_ver_str()
 	# Currenly just one encode mechanism version exist
 	encode_ver=${system_ver_arr[0]:1:1}
 	if [ "$encode_ver" -ne 0 ]; then
-		log_err "Unsupported encode version."
+		log_err "Unsupported SMBios BOM encode version."
 		return 2
 	fi
 
@@ -179,6 +186,9 @@ devtr_clean()
 {
 	if [ -e "$devtree_file" ]; then
 		rm -f "$devtree_file"
+	fi
+	if [ -e "$devtree_codes_file" ]; then
+		rm -f "$devtree_codes_file"
 	fi
 }
 
@@ -269,10 +279,11 @@ devtr_check_board_components()
 	local comp_arr=($(echo "$board_str" | fold -w2))
 
 	local board_key=${comp_arr[0]:0:1}
-	# ToDo: add finding of board number
-	# DBG: Show board name
-	# local board_name=${board_arr[$board_key]}
-	# log_info "DBG: Board: ${board_name}"
+	# Currently quantity board numbers isn't checked.
+	if [ $devtr_verb_display -eq 1 ]; then
+		local board_name=${board_arr[$board_key]}
+		log_info "DBG: Board: ${board_name}"
+	fi
 
 	case $board_key in
 		C)
@@ -291,7 +302,7 @@ devtr_check_board_components()
 			done
 			;;
 		*)
-			log_err "Incorrect encoded board. Board key ${board_key}"
+			log_err "Incorrect SMBios BOM encoded board. Board key ${board_key}"
 			return 1
 			;;
 	esac
@@ -316,44 +327,59 @@ devtr_check_board_components()
 				component_name=${thermal_arr[$component_key]}
 				alternative_key="${component_name}_${t_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				t_cnt=$((t_cnt+1))
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
 				;;
 			R)
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				r_cnt=$((r_cnt+1))
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
 				;;
 			E)
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				e_cnt=$((e_cnt+1))
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
 				;;
 			A)
 				component_name=${a2d_arr[$component_key]}
 				alternative_key="${component_name}_${a_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				a_cnt=$((a_cnt+1))
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
 				;;
 			P)
 				component_name=${pressure_arr[$component_key]}
 				alternative_key="${component_name}_${p_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
-				# log_info "DBG: ${category} component - ${alternative_comp}"
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				p_cnt=$((p_cnt+1))
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
 				;;
 			*)
-				log_err "Incorrect encoded category. Category key ${category_key}"
+				log_err "Incorrect SMBios BOM encoded category. Category key ${category_key}"
 				return 1
 				;;
 		esac
@@ -370,19 +396,25 @@ devtr_check_smbios_device_description()
 	fi
 
 	# Check if the call was done from standalone debug script with simualtion variables
-	if [ $# -eq 1 ]; then
+	if [ $# -eq 3 ]; then
 		system_ver_str="$1"
-	elif [ $# -eq 5 ]; then
+		devtr_verb_display=$2
+		devtree_codes_file="$3"
+	elif [ $# -eq 7 ]; then
 		system_ver_str="$1"
 		board_type="$2"
 		sku="$3"
 		devtree_file="$4"
 		cpu_type="$5"
+		devtr_verb_display=$6
+		devtree_codes_file="$7"
 	fi
 
 	devtr_clean
 
-	# log_info "DBG: SMBios system version string: ${system_ver_str}"
+	if [ $devtr_verb_display -eq 1 ]; then
+		log_info "DBG: SMBios system version string: ${system_ver_str}"
+	fi
 	devtr_validate_system_ver_str
 	rc=$?
 	if [ $rc -ne 0 ]; then
