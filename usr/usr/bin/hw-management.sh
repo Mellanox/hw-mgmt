@@ -1892,10 +1892,10 @@ do_start()
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
+	set_config_data
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
-	set_config_data
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
