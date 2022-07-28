@@ -1228,6 +1228,8 @@ mqm9510_specific()
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 32000 > $config_path/psu_fan_max
+	echo 9000 > $config_path/psu_fan_min
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=3
@@ -1248,6 +1250,8 @@ mqm9520_specific()
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 32000 > $config_path/psu_fan_max
+	echo 9000 > $config_path/psu_fan_min
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=8
