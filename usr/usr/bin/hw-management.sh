@@ -354,7 +354,7 @@ msn4800_base_connect_table=( mp2975 0x62 5 \
 	24c32 0x51 45)
 
 mqm9510_base_connect_table=( \
-	tmp102 0x4a 7 \
+	adt75  0x4a 7 \
 	24c512 0x51 8)
 
 mqm9510_dynamic_i2c_bus_connect_table=( \
@@ -371,8 +371,8 @@ mqm9520_base_connect_table=( \
 	24c512 0x51 8 )
 
 mqm9520_dynamic_i2c_bus_connect_table=( \
-	tmp102 0x4a 7  tmpsens1 \
-	tmp102 0x4a 15 tmpsens2 \
+	adt75  0x4a 7  port_amb1 \
+	adt75  0x4a 15 port_amb2 \
 	mp2888 0x66 5  voltmon1 \
 	mp2975 0x68 5  voltmon2 \
 	mp2975 0x6c 5  voltmon3 \
@@ -1251,6 +1251,8 @@ mqm9510_specific()
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 32000 > $config_path/psu_fan_max
+	echo 9000 > $config_path/psu_fan_min
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=3
@@ -1273,6 +1275,8 @@ mqm9520_specific()
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
+	echo 32000 > $config_path/psu_fan_max
+	echo 9000 > $config_path/psu_fan_min
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=8
@@ -1940,10 +1944,10 @@ do_start()
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
+	set_config_data
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
-	set_config_data
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
@@ -2003,26 +2007,38 @@ do_chip_up_down()
 	fi
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
-	VMOD0011)
-		# Chip up / down operations are to be performed for ASIC virtual address 0x37.
-		i2c_asic_addr_name=0037
-		i2c_asic_addr=0x37
-		i2c_asic_bus_default=3
-		;;
-	VMOD0010)
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		case $sku in
-		HI140|HI141)
+		VMOD0005)
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			case $sku in
+				HI146)
+					# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+					i2c_asic_addr_name=0037
+					i2c_asic_addr=0x37
+					;;
+				*)
+					;;
+			esac
+			;;
+		VMOD0010)
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			case $sku in
+				HI140|HI141)
+					# Chip up / down operations are to be performed for ASIC virtual address 0x37.
+					i2c_asic_addr_name=0037
+					i2c_asic_addr=0x37
+					;;
+				*)
+					;;
+			esac
+			;;
+		VMOD0011)
 			# Chip up / down operations are to be performed for ASIC virtual address 0x37.
 			i2c_asic_addr_name=0037
 			i2c_asic_addr=0x37
+			i2c_asic_bus_default=3
 			;;
 		*)
 			;;
-		esac
-		;;
-	*)
-		;;
 	esac
 
 	map_asic_pci_to_i2c_bus $pci_bus

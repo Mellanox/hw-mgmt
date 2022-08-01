@@ -66,8 +66,7 @@ new file mode 100644
 index 000000000..3f98bdcd2
 --- /dev/null
 +++ b/drivers/hwmon/emc2305.c
-
-@@ -0,0 +1,523 @@
+@@ -0,0 +1,522 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Hardware monitoring driver for EMC2305 fan controller
@@ -590,7 +589,5 @@ index 000000000..3f98bdcd2
 +MODULE_AUTHOR("Claud Chang <claud.chang@deltaww.com>");
 +MODULE_DESCRIPTION("SMSC EMC2305 fan controller driver");
 +MODULE_LICENSE("GPL");
-+
 --
 2.20.1
-
