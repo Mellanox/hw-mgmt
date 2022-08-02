@@ -536,16 +536,16 @@ if [ "$1" == "add" ]; then
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
 			if [ -f "$3""$4"/leakage$i ]; then
-				ln -sf "$3""$4"/leakage$i $system_path/leakage"$i"_status
-				event=$(< $system_path/leakage"$i"_status)
+				ln -sf "$3""$4"/leakage$i $system_path/leakage"$i"
+				event=$(< $system_path/leakage"$i")
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/leakage"$i"
 				fi
 			fi
 		done
 		if [ -f "$3""$4"/leakage_rope ]; then
-			ln -sf "$3""$4"/leakage_rope $system_path/leakage_rope_status
-			event=$(< $system_path/leakage_rope_status)
+			ln -sf "$3""$4"/leakage_rope $system_path/leakage_rope
+			event=$(< $system_path/leakage_rope)
 			if [ "$event" -eq 1 ]; then
 				echo 1 > $events_path/leakage_rope
 			fi
@@ -1057,9 +1057,9 @@ else
 			check_n_unlink $system_path/erot"$i"_error
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
-			check_n_unlink $system_path/leakage"$i"_status
+			check_n_unlink $system_path/leakage"$i"
 		done
-		check_n_unlink $system_path/leakage_rope_status
+		check_n_unlink $system_path/leakage_rope
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
