@@ -941,24 +941,21 @@ mqmxxx_msn37x_msn34x_specific()
 {
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 
-	# Just in case that SMBIOS devtree wasn't created
-	if [ ! -e "$devtree_file" ]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		case $sku in
-			HI136)
-				# msn3700C-S
-				connect_table+=(${msn37xx_secured_connect_table[@]})
-			;;
-			HI112|HI116)
-				# msn3700/msn3700C
-				connect_msn3700
-			;;
-			*)
-				connect_table+=(${mqm8700_base_connect_table[@]})
-			;;
-		esac
-		add_cpu_board_to_connection_table
-	fi
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+		HI136)
+			# msn3700C-S
+			connect_table+=(${msn37xx_secured_connect_table[@]})
+		;;
+		HI112|HI116)
+			# msn3700/msn3700C
+			connect_msn3700
+		;;
+		*)
+			connect_table+=(${mqm8700_base_connect_table[@]})
+		;;
+	esac
+	add_cpu_board_to_connection_table
 
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
@@ -1100,7 +1097,9 @@ connect_msn4700_msn4600_A1()
 
 msn47xx_specific()
 {
-	if [ ! -e "$devtree_file" ]; then
+	if [ -e "$devtree_file" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	else
 		regio_path=$(find_regio_sysfs_path)
 		res=$?
 		if [ $res -eq 0 ]; then
@@ -1116,10 +1115,6 @@ msn47xx_specific()
 		else
 			connect_msn4700_msn4600
 		fi
-	else
-		# ToDo. Add differentiation of sensors file.
-		# lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
-		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	fi
 
 	thermal_type=$thermal_type_t10
@@ -1133,7 +1128,9 @@ msn47xx_specific()
 
 msn46xx_specific()
 {
-	if [ ! -e "$devtree_file" ]; then
+	if [ -e "$devtree_file" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	else
 		regio_path=$(find_regio_sysfs_path)
 		res=$?
 		if [ $res -eq 0 ]; then
@@ -1149,10 +1146,6 @@ msn46xx_specific()
 		else
 			connect_msn4700_msn4600
 		fi
-	else
-		# ToDo. Add differentiation of sensors file.
-		# lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
-		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	fi
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -1195,8 +1188,6 @@ mqm97xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 
 	if [ -e "$devtree_file" ]; then
-		# ToDo. Add differentiation of sensors file.
-		# connect_table will be initialized at later step from devtree file
 		lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 	else
 		regio_path=$(find_regio_sysfs_path)
@@ -1289,8 +1280,10 @@ mqm9520_specific()
 
 mqm87xx_rev1_specific()
 {
-	connect_table+=(${mqm8700_rev1_base_connect_table[@]})
-	add_cpu_board_to_connection_table
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${mqm8700_rev1_base_connect_table[@]})
+		add_cpu_board_to_connection_table
+	fi
 
 	thermal_type=$thermal_type_t5
 	max_tachos=12
@@ -1731,10 +1724,6 @@ connect_platform()
 		declare -a connect_table=($(<"$devtree_file"))
 		# New connect table contains also device link name, e.g., fan_amb
 		dev_skip=4
-		# DBG: check number of components
-		# local arr_len=${#connect_table[@]}
-		# arr_len=$((arr_len/4))
-		# log_info "DBG: SMBIOS: connect platform table, number of components ${arr_len}"
 	else
 		dev_skip=3
 	fi
@@ -1742,12 +1731,6 @@ connect_platform()
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_skip)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
-		# DBG: for comparison
-		# if [ -e "$devtree_file" ]; then
-		#	log_info "DBG: SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
-		# else
-		#	log_info "DBG: NOT SMBIOS: i=${i} connected_device ${connect_table[i]} ${connect_table[i+1]} ${connect_table[i+2]}"
-		# fi
 	done
 }
 

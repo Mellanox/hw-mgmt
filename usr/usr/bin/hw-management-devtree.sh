@@ -31,8 +31,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# ToDo: Move default conenction separate bsp file, e.g. hw-management-layout. They will be used in case of SMBios error.
-
 system_ver_file=/sys/devices/virtual/dmi/id/product_version
 sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 devtr_verb_display=0
@@ -158,17 +156,21 @@ devtr_validate_system_ver_str()
 	unset IFS
 	local i=0
 
+# Don't report error in 2 first checks as theoretically it can be a case
+# of not customized/old SMBIOS field. Output is just in debug mode.
 	substr_len=${#system_ver_arr[0]}
 	if [[ ! ${system_ver_arr[0]} =~ V[0-9] ]] || [ "$substr_len" -ne 2 ]; then
 		if [ $devtr_verb_display -eq 1 ]; then
-			log_info "DBG: SMBIOS BOM string is not correct"
+			log_info "DBG: SMBIOS BOM string is not correct. Problem in Version part: ${system_ver_arr[0]}"
 		fi
 		return 1
 	fi
-
+	
 	arr_len=${#system_ver_arr[@]}
 	if [ "$arr_len" -lt 2 ]; then
-		# log_info "DBG: SMBIOS BOM string is not correct"
+		if [ $devtr_verb_display -eq 1 ]; then
+			log_info "DBG: SMBIOS BOM string is not correct. Problem in number of string components: ${arr_len}"
+		fi
 		return 1
 	fi
 
@@ -194,7 +196,7 @@ devtr_clean()
 
 # Check if system has SMBios BOM changes mechanism support.
 # If yes, init appropriate associative arrays.
-# Jaguar, Anaconda, Leopard are added just for debug.
+# Jaguar, Leopard, Gorilla are added just for debug.
 # This mechanism is enabled on new systems starting from Marlin.
 devtr_check_supported_system_init_alternatives()
 {
@@ -221,11 +223,13 @@ devtr_check_supported_system_init_alternatives()
 						swb_alternatives["$key"]="${mqm8700_alternatives["$key"]}"
 					done
 					;;
-				HI112|HI116|HI136)	# Anaconda
-					for key in "${!msn3700_alternatives[@]}"; do
-						swb_alternatives["$key"]="${msn3700_alternatives["$key"]}"
-					done
-					;;
+# Anaconda was removed even in debug mode as their sensors.conf variants can't be normally merged.
+# Code left meantime commented.
+#				HI112|HI116|HI136)	# Anaconda
+#					for key in "${!msn3700_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${msn3700_alternatives["$key"]}"
+#					done
+#					;;
 				*)
 					return 1
 					;;
