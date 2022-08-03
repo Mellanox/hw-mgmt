@@ -1962,7 +1962,15 @@ do_start()
 
 do_stop()
 {
-	check_system
+	check_cpu_type
+	# There is no need to perform extra work of check_system during
+	# hw-management stop in case of devtree exist. Directly init connect_table.
+	if [ -e "$devtree_file" ]; then
+		unset connect_table
+		declare -a connect_table=($(<"$devtree_file"))
+	else
+		check_system
+	fi
 	disconnect_platform
 	set_jtag_gpio "unexport"
 	rm -fR /var/run/hw-management
