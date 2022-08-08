@@ -830,10 +830,11 @@ if [ "$1" == "add" ]; then
 					# Make links only to 1st sensor - Composite temperature.
 					# Normaslized composite temperature values are taken to thermal management.
 					if [ "$i" -eq 1 ]; then
-						ln -sf "$3""$4"/temp"$i"_alarm "$thermal_path"/"$dev_name"_"$name"_alarm
 						ln -sf "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
 						ln -sf "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
-						ln -sf "$3""$4"/temp"$i"_min "$thermal_path"/"$dev_name"_"$name"_min
+						if [ -e "$thermal_path"/"$dev_name"_"$name"_min ]; then
+							ln -sf "$3""$4"/temp"$i"_min "$thermal_path"/"$dev_name"_"$name"_min
+						fi
 					fi
 				fi
 			done
