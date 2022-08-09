@@ -59,10 +59,10 @@
 
 source hw-management-helpers.sh
 board_type=$(< $board_type_file)
+source hw-management-devtree.sh
 # Local constants and variables
 
 thermal_type=$thermal_type_def
-
 asic_control=1
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
@@ -1161,20 +1161,24 @@ connect_msn4700_msn4600_A1()
 
 msn47xx_specific()
 {
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			1)
-				connect_msn4700_msn4600_A1
-			;;
-			*)
-				connect_msn4700_msn4600
-			;;
-		esac
+	if [ -e "$devtree_file" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	else
-		connect_msn4700_msn4600
+		regio_path=$(find_regio_sysfs_path)
+		res=$?
+		if [ $res -eq 0 ]; then
+			sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+			case $sys_ver in
+				1)
+					connect_msn4700_msn4600_A1
+				;;
+				*)
+					connect_msn4700_msn4600
+				;;
+			esac
+		else
+			connect_msn4700_msn4600
+		fi
 	fi
 
 	thermal_type=$thermal_type_t10
@@ -1188,20 +1192,24 @@ msn47xx_specific()
 
 msn46xx_specific()
 {
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			1|3)
-				connect_msn4700_msn4600_A1
-			;;
-			*)
-				connect_msn4700_msn4600
-			;;
-		esac
+	if [ -e "$devtree_file" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	else
-		connect_msn4700_msn4600
+		regio_path=$(find_regio_sysfs_path)
+		res=$?
+		if [ $res -eq 0 ]; then
+			sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+			case $sys_ver in
+				1|3)
+					connect_msn4700_msn4600_A1
+				;;
+				*)
+					connect_msn4700_msn4600
+				;;
+			esac
+		else
+			connect_msn4700_msn4600
+		fi
 	fi
 
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
@@ -1243,35 +1251,39 @@ mqm97xx_specific()
 {
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
 
-	regio_path=$(find_regio_sysfs_path)
-	res=$?
-	if [ $res -eq 0 ]; then
-		sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
-		case $sys_ver in
-			0)
-				connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-				;;
-			1)
-				connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-				;;
-			7)
-				connect_table+=(${mqm97xx_power_base_connect_table[@]})
-				lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-				;;
-			*)
-				connect_table+=(${mqm97xx_base_connect_table[@]})
-				named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
-				add_come_named_busses
-				echo -n "${named_busses[@]}" > $config_path/named_busses
-				;;
-		esac
+	if [ -e "$devtree_file" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 	else
-		connect_table+=(${mqm97xx_base_connect_table[@]})
-	fi
+		regio_path=$(find_regio_sysfs_path)
+		res=$?
+		if [ $res -eq 0 ]; then
+			sys_ver=$(cut "$regio_path"/config1 -d' ' -f 1)
+			case $sys_ver in
+				0)
+					connect_table+=(${mqm97xx_rev0_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+					;;
+				1)
+					connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+					;;
+				7)
+					connect_table+=(${mqm97xx_power_base_connect_table[@]})
+					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+					;;
+				*)
+					connect_table+=(${mqm97xx_base_connect_table[@]})
+					named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+					add_come_named_busses
+					echo -n "${named_busses[@]}" > $config_path/named_busses
+					;;
+				esac
+		else
+			connect_table+=(${mqm97xx_base_connect_table[@]})
+		fi
 
-	add_cpu_board_to_connection_table
+		add_cpu_board_to_connection_table
+	fi
 
 	thermal_type=$thermal_type_def
 	max_tachos=14
@@ -1286,9 +1298,11 @@ mqm97xx_specific()
 mqm9510_specific()
 {
 	local cpu_bus_offset=18
-	connect_table+=(${mqm9510_base_connect_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
-	add_cpu_board_to_connection_table $cpu_bus_offset
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${mqm9510_base_connect_table[@]})
+		add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
@@ -1307,9 +1321,11 @@ mqm9510_specific()
 mqm9520_specific()
 {
 	local cpu_bus_offset=18
-	connect_table+=(${mqm9520_base_connect_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
-	add_cpu_board_to_connection_table $cpu_bus_offset
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${mqm9520_base_connect_table[@]})
+		add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
 	i2c_asic2_bus_default=10
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
@@ -1328,9 +1344,11 @@ mqm9520_specific()
 
 mqm87xx_rev1_specific()
 {
-	connect_table+=(${mqm8700_connect_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${mqm8700_rev1_voltmon_connect_table[@]}"
-	add_cpu_board_to_connection_table
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${mqm8700_connect_table[@]})
+		add_i2c_dynamic_bus_dev_connection_table "${mqm8700_rev1_voltmon_connect_table[@]}"
+		add_cpu_board_to_connection_table
+	fi
 
 	thermal_type=$thermal_type_t5
 	max_tachos=12
@@ -1546,7 +1564,6 @@ p2317_specific()
 
 check_system()
 {
-	check_cpu_type
 	# Check ODM
 	board=$(< /sys/devices/virtual/dmi/id/board_name)
 	case $board in
@@ -1769,7 +1786,17 @@ set_config_data()
 connect_platform()
 {
 	find_i2c_bus
-	for ((i=0; i<${#connect_table[@]}; i+=3)); do
+	# Check if it's new or old format of connect table
+	if [ -e "$devtree_file" ]; then
+		unset connect_table
+		declare -a connect_table=($(<"$devtree_file"))
+		# New connect table contains also device link name, e.g., fan_amb
+		dev_step=4
+	else
+		dev_step=3
+	fi
+
+	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
 		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 				"${connect_table[i+2]}"
 	done
@@ -1780,7 +1807,13 @@ disconnect_platform()
 	if [ -f $config_path/i2c_bus_offset ]; then
 		i2c_bus_offset=$(<$config_path/i2c_bus_offset)
 	fi
-	for ((i=0; i<${#connect_table[@]}; i+=3)); do
+	# Check if it's new or old format of connect table
+	if [ -e "$devtree_file" ]; then
+		dev_step=4
+	else
+		dev_step=3
+	fi
+	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
 		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 	done
 }
@@ -1950,6 +1983,8 @@ map_asic_pci_to_i2c_bus()
 do_start()
 {
 	create_symbolic_links
+	check_cpu_type
+	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
 
@@ -1995,7 +2030,15 @@ do_start()
 
 do_stop()
 {
-	check_system
+	check_cpu_type
+	# There is no need to perform extra work of check_system during
+	# hw-management stop in case of devtree exist. Directly init connect_table.
+	if [ -e "$devtree_file" ]; then
+		unset connect_table
+		declare -a connect_table=($(<"$devtree_file"))
+	else
+		check_system
+	fi
 	disconnect_platform
 	set_jtag_gpio "unexport"
 	rm -fR /var/run/hw-management

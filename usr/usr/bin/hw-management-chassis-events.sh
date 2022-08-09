@@ -604,10 +604,14 @@ function get_i2c_voltmon_prefix()
 	i2c_busdev_path=$2
 	
 	# Check if we have devices list which can be connected with name translation.
-	if [  -f $config_path/i2c_bus_connect_devices ];
+	if [  -f $config_path/i2c_bus_connect_devices ] || [ -f "$devtree_file" ];
 	then
 		# Load i2c devices list which should be connected on demand.
-		declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+		if [ -f "$devtree_file" ]; then
+			declare -a dynamic_i2c_bus_connect_table=($(<"$devtree_file"))
+		else
+			declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+		fi
 	
 		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
 		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
