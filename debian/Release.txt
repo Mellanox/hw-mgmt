@@ -1,4 +1,69 @@
 ================================================================================
+- V.7.0020.3100
+-Thursday , 11 Aug 2022
+--------------------------------------------------------------------------------
+- New Features
+    o  SN3700: add support for respin: voltmon: tps53679=> mp2975, temp sensor: tmp102=>adt75(0x4a), A2D:max11603 removed
+    o  MSN4600C/MQM8700/MSN2700/MSN2410/MSN3700 – support A2D:max11603 removed
+    o  SPC1 system: Optimize time of creation CPLD port version attribute 
+    o  System: Optimizing hw-mgmt start time by removing CPLD attributes creation from post-init flow and create on-the-fly.
+    o  System: Add support for OSFP transceiver eeprom dump modules via ethtool 
+       *Kernel 5.10: 
+       patches 5.10: 
+                0174-core-Add-support-for-OSFP-transceiver-modules.patch
+       *Kernel 4.19: 
+       patches 4.19: 
+                0164-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch
+
+    o  System: Add support for Infineon Digital Multi-phase xdp152 family controllers
+       *Kernel 5.10: 
+       patches 5.10: 
+                0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch
+       *Kernel 4.19: 
+       patches 4.19: 
+                0165-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch
+    o  SN4700/MQM9700: Prepare infrastructure for meaningful symbolic links name for I2C busses under /dev/main/
+    o  System: Introduce SMBIOS alternative BOM identification mechanism
+
+- Bug fixes 
+    o  SN4800/QM9700: Delta 2000 PSU’s FAN set minimal speed didn’t work.
+    o  SN4800/QM9700: Delta 2000 PSU’s didn’t support remote FW upgrade.
+    o  system: certain drivers commands didn’t work because some var/run/hw-management/config files were not create early (before udev trigger).
+    o  system: hw-management-ready.sh didn’t run due some typo
+    o  system: NVMe missing temp1_min attribute in kernel 4.15/4.19
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.3100_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0020.3000
 -Sunday , 3 July 2022
 --------------------------------------------------------------------------------
