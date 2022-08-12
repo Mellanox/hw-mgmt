@@ -53,16 +53,14 @@ fi
 
 case $board_type in
 VMOD0014)
-	while [ ! -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]
-	do
-		sleep 1
-	done
+	if [ ! -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]; then
+		timeout 180 bash -c 'until [ -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
+	fi
 	;;
 *)
-	while [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]
-	do
-		sleep 1
-	done
+	if [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; then
+		timeout 180 bash -c 'until [ -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
+	fi
 	;;
 esac
 echo "Start Chassis HW management service."

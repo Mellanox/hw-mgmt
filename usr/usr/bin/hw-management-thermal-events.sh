@@ -42,12 +42,18 @@ max_psus=4
 max_pwm=4
 max_lcs=8
 max_erots=2
+max_leakage=8
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
 pciesw_i2c_bus=0
 fan_full_speed_code=20
+# Static variable to keep track the number of fan drawers
+fan_drwr_num=0
+# 46 - F, 52 - R
+fan_direction_exhaust=46
+fan_direction_intake=52
 
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
@@ -167,6 +173,31 @@ sn2201_find_cpu_core_temp_ids()
 		tmp=$(cat /proc/cpuinfo | grep -m2 "core id" | tail -n1 | awk '{print $4}')
 		core1_temp_id=$(($tmp+2))
 	fi
+}
+
+get_fixed_fans_direction()
+{
+	# Earlier the code was trying to read the offset of the string MLNX from
+	# /var/run/hw-management/eeprom/vpd_info and perform the fan direction
+	# offset computation like this:
+	# fan_dir_offset=$((sanity_offset+pn_sanity_offset+fan_dir_pn_offset))
+	# sanity_offset:     Offset of string "MLNX"
+	# pn_sanity_offset:  62
+	# fan_dir_pn_offset: 11
+	# There was a delay of ~10sec to get the 'vpd_info' to be available.
+	# This optimization directly read the fan direction from the eeprom
+	# address 0x102, using i2ctransfer command and avoids the delay.
+	fan_direction=$(i2ctransfer -f -y 8 w2@0x51 0x01 0x02 r1 | cut -d'x' -f 2)	
+	case $fan_direction in
+	$fan_direction_exhaust)
+		echo 1 > $config_path/fixed_fans_dir
+		;;
+	$fan_direction_intake)
+		echo 0 > $config_path/fixed_fans_dir
+		;;
+	*)
+		;;
+	esac
 }
 
 if [ "$1" == "add" ]; then
@@ -362,6 +393,13 @@ if [ "$1" == "add" ]; then
 			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
 				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
+			# Disable kernel thermal algorthm on liquid cooled systems
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI140" ]] || [[ $sku == "HI141" ]]; then
+				if [ -x /usr/bin/hw-management-liquid-cooling.sh ]; then
+					/usr/bin/hw-management-liquid-cooling.sh $tpath/"$zonetype"
+				fi
+			fi
 		fi
 	fi
 	if [ "$2" == "cooling_device" ]; then
@@ -397,8 +435,22 @@ if [ "$1" == "add" ]; then
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/fan"$i"
 				fi
+				(( fan_drwr_num++ ))
 			fi
 		done
+
+		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
+			get_fixed_fans_direction
+			if [ -f $config_path/fixed_fans_dir ]; then
+				for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
+					cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
+					echo 1 > $thermal_path/fan"$i"_status
+				done
+			fi
+		else
+			echo $fan_drwr_num > $config_path/fan_drwr_num
+		fi
+
 		for ((i=1; i<=max_psus; i+=1)); do
 			if [ -f "$3""$4"/psu$i ]; then
 				ln -sf "$3""$4"/psu$i $thermal_path/psu"$i"_status
@@ -482,6 +534,22 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		done
+		for ((i=1; i<=max_leakage; i+=1)); do
+			if [ -f "$3""$4"/leakage$i ]; then
+				ln -sf "$3""$4"/leakage$i $system_path/leakage"$i"
+				event=$(< $system_path/leakage"$i")
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/leakage"$i"
+				fi
+			fi
+		done
+		if [ -f "$3""$4"/leakage_rope ]; then
+			ln -sf "$3""$4"/leakage_rope $system_path/leakage_rope
+			event=$(< $system_path/leakage_rope)
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $events_path/leakage_rope
+			fi
+		fi
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
@@ -733,10 +801,15 @@ if [ "$1" == "add" ]; then
 		elif echo $mfr | grep -iq "Delta"; then
 			# Support FW update only for specific Delta PSU capacities
 			fw_ver="N/A"
-			if [ "$cap" == "550" ]; then
+			if [ "$cap" == "550" -o "$cap" == "2000" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
 			fi
 			echo $fw_ver > $fw_path/"$2"_fw_ver
+			# Special handling for Delta 2000 fan speed command
+			if [ "$cap" == "2000" ]; then
+				i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
+				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
+			fi
 		fi
 
 	fi
@@ -757,10 +830,11 @@ if [ "$1" == "add" ]; then
 					# Make links only to 1st sensor - Composite temperature.
 					# Normaslized composite temperature values are taken to thermal management.
 					if [ "$i" -eq 1 ]; then
-						ln -sf "$3""$4"/temp"$i"_alarm "$thermal_path"/"$dev_name"_"$name"_alarm
 						ln -sf "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
 						ln -sf "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
-						ln -sf "$3""$4"/temp"$i"_min "$thermal_path"/"$dev_name"_"$name"_min
+						if [ -e "$3""$4"/temp1_min ]; then
+							ln -sf "$3""$4"/temp1_min "$thermal_path"/"$dev_name"_"$name"_min
+						fi
 					fi
 				fi
 			done
@@ -983,6 +1057,10 @@ else
 			check_n_unlink $system_path/erot"$i"_ap
 			check_n_unlink $system_path/erot"$i"_error
 		done
+		for ((i=1; i<=max_leakage; i+=1)); do
+			check_n_unlink $system_path/leakage"$i"
+		done
+		check_n_unlink $system_path/leakage_rope
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi

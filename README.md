@@ -31,10 +31,14 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN4800
 - SGN2410
 - SN2201
+- E3597
+- P4697
+- P2317
 
 ## Supported Kernel versions:
 - 4.9.xx
 - 4.19.xx
+- 5.10.xx
 
 ## Sysfs attributes:
 The thermal control operates over sysfs attributes.
@@ -164,6 +168,7 @@ CONFIG_SECURITY_LOCKDOWN_LSM=y (if kernel version >= v5.4, optional up to user)
 CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y (if kernel version >= v5.4, optional up to user)
 CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y (if kernel version >= v5.4, optional up to user)
 CONFIG_THERMAL_NETLINK=y (if kernel version >= v5.10)
+CONFIG_SENSORS_XDPE152=m
 
 ```
 **Note:**

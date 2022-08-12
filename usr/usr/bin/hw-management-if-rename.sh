@@ -1,6 +1,6 @@
 #!/bin/bash
-##################################################################################
-# Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+# Copyright (c) 2018 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,26 +31,39 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
 
-# Local constants and paths.
-CPLD3_VER_DEF="0"
- 
-board=$(cat /sys/devices/virtual/dmi/id/board_name)
-cpld_num=$(cat $config_path/cpld_num)
+port_name=$1
+board=$(< $board_type_file)
+
 case $board in
-	VMOD0015)
-		# Special case to inform external node (BMC) that system ready
-		# for telemetry communication.
-		if [ ! -L $system_path/comm_chnl_ready ]; then
-			log_err "Missed attrubute comm_chnl_ready."
-		else
-			echo 1 > $system_path/comm_chnl_ready
-			log_info "Communication channel is ready"
-		fi
+VMOD0010)
+	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+	case $sku in
+	HI140|HI141)
+		# Determine ASIC index according to ASIC I2C bus
+		busdir=$(echo ${2}${3} | xargs dirname | xargs dirname)
+		busfolder=$(basename $busdir)
+		bus="${busfolder:0:${#busfolder}-5}"
+		case $bus in
+		2)
+			# ASIC1 on leaf or spine
+			echo sw1${port_name}
+			;;
+		*)
+			# ASIC2 on leaf or spine
+			echo sw2${port_name}
+			;;
+		esac
 		;;
 	*)
+		echo ${port_name}
 		;;
+	esac
+	;;
+*)
+	echo ${port_name}
+	;;
 esac
 
+exit 0

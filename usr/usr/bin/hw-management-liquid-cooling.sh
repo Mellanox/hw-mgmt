@@ -1,4 +1,6 @@
 #!/bin/bash
+
+#!/bin/bash
 ##################################################################################
 # Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
@@ -31,26 +33,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# hw-management script that is executed at the end of hw-management start.
-source hw-management-helpers.sh
-
-# Local constants and paths.
-CPLD3_VER_DEF="0"
- 
-board=$(cat /sys/devices/virtual/dmi/id/board_name)
-cpld_num=$(cat $config_path/cpld_num)
-case $board in
-	VMOD0015)
-		# Special case to inform external node (BMC) that system ready
-		# for telemetry communication.
-		if [ ! -L $system_path/comm_chnl_ready ]; then
-			log_err "Missed attrubute comm_chnl_ready."
-		else
-			echo 1 > $system_path/comm_chnl_ready
-			log_info "Communication channel is ready"
-		fi
-		;;
-	*)
-		;;
-esac
-
+# Disable kernel thermal algorithm
+path="$1"
+if [ -d "$path" ]; then
+	sleep 0.1
+	echo "disabled" > "$path"/thermal_zone_mode
+	echo "user_space" > "$path"/thermal_zone_policy
+	# Fixup race condition for main thermal zone.
+	if [ -f /var/run/hw-management/thermal/mlxsw/thermal_zone_mode ]; then
+		echo "disabled" > /var/run/hw-management/thermal/mlxsw/thermal_zone_mode
+	fi
+fi

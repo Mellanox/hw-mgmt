@@ -752,7 +752,7 @@ index 000000000000..f1a1e5cf6a5f
 +	if (!types_info)
 +		return -ENOMEM;
 +	linecards->types_info = types_info;
-+
++	return 0; /* Skip for non-upstream flow. */
 +	err = request_firmware_direct(&firmware,
 +				      MLXSW_LINECARDS_INI_BUNDLE_FILE,
 +				      linecards->bus_info->dev);
