@@ -35,7 +35,6 @@
 
 source hw-management-helpers.sh
 source hw-management-devtree.sh
-system_ver_file=/sys/devices/virtual/dmi/id/product_version
 board_type=$(<"$board_type_file")
 cpu_type=$(<"$config_path"/cpu_type)
 devtr_verb_display=0

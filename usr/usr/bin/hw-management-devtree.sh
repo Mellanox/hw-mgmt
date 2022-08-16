@@ -31,13 +31,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-system_ver_file=/sys/devices/virtual/dmi/id/product_version
-sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 devtr_verb_display=0
 devtree_codes_file=
 
 # Declare common associative arrays for SMBIOS System Version parsing.
-declare -A board_arr=(["C"]="comex" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board")
+declare -A board_arr=(["C"]="comex" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock board")
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
 
@@ -48,7 +46,7 @@ declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
 # Just currently used EEPROMs are in this mapping.
-declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["i"]="24c512")
+declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
 
 declare -A pressure_arr=(["0"]="dummy" ["a"]="icp20100" ["b"]="bmp390" ["c"]="lps22")
 
@@ -129,15 +127,55 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
+declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
+				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
+				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
+				["mp2975_2"]="mp2975 0x65 5 voltmon3" \
+				["mp2975_3"]="mp2975 0x66 5 voltmon4" \
+				["mp2975_4"]="mp2975 0x67 5 voltmon5" \
+				["mp2975_5"]="mp2975 0x68 5 voltmon6" \
+				["mp2975_6"]="mp2975 0x69 5 voltmon7" \
+				["mp2975_7"]="mp2975 0x6a 5 voltmon8" \
+				["mp2975_8"]="mp2975 0x6b 5 voltmon9" \
+				["mp2975_9"]="mp2975 0x6c 5 voltmon10" \
+				["mp2975_10"]="mp2975 0x6e 5 voltmon11" \
+				["mp2975_11"]="mp2975 0x6f 5 voltmon12" \
+				["xdpe15284_0"]="xdpe15284 0x62 5 voltmon1" \
+				["xdpe15284_1"]="xdpe15284 0x63 5 voltmon2" \
+				["xdpe15284_2"]="xdpe15284 0x65 5 voltmon3" \
+				["xdpe15284_3"]="xdpe15284 0x66 5 voltmon4" \
+				["xdpe15284_4"]="xdpe15284 0x67 5 voltmon5" \
+				["xdpe15284_5"]="xdpe15284 0x68 5 voltmon6" \
+				["xdpe15284_6"]="xdpe15284 0x69 5 voltmon7" \
+				["xdpe15284_7"]="xdpe15284 0x6a 5 voltmon8" \
+				["xdpe15284_8"]="xdpe15284 0x6b 5 voltmon9" \
+				["xdpe15284_9"]="xdpe15284 0x6c 5 voltmon10" \
+				["xdpe15284_10"]="xdpe15284 0x6e 5 voltmon11" \
+				["xdpe15284_11"]="xdpe15284 0x6f 5 voltmon12" \
+				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="tmp102 0x4a 7 port_amb" \
+				["24c512_0"]="24c512 0x51 8 system_eeprom")
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board
 # Actually it's located on fan board and in this way it will be passed through SMBios
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
 declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 7 fan_amb")
 
+# ToDo Check if really required or can be changed by HW
+declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
+				   ["adt75_0"]="adt75 0x49 6 fan_amb")
+
+# Currently system can have just multiple clock boards
+declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x50 5 clk_eeprom")
+
+declare -A pwr_type0_alternatives=(["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
+
 declare -A comex_alternatives
 declare -A swb_alternatives
 declare -A fan_alternatives
+declare -A clk_alternatives
+declare -A pwr_alternatives
 declare -A board_alternatives
 
 devtr_validate_system_ver_str()
@@ -254,6 +292,28 @@ devtr_check_supported_system_init_alternatives()
 			done
 			return 0
 			;;
+		VMOD0013)
+			case $sku in
+				HI144|HI147|HI148)	# ToDo Separate later on
+					for key in "${!sn5600_alternatives[@]}"; do
+						swb_alternatives["$key"]="${sn5600_alternatives["$key"]}"
+					done
+				;;
+			*)
+				return 1
+				;;
+			esac
+			for key in "${!fan_type0_alternatives[@]}"; do
+				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+			done
+			for key in "${!pwr_type0_alternatives[@]}"; do
+				pwr_alternatives["$key"]="${pwr_type0_alternatives["$key"]}"
+			done
+			for key in "${!clk_type0_alternatives[@]}"; do
+				clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
+			done
+			return 0
+			;;
 		*)
 			return 1
 			;;
@@ -263,11 +323,14 @@ devtr_check_supported_system_init_alternatives()
 devtr_check_board_components()
 {
 	local board_str=$1
+	local board_num=1
+	local bus_offset=0
+	local addr_offset=0
 
 	local comp_arr=($(echo "$board_str" | fold -w2))
 
 	local board_key=${comp_arr[0]:0:1}
-	# Currently quantity board numbers isn't checked.
+
 	if [ $devtr_verb_display -eq 1 ]; then
 		local board_name=${board_arr[$board_key]}
 		log_info "DBG: Board: ${board_name}"
@@ -289,15 +352,36 @@ devtr_check_board_components()
 				board_alternatives["$key"]="${fan_alternatives["$key"]}"
 			done
 			;;
+		P)	# Power board
+			for key in "${!pwr_alternatives[@]}"; do
+				board_alternatives["$key"]="${pwr_alternatives["$key"]}"
+			done
+			;;
+		K)	# Clock board
+			# Currently only clock boards number can be bigger than 1
+			if [ -e "$config_path"/clk_brd_num ]; then
+				board_num=$(< $config_path/clk_brd_num)
+			fi
+			if [ -e "$config_path"/clk_brd_bus_offset ]; then
+				bus_offset=$(< $config_path/clk_brd_bus_offset)
+			fi
+			if [ -e "$config_path"/clk_brd_addr_offset ]; then
+				addr_offset=$(< $config_path/clk_brd_addr_offset)
+			fi
+			for key in "${!clk_alternatives[@]}"; do
+				board_alternatives["$key"]="${clk_alternatives["$key"]}"
+			done
+			;;
 		*)
 			log_err "Incorrect SMBios BOM encoded board. Board key ${board_key}"
 			return 1
 			;;
 	esac
 
-	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0
+	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; brd=0
+	curr_component=()
 	for comp in "${comp_arr[@]}"; do
-		# Skip 1st tuple in board string. It desctibes board naem and number
+		# Skip 1st tuple in board string. It desctibes board name and number
 		# All other tuples describe components.
 		if [ $i -eq 0 ]; then
 		        i=$((i + 1))
@@ -316,55 +400,65 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${t_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				t_cnt=$((t_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				t_cnt=$((t_cnt+1))
 				;;
 			R)	# Voltage Regulators
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				r_cnt=$((r_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				r_cnt=$((r_cnt+1))
 				;;
 			E)	# Eeproms
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
-				echo -n "${alternative_comp} " >> "$devtree_file"
+				# Currently it's done just for EEPROM as other components can't be in multiple cards of the same type
+				# Moose system has 2 Clock boards. Just EEPROM is accessed on these boards.
+				for ((brd=0;brd<board_num;brd++)) do
+					curr_component=(${board_alternatives[$alternative_key]})
+					if [ $addr_offset -ne 0 ]; then
+						curr_component[1]=$((curr_component[1]+addr_offset*brd))
+					fi
+					if [ $bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+bus_offset*brd))
+					fi
+					echo -n "${curr_component[@]} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG: ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				done
 				e_cnt=$((e_cnt+1))
-				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
-				fi
 				;;
 			A)	# A2D
 				component_name=${a2d_arr[$component_key]}
 				alternative_key="${component_name}_${a_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				a_cnt=$((a_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				a_cnt=$((a_cnt+1))
 				;;
 			P)	# Pressure Sensors
 				component_name=${pressure_arr[$component_key]}
 				alternative_key="${component_name}_${p_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				p_cnt=$((p_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				p_cnt=$((p_cnt+1))
 				;;
 			*)
 				log_err "Incorrect SMBios BOM encoded category. Category key ${category_key}"

@@ -59,6 +59,7 @@
 
 source hw-management-helpers.sh
 board_type=$(< $board_type_file)
+sku=$(< $sku_file)
 source hw-management-devtree.sh
 # Local constants and variables
 
@@ -106,6 +107,7 @@ leakage_count=0
 
 base_cpu_bus_offset=10
 ndr_cpu_bus_offset=18
+ng800_cpu_bus_offset=34
 connect_table=()
 named_busses=()
 
@@ -399,6 +401,26 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x68 13 voltmon5 \
 	mp2975 0x6c 13 voltmon6 )
 
+# Just for possible initial step without SMBios alternative BOM mechanism
+sn5600_base_connect_table=( \
+	24c128 0x50 5 \
+	24c128 0x53 5 \
+	mp2975 0x62 5 \
+	mp2975 0x63 5 \
+	mp2975 0x65 5 \
+	mp2975 0x66 5 \
+	mp2975 0x67 5 \
+	mp2975 0x68 5 \
+	mp2975 0x69 5 \
+	mp2975 0x6a 5 \
+	mp2975 0x6b 5 \
+	mp2975 0x6c 5 \
+	mp2975 0x6e 5 \
+	mp2975 0x6f 5 \
+	tmp102 0x49 6 \
+	tmp102 0x4a 7 \
+	24c512 0x51 8 )
+
 p2317_connect_table=(	24c512 0x51 8)
 
 # I2C busses naming.
@@ -406,6 +428,7 @@ cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
+sn5600_named_busses=( asic1 2 pwr 4 vr1 5 ambf 6 amb1 7 vpd 8 )
 
 ACTION=$1
 
@@ -434,8 +457,8 @@ function set_i2c_bus_frequency_400KHz()
 {
 	# Speed-up ASIC I2C driver probing by setting I2C frequency to 400KHz.
 	# Relevant only to particular system types.
-	board=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+
+	case $board_type in
 	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
 		if [ -f $config_path/default_i2c_freq ]; then
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq_400"
@@ -450,8 +473,8 @@ function restore_i2c_bus_frequency_default()
 {
 	# Restore I2C base frequency to the default value.
 	# Relevant only to particular system types.
-	board=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+
+	case $board_type in
 	VMOD0001|VMOD0002|VMOD003|VMOD0004|VMOD0005|VMOD0009)
 		if [ -f $config_path/default_i2c_freq ]; then
 			i2c_freq=$(< $config_path/default_i2c_freq)
@@ -694,7 +717,6 @@ add_cpu_board_to_connection_table()
 				;;
 				*)
 					# COMEX BWD regular version not support HW_REV register
-					sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 					case $sku in
 						HI116|HI112|HI124|HI100)
 							# MSN3700/MSN3700C/MS4600C/MQM8700
@@ -738,7 +760,7 @@ add_i2c_dynamic_bus_dev_connection_table()
 	connection_table=("$@")
 	dynamic_i2cbus_connection_table=()
 
-	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
+	echo -n "${connection_table[@]}" >> $config_path/i2c_bus_connect_devices
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
 		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
 		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
@@ -848,7 +870,6 @@ msn21xx_specific()
 msn24xx_specific()
 {
 	start_mst_for_spc1_port_cpld
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI138)
 			# SGN2410_A1
@@ -894,7 +915,6 @@ msn27xx_msb_msx_specific()
 	esac
 	add_cpu_board_to_connection_table
 
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI138)
 			hotplug_fans=0
@@ -981,7 +1001,6 @@ mqmxxx_msn37x_msn34x_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 	local voltmon_connection_table=()
 
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI136)
 			# msn3700C-S
@@ -1130,8 +1149,7 @@ msn27002_msb78002_specific()
 
 connect_msn4700_msn4600()
 {
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-	if [ $sku == "HI124"]; then
+	if [ "$sku" == "HI124" ]; then
 		# msn4600C with removed A2D
 		connect_table+=(${msn4600C_base_connect_table[@]})
 	else
@@ -1144,8 +1162,7 @@ connect_msn4700_msn4600()
 
 connect_msn4700_msn4600_A1()
 {
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-	if [ $sku == "HI124"]; then
+	if [ "$sku" == "HI124" ]; then
 		#  msn4600C with removed A2D
 		connect_table+=(${msn4600C_A1_base_connect_table[@]})
 	else
@@ -1212,7 +1229,6 @@ msn46xx_specific()
 		fi
 	fi
 
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	# this is MSN4600C
 	if [ "$sku" == "HI124" ]; then
 		thermal_type=$thermal_type_t8
@@ -1430,7 +1446,6 @@ msn_spc2_common()
 		sys_ver=0
 	fi
 
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI120)
 			msn3420_specific
@@ -1462,7 +1477,6 @@ msn_spc2_common()
 
 msn_spc3_common()
 {
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 	case $sku in
 		HI123|HI124)
 			msn46xx_specific
@@ -1562,11 +1576,52 @@ p2317_specific()
 	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
 }
 
+sn56xx_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${sn5600_base_connect_table[@]})
+		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
+	fi
+	thermal_type=$thermal_type_def
+	# Set according to front fan max. Rear fan max is 13200
+	echo 13800 > $config_path/fan_max_speed
+	echo 2000 > $config_path/fan_min_speed	# ToDo. Now ~15%, not provided, check on real system
+	echo 26500 > $config_path/psu_fan_max
+	echo 4000 > $config_path/psu_fan_min	# ToDo. Now ~15%, not provided, check on real system
+	max_tachos=8
+	hotplug_fans=4
+	hotplug_pwrs=2
+	hotplug_psus=2
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
+	named_busses+=(${sn5600_named_busses[@]})
+	add_come_named_busses $ng800_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+}
+
+sn_spc4_common()
+{
+	# ToDo Meantime same for all SPC4 systems.
+	case $sku in
+		HI144)	# Moose
+			sn56xx_specific
+		;;
+		HI147)	# Hippo
+			sn56xx_specific
+		;;
+		HI148)	# Ibex
+			sn56xx_specific
+		;;
+		*)
+			sn56xx_specific
+		;;
+	esac
+}
+
 check_system()
 {
 	# Check ODM
-	board=$(< /sys/devices/virtual/dmi/id/board_name)
-	case $board in
+	case $board_type in
 		VMOD0001)
 			msn27xx_msb_msx_specific
 			;;
@@ -1593,6 +1648,9 @@ check_system()
 			;;
 		VMOD0011)
 			msn48xx_specific
+			;;
+		VMOD0013)
+			sn_spc4_common
 			;;
 		VMOD0014)
 			sn2201_specific
@@ -1891,7 +1949,7 @@ set_asic_pci_id()
 	if [ ! -f "$config_path"/asic_control ]; then
 		echo $asic_control > "$config_path"/asic_control
 	fi
-	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+
 	# Get ASIC PCI Ids.
 	case $sku in
 	HI122|HI123|HI124|HI126)
@@ -1960,6 +2018,24 @@ set_asic_pci_id()
 	return
 }
 
+pre_devtr_init()
+{
+	case $board_type in
+	VMOD0013)
+		case $sku in
+		HI144|HI147|HI148)	# ToDo Possible change for Hippo, Ibex
+			echo 2 > "$config_path"/clk_brd_num
+			echo 3 > "$config_path"/clk_brd_addr_offset
+			;;
+		*)
+			;;
+		esac
+		;;
+	*)
+		;;
+	esac
+}
+
 map_asic_pci_to_i2c_bus()
 {
 	if [ -z "$1" ]; then
@@ -1984,6 +2060,7 @@ do_start()
 {
 	create_symbolic_links
 	check_cpu_type
+	pre_devtr_init
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
@@ -2067,7 +2144,6 @@ do_chip_up_down()
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 		VMOD0005)
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
 				HI146)
 					# Chip up / down operations are to be performed for ASIC virtual address 0x37.
@@ -2079,7 +2155,6 @@ do_chip_up_down()
 			esac
 			;;
 		VMOD0010)
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
 				HI140|HI141)
 					# Chip up / down operations are to be performed for ASIC virtual address 0x37.
