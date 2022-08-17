@@ -1582,7 +1582,8 @@ sn56xx_specific()
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	thermal_type=$thermal_type_def
+	# ToDo Uncomment when will be defined	thermal_type=$thermal_type_t14
+	thermal_type=$thermal_type_def	# ToDo Temporary default 60%
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2000 > $config_path/fan_min_speed	# ToDo. Now ~15%, not provided, check on real system
