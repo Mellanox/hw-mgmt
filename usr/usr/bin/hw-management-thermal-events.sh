@@ -613,31 +613,35 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
+		name=$(<"$3""$4"/name)
+		if [ "$name" != "jc42" ]; then
+			return
+		fi
 		check_cpu_type
 		shopt -s extglob
 		case $cpu_type in
 			$RNG_CPU)
-				sodimm1_addr='0-0018'
-				sodimm2_addr='0-001a'
+				sodimm1_addr='0018'
+				sodimm2_addr='001a'
 			;;
 			$IVB_CPU)
-				sodimm1_addr='0-001b'
-				sodimm2_addr='0-001a'
+				sodimm1_addr='001b'
+				sodimm2_addr='001a'
 			;;
 			$CFL_CPU)
-				sodimm1_addr='0-001c'
-				sodimm2_addr='@(0-001a|0-001e)'
+				sodimm1_addr='001c'
+				sodimm2_addr='@(001a|001e)'
 			;;
 			$DNV_CPU)
-				sodimm1_addr='0-0018'
-				sodimm2_addr='0-001a'
+				sodimm1_addr='0018'
+				sodimm2_addr='001a'
 			;;
 			*)
 				exit 0
 			;;
 		esac
 
-		sodimm_i2c_addr=$(echo "$3"|xargs dirname|xargs dirname|xargs basename)
+		sodimm_i2c_addr=$(echo "$3"|xargs dirname|xargs dirname|xargs basename | cut -f2 -d"-")
 		case $sodimm_i2c_addr in
 			$sodimm1_addr)
 				sodimm_name=sodimm1_temp
