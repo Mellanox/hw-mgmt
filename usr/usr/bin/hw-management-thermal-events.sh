@@ -34,6 +34,7 @@
 
 source hw-management-helpers.sh
 board_type=$(< $board_type_file)
+sku=$(< $sku_file)
 
 # Local variables
 fan_command=$config_path/fan_command
@@ -394,7 +395,6 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
 			# Disable kernel thermal algorthm on liquid cooled systems
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			if [[ $sku == "HI140" ]] || [[ $sku == "HI141" ]]; then
 				if [ -x /usr/bin/hw-management-liquid-cooling.sh ]; then
 					/usr/bin/hw-management-liquid-cooling.sh $tpath/"$zonetype"
@@ -653,7 +653,6 @@ if [ "$1" == "add" ]; then
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 			exit 0
 		fi

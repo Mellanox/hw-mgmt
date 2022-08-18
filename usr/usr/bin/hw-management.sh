@@ -1587,8 +1587,8 @@ sn56xx_specific()
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2000 > $config_path/fan_min_speed	# ToDo. Now ~15%, not provided, check on real system
-	echo 26500 > $config_path/psu_fan_max
-	echo 4000 > $config_path/psu_fan_min	# ToDo. Now ~15%, not provided, check on real system
+	echo 25000 > $config_path/psu_fan_max
+	echo 9500 > $config_path/psu_fan_min
 	max_tachos=8
 	hotplug_fans=4
 	hotplug_pwrs=2
