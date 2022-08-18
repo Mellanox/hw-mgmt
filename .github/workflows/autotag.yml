@@ -1,0 +1,76 @@
+name: Update tag
+on:
+  push:
+    branches:
+      - V.7.00*_BR
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check "TAG" label is set
+      id: check_tag_label
+      uses: shioyang/check-pr-labels-on-push-action@v1.0.3
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        labels: '["TAG+1"]'
+        
+    - name: Check "update_chengelog" label is set
+      id: check_changelog_label
+      uses: shioyang/check-pr-labels-on-push-action@v1.0.3
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        labels: '["Update changelog"]'
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - id: base_tag
+      name: Base tag
+      if: ${{ steps.check_changelog_label.outputs.result  == 'true' }}
+      run: |   
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+        git config user.name "$GITHUB_ACTOR"
+        new_tag=$(git describe --tags --abbrev=0)
+        echo "Tag: $new_tag"
+        echo "GITHUB_NEW_TAG=$new_tag" >> $GITHUB_ENV
+
+    - id: new_tag
+      name: New tag
+      if: ${{ steps.check_tag_label.outputs.result  == 'true' }}
+      run: |   
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+        git config user.name "$GITHUB_ACTOR"
+        current_branch=$(git rev-parse --abbrev-ref HEAD)
+        new_tag=$(./.contrib/version_tag.py -b $current_branch)
+        echo "Branch: $current_branch"
+        echo "Tag: $new_tag"
+        echo "GITHUB_NEW_TAG=$new_tag" >> $GITHUB_ENV
+
+
+    - id: update_changelog
+      name: Update changelog 
+      if: ${{ steps.check_changelog_label.outputs.result  == 'true' }}
+      run: |   
+        changelog=$(git  log -1 --name-only --pretty="" | grep "debian/changelog" || rc=$?)
+        if [ ! -z "$changelog" ]; then exit 0; fi
+        new_tag=${{ env.GITHUB_NEW_TAG }}
+        echo "Updating changelog..."
+        echo "New tag: $new_tag"
+        sed -i "s/\(.*mlnx.\)[0-9.]*)\(.*\)/\1"$new_tag")\2/g" debian/changelog
+        sed -i "s/-- MellanoxBSP <system-sw-low-level@mellanox.com>.*$/-- MellanoxBSP <system-sw-low-level@mellanox.com> $(date -R)/g" debian/changelog
+        git add debian/changelog
+        git commit --amend --no-edit
+        git push -f
+      continue-on-error: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_OLEKSANDR }}
+
+    - id: set_tag
+      name: Set tag
+      if: ${{ steps.check_tag_label.outputs.result  == 'true' }}
+      run: |    
+        new_tag=${{ env.GITHUB_NEW_TAG }}
+        echo "Set tag: $new_tag"
+        git tag $new_tag
+        git push --tags
