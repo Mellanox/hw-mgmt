@@ -37,7 +37,7 @@ devtr_verb_display=0
 devtree_codes_file=
 
 # Declare common associative arrays for SMBIOS System Version parsing.
-declare -A board_arr=(["C"]="comex" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board")
+declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board")
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
 
@@ -318,8 +318,8 @@ devtr_check_board_components()
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				t_cnt=$((t_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				;;
 			R)	# Voltage Regulators
@@ -329,8 +329,8 @@ devtr_check_board_components()
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				r_cnt=$((r_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				;;
 			E)	# Eeproms
@@ -340,8 +340,8 @@ devtr_check_board_components()
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				e_cnt=$((e_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				;;
 			A)	# A2D
@@ -351,8 +351,8 @@ devtr_check_board_components()
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				a_cnt=$((a_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				;;
 			P)	# Pressure Sensors
@@ -362,8 +362,8 @@ devtr_check_board_components()
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				p_cnt=$((p_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				;;
 			*)
