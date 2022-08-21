@@ -76,17 +76,17 @@ devtr_show_devtree_file()
 		echo "Number of components in devtree: ${arr_len}"
 		printf "Number\\t\\tBus\\tAddress\\tDevice\\t\\tName\\n"
 
-		for ((i=0, j=0, k=0; i<${#devtree_table[@]}; i+=4, j+=1, k+=2)); do
+		for ((i=0, j=0, k=0; i<${#devtree_table[@]}; i+=4, j+=1, k+=3)); do
 			strlen=${#devtree_table[i]}
 			if [ "$strlen" -lt 8 ]; then
 				printf "Device %s:\\t%s\\t%s\\t%s\\t\\t%s\\n" "${j}" "${devtree_table[i+2]}" "${devtree_table[i+1]}" "${devtree_table[i]}" "${devtree_table[i+3]}"
 				if [ $devtr_verb_display -eq 1 ]; then
-					printf "\\t\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}"
+					printf "\\tBoard name: %s\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}" "${devtree_codes_table[k+2]}"
 				fi
 			else
 				printf "Device %s:\\t%s\\t%s\\t%s\\t%s\\n" "${j}" "${devtree_table[i+2]}" "${devtree_table[i+1]}" "${devtree_table[i]}" "${devtree_table[i+3]}"
 				if [ $devtr_verb_display -eq 1 ]; then
-					printf "\\t\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}"
+					printf "\\tBoard name: %s\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}" "${devtree_codes_table[k+2]}"
 				fi
 			fi
 		done
@@ -112,14 +112,14 @@ devtr_2_csv_convert()
 		devtree_csv_file="$devtree_dir""/"devtree.csv
 
 		if [ $devtr_verb_display -eq 0 ]; then
-			echo "Device,Bus,Address,Name" > "$devtree_csv_file"
+			echo "Device,Bus,Address,Device name" > "$devtree_csv_file"
 			for ((i=0; i<${#devtree_table[@]}; i+=4)); do
 				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}" >> "$devtree_csv_file"
 			done
 		else
-			echo "Device,Bus,Address,Name,Category code,Device code" > "$devtree_csv_file"
-			for ((i=0, j=0; i<${#devtree_table[@]}; i+=4, j+=2)); do
-				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}"",""${devtree_codes_table[j]}"",""${devtree_codes_table[j+1]}" >> "$devtree_csv_file"
+			echo "Device,Bus,Address,Device name,Board name,Category code,Device code" > "$devtree_csv_file"
+			for ((i=0, j=0; i<${#devtree_table[@]}; i+=4, j+=3)); do
+				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}"",""${devtree_codes_table[j]}"",""${devtree_codes_table[j+1]}"",""${devtree_codes_table[j+2]}" >> "$devtree_csv_file"
 			done
 		fi
 	else
