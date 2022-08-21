@@ -35,7 +35,7 @@ devtr_verb_display=0
 devtree_codes_file=
 
 # Declare common associative arrays for SMBIOS System Version parsing.
-declare -A board_arr=(["C"]="comex" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock board")
+declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board")
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
 
@@ -92,11 +92,11 @@ declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d
 					 ["24c32_0"]="24c32 0x51 8 system_eeprom")
 
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
-				 ["mp2888_1"]="mp2888 0x66 5 voltmon2" \
-				 ["mp2975_2"]="mp2975 0x68 5 voltmon3" \
-				 ["mp2975_3"]="mp2975 0x6a 5 voltmon4" \
-				 ["mp2975_4"]="mp2975 0x6c 5 voltmon5" \
-				 ["mp2975_5"]="mp2975 0x6e 5 voltmon6" \
+				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
+				 ["mp2975_2"]="mp2975 0x68 5 voltmon4" \
+				 ["mp2975_3"]="mp2975 0x6a 5 voltmon5" \
+				 ["mp2975_4"]="mp2975 0x6c 5 voltmon6" \
+				 ["mp2975_5"]="mp2975 0x6e 5 voltmon7" \
 				 ["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
@@ -401,8 +401,8 @@ devtr_check_board_components()
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				t_cnt=$((t_cnt+1))
 				;;
@@ -412,8 +412,8 @@ devtr_check_board_components()
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				r_cnt=$((r_cnt+1))
 				;;
@@ -432,8 +432,8 @@ devtr_check_board_components()
 					fi
 					echo -n "${curr_component[@]} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
-						log_info "DBG: ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+						log_info "DBG:  ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				done
 				e_cnt=$((e_cnt+1))
@@ -444,8 +444,8 @@ devtr_check_board_components()
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				a_cnt=$((a_cnt+1))
 				;;
@@ -455,8 +455,8 @@ devtr_check_board_components()
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
 				if [ $devtr_verb_display -eq 1 ]; then
-					log_info "DBG: ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-					echo -n " ${category_key} ${component_key} " >> "$devtree_codes_file"
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				p_cnt=$((p_cnt+1))
 				;;
