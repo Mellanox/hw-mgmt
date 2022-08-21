@@ -1593,6 +1593,7 @@ sn56xx_specific()
 	hotplug_fans=4
 	hotplug_pwrs=2
 	hotplug_psus=2
+	psu2_i2c_addr=0x5a	# Change default PSU2 I2C address
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})

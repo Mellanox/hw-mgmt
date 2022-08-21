@@ -656,6 +656,11 @@ if [ "$1" == "add" ]; then
 		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 			exit 0
 		fi
+		psu_name="$2"
+		# Moose system has PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
+		if [[ $sku == "HI144" ]] && [[ "$2" == "psu4" ]]; then
+			psu_name="psu2"
+		fi
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -668,41 +673,41 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Set default fan speed
-		addr=$(< $config_path/"$2"_i2c_addr)
+		addr=$(< $config_path/"$psu_name"_i2c_addr)
 		command=$(< $fan_command)
 		speed=$(< $fan_psu_default)
 		# Allow PS controller to stabilize
 		sleep 2
 		i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
 		# Set I2C bus for psu
-		echo "$bus" > $config_path/"$2"_i2c_bus
+		echo "$bus" > $config_path/"$psu_name"_i2c_bus
 		# Add thermal attributes
-		check_n_link "$5""$3"/temp1_input $thermal_path/"$2"_temp
-		check_n_link "$5""$3"/temp1_max $thermal_path/"$2"_temp_max
-		check_n_link "$5""$3"/temp1_max_alarm $thermal_path/"$2"_temp_max_alarm
-		check_n_link "$5""$3"/temp2_input $thermal_path/"$2"_temp2
-		check_n_link "$5""$3"/temp2_max $thermal_path/"$2"_temp2_max
-		check_n_link "$5""$3"/temp2_max_alarm $thermal_path/"$2"_temp2_max_alarm
-		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$2"_fan1_alarm
-		check_n_link "$5""$3"/power1_alarm $alarm_path/"$2"_power1_alarm
-		check_n_link "$5""$3"/fan1_input $thermal_path/"$2"_fan1_speed_get
+		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp
+		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp_max
+		check_n_link "$5""$3"/temp1_max_alarm $thermal_path/"$psu_name"_temp_max_alarm
+		check_n_link "$5""$3"/temp2_input $thermal_path/"$psu_name"_temp2
+		check_n_link "$5""$3"/temp2_max $thermal_path/"$psu_name"_temp2_max
+		check_n_link "$5""$3"/temp2_max_alarm $thermal_path/"$psu_name"_temp2_max_alarm
+		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$psu_name"_fan1_alarm
+		check_n_link "$5""$3"/power1_alarm $alarm_path/"$psu_name"_power1_alarm
+		check_n_link "$5""$3"/fan1_input $thermal_path/"$psu_name"_fan1_speed_get
 
 		# Add PSU power attributes
-		psu_connect_power_sensor "$5""$3"/in1 "$2"_volt_in
-		psu_connect_power_sensor "$5""$3"/in2 "$2"_volt
+		psu_connect_power_sensor "$5""$3"/in1 "$psu_name"_volt_in
+		psu_connect_power_sensor "$5""$3"/in2 "$psu_name"_volt
 
 		if [ -f "$5""$3"/in3_input ]; then
-			psu_connect_power_sensor "$5""$3"/in3 "$2"_volt_out2
+			psu_connect_power_sensor "$5""$3"/in3 "$psu_name"_volt_out2
 		else
 			in2_label=$(< "$5""$3"/in2_label)
 			if [ "$in2_label" == "vout1" ]; then
-				psu_connect_power_sensor "$5""$3"/in2 "$2"_volt_out
+				psu_connect_power_sensor "$5""$3"/in2 "$psu_name"_volt_out
 			fi
 		fi
-		psu_connect_power_sensor "$5""$3"/power1 "$2"_power_in
-		psu_connect_power_sensor "$5""$3"/power2 "$2"_power
-		psu_connect_power_sensor "$5""$3"/curr1 "$2"_curr_in
-		psu_connect_power_sensor "$5""$3"/curr2 "$2"_curr
+		psu_connect_power_sensor "$5""$3"/power1 "$psu_name"_power_in
+		psu_connect_power_sensor "$5""$3"/power2 "$psu_name"_power
+		psu_connect_power_sensor "$5""$3"/curr1 "$psu_name"_curr_in
+		psu_connect_power_sensor "$5""$3"/curr2 "$psu_name"_curr
 
 		# Allow modification for some PSU thresholds through 'sensors'
 		# utilities 'sets instruction.
@@ -716,11 +721,11 @@ if [ "$1" == "add" ]; then
 			chmod 644 "$5""$3"/in3_max
 		fi
 
-		if [ ! -f $config_path/"$2"_i2c_addr ]; then
+		if [ ! -f $config_path/"$psu_name"_i2c_addr ]; then
 			exit 0
 		fi
 
-		psu_addr=$(< $config_path/"$2"_i2c_addr)
+		psu_addr=$(< $config_path/"$psu_name"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 		eeprom_name=$2_info
 		if [ "$board_type" == "VMOD0014" ]; then
@@ -730,7 +735,7 @@ if [ "$1" == "add" ]; then
 		fi
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
-		if [ $? -eq 0 ] && [ ! -L $eeprom_path/"$2"_info ] && [ ! -f "$eeprom_file" ]; then
+		if [ $? -eq 0 ] && [ ! -L $eeprom_path/"$psu_name"_info ] && [ ! -f "$eeprom_file" ]; then
 			if [ "$board_type" == "VMOD0014" ]; then
 				psu_eeprom_type="24c02"
 			else
@@ -742,51 +747,51 @@ if [ "$1" == "add" ]; then
 			echo "$psu_eeprom_type" 0x"$psu_eeprom_addr" > /sys/class/i2c-dev/i2c-"$bus"/device/new_device
 			ln -sf "$eeprom_file" "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			chmod 400 "$eeprom_path"/"$eeprom_name" 2>/dev/null
-			echo 1 > $config_path/"$2"_eeprom_us
+			echo 1 > $config_path/"$psu_name"_eeprom_us
 		fi
 
 		# Set default PSU FAN speed from config, it will be overwitten by values from VPD.
 		if [ -f $config_path/psu_fan_min ]; then
-			cat $config_path/psu_fan_min > "$thermal_path"/"$2"_fan_min
+			cat $config_path/psu_fan_min > "$thermal_path"/"$psu_name"_fan_min
 		fi
 		if [ -f $config_path/psu_fan_max ]; then
-			cat $config_path/psu_fan_max > "$thermal_path"/"$2"_fan_max
+			cat $config_path/psu_fan_max > "$thermal_path"/"$psu_name"_fan_max
 		fi
 		# PSU VPD
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
-		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$2"_vpd
+		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
 		if [ $? -ne 0 ]; then
 			# PS EEPROM VPD.
-			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$2"_info > $eeprom_path/"$2"_vpd
+			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
-				echo "Failed to read PSU VPD" > $eeprom_path/"$2"_vpd
+				echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
 				exit 0
 			else
 				# Add PSU FAN speed info.
 				if [ -f $config_path/psu_fan_max ]; then
-					echo -ne "MAX_RPM: " >> $eeprom_path/"$2"_vpd
-					cat $config_path/psu_fan_max >> $eeprom_path/"$2"_vpd
+					echo -ne "MAX_RPM: " >> $eeprom_path/"$psu_name"_vpd
+					cat $config_path/psu_fan_max >> $eeprom_path/"$psu_name"_vpd
 				fi
 				if [ -f $config_path/psu_fan_min ]; then
-					echo -ne "MIN_RPM: " >> $eeprom_path/"$2"_vpd
-					cat $config_path/psu_fan_min >> $eeprom_path/"$2"_vpd
+					echo -ne "MIN_RPM: " >> $eeprom_path/"$psu_name"_vpd
+					cat $config_path/psu_fan_min >> $eeprom_path/"$psu_name"_vpd
 				fi
 			fi
 		fi
 		# Expose min/max psu fan speed per psu from vpd to attributes.
-		grep MIN_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_min
-		grep MAX_RPM: $eeprom_path/"$2"_vpd | cut -d' ' -f2 > "$thermal_path"/"$2"_fan_max
-		ps_min_rpm=$(<"$thermal_path"/"$2"_fan_min)
-		ps_max_rpm=$(< "$thermal_path"/"$2"_fan_max)
+		grep MIN_RPM: $eeprom_path/"$psu_name"_vpd | cut -d' ' -f2 > "$thermal_path"/"$psu_name"_fan_min
+		grep MAX_RPM: $eeprom_path/"$psu_name"_vpd | cut -d' ' -f2 > "$thermal_path"/"$psu_name"_fan_max
+		ps_min_rpm=$(<"$thermal_path"/"$psu_name"_fan_min)
+		ps_max_rpm=$(< "$thermal_path"/"$psu_name"_fan_max)
 		if [ "$ps_min_rpm" -eq 0 ]; then
 			ps_min_rpm=$(((ps_max_rpm*20)/100))
-			echo $ps_min_rpm > "$thermal_path"/"$2"_fan_min
+			echo $ps_min_rpm > "$thermal_path"/"$psu_name"_fan_min
 		fi
 
 		# PSU FW VER
-		mfr=$(grep MFR_NAME $eeprom_path/"$2"_vpd | awk '{print $2}')
-		cap=$(grep CAPACITY $eeprom_path/"$2"_vpd | awk '{print $2}')
+		mfr=$(grep MFR_NAME $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
+		cap=$(grep CAPACITY $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
 		if echo $mfr | grep -iq "Murata"; then
 			# Support FW update only for specific Murata PSU capacities
 			fw_ver="N/A"
@@ -795,15 +800,15 @@ if [ "$1" == "add" ]; then
 				fw_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr)
 				fw_primary_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr -P)
 			fi
-			echo $fw_ver > $fw_path/"$2"_fw_ver
-			echo $fw_primary_ver > $fw_path/"$2"_fw_primary_ver
+			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
+			echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
 		elif echo $mfr | grep -iq "Delta"; then
 			# Support FW update only for specific Delta PSU capacities
 			fw_ver="N/A"
 			if [ "$cap" == "550" -o "$cap" == "2000" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
 			fi
-			echo $fw_ver > $fw_path/"$2"_fw_ver
+			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
 			# Special handling for Delta 2000 fan speed command
 			if [ "$cap" == "2000" ]; then
 				i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
@@ -1097,6 +1102,11 @@ else
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
+		psu_name="$2"
+		# Moose system has PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
+		if [[ $sku == "HI144" ]] && [[ "$2" == "psu4" ]]; then
+			psu_name="psu2"
+		fi
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -1109,35 +1119,35 @@ else
 			exit 0
 		fi
 
-		if [ -L $eeprom_path/"$2"_info ] && [ -f $config_path/"$2"_eeprom_us ]; then
-			psu_addr=$(< $config_path/"$2"_i2c_addr)
+		if [ -L $eeprom_path/"$psu_name"_info ] && [ -f $config_path/"$psu_name"_eeprom_us ]; then
+			psu_addr=$(< $config_path/"$psu_name"_i2c_addr)
 			psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 			echo 0x$psu_eeprom_addr > /sys/class/i2c-dev/i2c-"$bus"/device/delete_device
-			unlink $eeprom_path/"$2"_info
-			rm -rf $config_path/"$2"_eeprom_us
+			unlink $eeprom_path/"$psu_name"_info
+			rm -rf $config_path/"$psu_name"_eeprom_us
 		fi
 		# Remove thermal attributes
-		check_n_unlink $thermal_path/"$2"_temp
-		check_n_unlink $thermal_path/"$2"_temp_max
-		check_n_unlink $thermal_path/"$2"_temp_alarm
-		check_n_unlink $thermal_path/"$2"_temp_max_alarm
-		check_n_unlink $thermal_path/"$2"_temp2
-		check_n_unlink $thermal_path/"$2"_temp2_max
-		check_n_unlink $thermal_path/"$2"_temp2_max_alarm
-		check_n_unlink $thermal_path/"$2"_fan1_speed_get
-		check_n_unlink $alarm_path/"$2"_fan1_alarm
-		check_n_unlink $alarm_path/"$2"_power1_alarm
+		check_n_unlink $thermal_path/"$psu_name"_temp
+		check_n_unlink $thermal_path/"$psu_name"_temp_max
+		check_n_unlink $thermal_path/"$psu_name"_temp_alarm
+		check_n_unlink $thermal_path/"$psu_name"_temp_max_alarm
+		check_n_unlink $thermal_path/"$psu_name"_temp2
+		check_n_unlink $thermal_path/"$psu_name"_temp2_max
+		check_n_unlink $thermal_path/"$psu_name"_temp2_max_alarm
+		check_n_unlink $thermal_path/"$psu_name"_fan1_speed_get
+		check_n_unlink $alarm_path/"$psu_name"_fan1_alarm
+		check_n_unlink $alarm_path/"$psu_name"_power1_alarm
 
 		# Remove power attributes
-		psu_disconnect_power_sensor "$2"_volt_in
-		psu_disconnect_power_sensor "$2"_volt
-		psu_disconnect_power_sensor "$2"_volt_out2
-		psu_disconnect_power_sensor "$2"_power_in
-		psu_disconnect_power_sensor "$2"_power
-		psu_disconnect_power_sensor "$2"_curr_in
-		psu_disconnect_power_sensor "$2"_curr
+		psu_disconnect_power_sensor "$psu_name"_volt_in
+		psu_disconnect_power_sensor "$psu_name"_volt
+		psu_disconnect_power_sensor "$psu_name"_volt_out2
+		psu_disconnect_power_sensor "$psu_name"_power_in
+		psu_disconnect_power_sensor "$psu_name"_power
+		psu_disconnect_power_sensor "$psu_name"_curr_in
+		psu_disconnect_power_sensor "$psu_name"_curr
 
-		rm -f $eeprom_path/"$2"_vpd
+		rm -f $eeprom_path/"$psu_name"_vpd
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
