@@ -305,66 +305,84 @@ devtr_check_board_components()
 		fi
 		category_key=${comp:0:1}
 		component_key=${comp:1:2}
-		# Don't process removed component
-		if [ "$component_key" == "0" ]; then
-			continue
-		fi
+
 		category=${category_arr[$category_key]}  # Optional, just for print.
 		case $category_key in
 			T)	# Thermal Sensors
+				# Don't process removed component
+				if [ "$component_key" == "0" ]; then
+					t_cnt=$((t_cnt+1))
+					continue
+				fi
 				component_name=${thermal_arr[$component_key]}
 				alternative_key="${component_name}_${t_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				t_cnt=$((t_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				t_cnt=$((t_cnt+1))
 				;;
 			R)	# Voltage Regulators
+				if [ "$component_key" == "0" ]; then
+					r_cnt=$((r_cnt+1))
+					continue
+				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				r_cnt=$((r_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				r_cnt=$((r_cnt+1))
 				;;
 			E)	# Eeproms
+				if [ "$component_key" == "0" ]; then
+					e_cnt=$((e_cnt+1))
+					continue
+				fi
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				e_cnt=$((e_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				e_cnt=$((e_cnt+1))
 				;;
 			A)	# A2D
+				if [ "$component_key" == "0" ]; then
+					a_cnt=$((a_cnt+1))
+					continue
+				fi
 				component_name=${a2d_arr[$component_key]}
 				alternative_key="${component_name}_${a_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				a_cnt=$((a_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				a_cnt=$((a_cnt+1))
 				;;
 			P)	# Pressure Sensors
+				if [ "$component_key" == "0" ]; then
+					p_cnt=$((p_cnt+1))
+					continue
+				fi
 				component_name=${pressure_arr[$component_key]}
 				alternative_key="${component_name}_${p_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				echo -n "${alternative_comp} " >> "$devtree_file"
-				p_cnt=$((p_cnt+1))
 				if [ $devtr_verb_display -eq 1 ]; then
 					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
+				p_cnt=$((p_cnt+1))
 				;;
 			*)
 				log_err "Incorrect SMBios BOM encoded category. Category key ${category_key}"
