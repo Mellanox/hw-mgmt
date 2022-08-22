@@ -389,13 +389,15 @@ devtr_check_board_components()
 		fi
 		category_key=${comp:0:1}
 		component_key=${comp:1:2}
-		# Don't process removed component
-		if [ "$component_key" == "0" ]; then
-			continue
-		fi
+
 		category=${category_arr[$category_key]}  # Optional, just for print.
 		case $category_key in
 			T)	# Thermal Sensors
+				# Don't process removed component.
+				if [ "$component_key" == "0" ]; then
+					t_cnt=$((t_cnt+1))
+					continue
+				fi
 				component_name=${thermal_arr[$component_key]}
 				alternative_key="${component_name}_${t_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
@@ -407,6 +409,10 @@ devtr_check_board_components()
 				t_cnt=$((t_cnt+1))
 				;;
 			R)	# Voltage Regulators
+				if [ "$component_key" == "0" ]; then
+					r_cnt=$((r_cnt+1))
+					continue
+				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
@@ -418,6 +424,10 @@ devtr_check_board_components()
 				r_cnt=$((r_cnt+1))
 				;;
 			E)	# Eeproms
+				if [ "$component_key" == "0" ]; then
+					e_cnt=$((e_cnt+1))
+					continue
+				fi
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
 				# Currently it's done just for EEPROM as other components can't be in multiple cards of the same type
@@ -439,6 +449,10 @@ devtr_check_board_components()
 				e_cnt=$((e_cnt+1))
 				;;
 			A)	# A2D
+				if [ "$component_key" == "0" ]; then
+					a_cnt=$((a_cnt+1))
+					continue
+				fi
 				component_name=${a2d_arr[$component_key]}
 				alternative_key="${component_name}_${a_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
@@ -450,6 +464,10 @@ devtr_check_board_components()
 				a_cnt=$((a_cnt+1))
 				;;
 			P)	# Pressure Sensors
+				if [ "$component_key" == "0" ]; then
+					p_cnt=$((p_cnt+1))
+					continue
+				fi
 				component_name=${pressure_arr[$component_key]}
 				alternative_key="${component_name}_${p_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
