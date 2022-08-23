@@ -2153,20 +2153,10 @@ do_chip_up_down()
 
 	map_asic_pci_to_i2c_bus $pci_bus
 	bus=$?
-	# TMP: Use this mapping for getting bus below. Modify it as following.
-	#if [ $bus -eq 0 ]; the
-	#	# Add ASIC device.
-	#	if [ asic_index -eq 1 ]; then
-	#		get_asic_bus
-	#	else
-	#		get_asic2_bus
-	#	fi
-	#	bus=$?
-	#fi
-	# Remove three line below after TMP is uncommented.
-	# Add ASIC device.
-	get_asic_bus
-	bus=$?
+	if [ $bus -eq 0 ]; then
+		get_asic_bus
+		bus=$?
+	fi
 
 	case $action in
 	0)
