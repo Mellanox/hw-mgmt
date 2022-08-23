@@ -796,7 +796,7 @@ if [ "$1" == "add" ]; then
 			# Support FW update only for specific Murata PSU capacities
 			fw_ver="N/A"
 			fw_primary_ver="N/A"
-			if [ "$cap" == "1500" -o "$cap" == "2000" ]; then
+			if [ "$cap" == "1500" -o "$cap" == "2000" -o "$cap" == "2500" ]; then
 				fw_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr)
 				fw_primary_ver=$(hw_management_psu_fw_update_murata.py -v -b $bus -a $psu_addr -P)
 			fi
