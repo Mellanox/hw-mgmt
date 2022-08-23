@@ -1,4 +1,4 @@
-From 65f10a56c4e824dd871cda930ab01ce7de90799b Mon Sep 17 00:00:00 2001
+From a4c240440bd5da136c53bd302a27e55c1f85e4df Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Wed, 10 Aug 2022 06:25:26 +0300
 Subject: [PATCH 1/1] platform: mellanox: Introduce support for next-generation
@@ -28,7 +28,7 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 102 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index c61ac69b4..8c92eca79 100644
+index c61ac69b4..eb8211d83 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -268,6 +268,7 @@
@@ -148,9 +148,9 @@ index c61ac69b4..8c92eca79 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "asic_pg",
++		.label = "asic_pg_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
  	{
