@@ -1,10 +1,8 @@
-From 845a71fce4c283c9524b308cef76f62bf2a51a7b Mon Sep 17 00:00:00 2001
+From 65f10a56c4e824dd871cda930ab01ce7de90799b Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Wed, 10 Aug 2022 06:25:26 +0300
 Subject: [PATCH 1/1] platform: mellanox: Introduce support for next-generation
  800GB/s ethernet switch.
-
-TMP: This is inital commit. It will be enhanced later-on.
 
 Introduce support for Nvidia next-generation 800GB/s ethernet switch - SN5600.
 SN5600 is 51.2 Tbps Ethernet switch based on Nvidia Spectrum-4 ASIC.
@@ -30,7 +28,7 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 102 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index c61ac69b4..c5c91639a 100644
+index c61ac69b4..8c92eca79 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -268,6 +268,7 @@
@@ -47,8 +45,8 @@ index c61ac69b4..c5c91639a 100644
  
 +/* Platform channels for ng800 system family */
 +static const int mlxplat_ng800_channels[] = {
-+	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-+	19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34
++	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
++	18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
 +};
 +
 +/* Platform ng800 mux data */
@@ -97,7 +95,7 @@ index c61ac69b4..c5c91639a 100644
  	},
  	{
 -		.label = "reset_voltmon_upgrade_fail",
-+		.label = "reset_pwr_converter_fail",		// <<< Changed from TPS. Change should be upstreamed in separate patch?
++		.label = "reset_pwr_converter_fail",		// ToDo This was changed from TPS. Should be upstreamed in separate patch.
  		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
  		.mask = GENMASK(7, 0) & ~BIT(0),
  		.mode = 0444,
@@ -119,7 +117,7 @@ index c61ac69b4..c5c91639a 100644
  		.mode = 0444,
  	},
 +	{
-+		.label = "pwr_cvtr_prog_en",			// <<< Ofer check
++		.label = "pwr_cvtr_prog_en",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
 +		.mode = 0644,
@@ -132,7 +130,7 @@ index c61ac69b4..c5c91639a 100644
  		.mode = 0444,
  	},
 +	{
-+		.label = "clk_brd1_boot_fail",			// <<< Check Ofer, bits 4 - 7 exact purpose, reguired.
++		.label = "clk_brd1_boot_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
@@ -150,7 +148,7 @@ index c61ac69b4..c5c91639a 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "asic_pg",				// <<< Check Ofer, ASIC_PG - is it asic_pwr_fail, 0/1
++		.label = "asic_pg",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
@@ -167,7 +165,7 @@ index c61ac69b4..c5c91639a 100644
 +	int i;
 +
 +	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
-+	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ng800_mux_data);	// <<< Will we use this in future? 16 channels - general, 16 - special, e.g. EROTs 
++	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ng800_mux_data); 
 +	mlxplat_mux_data = mlxplat_ng800_mux_data;
 +	mlxplat_hotplug = &mlxplat_mlxcpld_ext_data;
 +	mlxplat_hotplug->deferred_nr =
