@@ -73,6 +73,7 @@ thermal_type_t14=14
 thermal_type_def=0
 thermal_type_full=100
 
+base_cpu_bus_offset=10
 max_tachos=14
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3

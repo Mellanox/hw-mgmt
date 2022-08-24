@@ -236,8 +236,15 @@ devtr_check_supported_system_init_alternatives()
 			done
 			;;
 		$CFL_CPU)
+			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
+				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
+			else
+				cpu_brd_bus_offset=0
+			fi
 			for key in "${!comex_cfl_alternatives[@]}"; do
-				comex_alternatives["$key"]="${comex_cfl_alternatives["$key"]}"
+				curr_component=(${comex_cfl_alternatives["$key"]})
+				curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
+				comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
 			done
 			;;
 		*)
@@ -432,18 +439,20 @@ devtr_check_board_components()
 				alternative_key="${component_name}_${e_cnt}"
 				# Currently it's done just for EEPROM as other components can't be in multiple cards of the same type
 				# Moose system has 2 Clock boards. Just EEPROM is accessed on these boards.
-				for ((brd=0;brd<board_num;brd++)) do
+				for ((brd=0,n=1;brd<board_num;brd++,n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					if [ $addr_offset -ne 0 ]; then
 						curr_component[1]=$((curr_component[1]+addr_offset*brd))
+						curr_component[1]=0x$(echo "obase=16; ${curr_component[1]}"|bc)
 					fi
 					if [ $bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+bus_offset*brd))
+						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
 					fi
 					echo -n "${curr_component[@]} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
 						log_info "DBG:  ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+						echo -n " ${board_name}${n} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				done
 				e_cnt=$((e_cnt+1))

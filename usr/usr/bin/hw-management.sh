@@ -105,7 +105,6 @@ leakage_count=0
 # loaded in case they were not loaded before or in case these drivers are not
 # configured as modules.
 
-base_cpu_bus_offset=10
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
 connect_table=()
@@ -417,7 +416,7 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x68 13 voltmon5 \
 	mp2975 0x6c 13 voltmon6 )
 
-# Just for possible initial step without SMBios alternative BOM mechanism
+# Just for possible initial step without SMBios alternative BOM string
 sn5600_base_connect_table=( \
 	24c128 0x50 5 \
 	24c128 0x53 5 \
@@ -444,7 +443,7 @@ cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
-sn5600_named_busses=( asic1 2 pwr 4 vr1 5 ambf 6 amb1 7 vpd 8 )
+sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 
 ACTION=$1
 
@@ -1640,11 +1639,13 @@ sn56xx_specific()
 	echo 2000 > $config_path/fan_min_speed	# ToDo. Now ~15%, not provided, check on real system
 	echo 25000 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
+	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
 	max_tachos=8
 	hotplug_fans=4
 	hotplug_pwrs=2
 	hotplug_psus=2
-	psu2_i2c_addr=0x5a	# Change default PSU2 I2C address
+	psu2_i2c_addr=0x5a
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})
@@ -2011,7 +2012,7 @@ set_asic_pci_id()
 	HI130|HI140|HI141)
 		asic_pci_id=$quantum2_pci_id
 		;;
-	HI144|HI147)
+	HI144|HI147|HI148)
 		asic_pci_id=$spc4_pci_id
 		;;
 	HI131)
@@ -2056,7 +2057,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI144|HI147)
+	HI144|HI147|HI148)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
@@ -2077,6 +2078,7 @@ pre_devtr_init()
 	VMOD0013)
 		case $sku in
 		HI144|HI147|HI148)	# ToDo Possible change for Hippo, Ibex
+			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			echo 2 > "$config_path"/clk_brd_num
 			echo 3 > "$config_path"/clk_brd_addr_offset
 			;;
