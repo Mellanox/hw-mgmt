@@ -12,7 +12,7 @@ jobs:
       uses: shioyang/check-pr-labels-on-push-action@v1.0.3
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        labels: '["TAG+1"]'
+        labels: '["Add TAG"]'
         
     - name: Check "update_chengelog" label is set
       id: check_changelog_label

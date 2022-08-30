@@ -406,7 +406,7 @@ devtr_check_board_components()
 		category=${category_arr[$category_key]}  # Optional, just for print.
 		case $category_key in
 			T)	# Thermal Sensors
-				# Don't process removed component.
+				# Don't process removed component
 				if [ "$component_key" == "0" ]; then
 					t_cnt=$((t_cnt+1))
 					continue
