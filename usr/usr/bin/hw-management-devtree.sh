@@ -45,6 +45,8 @@ declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps
 
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
+declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus")
+
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
 
@@ -127,7 +129,11 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
-declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
+declare -A sn5600_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
+				["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
+				["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
+				["pmbus_3"]="pmbus 0x15 4 pwr_conv2" \
+				["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
 				["mp2975_2"]="mp2975 0x65 5 voltmon3" \
@@ -385,7 +391,7 @@ devtr_check_board_components()
 			;;
 	esac
 
-	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; brd=0
+	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; brd=0
 	curr_component=()
 	for comp in "${comp_arr[@]}"; do
 		# Skip 1st tuple in board string. It desctibes board name and number
@@ -451,8 +457,13 @@ devtr_check_board_components()
 					fi
 					echo -n "${curr_component[@]} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
+						if [ $board_num -gt 1 ]; then
+							board_name_str="${board_name}${n}"
+						else
+							board_name_str="$board_name"
+						fi
 						log_info "DBG:  ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${board_name}${n} ${category_key} ${component_key} " >> "$devtree_codes_file"
+						echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				done
 				e_cnt=$((e_cnt+1))
@@ -486,6 +497,21 @@ devtr_check_board_components()
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				p_cnt=$((p_cnt+1))
+				;;
+			O)	# Power Convertors
+				if [ "$component_key" == "0" ]; then
+					o_cnt=$((o_cnt+1))
+					continue
+				fi
+				component_name=${pwr_conv_arr[$component_key]}
+				alternative_key="${component_name}_${o_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				echo -n "${alternative_comp} " >> "$devtree_file"
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
+				o_cnt=$((o_cnt+1))
 				;;
 			*)
 				log_err "Incorrect SMBios BOM encoded category. Category key ${category_key}"

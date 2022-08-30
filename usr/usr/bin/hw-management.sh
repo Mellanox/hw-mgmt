@@ -418,6 +418,10 @@ mqm9520_dynamic_i2c_bus_connect_table=( \
 
 # Just for possible initial step without SMBios alternative BOM string
 sn5600_base_connect_table=( \
+	pmbus  0x10 4 \
+	pmbus  0x11 4 \
+	pmbus  0x13 4 \
+	pmbus  0x15 4 \
 	24c128 0x50 5 \
 	24c128 0x53 5 \
 	mp2975 0x62 5 \
