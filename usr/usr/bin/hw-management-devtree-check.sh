@@ -35,7 +35,6 @@
 
 source hw-management-helpers.sh
 source hw-management-devtree.sh
-system_ver_file=/sys/devices/virtual/dmi/id/product_version
 board_type=$(<"$board_type_file")
 cpu_type=$(<"$config_path"/cpu_type)
 devtr_verb_display=0
@@ -119,7 +118,7 @@ devtr_2_csv_convert()
 		else
 			echo "Device,Bus,Address,Device name,Board name,Category code,Device code" > "$devtree_csv_file"
 			for ((i=0, j=0; i<${#devtree_table[@]}; i+=4, j+=3)); do
-				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}"",""${devtree_codes_table[j]}"",""${devtree_codes_table[j+1]}"",""${devtree_codes_table[j+2]}" >> "$devtree_csv_file"
+				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}""," "${devtree_codes_table[j]}""," "${devtree_codes_table[j+1]}""," "${devtree_codes_table[j+2]}" >> "$devtree_csv_file"
 			done
 		fi
 	else
