@@ -723,6 +723,9 @@ if [ "$1" == "add" ]; then
 				iio_name=$lc_iio_dev_name_def
 			fi
 		fi
+		if [ ! -d $environment_path ]; then
+			sleep 1
+		fi
 		# ADS1015 used on SN2201 has scale for every input
 		if [ "$board_type" == "VMOD0014" ]; then
 			for i in {0..7}; do
