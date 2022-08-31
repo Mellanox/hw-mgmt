@@ -61,6 +61,11 @@ VMOD0010)
 		;;
 	esac
 	;;
+VMOD0011)
+	# Remove line card index from port name.
+	remove_pattern=`echo ${port_name} | cut -c3-4`
+	echo ${port_name} | sed s/"$remove_pattern"//
+	;;
 *)
 	echo ${port_name}
 	;;
