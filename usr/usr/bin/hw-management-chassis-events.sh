@@ -631,7 +631,7 @@ function get_i2c_voltmon_prefix()
 			then
 				voltmon_name="${dynamic_i2c_bus_connect_table[i+3]}"
 				if [ $voltmon_name == "NA" ]; then 
-					echo "$undefined"
+					echo "undefined"
 				else
 					echo "$voltmon_name"
 				fi
