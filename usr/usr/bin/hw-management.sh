@@ -1374,6 +1374,8 @@ mqm9510_specific()
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
 	thermal_type=$thermal_type_def
+	i2c_bus_def_off_eeprom_cpu=24
+	i2c_comex_mon_bus_default=23
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
 	echo 32000 > $config_path/psu_fan_max
@@ -1397,6 +1399,8 @@ mqm9520_specific()
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
 	i2c_asic2_bus_default=10
+	i2c_bus_def_off_eeprom_cpu=24
+	i2c_comex_mon_bus_default=23
 	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
