@@ -788,7 +788,7 @@ add_i2c_dynamic_bus_dev_connection_table()
 	connection_table=("$@")
 	dynamic_i2cbus_connection_table=()
 
-	echo -n "${connection_table[@]}" >> $config_path/i2c_bus_connect_devices
+	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
 		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
 		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
