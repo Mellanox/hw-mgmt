@@ -757,7 +757,7 @@ add_come_named_busses()
 		come_named_busses+=( ${cfl_come_named_busses[@]} )
 		;;
 	*)
-		exit 0
+		return
 		;;
 	esac
 
@@ -1131,7 +1131,7 @@ msn27002_msb78002_specific()
 connect_msn4700_msn4600()
 {
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-	if [ $sku == "HI124"]; then
+	if [ $sku == "HI124" ]; then
 		# msn4600C with removed A2D
 		connect_table+=(${msn4600C_base_connect_table[@]})
 	else
@@ -1145,11 +1145,11 @@ connect_msn4700_msn4600()
 connect_msn4700_msn4600_A1()
 {
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-	if [ $sku == "HI124"]; then
+	if [ $sku == "HI124" ]; then
 		#  msn4600C with removed A2D
 		connect_table+=(${msn4600C_A1_base_connect_table[@]})
 	else
-        # msn4700/msn4600 respin
+		# msn4700/msn4600 respin
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	fi
 	add_cpu_board_to_connection_table
