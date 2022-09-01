@@ -1,7 +1,7 @@
-From 1b32b9305337f6606fdcc1c1f0b5561234bc2264 Mon Sep 17 00:00:00 2001
+From a793dad1c289428a6b8dec32471cc16520975e5a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 14 Feb 2022 13:24:44 +0200
-Subject: [PATCH 4/9] platform: mellanox: Introduce support for NVLink4 managed
+Subject: [PATCH 3/8] platform: mellanox: Introduce support for NVLink4 managed
  switch
 X-NVConfidentiality: public
 
@@ -37,7 +37,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 203 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 9d60aeff2..135da4fa3 100644
+index d1fd7cfdb..e81c88877 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -93,6 +93,12 @@
