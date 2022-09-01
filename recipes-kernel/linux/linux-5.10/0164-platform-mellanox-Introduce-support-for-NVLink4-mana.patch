@@ -1,8 +1,8 @@
-From e8a3b233531f79bef59c692dbf6a4d230827a114 Mon Sep 17 00:00:00 2001
+From 0a4db5f312f0bec933e7fe2df6b4518f209fce9c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 14 Feb 2022 13:24:44 +0200
-Subject: [PATCH 3/8] platform: mellanox: Introduce support for NVLink4 managed
- switch
+Subject: [PATCH 03/10] platform: mellanox: Introduce support for NVLink4
+ managed switch
 X-NVConfidentiality: public
 
 Introduce support for Nvidia P4697 system, the NVLink4 rack switch
@@ -37,7 +37,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 228 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 7cabc488e..47fe870e8 100644
+index 799917b5b..7249f68c9 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -93,6 +93,12 @@
