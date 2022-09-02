@@ -1313,30 +1313,6 @@ enable_disable_zones_set_pwm()
 {
 	case $1 in
 	1)
-		mode="enabled"
-		policy="step_wise"
-		;;
-	*)
-		mode="disabled"
-		policy="user_space"
-		;;
-	esac
-
-	if [ -L $tz_mode ]; then
-		echo $policy > $tz_policy
-	fi
-	set_thermal_zone_attr  "" "module" $module_counter "thermal_zone_policy" $policy
-	set_thermal_zone_attr  "" "gearbox" $gearbox_counter "thermal_zone_policy" $policy
-
-	if [ -L $tz_mode ]; then
-		echo $mode > $tz_mode
-	fi
-
-	set_thermal_zone_attr  "" "module" $module_counter "thermal_zone_mode" $mode
-	set_thermal_zone_attr  "" "gearbox" $gearbox_counter "thermal_zone_mode" $mode
-
-	case $1 in
-	1)
 		set_pwm_min_threshold
 		fan_dynamic_min_last=$fan_dynamic_min
 		check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
