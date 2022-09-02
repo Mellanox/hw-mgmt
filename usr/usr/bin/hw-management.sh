@@ -807,7 +807,7 @@ add_come_named_busses()
 		come_named_busses+=( ${cfl_come_named_busses[@]} )
 		;;
 	*)
-		exit 0
+		return
 		;;
 	esac
 
@@ -1194,7 +1194,7 @@ connect_msn4700_msn4600_A1()
 		#  msn4600C with removed A2D
 		connect_table+=(${msn4600C_A1_base_connect_table[@]})
 	else
-        # msn4700/msn4600 respin
+		# msn4700/msn4600 respin
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	fi
 	add_cpu_board_to_connection_table
