@@ -74,3 +74,22 @@ jobs:
         echo "Set tag: $new_tag"
         git tag $new_tag
         git push --tags
+
+    - name: Create new tag comment
+      if: ${{ steps.check_tag_label.outputs.result  == 'true' }}
+      uses: mshick/add-pr-comment@v1
+      with:
+        message: |
+            **Hello**
+            🌏
+            !
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create new tag comment
+      if: ${{ steps.check_tag_label.outputs.result  == 'true' }}
+      uses: peter-evans/create-or-update-comment@v2
+      with:
+        issue-number: 1
+        body: |
+          New tag was created: ${{ env.GITHUB_NEW_TAG }}
+        reactions: '+1'
