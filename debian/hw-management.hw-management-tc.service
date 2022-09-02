@@ -1,12 +1,12 @@
 [Unit]
-Description=Thermal control service of Mellanox systems
+Description=Thermal control service (ver.2.0) of Mellanox systems
 After=hw-management.service
 Requires=hw-management.service
 PartOf=hw-management.service
 Documentation=man:hw-management-tc.service(8)
 
 [Service]
-ExecStart="/usr/bin/hw-management-thermal-control.sh"
+ExecStart="/usr/bin/hw_management_thermal_control.py"
 
 [Install]
 WantedBy=multi-user.target
