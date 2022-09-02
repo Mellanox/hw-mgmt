@@ -739,7 +739,8 @@ if [ "$1" == "add" ]; then
 		fi
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
-		if [ $? -eq 0 ] && [ ! -L $eeprom_path/"$psu_name"_info ] && [ ! -f "$eeprom_file" ]; then
+		cmd_status=$?
+		if [ $cmd_status -eq 0 ] && [ ! -L $eeprom_path/"$psu_name"_info ] && [ ! -f "$eeprom_file" ]; then
 			if [ "$board_type" == "VMOD0014" ]; then
 				psu_eeprom_type="24c02"
 			else
@@ -752,6 +753,11 @@ if [ "$1" == "add" ]; then
 			ln -sf "$eeprom_file" "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			chmod 400 "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			echo 1 > $config_path/"$psu_name"_eeprom_us
+		else
+			if [ $cmd_status -eq 0 ] && [ -L $eeprom_path/"$psu_name"_info ] && [ -f "$eeprom_file" ]; then
+				chmod 400 "$eeprom_path"/"$eeprom_name" 2>/dev/null
+				echo 1 > $config_path/"$psu_name"_eeprom_us
+			fi
 		fi
 
 		# Set default PSU FAN speed from config, it will be overwitten by values from VPD.
