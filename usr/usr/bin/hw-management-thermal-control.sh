@@ -473,12 +473,39 @@ unk_dir_untrust_t12=(5000 12 15000 13 25000 14 30000 15 35000 16 45000 17 $max_a
 # 30-35		30	50	20	20	30	50
 # 35-40		40	60	20	20	40	60
 
+
 p2c_dir_trust_t13=(25000 12 35000 13 40000 14 $max_amb 14 )
 p2c_dir_untrust_t13=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
 c2p_dir_trust_t13=(40000 12 $max_amb 12 )
 c2p_dir_untrust_t13=(40000 12 $max_amb 12 )
 unk_dir_trust_t13=(25000 12 35000 13 40000 14 $max_amb 14 )
 unk_dir_untrust_t13=(5000 12 20000 13 25000 14 35000 15 40000 16 $max_amb 16 )
+
+# Class t14 for SN5600.
+# ToDo This is preBU setting, just as placeholder
+# Actual info should be provided aftyer tests on real system with ASIC.
+# Direction	P2C		C2P		Unknown
+#--------------------------------------------------------------
+# Amb [C]	copper/	AOC W/O copper/	AOC W/O	copper/	AOC W/O
+#		sensors	sensor	sensor	sensor	sensor	sensor
+#--------------------------------------------------------------
+#  <0		30	30	30	30	30	30
+#  0-5		30	30	30	30	30	30
+#  5-10		30	30	30	30	30	30
+# 10-15		30	30	30	30	30	30
+# 15-20		30	40	30	30	30	40
+# 20-25		30	50	30	40	30	50
+# 25-30		30	60	30	50	30	60
+# 30-35		40	70	30	60	40	70
+# 35-40		50	80	40	70	50	80
+# 40-45		60	90	50	80	60	90
+
+p2c_dir_trust_t14=(30000 13 35000 14 40000 15 45000 16 $max_amb 16)
+p2c_dir_untrust_t14=(15000 13 20000 14 25000 15 30000 16 35000 17 40000 18 45000 19 $max_amb 19)
+c2p_dir_trust_t14=(35000 13 40000 14 45000 15 $max_amb 15)
+c2p_dir_untrust_t14=(20000 13 25000 14 30000 15 35000 16 40000 17 45000 18 $max_amb 18)
+unk_dir_trust_t14=(30000 13 35000 14 40000 15 45000 16 $max_amb 16)
+unk_dir_untrust_t14=(15000 13 20000 14 25000 15 30000 16 35000 17 40000 18 45000 19 $max_amb 19)
 
 # Local variables
 report_counter=120
@@ -1111,6 +1138,16 @@ init_system_dynamic_minimum_db()
 		config_unk_dir_trust "${unk_dir_trust_t13[@]}"
 		config_unk_dir_untrust "${unk_dir_untrust_t13[@]}"
 		;;
+	$thermal_type_t14)
+		# Config FAN minimal speed setting for class t14.
+		# ToDo. Use default 60% settings until real values will be available.
+		config_p2c_dir_trust "${p2c_dir_trust_def[@]}"
+		config_p2c_dir_untrust "${p2c_dir_untrust_def[@]}"
+		config_c2p_dir_trust "${c2p_dir_trust_def[@]}"
+		config_c2p_dir_untrust "${c2p_dir_untrust_def[@]}"
+		config_unk_dir_trust "${unk_dir_trust_def[@]}"
+		config_unk_dir_untrust "${unk_dir_untrust_def[@]}"
+		;;
 	$thermal_type_full)
 		# Config FAN default minimal speed setting
 		config_p2c_dir_trust "${p2c_dir_trust_def[@]}"
@@ -1274,30 +1311,6 @@ set_thermal_zone_attr()
 
 enable_disable_zones_set_pwm()
 {
-	case $1 in
-	1)
-		mode="enabled"
-		policy="step_wise"
-		;;
-	*)
-		mode="disabled"
-		policy="user_space"
-		;;
-	esac
-
-	if [ -L $tz_mode ]; then
-		echo $policy > $tz_policy
-	fi
-	set_thermal_zone_attr  "" "module" $module_counter "thermal_zone_policy" $policy
-	set_thermal_zone_attr  "" "gearbox" $gearbox_counter "thermal_zone_policy" $policy
-
-	if [ -L $tz_mode ]; then
-		echo $mode > $tz_mode
-	fi
-
-	set_thermal_zone_attr  "" "module" $module_counter "thermal_zone_mode" $mode
-	set_thermal_zone_attr  "" "gearbox" $gearbox_counter "thermal_zone_mode" $mode
-
 	case $1 in
 	1)
 		set_pwm_min_threshold

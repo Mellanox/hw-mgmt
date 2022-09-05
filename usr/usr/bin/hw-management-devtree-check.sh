@@ -35,7 +35,6 @@
 
 source hw-management-helpers.sh
 source hw-management-devtree.sh
-system_ver_file=/sys/devices/virtual/dmi/id/product_version
 board_type=$(<"$board_type_file")
 cpu_type=$(<"$config_path"/cpu_type)
 devtr_verb_display=0
@@ -43,10 +42,11 @@ devtree_codes_file="${PWD}/devtree_codes"
 
 usage()                                                                                              
 {                                                                                                    
-        printf "Usage:\\t %s <-d> | <-s> | <-p> | -S | -v | <-h>\\n" `basename "$0"`
+        printf "Usage:\\t %s -d | -s | -p | -c | -h | -S | -v\\n" `basename "$0"`
 	printf "%s\\t display device tree\\n" "-d"
 	printf "%s\\t show system version SMBIOS string\\n" "-s"
 	printf "%s\\t parse provided SMBIOS BOM string and create devtree\\n" "-p <SMBIOS_BOM_STR>"
+	printf "%s\\t convert devtree file to csv format for Excel\\n" "-c"
 	printf "%s\\t simulate parameters for debug through environment variables:\\n" "-S"
 	printf "\\t DT_BOARD_TYPE, DT_SYS_SKU, DT_PATH, DT_CPU_TYPE\\n"
 	printf "%s\\t verbose simulation output and display of device tree\\n" "-v"
@@ -75,20 +75,52 @@ devtr_show_devtree_file()
 		echo "Number of components in devtree: ${arr_len}"
 		printf "Number\\t\\tBus\\tAddress\\tDevice\\t\\tName\\n"
 
-		for ((i=0, j=0, k=0; i<${#devtree_table[@]}; i+=4, j+=1, k+=2)); do
+		for ((i=0, j=0, k=0; i<${#devtree_table[@]}; i+=4, j+=1, k+=3)); do
 			strlen=${#devtree_table[i]}
 			if [ "$strlen" -lt 8 ]; then
 				printf "Device %s:\\t%s\\t%s\\t%s\\t\\t%s\\n" "${j}" "${devtree_table[i+2]}" "${devtree_table[i+1]}" "${devtree_table[i]}" "${devtree_table[i+3]}"
 				if [ $devtr_verb_display -eq 1 ]; then
-					printf "\\t\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}"
+					printf "\\tBoard name: %s\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}" "${devtree_codes_table[k+2]}"
 				fi
 			else
 				printf "Device %s:\\t%s\\t%s\\t%s\\t%s\\n" "${j}" "${devtree_table[i+2]}" "${devtree_table[i+1]}" "${devtree_table[i]}" "${devtree_table[i+3]}"
 				if [ $devtr_verb_display -eq 1 ]; then
-					printf "\\t\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}"
+					printf "\\tBoard name: %s\\tCategory code: %s\\tDevice code: %s\\n" "${devtree_codes_table[k]}" "${devtree_codes_table[k+1]}" "${devtree_codes_table[k+2]}"
 				fi
 			fi
 		done
+	else
+		echo "No devicetree file"
+	fi
+}
+
+devtr_2_csv_convert()
+{
+	if [ -e "$devtree_file" ]; then
+		declare -a devtree_table=($(<"$devtree_file"))
+
+		if [ $devtr_verb_display -eq 1 ]; then
+			if [ -e "$devtree_codes_file" ]; then
+				declare -a devtree_codes_table=($(<"$devtree_codes_file"))
+			else
+				devtr_verb_display=0
+				echo "No verbose devtree_codes file"
+			fi
+		fi
+		devtree_dir=$(dirname "${devtree_file}")
+		devtree_csv_file="$devtree_dir""/"devtree.csv
+
+		if [ $devtr_verb_display -eq 0 ]; then
+			echo "Device,Bus,Address,Device name" > "$devtree_csv_file"
+			for ((i=0; i<${#devtree_table[@]}; i+=4)); do
+				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}" >> "$devtree_csv_file"
+			done
+		else
+			echo "Device,Bus,Address,Device name,Board name,Category code,Device code" > "$devtree_csv_file"
+			for ((i=0, j=0; i<${#devtree_table[@]}; i+=4, j+=3)); do
+				echo  "${devtree_table[i]}""," "${devtree_table[i+1]}""," "${devtree_table[i+2]}""," "${devtree_table[i+3]}""," "${devtree_codes_table[j]}""," "${devtree_codes_table[j+1]}""," "${devtree_codes_table[j+2]}" >> "$devtree_csv_file"
+			done
+		fi
 	else
 		echo "No devicetree file"
 	fi
@@ -148,16 +180,17 @@ rc=0
 devtr_display=0
 devtr_parse=0
 devtr_sim=0
+devtr_csv_convert=0
 if [ "$param_num" -ge 1 ]; then
 	OPTIND=1
-	optspec="dsShp:v"
+	optspec="dsShcp:v"
 	while getopts "$optspec" optchar; do
 		case "${optchar}" in
 			d)
 				devtr_display=1
 				;;
 			s)
-				smbios_bom_str=$(<$system_ver_file)
+				smbios_bom_str=$(<"$system_ver_file")
 				echo "Devtree SMBios string: ${smbios_bom_str}"
 				;;
 			h)
@@ -172,6 +205,9 @@ if [ "$param_num" -ge 1 ]; then
 				;;
 			v)
 				devtr_verb_display=1
+				;;
+			c)
+				devtr_csv_convert=1
 				;;
 			*)
 				usage
@@ -189,6 +225,8 @@ devtr_sim_environment_vars
 
 if [ $devtr_display -eq 1 ]; then
 	devtr_show_devtree_file
+elif [ $devtr_csv_convert -eq 1 ]; then
+	devtr_2_csv_convert
 elif [ $devtr_parse -eq 1 ]; then
 	if [ $devtr_sim -eq 1 ]; then
 		devtr_check_smbios_device_description "$smbios_bom_str" "$devtr_verb_display" "$devtree_codes_file" "$board_type" "$sku" "$devtree_file" "$cpu_type"

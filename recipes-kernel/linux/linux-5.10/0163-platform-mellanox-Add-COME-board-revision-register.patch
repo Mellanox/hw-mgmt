@@ -1,7 +1,7 @@
-From 242741f0b82c9e03bd8f024c85174b53b6ff33ef Mon Sep 17 00:00:00 2001
+From 4f9b675f12b900f544d82eff62401d51390d23df Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 6 Jul 2022 17:26:41 +0300
-Subject: [PATCH 2/8] platform: mellanox: Add COME board revision register
+Subject: [PATCH 02/10] platform: mellanox: Add COME board revision register
 X-NVConfidentiality: public
 
 Add to CPLD COME board configuration register for getting a board
@@ -15,7 +15,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 21 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index a31dd0d2a..7cabc488e 100644
+index b3a5f0230..799917b5b 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -160,6 +160,7 @@

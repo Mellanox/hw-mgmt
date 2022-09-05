@@ -1,7 +1,7 @@
-From 64228d47e3c18c0cafc7eaf2bbb920a69a401692 Mon Sep 17 00:00:00 2001
+From fed215875bdea5c4e5808ae71eded9bae8d92d6a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 May 2022 14:31:10 +0300
-Subject: [PATCH 6/8] TMP: platform: mlx-platform: Add SPI path for NVLink
+Subject: [PATCH 06/10] TMP: platform: mlx-platform: Add SPI path for NVLink
  switch for EROT access
 X-NVConfidentiality: public
 
@@ -14,7 +14,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 17 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 47fe870e8..c61ac69b4 100644
+index 7249f68c9..50a080931 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -16,6 +16,7 @@
