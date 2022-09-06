@@ -97,7 +97,7 @@ VMOD0014)
 esac
 
 dump_cmd "dmesg" "dmesg" "10"
-dump_cmd "dmidecode -t1 -t2 -t 11" "dmidecode" "3"
+dump_cmd "dmidecode -t1 -t2 -t11 -t15" "dmidecode" "3"
 dump_cmd "lsmod" "lsmod" "3"
 dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
