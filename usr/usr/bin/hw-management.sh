@@ -215,7 +215,8 @@ sn3750sx_secured_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x66 5 \
 			tmp102 0x49 7 \
 			adt75 0x4a 7 \
-			24c512 0x51 8)
+			24c512 0x51 8 \
+			24c128 0x54 9)
 
 msn3420_base_connect_table=(	max11603 0x6d 5 \
 			xdpe12284 0x62 5 \
@@ -2210,8 +2211,9 @@ do_chip_up_down()
 			case $sku in
 				HI146)
 					# Chip up / down operations are to be performed for ASIC virtual address 0x37.
-					i2c_asic_addr_name=0037
-					i2c_asic_addr=0x37
+					# Disabling it for the timebeing. Will have to enable once h/w resolves the issue
+					# i2c_asic_addr_name=0037
+					# i2c_asic_addr=0x37
 					;;
 				*)
 					;;
