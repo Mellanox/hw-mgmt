@@ -50,7 +50,7 @@ declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus")
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
 
-declare -A pressure_arr=(["0"]="dummy" ["a"]="icp20100" ["b"]="bmp390" ["c"]="lps22")
+declare -A pressure_arr=(["0"]="dummy" ["a"]="icp201xx" ["b"]="bmp390" ["c"]="lps22")
 
 # Declare component alternatives associative arrays.
 declare -A comex_bdw_alternatives=(["mp2975_0"]="mp2975 0x61 15 comex_voltmon2" \
@@ -129,11 +129,7 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
-declare -A sn5600_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
-				["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
-				["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
-				["pmbus_3"]="pmbus 0x15 4 pwr_conv2" \
-				["max11603_0"]="max11603 0x6d 5 swb_a2d" \
+declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
 				["mp2975_2"]="mp2975 0x65 5 voltmon3" \
@@ -168,14 +164,19 @@ declare -A sn5600_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 7 fan_amb")
 
-# ToDo Check if really required or can be changed by HW.
 declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 6 fan_amb")
 
 # Currently system can have just multiple clock boards.
 declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x50 5 clk_eeprom")
 
-declare -A pwr_type0_alternatives=(["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
+declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
+				   ["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv2" \
+				   ["icp201xx_0"]="icp201xx 0x63 4 press_sens1" \
+				   ["icp201xx_1"]="icp201xx 0x64 4 press_sens2" \
+				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
