@@ -295,7 +295,7 @@ msn3510_base_connect_table=(	max11603 0x6d 5 \
 mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8)
+			24c512 0x51 8)
 
 # MQM9700 adt75 temp sensors
 mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
@@ -333,11 +333,11 @@ mqm97xx_mps_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 			mp2975 0x6a 5 voltmon5 \
 			mp2975 0x6c 5 voltmon6 )
 
-mqm97xx_xpde_voltmon_connect_table=( xpde152854 0x62 5 voltmon1 \
-			mp2888 0x66 5 voltmon2 \
-			xpde152854 0x68 5 voltmon3 \
-			xpde152854 0x6a 5 voltmon4 \
-			xpde152854 0x6c 5 voltmon5 )
+mqm97xx_xpde_voltmon_connect_table=( xdpe15284 0x62 5 voltmon1 \
+			mp2888 0x66 5 voltmon3 \
+			xdpe15284 0x68 5 voltmon4 \
+			xdpe15284 0x6a 5 voltmon5 \
+			xdpe15284 0x6c 5 voltmon6 )
 
 mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 			mp2888 0x66 5 voltmon2 \

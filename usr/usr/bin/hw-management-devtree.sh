@@ -99,9 +99,14 @@ declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_3"]="mp2975 0x6a 5 voltmon5" \
 				 ["mp2975_4"]="mp2975 0x6c 5 voltmon6" \
 				 ["mp2975_5"]="mp2975 0x6e 5 voltmon7" \
+				 ["152x4_0"]="xpde152854 0x62 5 voltmon1" \
+				 ["152x4_1"]="xpde152854 0x68 5 voltmon4" \
+				 ["152x4_2"]="xpde152854 0x6a 5 voltmon5" \
+				 ["152x4_3"]="xpde152854 0x6c 5 voltmon6" \
 				 ["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
+				 ["stts751_0"]="stts751 0x4a 7 port_amb" \
 				 ["24c32_0"]="24c32 0x51 8 system_eeprom" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
@@ -162,7 +167,8 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # Actually it's located on fan board and in this way it will be passed through SMBios
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
 declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
-				   ["adt75_0"]="adt75 0x49 7 fan_amb")
+				   ["adt75_0"]="adt75 0x49 7 fan_amb" \
+				   ["stts751_0"]="stts751 0x49 7 fan_amb")
 
 declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 6 fan_amb")
