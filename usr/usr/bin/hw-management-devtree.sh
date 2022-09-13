@@ -245,14 +245,16 @@ devtr_check_supported_system_init_alternatives()
 		$CFL_CPU)
 			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
 				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
+				for key in "${!comex_cfl_alternatives[@]}"; do
+					curr_component=(${comex_cfl_alternatives["$key"]})
+					curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
+					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
+				done
 			else
-				cpu_brd_bus_offset=0
+				for key in "${!comex_bdw_alternatives[@]}"; do
+					comex_alternatives["$key"]="${comex_cfl_alternatives["$key"]}"
+				done
 			fi
-			for key in "${!comex_cfl_alternatives[@]}"; do
-				curr_component=(${comex_cfl_alternatives["$key"]})
-				curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
-				comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
-			done
 			;;
 		*)
 			return 1
