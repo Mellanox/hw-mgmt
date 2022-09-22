@@ -541,18 +541,11 @@ function find_regio_sysfs_path_helper()
 
 function find_regio_sysfs_path()
 {
-	local retry_to=0.5
-	local retry_cnt=10
 
-	for ((i=0; i<${retry_cnt}; i+=1)); do
-		find_regio_sysfs_path_helper
-		if [ $? -eq 0 ]; then
-			return 0
-		fi
-		sleep "$retry_to"
-	done
-
-	log_err "mlxreg_io is not loaded"
+	retry_helper find_regio_sysfs_path_helper 0.5 10 "mlxreg_io is not loaded"
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
 	return 1
 }
 

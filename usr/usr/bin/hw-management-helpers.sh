@@ -233,3 +233,35 @@ disconnect_device()
 
 	return 0
 }
+
+# Common retry helper function.
+# Input:
+# - $1 - user function to execute.
+# - $2 - retry timeout delay window.
+# - $3 - retry counter.
+# - $4 - user log to be produced if user function failed (optional).
+# Output:
+# - return code (0 - success; 1 - failure).
+# Example:
+# retry_helper find_regio_sysfs_path_helper 0.5 10 "mlxreg_io is not loaded"
+function retry_helper()
+{
+	local user_func="$1"
+	local retry_to="$2"
+	local retry_cnt="$3"
+	local user_log="$4"
+
+	for ((i=0; i<${retry_cnt}; i+=1)); do
+		$user_func
+		if [ $? -eq 0 ]; then
+			return 0
+		fi
+		sleep "$retry_to"
+	done
+
+	if [ ! -z "$$user_log" ]; then
+		log_err "$user_log"
+	fi
+
+	return 1
+}
