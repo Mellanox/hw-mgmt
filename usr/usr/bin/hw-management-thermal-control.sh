@@ -1219,7 +1219,9 @@ update_dynamic_min_pwm()
 		# Fan in state 2 after init, resume or after some missed unit
 		# was inserted back. Move to normal internal state 0.
 		check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
-		cooling_level_update_state=0
+		if [ $? -eq 0 ]; then
+        	cooling_level_update_state=0
+        fi
 	fi
 }
 
@@ -1236,9 +1238,12 @@ check_trip_min_vs_current_temp_per_type()
 	
 	for ((i=1; i<=dev_count; i+=1)); do
 		if [ -f $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp ]; then
-			trip=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_"$zone")
-			trip=$((trip-temp_tz_hyst))
+			trip_orig=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_"$zone")
+			trip=$((trip_orig-temp_tz_hyst))
 			temp_now=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp)
+			if [ "$trip_orig" -le 10 ] && [ "$temp_now" -ne 0 ]; then
+				log_warning "Module mlxsw-$dev_type$i unsusual attribute values: temperature $temp_now, temp_trip_$zone $trip_orig"
+			fi 
 			if [ "$temp_now" -gt 0 ] && [ "$trip" -le  "$temp_now" ]; then
 				return 1
 			fi
@@ -1254,12 +1259,12 @@ check_trip_min_vs_current_temp()
 
 	check_trip_min_vs_current_temp_per_type "" "module" $module_counter $zone
 	if [ "$?" -ne 0 ]; then
-		return
+		return 1
 	fi
 
 	check_trip_min_vs_current_temp_per_type "" "gearbox" $gearbox_counter $zone
 	if [ "$?" -ne 0 ]; then
-		return
+		return 1
 	fi
 
 	if [ "$lc_counter" -gt 0 ]; then
@@ -1269,12 +1274,12 @@ check_trip_min_vs_current_temp()
 				lc_module_count=$(< $hw_management_path/lc"$i"/config/module_counter)
 				check_trip_min_vs_current_temp_per_type "lc$i" "module" "$lc_module_count"
 				if [ "$?" -ne 0 ]; then
-					return
+					return 1
 				fi
 				lc_gbox_count=$(< $hw_management_path/lc"$i"/config/gearbox_counter)
 				check_trip_min_vs_current_temp_per_type "lc$i" "gearbox" "$lc_gbox_count"
 				if [ "$?" -ne 0 ]; then
-					return
+					return 1
 				fi
 			fi
 		done
@@ -1286,6 +1291,7 @@ check_trip_min_vs_current_temp()
 		set_dynamic_min_pwm $trip_low_limit
 		cooling_level_updated=1
 	fi
+	return 0
 }
 
 # Ckeck existing and set thermal attributes
@@ -1405,9 +1411,11 @@ thermal_control_preinit()
 	fan_dynamic_min_init=$((fan_dynamic_min -fan_max_state))
 	fan_dynamic_min_init=$((fan_dynamic_min_init*10))
 	echo $fan_dynamic_min_init > $thermal_path/fan_dynamic_min
+	#set_fan_to_full_speed
 	count=0
 	audit_count=0
 	suspend_thermal=0
+	#set_dynamic_min_pwm $trip_low_limit
 }
 
 sku=$(< /sys/devices/virtual/dmi/id/product_sku)
