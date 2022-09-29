@@ -32,6 +32,7 @@
 #
 
 set -e
+source hw-management-helpers.sh
 
 # SANITY 4D4C4E58 = MLNX.
 MLNX_CUSTOM_CHECKER=4D4C4E58
@@ -216,7 +217,7 @@ Usage example:
 		exit 0
 		;;
 	conv)
-		do_conv
+		retry_helper do_conv 0.5 10 "vpd parsing failed"
 		exit 0
 		;;
 	*)
