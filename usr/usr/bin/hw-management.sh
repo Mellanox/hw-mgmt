@@ -214,7 +214,7 @@ msn37xx_A1_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 sn3750sx_secured_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x66 5 \
 			tmp102 0x49 7 \
-			adt75 0x4a 7 \
+			tmp102 0x4a 7 \
 			24c512 0x51 8 \
 			24c128 0x54 9)
 
