@@ -339,6 +339,11 @@ Kernel-5.10
 |0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch         |                                            | downstream                                      | SN4800                                                       |
 |0174-core-Add-support-for-OSFP-transceiver-modules.patch                | f881c4ab37db1e0ef35b2aef96bb139a95f2c545   |                                                 |                                                              |
 |0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch         | 9054416afcb443933c16f9e8c4531086e62eb689   |                                                 |                                                              |
+|0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch         |                                            |                                                 | SN5600                                                       |
+|0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch         |                                            |                                                 | SN5600                                                       |
+|0178-platform-mellanox-Introduce-support-for-next-generat.patch         |                                            |                                                 | SN5600                                                       |
+|0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            |                                                 | SN5600                                                       |
+|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         |                                            |                                                 |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
