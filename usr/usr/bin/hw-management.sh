@@ -508,7 +508,7 @@ function restore_i2c_bus_frequency_default()
 	esac
 }
 
-function find_regio_sysfs_path()
+function find_regio_sysfs_path_helper()
 {
 	# Find hwmon{n} sysfs path for regio device
 	case $board_type in 
@@ -536,7 +536,16 @@ function find_regio_sysfs_path()
 		;;
 	esac
 
-	log_err "mlxreg_io is not loaded"
+	return 1
+}
+
+function find_regio_sysfs_path()
+{
+
+	retry_helper find_regio_sysfs_path_helper 0.5 10 "mlxreg_io is not loaded"
+	if [ $? -eq 0 ]; then
+		return 0
+	fi
 	return 1
 }
 

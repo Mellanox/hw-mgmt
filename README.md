@@ -21,6 +21,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN2010
 - MQMB7800
 - MSN3700
+- MSN3750
 - MSN3700S
 - MSN3800
 - MSN4410
