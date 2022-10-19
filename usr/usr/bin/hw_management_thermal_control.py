@@ -123,12 +123,15 @@ class CONST(object):
     RUNNING = "RUNNING"
 
 sensor_by_name_def_config = {
-    r'psu\d+': {"type": "psu_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
+    r'psu\d+': {"type": "psu_sensor", "input_suffix":"_fan1_speed_get", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
     r'fan\d+': {"type": "fan_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
     r'mlxsw-module\d+': {"type": "thermal_module_sensor", "pwm_min" : 25, "pwm_max" : 100, "poll_time" : 20, "refresh_attr_timeout" : 30 * 60},
     r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "pwm_min" : 25, "pwm_max" : 100, "poll_time" : 6},
     r'mlxsw': {"type": "thermal_module_sensor", "pwm_min" : 25, "pwm_max" : 100, "poll_time" : 3},
     r'cpu_pack': {"type": "thermal_sensor", "val_min": 15, "val_max": 65,  "pwm_min": 25, "pwm_max": 100, "poll_time": 3, "input_smooth_level" : 3},
+    r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix":"_input", "val_min": 15, "val_max": 65,  "pwm_min": 25, "pwm_max": 100, "poll_time": 10, "input_smooth_level" : 2},
+    r'pch': {"type": "thermal_sensor", "input_suffix":"_temp", "val_min": 15, "val_max": 65,  "pwm_min": 25, "pwm_max": 100, "poll_time": 10, "input_smooth_level" : 2},
+    r'comex_amb': {"type": "thermal_sensor", "val_min": 15, "val_max": 65,  "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
     r'fan_amb': {"type": "thermal_sensor", "val_min": 15, "val_max": 65,  "pwm_min": 25, "pwm_max": 100, "poll_time": 60},
     r'port_amb': {"type": "thermal_sensor", "val_min": 15, "val_max": 65,  "pwm_min": 25, "pwm_max": 100, "poll_time": 60},
     r'sensor_amb': {"type": "ambiant_thermal_sensor", "file_in_dict": {CONST.C2P: CONST.C2P_SENS, CONST.P2C: CONST.P2C_SENS}, "poll_time": 10}
@@ -1000,7 +1003,7 @@ class system_device(hw_managemet_file_op):
         self.name = dev_config_dict["name"]
         self.type = dev_config_dict["type"]
         self.log.info("Init {0} ({1})".format(self.name, self.type))
-        self.file_in = self.sensors_config.get("file_in", None)
+        self.file_name = self.sensors_config.get("file_name", None)
         self.enable = int(self.sensors_config.get("enable", 1))
         self.value = CONST.TEMP_INIT_DEF
         self.pwm = CONST.PWM_MIN
@@ -1131,7 +1134,7 @@ class system_device(hw_managemet_file_op):
     def check_sensor_blocked(self, name=None):
         ''
         if not name:
-            name = self.file_in
+            name = self.file_name
         blk_filename = "thermal/{}_blacklist".format(name)
         if self._check_file(blk_filename):
             try:
@@ -1163,11 +1166,12 @@ class system_device(hw_managemet_file_op):
 class thermal_sensor(system_device):
         def __init__(self, config, dev_config_dict, logger):
             system_device.__init__(self, config, dev_config_dict, logger)
+            self.file_input = self.file_name + dev_config_dict.get("input_suffix", "")
 
         # ----------------------------------------------------------------------
         def sensor_configure(self):
-            self.val_min = self.read_val_min_max("{}_min".format(self.file_in), "val_min", CONST.TEMP_SENSOR_SCALE)   
-            self.val_max = self.read_val_min_max("{}_max".format(self.file_in), "val_max", CONST.TEMP_SENSOR_SCALE)
+            self.val_min = self.read_val_min_max("{}_min".format(self.file_name), "val_min", CONST.TEMP_SENSOR_SCALE)   
+            self.val_max = self.read_val_min_max("{}_max".format(self.file_name), "val_max", CONST.TEMP_SENSOR_SCALE)
             self.input_smooth_level = self.sensors_config.get("input_smooth_level", 1)
             self.value_acc = 0
 
@@ -1177,19 +1181,19 @@ class thermal_sensor(system_device):
             '''
             self.set_trusted(True)
             pwm = self.pwm_min
-            if not self._check_file(self.file_in):
-                self.handle_reading_file_err(self.file_in)
-                self.log.error("Missing file {}. Set pwm for dev {} to {}".format(self.file_in, self.name, self.pwm))
+            if not self._check_file(self.file_input):
+                self.handle_reading_file_err(self.file_input)
+                self.log.error("Missing file {}. Set pwm for dev {} to {}".format(self.file_input, self.name, self.pwm))
             else:
                 try:
-                    temperature = int(self._read_file(self.file_in))
-                    self.handle_reading_file_err(self.file_in, True)
+                    temperature = int(self._read_file(self.file_input))
+                    self.handle_reading_file_err(self.file_input, True)
                     temperature /= CONST.TEMP_SENSOR_SCALE
                     value = int(temperature)
                     
                 except:
-                    self.log.error("Wrong value reading from file: {}".format(self.file_in))
-                    self.handle_reading_file_err(self.file_in)
+                    self.log.error("Wrong value reading from file: {}".format(self.file_input))
+                    self.handle_reading_file_err(self.file_input)
 
             # integral filter for soothing temperature change
             self.value_acc -= self.value_acc/self.input_smooth_level
@@ -1232,7 +1236,7 @@ class thermal_module_sensor(system_device):
         def __init__(self, config, dev_config_dict, logger):
             system_device.__init__(self, config, dev_config_dict, logger)
             
-            result = re.match(r'.*(module\d+)', self.file_in)
+            result = re.match(r'.*(module\d+)', self.file_name)
             if result and len(result.groups()) > 0:
                 module_name = result.group(1)
                 self.module_name = module_name
@@ -1241,8 +1245,8 @@ class thermal_module_sensor(system_device):
 
          # ----------------------------------------------------------------------
         def sensor_configure(self):
-            self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.file_in), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-            self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.file_in), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+            self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+            self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
 
             self.refresh_attr_timeout = self.sensors_config.get("refresh_attr_timeout", 0)
             if self.refresh_attr_timeout:
@@ -1251,8 +1255,8 @@ class thermal_module_sensor(system_device):
                 self.refresh_timeout = 0
             self.trusted = 0
 
-            tz_policy_filename = "thermal/{}/thermal_zone_policy".format(self.file_in)
-            tz_mode_filename = "thermal/{}/thermal_zone_mode".format(self.file_in)
+            tz_policy_filename = "thermal/{}/thermal_zone_policy".format(self.file_name)
+            tz_mode_filename = "thermal/{}/thermal_zone_mode".format(self.file_name)
 
             self._write_file(tz_policy_filename, "user_space")
             self._write_file(tz_mode_filename, "disabled")
@@ -1265,11 +1269,11 @@ class thermal_module_sensor(system_device):
             pwm = self.pwm_min
 
             if self.refresh_attr_timeout and self.refresh_timeout < current_milli_time():
-                self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.file_in), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-                self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.file_in), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+                self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+                self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
                 self.refresh_timeout = current_milli_time() + self.refresh_attr_timeout * 1000
 
-            temp_read_file = "thermal/{}/thermal_zone_temp".format(self.file_in)
+            temp_read_file = "thermal/{}/thermal_zone_temp".format(self.file_name)
             if not self._check_file(temp_read_file):
                 self.log.info("Missing file {} :{}.".format(self.name, temp_read_file))
             else:
@@ -1289,7 +1293,7 @@ class thermal_module_sensor(system_device):
                         elif self.value < self.val_min:
                             pwm = self.pwm_min
                 except:
-                    self.log.warn("value reading from file: {}".format(self.file_in))
+                    self.log.warn("value reading from file: {}".format(self.file_name))
                     self.handle_reading_file_err(rpm_file_name)
             
             self.log.debug("{} value {}".format(self.name, self.value))
@@ -1345,8 +1349,9 @@ class psu_sensor(system_device):
         def __init__(self, config, dev_config_dict, logger):
             system_device.__init__(self, config, dev_config_dict, logger)
 
-            self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.file_in), "val_min")
-            self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.file_in), "val_max")
+            self.file_input = self.file_name  + dev_config_dict.get("input_suffix", "")
+            self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.file_name), "val_min")
+            self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.file_name), "val_max")
             self.prsnt_err_pwm_min = self._get_file_val("config/pwm_min_psu_not_present")
             
             self.rpm_trh = 0.15      
@@ -1356,7 +1361,7 @@ class psu_sensor(system_device):
         def _get_status(self):
             '''
             '''
-            psu_status_filename = "thermal/{}_status".format(self.file_in)
+            psu_status_filename = "thermal/{}_status".format(self.file_name)
             psu_status = 0
             if not self._check_file(psu_status_filename):
                 self.log.error("Missing file {} dev {}".format(psu_status_filename, self.name))
@@ -1372,10 +1377,10 @@ class psu_sensor(system_device):
 
         # ----------------------------------------------------------------------
         def set_pwm(self, pwm):
-            present = self._thermal_read_file_int("{0}_pwr_status".format(self.file_in))
+            present = self._thermal_read_file_int("{0}_pwr_status".format(self.file_name))
             if present == 1:
-                bus     = self._read_file("config/{0}_i2c_bus".format(self.file_in))
-                addr    = self._read_file("config/{0}_i2c_addr".format(self.file_in))
+                bus     = self._read_file("config/{0}_i2c_bus".format(self.file_name))
+                addr    = self._read_file("config/{0}_i2c_addr".format(self.file_name))
                 command = self._read_file("config/fan_command")
                 subprocess.call("i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, pwm), shell = True)
 
@@ -1384,7 +1389,7 @@ class psu_sensor(system_device):
             '''
             '''
             self.pwm = self.pwm_min
-            rpm_file_name = "thermal/{}_fan1_speed_get".format(self.file_in)
+            rpm_file_name = "thermal/{}".format(self.file_input)
             if not self._check_file(rpm_file_name):
                 self.log.error("Missing file {} dev {}".format(rpm_file_name, self.name))
                 self.handle_reading_file_err(rpm_file_name)
@@ -1612,7 +1617,7 @@ class ambiant_thermal_sensor(system_device):
         def __init__(self, config, dev_config_dict, logger):
             system_device.__init__(self, config, dev_config_dict, logger)
            
-            self.file_in = dev_config_dict.get("file_in_dict", None)
+            self.file_name = dev_config_dict.get("file_in_dict", None)
             self.value_dict = {CONST.C2P_SENS: 0, CONST.P2C_SENS: 0}
             self.flow_dir = CONST.C2P
             self.trusted = CONST.UNTRUST_TYPE
@@ -1630,21 +1635,21 @@ class ambiant_thermal_sensor(system_device):
             '''
             '''
             # reading all amb sensors
-            for key, file_in in self.file_in.items():
-                if not self._check_file(file_in):
-                    self.handle_reading_file_err(self.file_in)
-                    self.log.error("Missing file {}. Set pwm for dev {} to {}".format(file_in, self.name, self.pwm))
+            for key, file_name in self.file_name.items():
+                if not self._check_file(file_name):
+                    self.handle_reading_file_err(self.file_name)
+                    self.log.error("Missing file {}. Set pwm for dev {} to {}".format(file_name, self.name, self.pwm))
                 else:
                     try:
-                        temperature = int(self._read_file(file_in))
-                        self.handle_reading_file_err(file_in, True)
+                        temperature = int(self._read_file(file_name))
+                        self.handle_reading_file_err(file_name, True)
                         temperature /= CONST.TEMP_SENSOR_SCALE
-                        self.value_dict[file_in] = int(temperature)
+                        self.value_dict[file_name] = int(temperature)
                     except:
-                        self.log.error("Error value reading from file: {}".format(self.file_in))
-                        self.handle_reading_file_err(self.file_in)
+                        self.log.error("Error value reading from file: {}".format(self.file_name))
+                        self.handle_reading_file_err(self.file_name)
     
-                self.log.debug("{} {} value {}".format(self.name, file_in, temperature))
+                self.log.debug("{} {} value {}".format(self.name, file_name, temperature))
 
             if self.value_dict[CONST.P2C_SENS] > self.value_dict[CONST.C2P_SENS]:
                 self.flow_dir = CONST.C2P
@@ -1690,6 +1695,12 @@ class ThermalManagement(hw_managemet_file_op):
         self.periodic_report_worker_timer = None
         self.thermal_table = None
         self.config = config
+
+        try :
+            thermal_delay = int(self._read_file("config/thermal_delay"))
+            self.exit.wait(thermal_delay)
+        except:
+            pass
 
         sensors_config = {}
         if config[CONST.SENSORS_CONFIG]:
@@ -1923,7 +1934,6 @@ class ThermalManagement(hw_managemet_file_op):
         else:
             self.log.notice("System typename \"{}\" thermal type:\"{}\"".format(self.sys_typename, self.thermal_table['name']))
 
-
     # ----------------------------------------------------------------------
     def init(self):
         '''
@@ -1931,6 +1941,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************")
         self.log.notice("Init thermal control ver: v.{}".format(VERSION))
         self.log.notice("********************************")
+
         self._collect_hw_info()
 
         # Set initial PWM to maximum
@@ -1941,28 +1952,40 @@ class ThermalManagement(hw_managemet_file_op):
         for psu_idx in range(1,self.psu_count+1):
             name = "psu{}".format(psu_idx)
             in_file = "psu{}".format(psu_idx)
-            self.sensor_add_config("psu_sensor", name, {"file_in": in_file})
+            self.sensor_add_config("psu_sensor", name, {"file_name": in_file})
  
         for fan_idx in range(1,self.fan_drwr_num+1):
             name = "fan{}".format(fan_idx)
-            self.sensor_add_config("fan_sensor", name, {"file_in": name, "drwr_id": fan_idx, "tacho_cnt" : self.fan_drwr_capacity})
+            self.sensor_add_config("fan_sensor", name, {"file_name": name, "drwr_id": fan_idx, "tacho_cnt" : self.fan_drwr_capacity})
 
         for module_idx in range(1,self.module_counter+1):
             name = "mlxsw-module{}".format(module_idx)
-            self.sensor_add_config("thermal_module_sensor", name, {"file_in": name})
+            self.sensor_add_config("thermal_module_sensor", name, {"file_name": name})
           
         for gearbox_idx in range(1,self.gearbox_counter+1):
             name = "mlxsw-gearbox{}".format(gearbox_idx)
-            self.sensor_add_config("thermal_module_sensor", name, {"file_in": name})   
+            self.sensor_add_config("thermal_module_sensor", name, {"file_name": name})   
 
         name = "mlxsw"
-        self.sensor_add_config("thermal_module_sensor", name, {"file_in": name})
+        self.sensor_add_config("thermal_module_sensor", name, {"file_name": name})
 
         name = "cpu_pack"
-        self.sensor_add_config("thermal_sensor", name, {"file_in": "thermal/cpu_pack", "val_min": 15, "val_max": 65})
+        self.sensor_add_config("thermal_sensor", name, {"file_name": "thermal/cpu_pack", "val_min": 15, "val_max": 65})
 
         name = "sensor_amb"
         self.sensor_add_config("ambiant_thermal_sensor", name, {"file_in_dict": {CONST.C2P: CONST.C2P_SENS, CONST.P2C: CONST.P2C_SENS}})
+        
+        # scanning for extra sensors
+        for sodimm_idx in range(1,5):
+            name = "sodimm{}_temp".format(sodimm_idx)
+            if self._check_file("thermal/{}_input".format(name)):
+                self.sensor_add_config("thermal_sensor", name, {"file_name": "thermal/{}".format(name)})
+                
+        if self._check_file("thermal/pch_temp"):
+            self.sensor_add_config("thermal_sensor", "pch", {"file_name": "thermal/pch"})
+            
+        if self._check_file("thermal/comex_amb"):
+            self.sensor_add_config("thermal_sensor", "comex_amb", {"file_name": "thermal/comex_amb"})
 
         #print(json.dumps(self.sensors_config, sort_keys=True, indent=4))
 
