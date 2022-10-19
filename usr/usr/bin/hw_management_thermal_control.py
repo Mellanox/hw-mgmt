@@ -138,7 +138,7 @@ sensor_by_name_def_config = {
 # System definition table
 #############################
 fan_err_default = {
-                "tacho" : {"-127:40":70, "41:120":100},
+                "tacho" : {"-127:40":100, "41:120":100},
                 "present" :  {"-127:120":100},
                 "fault" :  {"-127:120":100},
                 "direction" :  {"-127:120":100}
@@ -765,10 +765,10 @@ class Logger(object):
         '''
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-        stream_handler = logging.StreamHandler()
+        '''stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.ERROR)
         stream_handler.setFormatter(formatter)
-        self.logger.addHandler(stream_handler)
+        self.logger.addHandler(stream_handler)'''
 
         if log_file:
             dt = datetime.datetime.now()
@@ -1474,6 +1474,8 @@ class fan_sensor(system_device):
             self.pwm = self.pwm_min
             self.pwm_last = 0
             self.rpm_valid_state = True
+            self.fan_dir_fail = False
+            self.fan_dir = self._get_dir()
 
         # ----------------------------------------------------------------------
         def _get_dir(self):
@@ -1590,7 +1592,7 @@ class fan_sensor(system_device):
             if self.fan_dir_fail:
                 self.fault_list.append("direction")
                 pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir,  "fan_err", 'direction']), pwm)
-                self.log.error("{} dir error. Set PWM low threshold {}".format(self.name, self.pwm))
+                self.log.error("{} dir error. Set PWM low threshold {}".format(self.name, pwm))
 
             # sensor error reading counter
             if self.check_reading_file_err():
@@ -1976,7 +1978,6 @@ class ThermalManagement(hw_managemet_file_op):
 
             self.dev_obj_list.append(dev_obj)
         self.dev_obj_list.sort(key=lambda x: x.name)
-        self._check_fan_dir()
         self._write_file("config/periodic_report", self.periodic_report_time)
 
         #print (json.dumps(self.sensors_config, indent=4))
@@ -1999,6 +2000,8 @@ class ThermalManagement(hw_managemet_file_op):
             if not self.pwm_worker_timer:
                 self.pwm_worker_timer = RepeatedTimer(self.pwm_worker_poll_time, self._pwm_worker)
             self.pwm_worker_timer.stop()
+            
+            self._check_fan_dir()
 
     # ----------------------------------------------------------------------
     def stop(self):
