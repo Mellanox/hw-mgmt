@@ -1009,6 +1009,7 @@ class system_device(hw_managemet_file_op):
         self.trusted = True
         self.state = CONST.STOPPED
         self.err_fread_max = CONST.SENSOR_FREAD_FAIL_TIMES
+        self.err_fread_err_counter_dict = {}
         
     # ----------------------------------------------------------------------
     def start(self):
@@ -1364,6 +1365,13 @@ class psu_fan_sensor(system_device):
             return psu_status
 
         # ----------------------------------------------------------------------
+        def _get_rpm_fault(self):
+            if self.value < self.val_min * 0.2 or self.value > self.val_max *1.2:
+                return True
+            else:
+                return False
+
+        # ----------------------------------------------------------------------
         def set_pwm(self, pwm):
             present = self._thermal_read_file_int("{0}_pwr_status".format(self.file_name))
             if present == 1:
@@ -1407,6 +1415,12 @@ class psu_fan_sensor(system_device):
                     pwm = g_get_dmin(thermal_table, amb_tmp,  [flow_dir, "psu_err", 'present'])
                 self.log.error("{} psu_status {}".format(self.name, psu_status))
 
+            rpm_fault= self._get_rpm_fault()
+            if rpm_fault:
+                # PSU status error. Calculating dmin based on this information
+                self.fault_list.append("fault")
+                pwm = g_get_dmin(thermal_table, amb_tmp,  [flow_dir, "psu_err", 'present'])
+                self.log.error("{} psu_fan_fault".format(self.name))
             # sensor error reading counter
             if self.check_reading_file_err():
                 self.pwm = max(self.pwm_max, self.pwm)
@@ -1607,7 +1621,7 @@ class ambiant_thermal_sensor(system_device):
            
             self.file_name = dev_config_dict.get("file_in_dict", None)
             self.value_dict = {CONST.C2P_SENS: 0, CONST.P2C_SENS: 0}
-            self.flow_dir = CONST.C2P
+            self.flow_dir = CONST.UNKNOWN
             self.trusted = CONST.UNTRUST_TYPE
 
         # ----------------------------------------------------------------------
@@ -1862,7 +1876,21 @@ class ThermalManagement(hw_managemet_file_op):
         self._write_pwm(self.pwm)
 
     # ----------------------------------------------------------------------
-    def sensor_add_config(self, type, name, extra_config = {}):
+    def _is_suspend(self):
+        ''
+        suspend_filename = CONST.SUSPEND_FILE
+        if self._check_file(suspend_filename):
+            try:
+                val_str = self._read_file(suspend_filename)
+                val = str2bool(val_str)
+            except ValueError:
+                return False
+        else:
+            return False
+        return val
+
+    # ----------------------------------------------------------------------
+    def _sensor_add_config(self, type, name, extra_config = {}):
         if  name not in self.sensors_config.keys():
             self.sensors_config[name] = {"type" : type}
         self.sensors_config[name]["name"] = name
@@ -1876,11 +1904,7 @@ class ThermalManagement(hw_managemet_file_op):
             add_missing_to_dict(self.sensors_config[name], extra_config)
 
     # ----------------------------------------------------------------------
-    def get_obj_name(obj):
-        return obj.name
-
-    # ----------------------------------------------------------------------
-    def pwm_strategy_max(self, pwm_list):
+    def _pwm_strategy_max(self, pwm_list):
         max = 0
         name = ''
         for key,val in pwm_list.items():
@@ -1890,7 +1914,7 @@ class ThermalManagement(hw_managemet_file_op):
         return max, name
 
     # ----------------------------------------------------------------------
-    def pwm_strategy_avg(self, pwm_list):
+    def _pwm_strategy_avg(self, pwm_list):
         return float(sum(pwm_list)) / len(pwm_list)
 
     # ----------------------------------------------------------------------
@@ -1902,8 +1926,28 @@ class ThermalManagement(hw_managemet_file_op):
                 break;
         return thermal_table
 
+     # ----------------------------------------------------------------------
+    def sig_handler(self, sig, frame):
+        '''
+        @summary:
+            Signal handler for trination signals
+        '''
+        if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
+            self.log.notice("Thermal control was terminated PID={}".format( os.getpid() ))
+            self.stop()
+            self.exit.set()
+
+        sys.exit(1)
+
     # ----------------------------------------------------------------------
     def init_system_table(self):
+        '''
+        @summary: Init dmin table by the system type. Type definition priority
+        1. Check sys_typename from command line argument
+        2. Get type from config/thermal_type
+        3. Get SKU 
+        4. Using default table
+        '''
         if self.sys_typename:
             self.thermal_table = self._match_system_table(self.sys_typename)
         else:
@@ -1942,44 +1986,44 @@ class ThermalManagement(hw_managemet_file_op):
         for psu_idx in range(1,self.psu_count+1):
             name = "psu{}_fan".format(psu_idx)
             in_file = "psu{}".format(psu_idx)
-            self.sensor_add_config("psu_fan_sensor", name, {"file_name": in_file})
+            self._sensor_add_config("psu_fan_sensor", name, {"file_name": in_file})
 
             name = "psu{}_temp".format(psu_idx)
             in_file = "thermal/psu{}_temp".format(psu_idx)
-            self.sensor_add_config("thermal_sensor", name, {"file_name": in_file})
+            self._sensor_add_config("thermal_sensor", name, {"file_name": in_file})
  
         for fan_idx in range(1,self.fan_drwr_num+1):
             name = "fan{}".format(fan_idx)
-            self.sensor_add_config("fan_sensor", name, {"file_name": name, "drwr_id": fan_idx, "tacho_cnt" : self.fan_drwr_capacity})
+            self._sensor_add_config("fan_sensor", name, {"file_name": name, "drwr_id": fan_idx, "tacho_cnt" : self.fan_drwr_capacity})
 
         for module_idx in range(1,self.module_counter+1):
             name = "mlxsw-module{}".format(module_idx)
-            self.sensor_add_config("thermal_module_sensor", name, {"file_name": name})
+            self._sensor_add_config("thermal_module_sensor", name, {"file_name": name})
           
         for gearbox_idx in range(1,self.gearbox_counter+1):
             name = "mlxsw-gearbox{}".format(gearbox_idx)
-            self.sensor_add_config("thermal_module_sensor", name, {"file_name": name})   
+            self._sensor_add_config("thermal_module_sensor", name, {"file_name": name})   
 
         name = "mlxsw"
-        self.sensor_add_config("thermal_module_sensor", name, {"file_name": name})
+        self._sensor_add_config("thermal_module_sensor", name, {"file_name": name})
 
         name = "cpu_pack"
-        self.sensor_add_config("thermal_sensor", name, {"file_name": "thermal/cpu_pack"})
+        self._sensor_add_config("thermal_sensor", name, {"file_name": "thermal/cpu_pack"})
 
         name = "sensor_amb"
-        self.sensor_add_config("ambiant_thermal_sensor", name, {"file_in_dict": {CONST.C2P: CONST.C2P_SENS, CONST.P2C: CONST.P2C_SENS}})
-        
+        self._sensor_add_config("ambiant_thermal_sensor", name)
+
         # scanning for extra sensors
         for sodimm_idx in range(1,5):
             name = "sodimm{}_temp".format(sodimm_idx)
             if self._check_file("thermal/{}_input".format(name)):
-                self.sensor_add_config("thermal_sensor", name, {"file_name": "thermal/{}".format(name)})
+                self._sensor_add_config("thermal_sensor", name, {"file_name": "thermal/{}".format(name)})
                 
         if self._check_file("thermal/pch_temp"):
-            self.sensor_add_config("thermal_sensor", "pch", {"file_name": "thermal/pch"})
+            self._sensor_add_config("thermal_sensor", "pch", {"file_name": "thermal/pch"})
             
         if self._check_file("thermal/comex_amb"):
-            self.sensor_add_config("thermal_sensor", "comex_amb", {"file_name": "thermal/comex_amb"})
+            self._sensor_add_config("thermal_sensor", "comex_amb", {"file_name": "thermal/comex_amb"})
 
         #print(json.dumps(self.sensors_config, sort_keys=True, indent=4))
 
@@ -2053,7 +2097,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************")
 
         while not self.exit.is_set():
-            if self.is_suspend():
+            if self._is_suspend():
                 self.stop()
                 self.exit.wait(5)
                 continue
@@ -2083,7 +2127,7 @@ class ThermalManagement(hw_managemet_file_op):
                     obj_timestump = dev_obj.get_timestump()
                     timestump_next = min(obj_timestump, timestump_next)
 
-            pwm, name = self.pwm_strategy_max(pwm_list)
+            pwm, name = self._pwm_strategy_max(pwm_list)
             self.log.debug("Result PWM {}".format(pwm))
             self._set_pwm(pwm, reason=name)
             sleep_ms = int(timestump_next - current_milli_time())
@@ -2091,19 +2135,6 @@ class ThermalManagement(hw_managemet_file_op):
                  sleep_ms = 1000
             self.log.debug("sleeping {} msec".format(sleep_ms))
             self.exit.wait(sleep_ms/1000)
-
-    # ----------------------------------------------------------------------
-    def sig_handler(self, sig, frame):
-        '''
-        @summary:
-            Signal handler for trination signals
-        '''
-        if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
-            self.log.notice("Thermal control was terminated PID={}".format( os.getpid() ))
-            self.stop()
-            self.exit.set()
-
-        sys.exit(1)
 
     # ----------------------------------------------------------------------
     def print_periodic_info(self):
@@ -2119,19 +2150,6 @@ class ThermalManagement(hw_managemet_file_op):
                     self.log.notice(obj_info_str)
         self.log.notice("================================")
 
-    # ----------------------------------------------------------------------
-    def is_suspend(self):
-        ''
-        suspend_filename = CONST.SUSPEND_FILE
-        if self._check_file(suspend_filename):
-            try:
-                val_str = self._read_file(suspend_filename)
-                val = str2bool(val_str)
-            except ValueError: 
-                return False               
-        else:
-            return False
-        return val
 
 def str2bool_argparse(val):
     '''
@@ -2148,6 +2166,7 @@ class RawTextArgumentDefaultsHelpFormatter(
         argparse.RawTextHelpFormatter
     ):
         pass
+
 if __name__ == '__main__':
     CMD_PARSER = argparse.ArgumentParser(formatter_class=RawTextArgumentDefaultsHelpFormatter, description='hw-management thermal control')
     CMD_PARSER.add_argument('--version', action='version', version='%(prog)s ver:{}'.format(VERSION))
@@ -2193,4 +2212,3 @@ if __name__ == '__main__':
         thermal_management.stop()
 
     sys.exit(0)
-  
