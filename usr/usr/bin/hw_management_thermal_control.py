@@ -1181,6 +1181,7 @@ class thermal_sensor(system_device):
             '''
             self.set_trusted(True)
             pwm = self.pwm_min
+            value = self.value
             if not self._check_file(self.file_input):
                 self.handle_reading_file_err(self.file_input)
                 self.log.error("Missing file {}. Set pwm for dev {} to {}".format(self.file_input, self.name, self.pwm))
@@ -1980,7 +1981,7 @@ class ThermalManagement(hw_managemet_file_op):
         if self._check_file("thermal/comex_amb"):
             self.sensor_add_config("thermal_sensor", "comex_amb", {"file_name": "thermal/comex_amb"})
 
-        print(json.dumps(self.sensors_config, sort_keys=True, indent=4))
+        #print(json.dumps(self.sensors_config, sort_keys=True, indent=4))
 
         for key,val in self.sensors_config.items():
             try:
@@ -1996,8 +1997,6 @@ class ThermalManagement(hw_managemet_file_op):
             self.dev_obj_list.append(dev_obj)
         self.dev_obj_list.sort(key=lambda x: x.name)
         self._write_file("config/periodic_report", self.periodic_report_time)
-
-        #print (json.dumps(self.sensors_config, indent=4))
 
     # ----------------------------------------------------------------------
     def start(self):
