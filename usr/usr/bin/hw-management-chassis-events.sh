@@ -904,7 +904,6 @@ if [ "$1" == "add" ]; then
 			;;
 		esac
 		# Allow insertion of all the attributes, but skip redundant cpld entries.
-		sleep 1
 		if [ -d "$3""$4" ]; then
 			local cpld_num
 			for attrpath in "$3""$4"/*; do
