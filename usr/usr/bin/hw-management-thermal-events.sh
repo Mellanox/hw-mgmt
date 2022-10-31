@@ -37,7 +37,6 @@ board_type=$(< $board_type_file)
 sku=$(< $sku_file)
 
 # Local variables
-fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
 max_psus=4
 max_pwm=4
@@ -668,7 +667,6 @@ if [ "$1" == "add" ]; then
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
-		# PSU unit FAN speed set
 		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -676,15 +674,12 @@ if [ "$1" == "add" ]; then
 		if [ "$bus" == "$comex_bus" ]; then
 			exit 0
 		fi
-		# Set default fan speed
-		addr=$(< $config_path/"$psu_name"_i2c_addr)
-		command=$(< $fan_command)
-		speed=$(< $fan_psu_default)
 		# Allow PS controller to stabilize
 		sleep 2
-		i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
+		# Set default fan speed
+		psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		# Add thermal attributes
 		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp
 		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp_max
@@ -819,11 +814,6 @@ if [ "$1" == "add" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
-			# Special handling for Delta 2000 fan speed command
-			if [ "$cap" == "2000" ]; then
-				i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
-				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
-			fi
 		fi
 
 	fi
@@ -1120,7 +1110,6 @@ else
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
-		# PSU unit FAN speed set
 		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
