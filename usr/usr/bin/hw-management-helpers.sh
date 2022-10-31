@@ -265,3 +265,25 @@ function retry_helper()
 
 	return 1
 }
+
+# Set PSU fan speed
+# Input:
+# - $1 - psu name
+# - $2 - psu speed
+# Output:
+# - none
+psu_set_fan_speed()
+{
+	local addr=$(< $config_path/"$1"_i2c_addr)
+	local bus=$(< $config_path/"$1"_i2c_bus)
+	local fan_config_command=$(< $config_path/fan_config_command)
+	local fan_speed_units=$(< $config_path/fan_speed_units)
+	local fan_command=$(< $config_path/fan_command)
+	local speed=$2
+
+	# Set fan speed units (percentage or RPM)
+	i2cset -f -y "$bus" "$addr" "$fan_config_command" "$fan_speed_units" bp
+
+	# Set fan speed
+	i2cset -f -y "$bus" "$addr" "$fan_command" "${speed}" wp
+}

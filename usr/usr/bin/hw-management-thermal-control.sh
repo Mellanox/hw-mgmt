@@ -81,7 +81,6 @@ temp_fan_amb=$thermal_path/fan_amb
 temp_port_amb=$thermal_path/port_amb
 pwm=$thermal_path/pwm1
 asic=$thermal_path/asic
-fan_command=$config_path/fan_command
 tz_mode=$thermal_path/mlxsw/thermal_zone_mode
 tz_policy=$thermal_path/mlxsw/thermal_zone_policy
 tz_temp=$thermal_path/mlxsw/thermal_zone_temp
@@ -886,16 +885,9 @@ update_psu_fan_speed()
 		if [ -L $thermal_path/psu"$i"_pwr_status ]; then
 			pwr=$(< $thermal_path/psu"$i"_pwr_status)
 			if [ "$pwr" -eq 1 ]; then
-				bus=$(< $config_path/psu"$i"_i2c_bus)
-				addr=$(< $config_path/psu"$i"_i2c_addr)
-				command=$(< $fan_command)
 				entry=$(< $thermal_path/cooling_cur_state)
 				speed=${psu_fan_speed[$entry]}
-				# SN2201 sets psu fan speed in percentage mode.
-				if [ "$board_type" == "VMOD0014" ]; then
-					i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
-				fi
-				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
+				psu_set_fan_speed psu"$i" "$speed"
 			fi
 		fi
 	done

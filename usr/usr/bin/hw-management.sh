@@ -74,6 +74,8 @@ psu4_i2c_addr=0x5a
 psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
+fan_config_command=0x3a
+fan_speed_units=0x90
 chipup_delay_default=0
 hotplug_psus=2
 hotplug_fans=6
@@ -1905,6 +1907,8 @@ set_config_data()
 	done
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
+	echo $fan_config_command > $config_path/fan_config_command
+	echo $fan_speed_units > $config_path/fan_speed_units
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
