@@ -47,7 +47,7 @@
 
 . /lib/lsb/init-functions
 
-EXECUTABLE=/usr/bin/hw-management-thermal-control.sh
+EXECUTABLE=/usr/bin/hw_management_thermal_control.py
 SERVICE=hw-management-tc
 ACTION=$1
 pid=/var/run/$SERVICE.pid
