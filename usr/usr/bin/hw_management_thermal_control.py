@@ -123,7 +123,7 @@ class CONST(object):
 
     FAN_RELAX_TIME = 10
     FAN_CALIBRATE_CYCLES = 2
-    PWM_CHANGE_THYST = 3
+    PWM_CHANGE_HYST = 3
     DMIN_PWM_STEP_MIN = 2
     PWM_INC_STEP_MAX = 7
     PWM_WORKET_POLL_TIME = 2
@@ -143,6 +143,8 @@ class CONST(object):
     STOPPED = "STOPPED"
     RUNNING = "RUNNING"
 
+    VMOD_DEF = "VMOD0001"
+
 
 """
 Default sensor  configuration.
@@ -153,8 +155,8 @@ These valued can be overrides with the input sensors configuration file
 SENSOR_DEF_CONFIG = {
     r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
     r'fan\d+': {"type": "fan_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
-    r'mlxsw-module\d+': {"type": "thermal_module_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 20, "refresh_attr_period": 30 * 60},
-    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "pwm_min": 20, "pwm_max": 100, "poll_time": 6},
+    r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":50000, "val_max":80000, "pwm_min": 25, "pwm_max": 100, "poll_time": 20, "refresh_attr_period": 30 * 60},
+    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":50000, "val_max":80000, "pwm_min": 20, "pwm_max": 100, "poll_time": 6},
     r'mlxsw': {"type": "thermal_module_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
     r'cpu_pack': {"type": "thermal_sensor", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3, "input_smooth_level": 3},
     r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10, "input_smooth_level": 2},
@@ -951,11 +953,14 @@ class RepeatedTimer(object):
         self.start()
         self.function()
 
-    def start(self):
+    def start(self, immediately_run=False):
         """
         @summary:
             Start selected timer (if it not running)
         """
+        if immediately_run:
+            self.function()
+
         if not self.is_running:
             self._timer = Timer(self.interval, self._run)
             self._timer.start()
@@ -1099,7 +1104,7 @@ class system_device(hw_managemet_file_op):
         self.enable = int(self.sensors_config.get("enable", 1))
         self.input_smooth_level = self.sensors_config.get("input_smooth_level", 1)
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
-        self.update_timestump(0)
+        self.update_timestump(1000)
         self.value = CONST.TEMP_INIT_DEF
         self.value_acc = self.value * self.input_smooth_level
         self.pwm = CONST.PWM_MIN
@@ -1131,7 +1136,7 @@ class system_device(hw_managemet_file_op):
         self.value_acc = self.value * self.input_smooth_level
         self.err_fread_err_counter_dict = {}
         self.sensor_configure()
-        self.update_timestump(0)
+        self.update_timestump(1000)
 
     def stop(self):
         """
@@ -1324,7 +1329,7 @@ class thermal_sensor(system_device):
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
-        @summary: this function calling on sensor start after initialisation or suspend off
+        @summary: this function calling on sensor start after initialization or suspend off
         """
         self.val_min = self.read_val_min_max("{}_min".format(self.file_name), "val_min", CONST.TEMP_SENSOR_SCALE)
         self.val_max = self.read_val_min_max("{}_max".format(self.file_name), "val_max", CONST.TEMP_SENSOR_SCALE)
@@ -1337,7 +1342,7 @@ class thermal_sensor(system_device):
         pwm = self.pwm_min
         value = self.value
         if not self.check_file(self.file_input):
-            self.log.error("Missing file {}. Set pwm for dev {} to {}".format(self.file_input, self.name, self.pwm))
+            self.log.error("{}: missing file {}".format(self.name, file_name))
             self.handle_reading_file_err(self.file_input)
         else:
             try:
@@ -1397,6 +1402,9 @@ class thermal_module_sensor(system_device):
 
      # ----------------------------------------------------------------------
     def sensor_configure(self):
+        """
+        @summary: this function calling on sensor start after initialization or suspend off
+        """
         self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
         self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
 
@@ -1650,7 +1658,9 @@ class fan_sensor(system_device):
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
-        ''
+        """
+        @summary: this function calling on sensor start after initialization or suspend off
+        """
         self.value = [0] * self.tacho_cnt
 
         self.fault_list = []
@@ -1722,7 +1732,12 @@ class fan_sensor(system_device):
                 rpm_expected = int(pwm_curr * self.rpm_pwm_scale)
                 rpm_diff = abs(rpm_real - rpm_expected)
                 if float(rpm_diff) / rpm_expected >= self.rpm_trh:
-                    self.log.error("{} read tacho {}: {} too much different than expected {}".format(self.name, tacho_idx, rpm_real, rpm_expected))
+                    self.log.error("{} read tacho {}: {} too much different than expected {} pwm  {} scale {}".format(self.name,
+                                                                                                                      tacho_idx,
+                                                                                                                      rpm_real,
+                                                                                                                      rpm_expected,
+                                                                                                                      pwm_curr,
+                                                                                                                      self.rpm_pwm_scale))
                     self.rpm_valid_state = False
 
         return self.rpm_valid_state
@@ -1824,7 +1839,7 @@ class ambiant_thermal_sensor(system_device):
         # reading all amb sensors
         for _, file_name in self.file_name.items():
             if not self.check_file(file_name):
-                self.log.error("Missing file {}. Set pwm for dev {} to {}".format(file_name, self.name, self.pwm))
+                self.log.error("{}: missing file {}".format(self.name, file_name))
                 self.handle_reading_file_err(file_name)
             else:
                 try:
@@ -1899,13 +1914,6 @@ class ThermalManagement(hw_managemet_file_op):
         self._collect_hw_info()
         self._write_pwm(self.pwm_target)
 
-        self.exit = Event()
-        try:
-            thermal_delay = int(self.read_file("config/thermal_delay"))
-            self.exit.wait(thermal_delay)
-        except BaseException:
-            pass
-
         sensors_config = {}
         if config[CONST.SENSORS_CONFIG]:
             config_file = config[CONST.SENSORS_CONFIG]
@@ -1938,6 +1946,13 @@ class ThermalManagement(hw_managemet_file_op):
         self.trusted = True
 
         self.state = CONST.UNCONFIGURED
+        
+        self.exit = Event()
+        try:
+            thermal_delay = int(self.read_file("config/thermal_delay"))
+            self.exit.wait(thermal_delay)
+        except BaseException:
+            pass
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -1950,6 +1965,25 @@ class ThermalManagement(hw_managemet_file_op):
         self.psu_pwr_count = CONST.PSU_COUNT_DEF
         self.module_counter = CONST.MODULE_COUNT_DEF
         self.gearbox_counter = CONST.GEARBOX_COUNT_DEF
+        self.board_type = None
+        self.sku = None
+        self.system_ver = None
+
+        board_type_file = "/sys/devices/virtual/dmi/id/board_name"
+        sku_file = "/sys/devices/virtual/dmi/id/product_sku"
+        system_ver_file = "/sys/devices/virtual/dmi/id/product_version"
+
+        if os.path.isfile(board_type_file):
+            with open(board_type_file, "r") as content_file:
+                self.board_type = content_file.read().rstrip("\n")
+
+        if os.path.isfile(sku_file):
+            with open(sku_file, "r") as content_file:
+                self.sku = content_file.read().rstrip("\n")
+
+        if os.path.isfile(system_ver_file):
+            with open(system_ver_file, "r") as content_file:
+                self.system_ver = content_file.read().rstrip("\n")
 
         try:
             self.max_tachos = int(self.read_file("config/max_tachos"))
@@ -2045,7 +2079,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.thermal_write_file("pwm1", int(pwm_val * 255 / 100))
 
     # ----------------------------------------------------------------------
-    def _set_pwm(self, pwm, hysteresis=CONST.PWM_CHANGE_THYST, reason=""):
+    def _set_pwm(self, pwm, hysteresis=CONST.PWM_CHANGE_HYST, reason=""):
         """
         @summary: Set target PWM for the system
         @param pwm: target PWM value
@@ -2063,7 +2097,7 @@ class ThermalManagement(hw_managemet_file_op):
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
             if self.pwm_worker_timer:
-                self.pwm_worker_timer.start()
+                self.pwm_worker_timer.start(True)
             else:
                 self.pwm = pwm
                 self._write_pwm(self.pwm)
@@ -2081,16 +2115,18 @@ class ThermalManagement(hw_managemet_file_op):
             return
 
         self.log.debug("PWM target: {} curr: {}".format(self.pwm_target, self.pwm))
-        diff = abs(self.pwm_target - self.pwm)
+        if self.pwm_target < self.pwm:
+            diff = abs(self.pwm_target - self.pwm)
+            diff = int(round((float(diff) / 2 + 0.5)))
+            if diff > self.pwm_sooth_step_max:
+                diff = self.pwm_sooth_step_max
 
-        diff = int(round((float(diff) / 2 + 0.5)))
-        if diff > self.pwm_sooth_step_max:
-            diff = self.pwm_sooth_step_max
-
-        if self.pwm_target > self.pwm:
-            self.pwm += diff
+            if self.pwm_target > self.pwm:
+                self.pwm += diff
+            else:
+                self.pwm -= diff
         else:
-            self.pwm -= diff
+            self.pwm = self.pwm_target
         self._write_pwm(self.pwm)
 
     # ----------------------------------------------------------------------
@@ -2173,6 +2209,8 @@ class ThermalManagement(hw_managemet_file_op):
         2. Thermal class
         3. SKU
         """
+        if not typename:
+            return None
         thermal_table = None
         for typename_mask in THERMAL_TABLE_LIST.keys():
             if re.match(typename_mask, typename):
@@ -2184,28 +2222,26 @@ class ThermalManagement(hw_managemet_file_op):
     def init_thermal_table(self):
         """
         @summary: Init dmin table by the system type. Type definition priority
-        1. Check sys_typename from command line argument
-        2. Get type from config/thermal_type
-        3. Get SKU
-        4. Using default table
+            1. Check sys_typename from command line argument
+            2. Get type from config/thermal_type
+            3. Get SKU
+            4. Using default table
         """
+        typename = None
         if self.sys_typename:
-            self.thermal_table = self._match_system_table(self.sys_typename)
+            typename = self.sys_typename
         else:
             typename = self.read_file("config/thermal_type")
             if typename:
                 typename = "tc_t{}".format(typename)
-            else:
-                sku_filename = "/sys/devices/virtual/dmi/id/product_sku"
-                if os.path.isfile(sku_filename):
-                    with open(sku_filename, "r") as sku_file:
-                        typename = sku_file.read().rstrip("\n")
-            if typename:
-                self.thermal_table = self._match_system_table(self.sys_typename)
+            elif self.board_type:
+                typename = self.board_type
+
+        self.thermal_table = self._match_system_table(typename)
 
         if not self.thermal_table:
             self.thermal_table = THERMAL_TABLE_LIST["default"]
-            self.log.notice("System typename {} not found. Using default thermal type:{}".format(self.sys_typename, self.thermal_table["name"]))
+            self.log.notice("System typename {} not found. Using default thermal type:{}".format(typename, self.thermal_table["name"]))
         else:
             self.log.notice("System typename \"{}\" thermal type:\"{}\"".format(self.sys_typename, self.thermal_table["name"]))
 
@@ -2268,7 +2304,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************")
 
         # Set initial PWM to maximum
-        self._set_pwm(CONST.PWM_MAX, hysteresis=CONST.PWM_CHANGE_THYST, reason="Set initial PWM")
+        self._set_pwm(CONST.PWM_MAX, hysteresis=CONST.PWM_CHANGE_HYST, reason="Set initial PWM")
 
         self.init_thermal_table()
         self.init_sensor_configuration()
@@ -2463,7 +2499,7 @@ if __name__ == '__main__':
     CMD_PARSER.add_argument("-t", "--systypename",
                             dest="systypename",
                             help="System name/type/SKU (MSN2700, HI110, VMOD0001)",
-                            default="default")
+                            default=None)
     CMD_PARSER.add_argument("-v", "--verbosity",
                             dest="verbosity",
                             help="""Set log verbosity level.
