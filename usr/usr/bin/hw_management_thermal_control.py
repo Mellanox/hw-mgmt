@@ -2491,7 +2491,7 @@ if __name__ == '__main__':
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest=CONST.LOG_FILE,
                             help="Add output also to log file. Pass file name here",
-                            default="/tmp/tc_log")
+                            default="/var/log/tc_log")
     CMD_PARSER.add_argument("-s", "--syslog",
                             dest=CONST.LOG_USE_SYSLOG,
                             help="enable/disable output to syslog",
