@@ -1342,7 +1342,7 @@ class thermal_sensor(system_device):
         pwm = self.pwm_min
         value = self.value
         if not self.check_file(self.file_input):
-            self.log.error("{}: missing file {}".format(self.name, file_name))
+            self.log.warn("{}: missing file {}".format(self.name, file_name))
             self.handle_reading_file_err(self.file_input)
         else:
             try:
@@ -1519,7 +1519,7 @@ class psu_fan_sensor(system_device):
         psu_status_filename = "thermal/{}_status".format(self.file_name)
         psu_status = 0
         if not self.check_file(psu_status_filename):
-            self.log.error("Missing file {} dev: {}".format(psu_status_filename, self.name))
+            self.log.warn("Missing file {} dev: {}".format(psu_status_filename, self.name))
             self.handle_reading_file_err(psu_status_filename)
         else:
             try:
@@ -1557,7 +1557,7 @@ class psu_fan_sensor(system_device):
         self.pwm = self.pwm_min
         rpm_file_name = "thermal/{}".format(self.file_input)
         if not self.check_file(rpm_file_name):
-            self.log.error("Missing file {} dev: {}".format(rpm_file_name, self.name))
+            self.log.warn("Missing file {} dev: {}".format(rpm_file_name, self.name))
             self.handle_reading_file_err(rpm_file_name)
         else:
             try:
@@ -1588,7 +1588,7 @@ class psu_fan_sensor(system_device):
 
         rpm_fault = self._get_rpm_fault()
         if rpm_fault:
-            self.log.error("{} psu_fan_fault".format(self.name))
+            self.log.warn("{} psu_fan_fault".format(self.name))
             # PSU status error. Calculating dmin based on this information
             self.fault_list.append("fault")
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "psu_err", "present"])
@@ -1688,7 +1688,7 @@ class fan_sensor(system_device):
         status_filename = "thermal/fan{}_status".format(self.fan_drwr_id)
         status = None
         if not self.check_file(status_filename):
-            self.log.error("Missing file {} dev: {}".format(status_filename, self.name))
+            self.log.warn("Missing file {} dev: {}".format(status_filename, self.name))
             self.handle_reading_file_err(status_filename)
         else:
             try:
@@ -1732,7 +1732,7 @@ class fan_sensor(system_device):
                 rpm_expected = int(pwm_curr * self.rpm_pwm_scale)
                 rpm_diff = abs(rpm_real - rpm_expected)
                 if float(rpm_diff) / rpm_expected >= self.rpm_trh:
-                    self.log.error("{} read tacho {}: {} too much different than expected {} pwm  {} scale {}".format(self.name,
+                    self.log.warn("{} read tacho {}: {} too much different than expected {} pwm  {} scale {}".format(self.name,
                                                                                                                       tacho_idx,
                                                                                                                       rpm_real,
                                                                                                                       rpm_expected,
@@ -1759,7 +1759,7 @@ class fan_sensor(system_device):
         for tacho_id in range(0, self.tacho_cnt):
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
-                self.log.error("Missing file {} dev: {}".format(rpm_file_name, self.name))
+                self.log.warn("Missing file {} dev: {}".format(rpm_file_name, self.name))
                 self.handle_reading_file_err(rpm_file_name)
             else:
                 try:
@@ -1782,23 +1782,23 @@ class fan_sensor(system_device):
         if fan_status == 0:
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "present"])
             self.fault_list.append("present")
-            self.log.error("{} status 0. Set PWM {}".format(self.name, pwm))
+            self.log.warn("{} status 0. Set PWM {}".format(self.name, pwm))
 
         fan_fault = self._get_fault()
         if 1 in fan_fault:
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "fault"])
             self.fault_list.append("fault")
-            self.log.error("{} tacho {} fault. Set PWM {}".format(self.name, fan_fault, pwm))
+            self.log.warn("{} tacho {} fault. Set PWM {}".format(self.name, fan_fault, pwm))
 
         if not self._validate_rpm():
             self.fault_list.append("tacho")
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "tacho"]), pwm)
-            self.log.error("{} incorrect rpm {}. Set PWM  {}".format(self.name, self.value, pwm))
+            self.log.warn("{} incorrect rpm {}. Set PWM  {}".format(self.name, self.value, pwm))
 
         if self.fan_dir_fail:
             self.fault_list.append("direction")
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "direction"]), pwm)
-            self.log.error("{} dir error. Set PWM {}".format(self.name, pwm))
+            self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
 
         # sensor error reading counter
         if self.check_reading_file_err():
@@ -1839,7 +1839,7 @@ class ambiant_thermal_sensor(system_device):
         # reading all amb sensors
         for _, file_name in self.file_name.items():
             if not self.check_file(file_name):
-                self.log.error("{}: missing file {}".format(self.name, file_name))
+                self.log.warn("{}: missing file {}".format(self.name, file_name))
                 self.handle_reading_file_err(file_name)
             else:
                 try:
@@ -1918,7 +1918,7 @@ class ThermalManagement(hw_managemet_file_op):
         if config[CONST.SENSORS_CONFIG]:
             config_file = config[CONST.SENSORS_CONFIG]
             if not os.path.isfile(config_file):
-                self.log.error("Can't load sensor config. Missing file {}".format(config_file))
+                self.log.warn("Can't load sensor config. Missing file {}".format(config_file))
             else:
                 with open(config_file) as f:
                     sensors_config = json.load(f)
