@@ -33,6 +33,7 @@
 
 source hw-management-helpers.sh
 board_type=$(< $board_type_file)
+sku=$(< $sku_file)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_def_off_eeprom_vpd=8
@@ -69,6 +70,8 @@ if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_def_off_eeprom_fan2=11
 	i2c_bus_def_off_eeprom_fan3=12
 	i2c_bus_def_off_eeprom_fan4=13
+elif [ "$board_type" == "VMOD0013" ]; then
+	psu2_i2c_addr=0x5a
 fi
 
 # Voltmon sensors by label mapping:
@@ -290,7 +293,11 @@ find_eeprom_name()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				eeprom_name=psu4_info
+				if [ $sku == "HI144" ]; then
+					eeprom_name=psu2_info
+				else
+					eeprom_name=psu4_info
+				fi
 			fi
 			;;
 		esac
@@ -345,7 +352,11 @@ find_eeprom_name_on_remove()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				eeprom_name=psu4_info
+				if [ $sku == "HI144" ]; then
+					eeprom_name=psu2_info
+				else
+					eeprom_name=psu4_info
+				fi
 			fi
 			;;
 		esac

@@ -172,12 +172,13 @@ declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 6 fan_amb")
 
 # Currently system can have just multiple clock boards.
-declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x50 5 clk_eeprom")
+declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
+				   ["24c128_1"]="24c128 0x57 5 clk_eeprom2")
 
 declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
 				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
-				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv2" \
+				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
 				   ["icp201xx_0"]="icp201xx 0x63 4 press_sens1" \
 				   ["icp201xx_1"]="icp201xx 0x64 4 press_sens2" \
 				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
