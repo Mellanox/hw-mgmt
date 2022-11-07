@@ -427,8 +427,6 @@ sn5600_base_connect_table=( \
 	pmbus  0x15 4 \
 	icp201xx 0x63 4 \
 	icp201xx 0x64 4 \
-	24c128 0x50 5 \
-	24c128 0x53 5 \
 	mp2975 0x62 5 \
 	mp2975 0x63 5 \
 	mp2975 0x64 5 \
@@ -1657,7 +1655,7 @@ sn56xx_specific()
 	thermal_type=$thermal_type_def	# ToDo Temporary default 60%
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
-	echo 2000 > $config_path/fan_min_speed	# ToDo. Now ~15%, not provided, check on real system
+	echo 2800 > $config_path/fan_min_speed
 	echo 25000 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
