@@ -425,8 +425,6 @@ sn5600_base_connect_table=( \
 	pmbus  0x11 4 \
 	pmbus  0x13 4 \
 	pmbus  0x15 4 \
-	icp201xx 0x63 4 \
-	icp201xx 0x64 4 \
 	mp2975 0x62 5 \
 	mp2975 0x63 5 \
 	mp2975 0x64 5 \
