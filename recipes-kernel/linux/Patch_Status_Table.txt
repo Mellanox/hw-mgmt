@@ -344,7 +344,7 @@ Kernel-5.10
 |0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch         |                                            |                                                 | SN5600                                                       |
 |0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch         |                                            |                                                 | SN5600                                                       |
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch         |                                            |                                                 | SN5600                                                       |
-|0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            |                                                 | SN5600                                                       |
+|0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            | downstream for OPT-OS use only                  | SN5600                                                       |
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         | 525dd5aed67a2f4f7278116fb92a24e6a53e2622   |  accepted                                       |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
