@@ -361,13 +361,11 @@ e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
 			mp2975 0x26 5  voltmon5 \
 			mp2975 0x27 5  voltmon6)
 
-p4697_base_connect_table=(    max11603 0x6d 7 \
-			adt75 0x49 7 \
+p4697_base_connect_table=(	adt75 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_rev1_base_connect_table=(    max11603 0x6d 7 \
-			tmp102 0x49 7 \
+p4697_rev1_base_connect_table=(	tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
@@ -761,8 +759,8 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
-				# MQM9700 removed A2D from CFL
-				HI130)
+				# MQM9700, P4697 removed A2D from CFL
+				HI130 | HI142)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
