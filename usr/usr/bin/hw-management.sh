@@ -855,7 +855,7 @@ set_spc1_port_cpld()
 			fi
 			mt_dev=$(find /dev/mst -name *00_pciconf0)
 			cmd='mlxreg --reg_name MSCI  -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
-			ver_hex=$(eval $cmd)
+			ver_hex=$(eval $cmd 2>/dev/null)
 			if [ ! -z "$ver_hex" ]; then
 				ver_dec=$(printf "%d" $ver_hex)
 			fi
@@ -975,10 +975,10 @@ msn27xx_msb_msx_specific()
 		;;
 		*)
 			echo 3 > $config_path/cpld_num
+			echo cpld3 > $config_path/cpld_port
 		;;
 	esac
 
-	echo cpld3 > $config_path/cpld_port
 	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
