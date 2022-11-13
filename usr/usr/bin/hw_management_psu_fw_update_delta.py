@@ -64,7 +64,7 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_REVISION.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 6)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())
         return ascii_str
