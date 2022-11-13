@@ -810,7 +810,7 @@ if [ "$1" == "add" ]; then
 		elif echo $mfr | grep -iq "Delta"; then
 			# Support FW update only for specific Delta PSU capacities
 			fw_ver="N/A"
-			if [ "$cap" == "550" -o "$cap" == "2000" ]; then
+			if [ "$cap" == "550" -o "$cap" == "2000" -o "$cap" == "3000" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
