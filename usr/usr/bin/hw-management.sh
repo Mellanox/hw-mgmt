@@ -244,8 +244,7 @@ msn27002_msn24102_msb78002_base_connect_table=( pmbus 0x27 5 \
 			max11603 0x6d 15 \
 			lm75 0x49 17)
 
-msn4700_msn4600_base_connect_table=(	max11603 0x6d 5 \
-			xdpe12284 0x62 5 \
+msn4700_msn4600_base_connect_table=( xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
 			xdpe12284 0x66 5 \
 			xdpe12284 0x68 5 \
@@ -267,8 +266,7 @@ msn4600C_base_connect_table=( xdpe12284 0x62 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4700_msn4600_A1_base_connect_table=(	max11603 0x6d 5 \
-			mp2975 0x62 5 \
+msn4700_msn4600_A1_base_connect_table=( mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
@@ -277,7 +275,7 @@ msn4700_msn4600_A1_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4600C_A1_base_connect_table=(	mp2975 0x62 5 \
+msn4600C_A1_base_connect_table=( mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
@@ -744,8 +742,8 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100)
-							#Anaconda 100/200 Tigon Jaguar
+						HI116|HI112|HI124|HI100|HI122|HI123)
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1201,7 +1199,7 @@ connect_msn4700_msn4600_A1()
 		#  msn4600C with removed A2D
 		connect_table+=(${msn4600C_A1_base_connect_table[@]})
 	else
-		# msn4700/msn4600 respin
+		# msn4700/msn4600 respin 
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	fi
 	add_cpu_board_to_connection_table
