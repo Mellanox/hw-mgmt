@@ -174,6 +174,7 @@ CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y (if kernel version >= v5.4, optional up to 
 CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y (if kernel version >= v5.4, optional up to user)
 CONFIG_THERMAL_NETLINK=y (if kernel version >= v5.10)
 CONFIG_SENSORS_XDPE152=m
+CONFIG_DRIVETEMP=m
 
 ```
 **Note:**

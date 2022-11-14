@@ -844,6 +844,15 @@ if [ "$1" == "add" ]; then
 			done
 		fi
 	fi
+	if [ "$2" == "drivetemp" ]; then
+		name=$(<"$3""$4"/name)
+		if [ "$name" == "drivetemp" ]; then
+			check_n_link "$3""$4"/temp1_input $thermal_path/drivetemp
+			check_n_link "$3""$4"/temp1_crit $thermal_path/drivetemp_crit
+			check_n_link "$3""$4"/temp1_max $thermal_path/drivetemp_max
+			check_n_link "$3""$4"/temp1_min $thermal_path/drivetemp_min
+		fi
+	fi
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
