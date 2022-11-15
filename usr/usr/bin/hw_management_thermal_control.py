@@ -87,6 +87,9 @@ class CONST(object):
     GLOBAL_CONFIG = "global_config"
     SENSORS_CONFIG = "sensors_config"
 
+    # log current level filename
+    LOG_LEVEL_FILENAME = "config/tc_log_level"
+
     # Fan direction
     C2P = "C2P"
     P2C = "P2C"
@@ -883,6 +886,9 @@ class Logger(object):
         self.logger = logging.getLogger("main")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
+
+        self.logger_fh = None
+
         self.set_param(use_syslog, log_file, verbosity)
 
     def set_param(self, use_syslog=None, log_file=None, verbosity=0):
@@ -898,13 +904,13 @@ class Logger(object):
 
         if log_file:
             if any(std_file in log_file for std_file in ["stdout", "stderr"]):
-                logger_fh = logging.StreamHandler()
+                self.logger_fh = logging.StreamHandler()
             else:
-                logger_fh = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2)
+                self.logger_fh = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2)
 
-            logger_fh.setFormatter(formatter)
-            logger_fh.setLevel(verbosity)
-            self.logger.addHandler(logger_fh)
+            self.logger_fh.setFormatter(formatter)
+            self.logger_fh.setLevel(verbosity)
+            self.logger.addHandler(self.logger_fh)
 
         if use_syslog:
             if sys.platform == "darwin":
@@ -919,6 +925,15 @@ class Logger(object):
 
             syslog_handler.setFormatter(logging.Formatter("hw-management-tc: %(levelname)s - %(message)s"))
             self.logger.addHandler(syslog_handler)
+
+    def set_loglevel(self, verbosity):
+        """
+        @summary:
+            Set log level for logging in file
+        @param verbosity: logging level 0 .. 80
+        """
+        if self.logger_fh:
+            self.logger_fh.setLevel(verbosity)
 
     def debug(self, msg=""):
         """
@@ -1951,6 +1966,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         hw_managemet_file_op.__init__(self, config)
         self.log = Logger(config[CONST.LOG_USE_SYSLOG], config[CONST.LOG_FILE], config["verbosity"])
+        self.write_file(CONST.LOG_LEVEL_FILENAME, config["verbosity"])
         self.periodic_report_worker_timer = None
         self.thermal_table = None
         self.config = config
@@ -2450,6 +2466,14 @@ class ThermalManagement(hw_managemet_file_op):
 
         # main loop
         while not self.exit.is_set():
+            try:
+                log_level = int(self.read_file(CONST.LOG_LEVEL_FILENAME))
+                if log_level != self.config["verbosity"]:
+                    self.config["verbosity"] = log_level
+                    self.log.set_loglevel(self.config["verbosity"])
+            except BaseException:
+                pass
+
             if self._is_suspend():
                 self.stop()
                 self.exit.wait(5)
