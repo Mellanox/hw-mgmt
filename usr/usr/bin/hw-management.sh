@@ -1338,7 +1338,7 @@ mqm97xx_specific()
 					voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
 					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 					;;
-				13)
+				5|13)
 					connect_table+=(${mqm97xx_rev2_base_connect_table[@]})
 					voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
 					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
