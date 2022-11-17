@@ -726,7 +726,7 @@ if [ "$1" == "add" ]; then
 
 		psu_addr=$(< $config_path/"$psu_name"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
-		eeprom_name=$psu_name_info
+		eeprom_name="$psu_name"_info
 		if [ "$board_type" == "VMOD0014" ]; then
 			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		else
