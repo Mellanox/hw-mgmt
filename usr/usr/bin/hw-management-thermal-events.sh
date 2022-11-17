@@ -812,6 +812,16 @@ if [ "$1" == "add" ]; then
 			fw_ver="N/A"
 			if [ "$cap" == "550" -o "$cap" == "2000" -o "$cap" == "3000" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+				if [ "$cap" == "3000" ] && [ "$board_type" == "VMOD0013" ]; then
+					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
+						echo 38000 > "$config_path"/amb_tmp_warn_limit
+					fi
+					if [ ! -e "$config_path"/amb_tmp_crit_limit ]; then
+						echo 40000 > "$config_path"/amb_tmp_crit_limit
+					fi
+					echo 30 > "$config_path"/"$psu_name"_power_slope
+					echo "$cap" > "$config_path"/"$psu_name"_power_capacity
+				fi
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
 		fi
@@ -1156,6 +1166,11 @@ else
 		psu_disconnect_power_sensor "$psu_name"_curr
 
 		rm -f $eeprom_path/"$psu_name"_vpd
+		rm -f $fw_path/"$psu_name"_fw_ver
+		if [ -e "$config_path"/"$psu_name"_power_slope ]; then
+			rm -f "$config_path"/"$psu_name"_power_slope
+			rm -f "$config_path"/"$psu_name"_power_capacity
+		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
