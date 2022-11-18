@@ -13,6 +13,7 @@
     o  #3255632 sn3750sx: missed out power/current fields in sensor.conf
     o  system:  duration of link of reboot cause increased due hw-mgmt init finish indication given too early (not all sysfs path created)
     o  sn3750sx: Temperature sensor at 7-004a has been changed to tmp102 from adt75
+    o  #3263123:during running test: test_psu_vpd Check VPD failed 
 
     o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0020.4100/recipes-kernel/linux/Patch_Status_Table.txt
  
