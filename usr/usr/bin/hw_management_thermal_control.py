@@ -2,7 +2,7 @@
 # pylint: disable=line-too-long
 # pylint: disable=C0103
 ########################################################################
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -1171,10 +1171,10 @@ class system_device(hw_managemet_file_op):
         self.state = CONST.STOPPED
         self.err_fread_max = CONST.SENSOR_FREAD_FAIL_TIMES
         self.err_fread_err_counter_dict = {}
-        self.pwm_min = 0
-        self.pwm_max = 100
-        self.val_min = 0
-        self.val_max = 100
+        self.pwm_min = CONST.PWM_MIN
+        self.pwm_max = CONST.PWM_MAX
+        self.val_min = CONST.TEMP_MIN_MAX["val_min"]
+        self.val_max = CONST.TEMP_MIN_MAX["val_max"]
 
     # ----------------------------------------------------------------------
     def start(self):
