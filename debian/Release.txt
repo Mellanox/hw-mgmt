@@ -1,5 +1,5 @@
 ================================================================================
-- V.7.0020.4100
+- V.7.0020.4101
 - Sunday , 17 Nov 2022 
 --------------------------------------------------------------------------------
 - New Features    
@@ -7,7 +7,7 @@
     o  sn4600/sn4700: support remove A2D component from system
     o  hw-mgmt: psu: add support for delta 3k: a. Add special FW update handling (due different FW upload status reading)
                                                b. Support reading of FW version.
-					       c. Force explicit setting of fan speed type to % (due default PSU FW being numeric RPM)
+
 - Bug fixes
 
     o  #3255632 sn3750sx: missed out power/current fields in sensor.conf
