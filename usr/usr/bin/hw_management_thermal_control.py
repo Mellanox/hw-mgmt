@@ -167,10 +167,10 @@ SENSOR_DEF_CONFIG = {
     r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":50000, "val_max":80000, "pwm_min": 25, "pwm_max": 100, "poll_time": 20, "refresh_attr_period": 30 * 60},
     r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":50000, "val_max":80000, "pwm_min": 20, "pwm_max": 100, "poll_time": 6},
     r'mlxsw': {"type": "thermal_module_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
-    r'cpu_pack': {"type": "thermal_sensor", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3, "pwm_hyst" : 3, "input_smooth_level": 3},
-    r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10, "input_smooth_level": 2},
-    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10,  "pwm_hyst" : 3, "input_smooth_level": 2},
-    r'comex_amb': {"type": "thermal_sensor", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
+    r'cpu_pack': {"type": "thermal_sensor", "val_min": 15000, "val_max": 90000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3, "pwm_hyst" : 3, "input_smooth_level": 3},
+    r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min": 15000, "val_max": 85000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10, "input_smooth_level": 2},
+    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 15000, "val_max": 85000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10,  "pwm_hyst" : 3, "input_smooth_level": 2},
+    r'comex_amb': {"type": "thermal_sensor", "val_min": 15000, "val_max": 85000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
     r'sensor_amb': {"type": "ambiant_thermal_sensor", "file_in_dict": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "poll_time": 10},
     r'psu\d+_temp': {"type": "thermal_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 30}
 }
@@ -1315,7 +1315,7 @@ class system_device(hw_managemet_file_op):
         if self.val_max == self.val_min:
             return self.pwm_min
 
-        pwm = self.pwm_min + ((self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
+        pwm = self.pwm_min + (float(self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
         if pwm > self.pwm_max:
             pwm = self.pwm_max
 
