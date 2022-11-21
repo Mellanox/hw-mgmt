@@ -1491,6 +1491,7 @@ class thermal_module_sensor(system_device):
         @summary: handle sensor input
         """
         pwm = self.pwm_min
+        self.set_trusted(True)
         # refreshing min/max attributes each 30 min
         if self.refresh_timeout > 0 and self.refresh_timeout < current_milli_time():
             self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.base_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
@@ -1523,12 +1524,12 @@ class thermal_module_sensor(system_device):
 
         self.log.debug("{} value {}".format(self.name, self.value))
 
+        self.pwm = pwm
         # check if module have sensor interface
         if self.val_max == 0 and self.val_min == 0 and self.value == 0:
-            self.set_trusted(False)
             return
         else:
-            self.set_trusted(True)
+            # calculate PWM based on formula
             self.pwm = max(self.calculate_pwm_formula(), pwm)
 
     # ----------------------------------------------------------------------
@@ -1925,7 +1926,7 @@ class ambiant_thermal_sensor(system_device):
             self.flow_dir = CONST.UNKNOWN
             self.value = self.value_dict[CONST.PORT_SENS]
 
-        self.pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, self.trusted])
+        self.pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, self.trusted], interpolated=True)
 
     # ----------------------------------------------------------------------
     def handle_err(self, thermal_table, flow_dir, amb_tmp):
@@ -1966,6 +1967,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         hw_managemet_file_op.__init__(self, config)
         self.log = Logger(config[CONST.LOG_USE_SYSLOG], config[CONST.LOG_FILE], config["verbosity"])
+        self.log.notice("Preinit thermal control")
         self.write_file(CONST.LOG_LEVEL_FILENAME, config["verbosity"])
         self.periodic_report_worker_timer = None
         self.thermal_table = None
