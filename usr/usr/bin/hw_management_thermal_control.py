@@ -110,14 +110,14 @@ class CONST(object):
     SUSPEND_FILE = "config/suspend"
 
     # Default report time if not configured other value
-    PERIODIC_REPORT_TIME = 5 * 60
+    PERIODIC_REPORT_TIME = 30
     PERIODIC_REPORT_FILE = "config/periodic_report"
 
     # Default sensor configuration if not 0configured other value
     SENSOR_POLL_TIME_DEF = 3
     TEMP_INIT_DEF = 25
     TEMP_SENSOR_SCALE = 1000.0
-    TEMP_MIN_MAX = {"val_min": 10000, "val_max": 65000}
+    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 65000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 25000}
 
     # Max/min PWM value - global for all system
@@ -152,8 +152,6 @@ class CONST(object):
     STOPPED = "STOPPED"
     RUNNING = "RUNNING"
 
-    VMOD_DEF = "VMOD0001"
-
 
 """
 Default sensor  configuration.
@@ -162,17 +160,17 @@ These valued can be overrides with the input sensors configuration file
 """
 
 SENSOR_DEF_CONFIG = {
-    r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
-    r'fan\d+': {"type": "fan_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 30},
-    r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":50000, "val_max":80000, "pwm_min": 25, "pwm_max": 100, "poll_time": 20, "refresh_attr_period": 30 * 60},
-    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":50000, "val_max":80000, "pwm_min": 20, "pwm_max": 100, "poll_time": 6},
-    r'mlxsw': {"type": "thermal_module_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
-    r'cpu_pack': {"type": "thermal_sensor", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3, "pwm_hyst" : 3, "input_smooth_level": 3},
-    r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10, "input_smooth_level": 2},
-    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 10,  "pwm_hyst" : 3, "input_smooth_level": 2},
-    r'comex_amb': {"type": "thermal_sensor", "val_min": 15000, "val_max": 65000, "pwm_min": 25, "pwm_max": 100, "poll_time": 3},
+    r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "poll_time": 30},
+    r'fan\d+': {"type": "fan_sensor", "poll_time": 30},
+    r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 20, "refresh_attr_period": 30 * 60},
+    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 6},
+    r'mlxsw': {"type": "thermal_module_sensor", "poll_time": 3},
+    r'cpu_pack': {"type": "thermal_sensor", "val_min": 50000, "val_max": 90000, "poll_time": 3, "pwm_hyst" : 3, "input_smooth_level": 3},
+    r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min_override": 50000, "val_max": 85000, "poll_time": 10, "input_smooth_level": 2},
+    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10,  "pwm_hyst" : 3, "input_smooth_level": 2},
+    r'comex_amb': {"type": "thermal_sensor", "val_min": 45000, "val_max": 85000, "poll_time": 3},
     r'sensor_amb': {"type": "ambiant_thermal_sensor", "file_in_dict": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "poll_time": 10},
-    r'psu\d+_temp': {"type": "thermal_sensor", "pwm_min": 25, "pwm_max": 100, "poll_time": 30}
+    r'psu\d+_temp': {"type": "thermal_sensor", "val_min": 45000, "val_max":  85000, "poll_time": 30}
 }
 
 #############################
@@ -1315,7 +1313,7 @@ class system_device(hw_managemet_file_op):
         if self.val_max == self.val_min:
             return self.pwm_min
 
-        pwm = self.pwm_min + ((self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
+        pwm = self.pwm_min + (float(self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
         if pwm > self.pwm_max:
             pwm = self.pwm_max
 
@@ -1395,6 +1393,7 @@ class thermal_sensor(system_device):
         @summary: this function calling on sensor start after initialization or suspend off
         """
         self.val_min = self.read_val_min_max("{}_min".format(self.base_name), "val_min", CONST.TEMP_SENSOR_SCALE)
+        self.val_min = self.sensors_config.get("val_min_override",self.val_min)
         self.val_max = self.read_val_min_max("{}_max".format(self.base_name), "val_max", CONST.TEMP_SENSOR_SCALE)
 
     # ----------------------------------------------------------------------
@@ -2366,6 +2365,8 @@ class ThermalManagement(hw_managemet_file_op):
 
         if self.check_file("thermal/cpu_pack"):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_name": "thermal/cpu_pack"})
+        elif self.check_file("thermal/cpu_core1"):
+            self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_name": "thermal/cpu_core1"})
 
         self._sensor_add_config("ambiant_thermal_sensor", "sensor_amb")
 
@@ -2380,8 +2381,6 @@ class ThermalManagement(hw_managemet_file_op):
 
         if self.check_file("thermal/comex_amb"):
             self._sensor_add_config("thermal_sensor", "comex_amb", {"base_name": "thermal/comex_amb"})
-        elif self.check_file("thermal/cpu_core1"):
-            self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_name": "thermal/cpu_core1"})
 
     # ----------------------------------------------------------------------
     def init(self):
@@ -2544,8 +2543,10 @@ class ThermalManagement(hw_managemet_file_op):
         ambient_sensor = self._get_dev_obj("sensor_amb")
         if ambient_sensor:
             amb_tmp = ambient_sensor.get_value()
+            flow_dir = ambient_sensor.get_flow_dir()
         else:
             amb_tmp = "-"
+            flow_dir = "-"
 
         mlxsw_sensor = self._get_dev_obj("mlxsw")
         if mlxsw_sensor:
@@ -2555,8 +2556,8 @@ class ThermalManagement(hw_managemet_file_op):
 
         self.log.notice("Thermal periodic report")
         self.log.notice("================================")
-        self.log.notice("Temperature(C): asic: {} amb {}".format(mlxsw_tmp, amb_tmp))
-        self.log.notice("Cooling(%) {} trusted:{}".format(self.pwm_target, self.trusted))
+        self.log.notice("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
+        self.log.notice("Cooling(%) {}, dir {}, trusted:{}".format(self.pwm_target, flow_dir, self.trusted))
         self.log.notice("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
