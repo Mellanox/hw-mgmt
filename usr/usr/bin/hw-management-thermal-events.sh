@@ -37,7 +37,6 @@ board_type=$(< $board_type_file)
 sku=$(< $sku_file)
 
 # Local variables
-fan_command=$config_path/fan_command
 fan_psu_default=$config_path/fan_psu_default
 max_psus=4
 max_pwm=4
@@ -668,7 +667,6 @@ if [ "$1" == "add" ]; then
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
-		# PSU unit FAN speed set
 		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -676,15 +674,12 @@ if [ "$1" == "add" ]; then
 		if [ "$bus" == "$comex_bus" ]; then
 			exit 0
 		fi
-		# Set default fan speed
-		addr=$(< $config_path/"$psu_name"_i2c_addr)
-		command=$(< $fan_command)
-		speed=$(< $fan_psu_default)
 		# Allow PS controller to stabilize
 		sleep 2
-		i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
+		# Set default fan speed
+		psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		# Add thermal attributes
 		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp
 		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp_max
@@ -731,7 +726,7 @@ if [ "$1" == "add" ]; then
 
 		psu_addr=$(< $config_path/"$psu_name"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
-		eeprom_name=$2_info
+		eeprom_name="$psu_name"_info
 		if [ "$board_type" == "VMOD0014" ]; then
 			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		else
@@ -815,15 +810,20 @@ if [ "$1" == "add" ]; then
 		elif echo $mfr | grep -iq "Delta"; then
 			# Support FW update only for specific Delta PSU capacities
 			fw_ver="N/A"
-			if [ "$cap" == "550" -o "$cap" == "2000" ]; then
+			if [ "$cap" == "550" -o "$cap" == "2000" -o "$cap" == "3000" ]; then
 				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+				if [ "$cap" == "3000" ] && [ "$board_type" == "VMOD0013" ]; then
+					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
+						echo 38000 > "$config_path"/amb_tmp_warn_limit
+					fi
+					if [ ! -e "$config_path"/amb_tmp_crit_limit ]; then
+						echo 40000 > "$config_path"/amb_tmp_crit_limit
+					fi
+					echo 30 > "$config_path"/"$psu_name"_power_slope
+					echo "$cap" > "$config_path"/"$psu_name"_power_capacity
+				fi
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
-			# Special handling for Delta 2000 fan speed command
-			if [ "$cap" == "2000" ]; then
-				i2cset -f -y "$bus" "$addr" 0x3a 0x90 bp
-				i2cset -f -y "$bus" "$addr" "$command" "$speed" wp
-			fi
 		fi
 
 	fi
@@ -852,6 +852,15 @@ if [ "$1" == "add" ]; then
 					fi
 				fi
 			done
+		fi
+	fi
+	if [ "$2" == "drivetemp" ]; then
+		name=$(<"$3""$4"/name)
+		if [ "$name" == "drivetemp" ]; then
+			check_n_link "$3""$4"/temp1_input $thermal_path/drivetemp
+			check_n_link "$3""$4"/temp1_crit $thermal_path/drivetemp_crit
+			check_n_link "$3""$4"/temp1_max $thermal_path/drivetemp_max
+			check_n_link "$3""$4"/temp1_min $thermal_path/drivetemp_min
 		fi
 	fi
 elif [ "$1" == "change" ]; then
@@ -1120,7 +1129,6 @@ else
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
-		# PSU unit FAN speed set
 		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -1158,6 +1166,11 @@ else
 		psu_disconnect_power_sensor "$psu_name"_curr
 
 		rm -f $eeprom_path/"$psu_name"_vpd
+		rm -f $fw_path/"$psu_name"_fw_ver
+		if [ -e "$config_path"/"$psu_name"_power_slope ]; then
+			rm -f "$config_path"/"$psu_name"_power_slope
+			rm -f "$config_path"/"$psu_name"_power_capacity
+		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"

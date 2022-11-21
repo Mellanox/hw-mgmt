@@ -99,9 +99,14 @@ declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_3"]="mp2975 0x6a 5 voltmon5" \
 				 ["mp2975_4"]="mp2975 0x6c 5 voltmon6" \
 				 ["mp2975_5"]="mp2975 0x6e 5 voltmon7" \
+				 ["152x4_0"]="xpde152854 0x62 5 voltmon1" \
+				 ["152x4_1"]="xpde152854 0x68 5 voltmon4" \
+				 ["152x4_2"]="xpde152854 0x6a 5 voltmon5" \
+				 ["152x4_3"]="xpde152854 0x6c 5 voltmon6" \
 				 ["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
+				 ["stts751_0"]="stts751 0x4a 7 port_amb" \
 				 ["24c32_0"]="24c32 0x51 8 system_eeprom" \
 				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
@@ -132,28 +137,26 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
-				["mp2975_2"]="mp2975 0x65 5 voltmon3" \
-				["mp2975_3"]="mp2975 0x66 5 voltmon4" \
-				["mp2975_4"]="mp2975 0x67 5 voltmon5" \
-				["mp2975_5"]="mp2975 0x68 5 voltmon6" \
-				["mp2975_6"]="mp2975 0x69 5 voltmon7" \
-				["mp2975_7"]="mp2975 0x6a 5 voltmon8" \
-				["mp2975_8"]="mp2975 0x6b 5 voltmon9" \
-				["mp2975_9"]="mp2975 0x6c 5 voltmon10" \
+				["mp2975_2"]="mp2975 0x64 5 voltmon3" \
+				["mp2975_3"]="mp2975 0x65 5 voltmon4" \
+				["mp2975_4"]="mp2975 0x66 5 voltmon5" \
+				["mp2975_5"]="mp2975 0x67 5 voltmon6" \
+				["mp2975_6"]="mp2975 0x68 5 voltmon7" \
+				["mp2975_7"]="mp2975 0x69 5 voltmon8" \
+				["mp2975_8"]="mp2975 0x6a 5 voltmon9" \
+				["mp2975_9"]="mp2975 0x6b 5 voltmon10" \
 				["mp2975_10"]="mp2975 0x6e 5 voltmon11" \
-				["mp2975_11"]="mp2975 0x6f 5 voltmon12" \
 				["xdpe15284_0"]="xdpe15284 0x62 5 voltmon1" \
 				["xdpe15284_1"]="xdpe15284 0x63 5 voltmon2" \
-				["xdpe15284_2"]="xdpe15284 0x65 5 voltmon3" \
-				["xdpe15284_3"]="xdpe15284 0x66 5 voltmon4" \
-				["xdpe15284_4"]="xdpe15284 0x67 5 voltmon5" \
-				["xdpe15284_5"]="xdpe15284 0x68 5 voltmon6" \
-				["xdpe15284_6"]="xdpe15284 0x69 5 voltmon7" \
-				["xdpe15284_7"]="xdpe15284 0x6a 5 voltmon8" \
-				["xdpe15284_8"]="xdpe15284 0x6b 5 voltmon9" \
-				["xdpe15284_9"]="xdpe15284 0x6c 5 voltmon10" \
+				["xdpe15284_2"]="xdpe15284 0x64 5 voltmon3" \
+				["xdpe15284_3"]="xdpe15284 0x65 5 voltmon4" \
+				["xdpe15284_4"]="xdpe15284 0x66 5 voltmon5" \
+				["xdpe15284_5"]="xdpe15284 0x67 5 voltmon6" \
+				["xdpe15284_6"]="xdpe15284 0x68 5 voltmon7" \
+				["xdpe15284_7"]="xdpe15284 0x69 5 voltmon8" \
+				["xdpe15284_8"]="xdpe15284 0x6a 5 voltmon9" \
+				["xdpe15284_9"]="xdpe15284 0x6b 5 voltmon10" \
 				["xdpe15284_10"]="xdpe15284 0x6e 5 voltmon11" \
-				["xdpe15284_11"]="xdpe15284 0x6f 5 voltmon12" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="tmp102 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 system_eeprom")
@@ -162,18 +165,20 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # Actually it's located on fan board and in this way it will be passed through SMBios
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
 declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
-				   ["adt75_0"]="adt75 0x49 7 fan_amb")
+				   ["adt75_0"]="adt75 0x49 7 fan_amb" \
+				   ["stts751_0"]="stts751 0x49 7 fan_amb")
 
 declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 6 fan_amb")
 
 # Currently system can have just multiple clock boards.
-declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x50 5 clk_eeprom")
+declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
+				   ["24c128_1"]="24c128 0x57 5 clk_eeprom2")
 
 declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
 				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
-				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv2" \
+				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
 				   ["icp201xx_0"]="icp201xx 0x63 4 press_sens1" \
 				   ["icp201xx_1"]="icp201xx 0x64 4 press_sens2" \
 				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")

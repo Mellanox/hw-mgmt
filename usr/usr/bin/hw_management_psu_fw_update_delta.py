@@ -56,12 +56,15 @@ MFR_FWUPLOAD = 0xd7
 MFR_FWUPLOAD_STATUS = 0xd2
 MFR_FWUPLOAD_REVISION = 0xd5
 
+# Special FWUPLOAD_STATUS command for the first batch of Delta 3K PSUs
+MFR_MODEL_3000AB_10G = "DPS-3000AB-10 G"
+MFR_FWUPLOAD_STATUS_3000AB_10G = 0xd8
 
 def read_mfr_fw_revision(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_REVISION.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 6)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())
         return ascii_str
@@ -82,7 +85,13 @@ def read_mfr_fw_upload_status(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_UPLOAD_STATUS.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_STATUS, 1)
+    mfr_upload_status_cmd = MFR_FWUPLOAD_STATUS
+    mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
+    if mfr_model == MFR_MODEL_3000AB_10G:
+        mfr_upload_status_cmd = MFR_FWUPLOAD_STATUS_3000AB_10G
+
+
+    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, mfr_upload_status_cmd, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upload_status = UPLOAD_STATUS_DICT.get(int(ret, 16))
         print(upload_status)

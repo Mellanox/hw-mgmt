@@ -74,6 +74,8 @@ psu4_i2c_addr=0x5a
 psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
+fan_config_command=0x3a
+fan_speed_units=0x90
 chipup_delay_default=0
 hotplug_psus=2
 hotplug_fans=6
@@ -214,7 +216,7 @@ msn37xx_A1_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 sn3750sx_secured_connect_table=(	mp2975 0x62 5 \
 			mp2975 0x66 5 \
 			tmp102 0x49 7 \
-			adt75 0x4a 7 \
+			tmp102 0x4a 7 \
 			24c512 0x51 8 \
 			24c128 0x54 9)
 
@@ -242,8 +244,7 @@ msn27002_msn24102_msb78002_base_connect_table=( pmbus 0x27 5 \
 			max11603 0x6d 15 \
 			lm75 0x49 17)
 
-msn4700_msn4600_base_connect_table=(	max11603 0x6d 5 \
-			xdpe12284 0x62 5 \
+msn4700_msn4600_base_connect_table=( xdpe12284 0x62 5 \
 			xdpe12284 0x64 5 \
 			xdpe12284 0x66 5 \
 			xdpe12284 0x68 5 \
@@ -265,8 +266,7 @@ msn4600C_base_connect_table=( xdpe12284 0x62 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4700_msn4600_A1_base_connect_table=(	max11603 0x6d 5 \
-			mp2975 0x62 5 \
+msn4700_msn4600_A1_base_connect_table=( mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
@@ -275,7 +275,7 @@ msn4700_msn4600_A1_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4600C_A1_base_connect_table=(	mp2975 0x62 5 \
+msn4600C_A1_base_connect_table=( mp2975 0x62 5 \
 			mp2975 0x64 5 \
 			mp2975 0x66 5 \
 			mp2975 0x6a 5 \
@@ -295,7 +295,7 @@ msn3510_base_connect_table=(	max11603 0x6d 5 \
 mqm97xx_base_connect_table=(	max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
-			24c32 0x51 8)
+			24c512 0x51 8)
 
 # MQM9700 adt75 temp sensors
 mqm97xx_rev0_base_connect_table=(    max11603 0x6d 5 \
@@ -333,11 +333,11 @@ mqm97xx_mps_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 			mp2975 0x6a 5 voltmon5 \
 			mp2975 0x6c 5 voltmon6 )
 
-mqm97xx_xpde_voltmon_connect_table=( xpde152854 0x62 5 voltmon1 \
-			mp2888 0x66 5 voltmon2 \
-			xpde152854 0x68 5 voltmon3 \
-			xpde152854 0x6a 5 voltmon4 \
-			xpde152854 0x6c 5 voltmon5 )
+mqm97xx_xpde_voltmon_connect_table=( xdpe15284 0x62 5 voltmon1 \
+			mp2888 0x66 5 voltmon3 \
+			xdpe15284 0x68 5 voltmon4 \
+			xdpe15284 0x6a 5 voltmon5 \
+			xdpe15284 0x6c 5 voltmon6 )
 
 mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 			mp2888 0x66 5 voltmon2 \
@@ -359,22 +359,20 @@ e3597_dynamic_i2c_bus_connect_table=(  mp2975 0x22 5 voltmon1 \
 			mp2975 0x26 5  voltmon5 \
 			mp2975 0x27 5  voltmon6)
 
-p4697_base_connect_table=(    max11603 0x6d 7 \
-			adt75 0x49 7 \
+p4697_base_connect_table=(	adt75 0x49 7 \
 			adt75 0x4a 7 \
 			24c512 0x51 8)
 
-p4697_rev1_base_connect_table=(    max11603 0x6d 7 \
-			tmp102 0x49 7 \
+p4697_rev1_base_connect_table=(	tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c512 0x51 8)
 
 p4697_dynamic_i2c_bus_connect_table=(  mp2975 0x62 26 voltmon1 \
 			mp2975 0x65 26 voltmon2 \
 			mp2975 0x67 26 voltmon3 \
-			mp2975 0x62 27 voltmon4 \
-			mp2975 0x65 27 voltmon5 \
-			mp2975 0x67 27 voltmon6)
+			mp2975 0x62 29 voltmon4 \
+			mp2975 0x65 29 voltmon5 \
+			mp2975 0x67 29 voltmon6)
 
 msn4800_base_connect_table=( mp2975 0x62 5 \
 	mp2975 0x64 5 \
@@ -423,12 +421,9 @@ sn5600_base_connect_table=( \
 	pmbus  0x11 4 \
 	pmbus  0x13 4 \
 	pmbus  0x15 4 \
-	icp201xx 0x63 4 \
-	icp201xx 0x64 4 \
-	24c128 0x50 5 \
-	24c128 0x53 5 \
 	mp2975 0x62 5 \
 	mp2975 0x63 5 \
+	mp2975 0x64 5 \
 	mp2975 0x65 5 \
 	mp2975 0x66 5 \
 	mp2975 0x67 5 \
@@ -436,9 +431,7 @@ sn5600_base_connect_table=( \
 	mp2975 0x69 5 \
 	mp2975 0x6a 5 \
 	mp2975 0x6b 5 \
-	mp2975 0x6c 5 \
 	mp2975 0x6e 5 \
-	mp2975 0x6f 5 \
 	tmp102 0x49 6 \
 	tmp102 0x4a 7 \
 	24c512 0x51 8 )
@@ -749,8 +742,8 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100)
-							#Anaconda 100/200 Tigon Jaguar
+						HI116|HI112|HI124|HI100|HI122|HI123)
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -764,8 +757,8 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
-				# MQM9700 removed A2D from CFL
-				HI130)
+				# MQM9700, P4697 removed A2D from CFL
+				HI130 | HI142)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
@@ -860,7 +853,7 @@ set_spc1_port_cpld()
 			fi
 			mt_dev=$(find /dev/mst -name *00_pciconf0)
 			cmd='mlxreg --reg_name MSCI  -d $mt_dev -g -i "index=2" | grep version | cut -d "|" -f2'
-			ver_hex=$(eval $cmd)
+			ver_hex=$(eval $cmd 2>/dev/null)
 			if [ ! -z "$ver_hex" ]; then
 				ver_dec=$(printf "%d" $ver_hex)
 			fi
@@ -980,10 +973,10 @@ msn27xx_msb_msx_specific()
 		;;
 		*)
 			echo 3 > $config_path/cpld_num
+			echo cpld3 > $config_path/cpld_port
 		;;
 	esac
 
-	echo cpld3 > $config_path/cpld_port
 	set_spc1_port_cpld
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
@@ -1206,7 +1199,7 @@ connect_msn4700_msn4600_A1()
 		#  msn4600C with removed A2D
 		connect_table+=(${msn4600C_A1_base_connect_table[@]})
 	else
-		# msn4700/msn4600 respin
+		# msn4700/msn4600 respin 
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 	fi
 	add_cpu_board_to_connection_table
@@ -1345,7 +1338,7 @@ mqm97xx_specific()
 					voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
 					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 					;;
-				13)
+				5|13)
 					connect_table+=(${mqm97xx_rev2_base_connect_table[@]})
 					voltmon_connection_table=(${mqm97xx_xpde_voltmon_connect_table[@]})
 					lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
@@ -1656,7 +1649,7 @@ sn56xx_specific()
 	thermal_type=$thermal_type_def	# ToDo Temporary default 60%
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
-	echo 2000 > $config_path/fan_min_speed	# ToDo. Now ~15%, not provided, check on real system
+	echo 2800 > $config_path/fan_min_speed
 	echo 25000 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
@@ -1906,6 +1899,8 @@ set_config_data()
 	done
 	echo $fan_psu_default > $config_path/fan_psu_default
 	echo $fan_command > $config_path/fan_command
+	echo $fan_config_command > $config_path/fan_config_command
+	echo $fan_speed_units > $config_path/fan_speed_units
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
