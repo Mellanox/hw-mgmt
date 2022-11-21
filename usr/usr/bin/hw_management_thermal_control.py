@@ -1345,7 +1345,7 @@ class system_device(hw_managemet_file_op):
         @return: True if device is disabled
         """
         if not name:
-            name = self.base_name
+            name = self.name
         blk_filename = "thermal/{}_blacklist".format(name)
         if self.check_file(blk_filename):
             try:
@@ -1813,6 +1813,29 @@ class fan_sensor(system_device):
         @return: fan direction CONST.P2C/CONST.C2P
         """
         return self.fan_dir
+
+    # ----------------------------------------------------------------------
+    def check_sensor_blocked(self, name=None):
+        """
+        @summary:  check if sensor disabled. Sensor can be disabled by writing 1 to file {sensor_name}_blacklist
+        @param name: device sensor name
+        @return: True if device is disabled
+        """
+        if not name:
+            try:
+                name = self.name.split(':')[0]
+            except:
+                name = self.name
+        blk_filename = "thermal/{}_blacklist".format(name)
+        if self.check_file(blk_filename):
+            try:
+                val_str = self.read_file(blk_filename)
+                val = str2bool(val_str)
+            except ValueError:
+                return False
+        else:
+            return False
+        return val
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
