@@ -569,7 +569,8 @@ if [ "$1" == "add" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
+			# Run automatic chipup based on ASIC health event only in ONL OS.
+			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ] && [ -d /mnt/onl ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
@@ -877,25 +878,13 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
+			# Run automatic chipup based on ASIC health event only in ONL OS.
+			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ] && [ -d /mnt/onl ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown "$asic_index"
-		else
-			asic_health=0
-			if [ -f "$3""$4"/asic1 ]; then
-				asic_health=$(< "$4""$5"/asic1)
-			fi
-			if [ "$asic_health" -eq 2 ]; then
-				if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
-					sleep 3
-					/usr/bin/hw-management.sh chipup "$asic_index"
-				fi
-			else
-				/usr/bin/hw-management.sh chipdown "$asic_index"
-			fi
 		fi
 	fi
 else
