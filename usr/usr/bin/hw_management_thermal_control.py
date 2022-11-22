@@ -198,6 +198,28 @@ psu_err_default = {
     "fault": {"-127:120": 100},
 }
 
+TABLE_DEFAULT = {
+    "name": "default",
+    CONST.C2P: {
+        CONST.TRUST_TYPE: {"-127:120": 60},
+        CONST.UNTRUST_TYPE: {"-127:120": 60},
+        "fan_err": fan_err_default,
+        "psu_err": psu_err_default
+    },
+    CONST.P2C: {
+        CONST.TRUST_TYPE: {"-127:120": 60},
+        CONST.UNTRUST_TYPE: {"-127:120": 60},
+        "fan_err": fan_err_default,
+        "psu_err": psu_err_default
+    },
+    CONST.UNKNOWN: {
+        CONST.TRUST_TYPE: {"-127:120": 60},
+        CONST.UNTRUST_TYPE: {"-127:120": 60},
+        "fan_err": fan_err_default,
+        "psu_err": psu_err_default
+    }
+}
+
 # Class t1 for MSN27*|MSN24*
 # Direction    P2C        C2P        Unknown
 #--------------------------------------------------------------
@@ -738,7 +760,7 @@ TABLE_CLASS14 = {
 }
 
 THERMAL_TABLE_LIST = {
-    "default": TABLE_CLASS1,
+    "default": TABLE_DEFAULT,
     r'(MSN27\d+)|(MSN24\d+)|(tc_t1)': TABLE_CLASS1,
     r'(MSN21\d+)': TABLE_CLASS2,
     r'MSN274\d+': TABLE_CLASS3,
@@ -2295,7 +2317,8 @@ class ThermalManagement(hw_managemet_file_op):
             self.stop()
             self.exit.set()
 
-        sys.exit(1)
+            self.log.notice("Thermal control terminated")
+            sys.exit(1)
 
     # ----------------------------------------------------------------------
     @staticmethod
@@ -2569,7 +2592,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("================================")
         self.log.notice("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
         self.log.notice("Cooling(%) {} ({})".format(self.pwm_target, self.pwm_change_reason))
-        self.log.notice("dir {}, trusted:{}".format(flow_dir, self.trusted))
+        self.log.notice("dir:{}, trusted:{}".format(flow_dir, self.trusted))
         self.log.notice("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
