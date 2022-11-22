@@ -157,6 +157,15 @@ class CONST(object):
 Default sensor  configuration.
 Defined per sensor name. Sensor name can be defined with the regexp mask.
 These valued can be overrides with the input sensors configuration file
+Options description:
+
+type - device sensor handler type (same as class name)
+name - name of sensor. Could be any string
+poll_time - polling time in sec for sensor read/error check
+val_min/val_max - default values in case sensor don't expose limits in hw-management folder
+pwm_max/pwm_min - PWM limits tat sensor can set
+pwm_hyst - hysteresis for PWM value change calculated by formula
+input_smooth_level - soothing level for sensor input value reading
 """
 
 SENSOR_DEF_CONFIG = {
@@ -165,7 +174,7 @@ SENSOR_DEF_CONFIG = {
     r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 20, "refresh_attr_period": 30 * 60},
     r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 6},
     r'mlxsw': {"type": "thermal_module_sensor", "poll_time": 3},
-    r'cpu_pack': {"type": "thermal_sensor", "val_min": 50000, "val_max": 90000, "poll_time": 3, "pwm_hyst" : 3, "input_smooth_level": 3},
+    r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", "val_min": 50000, "val_max": 90000, "poll_time": 3, "pwm_hyst" : 5, "input_smooth_level": 3},
     r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min_override": 50000, "val_max": 85000, "poll_time": 10, "input_smooth_level": 2},
     r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10,  "pwm_hyst" : 3, "input_smooth_level": 2},
     r'comex_amb': {"type": "thermal_sensor", "val_min": 45000, "val_max": 85000, "poll_time": 3},
@@ -1689,9 +1698,9 @@ class fan_sensor(system_device):
         self.is_calibrated = False
         self.rpm_pwm_scale = self.val_max / 255
 
-        self.rpm_trh = 0.3
+        self.rpm_trh = 0.35
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
-        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout
+        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         self.name = "{}:{}".format(self.name, range(self.tacho_idx, self.tacho_idx + self.tacho_cnt))
 
         self.pwm_last = 0
@@ -1786,18 +1795,20 @@ class fan_sensor(system_device):
         pwm_curr = self.thermal_read_file_int("pwm1")
         if pwm_curr != self.pwm_last:
             self.pwm_last = self.thermal_read_file_int("pwm1")
-            self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout
+            self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         elif self.rpm_relax_timestump < current_milli_time():
-            self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout
+            self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
             self.rpm_valid_state = True
             for tacho_idx in range(self.tacho_idx, self.tacho_idx + self.tacho_cnt):
                 rpm_real = self.thermal_read_file_int("fan{}_speed_get".format(tacho_idx))
                 rpm_expected = int(pwm_curr * self.rpm_pwm_scale)
                 rpm_diff = abs(rpm_real - rpm_expected)
-                if float(rpm_diff) / rpm_expected >= self.rpm_trh:
-                    self.log.warn("{} read tacho {}: {} too much different than expected {} pwm  {} scale {}".format(self.name,
+                rpm_diff = int(float(rpm_diff) / rpm_expected)
+                if rpm_diff >= self.rpm_trh:
+                    self.log.warn("{} tacho {}: {} too much different {}% than expected {} pwm  {} scale {}".format(self.name,
                                                                                                                      tacho_idx,
                                                                                                                      rpm_real,
+                                                                                                                     rpm_diff,
                                                                                                                      rpm_expected,
                                                                                                                      pwm_curr,
                                                                                                                      self.rpm_pwm_scale))
@@ -1996,9 +2007,9 @@ class ThermalManagement(hw_managemet_file_op):
         self.config = config
         # Set PWM to maximum -1. This is a trick for forse waiting
         # of FAN_RELAX_TIME on FAN calibrate
-        self.pwm_target = CONST.PWM_MAX - 1
+        self.pwm_target = CONST.PWM_MAX
         self.pwm = self.pwm_target
-
+        self.pwm_change_reason = "-"
         self._collect_hw_info()
         self._write_pwm(self.pwm_target)
 
@@ -2177,11 +2188,11 @@ class ThermalManagement(hw_managemet_file_op):
 
         if pwm != self.pwm_target:
             if reason:
-                reason_notice = ' reason:"{}"'.format(reason)
+                reason_notice = 'reason:"{}"'.format(reason)
             else:
                 reason_notice = ""
-    
-            self.log.notice("PWM target changed from {} to PWM {}{}".format(self.pwm_target, pwm, reason_notice))
+            self.pwm_change_reason = reason_notice
+            self.log.notice("PWM target changed from {} to PWM {} {}".format(self.pwm_target, pwm, reason_notice))
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
             if self.pwm_worker_timer:
@@ -2557,7 +2568,8 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Thermal periodic report")
         self.log.notice("================================")
         self.log.notice("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
-        self.log.notice("Cooling(%) {}, dir {}, trusted:{}".format(self.pwm_target, flow_dir, self.trusted))
+        self.log.notice("Cooling(%) {} ({})".format(self.pwm_target, self.pwm_change_reason))
+        self.log.notice("dir {}, trusted:{}".format(flow_dir, self.trusted))
         self.log.notice("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
