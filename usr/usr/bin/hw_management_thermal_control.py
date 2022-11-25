@@ -172,11 +172,11 @@ SENSOR_DEF_CONFIG = {
     r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "poll_time": 30},
     r'fan\d+': {"type": "fan_sensor", "poll_time": 30},
     r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 20, "refresh_attr_period": 30 * 60},
-    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 6},
+    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 20, "refresh_attr_period": 30 * 60},
     r'mlxsw': {"type": "thermal_module_sensor", "poll_time": 3},
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", "val_min": 50000, "val_max": 90000, "poll_time": 3, "pwm_hyst" : 5, "input_smooth_level": 3},
     r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min_override": 50000, "val_max": 85000, "poll_time": 10, "input_smooth_level": 2},
-    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10,  "pwm_hyst" : 3, "input_smooth_level": 2},
+    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10, "pwm_hyst" : 3, "input_smooth_level": 2},
     r'comex_amb': {"type": "thermal_sensor", "val_min": 45000, "val_max": 85000, "poll_time": 3},
     r'sensor_amb': {"type": "ambiant_thermal_sensor", "file_in_dict": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "poll_time": 10},
     r'psu\d+_temp': {"type": "thermal_sensor", "val_min": 45000, "val_max":  85000, "poll_time": 30}
@@ -1302,7 +1302,7 @@ class system_device(hw_managemet_file_op):
         """
         pwm_diff = abs(self.last_pwm - self.pwm)
         if pwm_diff >= self.pwm_hysteresis:
-            self.last_pwm = self.pwm 
+            self.last_pwm = self.pwm
         return self.last_pwm
 
     # ----------------------------------------------------------------------
@@ -1424,7 +1424,7 @@ class thermal_sensor(system_device):
         @summary: this function calling on sensor start after initialization or suspend off
         """
         self.val_min = self.read_val_min_max("{}_min".format(self.base_name), "val_min", CONST.TEMP_SENSOR_SCALE)
-        self.val_min = self.sensors_config.get("val_min_override",self.val_min)
+        self.val_min = self.sensors_config.get("val_min_override", self.val_min)
         self.val_max = self.read_val_min_max("{}_max".format(self.base_name), "val_max", CONST.TEMP_SENSOR_SCALE)
 
     # ----------------------------------------------------------------------
@@ -1828,12 +1828,12 @@ class fan_sensor(system_device):
                 rpm_diff = int(float(rpm_diff) / rpm_expected)
                 if rpm_diff >= self.rpm_trh:
                     self.log.warn("{} tacho {}: {} too much different {}% than expected {} pwm  {} scale {}".format(self.name,
-                                                                                                                     tacho_idx,
-                                                                                                                     rpm_real,
-                                                                                                                     rpm_diff,
-                                                                                                                     rpm_expected,
-                                                                                                                     pwm_curr,
-                                                                                                                     self.rpm_pwm_scale))
+                                                                                                                    tacho_idx,
+                                                                                                                    rpm_real,
+                                                                                                                    rpm_diff,
+                                                                                                                    rpm_expected,
+                                                                                                                    pwm_curr,
+                                                                                                                    self.rpm_pwm_scale))
                     self.rpm_valid_state = False
 
         return self.rpm_valid_state
