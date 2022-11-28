@@ -569,8 +569,8 @@ if [ "$1" == "add" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			# Run automatic chipup based on ASIC health event only in ONL OS.
-			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ] && [ -d /mnt/onl ]; then
+			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
+			if [ -f /etc/autochipup ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
@@ -878,8 +878,8 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			# Run automatic chipup based on ASIC health event only in ONL OS.
-			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ] && [ -d /mnt/onl ]; then
+			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
+			if [ -f /etc/autochipup ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
