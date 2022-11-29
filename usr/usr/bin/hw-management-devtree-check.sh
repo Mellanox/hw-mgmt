@@ -130,8 +130,8 @@ devtr_2_csv_convert()
 # DT_BOARD_TYPE - SMBIOS VMOD variable
 # DT_SYS_SKU - system SKU
 # DT_PATH -full path of devtree file for use. Default is /var/run/hw-management/config
-# DT_CPU_TYPE - simulate other CPU. Currently Broadwell and Coffelake CPUs are supported
-# 	BDW_CPU, CFL_CPU e.g. export DT_CPU_TYPE=BDW_CPU
+# DT_CPU_TYPE - simulate other CPU. Currently Broadwell, Coffelake and BF3 CPUs are supported
+# 	BDW_CPU, CFL_CPU, BF3_CPU e.g. export DT_CPU_TYPE=BDW_CPU
 devtr_sim_environment_vars()
 {
 	if [[ -z "${DT_BOARD_TYPE}" ]]; then
@@ -167,6 +167,9 @@ devtr_sim_environment_vars()
 				;;
 			CFL_CPU)
 				cpu_type="${CFL_CPU}"
+				;;
+			BF3_CPU)
+				cpu_type="${BF3_CPU}"
 				;;
 			*)
 				cpu_type=$(<"$config_path"/cpu_type)

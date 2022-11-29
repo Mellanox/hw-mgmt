@@ -175,6 +175,9 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
 
+declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
+				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBios
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -285,6 +288,20 @@ devtr_check_supported_system_init_alternatives()
 			else
 				for key in "${!comex_bdw_alternatives[@]}"; do
 					comex_alternatives["$key"]="${comex_cfl_alternatives["$key"]}"
+				done
+			fi
+			;;
+		$BF3_CPU)
+			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
+				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
+				for key in "${!comex_bf3_alternatives[@]}"; do
+					curr_component=(${comex_bf3_alternatives["$key"]})
+					curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
+					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
+				done
+			else
+				for key in "${!comex_bf3_alternatives[@]}"; do
+					comex_alternatives["$key"]="${comex_bf3_alternatives["$key"]}"
 				done
 			fi
 			;;
@@ -592,7 +609,7 @@ devtr_check_board_components()
 # $4 - board type (VMOD)
 # $5 - system SKU
 # $6 - location of devtree file
-# $7 - CPU type: BDW_CPU, CFL_CPU
+# $7 - CPU type: BDW_CPU, CFL_CPU, BF3_CPU
 devtr_check_smbios_device_description()
 {
 	system_ver_str=$(<$system_ver_file)

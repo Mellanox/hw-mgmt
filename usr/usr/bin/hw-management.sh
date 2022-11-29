@@ -586,12 +586,13 @@ SODIMM_TEMP_HYST=6000
 
 set_sodimm_temp_limits()
 {
-	# SODIMM temp reading is not supported on Broadwell-DE Comex.
+	# SODIMM temp reading is not supported on Broadwell-DE Comex
+	# and on BF# Comex.
 	# Broadwell-DE Comex can be installed interchangeably with new
 	# Coffee Lake Comex on part of systems e.g. on Anaconda.
 	# Thus check by CPU type and not by system type.
 	case $cpu_type in
-		$BDW_CPU)
+		$BDW_CPU|$BF3_CPU)
 			return 0
 			;;
 		*)
@@ -649,6 +650,12 @@ set_jtag_gpio()
 			jtag_tck=87
 			jtag_tms=88
 			jtag_tdo=89
+			;;
+		$BF3_CPU)
+			jtag_tdi=11
+			jtag_tck=55
+			jtag_tms=54
+			jtag_tdo=12
 			;;
 		*)
 			return 0
@@ -803,6 +810,9 @@ add_cpu_board_to_connection_table()
 			esac
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
+		$BF3_CPU)
+			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+			;;
 		*)
 			log_err "$product is not supported"
 			exit 0
@@ -844,7 +854,7 @@ add_come_named_busses()
 	local come_named_busses=()
 
 	case $cpu_type in
-	$CFL_CPU)
+	$CFL_CPU|$BF3_CPU)
 		come_named_busses+=( ${cfl_come_named_busses[@]} )
 		;;
 	*)
@@ -1749,6 +1759,31 @@ p4262_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
+mqmxxx_bf3_common()
+{
+	local voltmon_connection_table=()
+
+	lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
+	if [ ! -e "$devtree_file" ]; then
+		# Bring-up note:
+		# SMBIOS might be not ready for bring-up - use here specific configuration
+		# available for bring-up stage.
+		connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
+		voltmon_connection_table=(${mqm97xx_mps_voltmon_connect_table[@]})
+	fi
+
+	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
+	add_come_named_busses
+	thermal_type=$thermal_type_def
+	max_tachos=14
+	hotplug_fans=7
+	echo 29500 > $config_path/fan_max_speed
+	echo 5000 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+}
+
 check_system()
 {
 	# Check ODM
@@ -1792,6 +1827,9 @@ check_system()
 		VMOD0017)
 			p4262_specific
 			;;
+		VMOD0016)
+			mqmxxx_bf3_common
+			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $product in
@@ -1832,7 +1870,14 @@ check_system()
 					msn46xx_specific
 					;;
 				MQM97*)
-					mqm97xx_specific
+					case $cpu_type in
+						$BF3_CPU)
+							mqmxxx_bf3_common
+							;;
+						*)
+							mqm97xx_specific
+							;;
+					esac
 					;;
 				MQM87*)
 					mqm87xx_specific
@@ -1856,6 +1901,9 @@ check_system()
 								;;
 							$BDW_CPU)
 								mqmxxx_msn37x_msn34x_specific
+								;;
+							$BF3_CPU)
+								mqmxxx_bf3_common
 								;;
 							*)
 								log_err "$product is not supported"
