@@ -92,6 +92,7 @@ RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 DNV_CPU=0x65F
+BF3_CPU=0xD41
 
 log_err()
 {
@@ -105,14 +106,23 @@ log_info()
 
 check_cpu_type()
 {
-    if [ ! -f $config_path/cpu_type ]; then
-        family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
-        model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
-        cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
-        echo $cpu_type > $config_path/cpu_type
-    else
-        cpu_type=$(cat $config_path/cpu_type)
-    fi  
+	if [ ! -f $config_path/cpu_type ]; then
+		# ARM CPU provide "CPU part" field, x86 does not. Check for ARM first.
+		cpu_pn=$(grep -m1 "CPU part" /proc/cpuinfo | awk '{print $4}')
+		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
+		cpu_pn=0x$cpu_pn
+		if [ "$cpu_pn" == "$BF3_CPU" ]; then
+			echo $cpu_part > $config_path/cpu_type
+			return 0
+		fi
+
+		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
+		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
+		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+		echo $cpu_type > $config_path/cpu_type
+	else
+		cpu_type=$(cat $config_path/cpu_type)
+	fi
 }
 
 find_i2c_bus()
