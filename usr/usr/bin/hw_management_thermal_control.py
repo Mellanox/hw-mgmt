@@ -87,14 +87,18 @@ class CONST(object):
     GLOBAL_CONFIG = "global_config"
     SENSORS_CONFIG = "sensors_config"
 
-    # log current level filename
+    # File which defined current level filename.
+    # User can dynamically change loglevel without TC restarting.
     LOG_LEVEL_FILENAME = "config/tc_log_level"
 
-    # Fan direction
+    # Fan direction string alias
+    #fan dir:
+    # 0: port > fan, dir fan->port C2P  Port t change not affect
+    # 1: port < fan, dir port->fan P2C  Fan t change not affect
     C2P = "C2P"
     P2C = "P2C"
 
-    # Sensor to for specified direction
+    # Sensor files for ambiant temperature measurement 
     FAN_SENS = "thermal/fan_amb"
     PORT_SENS = "thermal/port_amb"
 
@@ -109,8 +113,9 @@ class CONST(object):
     # suspend control file path
     SUSPEND_FILE = "config/suspend"
 
-    # Default report time if not configured other value
-    PERIODIC_REPORT_TIME = 30
+    # Default period for printing TC report (in sec.)
+    PERIODIC_REPORT_TIME = 5 * 60
+    # File which define TC report period. TC should be restarted to apply changes in this file
     PERIODIC_REPORT_FILE = "config/periodic_report"
 
     # Default sensor configuration if not 0configured other value
@@ -128,7 +133,8 @@ class CONST(object):
     ### FAN calibration
     # Time for FAN rotation stabilize after change
     FAN_RELAX_TIME = 10
-    # Calibration cycles for FAN speed calibration at 100%
+    # Cycles for FAN speed calibration at 100%.
+    # FAN RPM value will be averaged  by reading by several(FAN_CALIBRATE_CYCLES) readings 
     FAN_CALIBRATE_CYCLES = 2
 
     ### PWM smoothing
@@ -147,7 +153,7 @@ class CONST(object):
     # Consistent file read  errors for set error state
     SENSOR_FREAD_FAIL_TIMES = 3
 
-    # Main state
+    # Main TC loop state
     UNCONFIGURED = "UNCONFIGURED"
     STOPPED = "STOPPED"
     RUNNING = "RUNNING"
@@ -164,8 +170,12 @@ name - name of sensor. Could be any string
 poll_time - polling time in sec for sensor read/error check
 val_min/val_max - default values in case sensor don't expose limits in hw-management folder
 pwm_max/pwm_min - PWM limits tat sensor can set
-pwm_hyst - hysteresis for PWM value change calculated by formula
-input_smooth_level - soothing level for sensor input value reading
+pwm_hyst - hysteresis for PWM value change. PWM value for thermal sensor can be calculated by the formula:
+    pwm = pwm_min + ((value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
+input_smooth_level - soothing level for sensor input value reading. Formula to calculate avg:
+    avg_acc -= avg_acc/input_smooth_level
+    avg_acc = last_value + avg_acc
+    avg = ang_acc / input_smooth_level
 """
 
 SENSOR_DEF_CONFIG = {
@@ -184,9 +194,9 @@ SENSOR_DEF_CONFIG = {
 
 #############################
 # System definition table
-#############################
+############################
 fan_err_default = {
-    "tacho": {"-127:40": 100, "41:120": 100},
+    "tacho": {"-127:120": 100},
     "present": {"-127:120": 100},
     "fault": {"-127:120": 100},
     "direction": {"-127:120": 100}
@@ -197,6 +207,8 @@ psu_err_default = {
     "direction": {"-127:120": 100},
     "fault": {"-127:120": 100},
 }
+
+sensor_read_err_default = {"-127:120": 100}
 
 TABLE_DEFAULT = {
     "name": "default",
@@ -217,7 +229,8 @@ TABLE_DEFAULT = {
         CONST.UNTRUST_TYPE: {"-127:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t1 for MSN27*|MSN24*
@@ -255,7 +268,8 @@ TABLE_CLASS1 = {
         CONST.UNTRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t2 for MSN21*
@@ -293,7 +307,8 @@ TABLE_CLASS2 = {
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t3 for MSN274*
@@ -331,7 +346,8 @@ TABLE_CLASS3 = {
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t4 for MSN201*
@@ -370,7 +386,8 @@ TABLE_CLASS4 = {
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t5 for MSN3700|MQM8700
@@ -408,7 +425,8 @@ TABLE_CLASS5 = {
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 40, "41:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t6 for MSN3700C
@@ -447,7 +465,8 @@ TABLE_CLASS6 = {
         CONST.UNTRUST_TYPE: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t7 for MSN3800
@@ -485,7 +504,8 @@ TABLE_CLASS7 = {
         CONST.UNTRUST_TYPE: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t8 for MSN4600
@@ -523,7 +543,8 @@ TABLE_CLASS8 = {
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t9 for MSN3420
@@ -562,7 +583,8 @@ TABLE_CLASS9 = {
         CONST.UNTRUST_TYPE: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t10 for MSN4700
@@ -601,7 +623,8 @@ TABLE_CLASS10 = {
         CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t11 for SN2201.
@@ -639,7 +662,8 @@ TABLE_CLASS11 = {
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t12 for MSN4600
@@ -677,7 +701,8 @@ TABLE_CLASS12 = {
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t13 for MSN4800
@@ -715,7 +740,8 @@ TABLE_CLASS13 = {
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 # Class t14 for SN5600.
@@ -756,7 +782,8 @@ TABLE_CLASS14 = {
         CONST.UNTRUST_TYPE:  {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default
-    }
+    },
+    "sensor_err" :sensor_read_err_default
 }
 
 THERMAL_TABLE_LIST = {
@@ -774,7 +801,7 @@ THERMAL_TABLE_LIST = {
     r"(SN2201)|(tc_t11)": TABLE_CLASS11,
     r"(MSN4600C)|(tc_t12)": TABLE_CLASS12,
     r"(MSN4800)|(tc_t13)": TABLE_CLASS13,
-    r"(MSN5600)|(tc_t13)": TABLE_CLASS14
+    r"(MSN5600)|(tc_t14)": TABLE_CLASS14
 }
 
 
@@ -782,6 +809,8 @@ def str2bool(val):
     """
     @summary:
         Convert input val value (y/n, true/false, 1/0, y/n) to bool
+    @param val: input value.
+    @return: True or False 
     """
     if isinstance(val, bool):
         return val
@@ -796,6 +825,7 @@ def current_milli_time():
     """
     @summary:
         get current time in milliseconds
+    @return: int value time in milliseconds
     """
     return round(time.time() * 1000)
 
@@ -901,7 +931,7 @@ class Logger(object):
     It can log to several places in parallel
     """
 
-    def __init__(self, use_syslog=False, log_file=None, verbosity=0):
+    def __init__(self, use_syslog=False, log_file=None, verbosity=20):
         """
         @summary:
             The following class provide functionality to log messages.
@@ -920,7 +950,7 @@ class Logger(object):
 
         self.set_param(use_syslog, log_file, verbosity)
 
-    def set_param(self, use_syslog=None, log_file=None, verbosity=0):
+    def set_param(self, use_syslog=None, log_file=None, verbosity=20):
         """
         @summary:
             Set logger parameters. Can be called any time
@@ -935,7 +965,7 @@ class Logger(object):
             if any(std_file in log_file for std_file in ["stdout", "stderr"]):
                 self.logger_fh = logging.StreamHandler()
             else:
-                self.logger_fh = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2)
+                self.logger_fh = RotatingFileHandler(log_file, maxBytes=(5 * 1024) * 1024, backupCount=2)
 
             self.logger_fh.setFormatter(formatter)
             self.logger_fh.setLevel(verbosity)
@@ -1470,9 +1500,12 @@ class thermal_sensor(system_device):
         """
         @summary: handle sensor errors
         """
+        pwm = self.pwm_min
         # sensor error reading counter
         if self.check_reading_file_err():
-            self.pwm = max(self.pwm_max, self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
+
+        self.pwm = max(pwm, self.pwm)
         return None
 
 
@@ -1687,9 +1720,10 @@ class psu_fan_sensor(system_device):
             self.fault_list.append("fault")
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "psu_err", "present"])
 
+        self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
         if self.check_reading_file_err():
-            self.pwm = max(self.pwm_max, self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
         self.pwm = max(pwm, self.pwm)
 
         return
@@ -1919,9 +1953,10 @@ class fan_sensor(system_device):
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "direction"]), pwm)
             self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
 
+        self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
         if self.check_reading_file_err():
-            self.pwm = max(self.pwm_max, self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
         self.pwm = max(pwm, self.pwm)
 
         return
@@ -1987,9 +2022,11 @@ class ambiant_thermal_sensor(system_device):
     def handle_err(self, thermal_table, flow_dir, amb_tmp):
         """
         """
+        pwm = self.pwm_min
         # sensor error reading counter
         if self.check_reading_file_err():
-            self.pwm = max(self.pwm_max, self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
+        self.pwm = max(pwm, self.pwm)
         return None
 
     # ----------------------------------------------------------------------
@@ -2238,14 +2275,10 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.debug("PWM target: {} curr: {}".format(self.pwm_target, self.pwm))
         if self.pwm_target < self.pwm:
             diff = abs(self.pwm_target - self.pwm)
-            diff = int(round((float(diff) / 2 + 0.5)))
-            if diff > self.pwm_sooth_step_max:
-                diff = self.pwm_sooth_step_max
-
-            if self.pwm_target > self.pwm:
-                self.pwm += diff
-            else:
-                self.pwm -= diff
+            step = int(round((float(diff) / 2 + 0.5)))
+            if step > self.pwm_sooth_step_max:
+                step = self.pwm_sooth_step_max
+            self.pwm -= step
         else:
             self.pwm = self.pwm_target
         self._write_pwm(self.pwm)
@@ -2430,7 +2463,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         self.init_thermal_table()
         self.init_sensor_configuration()
-        #print(json.dumps(self.sensors_config, sort_keys=True, indent=4))
+        self.log.debug("Sensor config dump\n{}".format(json.dumps(self.sensors_config, sort_keys=True, indent=4)))
 
         for key, val in self.sensors_config.items():
             try:
@@ -2565,8 +2598,13 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.debug("Result PWM {}".format(pwm))
             self._set_pwm(pwm, reason=name)
             sleep_ms = int(timestump_next - current_milli_time())
+
+            # Poll time should not be smaller than 1 sec to reduce system load
+            # and mot more 10 sec to have a good response for suspend mode change polling
             if sleep_ms < 1000:
                 sleep_ms = 1000
+            elif sleep_ms > 10 * 1000:
+                sleep_ms = 10 * 1000
             self.exit.wait(sleep_ms / 1000)
 
     # ----------------------------------------------------------------------
