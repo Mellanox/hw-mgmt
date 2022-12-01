@@ -2222,7 +2222,7 @@ class ThermalManagement(hw_managemet_file_op):
         @return: pwm value calculated based on PSU state
         """
         for psu_idx in range(1, self.psu_pwr_count + 1):
-            psu_obj = self._get_dev_obj("psu{}".format(psu_idx))
+            psu_obj = self._get_dev_obj("psu{}_fan".format(psu_idx))
             if psu_obj:
                 psu_obj.set_pwm(pwm)
 
