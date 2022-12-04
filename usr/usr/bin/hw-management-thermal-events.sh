@@ -821,7 +821,8 @@ if [ "$1" == "add" ]; then
 						echo 40000 > "$config_path"/amb_tmp_crit_limit
 					fi
 					echo 30 > "$config_path"/"$psu_name"_power_slope
-					echo "$cap" > "$config_path"/"$psu_name"_power_capacity
+					power_cap=$((cap*1000000))
+					echo $power_cap > "$config_path"/"$psu_name"_power_capacity
 				fi
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
