@@ -1186,8 +1186,13 @@ set_dynamic_min_pwm()
 
 	set_cur_state=$((fan_dynamic_min-fan_max_state))
 	cur_cooling=$(< $cooling_cur_state)
+	limit=$((trip_low_limit+10))
 	if [ "$fan_dynamic_min" -ne "$cur_cooling" ]; then
-		echo "$fan_dynamic_min" > $cooling_cur_state
+		if [ "$fan_dynamic_min" -ge "$limit" ]; then
+			echo "$fan_dynamic_min" > $cooling_cur_state
+		else
+			echo "$limit" > $cooling_cur_state
+		fi
 	fi
 	if [ "$set_cur_state" -ge "$trip_low_limit" ]; then
 		set_cooling=$set_cur_state
@@ -1230,11 +1235,11 @@ check_trip_min_vs_current_temp_per_type()
 	
 	for ((i=1; i<=dev_count; i+=1)); do
 		if [ -f $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp ]; then
+			temp_now=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp)
 			trip_orig=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/temp_trip_"$zone")
 			trip=$((trip_orig-temp_tz_hyst))
-			temp_now=$(< $hw_management_path/"$subsys_path"/thermal/mlxsw-"$dev_type""$i"/thermal_zone_temp)
 			if [ "$trip_orig" -le 10 ] && [ "$temp_now" -ne 0 ]; then
-				log_warning "Module mlxsw-$dev_type$i unsusual attribute values: temperature $temp_now, temp_trip_$zone $trip_orig"
+				log_warning "Module mlxsw-$dev_type$i unexpected attribute values: temperature $temp_now, temp_trip_$zone $trip_orig"
 			fi 
 			if [ "$temp_now" -gt 0 ] && [ "$trip" -le  "$temp_now" ]; then
 				return 1
@@ -1313,7 +1318,7 @@ enable_disable_zones_set_pwm()
 	1)
 		set_pwm_min_threshold
 		fan_dynamic_min_last=$fan_dynamic_min
-		check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
+		check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
 		;;
 	*)
 		set_default_pwm
