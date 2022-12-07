@@ -113,6 +113,9 @@ class CONST(object):
     # suspend control file path
     SUSPEND_FILE = "config/suspend"
 
+    # delay before TC start (sec)
+    THERMAL_WAIT_FOR_CONFIG = 90
+
     # Default period for printing TC report (in sec.)
     PERIODIC_REPORT_TIME = 5 * 60
     # File which define TC report period. TC should be restarted to apply changes in this file
@@ -181,11 +184,11 @@ input_smooth_level - soothing level for sensor input value reading. Formula to c
 """
 
 SENSOR_DEF_CONFIG = {
-    r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "poll_time": 30},
-    r'fan\d+': {"type": "fan_sensor", "poll_time": 30},
-    r'mlxsw-module\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 20, "value_hyst" : 2, "refresh_attr_period": 30 * 60},
-    r'mlxsw-gearbox\d+': {"type": "thermal_module_sensor", "val_min":60000, "val_max":80000, "poll_time": 20, "value_hyst" : 2, "refresh_attr_period": 30 * 60},
-    r'mlxsw': {"type": "thermal_module_sensor", "poll_time": 3, "value_hyst" : 2, "input_smooth_level": 2},
+    r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "val_min":4500, "val_max":20000, "poll_time": 30},
+    r'fan\d+': {"type": "fan_sensor", "val_min":4500, "val_max":20000, "poll_time": 30},
+    r'module\d+': {"type": "thermal_module_sensor", "input_suffix": "_temp_input", "val_min":60000, "val_max":80000, "poll_time": 20, "value_hyst" : 2, "refresh_attr_period": 30 * 60},
+    r'gearbox\d+': {"type": "thermal_module_sensor", "input_suffix": "_temp_input", "val_min":60000, "val_max":80000, "poll_time": 20, "value_hyst" : 2, "refresh_attr_period": 30 * 60},
+    r'asic': {"type": "thermal_module_sensor", "val_min":75000, "val_max":105000, "poll_time": 3, "value_hyst" : 2, "input_smooth_level": 2},
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", "val_min": 50000, "val_max": 90000, "poll_time": 3, "value_hyst" : 5, "input_smooth_level": 3},
     r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min_override": 50000, "val_max": 85000, "poll_time": 10, "input_smooth_level": 2},
     r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10, "value_hyst" : 2, "input_smooth_level": 2},
@@ -1243,6 +1246,7 @@ class system_device(hw_managemet_file_op):
         self.value_last_update_trend = 0
         self.value_trend = 0
         self.value_hyst = int(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
+        self.fault_list = []
 
     # ----------------------------------------------------------------------
     def start(self):
@@ -1252,6 +1256,10 @@ class system_device(hw_managemet_file_op):
         """
         if self.state == CONST.RUNNING:
             return
+
+        if self.check_sensor_blocked():
+            return
+
         self.log.info("Staring {}".format(self.name))
         self.state = CONST.RUNNING
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
@@ -1267,7 +1275,9 @@ class system_device(hw_managemet_file_op):
         self.err_fread_err_counter_dict = {}
         self.sensor_configure()
         self.update_timestump(1000)
+        self.fault_list = []
 
+    # ----------------------------------------------------------------------
     def stop(self):
         """
         @summary: Stop device service
@@ -1477,7 +1487,7 @@ class system_device(hw_managemet_file_op):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
-        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, pwm: {}, {}".format(self.name, self.value, self.val_min, self.val_max, self.pwm, self.state)
+        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], pwm: {}, {}".format(self.name, self.value, self.val_min, self.val_max, ",".join(self.fault_list), self.pwm, self.state)
         return info_str
 
 
@@ -1539,9 +1549,11 @@ class thermal_sensor(system_device):
         """
         @summary: handle sensor errors
         """
+        self.fault_list = []
         pwm = self.pwm_min
         # sensor error reading counter
         if self.check_reading_file_err():
+            self.fault_list.append("sensor_read")
             pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
 
         self.pwm = max(pwm, self.pwm)
@@ -1556,22 +1568,17 @@ class thermal_module_sensor(system_device):
     def __init__(self, config, dev_config_dict, logger):
         system_device.__init__(self, config, dev_config_dict, logger)
 
-        result = re.match(r".*(module\d+)", self.base_name)
-        if result:
-            module_name = result.group(1)
-            self.module_name = module_name
-        else:
-            self.module_name = ""
+        self.file_input = self.base_name + dev_config_dict.get("input_suffix", "")
         self.refresh_attr_period = 0
         self.refresh_timeout = 0
 
-     # ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.base_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-        self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.base_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
 
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
         if self.refresh_attr_period:
@@ -1581,11 +1588,18 @@ class thermal_module_sensor(system_device):
         self.set_trusted(False)
 
         # Disable kernel control for this thermal zone
-        tz_policy_filename = "thermal/{}/thermal_zone_policy".format(self.base_name)
-        tz_mode_filename = "thermal/{}/thermal_zone_mode".format(self.base_name)
 
-        self.write_file(tz_policy_filename, "user_space")
-        self.write_file(tz_mode_filename, "disabled")
+        if "asic" in self.base_name:
+            tz_name = "mlxsw"
+        else:
+            tz_name = "mlxsw-{}".format(self.base_name)
+        tz_policy_filename = "thermal/{}/thermal_zone_policy".format(tz_name)
+        tz_mode_filename = "thermal/{}/thermal_zone_mode".format(tz_name)
+        try:
+            self.write_file(tz_policy_filename, "user_space")
+            self.write_file(tz_mode_filename, "disabled")
+        except:
+            pass
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1600,7 +1614,7 @@ class thermal_module_sensor(system_device):
             self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.base_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
             self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
 
-        temp_read_file = "thermal/{}/thermal_zone_temp".format(self.base_name)
+        temp_read_file = "thermal/{}".format(self.file_input)
         if not self.check_file(temp_read_file):
             self.log.info("Missing file {} :{}.".format(self.name, temp_read_file))
             self.handle_reading_file_err(temp_read_file)
@@ -1630,7 +1644,7 @@ class thermal_module_sensor(system_device):
 
         self.pwm = pwm
         # check if module have sensor interface
-        if self.val_max == 0 and self.val_min == 0 and self.value == 0:
+        if self.val_max == 0 and self.value == 0:
             return
         else:
             # calculate PWM based on formula
@@ -1641,21 +1655,19 @@ class thermal_module_sensor(system_device):
         """
         @summary: handle sensor errors
         """
+        self.fault_list = []
         fault_status = 0
-        if self.module_name:
-            fault_filename = "thermal/{}_temp_fault".format(self.module_name)
-            if self.check_file(fault_filename):
-                try:
-                    fault_status = int(self.read_file(fault_filename))
-                    self.handle_reading_file_err(fault_filename, reset=True)
-                    if fault_status:
-                        self.log.notice("{}: {} (untrusted)".format(fault_filename, fault_status))
-                        self.set_trusted(False)
-                except BaseException:
-                    self.log.error("Value reading from file: {}".format(fault_filename))
-                    self.handle_reading_file_err(fault_filename)
-            else:
-                self.log.error("{} : {} not exist".format(self.name, fault_filename))
+
+        fault_filename = "thermal/{}_temp_fault".format(self.base_name)
+        if self.check_file(fault_filename):
+            try:
+                fault_status = int(self.read_file(fault_filename))
+                self.handle_reading_file_err(fault_filename, reset=True)
+                if fault_status:
+                    self.log.notice("{}: {} (untrusted)".format(fault_filename, fault_status))
+                    self.set_trusted(False)
+            except BaseException:
+                self.log.error("Value reading from file: {}".format(fault_filename))
                 self.handle_reading_file_err(fault_filename)
 
         # sensor error reading counter
@@ -2155,8 +2167,10 @@ class ThermalManagement(hw_managemet_file_op):
 
         self.trusted = True
         self.state = CONST.UNCONFIGURED
-
+        self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG))
         self.exit = Event()
+        self.exit.wait(CONST.THERMAL_WAIT_FOR_CONFIG)
+
         try:
             thermal_delay = int(self.read_file("config/thermal_delay"))
             self.exit.wait(thermal_delay)
@@ -2481,14 +2495,14 @@ class ThermalManagement(hw_managemet_file_op):
             self._sensor_add_config("fan_sensor", name, {"base_name": name, "drwr_id": fan_idx, "tacho_cnt": self.fan_drwr_capacity})
 
         for module_idx in range(1, self.module_counter + 1):
-            name = "mlxsw-module{}".format(module_idx)
+            name = "module{}".format(module_idx)
             self._sensor_add_config("thermal_module_sensor", name, {"base_name": name})
 
         for gearbox_idx in range(1, self.gearbox_counter + 1):
-            name = "mlxsw-gearbox{}".format(gearbox_idx)
+            name = "gearbox{}".format(gearbox_idx)
             self._sensor_add_config("thermal_module_sensor", name, {"base_name": name})
 
-        self._sensor_add_config("thermal_module_sensor", "mlxsw", {"base_name": "mlxsw"})
+        self._sensor_add_config("thermal_module_sensor", "asic", {"base_name": "asic"})
 
         if self.check_file("thermal/cpu_pack"):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_name": "thermal/cpu_pack"})
