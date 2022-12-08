@@ -1,35 +1,18 @@
-From a793dad1c289428a6b8dec32471cc16520975e5a Mon Sep 17 00:00:00 2001
+From ca6320c0dd7c089c26f89811aedd247e656104fa Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 14 Feb 2022 13:24:44 +0200
-Subject: [PATCH 3/8] platform: mellanox: Introduce support for NVLink4 managed
- switch
-X-NVConfidentiality: public
-
-Introduce support for Nvidia P4697 system, the NVLink4 rack switch
-implemented with two Nvidia LS10 NVSwitch ASICs, equipped on switch
-board and with Nvidia COME module.
+Subject: platform: mellanox: Introduce support for rack manager switch
 
 The rack switch is designed to provide high bandwidth, low latency
-NVLink connections between DGX products supporting external NVLink
-connectivity beginning with the Viking system. The system enables the
-deployment of a pod of "Viking" systems in a fully switched NVLink or
-fat-tree topology using optical fiber as the primary interconnect.
+connectivity using optical fiber as the primary interconnect.
 
-System supports 128 NVLink4 ports, 32 OSFP ports, non-blocking
-switching capacity of 25.6Tbps.
+System supports 32 OSFP ports, non-blocking switching capacity of
+25.6Tbps.
 System equipped with:
 - 2 replaceable power supplies (AC) with 1+1 redundancy model.
 - 7 replaceable fan drawers with 6+1 redundancy model.
-- 2 External Root of Trust or EROT (Glacier) devices for each of the
-  LS10 NVLink ASICs for the purpose of securing the LS10 firmware.
-  There are three interfaces available to access those devices:
-  - I2C interface from CPU side, which can be used to read basic
-    information from the EROT.
-  - The SPI out-of-band path from CPU (GSPI) provides a mechanism for
-    programming the EROT device in the case that both the primary and
-    fail-safe firmware images for the EROT device are corrupted.
-  - The SPI in-band interface from ASIC firmware (no CPU involved),
-    which is the main interface.
+- 2 External Root of Trust or EROT (Glacier) devices for securing
+  ASICs firmware.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
@@ -37,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 203 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index d1fd7cfdb..e81c88877 100644
+index d08be0471..32d462be6 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -93,6 +93,12 @@
@@ -74,7 +57,7 @@ index d1fd7cfdb..e81c88877 100644
  		    MLXPLAT_CPLD_LOW_AGGR_MASK_LEAK,
  };
  
-+/* Platform hotplug for nvlink switch systems family data */
++/* Platform hotplug for rack switch systems family data */
 +static struct mlxreg_core_data mlxplat_mlxcpld_erot_ap_items_data[] = {
 +	{
 +		.label = "erot1_ap",
@@ -105,7 +88,7 @@ index d1fd7cfdb..e81c88877 100644
 +	},
 +};
 +
-+static struct mlxreg_core_item mlxplat_mlxcpld_nvlink_switch_items[] = {
++static struct mlxreg_core_item mlxplat_mlxcpld_rack_switch_items[] = {
 +	{
 +		.data = mlxplat_mlxcpld_ext_psu_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
@@ -156,9 +139,9 @@ index d1fd7cfdb..e81c88877 100644
 +};
 +
 +static
-+struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_nvlink_switch_data = {
-+	.items = mlxplat_mlxcpld_nvlink_switch_items,
-+	.counter = ARRAY_SIZE(mlxplat_mlxcpld_nvlink_switch_items),
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_rack_switch_data = {
++	.items = mlxplat_mlxcpld_rack_switch_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_rack_switch_items),
 +	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
 +	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
 +	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
@@ -303,14 +286,14 @@ index d1fd7cfdb..e81c88877 100644
  	return 1;
  }
  
-+static int __init mlxplat_dmi_nvlink_switch_matched(const struct dmi_system_id *dmi)
++static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dmi)
 +{
 +	int i;
 +
 +	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
 +	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ib_modular_mux_data);
 +	mlxplat_mux_data = mlxplat_ib_modular_mux_data;
-+	mlxplat_hotplug = &mlxplat_mlxcpld_nvlink_switch_data;
++	mlxplat_hotplug = &mlxplat_mlxcpld_rack_switch_data;
 +	mlxplat_hotplug->deferred_nr =
 +		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
 +	mlxplat_led = &mlxplat_default_ng_led_data;
@@ -332,7 +315,7 @@ index d1fd7cfdb..e81c88877 100644
  		},
  	},
 +	{
-+		.callback = mlxplat_dmi_nvlink_switch_matched,
++		.callback = mlxplat_dmi_rack_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI142"),

@@ -1,7 +1,7 @@
-From c6da2069c9edb6b91a8ca8acdd43d3a2eca46733 Mon Sep 17 00:00:00 2001
+From 0d712bde8af7487ec673427b290d6c626b702111 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 6 May 2022 16:52:53 +0300
-Subject: [PATCH net fixed phy 1/1] TMP: lan743x: Add support for fixed phy
+Subject: [PATCH backport 5.10 06/17] DS: lan743x: Add support for fixed phy
 
 Add support for fixed phy for non DTS architecture.
 
