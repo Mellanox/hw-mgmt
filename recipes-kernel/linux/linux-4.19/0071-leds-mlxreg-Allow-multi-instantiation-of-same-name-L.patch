@@ -13,9 +13,8 @@ Thus, for example, "status" LED on chassis is to be called, like it is
 called now on non-modular systems, on which platform device Id is not
 specified: "mlxreg:status:green". While for the line cards LEDs it will
 be called like: "pcicard48:status:green", "ibcard66:status:green",
-"nvlinkcard68:status:green", etcetera. Where line card prefix is
-specified according to the type of bus connecting line card to the
-chassis: PCI, InfiniBand, NVLink and so on.
+etc. Where line card prefix is specified according to the type of bus
+connecting line card to the chassis: PCI, InfiniBand, and so on.
 
 LED driver works on top of register space of the programmable devices
 (CPLD or FPGA), providing the logic for LED control. The programmable
