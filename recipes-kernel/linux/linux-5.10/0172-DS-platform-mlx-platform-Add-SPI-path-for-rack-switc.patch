@@ -1,9 +1,8 @@
-From fed215875bdea5c4e5808ae71eded9bae8d92d6a Mon Sep 17 00:00:00 2001
+From 3dafb2c8b1c961c6e786c84c1933efab55d0df7b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 May 2022 14:31:10 +0300
-Subject: [PATCH 06/10] TMP: platform: mlx-platform: Add SPI path for NVLink
- switch for EROT access
-X-NVConfidentiality: public
+Subject: [PATCH backport 5.10 07/17] DS: platform: mlx-platform: Add SPI path
+ for rack switch for EROT access
 
 Create spidev for OOB access to External Root of Trusts devices.
 
@@ -14,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 17 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 7249f68c9..50a080931 100644
+index 16754a7fd..a580ab850 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -16,6 +16,7 @@
@@ -25,11 +24,11 @@ index 7249f68c9..50a080931 100644
  
  #define MLX_PLAT_DEVICE_NAME		"mlxplat"
  
-@@ -2552,6 +2553,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_nvlink_switch_data = {
+@@ -2299,6 +2300,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_rack_switch_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
-+static struct spi_board_info nvlink_switch_spi_board_info[] = {
++static struct spi_board_info rack_switch_switch_spi_board_info[] = {
 +	{
 +		.modalias       = "spidev",
 +		.irq            = -1,
@@ -42,7 +41,7 @@ index 7249f68c9..50a080931 100644
  /* Platform led default data */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
  	{
-@@ -5628,6 +5639,7 @@ static struct mlxreg_core_platform_data *mlxplat_fan;
+@@ -5254,6 +5265,7 @@ static struct mlxreg_core_platform_data *mlxplat_fan;
  static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
@@ -50,15 +49,15 @@ index 7249f68c9..50a080931 100644
  
  static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
  {
-@@ -5946,6 +5958,7 @@ static int __init mlxplat_dmi_spine_ndr_ib_modular_matched(const struct dmi_syst
+@@ -5462,6 +5474,7 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
  		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
-+	mlxplat_spi = nvlink_switch_spi_board_info;
++	mlxplat_spi = rack_switch_switch_spi_board_info;
  
  	return 1;
  }
-@@ -6347,6 +6360,9 @@ static int __init mlxplat_init(void)
+@@ -5917,6 +5930,9 @@ static int __init mlxplat_init(void)
  		}
  	}
  
@@ -81,5 +80,5 @@ index a6f1e94af..227504340 100644
  /*-------------------------------------------------------------------------*/
  
 -- 
-2.14.1
+2.20.1
 

@@ -1,8 +1,8 @@
-From 6fe5e1d9f90a7d704dedf156b8b1483f3cc245c1 Mon Sep 17 00:00:00 2001
+From 6782d682cb0510d0fee33f456ed3492834bad97d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 7 Jul 2021 10:29:27 +0000
-Subject: [PATCH backport v5.10.43 51/67] leds: mlxreg: Allow
- multi-instantiation of same name LED for modular systems
+Subject: leds: mlxreg: Allow multi-instantiation of same name LED for modular
+ systems
 
 It could be more than one instance of LED with the same name in the
 modular systems. For example, "status" or "uid" LED can be located
@@ -13,9 +13,8 @@ Thus, for example, "status" LED on chassis is to be called, like it is
 called now on non-modular systems, on which platform device Id is not
 specified: "mlxreg:status:green". While for the line cards LEDs it will
 be called like: "pcicard48:status:green", "ibcard66:status:green",
-"nvlinkcard68:status:green", etcetera. Where line card prefix is
-specified according to the type of bus connecting line card to the
-chassis: PCI, InfiniBand, NVLink and so on.
+etc. Where line card prefix is specified according to the type of bus
+connecting line card to the chassis: PCI, InfiniBand and so on.
 
 LED driver works on top of register space of the programmable devices
 (CPLD or FPGA), providing the logic for LED control. The programmable
@@ -49,7 +48,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
-index 0f2608a3496b..099ff4be291d 100644
+index 0f2608a34..099ff4be2 100644
 --- a/drivers/leds/leds-mlxreg.c
 +++ b/drivers/leds/leds-mlxreg.c
 @@ -245,8 +245,19 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
@@ -75,5 +74,5 @@ index 0f2608a3496b..099ff4be291d 100644
  		led_cdev->brightness = brightness;
  		led_cdev->max_brightness = LED_ON;
 -- 
-2.20.1
+2.14.1
 

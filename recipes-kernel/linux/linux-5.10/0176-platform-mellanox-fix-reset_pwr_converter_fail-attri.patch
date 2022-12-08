@@ -1,8 +1,8 @@
-From c1b2d147f78087cd87e853effd7dcd27a3110f06 Mon Sep 17 00:00:00 2001
+From 2e1b50d35889e78b05f507d60984d19fed53d07b Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Sun, 4 Sep 2022 10:41:45 +0300
-Subject: [PATCH 1/4] platform: mellanox: fix reset_pwr_converter_fail
- attribute.
+Subject: [PATCH backport 5.10 12/17] platform: mellanox: fix
+ reset_pwr_converter_fail attribute.
 
 Change incorrect reset_voltmon_upgrade_fail atitribute name to
 reset_pwr_converter_fail.
@@ -14,10 +14,10 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 50a080931..df0ae4776 100644
+index a580ab850..b9ea12fad 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -3758,7 +3758,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -3414,7 +3414,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0444,
  	},
  	{
@@ -27,5 +27,5 @@ index 50a080931..df0ae4776 100644
  		.mask = GENMASK(7, 0) & ~BIT(0),
  		.mode = 0444,
 -- 
-2.14.1
+2.20.1
 
