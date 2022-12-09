@@ -198,6 +198,21 @@ SENSOR_DEF_CONFIG = {
     r'psu\d+_temp': {"type": "thermal_sensor", "val_min": 45000, "val_max":  85000, "poll_time": 30}
 }
 
+
+#############################################
+# PSU fan speed vs system fan speed table
+#############################################
+PSU_PWM_DECODE_DEF = {"0:10": 30,
+           "11:21": 30,
+           "21:30": 30,
+           "31:40": 40,
+           "41:50": 50,
+           "51:60": 60, 
+           "61:70": 70,
+           "71:80": 80,
+           "81:90": 90,
+           "91:100": 100}
+
 #############################
 # System definition table
 ############################
@@ -864,20 +879,20 @@ def get_dict_val_by_path(dict_in, path):
     return dict_in
 
 
-def g_get_dmin_range(line, temp):
+def g_get_range_val(line, in_value):
     """
-    @summary: Searching temperature range which is match input temp and returning corresponding PWM value in
-    @param line: dict with temp ranges and PWM values
+    @summary: Searching range which is match to input val and returning corresponding outpur value
+    @param line: dict with temp ranges and output values
         Example: {"-127:20":30, "21:25":40 , "26:30":50, "31:120":60},
-    @param temp: target temperature
-    @return: PWM value
+    @param val: input value
+    @return: output value
     """
     for key, val in line.items():
-        t_range = key.split(":")
-        t_min = int(t_range[0])
-        t_max = int(t_range[1])
-        if t_min <= temp <= t_max:
-            return val, t_min, t_max
+        val_range = key.split(":")
+        val_min = int(val_range[0])
+        val_max = int(val_range[1])
+        if val_min <= in_value <= val_max:
+            return val, val_min, val_max
     return None, None, None
 
 
@@ -896,12 +911,12 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
     if not line:
         return CONST.PWM_MIN
     # get current range
-    dmin, range_min, range_max = g_get_dmin_range(line, temp)
+    dmin, range_min, range_max = g_get_range_val(line, temp)
     if not interpolated:
         return dmin
 
     # get range of next step
-    dmin_next, range_min_next, _ = g_get_dmin_range(line, range_max + 1)
+    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1)
     # reached maximum range
     if dmin_next is None:
         return dmin
@@ -1221,6 +1236,7 @@ class system_device(hw_managemet_file_op):
         self.sensors_config = dev_config_dict
         self.name = dev_config_dict["name"]
         self.type = dev_config_dict["type"]
+        self.pwm_decode = dev_config_dict.get("psu_fan_pwm_decode", PSU_PWM_DECODE_DEF)
         self.log.info("Init {0} ({1})".format(self.name, self.type))
         self.base_name = self.sensors_config.get("base_name", None)
         self.enable = int(self.sensors_config.get("enable", 1))
@@ -1741,13 +1757,16 @@ class psu_fan_sensor(system_device):
         """
         present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_name))
         if present == 1:
-            if pwm < CONST.PWM_PSU_MIN:
-                pwm = CONST.PWM_PSU_MIN
+            psu_pwm, _, _ =  g_get_range_val(self.pwm_decode, pwm)
+            if not psu_pwm:
+                self.log.warning("{} Can't much PWM {} to PSU. PPWM value not be change".format(self.name, pwm))
+            if psu_pwm < CONST.PWM_PSU_MIN:
+                psu_pwm = CONST.PWM_PSU_MIN
 
             bus = self.read_file("config/{0}_i2c_bus".format(self.base_name))
             addr = self.read_file("config/{0}_i2c_addr".format(self.base_name))
             command = self.read_file("config/fan_command")
-            subprocess.call("i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, pwm), shell=True)
+            subprocess.call("i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm), shell=True)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
