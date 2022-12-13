@@ -85,11 +85,20 @@ class CONST(object):
     LOG_FILE = "log_filename"
     HW_MGMT_ROOT = "root_folder"
     GLOBAL_CONFIG = "global_config"
-    SENSORS_CONFIG = "sensors_config"
+    SYSTEM_CONFIG = "system_config"
+
+    # System config str names
+    SYS_CONF_DMIN  = "dmin"
+    SYS_CONF_FAN_PWM = "psu_fan_pwm_decode"
+    SYS_CONF_FAN_PARAM = "fan_trend"
+    SYS_CONF_DEV_PARAM = "dev_parameters"
+    SYS_CONF_SENSORS_CONF = "sensors_config"
 
     # File which defined current level filename.
     # User can dynamically change loglevel without TC restarting.
     LOG_LEVEL_FILENAME = "config/tc_log_level"
+
+    SYSTEM_CONFIG_FILE = "config/tc_config.json"
 
     # Fan direction string alias
     #fan dir:
@@ -126,7 +135,7 @@ class CONST(object):
     TEMP_INIT_DEF = 25
     TEMP_SENSOR_SCALE = 1000.0
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 65000}
-    RPM_MIN_MAX = {"val_min": 5000, "val_max": 25000}
+    RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -194,7 +203,7 @@ SENSOR_DEF_CONFIG = {
     r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min_override": 50000, "val_max": 85000, "poll_time": 10, "input_smooth_level": 2},
     r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10, "value_hyst" : 2, "input_smooth_level": 2},
     r'comex_amb': {"type": "thermal_sensor", "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3},
-    r'sensor_amb': {"type": "ambiant_thermal_sensor", "file_in_dict": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2, "poll_time": 10},
+    r'sensor_amb': {"type": "ambiant_thermal_sensor", "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2, "poll_time": 10},
     r'psu\d+_temp': {"type": "thermal_sensor", "val_min": 45000, "val_max":  85000, "poll_time": 30}
 }
 
@@ -207,11 +216,23 @@ PSU_PWM_DECODE_DEF = {"0:10": 30,
            "21:30": 30,
            "31:40": 40,
            "41:50": 50,
-           "51:60": 60, 
+           "51:60": 60,
            "61:70": 70,
            "71:80": 80,
            "81:90": 90,
            "91:100": 100}
+
+############################
+# Fan Parameters table
+############################
+SYS_FAN_PARAM_DEF = {
+        "C2P": {
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101}},
+        "P2C": {
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101}}
+    }
 
 #############################
 # System definition table
@@ -237,21 +258,23 @@ TABLE_DEFAULT = {
         CONST.TRUST_TYPE: {"-127:120": 60},
         CONST.UNTRUST_TYPE: {"-127:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 60},
         CONST.UNTRUST_TYPE: {"-127:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:120": 60},
         CONST.UNTRUST_TYPE: {"-127:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t1 for MSN27*|MSN24*
@@ -276,21 +299,23 @@ TABLE_CLASS1 = {
         CONST.TRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:120": 60},
         CONST.UNTRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:40": 30, "41:120": 50},
         CONST.UNTRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         CONST.UNTRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t2 for MSN21*
@@ -315,21 +340,23 @@ TABLE_CLASS2 = {
         CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
         CONST.UNTRUST_TYPE: {"-127:40": 20, "41:120": 30},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t3 for MSN274*
@@ -354,21 +381,23 @@ TABLE_CLASS3 = {
         CONST.TRUST_TYPE: {"-127:120": 30},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 30},
         CONST.UNTRUST_TYPE: {"-127:35": 30, "36:40": 40, "41:120": 50},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:120": 30},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t4 for MSN201*
@@ -394,21 +423,23 @@ TABLE_CLASS4 = {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:20": 20, "21:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t5 for MSN3700|MQM8700
@@ -433,21 +464,23 @@ TABLE_CLASS5 = {
         CONST.TRUST_TYPE: {"-127:25": 20, "26:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:25": 20, "26:40": 30, "41:120": 40},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:26": 20, "26:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:26": 20, "26:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t6 for MSN3700C
@@ -473,21 +506,23 @@ TABLE_CLASS6 = {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:35": 20, "36:40": 30, "41:120": 40},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
         CONST.UNTRUST_TYPE: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:40": 30, "41:120": 30},
         CONST.UNTRUST_TYPE: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t7 for MSN3800
@@ -512,21 +547,23 @@ TABLE_CLASS7 = {
         CONST.TRUST_TYPE: {"-127:30": 20, "31:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:20": 20, "21:30": 30, "31:40": 40, "41:45": 50, "46:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 30},
         CONST.UNTRUST_TYPE: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:30": 20, "31:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t8 for MSN4600
@@ -551,21 +588,23 @@ TABLE_CLASS8 = {
         CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
         CONST.UNTRUST_TYPE: {"-127:30": 20, "31:40": 30, "41:120": 40},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t9 for MSN3420
@@ -591,21 +630,23 @@ TABLE_CLASS9 = {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:40": 20, "41:120": 40},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t10 for MSN4700
@@ -631,21 +672,23 @@ TABLE_CLASS10 = {
         CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 50},
         CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 50},
         CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 50},
         CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t11 for SN2201.
@@ -670,21 +713,23 @@ TABLE_CLASS11 = {
         CONST.TRUST_TYPE: {"-127:35": 30, "36:40": 40, "41:120": 50},
         CONST.UNTRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t12 for MSN4600
@@ -709,21 +754,23 @@ TABLE_CLASS12 = {
         CONST.TRUST_TYPE: {"-127:15": 20, "16:35": 30, "36:120": 40},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:35": 40, "41:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:15": 20, "16:35": 30, "36:120": 40},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t13 for MSN4800
@@ -748,21 +795,23 @@ TABLE_CLASS13 = {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:120": 20},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:25": 20, "26:30": 30, "31:120": 40},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:25": 20, "26:30": 30, "31:120": 40},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 # Class t14 for SN5600.
@@ -790,21 +839,23 @@ TABLE_CLASS14 = {
         CONST.TRUST_TYPE:{"-127:35": 30, "36:40": 40, "41:120": 50},
         CONST.UNTRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
     },
     CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         CONST.UNTRUST_TYPE:  {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
         "fan_err": fan_err_default,
-        "psu_err": psu_err_default
-    },
-    "sensor_err" :sensor_read_err_default
+        "psu_err": psu_err_default,
+        "sensor_err" :sensor_read_err_default
+    }
 }
 
 THERMAL_TABLE_LIST = {
@@ -1164,7 +1215,7 @@ class hw_managemet_file_op(object):
         return self.read_file(os.path.join("thermal", filename))
 
     # ----------------------------------------------------------------------
-    def thermal_read_file_int(self, filename):
+    def thermal_read_file_int(self, filename, scale=1):
         """
         @summary:
             read file from hw-management/thermal tree.
@@ -1172,6 +1223,7 @@ class hw_managemet_file_op(object):
         @return: int value from file
         """
         val = self.read_file(os.path.join("thermal", filename))
+        val = int(val)/scale
         return int(val)
 
     # ----------------------------------------------------------------------
@@ -1223,22 +1275,42 @@ class hw_managemet_file_op(object):
         """
         filename = os.path.join(self.root_folder, filename)
         os.remove(filename)
+        
+    def write_pwm(self, pwm):
+        """
+        @summary:
+            write value tp PWM file.
+        @param pwm: PWM value in persent 0..100
+        """
+        pwm_out = int(pwm * 255 / 100)
+        self.write_file("thermal/pwm1", pwm_out)
 
+    # ----------------------------------------------------------------------
+    def read_pwm(self):
+        """
+        @summary:
+            read PWM from hw-management/thermal tree.
+        @param filename: file to read from {hw-management-folder}/thermal/filename
+        @return: int value from file
+        """
+        pwm = int(self.read_file("thermal/pwm1"))
+        pwm_out = int(pwm / 2.55 + 0.5)
+        return int(pwm_out)
 
 
 class system_device(hw_managemet_file_op):
     """
     @summary: base class for system sensors
     """
-    def __init__(self, config, dev_config_dict, logger):
-        hw_managemet_file_op.__init__(self, config)
+    def __init__(self, cmd_arg, sys_config, name, logger):
+        hw_managemet_file_op.__init__(self, cmd_arg)
         self.log = logger
-        self.sensors_config = dev_config_dict
-        self.name = dev_config_dict["name"]
-        self.type = dev_config_dict["type"]
-        self.pwm_decode = dev_config_dict.get("psu_fan_pwm_decode", PSU_PWM_DECODE_DEF)
+        self.sensors_config = sys_config[CONST.SYS_CONF_SENSORS_CONF][name]
+        self.name = name
+        self.type = self.sensors_config["type"]
         self.log.info("Init {0} ({1})".format(self.name, self.type))
-        self.base_name = self.sensors_config.get("base_name", None)
+        self.base_file_name = self.sensors_config.get("base_file_name", None)
+        self.file_input = "{}{}".format(self.base_file_name, self.sensors_config.get("input_suffix", ""))
         self.enable = int(self.sensors_config.get("enable", 1))
         self.input_smooth_level = self.sensors_config.get("input_smooth_level", 1)
         if self.input_smooth_level < 1:
@@ -1518,21 +1590,20 @@ class thermal_sensor(system_device):
     @summary: base class for simple thermal sensors
     can be used for cpu/sodimm/psu/voltmon/etc. thermal sensors
     """
-    def __init__(self, config, dev_config_dict, logger):
-        system_device.__init__(self, config, dev_config_dict, logger)
-        self.file_input = self.base_name + dev_config_dict.get("input_suffix", "")
+    def __init__(self, cmd_arg, sys_config, name, logger):
+        system_device.__init__(self,cmd_arg, sys_config, name, logger)
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_min = self.read_val_min_max("{}_min".format(self.base_name), "val_min", CONST.TEMP_SENSOR_SCALE)
+        self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", CONST.TEMP_SENSOR_SCALE)
         # val_min_override:  overriding min value if it is defined
         if "val_min_override" in self.sensors_config.keys():
             self.val_min = int(self.sensors_config["val_min_override"] /CONST.TEMP_SENSOR_SCALE)
 
-        self.val_max = self.read_val_min_max("{}_max".format(self.base_name), "val_max", CONST.TEMP_SENSOR_SCALE)
+        self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", CONST.TEMP_SENSOR_SCALE)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1578,7 +1649,7 @@ class thermal_sensor(system_device):
         # sensor error reading counter
         if self.check_reading_file_err():
             self.fault_list.append("sensor_read")
-            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "sensor_err"])
 
         self.pwm = max(pwm, self.pwm)
         self._update_pwm()
@@ -1590,10 +1661,9 @@ class thermal_module_sensor(system_device):
     @summary: base class for modules sensor
     can be used for mlxsw/gearbox modules thermal sensor
     """
-    def __init__(self, config, dev_config_dict, logger):
-        system_device.__init__(self, config, dev_config_dict, logger)
+    def __init__(self, cmd_arg, sys_config, name, logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, logger)
 
-        self.file_input = self.base_name + dev_config_dict.get("input_suffix", "")
         self.refresh_attr_period = 0
         self.refresh_timeout = 0
 
@@ -1602,8 +1672,8 @@ class thermal_module_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
 
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
         if self.refresh_attr_period:
@@ -1614,10 +1684,10 @@ class thermal_module_sensor(system_device):
 
         # Disable kernel control for this thermal zone
 
-        if "asic" in self.base_name:
+        if "asic" in self.base_file_name:
             tz_name = "mlxsw"
         else:
-            tz_name = "mlxsw-{}".format(self.base_name)
+            tz_name = "mlxsw-{}".format(self.base_file_name)
         tz_policy_filename = "thermal/{}/thermal_zone_policy".format(tz_name)
         tz_mode_filename = "thermal/{}/thermal_zone_mode".format(tz_name)
         try:
@@ -1635,8 +1705,8 @@ class thermal_module_sensor(system_device):
         self.set_trusted(True)
         # refreshing min/max attributes each 30 min
         if self.refresh_timeout > 0 and self.refresh_timeout < current_milli_time():
-            self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.base_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-            self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.base_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+            self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+            self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
             self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
 
         temp_read_file = "thermal/{}".format(self.file_input)
@@ -1662,7 +1732,7 @@ class thermal_module_sensor(system_device):
                     elif self.value < self.val_min:
                         pwm = self.pwm_min
             except BaseException:
-                self.log.warn("value reading from file: {}".format(self.base_name))
+                self.log.warn("value reading from file: {}".format(self.base_file_name))
                 self.handle_reading_file_err(temp_read_file)
 
         self.log.debug("{} value {}".format(self.name, self.value))
@@ -1683,7 +1753,7 @@ class thermal_module_sensor(system_device):
         self.fault_list = []
         fault_status = 0
 
-        fault_filename = "thermal/{}_temp_fault".format(self.base_name)
+        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
         if self.check_file(fault_filename):
             try:
                 fault_status = int(self.read_file(fault_filename))
@@ -1707,12 +1777,13 @@ class psu_fan_sensor(system_device):
     @summary: base class for PSU device
     Can be used for Control of PSU temperature/RPM
     """
-    def __init__(self, config, dev_config_dict, logger):
-        system_device.__init__(self, config, dev_config_dict, logger)
-        self.file_input = self.base_name + dev_config_dict.get("input_suffix", "")
-        self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_name), "val_min")
-        self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_name), "val_max")
+     def __init__(self, cmd_arg, sys_config, name, logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, logger)
+
+        self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
+        self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
         self.prsnt_err_pwm_min = self.get_file_val("config/pwm_min_psu_not_present")
+        self.pwm_decode = sys_config.get(CONST.SYS_CONF_FAN_PWM, PSU_PWM_DECODE_DEF)
 
         self.rpm_trh = 0.15
         self.fault_list = []
@@ -1721,14 +1792,14 @@ class psu_fan_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_name), "val_min")
-        self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_name), "val_max")
+        self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
+        self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
 
     # ----------------------------------------------------------------------
     def _get_status(self):
         """
         """
-        psu_status_filename = "thermal/{}_status".format(self.base_name)
+        psu_status_filename = "thermal/{}_status".format(self.base_file_name)
         psu_status = 0
         if not self.check_file(psu_status_filename):
             self.log.warn("Missing file {} dev: {}".format(psu_status_filename, self.name))
@@ -1755,7 +1826,7 @@ class psu_fan_sensor(system_device):
         @summary: Set PWM level for PSU FAN
         @param pwm: PWM level value <= 100%
         """
-        present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_name))
+        present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
         if present == 1:
             psu_pwm, _, _ =  g_get_range_val(self.pwm_decode, pwm)
             if not psu_pwm:
@@ -1763,10 +1834,12 @@ class psu_fan_sensor(system_device):
             if psu_pwm < CONST.PWM_PSU_MIN:
                 psu_pwm = CONST.PWM_PSU_MIN
 
-            bus = self.read_file("config/{0}_i2c_bus".format(self.base_name))
-            addr = self.read_file("config/{0}_i2c_addr".format(self.base_name))
+            bus = self.read_file("config/{0}_i2c_bus".format(self.base_file_name))
+            addr = self.read_file("config/{0}_i2c_addr".format(self.base_file_name))
             command = self.read_file("config/fan_command")
-            subprocess.call("i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm), shell=True)
+            i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm)
+            self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
+            subprocess.call(i2c_cmd, shell=True)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1816,7 +1889,7 @@ class psu_fan_sensor(system_device):
         self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
         if self.check_reading_file_err():
-            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "sensor_err"])
         self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return
@@ -1834,20 +1907,18 @@ class fan_sensor(system_device):
     @summary: base class for FAN device
     Can be used for Control FAN RPM/state.
     """
-    def __init__(self, config, dev_config_dict, logger):
-        system_device.__init__(self, config, dev_config_dict, logger)
+    def __init__(self, cmd_arg, sys_config, name, logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, logger)
 
-        self.val_min = self.read_val_min_max("config/fan_min_speed", "val_min")
-        self.val_max = self.read_val_min_max("config/fan_max_speed", "val_max")
-        self.tacho_cnt = dev_config_dict.get("tacho_cnt", 1)
-        self.fan_drwr_id = int(dev_config_dict["drwr_id"])
+        self.fan_param = sys_config.get(CONST.SYS_CONF_FAN_PARAM, SYS_FAN_PARAM_DEF)
+        self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
+        self.fan_drwr_id = int(self.sensors_config["drwr_id"])
         self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.fan_dir = self._read_dir()
-        self.fan_dir_fail = False
+        self.system_flow_dir = CONST.UNKNOWN
         self.is_calibrated = False
-        self.rpm_pwm_scale = self.val_max / 255
 
-        self.rpm_trh = 0.35
+        self.rpm_trh = 0.10
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
         self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
@@ -1857,31 +1928,14 @@ class fan_sensor(system_device):
 
         self.fault_list = []
 
-        self.log.info("{}: Preparing calibration".format(self.name))
-        # get real FAN max_speed
-        pwm = int(self.read_file("thermal/pwm1"))
-        # check if PWM max already set
-        if pwm < 255:
-            self.thermal_write_file("pwm1", 255)
-            time.sleep(int(self.rpm_relax_timeout / 1000))
-
-        # get FAN RPM
-        rpm = 0
-        self.log.info("{}: Calibrating FAN rpm max...".format(self.name))
-        for _ in range(CONST.FAN_CALIBRATE_CYCLES):
-            for tacho_idx in range(self.tacho_idx, self.tacho_idx + self.tacho_cnt):
-                time.sleep(0.5)
-                rpm += self.thermal_read_file_int("fan{}_speed_get".format(tacho_idx))
-
-        rpm_max_real = float(rpm) / (CONST.FAN_CALIBRATE_CYCLES * self.tacho_cnt)
-        self.rpm_pwm_scale = rpm_max_real / 255
-        self.log.info("{}: rpm: max {} real {} scale {}".format(self.name, self.val_max, rpm_max_real, self.rpm_pwm_scale))
-
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
+        self.val_min_def = self.get_file_val("config/fan_min_speed",  CONST.RPM_MIN_MAX["val_min"])
+        self.val_max_def = self.get_file_val("config/fan_max_speed",  CONST.RPM_MIN_MAX["val_max"])
+
         self.value = [0] * self.tacho_cnt
 
         self.fault_list = []
@@ -1896,6 +1950,9 @@ class fan_sensor(system_device):
         """
         @summary: Reading chassis fan dir from FS
         """
+        if self._get_status() == 0:
+            return CONST.UNKNOWN
+
         if self.check_file("thermal/fan{}_dir".format(self.fan_drwr_id)):
             dir_val = self.read_file("thermal/fan{}_dir".format(self.fan_drwr_id))
             direction = CONST.C2P if dir_val == "0" else CONST.P2C
@@ -1944,29 +2001,66 @@ class fan_sensor(system_device):
     def _validate_rpm(self):
         """
         """
-        pwm_curr = self.thermal_read_file_int("pwm1")
-        if pwm_curr != self.pwm_last:
-            self.pwm_last = self.thermal_read_file_int("pwm1")
-            self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
-        elif self.rpm_relax_timestump < current_milli_time():
-            self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
-            self.rpm_valid_state = True
-            for tacho_idx in range(self.tacho_idx, self.tacho_idx + self.tacho_cnt):
-                rpm_real = self.thermal_read_file_int("fan{}_speed_get".format(tacho_idx))
-                rpm_expected = int(pwm_curr * self.rpm_pwm_scale)
-                rpm_diff = abs(rpm_real - rpm_expected)
-                rpm_diff = int(float(rpm_diff) / rpm_expected)
-                if rpm_diff >= self.rpm_trh:
-                    self.log.warn("{} tacho {}: {} too much different {}% than expected {} pwm  {} scale {}".format(self.name,
-                                                                                                                    tacho_idx,
-                                                                                                                    rpm_real,
-                                                                                                                    rpm_diff*100,
-                                                                                                                    rpm_expected,
-                                                                                                                    pwm_curr,
-                                                                                                                    self.rpm_pwm_scale))
-                    self.rpm_valid_state = False
+        drwr_param = self.fan_param[self.fan_dir]
+        pwm_curr = self.read_pwm()
 
-        return self.rpm_valid_state
+        for tacho_idx in range (self.tacho_cnt):
+            fan_param =  drwr_param[str(tacho_idx)]
+            rpm_real = self.thermal_read_file_int("fan{}_speed_get".format(self.tacho_idx + tacho_idx))
+            rpm_min = int(fan_param["rpm_min"])
+            if rpm_min == 0:
+                rpm_min = self.val_min_def
+
+            rpm_max = int(fan_param["rpm_max"])
+            if rpm_max == 0:
+                rpm_max = self.val_max_def
+
+            pwm_min = int(fan_param["pwm_min"])
+            slope= int(fan_param["slope"])
+            # 1. Check fan speed in range
+            if rpm_real < rpm_min or rpm_real> rpm_max:
+                self.log.info("{} tacho{}={} out of RPM range {}:{}".format(self.name,
+                                                                             tacho_idx+1,
+                                                                             rpm_real,
+                                                                             rpm_min,
+                                                                             rpm_max))
+                return False
+
+             # 2. Check fan trend
+            if pwm_curr >= pwm_min:
+                # if FAN spped stabilized after the last change
+                if self.rpm_relax_timestump <= current_milli_time():
+                    # claculate speed
+                    b = rpm_max - slope * CONST.PWM_MAX
+                    rpm_calcuated = slope * pwm_curr + b
+                    rpm_diff = abs(rpm_real - rpm_calcuated)
+                    rpm_diff = int(float(rpm_diff) / rpm_calcuated)
+                    if rpm_diff >= self.rpm_trh:
+                        self.log.warn("{} tacho {}: {} too much different {}% than calculated {} pwm  {}".format(self.name,
+                                                                                                                tacho_idx,
+                                                                                                                rpm_real,
+                                                                                                                rpm_diff*100,
+                                                                                                                rpm_calcuated,
+                                                                                                                pwm_curr))
+                        return False
+        return True
+
+    # ----------------------------------------------------------------------
+    def set_pwm(self, pwm_val):
+        """
+        @summary: Set PWM level for chassis FAN
+        @param pwm_val: PWM level value <= 100%
+        """
+        self.log.info("Write {} PWM {}".format(self.name, pwm_val))
+        if pwm_val < CONST.PWM_PSU_MIN:
+            pwm_val = CONST.PWM_PSU_MIN
+
+        pwn_curr = self.read_pwm()
+        if pwm_val == pwn_curr:
+            return
+
+        self.write_pwm(pwm_val)
+        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
 
     # ----------------------------------------------------------------------
     def get_dir(self):
@@ -1975,6 +2069,15 @@ class fan_sensor(system_device):
         @return: fan direction CONST.P2C/CONST.C2P
         """
         return self.fan_dir
+
+      # ----------------------------------------------------------------------
+    def set_system_flow_dir(self, flow_dir):
+        """
+        @summary: Set system flow dir info 
+        @param flow_dir: flow dir which is specified for this system or calculated by algo 
+        @return: None
+        """
+        self.system_flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
@@ -2044,7 +2147,20 @@ class fan_sensor(system_device):
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "tacho"]), pwm)
             self.log.warn("{} incorrect rpm {}. Set PWM  {}".format(self.name, self.value, pwm))
 
-        if self.fan_dir_fail:
+        # truth table for fan direction
+        #  FAN_DIR SYS_DIR     ERROR
+        #  C2P     C2P        False
+        #  C2P     P2C        True
+        #  C2P     UNKNOWN    False
+        #  P2C     C2P        True
+        #  P2C     P2C        False
+        #  P2C     UNKNOWN    False
+        #  UNKNOWN C2P        False
+        #  UNKNOWN P2C        False
+        #  UNKNOWN UNKNOWN    False
+
+        if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
+           (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.fault_list.append("direction")
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "direction"]), pwm)
             self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
@@ -2052,7 +2168,7 @@ class fan_sensor(system_device):
         self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
         if self.check_reading_file_err():
-            pwm = g_get_dmin(thermal_table, amb_tmp, ["sensor_err"])
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "sensor_err"])
         self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return
@@ -2071,10 +2187,8 @@ class ambiant_thermal_sensor(system_device):
     @summary: base class for ambient sensor. Ambient temperature is a combination
     of several temp sensors like port_amb and fan_amb
     """
-    def __init__(self, config, dev_config_dict, logger):
-        system_device.__init__(self, config, dev_config_dict, logger)
-
-        self.base_name = dev_config_dict.get("file_in_dict", None)
+    def __init__(self, cmd_arg, sys_config, name, logger):
+        system_device.__init__(self, cmd_arg, sys_config, name,  logger)
         self.value_dict = {CONST.FAN_SENS: 0, CONST.PORT_SENS: 0}
         self.flow_dir = CONST.UNKNOWN
 
@@ -2087,7 +2201,7 @@ class ambiant_thermal_sensor(system_device):
         """
         """
         # reading all amb sensors
-        for _, sens_file_name in self.base_name.items():
+        for _, sens_file_name in self.base_file_name.items():
             if not self.check_file(sens_file_name):
                 self.log.warn("{}: missing file {}".format(self.name, sens_file_name))
                 self.handle_reading_file_err(sens_file_name)
@@ -2099,7 +2213,7 @@ class ambiant_thermal_sensor(system_device):
                     self.value_dict[sens_file_name] = int(temperature)
                     self.log.debug("{} {} value {}".format(self.name, sens_file_name, temperature))
                 except BaseException:
-                    self.log.error("Error value reading from file: {}".format(self.base_name))
+                    self.log.error("Error value reading from file: {}".format(self.base_file_name))
                     self.handle_reading_file_err(sens_file_name)
 
         if self.flow_dir == CONST.C2P:
@@ -2146,39 +2260,24 @@ class ThermalManagement(hw_managemet_file_op):
             Provide system monitoring and thermal control
     """
 
-    def __init__(self, config):
+    def __init__(self, cmd_arg):
         """
         @summary:
             Init  thermal algorithm
-        @param config: global thermal configuration
+        @param params: global thermal configuration
         """
-        hw_managemet_file_op.__init__(self, config)
-        self.log = Logger(config[CONST.LOG_USE_SYSLOG], config[CONST.LOG_FILE], config["verbosity"])
+        hw_managemet_file_op.__init__(self, cmd_arg)
+        self.log = Logger(cmd_arg[CONST.LOG_USE_SYSLOG], cmd_arg[CONST.LOG_FILE], cmd_arg["verbosity"])
         self.log.notice("Preinit thermal control")
 
-        self.write_file(CONST.LOG_LEVEL_FILENAME, config["verbosity"])
+        self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
         self.periodic_report_worker_timer = None
-        self.thermal_table = None
-        self.config = config
+        self.cmd_arg = cmd_arg
 
         self.pwm_target = CONST.PWM_MAX
         self.pwm = self.pwm_target
         self.pwm_change_reason = "tc start"
-        self.fan_dir = CONST.UNKNOWN
-
-        sensors_config = {}
-        if config[CONST.SENSORS_CONFIG]:
-            config_file = config[CONST.SENSORS_CONFIG]
-            if not os.path.isfile(config_file):
-                self.log.warn("Can't load sensor config. Missing file {}".format(config_file))
-            else:
-                with open(config_file) as f:
-                    sensors_config = json.load(f)
-        else:
-            config_file = "{}/config/tc_sensors.conf".format(self.root_folder)
-            if os.path.isfile(config_file):
-                with open(config_file) as f:
-                    sensors_config = json.load(f)
+        self.system_flow_dir = CONST.UNKNOWN
 
         if self.check_file(CONST.PERIODIC_REPORT_FILE):
             self.periodic_report_time = int(self.read_file(CONST.PERIODIC_REPORT_FILE))
@@ -2186,8 +2285,6 @@ class ThermalManagement(hw_managemet_file_op):
         else:
             self.periodic_report_time = CONST.PERIODIC_REPORT_TIME
         self.log.info("periodic report {} sec".format(self.periodic_report_time))
-        self.sensors_config = sensors_config
-        self.sys_typename = self.config.get("systypename", None)
 
         self.dev_obj_list = []
 
@@ -2203,8 +2300,11 @@ class ThermalManagement(hw_managemet_file_op):
         signal.signal(signal.SIGHUP, self.sig_handler)
         self.exit = Event()
 
+        self.load_configuration()
+
         # Set PWM to the default state while we are waiting for system configuration
-        self._write_pwm(self.pwm_target)
+        self.log.notice("Set FAN PWM {}".format(self.pwm_target))
+        self.write_pwm(self.pwm_target)
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
@@ -2225,25 +2325,10 @@ class ThermalManagement(hw_managemet_file_op):
         self.psu_pwr_count = CONST.PSU_COUNT_DEF
         self.module_counter = CONST.MODULE_COUNT_DEF
         self.gearbox_counter = CONST.GEARBOX_COUNT_DEF
-        self.board_type = None
-        self.sku = None
-        self.system_ver = None
+        self.fan_flow_capability = CONST.UNKNOWN
 
-        board_type_file = "/sys/devices/virtual/dmi/id/board_name"
-        sku_file = "/sys/devices/virtual/dmi/id/product_sku"
-        system_ver_file = "/sys/devices/virtual/dmi/id/product_version"
-
-        if os.path.isfile(board_type_file):
-            with open(board_type_file, "r") as content_file:
-                self.board_type = content_file.read().rstrip("\n")
-
-        if os.path.isfile(sku_file):
-            with open(sku_file, "r") as content_file:
-                self.sku = content_file.read().rstrip("\n")
-
-        if os.path.isfile(system_ver_file):
-            with open(system_ver_file, "r") as content_file:
-                self.system_ver = content_file.read().rstrip("\n")
+        if self.check_file("config/system_flow_capability"):
+            self.fan_flow_capability = self.read_file("config/system_flow_capability")
 
         try:
             self.max_tachos = int(self.read_file("config/max_tachos"))
@@ -2275,12 +2360,12 @@ class ThermalManagement(hw_managemet_file_op):
         self.gearbox_counter = int(self.get_file_val("config/gearbox_counter", CONST.GEARBOX_COUNT_DEF))
 
     # ----------------------------------------------------------------------
-    def _get_dev_obj(self, name):
+    def _get_dev_obj(self, name_mask):
         """
         @summary: Get device object by it's name
         """
         for dev_obj in self.dev_obj_list:
-            if name == dev_obj.name:
+            if re.match(name_mask, dev_obj.name):
                 return dev_obj
         return None
 
@@ -2303,6 +2388,9 @@ class ThermalManagement(hw_managemet_file_op):
         number of presented air-out fans, set the direction error bit of all the presented air-out fans.
         Otherwise, set the direction error bit of all the presented air-in fans.
         """
+        if self.fan_flow_capability != CONST.UNKNOWN:
+            return self.fan_flow_capability
+
         c2p_count = 0
         p2c_count = 0
         for obj in self.dev_obj_list:
@@ -2311,17 +2399,13 @@ class ThermalManagement(hw_managemet_file_op):
                 c2p_count += 1
             elif fan_dir == CONST.P2C:
                 p2c_count += 1
+
         if c2p_count > p2c_count:
             pref_dir = CONST.C2P
         elif c2p_count < p2c_count:
             pref_dir = CONST.P2C
         else:
             pref_dir = CONST.UNKNOWN
-
-        for obj in self.dev_obj_list:
-            fan_dir = getattr(obj, "fan_dir", None)
-            if fan_dir is not None and fan_dir != pref_dir:
-                setattr(obj, "fan_dir_fail", 1)
 
         return pref_dir
 
@@ -2338,13 +2422,17 @@ class ThermalManagement(hw_managemet_file_op):
                 psu_obj.set_pwm(pwm)
 
     # ----------------------------------------------------------------------
-    def _write_pwm(self, pwm_val):
+    def _update_chassis_fan_speed(self, pwm_val):
         """
-        @summary: Write PWM value to the pwm file .
-        @param pwm: pwm value in present
+        @summary:
+            Set chassis fan PWM
+        @return: None
         """
-        self.log.info("Update FAN PWM {}".format(pwm_val))
-        self.thermal_write_file("pwm1", int(pwm_val * 255 / 100))
+        self.log.info("Update chassis FAN PWM {}".format(pwm_val))
+        for fan_idx in range(1, self.fan_drwr_num + 1):
+            fan_obj = self._get_dev_obj("fan{}.*".format(fan_idx))
+            if fan_obj:
+                fan_obj.set_pwm(pwm_val)
 
     # ----------------------------------------------------------------------
     def _set_pwm(self, pwm, reason=""):
@@ -2369,17 +2457,16 @@ class ThermalManagement(hw_managemet_file_op):
                 self.pwm_worker_timer.start(True)
             else:
                 self.pwm = pwm
-                self._write_pwm(self.pwm)
+                self._update_chassis_fan_speed(self.pwm)
 
     # ----------------------------------------------------------------------
     def _pwm_worker(self):
         ''
         if self.pwm_target == self.pwm:
-            pwm_real = self.thermal_read_file_int("pwm1")
-            pwm_set = int(self.pwm * 255 / 100)
-            if pwm_real != pwm_set:
+            pwm_real = self.read_pwm()
+            if pwm_real != self.pwm:
                 self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, pwm_set))
-                self._write_pwm(self.pwm)
+                self._update_chassis_fan_speed(self.pwm)
             self.pwm_worker_timer.stop()
             return
 
@@ -2392,7 +2479,21 @@ class ThermalManagement(hw_managemet_file_op):
             self.pwm -= step
         else:
             self.pwm = self.pwm_target
-        self._write_pwm(self.pwm)
+        self._update_chassis_fan_speed(self.pwm)
+        
+    # ----------------------------------------------------------------------
+    def _update_system_flow_dir(self, flow_dir):
+        """
+        @summary:
+            Update all nested subsystems with the expected flow fir
+        @return: None
+        """
+        self.system_flow_dir = flow_dir
+        self.log.info("Update chassis FAN dir {}".format(flow_dir))
+        for fan_idx in range(1, self.fan_drwr_num + 1):
+            fan_obj = self._get_dev_obj("fan{}.*".format(fan_idx))
+            if fan_obj:
+                fan_obj.set_system_flow_dir(flow_dir)
 
     # ----------------------------------------------------------------------
     def _is_suspend(self):
@@ -2417,16 +2518,26 @@ class ThermalManagement(hw_managemet_file_op):
         @param sensor_name: sensor/device sensor_name
         @param extr_config: additional configuration which can override default values from SENSOR_DEF_CONFIG
         """
-        if sensor_name not in self.sensors_config.keys():
-            self.sensors_config[sensor_name] = {"type": sensor_type}
-        self.sensors_config[sensor_name]["name"] = sensor_name
+        sensors_config = self.sys_config[CONST.SYS_CONF_SENSORS_CONF]
+        if sensor_name not in sensors_config.keys():
+            sensors_config[sensor_name] = {"type": sensor_type}
+        sensors_config[sensor_name]["name"] = sensor_name
 
         if extra_config:
-            add_missing_to_dict(self.sensors_config[sensor_name], extra_config)
+            add_missing_to_dict(sensors_config[sensor_name], extra_config)
 
-        for name_mask in SENSOR_DEF_CONFIG.keys():
+        # 1. Add missing keys from system_conf->sensors_config to sensor_conf
+        dev_param = self.sys_config[CONST.SYS_CONF_DEV_PARAM]
+        for name_mask, val in dev_param.items():
             if re.match(name_mask, sensor_name):
-                add_missing_to_dict(self.sensors_config[sensor_name], SENSOR_DEF_CONFIG[name_mask])
+                add_missing_to_dict(sensors_config[sensor_name], val)
+                break
+
+        # 2. Add missing keys from def config to sensor_conf
+        dev_param = SENSOR_DEF_CONFIG
+        for name_mask, val in dev_param.items():
+            if re.match(name_mask, sensor_name):
+                add_missing_to_dict(sensors_config[sensor_name], val)
                 break
 
     # ----------------------------------------------------------------------
@@ -2469,13 +2580,11 @@ class ThermalManagement(hw_managemet_file_op):
         """
         @summary: Find corresponded dmin table configuration based on system typename
         @param typename: name of system dmin table/ Please see available names in THERMAL_TABLE_LIST
-        can be:1
+        It can be
         1. system name
         2. Thermal class
         3. SKU
         """
-        if not typename:
-            return None
         thermal_table = None
         for typename_mask in THERMAL_TABLE_LIST.keys():
             if re.match(typename_mask, typename):
@@ -2484,31 +2593,80 @@ class ThermalManagement(hw_managemet_file_op):
         return thermal_table
 
     # ----------------------------------------------------------------------
-    def init_thermal_table(self):
+    def load_configuration(self):
         """
-        @summary: Init dmin table by the system type. Type definition priority
-            1. Check sys_typename from command line argument
-            2. Get type from config/thermal_type
-            3. Get SKU
-            4. Using default table
+        @summary: Init sonfiguration table.
         """
-        typename = None
-        if self.sys_typename:
-            typename = self.sys_typename
+        board_type_file = "/sys/devices/virtual/dmi/id/board_name"
+        sku_file = "/sys/devices/virtual/dmi/id/product_sku"
+        system_ver_file = "/sys/devices/virtual/dmi/id/product_version"
+
+        if os.path.isfile(board_type_file):
+            with open(board_type_file, "r") as content_file:
+                self.board_type = content_file.read().rstrip("\n")
+
+        if os.path.isfile(sku_file):
+            with open(sku_file, "r") as content_file:
+                self.sku = content_file.read().rstrip("\n")
+
+        if os.path.isfile(system_ver_file):
+            with open(system_ver_file, "r") as content_file:
+                self.system_ver = content_file.read().rstrip("\n")
+
+        sys_config = {}
+        if self.cmd_arg[CONST.SYSTEM_CONFIG]:
+            config_file_name = "{}/{}".format(self.root_folder, self.cmd_arg[CONST.SYSTEM_CONFIG])
         else:
+            config_file_name = "{}/{}".format(self.root_folder, CONST.SYSTEM_CONFIG_FILE)
+
+        try:
+            if os.path.isfile(config_file_name):
+                with open(config_file_name) as f:
+                    self.log.info("Loading system config from {}".format(config_file_name))
+                    sys_config = json.load(f)
+            else:
+                self.log.warn("Missing system config file {}. Applying default config.".format(config_file_name))
+        except:
+            self.log.error("Error on loading system config file {}. Applying default config.".format(config_file_name))
+
+        # 1. Init dmin tablex
+        if CONST.SYS_CONF_DMIN not in sys_config:
+            self.log.info("Dmin table missing in system_config. Init it from local.")
             typename = self.read_file("config/thermal_type")
             if typename:
                 typename = "tc_t{}".format(typename)
             elif self.board_type:
                 typename = self.board_type
 
-        self.thermal_table = self._match_system_table(typename)
+            thermal_table = self._match_system_table(typename)
 
-        if not self.thermal_table:
-            self.thermal_table = THERMAL_TABLE_LIST["default"]
-            self.log.notice("System typename {} not found. Using default thermal type:{}".format(typename, self.thermal_table["name"]))
-        else:
-            self.log.notice("System typename \"{}\" thermal type:\"{}\"".format(self.sys_typename, self.thermal_table["name"]))
+            if not thermal_table:
+                thermal_table = THERMAL_TABLE_LIST["default"]
+                self.log.info("System typename {} not found. Using default thermal type:{}.".format(typename, thermal_table["name"]))
+            else:
+                self.log.info("System thermal type:\"{}\"".format(thermal_table["name"]))
+            sys_config[CONST.SYS_CONF_DMIN] = thermal_table
+
+        # 2. Init PSU fan speed vs system fan speed table
+        if CONST.SYS_CONF_FAN_PWM not in sys_config:
+            self.log.info("PSU fan speed vs system fan speed table missing in system_config. Init it from local.")
+            sys_config[CONST.SYS_CONF_FAN_PWM] = PSU_PWM_DECODE_DEF
+
+        # 3. Init Fan Parameters table
+        if CONST.SYS_CONF_FAN_PARAM not in sys_config:
+            self.log.info("Fan Parameters table missing in system_config. Init it from local")
+            sys_config[CONST.SYS_CONF_FAN_PARAM] = SYS_FAN_PARAM_DEF
+
+        # 4. Init device parameters table
+        if CONST.SYS_CONF_DEV_PARAM not in sys_config:
+            self.log.info("Sensors param config table missing in system_config. Init it from local")
+            sys_config[CONST.SYS_CONF_DEV_PARAM] = {}
+
+        # 5. Init sensors config table
+        if CONST.SYS_CONF_SENSORS_CONF not in sys_config:
+            sys_config[CONST.SYS_CONF_SENSORS_CONF] = {}
+
+        self.sys_config = sys_config
 
     # ----------------------------------------------------------------------
     def init_sensor_configuration(self):
@@ -2520,30 +2678,30 @@ class ThermalManagement(hw_managemet_file_op):
         for psu_idx in range(1, self.psu_count + 1):
             name = "psu{}_fan".format(psu_idx)
             in_file = "psu{}".format(psu_idx)
-            self._sensor_add_config("psu_fan_sensor", name, {"base_name": in_file})
+            self._sensor_add_config("psu_fan_sensor", name, {"base_file_name": in_file})
 
             name = "psu{}_temp".format(psu_idx)
             in_file = "thermal/psu{}_temp".format(psu_idx)
-            self._sensor_add_config("thermal_sensor", name, {"base_name": in_file})
+            self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
 
         for fan_idx in range(1, self.fan_drwr_num + 1):
             name = "fan{}".format(fan_idx)
-            self._sensor_add_config("fan_sensor", name, {"base_name": name, "drwr_id": fan_idx, "tacho_cnt": self.fan_drwr_capacity})
+            self._sensor_add_config("fan_sensor", name, {"base_file_name": name, "drwr_id": fan_idx, "tacho_cnt": self.fan_drwr_capacity})
 
         for module_idx in range(1, self.module_counter + 1):
             name = "module{}".format(module_idx)
-            self._sensor_add_config("thermal_module_sensor", name, {"base_name": name})
+            self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": name})
 
         for gearbox_idx in range(1, self.gearbox_counter + 1):
             name = "gearbox{}".format(gearbox_idx)
-            self._sensor_add_config("thermal_module_sensor", name, {"base_name": name})
+            self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": name})
 
-        self._sensor_add_config("thermal_module_sensor", "asic", {"base_name": "asic"})
+        self._sensor_add_config("thermal_module_sensor", "asic", {"base_file_name": "asic"})
 
         if self.check_file("thermal/cpu_pack"):
-            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_name": "thermal/cpu_pack"})
+            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
         elif self.check_file("thermal/cpu_core1"):
-            self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_name": "thermal/cpu_core1"})
+            self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_file_name": "thermal/cpu_core1"})
 
         self._sensor_add_config("ambiant_thermal_sensor", "sensor_amb")
 
@@ -2551,13 +2709,13 @@ class ThermalManagement(hw_managemet_file_op):
         for sodimm_idx in range(1, 5):
             name = "sodimm{}_temp".format(sodimm_idx)
             if self.check_file("thermal/{}_input".format(name)):
-                self._sensor_add_config("thermal_sensor", name, {"base_name": "thermal/{}".format(name)})
+                self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
 
         if self.check_file("thermal/pch_temp"):
-            self._sensor_add_config("thermal_sensor", "pch", {"base_name": "thermal/pch"})
+            self._sensor_add_config("thermal_sensor", "pch", {"base_file_name": "thermal/pch"})
 
         if self.check_file("thermal/comex_amb"):
-            self._sensor_add_config("thermal_sensor", "comex_amb", {"base_name": "thermal/comex_amb"})
+            self._sensor_add_config("thermal_sensor", "comex_amb", {"base_file_name": "thermal/comex_amb"})
 
     # ----------------------------------------------------------------------
     def init(self):
@@ -2568,20 +2726,20 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Init thermal control ver: v.{}".format(VERSION))
         self.log.notice("********************************")
 
+        self.init_sensor_configuration()
+
         # Set initial PWM to maximum
         self._set_pwm(CONST.PWM_MAX, reason="Set initial PWM")
 
-        self.init_thermal_table()
-        self.init_sensor_configuration()
-        self.log.debug("Sensor config dump\n{}".format(json.dumps(self.sensors_config, sort_keys=True, indent=4)))
+        self.log.debug("System config dump\n{}".format(json.dumps(self.sys_config, sort_keys=True, indent=4)))
 
-        for key, val in self.sensors_config.items():
+        for key, val in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
             try:
                 dev_class_ = globals()[val["type"]]
             except Exception as err:
                 self.log.error("Unknown dev class {}".format(err.message))
                 continue
-            dev_obj = dev_class_(self.config, val, self.log)
+            dev_obj = dev_class_(self.cmd_arg, self.sys_config, key, self.log)
             if not dev_obj:
                 self.log.error("{} create failed".format(key))
                 sys.exit(1)
@@ -2613,11 +2771,12 @@ class ThermalManagement(hw_managemet_file_op):
                 self.pwm_worker_timer = RepeatedTimer(self.pwm_worker_poll_time, self._pwm_worker)
             self.pwm_worker_timer.stop()
 
-            self.fan_dir = self._check_fan_dir()
+            fan_dir = self._check_fan_dir()
+            self._update_system_flow_dir(fan_dir)
 
             ambient_sensor = self._get_dev_obj("sensor_amb")
             if ambient_sensor:
-                ambient_sensor.set_flow_dir(self.fan_dir)
+                ambient_sensor.set_flow_dir(fan_dir)
 
     # ----------------------------------------------------------------------
     def stop(self):
@@ -2637,11 +2796,10 @@ class ThermalManagement(hw_managemet_file_op):
                 self.periodic_report_worker_timer.stop()
                 self.periodic_report_worker_timer = None
 
+            self._set_pwm(CONST.PWM_MAX, reason="TC stop")
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     dev_obj.stop()
-
-            self._set_pwm(CONST.PWM_MAX, reason="TC stop")
 
     # ----------------------------------------------------------------------
     def run(self):
@@ -2654,14 +2812,15 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************")
 
         self.trusted = True
-        self.fan_dir = self._check_fan_dir()
+        fan_dir = self._check_fan_dir()
+        self._update_system_flow_dir(fan_dir)
 
         # Service of sensor ambient first because we must init amb temp and flow dir
         ambient_sensor = self._get_dev_obj("sensor_amb")
         if ambient_sensor:
-            ambient_sensor.process(self.thermal_table, CONST.TEMP_INIT_DEF, CONST.C2P)
+            ambient_sensor.process(self.sys_config[CONST.SYS_CONF_DMIN], CONST.TEMP_INIT_DEF, CONST.C2P)
             amb_tmp = ambient_sensor.get_value()
-            flow_dir = self.fan_dir
+            flow_dir = fan_dir
         else:
             amb_tmp = CONST.TEMP_INIT_DEF
             flow_dir = CONST.C2P
@@ -2670,9 +2829,9 @@ class ThermalManagement(hw_managemet_file_op):
         while not self.exit.is_set():
             try:
                 log_level = int(self.read_file(CONST.LOG_LEVEL_FILENAME))
-                if log_level != self.config["verbosity"]:
-                    self.config["verbosity"] = log_level
-                    self.log.set_loglevel(self.config["verbosity"])
+                if log_level != self.cmd_arg["verbosity"]:
+                    self.cmd_arg["verbosity"] = log_level
+                    self.log.set_loglevel(self.cmd_arg["verbosity"])
             except BaseException:
                 pass
 
@@ -2689,7 +2848,7 @@ class ThermalManagement(hw_managemet_file_op):
                 if dev_obj.enable:
                     if current_milli_time() >= dev_obj.get_timestump():
                         # process sensors
-                        dev_obj.process(self.thermal_table, flow_dir, amb_tmp)
+                        dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], flow_dir, amb_tmp)
                         dev_obj.update_timestump()
 
                         if dev_obj.name == "sensor_amb":
@@ -2725,7 +2884,7 @@ class ThermalManagement(hw_managemet_file_op):
         ambient_sensor = self._get_dev_obj("sensor_amb")
         if ambient_sensor:
             amb_tmp = ambient_sensor.get_value()
-            flow_dir = self.fan_dir
+            flow_dir = self.system_flow_dir
         else:
             amb_tmp = "-"
             flow_dir = "-"
@@ -2775,10 +2934,10 @@ class RawTextArgumentDefaultsHelpFormatter(
 if __name__ == '__main__':
     CMD_PARSER = argparse.ArgumentParser(formatter_class=RawTextArgumentDefaultsHelpFormatter, description="hw-management thermal control")
     CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
-    CMD_PARSER.add_argument("--sensors_config",
-                            dest=CONST.SENSORS_CONFIG,
-                            help="Config file with additional sensors description",
-                            default=None)
+    CMD_PARSER.add_argument("--system_config",
+                            dest=CONST.SYSTEM_CONFIG,
+                            help="System configuration file",
+                            default=CONST.SYSTEM_CONFIG_FILE)
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest=CONST.LOG_FILE,
                             help="Add output also to log file. Pass file name here",
@@ -2787,10 +2946,6 @@ if __name__ == '__main__':
                             dest=CONST.LOG_USE_SYSLOG,
                             help="enable/disable output to syslog",
                             type=str2bool_argparse, default=True)
-    CMD_PARSER.add_argument("-t", "--systypename",
-                            dest="systypename",
-                            help="System name/type/SKU (MSN2700, HI110, VMOD0001)",
-                            default=None)
     CMD_PARSER.add_argument("-v", "--verbosity",
                             dest="verbosity",
                             help="""Set log verbosity level.

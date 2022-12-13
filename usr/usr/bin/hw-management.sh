@@ -85,6 +85,7 @@ erot_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
+thermal_control_configs_path="/etc/hw-management-thermal"
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
@@ -2171,6 +2172,11 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+	fi
+	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+		ln -sf $thermal_control_config $config_path/tc_config.json
+	else
+		ln -sf $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }

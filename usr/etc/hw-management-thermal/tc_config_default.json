@@ -1,0 +1,27 @@
+ {
+	"psu_fan_pwm_decode" : {"0:10": 30, "11:21": 30, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
+	"fan_trend" : {
+        	"C2P": {
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101}},
+		"P2C": {
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101}
+		}
+	},
+	"dev_parameters" : {
+		"psu\\d+_fan":    {"val_min":4500, "val_max":28000, "poll_time": 30},
+		"fan\\d+":        {"poll_time": 30},
+		"module\\d+":     {"pwm_min": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"gearbox\\d+":    {"pwm_min": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"asic":           {"pwm_min": 20, "pwm_max" : 100, "val_min":75000, "val_max":105000, "poll_time": 3},
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 20, "pwm_max" : 100,  "val_min": 50000, "val_max": 90000, "poll_time": 3},
+		"sodimm\\d_temp" : {"pwm_min": 20, "pwm_max" : 100, "val_max": 85000, "poll_time": 10},
+		"pch":            {"pwm_min": 20, "pwm_max" : 100, "val_min": 50000, "val_max": 85000, "poll_time": 10},
+		"comex_amb":      {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max": 85000, "poll_time": 3},
+		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 100, "poll_time": 10},
+		"psu\\d+_temp":   {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max":  85000, "poll_time": 30}
+	}
+}
+
+ 
