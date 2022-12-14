@@ -815,6 +815,9 @@ if [ "$1" == "add" ]; then
 				prefix="voltmon6"
 			fi
 
+			check_n_link "$3""$4"/temp1_input $thermal_path/"$prefix"_temp_input
+			check_n_link "$3""$4"/temp1_max $thermal_path/"$prefix"_temp_max
+
 			for i in {1..3}; do
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
