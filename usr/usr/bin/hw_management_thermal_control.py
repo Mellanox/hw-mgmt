@@ -98,7 +98,7 @@ class CONST(object):
     # User can dynamically change loglevel without TC restarting.
     LOG_LEVEL_FILENAME = "config/tc_log_level"
 
-    SYSTEM_CONFIG_FILE = "config/tc_config.json"
+    SYSTEM_CONFIG_FILE = "/var/run/hw-management/config/tc_config.json"
 
     # Fan direction string alias
     #fan dir:
@@ -126,6 +126,7 @@ class CONST(object):
     THERMAL_WAIT_FOR_CONFIG = 90
 
     # Default period for printing TC report (in sec.)
+    # Note: set report time to 5 min on release
     PERIODIC_REPORT_TIME = 5 * 60
     # File which define TC report period. TC should be restarted to apply changes in this file
     PERIODIC_REPORT_FILE = "config/periodic_report"
@@ -156,7 +157,7 @@ class CONST(object):
     DMIN_PWM_STEP_MIN = 2
     # PWM smoothing in time
     PWM_INC_STEP_MAX = 8
-    PWM_WORKET_POLL_TIME = 2
+    PWM_WORKER_POLL_TIME = 5
 
     # default system devices
     PSU_COUNT_DEF = 2
@@ -267,13 +268,6 @@ TABLE_DEFAULT = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -304,13 +298,6 @@ TABLE_CLASS1 = {
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:40": 30, "41:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         CONST.UNTRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
@@ -349,13 +336,6 @@ TABLE_CLASS2 = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -387,13 +367,6 @@ TABLE_CLASS3 = {
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:120": 30},
         CONST.UNTRUST_TYPE: {"-127:35": 30, "36:40": 40, "41:120": 50},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -432,13 +405,6 @@ TABLE_CLASS4 = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -468,13 +434,6 @@ TABLE_CLASS5 = {
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:26": 20, "26:40": 30, "41:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:26": 20, "26:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         "fan_err": fan_err_default,
@@ -515,13 +474,6 @@ TABLE_CLASS6 = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:40": 30, "41:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -552,13 +504,6 @@ TABLE_CLASS7 = {
     },
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:30": 20, "31:40": 30, "41:120": 40},
         CONST.UNTRUST_TYPE: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
@@ -597,13 +542,6 @@ TABLE_CLASS8 = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -634,13 +572,6 @@ TABLE_CLASS9 = {
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:120": 20},
         CONST.UNTRUST_TYPE: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
         "fan_err": fan_err_default,
@@ -681,13 +612,6 @@ TABLE_CLASS10 = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -717,13 +641,6 @@ TABLE_CLASS11 = {
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
         "fan_err": fan_err_default,
@@ -763,13 +680,6 @@ TABLE_CLASS12 = {
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:15": 20, "16:35": 30, "36:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
     }
 }
 
@@ -799,13 +709,6 @@ TABLE_CLASS13 = {
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:25": 20, "26:30": 30, "31:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
         CONST.TRUST_TYPE: {"-127:25": 20, "26:30": 30, "31:120": 40},
         CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
@@ -845,13 +748,6 @@ TABLE_CLASS14 = {
     CONST.P2C: {
         CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.UNKNOWN: {
-        CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
-        CONST.UNTRUST_TYPE:  {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -1821,13 +1717,6 @@ class psu_fan_sensor(system_device):
         return psu_status
 
     # ----------------------------------------------------------------------
-    def _get_rpm_fault(self):
-        if self.value < self.val_min * 0.8 or self.value > self.val_max * 1.2:
-            self.log.warn("{} val:{}, min:{}, max:{}".format(self.name, self.value, self.val_min, self.val_max))
-            return True
-        return False
-
-    # ----------------------------------------------------------------------
     def set_pwm(self, pwm):
         """
         @summary: Set PWM level for PSU FAN
@@ -1886,13 +1775,6 @@ class psu_fan_sensor(system_device):
                 pwm = self.prsnt_err_pwm_min
             else:
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "psu_err", "present"])
-
-        rpm_fault = self._get_rpm_fault()
-        if rpm_fault:
-            self.log.warn("{} psu_fan_fault".format(self.name))
-            # PSU status error. Calculating dmin based on this information
-            self.fault_list.append("fault")
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "psu_err", "present"])
 
         self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
@@ -2297,7 +2179,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.dev_obj_list = []
 
         self.pwm_sooth_step_max = CONST.PWM_INC_STEP_MAX
-        self.pwm_worker_poll_time = CONST.PWM_WORKET_POLL_TIME
+        self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
 
         self.trusted = True
@@ -2624,9 +2506,9 @@ class ThermalManagement(hw_managemet_file_op):
 
         sys_config = {}
         if self.cmd_arg[CONST.SYSTEM_CONFIG]:
-            config_file_name = "{}/{}".format(self.root_folder, self.cmd_arg[CONST.SYSTEM_CONFIG])
+            config_file_name = self.cmd_arg[CONST.SYSTEM_CONFIG]
         else:
-            config_file_name = "{}/{}".format(self.root_folder, CONST.SYSTEM_CONFIG_FILE)
+            config_file_name = CONST.SYSTEM_CONFIG_FILE
 
         try:
             if os.path.isfile(config_file_name):
@@ -2689,9 +2571,9 @@ class ThermalManagement(hw_managemet_file_op):
             in_file = "psu{}".format(psu_idx)
             self._sensor_add_config("psu_fan_sensor", name, {"base_file_name": in_file})
 
-            name = "psu{}_temp".format(psu_idx)
+            """name = "psu{}_temp".format(psu_idx)
             in_file = "thermal/psu{}_temp".format(psu_idx)
-            self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
+            self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})"""
 
         for fan_idx in range(1, self.fan_drwr_num + 1):
             name = "fan{}".format(fan_idx)
@@ -2712,7 +2594,7 @@ class ThermalManagement(hw_managemet_file_op):
         elif self.check_file("thermal/cpu_core1"):
             self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_file_name": "thermal/cpu_core1"})
 
-        self._sensor_add_config("ambiant_thermal_sensor", "sensor_amb")
+        # self._sensor_add_config("ambiant_thermal_sensor", "sensor_amb")
 
         # scanning for extra sensors (SODIMM 1-4)
         for sodimm_idx in range(1, 5):
@@ -2720,11 +2602,11 @@ class ThermalManagement(hw_managemet_file_op):
             if self.check_file("thermal/{}_input".format(name)):
                 self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
 
-        if self.check_file("thermal/pch_temp"):
+        """if self.check_file("thermal/pch_temp"):
             self._sensor_add_config("thermal_sensor", "pch", {"base_file_name": "thermal/pch"})
 
         if self.check_file("thermal/comex_amb"):
-            self._sensor_add_config("thermal_sensor", "comex_amb", {"base_file_name": "thermal/comex_amb"})
+            self._sensor_add_config("thermal_sensor", "comex_amb", {"base_file_name": "thermal/comex_amb"})"""
 
     # ----------------------------------------------------------------------
     def init(self):
@@ -2949,6 +2831,7 @@ if __name__ == '__main__':
                             dest=CONST.LOG_USE_SYSLOG,
                             help="enable/disable output to syslog",
                             type=str2bool_argparse, default=True)
+    # Note: set logging to 50 on release
     CMD_PARSER.add_argument("-v", "--verbosity",
                             dest="verbosity",
                             help="""Set log verbosity level.
