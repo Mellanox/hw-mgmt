@@ -1317,6 +1317,10 @@ class system_device(hw_managemet_file_op):
             self.input_smooth_level = 1
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.update_timestump(1000)
+        self.val_min = CONST.TEMP_MIN_MAX["val_min"]
+        self.val_max = CONST.TEMP_MIN_MAX["val_max"]
+        self.pwm_min = CONST.PWM_MIN
+        self.pwm_max = CONST.PWM_MAX
         self.value = CONST.TEMP_INIT_DEF
         self.value_acc = self.value * self.input_smooth_level
         self.pwm = CONST.PWM_MIN
@@ -1326,10 +1330,7 @@ class system_device(hw_managemet_file_op):
         self.state = CONST.STOPPED
         self.err_fread_max = CONST.SENSOR_FREAD_FAIL_TIMES
         self.err_fread_err_counter_dict = {}
-        self.pwm_min = CONST.PWM_MIN
-        self.pwm_max = CONST.PWM_MAX
-        self.val_min = CONST.TEMP_MIN_MAX["val_min"]
-        self.val_max = CONST.TEMP_MIN_MAX["val_max"]
+
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
@@ -1353,8 +1354,6 @@ class system_device(hw_managemet_file_op):
         self.state = CONST.RUNNING
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
-        self.val_min = CONST.TEMP_MIN_MAX["val_min"]
-        self.val_max = CONST.TEMP_MIN_MAX["val_max"]
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
@@ -1777,11 +1776,9 @@ class psu_fan_sensor(system_device):
     @summary: base class for PSU device
     Can be used for Control of PSU temperature/RPM
     """
-     def __init__(self, cmd_arg, sys_config, name, logger):
+    def __init__(self, cmd_arg, sys_config, name, logger):
         system_device.__init__(self, cmd_arg, sys_config, name, logger)
 
-        self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
-        self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
         self.prsnt_err_pwm_min = self.get_file_val("config/pwm_min_psu_not_present")
         self.pwm_decode = sys_config.get(CONST.SYS_CONF_FAN_PWM, PSU_PWM_DECODE_DEF)
 
@@ -1794,6 +1791,16 @@ class psu_fan_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
         self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
+        self.system_flow_dir = CONST.UNKNOWN
+
+    # ----------------------------------------------------------------------
+    def set_system_flow_dir(self, flow_dir):
+        """
+        @summary: Set system flow dir info 
+        @param flow_dir: flow dir which is specified for this system or calculated by algo 
+        @return: None
+        """
+        self.system_flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
     def _get_status(self):
@@ -1826,6 +1833,7 @@ class psu_fan_sensor(system_device):
         @summary: Set PWM level for PSU FAN
         @param pwm: PWM level value <= 100%
         """
+        self.log.info("Write {} PWM {}".format(self.name, pwm))
         present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
         if present == 1:
             psu_pwm, _, _ =  g_get_range_val(self.pwm_decode, pwm)
@@ -2052,8 +2060,8 @@ class fan_sensor(system_device):
         @param pwm_val: PWM level value <= 100%
         """
         self.log.info("Write {} PWM {}".format(self.name, pwm_val))
-        if pwm_val < CONST.PWM_PSU_MIN:
-            pwm_val = CONST.PWM_PSU_MIN
+        if pwm_val < CONST.PWM_MIN:
+            pwm_val = CONST.PWM_MIN
 
         pwn_curr = self.read_pwm()
         if pwm_val == pwn_curr:
@@ -2070,7 +2078,7 @@ class fan_sensor(system_device):
         """
         return self.fan_dir
 
-      # ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def set_system_flow_dir(self, flow_dir):
         """
         @summary: Set system flow dir info 
@@ -2313,6 +2321,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG))
         self.exit.wait(CONST.THERMAL_WAIT_FOR_CONFIG)
         self._collect_hw_info()
+        self.amb_tmp = CONST.TEMP_INIT_DEF
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -2382,7 +2391,7 @@ class ThermalManagement(hw_managemet_file_op):
                     return False
         return True
 
-    def _check_fan_dir(self):
+    def _get_chassis_fan_dir(self):
         """
         @summary: Comparing case FAN direction. In case the number of presented air-in fans is higher or equal to the
         number of presented air-out fans, set the direction error bit of all the presented air-out fans.
@@ -2465,7 +2474,7 @@ class ThermalManagement(hw_managemet_file_op):
         if self.pwm_target == self.pwm:
             pwm_real = self.read_pwm()
             if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, pwm_set))
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm))
                 self._update_chassis_fan_speed(self.pwm)
             self.pwm_worker_timer.stop()
             return
@@ -2542,7 +2551,7 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     @staticmethod
-    def _pwm_strategy_max(pwm_list):
+    def _pwm_get_max(pwm_list):
         """
         @summary: calculating PWM. returning maximum PWM value in the passed list
         @param pwm_lis: list with pwm values.
@@ -2771,12 +2780,15 @@ class ThermalManagement(hw_managemet_file_op):
                 self.pwm_worker_timer = RepeatedTimer(self.pwm_worker_poll_time, self._pwm_worker)
             self.pwm_worker_timer.stop()
 
-            fan_dir = self._check_fan_dir()
+            fan_dir = self._get_chassis_fan_dir()
             self._update_system_flow_dir(fan_dir)
 
             ambient_sensor = self._get_dev_obj("sensor_amb")
             if ambient_sensor:
                 ambient_sensor.set_flow_dir(fan_dir)
+                ambient_sensor.process(self.sys_config[CONST.SYS_CONF_DMIN], fan_dir, CONST.TEMP_INIT_DEF)
+                ambient_sensor = self._get_dev_obj("sensor_amb")
+                self.amb_tmp = ambient_sensor.get_value()
 
     # ----------------------------------------------------------------------
     def stop(self):
@@ -2812,18 +2824,6 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************")
 
         self.trusted = True
-        fan_dir = self._check_fan_dir()
-        self._update_system_flow_dir(fan_dir)
-
-        # Service of sensor ambient first because we must init amb temp and flow dir
-        ambient_sensor = self._get_dev_obj("sensor_amb")
-        if ambient_sensor:
-            ambient_sensor.process(self.sys_config[CONST.SYS_CONF_DMIN], CONST.TEMP_INIT_DEF, CONST.C2P)
-            amb_tmp = ambient_sensor.get_value()
-            flow_dir = fan_dir
-        else:
-            amb_tmp = CONST.TEMP_INIT_DEF
-            flow_dir = CONST.C2P
 
         # main loop
         while not self.exit.is_set():
@@ -2843,18 +2843,21 @@ class ThermalManagement(hw_managemet_file_op):
                 self.start()
 
             pwm_list = {}
+            # set maximum next poll timestump = 60 seec
             timestump_next = current_milli_time() + 60 * 1000
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     if current_milli_time() >= dev_obj.get_timestump():
                         # process sensors
-                        dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], flow_dir, amb_tmp)
-                        dev_obj.update_timestump()
-
                         if dev_obj.name == "sensor_amb":
                             self.trusted = self._check_untrusted_module_sensor()
-                            amb_tmp = dev_obj.get_value()
                             dev_obj.set_trusted(self.trusted)
+                            dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, None)
+                            self.amb_tmp = dev_obj.get_value()
+                        else:
+                            dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
+
+                        dev_obj.update_timestump()
 
                     pwm = dev_obj.get_pwm()
                     self.log.debug("{0:25}: PWM {1}".format(dev_obj.name, pwm))
@@ -2863,15 +2866,15 @@ class ThermalManagement(hw_managemet_file_op):
                     obj_timestump = dev_obj.get_timestump()
                     timestump_next = min(obj_timestump, timestump_next)
 
-            pwm, name = self._pwm_strategy_max(pwm_list)
+            pwm, name = self._pwm_get_max(pwm_list)
             self.log.debug("Result PWM {}".format(pwm))
             self._set_pwm(pwm, reason=name)
             sleep_ms = int(timestump_next - current_milli_time())
 
             # Poll time should not be smaller than 1 sec to reduce system load
             # and mot more 10 sec to have a good response for suspend mode change polling
-            if sleep_ms < 1000:
-                sleep_ms = 1000
+            if sleep_ms < 1 * 1000:
+                sleep_ms = 1 * 1000
             elif sleep_ms > 10 * 1000:
                 sleep_ms = 10 * 1000
             self.exit.wait(sleep_ms / 1000)
