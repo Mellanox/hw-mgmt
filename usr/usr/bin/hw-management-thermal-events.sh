@@ -200,6 +200,45 @@ get_fixed_fans_direction()
 	esac
 }
 
+# Get PSU direction based on VPD PN field
+# PN_VPD_FIELD can have 2 formats
+# 1. PN_VPD_FIELD: MTEF-PSF-AC-G
+# 2. PN_VPD_FIELD: 930-9SPSU-00RA-00B
+#
+# Input parameters:
+# 1 - "$psu_name"
+# Return FAN direction
+# 0 - Forward (C2P)
+# 1 - Reverse (P2C)
+# 2 - unknown (read error or field missing)
+get_psu_fan_direction()
+{
+	vpd_file=$1
+	dir_char=""
+	pn="$(grep PN_VPD_FIELD $vpd_file)"
+	if [ -z $pn ]; then
+		return 2
+	fi
+	MLX_REGEXP="MTEF-PS([R,F])"
+	NV_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
+	[[ $pn =~ $MLX_REGEXP ]]
+	if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		dir_char="${BASH_REMATCH[1]}"
+	else
+		[[ $pn =~ $NV_REGEXP ]]
+		if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+			dir_char="${BASH_REMATCH[1]}"
+		fi
+	fi
+	if [ $dir_char == "F" ]; then
+		return 0
+	elif [ $dir_char == "R" ]; then
+		return 1
+	else
+		return 2
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -784,6 +823,10 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
+		# Get PSU FAN direction
+		get_psu_fan_direction $eeprom_path/"$psu_name"_vpd
+		echo $? > "$thermal_path"/"$psu_name"_fan_dir
+
 		# Expose min/max psu fan speed per psu from vpd to attributes.
 		grep MIN_RPM: $eeprom_path/"$psu_name"_vpd | cut -d' ' -f2 > "$thermal_path"/"$psu_name"_fan_min
 		grep MAX_RPM: $eeprom_path/"$psu_name"_vpd | cut -d' ' -f2 > "$thermal_path"/"$psu_name"_fan_max
