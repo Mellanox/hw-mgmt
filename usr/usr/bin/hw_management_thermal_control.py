@@ -195,17 +195,51 @@ input_smooth_level - soothing level for sensor input value reading. Formula to c
 """
 
 SENSOR_DEF_CONFIG = {
-    r'psu\d+_fan': {"type": "psu_fan_sensor", "input_suffix": "_fan1_speed_get", "val_min":4500, "val_max":20000, "poll_time": 30},
-    r'fan\d+': {"type": "fan_sensor", "val_min":4500, "val_max":20000, "poll_time": 30},
-    r'module\d+': {"type": "thermal_module_sensor", "input_suffix": "_temp_input", "val_min":60000, "val_max":80000, "poll_time": 20, "value_hyst" : 2, "refresh_attr_period": 30 * 60},
-    r'gearbox\d+': {"type": "thermal_module_sensor", "input_suffix": "_temp_input", "val_min":60000, "val_max":80000, "poll_time": 20, "value_hyst" : 2, "refresh_attr_period": 30 * 60},
-    r'asic': {"type": "thermal_module_sensor", "val_min":75000, "val_max":105000, "poll_time": 3, "value_hyst" : 2, "input_smooth_level": 2},
-    r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", "val_min": 50000, "val_max": 90000, "poll_time": 3, "value_hyst" : 5, "input_smooth_level": 3},
-    r'sodimm\d_temp': {"type": "thermal_sensor", "input_suffix": "_input", "val_min_override": 50000, "val_max": 85000, "poll_time": 10, "input_smooth_level": 2},
-    r'pch': {"type": "thermal_sensor", "input_suffix": "_temp", "val_min": 50000, "val_max": 85000, "poll_time": 10, "value_hyst" : 2, "input_smooth_level": 2},
-    r'comex_amb': {"type": "thermal_sensor", "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3},
-    r'sensor_amb': {"type": "ambiant_thermal_sensor", "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2, "poll_time": 10},
-    r'psu\d+_temp': {"type": "thermal_sensor", "val_min": 45000, "val_max":  85000, "poll_time": 30}
+    r'psu\d+_fan':      {"type": "psu_fan_sensor",
+                         "val_min":4500, "val_max":20000, "poll_time": 30, 
+                         "input_suffix": "_fan1_speed_get",
+                        },
+    r'fan\d+':          {"type": "fan_sensor", 
+                         "val_min":4500, "val_max":20000, "poll_time": 30
+                        },
+    r'module\d+':       {"type": "thermal_module_sensor", 
+                         "val_min":60000, "val_max":80000, "poll_time": 20, 
+                         "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
+                        },
+    r'gearbox\d+':      {"type": "thermal_module_sensor", 
+                         "val_min":60000, "val_max":80000, "poll_time": 20, 
+                         "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
+                        },
+    r'asic':            {"type": "thermal_module_sensor", 
+                         "val_min":75000, "val_max":105000, "poll_time": 3, 
+                         "value_hyst" : 2, "input_smooth_level": 2
+                        },
+    r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", 
+                                "val_min": 50000, "val_max": 90000, "poll_time": 3, 
+                                "value_hyst" : 5, "input_smooth_level": 3
+                               },
+    r'sodimm\d_temp':   {"type": "thermal_sensor", 
+                         "val_min": "!50000", "val_max": 85000, "poll_time": 10, 
+                         "input_suffix": "_input", "input_smooth_level": 2
+                        },
+    r'pch':             {"type": "thermal_sensor", 
+                         "val_min": 50000, "val_max": 85000, "poll_time": 10, 
+                         "input_suffix": "_temp", "value_hyst" : 2, "input_smooth_level": 2
+                        },
+    r'comex_amb':       {"type": "thermal_sensor", 
+                         "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3
+                        },
+    r'sensor_amb':      {"type": "ambiant_thermal_sensor", 
+                         "val_min": 20000, "val_max": 50000, "poll_time": 10,
+                         "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2
+                        },
+    r'psu\d+_temp':     {"type": "thermal_sensor", 
+                         "val_min": 45000, "val_max":  85000, "poll_time": 30
+                        },
+    r'voltmon\d+_temp': {"type": "thermal_sensor", 
+                         "val_min": 85000, "val_max": 105000, "poll_time": 3, 
+                         "input_suffix": "_input"
+                        }
 }
 
 
@@ -1432,7 +1466,14 @@ class system_device(hw_managemet_file_op):
         @param scale: scale for read value
         @return: int min/max value
         """
-        val = self.get_file_val(filename, self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type]))
+        default_val = str(self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type]))
+        if default_val[0] == "!":
+            # Use config value instead of device parameter reading 
+            default_val = default_val[1:]
+            val = int(default_val)
+        else:
+            default_val = int(default_val)
+            val = self.get_file_val(filename, default_val)
         val /= scale
         self.log.info("Set {} {} : {}".format(self.name, trh_type, val))
         return int(val)
@@ -1494,10 +1535,6 @@ class thermal_sensor(system_device):
         @summary: this function calling on sensor start after initialization or suspend off
         """
         self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", CONST.TEMP_SENSOR_SCALE)
-        # val_min_override:  overriding min value if it is defined
-        if "val_min_override" in self.sensors_config.keys():
-            self.val_min = int(self.sensors_config["val_min_override"] /CONST.TEMP_SENSOR_SCALE)
-
         self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", CONST.TEMP_SENSOR_SCALE)
 
     # ----------------------------------------------------------------------
@@ -2217,6 +2254,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.module_counter = CONST.MODULE_COUNT_DEF
         self.gearbox_counter = CONST.GEARBOX_COUNT_DEF
         self.fan_flow_capability = CONST.UNKNOWN
+        self.voltmon_file_list = []
 
         if self.check_file("config/system_flow_capability"):
             self.fan_flow_capability = self.read_file("config/system_flow_capability")
@@ -2244,6 +2282,13 @@ class ThermalManagement(hw_managemet_file_op):
         except BaseException:
             self.log.error("Missing hotplug_pwrs config.")
             sys.exit(1)
+
+        # Find voltmon temp sensors
+        file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
+        for fname in file_list:
+            res = re.match(r'(voltmon[0-9]+_temp)_input', fname)
+            if res:
+                self.voltmon_file_list.append(res.group(1))
 
         if self.fan_drwr_num:
             self.fan_drwr_capacity = int(self.max_tachos / self.fan_drwr_num)
@@ -2586,6 +2631,10 @@ class ThermalManagement(hw_managemet_file_op):
         for gearbox_idx in range(1, self.gearbox_counter + 1):
             name = "gearbox{}".format(gearbox_idx)
             self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": name})
+            
+        for voltmon in self.voltmon_file_list:
+            name = voltmon
+            self._sensor_add_config("thermal_sensor", name, {"base_file_name": name})
 
         self._sensor_add_config("thermal_module_sensor", "asic", {"base_file_name": "asic"})
 
