@@ -14,7 +14,7 @@ called now on non-modular systems, on which platform device Id is not
 specified: "mlxreg:status:green". While for the line cards LEDs it will
 be called like: "pcicard48:status:green", "ibcard66:status:green",
 etc. Where line card prefix is specified according to the type of bus
-connecting line card to the chassis: PCI, InfiniBand and so on.
+connecting line card to the chassis.
 
 LED driver works on top of register space of the programmable devices
 (CPLD or FPGA), providing the logic for LED control. The programmable
@@ -28,8 +28,7 @@ and management board.
 
 Line cards are connected to the chassis through I2C interface for the
 chassis management operations and through PCIe for the networking
-operations. Future line cards could be connected to the chassis through
-InfiniBand fabric, instead of PCIe.
+operations.
 
 The first type of line card supports 16x100GbE QSFP28 Ethernet ports.
 Those line cards equipped with the programmable devices aimed for
