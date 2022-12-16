@@ -4,8 +4,7 @@ Date: Tue, 5 Apr 2022 21:35:55 +0300
 Subject: [PATCH mlxsw/TMP 1/1] TMP: mlxsw: minimal: Ignore error reading SPAD
  register
 
-WA until FW will add support for SPAD register for
-Infiniband systems.
+WA until FW will add support for SPAD register for all systems.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
@@ -21,7 +20,7 @@ index 3d07c2dcf..f5f814a7d 100644
  	err = mlxsw_reg_query(mlxsw_m->core, MLXSW_REG(spad), spad_pl);
  	if (err)
 -		return err;
-+		return 0; /* TMP until FW will support SPAD for IB systems */
++		return 0; /* TMP until FW will support SPAD for all systems */
  	mlxsw_reg_spad_base_mac_memcpy_from(spad_pl, mlxsw_m->base_mac);
  	return 0;
  }

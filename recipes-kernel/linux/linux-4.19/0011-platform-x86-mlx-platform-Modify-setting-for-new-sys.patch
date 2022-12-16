@@ -6,8 +6,7 @@ Subject: [PATCH platform backport 1/2] platform/x86: mlx-platform: Modify
 
 Modify setting for new Mellanox system types of basic class VMOD0009,
 containing Mellanox systems equipped with the switch devices
-Spectrum 1 (32x100GbE Ethernet switch) and Switch-IB/Switch-IB2
-(36x100Gbe InfiniBand switch).
+Spectrum 1 asic.
 These are the Top of the Rack system, equipped with Mellanox Comex
 card.
 
