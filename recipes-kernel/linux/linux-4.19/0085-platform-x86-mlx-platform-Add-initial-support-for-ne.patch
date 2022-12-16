@@ -34,8 +34,7 @@ line card. The line cards are hot-pluggable.
 
 Line cards are connected to the chassis through I2C interface for the
 chassis management operations and through PCIe for the networking
-operations. Future line cards could be connected to the chassis through
-InfiniBand fabric, instead of PCIe.
+operations.
 
 The first type of line card supports 16x100GbE QSFP28 Ethernet ports.
 Those line cards equipped with the programmable devices aimed for

@@ -81,7 +81,7 @@ index 1d0c13c65..16754a7fd 100644
 +	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 +};
 +
-+/* Platform IB modular mux data */
++/* Platform rack switch mux data */
 +static struct i2c_mux_reg_platform_data mlxplat_rack_switch_mux_data[] = {
 +	{
 +		.parent = 1,

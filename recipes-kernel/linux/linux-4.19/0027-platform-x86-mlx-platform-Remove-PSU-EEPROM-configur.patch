@@ -15,7 +15,7 @@ could be equpped with different EEPROM type, which could be one byte
 address space adressing or even could be not equipped with EEPROM.
 In such case "24c32" will not work.
 
-Fixes: 1bd42d94ccab ("platform/x86: mlx-platform: Add support for new 200G IB and Ethernet systems")
+Fixes: 1bd42d94ccab ("platform/x86: mlx-platform: Add support for new 200G systems")
 Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
 ---
  drivers/platform/x86/mlx-platform.c | 15 ++-------------

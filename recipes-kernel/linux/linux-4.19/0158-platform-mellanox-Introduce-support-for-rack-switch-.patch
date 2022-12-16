@@ -1,26 +1,23 @@
-From d2a7a38621348bb81cb2bb466a24e93436b00f58 Mon Sep 17 00:00:00 2001
+From da446fac2efa63bd0ef72320a6959a0967d41080 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 27 Jan 2022 15:07:28 +0200
-Subject: [PATCH 1/8] platform: mellanox: Introduce support for NDR InfiniBand
- modular chassis
-X-NVConfidentiality: public
+Subject: platform: mellanox: Introduce support for rack switch manager
 
 Add support for MQM9510-N leaf and MQM9520-N spine blades for two
-flavors of NDR InfiniBand chassis:
-- MCS9500: 1,600Tb/s, 2048-port NDR InfiniBand chassis, which includes
+flavors of NDR chassis:
+- MCS9500: 1,600Tb/s, 2048-port NDR chassis, which includes
   32 leaves and 16 spines.
-- MCS9510: 800Tb/s, 1024-port NDR InfiniBand chassis, which includes
+- MCS9510: 800Tb/s, 1024-port NDR chassis, which includes
   16 leaves and 8 spines.
 
-MQM9510-N leaf is Nvidia Mellanox Quantum(TM) 2 NDR InfiniBand switch
+MQM9510-N leaf is Nvidia Mellanox Quantum(TM) 2 NDR switch
 equipped with 64 NDR ports, 32 OSFP dual ports, Coffee Lake COMe
-module, 2 Quantum-2 NDR InfiniBand ASICs, 2 Power Supplies (AC) and
+module, 2 Quantum-2 NDR ASICs, 2 Power Supplies (AC) and
 with hybrid cooled (liquid and air), supporting non-blocking switching
 capacity of 2x25.6Tbps.
-MQM9520-N spine is Nvidia Mellanox Quantum(TM) 2 NDR InfiniBand switch,
+MQM9520-N spine is Nvidia Mellanox Quantum(TM) 2 NDR switch,
 equipped with 64 NDR ports, Coffee Lake COMe module, 2 Quantum-2 NDR
-InfiniBand ASICs, 2 Power Supplies (AC) and with hybrid cooled (liquid
-and air).
+ASICs, 2 Power Supplies (AC) and with hybrid cooled (liquid and air).
 
 Both leaf and spine switches are two rack unit height.
 
@@ -33,7 +30,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 460 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 7124226b9..c0def9b97 100644
+index 1ac707994..c0b087d3c 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -90,6 +90,12 @@
@@ -82,7 +79,7 @@ index 7124226b9..c0def9b97 100644
  #define MLXPLAT_CPLD_CH2			10
  #define MLXPLAT_CPLD_CH3			18
  #define MLXPLAT_CPLD_CH2_ETH_MODULAR		3
-+#define MLXPLAT_CPLD_CH2_IB_MODULAR			18
++#define MLXPLAT_CPLD_CH2_RACK_SWITCH			18
  #define MLXPLAT_CPLD_CH3_ETH_MODULAR		43
  #define MLXPLAT_CPLD_CH4_ETH_MODULAR		51
  
@@ -90,13 +87,13 @@ index 7124226b9..c0def9b97 100644
  	},
  };
  
-+/* Platform channels for ib modular system family */
-+static const int mlxplat_ib_modular_channels[] = {
++/* Platform channels for modular system family */
++static const int mlxplat_rack_switch_channels[] = {
 +	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 +};
 +
-+/* Platform IB modular mux data */
-+static struct i2c_mux_reg_platform_data mlxplat_ib_modular_mux_data[] = {
++/* Platform rack switch mux data */
++static struct i2c_mux_reg_platform_data mlxplat_rack_switch_mux_data[] = {
 +	{
 +		.parent = 1,
 +		.base_nr = MLXPLAT_CPLD_CH1,
@@ -104,12 +101,12 @@ index 7124226b9..c0def9b97 100644
 +		.reg = (void __iomem *)MLXPLAT_CPLD_LPC_REG1,
 +		.reg_size = 1,
 +		.idle_in_use = 1,
-+		.values = mlxplat_ib_modular_channels,
-+		.n_values = ARRAY_SIZE(mlxplat_ib_modular_channels),
++		.values = mlxplat_rack_switch_channels,
++		.n_values = ARRAY_SIZE(mlxplat_rack_switch_channels),
 +	},
 +	{
 +		.parent = 1,
-+		.base_nr = MLXPLAT_CPLD_CH2_IB_MODULAR,
++		.base_nr = MLXPLAT_CPLD_CH2_RACK_SWITCH,
 +		.write_only = 1,
 +		.reg = (void __iomem *)MLXPLAT_CPLD_LPC_REG2,
 +		.reg_size = 1,
@@ -126,7 +123,7 @@ index 7124226b9..c0def9b97 100644
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
-+/* Platform hotplug for modular IB systems family data */
++/* Platform hotplug for rack switch systems family data */
 +static struct mlxreg_core_data mlxplat_mlxcpld_leakage_spine_items_data[] = {
 +	{
 +		.label = "leakage1",
@@ -208,7 +205,7 @@ index 7124226b9..c0def9b97 100644
 +	},
 +};
 +
-+static struct mlxreg_core_item mlxplat_mlxcpld_leaf_ndr_ib_modular_items[] = {
++static struct mlxreg_core_item mlxplat_mlxcpld_leaf_ndr_rack_switch_items[] = {
 +	{
 +		.data = mlxplat_mlxcpld_ext_psu_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
@@ -276,7 +273,7 @@ index 7124226b9..c0def9b97 100644
 +	},
 +};
 +
-+static struct mlxreg_core_item mlxplat_mlxcpld_spine_ndr_ib_modular_items[] = {
++static struct mlxreg_core_item mlxplat_mlxcpld_spine_ndr_rack_switch_items[] = {
 +	{
 +		.data = mlxplat_mlxcpld_ext_psu_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
@@ -345,9 +342,9 @@ index 7124226b9..c0def9b97 100644
 +};
 +
 +static
-+struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_leaf_ndr_ib_modular_data = {
-+	.items = mlxplat_mlxcpld_leaf_ndr_ib_modular_items,
-+	.counter = ARRAY_SIZE(mlxplat_mlxcpld_leaf_ndr_ib_modular_items),
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_leaf_ndr_rack_switch_data = {
++	.items = mlxplat_mlxcpld_leaf_ndr_rack_switch_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_leaf_ndr_rack_switch_items),
 +	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
 +	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
 +	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
@@ -356,9 +353,9 @@ index 7124226b9..c0def9b97 100644
 +};
 +
 +static
-+struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_spine_ndr_ib_modular_data = {
-+	.items = mlxplat_mlxcpld_spine_ndr_ib_modular_items,
-+	.counter = ARRAY_SIZE(mlxplat_mlxcpld_spine_ndr_ib_modular_items),
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_spine_ndr_rack_switch_data = {
++	.items = mlxplat_mlxcpld_spine_ndr_rack_switch_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_spine_ndr_rack_switch_items),
 +	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
 +	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
 +	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
@@ -373,8 +370,8 @@ index 7124226b9..c0def9b97 100644
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_modular_led_data),
  };
  
-+/* Platform led for modular IB systems with liquid cooling */
-+static struct mlxreg_core_data mlxplat_mlxcpld_ndr_ib_modular_led_data[] = {
++/* Platform led for modular systems with liquid cooling */
++static struct mlxreg_core_data mlxplat_mlxcpld_ndr_rack_switch_led_data[] = {
 +	{
 +		.label = "status:green",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
@@ -440,9 +437,9 @@ index 7124226b9..c0def9b97 100644
 +	},
 +};
 +
-+static struct mlxreg_core_platform_data mlxplat_ndr_ib_modular_led_data = {
-+		.data = mlxplat_mlxcpld_ndr_ib_modular_led_data,
-+		.counter = ARRAY_SIZE(mlxplat_mlxcpld_ndr_ib_modular_led_data),
++static struct mlxreg_core_platform_data mlxplat_ndr_rack_switch_led_data = {
++		.data = mlxplat_mlxcpld_ndr_rack_switch_led_data,
++		.counter = ARRAY_SIZE(mlxplat_mlxcpld_ndr_rack_switch_led_data),
 +};
 +
  /* Platform led data for QMB8700 system */
@@ -613,17 +610,17 @@ index 7124226b9..c0def9b97 100644
  	return 1;
  }
  
-+static int __init mlxplat_dmi_leaf_ndr_ib_modular_matched(const struct dmi_system_id *dmi)
++static int __init mlxplat_dmi_leaf_ndr_rack_switch_matched(const struct dmi_system_id *dmi)
 +{
 +	int i;
 +
 +	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
-+	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ib_modular_mux_data);
-+	mlxplat_mux_data = mlxplat_ib_modular_mux_data;
-+	mlxplat_hotplug = &mlxplat_mlxcpld_leaf_ndr_ib_modular_data;
++	mlxplat_mux_num = ARRAY_SIZE(mlxplat_rack_switch_mux_data);
++	mlxplat_mux_data = mlxplat_rack_switch_mux_data;
++	mlxplat_hotplug = &mlxplat_mlxcpld_leaf_ndr_rack_switch_data;
 +	mlxplat_hotplug->deferred_nr =
 +		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
-+	mlxplat_led = &mlxplat_ndr_ib_modular_led_data;
++	mlxplat_led = &mlxplat_ndr_rack_switch_led_data;
 +	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
 +	mlxplat_fan = &mlxplat_default_fan_data;
 +	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
@@ -634,17 +631,17 @@ index 7124226b9..c0def9b97 100644
 +	return 1;
 +}
 +
-+static int __init mlxplat_dmi_spine_ndr_ib_modular_matched(const struct dmi_system_id *dmi)
++static int __init mlxplat_dmi_spine_ndr_rack_switch_matched(const struct dmi_system_id *dmi)
 +{
 +	int i;
 +
 +	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
-+	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ib_modular_mux_data);
-+	mlxplat_mux_data = mlxplat_ib_modular_mux_data;
-+	mlxplat_hotplug = &mlxplat_mlxcpld_spine_ndr_ib_modular_data;
++	mlxplat_mux_num = ARRAY_SIZE(mlxplat_rack_switch_mux_data);
++	mlxplat_mux_data = mlxplat_rack_switch_mux_data;
++	mlxplat_hotplug = &mlxplat_mlxcpld_spine_ndr_rack_switch_data;
 +	mlxplat_hotplug->deferred_nr =
 +		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
-+	mlxplat_led = &mlxplat_ndr_ib_modular_led_data;
++	mlxplat_led = &mlxplat_ndr_rack_switch_led_data;
 +	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
 +	mlxplat_fan = &mlxplat_default_fan_data;
 +	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
@@ -663,14 +660,14 @@ index 7124226b9..c0def9b97 100644
  		},
  	},
 +	{
-+		.callback = mlxplat_dmi_spine_ndr_ib_modular_matched,
++		.callback = mlxplat_dmi_spine_ndr_rack_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI140"),
 +		},
 +	},
 +	{
-+		.callback = mlxplat_dmi_leaf_ndr_ib_modular_matched,
++		.callback = mlxplat_dmi_leaf_ndr_rack_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI141"),
