@@ -1,4 +1,4 @@
-From ca6320c0dd7c089c26f89811aedd247e656104fa Mon Sep 17 00:00:00 2001
+From 5ddc3bafb6922c809bd4d8b4e558542234cb2dc3 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 14 Feb 2022 13:24:44 +0200
 Subject: platform: mellanox: Introduce support for rack manager switch
@@ -20,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 203 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index d08be0471..32d462be6 100644
+index 8eba8a088..016d216c7 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -93,6 +93,12 @@
@@ -53,7 +53,7 @@ index d08be0471..32d462be6 100644
  #define MLXPLAT_CPLD_I2C_CAP_BIT	0x04
  #define MLXPLAT_CPLD_I2C_CAP_MASK	GENMASK(5, MLXPLAT_CPLD_I2C_CAP_BIT)
  
-@@ -2496,6 +2505,97 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_spine_ndr_ib_modular_da
+@@ -2496,6 +2505,97 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_spine_ndr_rack_switch_d
  		    MLXPLAT_CPLD_LOW_AGGR_MASK_LEAK,
  };
  
@@ -282,7 +282,7 @@ index d08be0471..32d462be6 100644
  	case MLXPLAT_CPLD_LPC_REG_WD2_TMR_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD2_TLEFT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_WD3_TMR_OFFSET:
-@@ -5801,6 +5976,27 @@ static int __init mlxplat_dmi_spine_ndr_ib_modular_matched(const struct dmi_syst
+@@ -5801,6 +5976,27 @@ static int __init mlxplat_dmi_spine_ndr_rack_switch_matched(const struct dmi_sys
  	return 1;
  }
  
@@ -291,8 +291,8 @@ index d08be0471..32d462be6 100644
 +	int i;
 +
 +	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
-+	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ib_modular_mux_data);
-+	mlxplat_mux_data = mlxplat_ib_modular_mux_data;
++	mlxplat_mux_num = ARRAY_SIZE(mlxplat_rack_switch_mux_data);
++	mlxplat_mux_data = mlxplat_rack_switch_mux_data;
 +	mlxplat_hotplug = &mlxplat_mlxcpld_rack_switch_data;
 +	mlxplat_hotplug->deferred_nr =
 +		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
