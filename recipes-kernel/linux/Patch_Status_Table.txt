@@ -346,6 +346,7 @@ Kernel-5.10
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch         |                                            |                                                 | SN5600                                                       |
 |0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            | downstream for OPT-OS use only                  | SN5600                                                       |
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         | 525dd5aed67a2f4f7278116fb92a24e6a53e2622   |  accepted                                       |                                                              |
+|0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch          |                                            | pending                                         |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
