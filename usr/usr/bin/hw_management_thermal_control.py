@@ -111,10 +111,10 @@ class CONST(object):
     FAN_SENS = "thermal/fan_amb"
     PORT_SENS = "thermal/port_amb"
 
-    # thermal zone types
     UNKNOWN = "Unknown"
-    TRUST_TYPE = "trusted"
-    UNTRUST_TYPE = "untrusted"
+    
+    # error types
+    UNTRUSTED_ERR = "untrusted"
 
     # default hw-management folder
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
@@ -123,11 +123,11 @@ class CONST(object):
     SUSPEND_FILE = "config/suspend"
 
     # delay before TC start (sec)
-    THERMAL_WAIT_FOR_CONFIG = 90
+    THERMAL_WAIT_FOR_CONFIG = 10
 
     # Default period for printing TC report (in sec.)
     # Note: set report time to 5 min on release
-    PERIODIC_REPORT_TIME = 5 * 60
+    PERIODIC_REPORT_TIME = 1 * 20
     # File which define TC report period. TC should be restarted to apply changes in this file
     PERIODIC_REPORT_FILE = "config/periodic_report"
 
@@ -203,23 +203,23 @@ SENSOR_DEF_CONFIG = {
                          "val_min":4500, "val_max":20000, "poll_time": 15
                         },
     r'module\d+':       {"type": "thermal_module_sensor", 
-                         "val_min":60000, "val_max":80000, "poll_time": 20, 
+                         "val_min":60000, "val_max":80000, "pwm_min": 20, "pwm_max": 100, "poll_time": 20, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor", 
-                         "val_min":"!70000", "val_max":"!105000", "poll_time": 6, 
+                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 20, "pwm_max": 100, "poll_time": 6, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
-                        },
+                        },z
     r'asic':            {"type": "thermal_module_sensor", 
-                         "val_min":"!70000", "val_max":"!105000", "poll_time": 3, 
+                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
                          "value_hyst" : 2, "input_smooth_level": 2
                         },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", 
-                                "val_min": "!70000",  "poll_time": 3, 
+                                "val_min": "!70000",  "val_max": "90000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
                                 "value_hyst" : 5, "input_smooth_level": 3
                                },
     r'sodimm\d_temp':   {"type": "thermal_sensor", 
-                         "val_min": "!75000", "val_crit": 85000, "poll_time": 30,
+                         "val_min": "!75000", "val_crit": 85000, "pwm_min": 20, "pwm_max": 100, "poll_time": 30,
                          "input_suffix": "_input", "input_smooth_level": 2
                         },
     r'pch':             {"type": "thermal_sensor", 
@@ -230,14 +230,14 @@ SENSOR_DEF_CONFIG = {
                          "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3, "enable" : 0 
                         },
     r'sensor_amb':      {"type": "ambiant_thermal_sensor", 
-                         "val_min": 20000, "val_max": 50000, "poll_time": 30,
+                         "val_min": 20000, "val_max": 50000, "pwm_min": 20, "pwm_max": 60, "poll_time": 30,
                          "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor", 
                          "val_min": 45000, "val_max":  85000, "poll_time": 30, "enable" : 0
                         },
     r'voltmon\d+_temp': {"type": "thermal_sensor", 
-                         "val_min": "!85000", "val_max": "!125000", "poll_time": 3, 
+                         "val_min": "!85000", "val_max": "!125000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
                          "input_suffix": "_input"
                         }
 }
@@ -290,15 +290,13 @@ sensor_read_err_default = {"-127:120": 100}
 TABLE_DEFAULT = {
     "name": "default",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -306,33 +304,16 @@ TABLE_DEFAULT = {
 }
 
 # Class t1 for MSN27*|MSN24*
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        30    30    30    30    30    30
-#   0-5        30    30    30    30    30    30
-#  5-10        30    30    30    30    30    30
-# 10-15        30    30    30    30    30    30
-# 15-20        30    30    30    30    30    30
-# 20-25        30    30    40    40    40    40
-# 25-30        30    40    50    50    50    50
-# 30-35        30    50    60    60    60    60
-# 35-40        30    60    60    60    60    60
-# 40-45        50    60    60    60    60    60
 TABLE_CLASS1 = {
     "name": "class 1",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:40": 30, "41:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -340,33 +321,16 @@ TABLE_CLASS1 = {
 }
 
 # Class t2 for MSN21*
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    20    20    20    20    20
-# 10-15        20    20    20    20    20    20
-# 15-20        20    30    20    20    20    30
-# 20-25        20    30    20    20    20    30
-# 25-30        20    40    20    20    20    40
-# 30-35        20    50    20    20    20    50
-# 35-40        20    60    20    20    20    60
-# 40-45        20    60    30    30    30    60
 TABLE_CLASS2 = {
     "name": "class 2",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:40": 20, "41:120": 30},
+        CONST.UNTRUSTED_ERR: {"-127:40": 20, "41:120": 30},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -374,33 +338,16 @@ TABLE_CLASS2 = {
 }
 
 # Class t3 for MSN274*
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        30    30    30    30    30    30
-#   0-5        30    30    30    30    30    30
-#  5-10        30    30    30    30    30    30
-# 10-15        30    30    30    30    30    30
-# 15-20        30    30    30    40    30    40
-# 20-25        30    30    30    40    30    40
-# 25-30        30    30    30    40    30    40
-# 30-35        30    30    30    50    30    50
-# 35-40        30    40    30    70    30    70
-# 40-45        30    50    30    70    30    70
 TABLE_CLASS3 = {
     "name": "class 3",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
+        CONST.UNTRUSTED_ERR: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:35": 30, "36:40": 40, "41:120": 50},
+        CONST.UNTRUSTED_ERR: {"-127:35": 30, "36:40": 40, "41:120": 50},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -408,34 +355,16 @@ TABLE_CLASS3 = {
 }
 
 # Class t4 for MSN201*
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    20    20    20    20    20
-# 10-15        20    20    20    20    20    20
-# 15-20        20    30    20    20    20    30
-# 20-25        20    40    20    30    20    40
-# 25-30        20    40    20    40    20    40
-# 30-35        20    50    20    50    20    50
-# 35-40        20    60    20    60    20    60
-# 40-45        20    60    20    60    20    60
-
 TABLE_CLASS4 = {
     "name": "class 4",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:20": 20, "21:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:20": 20, "21:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -443,33 +372,16 @@ TABLE_CLASS4 = {
 }
 
 # Class t5 for MSN3700|MQM8700
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    20    20    20    20    20
-# 10-15        20    20    20    20    20    20
-# 15-20        20    30    20    20    20    30
-# 20-25        20    30    20    20    20    30
-# 25-30        30    30    30    30    30    30
-# 30-35        30    40    30    30    30    40
-# 35-40        30    50    30    30    30    50
-# 40-45        40    60    40    40    40    60
 TABLE_CLASS5 = {
     "name": "class 5",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:25": 20, "26:40": 30, "41:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:25": 20, "26:40": 30, "41:120": 40},
+        CONST.UNTRUSTED_ERR: {"-127:25": 20, "26:40": 30, "41:120": 40},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:26": 20, "26:40": 30, "41:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -477,34 +389,16 @@ TABLE_CLASS5 = {
 }
 
 # Class t6 for MSN3700C
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    20    20    20    20    20
-# 10-15        20    30    20    20    20    30
-# 15-20        20    30    20    20    20    30
-# 20-25        20    40    20    20    20    40
-# 25-30        20    40    20    20    20    40
-# 30-35        20    50    20    20    20    50
-# 35-40        20    60    20    30    20    60
-# 40-45        30    60    20    40    30    60
-
 TABLE_CLASS6 = {
     "name": "class 6",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:35": 20, "36:40": 30, "41:120": 40},
+        CONST.UNTRUSTED_ERR: {"-127:35": 20, "36:40": 30, "41:120": 40},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -512,33 +406,16 @@ TABLE_CLASS6 = {
 }
 
 # Class t7 for MSN3800
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    30    20    20    20    30
-#  5-10        20    30    20    20    20    30
-# 10-15        20    40    20    20    20    40
-# 15-20        20    50    20    20    20    50
-# 20-25        20    60    20    30    20    60
-# 25-30        20    60    20    30    20    60
-# 30-35        20    60    30    40    30    60
-# 35-40        30    70    30    50    30    70
-# 40-45        30    70    40    60    40    70
 TABLE_CLASS7 = {
     "name": "class 7",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:30": 20, "31:40": 30, "41:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:20": 20, "21:30": 30, "31:40": 40, "41:45": 50, "46:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:20": 20, "21:30": 30, "31:40": 40, "41:45": 50, "46:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
+        CONST.UNTRUSTED_ERR: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -546,33 +423,16 @@ TABLE_CLASS7 = {
 }
 
 # Class t8 for MSN4600
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    30    20    20    20    30
-# 10-15        20    30    20    20    20    30
-# 15-20        20    30    20    20    20    30
-# 20-25        20    40    20    20    20    40
-# 25-30        20    40    20    20    20    40
-# 30-35        20    50    20    30    20    50
-# 35-40        20    60    20    30    20    60
-# 40-45        20    70    30    40    30    70
 TABLE_CLASS8 = {
     "name": "class 8",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:40": 20, "41:120": 30},
-        CONST.UNTRUST_TYPE: {"-127:30": 20, "31:40": 30, "41:120": 40},
+        CONST.UNTRUSTED_ERR: {"-127:30": 20, "31:40": 30, "41:120": 40},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
+        CONST.UNTRUSTED_ERR: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -580,34 +440,16 @@ TABLE_CLASS8 = {
 }
 
 # Class t9 for MSN3420
-# Direction    P2C        C2P        Unknown
-
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    20    20    20    20    20
-# 10-15        20    20    20    20    20    20
-# 15-20        20    20    20    20    20    20
-# 20-25        20    20    20    20    20    20
-# 25-30        20    30    20    20    20    30
-# 30-35        20    30    20    20    20    30
-# 35-40        20    40    20    20    20    40
-# 40-45        20    60    20    40    20    60
 TABLE_CLASS9 = {
     "name": "class 9",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:40": 20, "41:120": 40},
+        CONST.UNTRUSTED_ERR: {"-127:40": 20, "41:120": 40},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -615,34 +457,17 @@ TABLE_CLASS9 = {
 }
 
 # Class t10 for MSN4700
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    20    20    20    20    20
-# 10-15        20    20    20    20    20    20
-# 15-20        20    20    20    20    20    20
-# 20-25        20    20    20    20    20    20
-# 25-30        20    20    20    20    20    20
-# 30-35        20    20    20    20    20    20
-# 35-40        50    50    50    50    50    50
-# 40-45        50    50    50    50    50    50
 
 TABLE_CLASS10 = {
     "name": "class 10",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
+        CONST.UNTRUSTED_ERR: {"-127:35": 20, "36:120": 50},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:35": 20, "36:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:35": 20, "36:120": 50},
+        CONST.UNTRUSTED_ERR: {"-127:35": 20, "36:120": 50},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -650,33 +475,16 @@ TABLE_CLASS10 = {
 }
 
 # Class t11 for SN2201.
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        30    30    30    30    30    30
-#   0-5        30    30    30    30    30    30
-#  5-10        30    30    30    30    30    30
-# 10-15        30    30    30    30    30    30
-# 15-20        30    40    30    30    30    40
-# 20-25        30    50    30    40    30    50
-# 25-30        30    60    30    50    30    60
-# 30-35        40    70    30    60    40    70
-# 35-40        50    80    40    70    50    80
-# 40-45        60    90    50    80    60    90
 TABLE_CLASS11 = {
     "name": "class 11",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:35": 30, "36:40": 40, "41:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
+        CONST.UNTRUSTED_ERR: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
+        CONST.UNTRUSTED_ERR: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -684,33 +492,17 @@ TABLE_CLASS11 = {
 }
 
 # Class t12 for MSN4600
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    30    20    20    20    30
-# 10-15        20    30    20    20    30    30
-# 15-20        20    40    30    30    30    40
-# 20-25        20    40    30    30    30    40
-# 25-30        20    50    30    40    30    50
-# 30-35        20    60    30    40    30    60
-# 35-40        20    70    40    60    40    70
 # 40-45        20    70    40    60    40    70
 TABLE_CLASS12 = {
     "name": "class 12",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:15": 20, "16:35": 30, "36:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:15": 20, "16:25": 30, "26:35": 40, "41:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:25": 30, "26:35": 40, "41:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
+        CONST.UNTRUSTED_ERR: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -718,33 +510,16 @@ TABLE_CLASS12 = {
 }
 
 # Class t13 for MSN4800
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        20    20    20    20    20    20
-#   0-5        20    20    20    20    20    20
-#  5-10        20    30    20    20    20    30
-# 10-15        20    30    20    20    20    30
-# 15-20        20    30    20    20    20    30
-# 20-25        20    40    20    20    20    40
-# 25-30        30    50    20    20    30    50
-# 30-35        30    50    20    20    30    50
-# 35-40        40    60    20    20    40    60
-
 TABLE_CLASS13 = {
     "name": "class 13",
     CONST.C2P: {
-        CONST.TRUST_TYPE: {"-127:120": 20},
-        CONST.UNTRUST_TYPE: {"-127:120": 20},
+        CONST.UNTRUSTED_ERR: {"-127:120": 20},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:25": 20, "26:30": 30, "31:120": 40},
-        CONST.UNTRUST_TYPE: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
+        CONST.UNTRUSTED_ERR: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -752,36 +527,16 @@ TABLE_CLASS13 = {
 }
 
 # Class t14 for SN5600.
-# ToDo This is preBU setting, just as placeholder
-# Actual info should be provided aftyer tests on real system with ASIC.
-# Direction    P2C        C2P        Unknown
-#--------------------------------------------------------------
-# Amb [C]    copper/    AOC W/O copper/    AOC W/O    copper/    AOC W/O
-#        sensors    sensor    sensor    sensor    sensor    sensor
-#--------------------------------------------------------------
-#    <0        30    30    30    30    30    30
-#   0-5        30    30    30    30    30    30
-#  5-10        30    30    30    30    30    30
-# 10-15        30    30    30    30    30    30
-# 15-20        30    40    30    30    30    40
-# 20-25        30    50    30    40    30    50
-# 25-30        30    60    30    50    30    60
-# 30-35        40    70    30    60    40    70
-# 35-40        50    80    40    70    50    80
-# 40-45        60    90    50    80    60    90
-
 TABLE_CLASS14 = {
     "name": "class 14",
     CONST.C2P: {
-        CONST.TRUST_TYPE:{"-127:35": 30, "36:40": 40, "41:120": 50},
-        CONST.UNTRUST_TYPE: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
+        CONST.UNTRUSTED_ERR: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
     },
     CONST.P2C: {
-        CONST.TRUST_TYPE: {"-127:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
-        CONST.UNTRUST_TYPE: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
+        CONST.UNTRUSTED_ERR: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
         "fan_err": fan_err_default,
         "psu_err": psu_err_default,
         "sensor_err" :sensor_read_err_default
@@ -1256,11 +1011,11 @@ class system_device(hw_managemet_file_op):
         self.pwm = CONST.PWM_MIN
         self.last_pwm = self.pwm
         self.pwm_hysteresis = int(self.sensors_config.get("pwm_hyst", CONST.PWM_HYSTERESIS_DEF))
-        self.set_trusted(True)
         self.state = CONST.STOPPED
         self.err_fread_max = CONST.SENSOR_FREAD_FAIL_TIMES
         self.err_fread_err_counter_dict = {}
 
+        self.system_flow_dir = CONST.UNKNOWN
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
@@ -1425,19 +1180,13 @@ class system_device(hw_managemet_file_op):
         return self.poll_time_next
 
     # ----------------------------------------------------------------------
-    def is_trusted(self):
+    def set_system_flow_dir(self, flow_dir):
         """
-        @summary: Return True/False if sensor is trusted/not trusted
+        @summary: Set system flow dir info 
+        @param flow_dir: flow dir which is specified for this system or calculated by algo 
+        @return: None
         """
-        return True if self.trusted == CONST.TRUST_TYPE else False
-
-    # ----------------------------------------------------------------------
-    def set_trusted(self, trusted):
-        """
-        @summary:  set sensor trusted/untrusted
-        @param trusted: True/False
-        """
-        self.trusted = CONST.TRUST_TYPE if trusted else CONST.UNTRUST_TYPE
+        self.system_flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
     def calculate_pwm_formula(self):
@@ -1618,7 +1367,6 @@ class thermal_module_sensor(system_device):
             self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
         else:
             self.refresh_timeout = 0
-        self.set_trusted(False)
 
         # Disable kernel control for this thermal zone
 
@@ -1635,12 +1383,48 @@ class thermal_module_sensor(system_device):
             pass
 
     # ----------------------------------------------------------------------
+    def get_fault(self):
+        """
+        @summary: Get module sensor fault status
+        @return: True - in case if sensor is readeble and have consistent values
+            False - if module is in 'faulty' state
+        """
+        status = False
+        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
+        if self.check_file(fault_filename):
+            try:
+                fault_status = int(self.read_file(fault_filename))
+                self.handle_reading_file_err(fault_filename, reset=True)
+                if fault_status:
+                    status = True
+            except BaseException:
+                self.log.error("{}- Incorrect value in the file: {} ({})".format(self.name, fault_filename, BaseException))
+                status = True
+                self.handle_reading_file_err(fault_filename)
+            
+        return status
+
+    # ----------------------------------------------------------------------
+    def get_temp_support_status(self):
+        """
+        @summary: Check if module supporting temp sensor (optic)
+        @return: True - in case if temp sensor is supported
+            False - if module is not optical
+        """
+        status = True
+
+        if not self.value == 0 and self.val_max == 0:
+            self.log.info("Module unsupport temp reading val:{} max:{}".format(self.value, self.val_max))
+            status = False
+
+        return status
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
         """
         pwm = self.pwm_min
-        self.set_trusted(True)
         # refreshing min/max attributes each 30 min
         if self.refresh_timeout > 0 and self.refresh_timeout < current_milli_time():
             self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
@@ -1689,24 +1473,27 @@ class thermal_module_sensor(system_device):
         @summary: handle sensor errors
         """
         self.fault_list = []
-        fault_status = 0
+        pwm = self.pwm_min
 
-        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
-        if self.check_file(fault_filename):
-            try:
-                fault_status = int(self.read_file(fault_filename))
-                self.handle_reading_file_err(fault_filename, reset=True)
-                if fault_status:
-                    self.log.notice("{}: {} (untrusted)".format(fault_filename, fault_status))
-                    self.set_trusted(False)
-            except BaseException:
-                self.log.error("Value reading from file: {}".format(fault_filename))
-                self.handle_reading_file_err(fault_filename)
+        module_fault = self.get_fault()
+        if module_fault:
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
+            self.fault_list.append(CONST.UNTRUSTED_ERR)
+            self.log.warn("{} fault (untrusted). Set PWM {}".format(self.name, pwm))
+
+        module_temp_support = self.get_temp_support_status()
+        if not module_temp_support:
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
+            self.fault_list.append(CONST.UNTRUSTED_ERR)
+            self.log.info("{} not supporting thermal sensor  (untrusted). Set PWM {}".format(self.name, pwm))
 
         # sensor error reading counter
         if self.check_reading_file_err():
-            self.set_trusted(False)
-
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
+            self.fault_list.append(CONST.UNTRUSTED_ERR)
+            
+        self.pwm = max(pwm, self.pwm)
+        self._update_pwm()
         return None
 
 
@@ -1730,17 +1517,23 @@ class psu_fan_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
         self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
-        self.system_flow_dir = CONST.UNKNOWN
+        self.fan_dir = self._read_dir()
 
     # ----------------------------------------------------------------------
-    def set_system_flow_dir(self, flow_dir):
+    def _read_dir(self):
         """
-        @summary: Set system flow dir info 
-        @param flow_dir: flow dir which is specified for this system or calculated by algo 
-        @return: None
+        @summary: Reading chassis fan dir from FS
         """
-        self.system_flow_dir = flow_dir
+        if self._get_status() == 0:
+            return CONST.UNKNOWN
 
+        if self.check_file("thermal/{}_fan_dir".format(self.base_file_name)):
+            dir_val = self.read_file("thermal/{}_fan_dir".format(self.base_file_name))
+            direction = CONST.C2P if dir_val == "0" else CONST.P2C
+        else:
+            direction = CONST.UNKNOWN
+        return direction
+    
     # ----------------------------------------------------------------------
     def _get_status(self):
         """
@@ -1819,6 +1612,23 @@ class psu_fan_sensor(system_device):
             else:
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "psu_err", "present"])
 
+        # truth table for fan direction
+        #  FAN_DIR SYS_DIR     ERROR
+        #  C2P     C2P        False
+        #  C2P     P2C        True
+        #  C2P     UNKNOWN    False
+        #  P2C     C2P        True
+        #  P2C     P2C        False
+        #  P2C     UNKNOWN    False
+        #  UNKNOWN C2P        False
+        #  UNKNOWN P2C        False
+        #  UNKNOWN UNKNOWN    False
+        if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
+           (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
+            self.fault_list.append("direction")
+            pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "psu_err", "direction"]), pwm)
+            self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
+
         self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
         if self.check_reading_file_err():
@@ -1848,7 +1658,6 @@ class fan_sensor(system_device):
         self.fan_drwr_id = int(self.sensors_config["drwr_id"])
         self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.fan_dir = self._read_dir()
-        self.system_flow_dir = CONST.UNKNOWN
         self.is_calibrated = False
 
         self.rpm_trh = 0.10
@@ -2004,15 +1813,6 @@ class fan_sensor(system_device):
         return self.fan_dir
 
     # ----------------------------------------------------------------------
-    def set_system_flow_dir(self, flow_dir):
-        """
-        @summary: Set system flow dir info 
-        @param flow_dir: flow dir which is specified for this system or calculated by algo 
-        @return: None
-        """
-        self.system_flow_dir = flow_dir
-
-    # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
         """
         @summary:  check if sensor disabled. Sensor can be disabled by writing 1 to file {sensor_name}_blacklist
@@ -2123,18 +1923,28 @@ class ambiant_thermal_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, logger):
         system_device.__init__(self, cmd_arg, sys_config, name,  logger)
         self.value_dict = {CONST.FAN_SENS: 0, CONST.PORT_SENS: 0}
-        self.flow_dir = CONST.UNKNOWN
+        self.flow_dir = CONST.C2P
+
+ # ----------------------------------------------------------------------
+    def sensor_configure(self):
+        """
+        @summary: this function calling on sensor start after initialization or suspend off
+        """
+        self.val_min = self.read_val_min_max("", "val_min", CONST.TEMP_SENSOR_SCALE)
+        self.val_max = self.read_val_min_max("", "val_max", CONST.TEMP_SENSOR_SCALE)
 
     # ----------------------------------------------------------------------
-    def set_flow_dir(self, direction):
-        self.flow_dir = direction
+    def set_flow_dir(self, flow_dir):
+        self.flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         """
+        pwm = self.pwm_min
+
         # reading all amb sensors
-        for _, sens_file_name in self.base_file_name.items():
+        for flow_dir, sens_file_name in self.base_file_name.items():
             if not self.check_file(sens_file_name):
                 self.log.warn("{}: missing file {}".format(self.name, sens_file_name))
                 self.handle_reading_file_err(sens_file_name)
@@ -2143,21 +1953,29 @@ class ambiant_thermal_sensor(system_device):
                     temperature = int(self.read_file(sens_file_name))
                     self.handle_reading_file_err(sens_file_name, reset=True)
                     temperature /= CONST.TEMP_SENSOR_SCALE
-                    self.value_dict[sens_file_name] = int(temperature)
+                    self.value_dict[flow_dir] = int(temperature)
                     self.log.debug("{} {} value {}".format(self.name, sens_file_name, temperature))
                 except BaseException:
                     self.log.error("Error value reading from file: {}".format(self.base_file_name))
                     self.handle_reading_file_err(sens_file_name)
 
-        if self.flow_dir == CONST.C2P:
-            value = self.value_dict[CONST.FAN_SENS]
-        elif self.flow_dir == CONST.P2C:
-            value = self.value_dict[CONST.PORT_SENS]
-        else:
-            value = self.value_dict[CONST.PORT_SENS]
+        value = self.value_dict[self.flow_dir]
         self.update_value(value)
 
-        self.pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, self.trusted], interpolated=True)
+        if self.value > self.val_max:
+            pwm = self.pwm_max
+            self.log.info("{} value({}) more then max({}). Set pwm {}".format(self.name,
+                                                                              self.value,
+                                                                              self.val_max,
+                                                                              pwm))
+        elif self.value < self.val_min:
+            pwm = self.pwm_min
+            self.log.debug("{} value {}".format(self.name, self.value))
+        else:
+            pwm = self.calculate_pwm_formula()
+
+        self.pwm = pwm
+        #g_get_dmin(thermal_table, self.value, [self.flow_dir, self.trusted], interpolated=True)
 
     # ----------------------------------------------------------------------
     def handle_err(self, thermal_table, flow_dir, amb_tmp):
@@ -2166,7 +1984,7 @@ class ambiant_thermal_sensor(system_device):
         pwm = self.pwm_min
         # sensor error reading counter
         if self.check_reading_file_err():
-            pwm = g_get_dmin(thermal_table, 60, [self.flow_dir, self.trusted])
+            pwm = g_get_dmin(thermal_table, 60, [self.flow_dir, "sensor_err"])
         self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return None
@@ -2176,7 +1994,11 @@ class ambiant_thermal_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        info_str = "\"{}\" temp:{}, dir:{}, pwm:{}, {}".format(self.name, self.value_dict, self.flow_dir, self.pwm, self.state)
+        sens_val = ""
+        for key,val in self.base_file_name.items():
+            if key in self.value_dict.keys():
+                sens_val += "{}:{} ".format(val, self.value_dict[key])
+        info_str = "\"{}\" {}, dir:{}, pwm:{}, {}".format(self.name, sens_val, self.flow_dir, self.pwm, self.state)
         return info_str
 
 
@@ -2224,8 +2046,6 @@ class ThermalManagement(hw_managemet_file_op):
         self.pwm_sooth_step_max = CONST.PWM_INC_STEP_MAX
         self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
-
-        self.trusted = True
         self.state = CONST.UNCONFIGURED
 
         signal.signal(signal.SIGTERM, self.sig_handler)
@@ -2310,19 +2130,6 @@ class ThermalManagement(hw_managemet_file_op):
             if re.match(name_mask, dev_obj.name):
                 return dev_obj
         return None
-
-    # ----------------------------------------------------------------------
-    def _check_untrusted_module_sensor(self):
-        """
-        @summary:
-            Check if some module if fault state
-        @return: True - on sensor failure False - Ok
-        """
-        for dev_obj in self.dev_obj_list:
-            if dev_obj.enable:
-                if not dev_obj.is_trusted():
-                    return False
-        return True
 
     def _get_chassis_fan_dir(self):
         """
@@ -2430,12 +2237,10 @@ class ThermalManagement(hw_managemet_file_op):
             Update all nested subsystems with the expected flow fir
         @return: None
         """
-        self.system_flow_dir = flow_dir
         self.log.info("Update chassis FAN dir {}".format(flow_dir))
-        for fan_idx in range(1, self.fan_drwr_num + 1):
-            fan_obj = self._get_dev_obj("fan{}.*".format(fan_idx))
-            if fan_obj:
-                fan_obj.set_system_flow_dir(flow_dir)
+        self.system_flow_dir = flow_dir
+        for dev_obj in self.dev_obj_list:
+            dev_obj.set_system_flow_dir(flow_dir)
 
     # ----------------------------------------------------------------------
     def _is_suspend(self):
@@ -2761,8 +2566,6 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Run thermal control")
         self.log.notice("********************************")
 
-        self.trusted = True
-
         # main loop
         while not self.exit.is_set():
             try:
@@ -2788,8 +2591,6 @@ class ThermalManagement(hw_managemet_file_op):
                     if current_milli_time() >= dev_obj.get_timestump():
                         # process sensors
                         if dev_obj.name == "sensor_amb":
-                            self.trusted = self._check_untrusted_module_sensor()
-                            dev_obj.set_trusted(self.trusted)
                             dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, None)
                             self.amb_tmp = dev_obj.get_value()
                         else:
@@ -2840,7 +2641,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("================================")
         self.log.notice("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
         self.log.notice("Cooling(%) {} ({})".format(self.pwm_target, self.pwm_change_reason))
-        self.log.notice("dir:{}, trusted:{}".format(flow_dir, self.trusted))
+        self.log.notice("dir:{}".format(flow_dir))
         self.log.notice("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
