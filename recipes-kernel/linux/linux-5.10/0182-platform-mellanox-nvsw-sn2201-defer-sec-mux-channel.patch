@@ -1,0 +1,27 @@
+diff -Nur a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
+--- a/drivers/platform/mellanox/nvsw-sn2201.c	2022-12-26 19:00:14.837073954 +0200
++++ b/drivers/platform/mellanox/nvsw-sn2201.c	2022-12-26 19:12:55.056200524 +0200
+@@ -71,11 +71,15 @@
+ #define NVSW_SN2201_PHY_I2C_BUS_NUM		2
+ /* Number of main mux channels. */
+ #define NVSW_SN2201_MAIN_MUX_CHNL_NUM		8
++/* Number of secondary mux channels. */
++#define NVSW_SN2201_SEC_MUX_CHNL_NUM		4
+ 
+ #define NVSW_SN2201_MAIN_NR			0
+ #define NVSW_SN2201_MAIN_MUX_NR			1
+ #define NVSW_SN2201_MAIN_MUX_DEFER_NR		(NVSW_SN2201_PHY_I2C_BUS_NUM + \
+ 						 NVSW_SN2201_MAIN_MUX_CHNL_NUM - 1)
++#define NVSW_SN2201_SEC_MUX_DEFER_NR		(NVSW_SN2201_MAIN_MUX_DEFER_NR + \
++						 NVSW_SN2201_SEC_MUX_CHNL_NUM)
+ 
+ #define NVSW_SN2201_MAIN_MUX_CH0_NR	NVSW_SN2201_PHY_I2C_BUS_NUM
+ #define NVSW_SN2201_MAIN_MUX_CH1_NR	(NVSW_SN2201_MAIN_MUX_CH0_NR + 1)
+@@ -516,6 +520,7 @@
+ 	.counter = ARRAY_SIZE(nvsw_sn2201_items),
+ 	.cell = NVSW_SN2201_SYS_INT_STATUS_OFFSET,
+ 	.mask = NVSW_SN2201_CPLD_AGGR_MASK_DEF,
++	.deferred_nr = NVSW_SN2201_SEC_MUX_DEFER_NR,
+ };
+ 
+ /* SN2201 static devices. */
