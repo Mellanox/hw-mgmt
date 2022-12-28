@@ -508,7 +508,7 @@ unk_dir_untrust_t14=(15000 13 20000 14 25000 15 30000 16 35000 17 40000 18 45000
 
 # Local variables
 report_counter=120
-audit_trigger=10
+audit_limit=6
 audit_count=0
 fan_max_state=10
 fan_dynamic_min=12
@@ -1479,6 +1479,28 @@ do
 	# presence of untrusted optical cables or presence of any cables
 	# with untrusted temperature sensing.
 	set_pwm_min_threshold
+	# Init audit for fan speed step-by-step reducing.
+	audit_count=$((audit_count+1))
+	if [ "$audit_count" -le "$audit_limit" ]; then
+		cooling_min=$((fan_dynamic_min-fan_max_state))
+		cooling=$(< $cooling_cur_state)
+		# Set limit at init at first cycles from 90% to >= 40%,
+		# if environment allows to decrease fan speed.
+		fan_limit=$((fan_max_state-audit_count))
+		if [ "$cooling_min" -le "$cooling" ]; then
+			cooling_level_updated=0
+			# Test for high thermal zones.
+			check_trip_min_vs_current_temp "high" $fan_limit
+		fi
+		# Update PS unit fan speed
+		update_psu_fan_speed
+		# If one of PS units is out disable thermal zone and set PWM to the
+		# maximum speed.
+		get_psu_presence
+		# If one of tachometers is faulty set PWM to the maximum speed.
+		get_fan_faults
+		continue
+	fi
 	# Verify if cooling state required update.
 	update_dynamic_min_pwm
 	# Update PS unit fan speed
@@ -1524,24 +1546,6 @@ do
 		check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
 		full_speed=$pwm_noact
 		handle_dynamic_trend=0
-	fi
-
-	# Periodic audit for fan speed reducing.
-	# TMP: Temporary disable audit. Uncomment line below in next release.
-	# audit_count=$((audit_count+1))
-	if [ "$audit_count" -ge "$audit_trigger" ]; then
-		cooling_min=$((fan_dynamic_min-fan_max_state))
-		cooling=$(< $cooling_cur_state)
-		if [ "$cooling_min" -le  "$cooling" ]; then
-			cooling_level_updated=0
-			# Test for normal thermal zones.
-			check_trip_min_vs_current_temp "norm" $fan_norm_trip_low_limit
-			if [ "$cooling_level_updated" -eq 0 ]; then
-				# Test for high thermal zones.
-				check_trip_min_vs_current_temp "high" $fan_high_trip_low_limit
-			fi
-		fi
-		audit_count=0
 	fi
 
 	# Periodic log report.
