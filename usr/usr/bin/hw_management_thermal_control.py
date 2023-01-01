@@ -116,12 +116,6 @@ class CONST(object):
     # error types
     UNTRUSTED_ERR = "untrusted"
 
-    # default hw-management folder
-    HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
-
-    # suspend control file path
-    SUSPEND_FILE = "config/suspend"
-
     # delay before TC start (sec)
     THERMAL_WAIT_FOR_CONFIG = 10
 
@@ -132,8 +126,8 @@ class CONST(object):
     PERIODIC_REPORT_FILE = "config/periodic_report"
 
     # Default sensor configuration if not 0configured other value
-    SENSOR_POLL_TIME_DEF = 3
-    TEMP_INIT_DEF = 25
+    SENSOR_POLL_TIME_DEF = 30
+    TEMP_INIT_VAL_DEF = 25
     TEMP_SENSOR_SCALE = 1000.0
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
@@ -149,6 +143,10 @@ class CONST(object):
     ### FAN calibration
     # Time for FAN rotation stabilize after change
     FAN_RELAX_TIME = 10
+
+    FAN_SHUTDOWN_ENA = "1"
+    FAN_SHUTDOWN_DIS = "0"
+
     # Cycles for FAN speed calibration at 100%.
     # FAN RPM value will be averaged  by reading by several(FAN_CALIBRATE_CYCLES) readings
     FAN_CALIBRATE_CYCLES = 2
@@ -209,7 +207,7 @@ SENSOR_DEF_CONFIG = {
     r'gearbox\d+':      {"type": "thermal_module_sensor", 
                          "val_min":"!70000", "val_max":"!105000", "pwm_min": 20, "pwm_max": 100, "poll_time": 6, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
-                        },z
+                        },
     r'asic':            {"type": "thermal_module_sensor", 
                          "val_min":"!70000", "val_max":"!105000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
                          "value_hyst" : 2, "input_smooth_level": 2
@@ -457,7 +455,6 @@ TABLE_CLASS9 = {
 }
 
 # Class t10 for MSN4700
-
 TABLE_CLASS10 = {
     "name": "class 10",
     CONST.C2P: {
@@ -492,7 +489,6 @@ TABLE_CLASS11 = {
 }
 
 # Class t12 for MSN4600
-# 40-45        20    70    40    60    40    70
 TABLE_CLASS12 = {
     "name": "class 12",
     CONST.C2P: {
@@ -702,7 +698,6 @@ class Logger(object):
         self.logger = logging.getLogger("main")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
-
         self.logger_fh = None
 
         self.set_param(use_syslog, log_file, verbosity)
@@ -1006,7 +1001,7 @@ class system_device(hw_managemet_file_op):
         self.val_max = CONST.TEMP_MIN_MAX["val_max"]
         self.pwm_min = CONST.PWM_MIN
         self.pwm_max = CONST.PWM_MAX
-        self.value = CONST.TEMP_INIT_DEF
+        self.value = CONST.TEMP_INIT_VAL_DEF
         self.value_acc = self.value * self.input_smooth_level
         self.pwm = CONST.PWM_MIN
         self.last_pwm = self.pwm
@@ -1686,6 +1681,7 @@ class fan_sensor(system_device):
         self.rpm_valid_state = True
         self.fan_dir_fail = False
         self.fan_dir = self._read_dir()
+        self.fan_shutdown(False)
 
     # ----------------------------------------------------------------------
     def _read_dir(self):
@@ -1836,6 +1832,24 @@ class fan_sensor(system_device):
         return val
 
     # ----------------------------------------------------------------------
+    def fan_shutdown(self, shutdown=False):
+        ""
+        if not name:
+            try:
+                name = self.name.split(':')[0]
+            except:
+                name = self.name
+        fan_shutdown_filename = "system/{}_shutdown"
+        if self.check_file(fan_shutdown_filename):
+            try:
+                state = CONST.FAN_SHUTDOWN_ENA if shutdown else CONST.FAN_SHUTDOWN_DIS    
+                self.write_file(fan_shutdown_filename, state)
+            except ValueError:
+                return False
+        else:
+            return False
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
@@ -1895,9 +1909,11 @@ class fan_sensor(system_device):
         if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
            (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.fault_list.append("direction")
+            self.fan_shutdown(True)
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "direction"]), pwm)
             self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
-
+        else:
+            self.fan_shutdown(False)
         self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
         if self.check_reading_file_err():
@@ -2066,7 +2082,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG))
         self.exit.wait(CONST.THERMAL_WAIT_FOR_CONFIG)
         self._collect_hw_info()
-        self.amb_tmp = CONST.TEMP_INIT_DEF
+        self.amb_tmp = CONST.TEMP_INIT_VAL_DEF
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -2529,7 +2545,7 @@ class ThermalManagement(hw_managemet_file_op):
             ambient_sensor = self._get_dev_obj("sensor_amb")
             if ambient_sensor:
                 ambient_sensor.set_flow_dir(fan_dir)
-                ambient_sensor.process(self.sys_config[CONST.SYS_CONF_DMIN], fan_dir, CONST.TEMP_INIT_DEF)
+                ambient_sensor.process(self.sys_config[CONST.SYS_CONF_DMIN], fan_dir, CONST.TEMP_INIT_VAL_DEF)
                 ambient_sensor = self._get_dev_obj("sensor_amb")
                 self.amb_tmp = ambient_sensor.get_value()
 
