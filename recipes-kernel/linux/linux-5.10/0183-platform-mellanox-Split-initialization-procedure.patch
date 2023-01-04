@@ -1,7 +1,7 @@
-From abcbf10289d597ef4775608a2d9d4bbe3337dfe8 Mon Sep 17 00:00:00 2001
+From ad57f0d22787f5e5beaed888b57c1a862e39de49 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 11 Dec 2022 10:44:43 +0200
-Subject: [PATCH backport 5.10 2/4] platform: mellanox: Split initialization
+Subject: [PATCH backport 5.10 13/15] platform: mellanox: Split initialization
  procedure
 
 Split mlxplat_init() into two by adding mlxplat_pre_init().
@@ -18,7 +18,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 60 insertions(+), 18 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index e5a4d2472..578ab331b 100644
+index db7aa802b..551570eb1 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -323,6 +323,8 @@

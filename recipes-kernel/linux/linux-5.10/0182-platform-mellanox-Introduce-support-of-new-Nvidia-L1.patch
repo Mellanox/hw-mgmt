@@ -1,7 +1,7 @@
-From d68961c4f9afc6d6242b39f32343a4c357c001bc Mon Sep 17 00:00:00 2001
+From b8918a2ebc07712f8449e28fa5a3656f13624623 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 11 Dec 2022 09:26:48 +0200
-Subject: [PATCH backport 5.10 1/4] platform: mellanox: Introduce support of
+Subject: [PATCH backport 5.10 12/15] platform: mellanox: Introduce support of
  new Nvidia L1 switch
 
 Add support for new L1 switch nodes providing L1 connectivity for
@@ -31,7 +31,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 365 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index eb07b271f..e5a4d2472 100644
+index 4bbe1d8f0..db7aa802b 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -15,6 +15,7 @@

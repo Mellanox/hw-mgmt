@@ -1,7 +1,7 @@
-From 3dafb2c8b1c961c6e786c84c1933efab55d0df7b Mon Sep 17 00:00:00 2001
+From 823e4d301d6ce1f0df6b481dae3f70464e604638 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 May 2022 14:31:10 +0300
-Subject: [PATCH backport 5.10 07/17] DS: platform: mlx-platform: Add SPI path
+Subject: [PATCH backport 5.10 01/15] DS: platform: mlx-platform: Add SPI path
  for rack switch for EROT access
 
 Create spidev for OOB access to External Root of Trusts devices.
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 17 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 16754a7fd..a580ab850 100644
+index 3ad85934d..135ccea3a 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -16,6 +16,7 @@
@@ -49,10 +49,10 @@ index 16754a7fd..a580ab850 100644
  
  static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
  {
-@@ -5462,6 +5474,7 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+@@ -5551,6 +5563,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
  		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
- 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
+ 	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
 +	mlxplat_spi = rack_switch_switch_spi_board_info;
  
  	return 1;

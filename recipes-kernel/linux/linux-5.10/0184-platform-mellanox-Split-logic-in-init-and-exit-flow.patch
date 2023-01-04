@@ -1,8 +1,8 @@
-From fcd6e4edacb18198c9f85f164486f06f52532adc Mon Sep 17 00:00:00 2001
+From 7ba2d9598576d3abc5c6e7a70bbef479baaaf8b3 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 11 Dec 2022 11:08:07 +0200
-Subject: [PATCH backport 5.10 3/4] platform: mellanox: Split logic in init and
- exit flow
+Subject: [PATCH backport 5.10 14/15] platform: mellanox: Split logic in init
+ and exit flow
 
 Split logic in mlxplat_init()/mlxplat_exit() routines.
 Separate initialization of I2C infrastructure and others platform
@@ -25,7 +25,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 205 insertions(+), 109 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 578ab331b..7d53ace4a 100644
+index 551570eb1..1bb9e47f0 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -314,6 +314,9 @@
