@@ -201,23 +201,23 @@ SENSOR_DEF_CONFIG = {
                          "val_min":4500, "val_max":20000, "poll_time": 15
                         },
     r'module\d+':       {"type": "thermal_module_sensor", 
-                         "val_min":60000, "val_max":80000, "pwm_min": 20, "pwm_max": 100, "poll_time": 20, 
+                         "val_min":60000, "val_max":80000, "pwm_min": 30, "pwm_max": 100, "poll_time": 20, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor", 
-                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 20, "pwm_max": 100, "poll_time": 6, 
+                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 30, "pwm_max": 100, "poll_time": 6, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
                         },
     r'asic':            {"type": "thermal_module_sensor", 
-                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
+                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 30, "pwm_max": 100, "poll_time": 3, 
                          "value_hyst" : 2, "input_smooth_level": 2
                         },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", 
-                                "val_min": "!70000",  "val_max": "90000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
-                                "value_hyst" : 5, "input_smooth_level": 3
-                               },
+                        "val_min": "!70000",  "val_max": "90000", "pwm_min": 30, "pwm_max": 100, "poll_time": 3, 
+                        "value_hyst" : 5, "input_smooth_level": 3
+                       },
     r'sodimm\d_temp':   {"type": "thermal_sensor", 
-                         "val_min": "!75000", "val_crit": 85000, "pwm_min": 20, "pwm_max": 100, "poll_time": 30,
+                         "val_min": "!75000", "val_crit": 85000, "pwm_min": 30, "pwm_max": 100, "poll_time": 30,
                          "input_suffix": "_input", "input_smooth_level": 2
                         },
     r'pch':             {"type": "thermal_sensor", 
@@ -228,14 +228,14 @@ SENSOR_DEF_CONFIG = {
                          "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3, "enable" : 0 
                         },
     r'sensor_amb':      {"type": "ambiant_thermal_sensor", 
-                         "val_min": 20000, "val_max": 50000, "pwm_min": 20, "pwm_max": 60, "poll_time": 30,
+                         "val_min": 20000, "val_max": 50000, "pwm_min": 30, "pwm_max": 60, "poll_time": 30,
                          "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor", 
                          "val_min": 45000, "val_max":  85000, "poll_time": 30, "enable" : 0
                         },
     r'voltmon\d+_temp': {"type": "thermal_sensor", 
-                         "val_min": "!85000", "val_max": "!125000", "pwm_min": 20, "pwm_max": 100, "poll_time": 3, 
+                         "val_min": "!85000", "val_max": "!125000", "pwm_min": 30, "pwm_max": 100, "poll_time": 3, 
                          "input_suffix": "_input"
                         }
 }
@@ -244,8 +244,8 @@ SENSOR_DEF_CONFIG = {
 #############################################
 # PSU fan speed vs system fan speed table
 #############################################
-PSU_PWM_DECODE_DEF = {"0:10": 30,
-           "11:21": 30,
+PSU_PWM_DECODE_DEF = {"0:10": 10,
+           "11:21": 20,
            "21:30": 30,
            "31:40": 40,
            "41:50": 50,
@@ -260,11 +260,11 @@ PSU_PWM_DECODE_DEF = {"0:10": 30,
 ############################
 SYS_FAN_PARAM_DEF = {
         "C2P": {
-            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101},
-            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101}},
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101}},
         "P2C": {
-            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101},
-            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 150, "pwm_min" : 101}}
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101}}
     }
 
 #############################

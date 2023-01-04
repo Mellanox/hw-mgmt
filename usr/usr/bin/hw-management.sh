@@ -980,6 +980,7 @@ msn27xx_msb_msx_specific()
 
 	set_spc1_port_cpld
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
