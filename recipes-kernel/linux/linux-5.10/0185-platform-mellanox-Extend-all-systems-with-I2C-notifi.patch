@@ -1,8 +1,8 @@
-From d2d81c2adb5058ec3cc4afd6ef84f17df4ea77b1 Mon Sep 17 00:00:00 2001
+From c7a66f2da9fc569729288ce438819eef07372c6b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 26 Dec 2022 22:28:33 +0200
-Subject: [PATCH backport 5.10 4/4] platform: mellanox: Extend all systems with
- I2C notification callback
+Subject: [PATCH backport 5.10 15/15] platform: mellanox: Extend all systems
+ with I2C notification callback
 
 Motivation is to provide synchronization between I2C main bus and other
 platform drivers using this notification callback.
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 7d53ace4a..6b648315b 100644
+index 1bb9e47f0..04675ad9a 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -358,6 +358,11 @@ static const struct resource mlxplat_lpc_resources[] = {
