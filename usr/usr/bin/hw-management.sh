@@ -1233,6 +1233,7 @@ msn47xx_specific()
 		fi
 	fi
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700.json"
 	thermal_type=$thermal_type_t10
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
@@ -1362,6 +1363,7 @@ mqm97xx_specific()
 		add_cpu_board_to_connection_table
 	fi
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7

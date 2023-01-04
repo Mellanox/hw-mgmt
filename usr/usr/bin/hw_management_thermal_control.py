@@ -235,7 +235,7 @@ SENSOR_DEF_CONFIG = {
                          "val_min": 45000, "val_max":  85000, "poll_time": 30, "enable" : 0
                         },
     r'voltmon\d+_temp': {"type": "thermal_sensor", 
-                         "val_min": "!85000", "val_max": "!125000", "pwm_min": 30, "pwm_max": 100, "poll_time": 3, 
+                         "val_min": "!70000", "val_max": "!95000", "pwm_min": 30, "pwm_max": 70, "poll_time": 3, 
                          "input_suffix": "_input"
                         }
 }
