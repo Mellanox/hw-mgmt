@@ -200,6 +200,45 @@ get_fixed_fans_direction()
 	esac
 }
 
+# Get PSU direction based on VPD PN field
+# PN_VPD_FIELD can have 2 formats
+# 1. PN_VPD_FIELD: MTEF-PSF-AC-G
+# 2. PN_VPD_FIELD: 930-9SPSU-00RA-00B
+#
+# Input parameters:
+# 1 - "$psu_name"
+# Return FAN direction
+# 0 - Forward (C2P)
+# 1 - Reverse (P2C)
+# 2 - unknown (read error or field missing)
+get_psu_fan_direction()
+{
+	vpd_file=$1
+	dir_char=""
+	pn="$(grep PN_VPD_FIELD $vpd_file)"
+	if [ -z $pn ]; then
+		return 2
+	fi
+	MLX_REGEXP="MTEF-PS([R,F])"
+	NV_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
+	[[ $pn =~ $MLX_REGEXP ]]
+	if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		dir_char="${BASH_REMATCH[1]}"
+	else
+		[[ $pn =~ $NV_REGEXP ]]
+		if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+			dir_char="${BASH_REMATCH[1]}"
+		fi
+	fi
+	if [ $dir_char == "F" ]; then
+		return 0
+	elif [ $dir_char == "R" ]; then
+		return 1
+	else
+		return 2
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -569,7 +608,8 @@ if [ "$1" == "add" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
+			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
+			if [ -f /etc/autochipup ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
@@ -784,6 +824,10 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
+		# Get PSU FAN direction
+		get_psu_fan_direction $eeprom_path/"$psu_name"_vpd
+		echo $? > "$thermal_path"/"$psu_name"_fan_dir
+
 		# Expose min/max psu fan speed per psu from vpd to attributes.
 		grep MIN_RPM: $eeprom_path/"$psu_name"_vpd | cut -d' ' -f2 > "$thermal_path"/"$psu_name"_fan_min
 		grep MAX_RPM: $eeprom_path/"$psu_name"_vpd | cut -d' ' -f2 > "$thermal_path"/"$psu_name"_fan_max
@@ -820,7 +864,8 @@ if [ "$1" == "add" ]; then
 						echo 40000 > "$config_path"/amb_tmp_crit_limit
 					fi
 					echo 30 > "$config_path"/"$psu_name"_power_slope
-					echo "$cap" > "$config_path"/"$psu_name"_power_capacity
+					power_cap=$((cap*1000000))
+					echo $power_cap > "$config_path"/"$psu_name"_power_capacity
 				fi
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
@@ -877,25 +922,13 @@ elif [ "$1" == "change" ]; then
 			if [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
-			if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
+			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
+			if [ -f /etc/autochipup ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
 			/usr/bin/hw-management.sh chipdown "$asic_index"
-		else
-			asic_health=0
-			if [ -f "$3""$4"/asic1 ]; then
-				asic_health=$(< "$4""$5"/asic1)
-			fi
-			if [ "$asic_health" -eq 2 ]; then
-				if [ ! -f /etc/init.d/sxdkernel ] && [ ! -f /usr/lib/cumulus/sxdkernel ]; then
-					sleep 3
-					/usr/bin/hw-management.sh chipup "$asic_index"
-				fi
-			else
-				/usr/bin/hw-management.sh chipdown "$asic_index"
-			fi
 		fi
 	fi
 else
