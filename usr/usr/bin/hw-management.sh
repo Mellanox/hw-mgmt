@@ -438,6 +438,28 @@ sn5600_base_connect_table=( \
 
 p2317_connect_table=(	24c512 0x51 8)
 
+p4262_base_connect_table=( \
+	lm5066 0x11 4 \
+	pmbus 0x12 4 \
+	pmbus 0x13 4 \
+	pmbus 0x16 4 \
+	pmbus 0x17 4 \
+	pmbus 0x1b 4 \
+	pca9555 0x44 4\
+	24c502 0x50 4 \
+	tmp75 0x49 7 \
+	tmp75 0x4a 7 \
+	max11603 0x6d 7 \
+	24c512 0x51 8 )
+
+# TBD MS. Check exact components
+p4262_dynamic_i2c_bus_connect_table=( \
+	mp2975 0x62 26 voltmon1 \
+	mp2975 0x65 26 voltmon2 \
+	mp2975 0x67 26 voltmon3 \
+	mp2975 0x62 29 voltmon4 \
+	mp2975 0x65 29 voltmon5 )
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
@@ -758,7 +780,7 @@ add_cpu_board_to_connection_table()
 			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
 				# MQM9700, P4697 removed A2D from CFL
-				HI130 | HI142)
+				HI130|HI142|HI152)  # TBD MS. Which other systems have CFL comex with A2D
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
@@ -1685,6 +1707,29 @@ sn_spc4_common()
 	esac
 }
 
+p4262_specific()
+{
+	local cpu_bus_offset=18
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${p4262_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
+	echo 3 > $config_path/cpld_num
+	hotplug_fans=6
+	max_tachos=12
+	hotplug_pwrs=0
+	hotplug_psus=0
+	erot_count=2
+	asic_control=0
+	thermal_type=$thermal_type_def
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
+	add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
+}
+
 check_system()
 {
 	# Check ODM
@@ -1724,6 +1769,9 @@ check_system()
 			;;
 		VMOD0015)
 			p2317_specific
+			;;
+		VMOD0017)
+			p4262_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2033,10 +2081,7 @@ set_asic_pci_id()
 	HI131)
 		asic_pci_id=$nv3_pci_id
 		;;
-	HI142)
-		asic_pci_id=$nv4_pci_id
-		;;
-	HI143)
+	HI142|HI143|HI152)
 		asic_pci_id=$nv4_pci_id
 		;;
 	*)
@@ -2054,7 +2099,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|HI142)
+	HI131|HI141|HI142|HI152)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
