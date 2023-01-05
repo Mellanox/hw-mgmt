@@ -125,6 +125,12 @@ class CONST(object):
     # File which define TC report period. TC should be restarted to apply changes in this file
     PERIODIC_REPORT_FILE = "config/periodic_report"
 
+    # default hw-management folder
+    HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
+
+    # suspend control file path
+    SUSPEND_FILE = "config/suspend"
+
     # Default sensor configuration if not 0configured other value
     SENSOR_POLL_TIME_DEF = 30
     TEMP_INIT_VAL_DEF = 25
@@ -184,6 +190,8 @@ name - name of sensor. Could be any string
 poll_time - polling time in sec for sensor read/error check
 val_min/val_max - default values in case sensor don't expose limits in hw-management folder
 pwm_max/pwm_min - PWM limits tat sensor can set
+input_suffix - second part for sensor input file name
+    input_filename = base_file_name + input_suffix
 pwm_hyst - hysteresis for PWM value change. PWM value for thermal sensor can be calculated by the formula:
     pwm = pwm_min + ((value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
 input_smooth_level - soothing level for sensor input value reading. Formula to calculate avg:
@@ -201,41 +209,41 @@ SENSOR_DEF_CONFIG = {
                          "val_min":4500, "val_max":20000, "poll_time": 15
                         },
     r'module\d+':       {"type": "thermal_module_sensor", 
-                         "val_min":60000, "val_max":80000, "pwm_min": 30, "pwm_max": 100, "poll_time": 20, 
+                          "pwm_min": 30, "pwm_max": 100, "val_min":60000, "val_max":80000, "poll_time": 20, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor", 
-                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 30, "pwm_max": 100, "poll_time": 6, 
+                         "pwm_min": 30, "pwm_max": 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 6, 
                          "input_suffix": "_temp_input", "value_hyst" : 2, "refresh_attr_period": 30 * 60
                         },
     r'asic':            {"type": "thermal_module_sensor", 
-                         "val_min":"!70000", "val_max":"!105000", "pwm_min": 30, "pwm_max": 100, "poll_time": 3, 
+                         "pwm_min": 30, "pwm_max": 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, 
                          "value_hyst" : 2, "input_smooth_level": 2
                         },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor", 
-                        "val_min": "!70000",  "val_max": "90000", "pwm_min": 30, "pwm_max": 100, "poll_time": 3, 
+                        "pwm_min": 30, "pwm_max": 100, "val_min": "!70000",  "val_max": "90000", "poll_time": 3, 
                         "value_hyst" : 5, "input_smooth_level": 3
                        },
     r'sodimm\d_temp':   {"type": "thermal_sensor", 
-                         "val_min": "!75000", "val_crit": 85000, "pwm_min": 30, "pwm_max": 100, "poll_time": 30,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!75000", "val_crit": 85000, "poll_time": 30,
                          "input_suffix": "_input", "input_smooth_level": 2
                         },
     r'pch':             {"type": "thermal_sensor", 
-                         "val_min": 50000, "val_max": 85000, "poll_time": 10, 
+                         "pwm_min": 30, "pwm_max": 60, "val_min": 50000, "val_max": 85000, "poll_time": 10, 
                          "input_suffix": "_temp", "value_hyst" : 2, "input_smooth_level": 2, "enable" : 0
                         },
     r'comex_amb':       {"type": "thermal_sensor", 
-                         "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3, "enable" : 0 
+                         "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst" : 2, "poll_time": 3, "enable" : 0 
                         },
     r'sensor_amb':      {"type": "ambiant_thermal_sensor", 
-                         "val_min": 20000, "val_max": 50000, "pwm_min": 30, "pwm_max": 60, "poll_time": 30,
+                         "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, "poll_time": 30,
                          "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor", 
-                         "val_min": 45000, "val_max":  85000, "poll_time": 30, "enable" : 0
+                         "val_min": 45000, "val_max":85000, "poll_time": 30, "enable" : 0
                         },
     r'voltmon\d+_temp': {"type": "thermal_sensor", 
-                         "val_min": "!70000", "val_max": "!95000", "pwm_min": 30, "pwm_max": 70, "poll_time": 3, 
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 3, 
                          "input_suffix": "_input"
                         }
 }
@@ -1351,11 +1359,7 @@ class thermal_module_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-        if "asic" in self.base_file_name:
-            self.val_min =  self.val_max - 20
-        else:
-            self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+        self.refresh_attr()
 
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
         if self.refresh_attr_period:
@@ -1376,6 +1380,14 @@ class thermal_module_sensor(system_device):
             self.write_file(tz_mode_filename, "disabled")
         except:
             pass
+
+    def refresh_attr(self):
+        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+        if "asic" in self.base_file_name:
+            self.val_min =  self.val_max - 20
+        else:
+            self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+
 
     # ----------------------------------------------------------------------
     def get_fault(self):
@@ -1422,8 +1434,7 @@ class thermal_module_sensor(system_device):
         pwm = self.pwm_min
         # refreshing min/max attributes each 30 min
         if self.refresh_timeout > 0 and self.refresh_timeout < current_milli_time():
-            self.val_max = self.read_val_min_max("thermal/{}/temp_trip_hot".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
-            self.val_min = self.read_val_min_max("thermal/{}/temp_trip_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+            self.refresh_attr()
             self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
 
         temp_read_file = "thermal/{}".format(self.file_input)
@@ -1558,7 +1569,13 @@ class psu_fan_sensor(system_device):
         if present == 1:
             psu_pwm, _, _ =  g_get_range_val(self.pwm_decode, pwm)
             if not psu_pwm:
-                self.log.warning("{} Can't much PWM {} to PSU. PPWM value not be change".format(self.name, pwm))
+                self.log.warning("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
+
+            if psu_pwm == -1:
+                self.log.debug("{} PWM value {}. It means PWM should not be shanged".format(self.name, pwm))
+                # no need to change PSU PWM
+                return
+
             if psu_pwm < CONST.PWM_PSU_MIN:
                 psu_pwm = CONST.PWM_PSU_MIN
 
