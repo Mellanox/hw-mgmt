@@ -438,19 +438,30 @@ sn5600_base_connect_table=( \
 
 p2317_connect_table=(	24c512 0x51 8)
 
+# 6 TS are temporary for BU and will be removed later.
+# EEPROM 0x52 and A2D are unused
 p4262_base_connect_table=( \
+	pmbus 0x10 4 \
 	lm5066 0x11 4 \
 	pmbus 0x12 4 \
 	pmbus 0x13 4 \
 	pmbus 0x16 4 \
-	pmbus 0x17 4 \
 	pmbus 0x1b 4 \
-	pca9555 0x44 4\
+	tmp75 0x4d 4 \
+	tmp75 0x4e 4 \
 	24c502 0x50 4 \
+	tmp75 0x48 7 \
 	tmp75 0x49 7 \
 	tmp75 0x4a 7 \
+	tmp75 0x4b 7 \
+	tmp75 0x4c 7 \
+	tmp75 0x4d 7 \
+	tmp75 0x4e 7 \
+	tmp75 0x4f 7 \
+	24c502 0x50 7 \
 	max11603 0x6d 7 \
-	24c512 0x51 8 )
+	24c512 0x51 8 \
+	24c512 0x52 8 )
 
 # TBD MS. Check exact components
 p4262_dynamic_i2c_bus_connect_table=( \
