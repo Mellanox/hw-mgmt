@@ -160,7 +160,7 @@ class CONST(object):
     ### PWM smoothing
     DMIN_PWM_STEP_MIN = 2
     # PWM smoothing in time
-    PWM_INC_STEP_MAX = 8
+    PWM_MAX_REDUCTION = 8
     PWM_WORKER_POLL_TIME = 5
 
     # default system devices
@@ -268,11 +268,11 @@ PSU_PWM_DECODE_DEF = {"0:10": 10,
 ############################
 SYS_FAN_PARAM_DEF = {
         "C2P": {
-            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101},
-            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101}},
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10}},
         "P2C": {
-            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101},
-            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101}}
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10}}
     }
 
 #############################
@@ -1446,6 +1446,7 @@ class thermal_module_sensor(system_device):
                 temperature = int(self.read_file(temp_read_file))
                 self.handle_reading_file_err(temp_read_file, reset=True)
                 temperature /= CONST.TEMP_SENSOR_SCALE
+                self.log.debug("{} value:{}.".format(self.name, temperature))
                 # for modules that is not equipped with thermal sensor temperature returns zero
                 value = int(temperature)
                 self.update_value(value)
@@ -1698,6 +1699,7 @@ class fan_sensor(system_device):
         self.rpm_valid_state = True
         self.fan_dir_fail = False
         self.fan_dir = self._read_dir()
+        self.drwr_param = self.fan_param[self.fan_dir]
         self.fan_shutdown(False)
 
     # ----------------------------------------------------------------------
@@ -1756,11 +1758,10 @@ class fan_sensor(system_device):
     def _validate_rpm(self):
         """
         """
-        drwr_param = self.fan_param[self.fan_dir]
         pwm_curr = self.read_pwm()
 
         for tacho_idx in range (self.tacho_cnt):
-            fan_param =  drwr_param[str(tacho_idx)]
+            fan_param =  self.drwr_param[str(tacho_idx)]
             rpm_real = self.thermal_read_file_int("fan{}_speed_get".format(self.tacho_idx + tacho_idx))
             rpm_min = int(fan_param["rpm_min"])
             if rpm_min == 0:
@@ -1825,6 +1826,11 @@ class fan_sensor(system_device):
         """
         return self.fan_dir
 
+    def get_max_reduction(self):
+        ""
+        val = self.drwr_param["0"].get("pwm_max_reduction", CONST.PWM_MAX_REDUCTION)
+        return int(val)
+
     # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
         """
@@ -1851,11 +1857,7 @@ class fan_sensor(system_device):
     # ----------------------------------------------------------------------
     def fan_shutdown(self, shutdown=False):
         ""
-        if not name:
-            try:
-                name = self.name.split(':')[0]
-            except:
-                name = self.name
+        name = self.name
         fan_shutdown_filename = "system/{}_shutdown"
         if self.check_file(fan_shutdown_filename):
             try:
@@ -2057,8 +2059,10 @@ class ThermalManagement(hw_managemet_file_op):
         hw_managemet_file_op.__init__(self, cmd_arg)
         self.log = Logger(cmd_arg[CONST.LOG_USE_SYSLOG], cmd_arg[CONST.LOG_FILE], cmd_arg["verbosity"])
         self.log.notice("Preinit thermal control")
-
-        self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
+        try:
+            self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
+        except BaseException:
+            pass
         self.periodic_report_worker_timer = None
         self.cmd_arg = cmd_arg
 
@@ -2076,7 +2080,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         self.dev_obj_list = []
 
-        self.pwm_sooth_step_max = CONST.PWM_INC_STEP_MAX
+        self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
         self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
         self.state = CONST.UNCONFIGURED
@@ -2256,8 +2260,8 @@ class ThermalManagement(hw_managemet_file_op):
         if self.pwm_target < self.pwm:
             diff = abs(self.pwm_target - self.pwm)
             step = int(round((float(diff) / 2 + 0.5)))
-            if step > self.pwm_sooth_step_max:
-                step = self.pwm_sooth_step_max
+            if step > self.pwm_max_reduction:
+                step = self.pwm_max_reduction
             self.pwm -= step
         else:
             self.pwm = self.pwm_target
@@ -2321,8 +2325,7 @@ class ThermalManagement(hw_managemet_file_op):
                 break
 
     # ----------------------------------------------------------------------
-    @staticmethod
-    def _pwm_get_max(pwm_list):
+    def _pwm_get_max(self, pwm_list):
         """
         @summary: calculating PWM. returning maximum PWM value in the passed list
         @param pwm_lis: list with pwm values.
@@ -2337,8 +2340,7 @@ class ThermalManagement(hw_managemet_file_op):
         return pwm_max, name
 
     # ----------------------------------------------------------------------
-    @staticmethod
-    def _pwm_strategy_avg(pwm_list):
+    def _pwm_strategy_avg(self, pwm_list):
         return float(sum(pwm_list)) / len(pwm_list)
 
     # ----------------------------------------------------------------------
@@ -2355,8 +2357,7 @@ class ThermalManagement(hw_managemet_file_op):
             sys.exit(1)
 
     # ----------------------------------------------------------------------
-    @staticmethod
-    def _match_system_table(typename):
+    def _match_system_table(self, typename):
         """
         @summary: Find corresponded dmin table configuration based on system typename
         @param typename: name of system dmin table/ Please see available names in THERMAL_TABLE_LIST
@@ -2548,6 +2549,11 @@ class ThermalManagement(hw_managemet_file_op):
                 if dev_obj.enable:
                     dev_obj.start()
 
+            # get FAN max reduction from any of FAN
+            fan_obj = self._get_dev_obj(r'fan\d+')
+            if fan_obj:
+                self.pwm_max_reduction = fan_obj.get_max_reduction()
+
             if not self.periodic_report_worker_timer:
                 self.periodic_report_worker_timer = RepeatedTimer(self.periodic_report_time, self.print_periodic_info)
             self.periodic_report_worker_timer.start()
@@ -2644,11 +2650,11 @@ class ThermalManagement(hw_managemet_file_op):
             sleep_ms = int(timestump_next - current_milli_time())
 
             # Poll time should not be smaller than 1 sec to reduce system load
-            # and mot more 10 sec to have a good response for suspend mode change polling
+            # and mot more 20 sec to have a good respreaction for suspend mode change polling
             if sleep_ms < 1 * 1000:
                 sleep_ms = 1 * 1000
-            elif sleep_ms > 10 * 1000:
-                sleep_ms = 10 * 1000
+            elif sleep_ms > 20 * 1000:
+                sleep_ms = 20 * 1000
             self.exit.wait(sleep_ms / 1000)
 
     # ----------------------------------------------------------------------
