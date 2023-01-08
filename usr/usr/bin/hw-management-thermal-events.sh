@@ -43,6 +43,8 @@ max_pwm=4
 max_lcs=8
 max_erots=2
 max_leakage=8
+max_health_events=4
+max_power_events=1
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
@@ -614,6 +616,22 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
 		done
+		for ((i=0; i<=max_health_events; i+=1)); do
+			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
+				ln -sf "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
+				event=$(< $system_path/${l1_switch_health_events[$i]})
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/${l1_switch_health_events[$i]}
+				fi
+			fi
+		done
+		if [ -f "$3""$4"/power_button ]; then
+			ln -sf "$3""$4"/power_button $system_path/power_button
+			event=$(< $system_path/power_button)
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $events_path/power_button
+			fi
+		fi
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -1129,6 +1147,10 @@ else
 		for ((i=1; i<=asic_num; i+=1)); do
 			/usr/bin/hw-management.sh chipdown "$i"
 		done
+		for ((i=0; i<=max_health_events; i+=1)); do
+			check_n_unlink $system_path/${l1_switch_health_events[$i]}
+		done
+		check_n_unlink  $system_path/power_button
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
