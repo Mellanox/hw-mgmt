@@ -345,8 +345,12 @@ Kernel-5.10
 |0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch         |                                            |                                                 | SN5600                                                       |
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch         |                                            |                                                 | SN5600                                                       |
 |0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            | downstream for OPT-OS use only                  | SN5600                                                       |
-|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         | 525dd5aed67a2f4f7278116fb92a24e6a53e2622   |  accepted                                       |                                                              |
+|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         | 525dd5aed67a2f4f7278116fb92a24e6a53e2622   | accepted                                        |                                                              |
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch          |                                            | pending                                         |                                                              |
+|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch         |                                            | pending                                         |                                                              |
+|0183-platform-mellanox-Split-initialization-procedure.patch             |                                            | pending                                         |                                                              |
+|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch          |                                            | pending                                         |                                                              |
+|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch         |                                            | pending                                         |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
