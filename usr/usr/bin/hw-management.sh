@@ -82,6 +82,8 @@ hotplug_fans=6
 hotplug_pwrs=2
 hotplug_linecards=0
 erot_count=0
+health_events_count=0
+pwr_events_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
@@ -1734,6 +1736,8 @@ p4262_specific()
 	hotplug_psus=0
 	erot_count=2
 	asic_control=0
+	health_events_count=4
+	pwr_events_count=1
 	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
@@ -1906,7 +1910,12 @@ create_event_files()
 		done
 		check_n_init $events_path/leakage_rope 0
 	fi
-
+	for ((i=0; i<health_events_count; i+=1)); do
+		check_n_init  $events_path/${l1_switch_health_events[$i]} 0
+	done
+	if [ $pwr_events_count -ne 0 ]; then
+		check_n_init $events_path/power_button 0
+	fi
 }
 
 enable_vpd_wp()
