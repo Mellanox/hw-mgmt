@@ -53,6 +53,7 @@ system_ver_file=/sys/devices/virtual/dmi/id/product_version
 devtree_file=$config_path/devtree
 i2c_bus_def_off_eeprom_cpu_file=$config_path/i2c_bus_def_off_eeprom_cpu
 i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
+l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
 
 # Thermal type constants
 thermal_type_t1=1
