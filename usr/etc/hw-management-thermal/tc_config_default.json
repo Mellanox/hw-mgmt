@@ -1,7 +1,6 @@
  {
 	"dmin" : {
-		"name": "default",
-		"C2P": {
+			"C2P": {
 			"untrusted": {"-127:120": 60},
 			"fan_err": {
 				"tacho": {"-127:120": 100},

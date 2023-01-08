@@ -294,7 +294,6 @@ psu_err_default = {
 sensor_read_err_default = {"-127:120": 100}
 
 TABLE_DEFAULT = {
-    "name": "default",
     CONST.C2P: {
         CONST.UNTRUSTED_ERR: {"-127:120": 60},
         "fan_err": fan_err_default,
@@ -308,263 +307,6 @@ TABLE_DEFAULT = {
         "sensor_err" :sensor_read_err_default
     }
 }
-
-# Class t1 for MSN27*|MSN24*
-TABLE_CLASS1 = {
-    "name": "class 1",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t2 for MSN21*
-TABLE_CLASS2 = {
-    "name": "class 2",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:40": 20, "41:120": 30},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:25": 30, "26:31": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t3 for MSN274*
-TABLE_CLASS3 = {
-    "name": "class 3",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 30, "16:30": 40, "31:35": 50, "36:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:35": 30, "36:40": 40, "41:120": 50},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t4 for MSN201*
-TABLE_CLASS4 = {
-    "name": "class 4",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:20": 20, "21:25": 30, "26:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t5 for MSN3700|MQM8700
-TABLE_CLASS5 = {
-    "name": "class 5",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:25": 20, "26:40": 30, "41:120": 40},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "41:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t6 for MSN3700C
-TABLE_CLASS6 = {
-    "name": "class 6",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:35": 20, "36:40": 30, "41:120": 40},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:10": 20, "11:20": 30, "21:30": 40, "31:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t7 for MSN3800
-TABLE_CLASS7 = {
-    "name": "class 7",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:20": 20, "21:30": 30, "31:40": 40, "41:45": 50, "46:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:0": 20, "1:10": 30, "11:15": 40, "16:20": 50, "21:35": 60, "36:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t8 for MSN4600
-TABLE_CLASS8 = {
-    "name": "class 8",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:30": 20, "31:40": 30, "41:120": 40},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:5": 20, "6:20": 30, "21:30": 40, "31:35": 50, "36:40": 60, "41:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t9 for MSN3420
-TABLE_CLASS9 = {
-    "name": "class 9",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:40": 20, "41:120": 40},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:25": 20, "26:35": 30, "36:40": 40, "41:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t10 for MSN4700
-TABLE_CLASS10 = {
-    "name": "class 10",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:35": 20, "36:120": 50},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:35": 20, "36:120": 50},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t11 for SN2201.
-TABLE_CLASS11 = {
-    "name": "class 11",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "41:45": 80, "46:120": 90},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t12 for MSN4600
-TABLE_CLASS12 = {
-    "name": "class 12",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 20, "16:25": 30, "26:35": 40, "41:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:5": 20, "6:15": 30, "16:25": 40, "26:30": 50, "36:40": 60, "41:120": 70},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t13 for MSN4800
-TABLE_CLASS13 = {
-    "name": "class 13",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:120": 20},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:5": 20, "6:20": 30, "21:25": 40, "26:35": 50, "36:120": 60},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-# Class t14 for SN5600.
-TABLE_CLASS14 = {
-    "name": "class 14",
-    CONST.C2P: {
-        CONST.UNTRUSTED_ERR: {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    },
-    CONST.P2C: {
-        CONST.UNTRUSTED_ERR: {"-127:15": 30, "16:20": 40, "21:25": 50, "26:30": 60, "31:35": 70, "36:40": 80, "41:120": 90},
-        "fan_err": fan_err_default,
-        "psu_err": psu_err_default,
-        "sensor_err" :sensor_read_err_default
-    }
-}
-
-THERMAL_TABLE_LIST = {
-    "default": TABLE_DEFAULT,
-    r'(MSN27\d+)|(MSN24\d+)|(tc_t1)': TABLE_CLASS1,
-    r'(MSN21\d+)|(tc_t2)': TABLE_CLASS2,
-    r'(MSN274\d+)|(tc_t3)': TABLE_CLASS3,
-    r"(MSN201\d)|(tc_t4)": TABLE_CLASS4,
-    r"(MSN3700)|(MQM8700)|(tc_t5)": TABLE_CLASS5,
-    r"(MSN3700C)|(tc_t6)": TABLE_CLASS6,
-    r"(MSN3800)|(tc_t7)": TABLE_CLASS7,
-    r"(MSN4600C)|(tc_t8)": TABLE_CLASS8,
-    r"(MSN3420)|(tc_t9)": TABLE_CLASS9,
-    r"(MSN4700)|(tc_t10)": TABLE_CLASS10,
-    r"(SN2201)|(tc_t11)": TABLE_CLASS11,
-    r"(MSN4600C)|(tc_t12)": TABLE_CLASS12,
-    r"(MSN4800)|(tc_t13)": TABLE_CLASS13,
-    r"(MSN5600)|(tc_t14)": TABLE_CLASS14
-}
-
 
 def str2bool(val):
     """
@@ -1388,7 +1130,6 @@ class thermal_module_sensor(system_device):
         else:
             self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
 
-
     # ----------------------------------------------------------------------
     def get_fault(self):
         """
@@ -1446,7 +1187,7 @@ class thermal_module_sensor(system_device):
                 temperature = int(self.read_file(temp_read_file))
                 self.handle_reading_file_err(temp_read_file, reset=True)
                 temperature /= CONST.TEMP_SENSOR_SCALE
-                self.log.debug("{} value:{}.".format(self.name, temperature))
+                self.log.debug("{} value:{}".format(self.name, temperature))
                 # for modules that is not equipped with thermal sensor temperature returns zero
                 value = int(temperature)
                 self.update_value(value)
@@ -1463,8 +1204,6 @@ class thermal_module_sensor(system_device):
             except BaseException:
                 self.log.warn("value reading from file: {}".format(self.base_file_name))
                 self.handle_reading_file_err(temp_read_file)
-
-        self.log.debug("{} value {}".format(self.name, self.value))
 
         self.pwm = pwm
         # check if module have sensor interface
@@ -1772,9 +1511,11 @@ class fan_sensor(system_device):
                 rpm_max = self.val_max_def
 
             pwm_min = int(fan_param["pwm_min"])
-            slope= int(fan_param["slope"])
-            # 1. Check fan speed in range
-            if rpm_real < rpm_min or rpm_real> rpm_max:
+            slope = int(fan_param["slope"])
+            self.log.debug("{}:{} validate_rpm".format(self.name, fan_param))
+            self.log.debug("Real:{} min:{} max:{} slope{} validate rpm".format(rpm_real, rpm_min, rpm_max, slope))
+            # 1. Check fan speed in range with 10% tolerance
+            if rpm_real < rpm_min*0.9 or rpm_real > rpm_max*1.1:
                 self.log.info("{} tacho{}={} out of RPM range {}:{}".format(self.name,
                                                                              tacho_idx+1,
                                                                              rpm_real,
@@ -1790,8 +1531,13 @@ class fan_sensor(system_device):
                     b = rpm_max - slope * CONST.PWM_MAX
                     rpm_calcuated = slope * pwm_curr + b
                     rpm_diff = abs(rpm_real - rpm_calcuated)
-                    rpm_diff = int(float(rpm_diff) / rpm_calcuated)
-                    if rpm_diff >= self.rpm_trh:
+                    rpm_diff_norm = float(rpm_diff) / rpm_calcuated
+                    self.log.debug("validate_rpm:{} b:{} rpm_calcuated:{} rpm_diff:{} rpm_diff_norm:{}".format(self.name,
+                                                                                                              b,
+                                                                                                              rpm_calcuated,
+                                                                                                              rpm_diff,
+                                                                                                              rpm_diff_norm))
+                    if rpm_diff_norm >= self.rpm_trh:
                         self.log.warn("{} tacho {}: {} too much different {}% than calculated {} pwm  {}".format(self.name,
                                                                                                                 tacho_idx,
                                                                                                                 rpm_real,
@@ -2400,32 +2146,20 @@ class ThermalManagement(hw_managemet_file_op):
         else:
             config_file_name = CONST.SYSTEM_CONFIG_FILE
 
-        try:
-            if os.path.isfile(config_file_name):
-                with open(config_file_name) as f:
-                    self.log.info("Loading system config from {}".format(config_file_name))
-                    sys_config = json.load(f)
-            else:
-                self.log.warn("Missing system config file {}. Applying default config.".format(config_file_name))
-        except:
-            self.log.error("Error on loading system config file {}. Applying default config.".format(config_file_name))
-
+        if os.path.exists(config_file_name):
+            with open(config_file_name) as f:
+                self.log.info("Loading system config from {}".format(config_file_name))
+                try:
+                     sys_config = json.load(f)
+                except:
+                    self.log.error("System config file {} broken. Applying default config.".format(config_file_name))
+        else:
+            self.log.warn("System config file {} missing. Applying default config.".format(config_file_name))
+        
         # 1. Init dmin tablex
         if CONST.SYS_CONF_DMIN not in sys_config:
-            self.log.info("Dmin table missing in system_config. Init it from local.")
-            typename = self.read_file("config/thermal_type")
-            if typename:
-                typename = "tc_t{}".format(typename)
-            elif self.board_type:
-                typename = self.board_type
-
-            thermal_table = self._match_system_table(typename)
-
-            if not thermal_table:
-                thermal_table = THERMAL_TABLE_LIST["default"]
-                self.log.info("System typename {} not found. Using default thermal type:{}.".format(typename, thermal_table["name"]))
-            else:
-                self.log.info("System thermal type:\"{}\"".format(thermal_table["name"]))
+            self.log.info("Dmin table missing in system_config. Using default dmin table")
+            thermal_table = TABLE_DEFAULT
             sys_config[CONST.SYS_CONF_DMIN] = thermal_table
 
         # 2. Init PSU fan speed vs system fan speed table
