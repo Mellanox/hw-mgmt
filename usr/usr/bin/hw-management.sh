@@ -85,6 +85,7 @@ erot_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
+thermal_control_configs_path="/etc/hw-management-thermal"
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
@@ -1001,6 +1002,7 @@ msn27xx_msb_msx_specific()
 
 	set_spc1_port_cpld
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
@@ -1253,6 +1255,7 @@ msn47xx_specific()
 		fi
 	fi
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700.json"
 	thermal_type=$thermal_type_t10
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
@@ -1382,6 +1385,7 @@ mqm97xx_specific()
 		add_cpu_board_to_connection_table
 	fi
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
@@ -2216,6 +2220,11 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+	fi
+	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+		ln -sf $thermal_control_config $config_path/tc_config.json
+	else
+		ln -sf $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }
