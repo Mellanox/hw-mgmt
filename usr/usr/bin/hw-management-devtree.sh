@@ -47,6 +47,8 @@ declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
 declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus")
 
+declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
+
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
 
@@ -161,6 +163,18 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["adt75_0"]="tmp102 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 system_eeprom")
 
+declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
+			       ["tmp75_1"]="tmp75 0x49 7 port_temp2" \
+			       ["tmp75_2"]="tmp75 0x4a 7 port_temp3" \
+			       ["tmp75_3"]="tmp75 0x4b 7 port_temp3" \
+			       ["tmp75_4"]="tmp75 0x4c 7 fan_temp1" \
+			       ["tmp75_5"]="tmp75 0x4d 7 fan_temp2" \
+			       ["tmp75_6"]="tmp75 0x4e 7 fan_temp3" \
+			       ["tmp75_7"]="tmp75 0x4f 7 fan_temp3" \
+			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
+			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
+			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBios
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -182,6 +196,19 @@ declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["icp201xx_0"]="icp201xx 0x63 4 press_sens1" \
 				   ["icp201xx_1"]="icp201xx 0x64 4 press_sens2" \
 				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
+
+declare -A pwr_type1_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
+				   ["lm5066_1"]="lm5066 0x11 4 hot_swap" \
+				   ["pmbus_1"]="pmbus 0x12 4 pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x16 4 pwr_conv4" \
+				   ["pmbus_4"]="pmbus 0x1b 4 pwr_conv5" \
+				   ["tmp75_0"]="tmp75 0x4d 4 pdb_temp1" \
+				   ["adt75_0"]="tmp75 0x4d 4 pdb_temp1" \
+				   ["tmp75_1"]="tmp75 0x4e 4 pdb_temp2" \
+				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
+				   ["24c502_0"]="24c502 0x50 4 pdb_eeprom" \
+				   ["24c502_1"]="24c502 0x50 7 cable_cartridge_eeprom")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
@@ -335,6 +362,15 @@ devtr_check_supported_system_init_alternatives()
 			done
 			return 0
 			;;
+		VMOD0017)
+			for key in "${!p4262_alternatives[@]}"; do
+				swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
+			done
+			for key in "${!pwr_type1_alternatives[@]}"; do
+				pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
+			done
+			return 0
+			;;
 		*)
 			return 1
 			;;
@@ -399,7 +435,7 @@ devtr_check_board_components()
 			;;
 	esac
 
-	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; brd=0
+	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; h_cnt=0; brd=0
 	curr_component=()
 	for comp in "${comp_arr[@]}"; do
 		# Skip 1st tuple in board string. It desctibes board name and number.
@@ -520,6 +556,21 @@ devtr_check_board_components()
 					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 				fi
 				o_cnt=$((o_cnt+1))
+				;;
+			H)	# Hot-swap
+				if [ "$component_key" == "0" ]; then
+					h_cnt=$((h_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${h_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				echo -n "${alternative_comp} " >> "$devtree_file"
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
+				h_cnt=$((h_cnt+1))
 				;;
 			*)
 				log_err "Incorrect SMBios BOM encoded category. Category key ${category_key}"
