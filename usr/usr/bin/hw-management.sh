@@ -479,6 +479,7 @@ msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
+p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
 
 ACTION=$1
 
@@ -1743,6 +1744,9 @@ p4262_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
 	add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
+	named_busses+=(${p4262_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
 check_system()
