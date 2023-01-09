@@ -351,6 +351,7 @@ Kernel-5.10
 |0183-platform-mellanox-Split-initialization-procedure.patch             |                                            | pending                                         |                                                              |
 |0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch          |                                            | pending                                         |                                                              |
 |0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch         |                                            | pending                                         |                                                              |
+|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch         |                                            | pending                                         |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  

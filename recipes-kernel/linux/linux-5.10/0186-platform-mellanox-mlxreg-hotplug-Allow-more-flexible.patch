@@ -1,0 +1,76 @@
+From 8eded15026323df6012eb5324e5b6d12f4630c84 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 9 Jan 2023 19:35:31 +0200
+Subject: [PATCH backport 5.10 1/1] platform/mellanox: mlxreg-hotplug: Allow
+ more flexible hotplug events configuration
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Currently hotplug configuration in logic device assumes that all items
+are provided with no holes.
+Thus, any group of hotplug events, associated with the specific
+status/event/mask registers is configured in those registers
+successively from bit zero to bit #n (#n < 8).
+
+This logic is changed int order to allow non-successive definition to
+support configuration with the skipped bits – for example bits 3, 5, 7
+in status/event/mask registers can be associated with hotplug events,
+while others can be skipped.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c | 22 +++++++++++++++++++---
+ 1 file changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index 117bc3f39..4f27ed3a2 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -239,6 +239,17 @@ static ssize_t mlxreg_hotplug_attr_show(struct device *dev,
+ #define PRIV_ATTR(i) priv->mlxreg_hotplug_attr[i]
+ #define PRIV_DEV_ATTR(i) priv->mlxreg_hotplug_dev_attr[i]
+ 
++static int mlxreg_hotplug_item_label_index_get(u32 mask, u32 bit)
++{
++	int i, j;
++
++	for (i = 0, j = -1; i <= bit; i++) {
++		if (mask & BIT(i))
++			j++;
++	}
++	return j;
++}
++
+ static int mlxreg_hotplug_attr_init(struct mlxreg_hotplug_priv_data *priv)
+ {
+ 	struct mlxreg_core_hotplug_platform_data *pdata;
+@@ -272,7 +283,7 @@ static int mlxreg_hotplug_attr_init(struct mlxreg_hotplug_priv_data *priv)
+ 		/* Go over all unmasked units within item. */
+ 		mask = item->mask;
+ 		k = 0;
+-		for_each_set_bit(j, &mask, item->count) {
++		for_each_set_bit(j, &mask, 8) {
+ 			if (data->capability) {
+ 				/*
+ 				 * Read capability register and skip non
+@@ -365,9 +376,14 @@ mlxreg_hotplug_work_helper(struct mlxreg_hotplug_priv_data *priv,
+ 	regval &= item->mask;
+ 	asserted = item->cache ^ regval;
+ 	item->cache = regval;
+-
+ 	for_each_set_bit(bit, &asserted, 8) {
+-		data = item->data + bit;
++		int pos;
++
++		pos = mlxreg_hotplug_item_label_index_get(item->mask, bit);
++		if (pos < 0)
++			goto out;
++
++		data = item->data + pos;
+ 		if (regval & BIT(bit)) {
+ 			if (item->inversed)
+ 				mlxreg_hotplug_device_destroy(priv, data, item->kind);
+-- 
+2.20.1
+
