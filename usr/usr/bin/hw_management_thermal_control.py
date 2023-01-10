@@ -94,11 +94,24 @@ class CONST(object):
     SYS_CONF_DEV_PARAM = "dev_parameters"
     SYS_CONF_SENSORS_CONF = "sensors_config"
 
+    # *************************
+    # Folders definition
+    # *************************
+
+    # default hw-management folder
+    HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
+    # Link to thermal data
+    SYSTEM_CONFIG_FILE = "/var/run/hw-management/config/tc_config.json"
     # File which defined current level filename.
     # User can dynamically change loglevel without TC restarting.
     LOG_LEVEL_FILENAME = "config/tc_log_level"
-
-    SYSTEM_CONFIG_FILE = "/var/run/hw-management/config/tc_config.json"
+     # File which define TC report period. TC should be restarted to apply changes in this file
+    PERIODIC_REPORT_FILE = "config/periodic_report"
+    # suspend control file path
+    SUSPEND_FILE = "config/suspend"
+    # Sensor files for ambiant temperature measurement
+    FAN_SENS = "thermal/fan_amb"
+    PORT_SENS = "thermal/port_amb"
 
     # Fan direction string alias
     #fan dir:
@@ -107,29 +120,17 @@ class CONST(object):
     C2P = "C2P"
     P2C = "P2C"
 
-    # Sensor files for ambiant temperature measurement
-    FAN_SENS = "thermal/fan_amb"
-    PORT_SENS = "thermal/port_amb"
-
     UNKNOWN = "Unknown"
 
     # error types
     UNTRUSTED_ERR = "untrusted"
 
     # delay before TC start (sec)
-    THERMAL_WAIT_FOR_CONFIG = 10
+    THERMAL_WAIT_FOR_CONFIG = 120
 
     # Default period for printing TC report (in sec.)
     # Note: set report time to 5 min on release
     PERIODIC_REPORT_TIME = 1 * 20
-    # File which define TC report period. TC should be restarted to apply changes in this file
-    PERIODIC_REPORT_FILE = "config/periodic_report"
-
-    # default hw-management folder
-    HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
-
-    # suspend control file path
-    SUSPEND_FILE = "config/suspend"
 
     # Default sensor configuration if not 0configured other value
     SENSOR_POLL_TIME_DEF = 30
@@ -162,6 +163,8 @@ class CONST(object):
     # PWM smoothing in time
     PWM_MAX_REDUCTION = 8
     PWM_WORKER_POLL_TIME = 5
+    # FAN RPM tolerance in percent
+    FAN_RPM_TOLERANCE = 30
 
     # default system devices
     PSU_COUNT_DEF = 2
@@ -202,11 +205,11 @@ input_smooth_level - soothing level for sensor input value reading. Formula to c
 
 SENSOR_DEF_CONFIG = {
     r'psu\d+_fan':      {"type": "psu_fan_sensor",
-                         "val_min":4500, "val_max":20000, "poll_time": 30,
+                         "val_min":4500, "val_max":20000, "poll_time": 3,
                          "input_suffix": "_fan1_speed_get",
                         },
     r'fan\d+':          {"type": "fan_sensor",
-                         "val_min":4500, "val_max":20000, "poll_time": 15
+                         "val_min":4500, "val_max":20000, "poll_time": 3
                         },
     r'module\d+':       {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min":60000, "val_max":80000, "poll_time": 20,
@@ -268,11 +271,11 @@ PSU_PWM_DECODE_DEF = {"0:10": 10,
 ############################
 SYS_FAN_PARAM_DEF = {
         "C2P": {
-            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10},
-            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10}},
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
         "P2C": {
-            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10},
-            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10}}
+            "0" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
+            "1" : {"rpm_min":3000, "rpm_max":35000, "slope": 200, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}}
     }
 
 #############################
@@ -1124,6 +1127,10 @@ class thermal_module_sensor(system_device):
             pass
 
     def refresh_attr(self):
+        """
+        @summary: refresh sensor attributes.
+        @return None
+        """
         self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
         if "asic" in self.base_file_name:
             self.val_min = self.val_max - 20
@@ -1161,8 +1168,8 @@ class thermal_module_sensor(system_device):
         """
         status = True
 
-        if not self.value == 0 and self.val_max == 0:
-            self.log.info("Module unsupport temp reading val:{} max:{}".format(self.value, self.val_max))
+        if self.value == 0 and self.val_max == 0:
+            self.log.info("Module not support temp reading val:{} max:{}".format(self.value, self.val_max))
             status = False
 
         return status
@@ -1206,10 +1213,9 @@ class thermal_module_sensor(system_device):
                 self.handle_reading_file_err(temp_read_file)
 
         self.pwm = pwm
+
         # check if module have sensor interface
-        if self.val_max == 0 and self.value == 0:
-            return
-        else:
+        if self.get_temp_support_status():
             # calculate PWM based on formula
             self.pwm = max(self.calculate_pwm_formula(), pwm)
 
@@ -1228,7 +1234,7 @@ class thermal_module_sensor(system_device):
             self.log.warn("{} fault (untrusted). Set PWM {}".format(self.name, pwm))
 
         module_temp_support = self.get_temp_support_status()
-        if not module_temp_support:
+        if module_temp_support:
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
             self.fault_list.append(CONST.UNTRUSTED_ERR)
             self.log.info("{} not supporting thermal sensor  (untrusted). Set PWM {}".format(self.name, pwm))
@@ -1255,7 +1261,6 @@ class psu_fan_sensor(system_device):
         self.pwm_decode = sys_config.get(CONST.SYS_CONF_FAN_PWM, PSU_PWM_DECODE_DEF)
         self.fan_dir = CONST.C2P
 
-        self.rpm_trh = 0.15
         self.fault_list = []
 
     def sensor_configure(self):
@@ -1417,7 +1422,6 @@ class fan_sensor(system_device):
         self.val_max_def = self.get_file_val("config/fan_max_speed", CONST.RPM_MIN_MAX["val_max"])
         self.is_calibrated = False
 
-        self.rpm_trh = 0.10
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
         self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
@@ -1515,12 +1519,13 @@ class fan_sensor(system_device):
             if rpm_max == 0:
                 rpm_max = self.val_max_def
 
+            rpm_tolerance = float(fan_param.get("rpm_tolerance", CONST.FAN_RPM_TOLERANCE))/100
             pwm_min = int(fan_param["pwm_min"])
             slope = int(fan_param["slope"])
             self.log.debug("{}:{} validate_rpm".format(self.name, fan_param))
             self.log.debug("Real:{} min:{} max:{} slope{} validate rpm".format(rpm_real, rpm_min, rpm_max, slope))
-            # 1. Check fan speed in range with 10% tolerance
-            if rpm_real < rpm_min*0.9 or rpm_real > rpm_max*1.1:
+            # 1. Check fan speed in range with tolerance
+            if rpm_real < rpm_min*(1-rpm_tolerance) or rpm_real > rpm_max*(1+rpm_tolerance):
                 self.log.info("{} tacho{}={} out of RPM range {}:{}".format(self.name,
                                                                             tacho_idx+1,
                                                                             rpm_real,
@@ -1542,7 +1547,7 @@ class fan_sensor(system_device):
                                                                                                                rpm_calcuated,
                                                                                                                rpm_diff,
                                                                                                                rpm_diff_norm))
-                    if rpm_diff_norm >= self.rpm_trh:
+                    if rpm_diff_norm >= rpm_tolerance:
                         self.log.warn("{} tacho {}: {} too much different {}% than calculated {} pwm  {}".format(self.name,
                                                                                                                  tacho_idx,
                                                                                                                  rpm_real,
@@ -1578,7 +1583,9 @@ class fan_sensor(system_device):
         return self.fan_dir
 
     def get_max_reduction(self):
-        ""
+        """
+        @summary: get max_reduction value from fan parameters
+        """
         val = self.drwr_param["0"].get("pwm_max_reduction", CONST.PWM_MAX_REDUCTION)
         return int(val)
 
@@ -1688,7 +1695,7 @@ class fan_sensor(system_device):
             self.fan_shutdown(True)
             pwm = max(g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "direction"]), pwm)
             self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
-        else:
+        else: 
             self.fan_shutdown(False)
         self.pwm = max(pwm, self.pwm)
         # sensor error reading counter
@@ -1727,11 +1734,15 @@ class ambiant_thermal_sensor(system_device):
 
     # ----------------------------------------------------------------------
     def set_flow_dir(self, flow_dir):
+        """
+        @summary: Set fan flow direction
+        """
         self.flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
+        @summary: handle sensor input
         """
         pwm = self.pwm_min
 
@@ -1772,6 +1783,7 @@ class ambiant_thermal_sensor(system_device):
     # ----------------------------------------------------------------------
     def handle_err(self, thermal_table, flow_dir, amb_tmp):
         """
+        @summary: handle sensor errors
         """
         pwm = self.pwm_min
         # sensor error reading counter
@@ -1855,6 +1867,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
+            self.log.info("Sleep (thermal_delay) {} sec".format(thermal_delay))
             self.exit.wait(thermal_delay)
 
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG))
@@ -2144,7 +2157,7 @@ class ThermalManagement(hw_managemet_file_op):
                 self.log.info("Loading system config from {}".format(config_file_name))
                 try:
                     sys_config = json.load(f)
-                except:
+                except Exception:
                     self.log.error("System config file {} broken. Applying default config.".format(config_file_name))
         else:
             self.log.warn("System config file {} missing. Applying default config.".format(config_file_name))

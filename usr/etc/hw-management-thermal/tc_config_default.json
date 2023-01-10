@@ -32,11 +32,11 @@
 	"psu_fan_pwm_decode" : {"0:10": 10, "11:21": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
 	"fan_trend" : {
         "C2P": {
-			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10},
-			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10}},
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
 		"P2C": {
-			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10},
-			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10}
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
 		}
 	},
 	"dev_parameters" : {
@@ -48,10 +48,7 @@
 		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 100, "val_min": "!75000", "val_max": 85000, "poll_time": 30},
 		"sensor_amb":     {"pwm_min": 60, "pwm_max" : 60, "val_min": 20000, "val_max": 50000, "poll_time": 30},
 		"pch":            {"pwm_min": 20, "pwm_max" : 100, "val_min": 50000, "val_max": 85000, "poll_time": 10, "enable" : 0},
-		"comex_amb":      {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max": 85000, "poll_time": 3, "enable" : 0},
-		"psu\\d+_temp":   {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max":  85000, "poll_time": 30, "enable" : 0},
-		"psu\\d+_fan":    {"val_min":4500, "val_max":28000, "poll_time": 15},
-		"fan\\d+":        {"poll_time": 15}
+		"comex_amb":      {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max": 85000, "poll_time": 3, "enable" : 0}
 	}
 }
 
