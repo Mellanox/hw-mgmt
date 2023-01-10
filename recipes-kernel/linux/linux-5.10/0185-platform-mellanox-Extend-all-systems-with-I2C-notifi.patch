@@ -1,7 +1,7 @@
-From 77bbbdc38944768c262ccb7e67b11a2dfd23036a Mon Sep 17 00:00:00 2001
+From 1b4dcf3170f53225a68a23658e971df8b061dab2 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 26 Dec 2022 22:28:33 +0200
-Subject: [PATCH backport 5.10 4/4] platform: mellanox: Extend all systems with
+Subject: [PATCH backport 5.10 4/5] platform: mellanox: Extend all systems with
  I2C notification callback
 
 Motivation is to provide synchronization between I2C main bus and other
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 11 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index d7c5b8cb8..93854ea4b 100644
+index 057da0e6a..e8c656d6e 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -365,6 +365,11 @@ static const struct resource mlxplat_lpc_resources[] = {
@@ -28,7 +28,7 @@ index d7c5b8cb8..93854ea4b 100644
  /* Platform i2c next generation systems data */
  static struct mlxreg_core_data mlxplat_mlxcpld_i2c_ng_items_data[] = {
  	{
-@@ -5806,6 +5811,7 @@ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+@@ -5807,6 +5812,7 @@ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
  	mlxplat_led = &mlxplat_default_led_data;
  	mlxplat_regs_io = &mlxplat_default_regs_io_data;
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
@@ -36,7 +36,7 @@ index d7c5b8cb8..93854ea4b 100644
  
  	return 1;
  }
-@@ -5828,6 +5834,7 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
+@@ -5829,6 +5835,7 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
  	mlxplat_led = &mlxplat_default_led_wc_data;
  	mlxplat_regs_io = &mlxplat_default_regs_io_data;
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
@@ -44,7 +44,7 @@ index d7c5b8cb8..93854ea4b 100644
  
  	return 1;
  }
-@@ -5875,6 +5882,7 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
+@@ -5876,6 +5883,7 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
  	mlxplat_led = &mlxplat_msn21xx_led_data;
  	mlxplat_regs_io = &mlxplat_msn21xx_regs_io_data;
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
@@ -52,7 +52,7 @@ index d7c5b8cb8..93854ea4b 100644
  
  	return 1;
  }
-@@ -5897,6 +5905,7 @@ static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
+@@ -5898,6 +5906,7 @@ static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
  	mlxplat_led = &mlxplat_default_led_data;
  	mlxplat_regs_io = &mlxplat_msn21xx_regs_io_data;
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
@@ -60,7 +60,7 @@ index d7c5b8cb8..93854ea4b 100644
  
  	return 1;
  }
-@@ -5919,6 +5928,7 @@ static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
+@@ -5920,6 +5929,7 @@ static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
  	mlxplat_led = &mlxplat_msn21xx_led_data;
  	mlxplat_regs_io = &mlxplat_msn21xx_regs_io_data;
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
@@ -68,7 +68,7 @@ index d7c5b8cb8..93854ea4b 100644
  
  	return 1;
  }
-@@ -5968,6 +5978,7 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
+@@ -5969,6 +5979,7 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
  	mlxplat_fan = &mlxplat_default_fan_data;
  	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
  		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
