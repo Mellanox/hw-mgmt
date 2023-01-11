@@ -85,6 +85,7 @@ erot_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
+thermal_control_configs_path="/etc/hw-management-thermal"
 tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
@@ -896,6 +897,7 @@ msn21xx_specific()
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2100.json"
 	echo 4 > $config_path/fan_drwr_num
 	echo 1 > $config_path/fixed_fans_system
 }
@@ -979,6 +981,7 @@ msn27xx_msb_msx_specific()
 
 	set_spc1_port_cpld
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
@@ -999,6 +1002,7 @@ msn201x_specific()
 	echo 5 > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2010.json"
 	echo 4 > $config_path/fan_drwr_num
 	echo 1 > $config_path/fixed_fans_system
 }
@@ -1039,19 +1043,28 @@ mqmxxx_msn37x_msn34x_specific()
 			# msn3700C-S
 			connect_table+=(${msn37xx_secured_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
-		HI112|HI116)
-			# msn3700/msn3700C
+		HI112)
+			# msn3700
 			connect_msn3700
+		hw-mgmt: thermal	thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
+		;;
+		HI116)
+			# mmsn3700C
+			connect_msn3700
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
 		HI110)
 			# Jaguar
 			connect_table+=(${mqm8700_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+			thermal_control_config="$thermal_control_configs_path/tc_config_mqm8700.json"
 		;;
 		*)
 			connect_table+=(${mqm8700_A2D_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
+			thermal_control_config="$thermal_control_configs_path/tc_config_mqm8700.json"
 		;;
 	esac
 	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
@@ -1101,6 +1114,7 @@ msn3420_specific()
 	echo 3 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn3420.json"
 }
 
 msn_xh3000_specific()
@@ -1185,9 +1199,11 @@ connect_msn4700_msn4600()
 	if [ "$sku" == "HI124" ]; then
 		# msn4600C with removed A2D
 		connect_table+=(${msn4600C_base_connect_table[@]})
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600.json"
 	else
         # msn4700/msn4600
 		connect_table+=(${msn4700_msn4600_base_connect_table[@]})
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600C.json"
 	fi
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
@@ -1231,6 +1247,7 @@ msn47xx_specific()
 		fi
 	fi
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700.json"
 	thermal_type=$thermal_type_t10
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
@@ -1360,6 +1377,7 @@ mqm97xx_specific()
 		add_cpu_board_to_connection_table
 	fi
 
+	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
@@ -1437,6 +1455,7 @@ mqm87xx_rev1_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_mqm8700.json"
 	get_i2c_bus_frequency_default
 }
 
@@ -1624,6 +1643,7 @@ sn2201_specific()
 	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2201.json"
 }
 
 p2317_specific()
@@ -2171,6 +2191,11 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+	fi
+	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+		ln -sf $thermal_control_config $config_path/tc_config.json
+	else
+		ln -sf $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }

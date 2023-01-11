@@ -22,6 +22,8 @@ override_dh_auto_install:
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
 	dh_installdirs -p$(pname) etc/hw-management-sensors
 	cp usr/etc/hw-management-sensors/* debian/$(pname)/etc/hw-management-sensors
+	dh_installdirs -p$(pname) etc/hw-management-thermal
+	cp usr/etc/hw-management-thermal/* debian/$(pname)/etc/hw-management-thermal
 
 override_dh_installinit:
 	dh_installinit --name=hw-management
