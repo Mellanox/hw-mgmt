@@ -1134,9 +1134,9 @@ class thermal_module_sensor(system_device):
         """
         self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
         if "asic" in self.base_file_name:
-            self.val_min = self.val_max - 20
-        else:
             self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+        else:
+            self.val_min = self.val_max - 20
 
     # ----------------------------------------------------------------------
     def get_fault(self):
@@ -1358,7 +1358,7 @@ class psu_fan_sensor(system_device):
         psu_status = self._get_status()
         if psu_status == 0:
             # PSU status error. Calculating dmin based on this information
-            self.log.info("{} psu_status {}".format(self.name, psu_status))
+            self.log.warn("{} psu_status {}".format(self.name, psu_status))
             self.fault_list.append("present")
             if self.prsnt_err_pwm_min:
                 pwm = self.prsnt_err_pwm_min
