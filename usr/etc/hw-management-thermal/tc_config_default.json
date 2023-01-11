@@ -44,7 +44,7 @@
 		"gearbox\\d+":    {"pwm_min": 20, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 6},
 		"module\\d+":     {"pwm_min": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 20, "pwm_max" : 100,  "val_min": "!70000", "val_max": 90000, "poll_time": 3},
-		"voltmon\d+_temp":{"pwm_min": 20, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
+		"voltmon\\d+_temp":{"pwm_min": 20, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 100, "val_min": "!75000", "val_max": 85000, "poll_time": 30},
 		"sensor_amb":     {"pwm_min": 60, "pwm_max" : 60, "val_min": 20000, "val_max": 50000, "poll_time": 30},
 		"pch":            {"pwm_min": 20, "pwm_max" : 100, "val_min": 50000, "val_max": 85000, "poll_time": 10, "enable" : 0},
@@ -52,4 +52,3 @@
 	}
 }
 
- 
