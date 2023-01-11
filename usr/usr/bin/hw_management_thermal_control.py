@@ -240,7 +240,7 @@ SENSOR_DEF_CONFIG = {
                         },
     r'sensor_amb':      {"type": "ambiant_thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, "poll_time": 30,
-                         "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 2, "input_smooth_level": 2
+                         "base_file_name": {CONST.C2P: CONST.FAN_SENS, CONST.P2C: CONST.PORT_SENS}, "value_hyst" : 0, "input_smooth_level": 1
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor",
                          "val_min": 45000, "val_max":85000, "poll_time": 30, "enable" : 0
@@ -742,6 +742,7 @@ class system_device(hw_managemet_file_op):
         self.name = name
         self.type = self.sensors_config["type"]
         self.log.info("Init {0} ({1})".format(self.name, self.type))
+        self.log.debug("sensor config:\n{}".format(json.dumps(self.sensors_config, indent = 4)))
         self.base_file_name = self.sensors_config.get("base_file_name", None)
         self.file_input = "{}{}".format(self.base_file_name, self.sensors_config.get("input_suffix", ""))
         self.enable = int(self.sensors_config.get("enable", 1))
@@ -1169,7 +1170,7 @@ class thermal_module_sensor(system_device):
         status = True
 
         if self.value == 0 and self.val_max == 0:
-            self.log.info("Module not support temp reading val:{} max:{}".format(self.value, self.val_max))
+            self.log.debug("Module not support temp reading val:{} max:{}".format(self.value, self.val_max))
             status = False
 
         return status
@@ -1232,12 +1233,6 @@ class thermal_module_sensor(system_device):
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
             self.fault_list.append(CONST.UNTRUSTED_ERR)
             self.log.warn("{} fault (untrusted). Set PWM {}".format(self.name, pwm))
-
-        module_temp_support = self.get_temp_support_status()
-        if module_temp_support:
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
-            self.fault_list.append(CONST.UNTRUSTED_ERR)
-            self.log.info("{} not supporting thermal sensor  (untrusted). Set PWM {}".format(self.name, pwm))
 
         # sensor error reading counter
         if self.check_reading_file_err():
@@ -1802,7 +1797,12 @@ class ambiant_thermal_sensor(system_device):
         for key, val in self.base_file_name.items():
             if key in self.value_dict.keys():
                 sens_val += "{}:{} ".format(val, self.value_dict[key])
-        info_str = "\"{}\" {}, dir:{}, pwm:{}, {}".format(self.name, sens_val, self.flow_dir, self.pwm, self.state)
+        info_str = "\"{}\" {}({}), dir:{}, pwm:{}, {}".format(self.name,
+                                                              sens_val,
+                                                              self.value_dict[self.flow_dir],
+                                                              self.flow_dir,
+                                                              self.pwm,
+                                                              self.state)
         return info_str
 
 
