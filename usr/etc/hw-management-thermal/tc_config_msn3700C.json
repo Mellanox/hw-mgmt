@@ -12,7 +12,7 @@
 				"direction": {"-127:25": 20, "26:40": 30, "41:120": 40},
 				"fault": {"-127:25": 20, "26:40": 30, "41:120": 40}
 			},
-			"sensor_read_error" : {"-127:25": 20, "26:40": 30, "41:120": 40}
+			"sensor_read_error" :  {"-127:25": 20, "26:40": 30, "41:120": 40}
 		},
 		"P2C": {
 			"untrusted":  {"-127:15": 20, "16:30": 30, "31:35": 40, "36:40": 50, "36:120": 60},
@@ -45,6 +45,7 @@
 		"module\\d+":     {"pwm_minx": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
 		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 50, "val_min": 30000, "val_max": 50000, "poll_time": 30},
 		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!70000", "val_max": "!95000",  "poll_time": 60},
-		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
+		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
+
 	}
 }
