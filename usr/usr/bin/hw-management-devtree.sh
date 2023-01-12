@@ -197,12 +197,12 @@ declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["icp201xx_1"]="icp201xx 0x64 4 press_sens2" \
 				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
 
-declare -A pwr_type1_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
-				   ["lm5066_1"]="lm5066 0x11 4 hot_swap" \
-				   ["pmbus_1"]="pmbus 0x12 4 pwr_conv2" \
-				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
-				   ["pmbus_3"]="pmbus 0x16 4 pwr_conv4" \
-				   ["pmbus_4"]="pmbus 0x1b 4 pwr_conv5" \
+declare -A pwr_type1_alternatives=(["pmbus_0"]="pmbus 0x10 4 pdb_pwr_conv1" \
+				   ["lm5066_1"]="lm5066 0x11 4 pdb_hotswap1" \
+				   ["pmbus_1"]="pmbus 0x12 4 pdb_pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x13 4 pdb_pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x16 4 pdb_pwr_conv4" \
+				   ["pmbus_4"]="pmbus 0x1b 4 pdb_pwr_conv5" \
 				   ["tmp75_0"]="tmp75 0x4d 4 pdb_temp1" \
 				   ["adt75_0"]="tmp75 0x4d 4 pdb_temp1" \
 				   ["tmp75_1"]="tmp75 0x4e 4 pdb_temp2" \

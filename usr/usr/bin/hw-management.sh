@@ -461,7 +461,6 @@ p4262_base_connect_table=( \
 	tmp75 0x4e 7 \
 	tmp75 0x4f 7 \
 	24c502 0x50 7 \
-	max11603 0x6d 7 \
 	24c512 0x51 8 \
 	24c512 0x52 8 )
 
