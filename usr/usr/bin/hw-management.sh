@@ -1048,7 +1048,7 @@ mqmxxx_msn37x_msn34x_specific()
 		HI112)
 			# msn3700
 			connect_msn3700
-		hw-mgmt: thermal	thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
 		;;
 		HI116)
 			# mmsn3700C

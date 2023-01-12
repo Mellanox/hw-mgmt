@@ -1,10 +1,11 @@
  {
 	"dmin" : {
 			"C2P": {
-			"untrusted": {"-127:120": 60},
+			"untrusted": {"-127:120": 100},
 			"fan_err": {
 				"tacho": {"-127:120": 100},
 				"present": {"-127:120": 100},
+				"direction": {"-127:120": 100},
 				"fault": {"-127:120": 100}
 			},
 			"psu_err":  {
@@ -15,7 +16,7 @@
 			"sensor_read_error" :  {"-127:120": 100}
 		},
 		"P2C": {
-			"untrusted": {"-127:120": 60},
+			"untrusted": {"-127:120": 100},
 			"fan_err": {
 				"tacho": {"-127:120": 100},
 				"present": {"-127:120": 100},
@@ -46,7 +47,7 @@
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 20, "pwm_max" : 100,  "val_min": "!70000", "val_max": 90000, "poll_time": 3},
 		"voltmon\\d+_temp":{"pwm_min": 20, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 100, "val_min": "!75000", "val_max": 85000, "poll_time": 30},
-		"sensor_amb":     {"pwm_min": 60, "pwm_max" : 60, "val_min": 20000, "val_max": 50000, "poll_time": 30},
+		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 60, "val_min": 20000, "val_max": 50000, "poll_time": 30},
 		"pch":            {"pwm_min": 20, "pwm_max" : 100, "val_min": 50000, "val_max": 85000, "poll_time": 10, "enable" : 0},
 		"comex_amb":      {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max": 85000, "poll_time": 3, "enable" : 0}
 	}
