@@ -36,6 +36,7 @@ board_type=$(< $board_type_file)
 sku=$(< $sku_file)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
+i2c_bus_def_off_eeprom_cartridge=7
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
@@ -44,6 +45,7 @@ i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
 i2c_bus_def_off_eeprom_mgmt=45
+vpd_i2c_addr=0x51
 psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
@@ -272,7 +274,11 @@ find_eeprom_name()
 	addr=$2
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		eeprom_name=vpd_info
+		if [ "$board_type" == "VMOD0017" ] && [ "$addr" -ne "$vpd_i2c_addr" ]; then
+			eeprom_name=ipmi_info
+		else
+			eeprom_name=vpd_info
+		fi
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
@@ -284,6 +290,9 @@ find_eeprom_name()
 			elif [ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 				eeprom_name=psu2_info
 			fi
+			;;
+		VMOD0017)
+			eeprom_name=pdb_eeprom
 			;;
 		*)
 			if [ "$addr" = "$psu1_i2c_addr" ]; then
@@ -311,6 +320,8 @@ find_eeprom_name()
 		eeprom_name=fan4_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_mgmt" ]; then
 		eeprom_name=mgmt_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cartridge" ]; then
+		eeprom_name=cable_cartridge_eeprom 
 	elif [ "$bus" -eq 0 ]; then
 		:
 	else
