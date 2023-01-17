@@ -1713,13 +1713,6 @@ class fan_sensor(system_device):
             self.fault_list.append("present")
             self.log.warn("{} status 0. Set PWM {}".format(self.name, pwm))
 
-        fan_fault = self._get_fault()
-        if 1 in fan_fault:
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "fault"])
-            self.pwm = max(pwm, self.pwm)
-            self.fault_list.append("fault")
-            self.log.warn("{} tacho {} fault. Set PWM {}".format(self.name, fan_fault, pwm))
-
         if not self._validate_rpm():
             self.fault_list.append("tacho")
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "fan_err", "tacho"])
