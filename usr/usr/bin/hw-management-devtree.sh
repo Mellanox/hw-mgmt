@@ -39,13 +39,13 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts375")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts375" ["e"]="tmp75")
 
 declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4")
 
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
-declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus")
+declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus")
 
 declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
 
@@ -209,7 +209,7 @@ declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
 
 declare -A pwr_type1_alternatives=(["pmbus_0"]="pmbus 0x10 4 pdb_pwr_conv1" \
-				   ["lm5066_1"]="lm5066 0x11 4 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["pmbus_1"]="pmbus 0x12 4 pdb_pwr_conv2" \
 				   ["pmbus_2"]="pmbus 0x13 4 pdb_pwr_conv3" \
 				   ["pmbus_3"]="pmbus 0x16 4 pdb_pwr_conv4" \
@@ -218,8 +218,8 @@ declare -A pwr_type1_alternatives=(["pmbus_0"]="pmbus 0x10 4 pdb_pwr_conv1" \
 				   ["adt75_0"]="tmp75 0x4d 4 pdb_temp1" \
 				   ["tmp75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
-				   ["24c502_0"]="24c502 0x50 4 pdb_eeprom" \
-				   ["24c502_1"]="24c502 0x50 7 cable_cartridge_eeprom")
+				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
+				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
@@ -294,7 +294,7 @@ devtr_check_supported_system_init_alternatives()
 					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
 				done
 			else
-				for key in "${!comex_bdw_alternatives[@]}"; do
+				for key in "${!comex_cfl_alternatives[@]}"; do
 					comex_alternatives["$key"]="${comex_cfl_alternatives["$key"]}"
 				done
 			fi
