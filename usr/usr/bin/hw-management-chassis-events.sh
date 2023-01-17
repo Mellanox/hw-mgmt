@@ -405,6 +405,10 @@ function set_fan_direction()
 		if [ -f $config_path/fan_dir_eeprom ]; then
 			return
 		fi
+		# Check if CPLD fan direction is exists
+		if [ ! -f $system_path/fan_dir ]; then
+			return
+		fi
 		fan_dir=$(< $system_path/fan_dir)
 		fandirhex=$(printf "%x\n" "$fan_dir")
 		fan_bit_index=$(( ${attribute:3} - 1 ))
@@ -1034,18 +1038,21 @@ if [ "$1" == "add" ]; then
 			else
 				fan_dir_offset=$fan_dir_offset_in_vpd_eeprom_pn
 			fi
-			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
-			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
-			case $fan_direction in
-			$fan_direction_exhaust)
-				echo 1 > $thermal_path/"${fan_prefix}"_dir
-				;;
-			$fan_direction_intake)
-				echo 0 > $thermal_path/"${fan_prefix}"_dir
-				;;
-			*)
-				;;
-			esac
+			# We need to read FAN direction from eeprom if cpld fan direction exists
+			if [ ! -f $system_path/fan_dir ]; then
+				fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
+				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
+				case $fan_direction in
+				$fan_direction_exhaust)
+					echo 1 > $thermal_path/"${fan_prefix}"_dir
+					;;
+				$fan_direction_intake)
+					echo 0 > $thermal_path/"${fan_prefix}"_dir
+					;;
+				*)
+					;;
+				esac
+			fi
 			;;
 		*)
 			;;
