@@ -164,13 +164,21 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
+			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
 			       ["tmp75_1"]="tmp75 0x49 7 port_temp2" \
+			       ["adt75_1"]="adt75 0x49 7 port_temp2" \
 			       ["tmp75_2"]="tmp75 0x4a 7 port_temp3" \
-			       ["tmp75_3"]="tmp75 0x4b 7 port_temp3" \
+			       ["adt75_2"]="adt75 0x4a 7 port_temp3" \
+			       ["tmp75_3"]="tmp75 0x4b 7 port_temp4" \
+			       ["adt75_3"]="adt75 0x4b 7 port_temp4" \
 			       ["tmp75_4"]="tmp75 0x4c 7 fan_temp1" \
+			       ["adt75_4"]="adt75 0x4c 7 fan_temp1" \
 			       ["tmp75_5"]="tmp75 0x4d 7 fan_temp2" \
+			       ["adt75_5"]="adt75 0x4d 7 fan_temp2" \
 			       ["tmp75_6"]="tmp75 0x4e 7 fan_temp3" \
-			       ["tmp75_7"]="tmp75 0x4f 7 fan_temp3" \
+			       ["adt75_6"]="adt75 0x4e 7 fan_temp3" \
+			       ["tmp75_7"]="tmp75 0x4f 7 fan_temp4" \
+			       ["adt75_7"]="adt75 0x4f 7 fan_temp4" \
 			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
 			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
