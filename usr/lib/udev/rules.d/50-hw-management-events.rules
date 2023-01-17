@@ -91,6 +91,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon/hwmon*
 # SSD temp
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:*/ata*/host*/*/*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add drivetemp %S %p"
 
+# Nvidia LS10. Workaround: disable Nvidia RM driver at system init by power-off corresponding PCIe slots.
+SUBSYSTEM=="pci", KERNEL=="0000:03:00.0", DRIVERS=="nvidia", ACTION=="add", RUN+="/bin/sh -c 'echo 0 > /sys/bus/pci/slots/20/power'"
+SUBSYSTEM=="pci", KERNEL=="0000:04:00.0", DRIVERS=="nvidia", ACTION=="add", RUN+="/bin/sh -c 'echo 0 > /sys/bus/pci/slots/22/power'"
+
 # Switch - FAN tachometers, ASIC and ports temperatures and faults (I2C).
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add switch %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm switch %S %p"
