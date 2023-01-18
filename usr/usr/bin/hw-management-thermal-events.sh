@@ -208,8 +208,8 @@ get_fixed_fans_direction()
 # Input parameters:
 # 1 - "$psu_name"
 # Return FAN direction
-# 0 - Forward (C2P)
-# 1 - Reverse (P2C)
+# 0 - Reverse (C2P)
+# 1 - Forward(P2C)
 # 2 - unknown (read error or field missing)
 get_psu_fan_direction()
 {
@@ -230,9 +230,9 @@ get_psu_fan_direction()
 			dir_char="${BASH_REMATCH[1]}"
 		fi
 	fi
-	if [ $dir_char == "F" ]; then
+	if [ $dir_char == "R" ]; then
 		return 0
-	elif [ $dir_char == "R" ]; then
+	elif [ $dir_char == "F" ]; then
 		return 1
 	else
 		return 2
