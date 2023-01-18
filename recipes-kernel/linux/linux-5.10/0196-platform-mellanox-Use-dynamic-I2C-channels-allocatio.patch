@@ -1,0 +1,76 @@
+From 1d75988b1656f80f2140f130ac2a80ddfeef7229 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 18 Jan 2023 19:44:41 +0200
+Subject: [PATCH backport 5.10 10/10] platform/mellanox: Use dynamic I2C
+ channels allocation for specific system
+
+Use 'i2c-mux-regmap' driver instead of 'i2c-mux-reg' driver for creation
+I2C mux infrastructure for system types on which I2C channels could be
+allocated in a non-continuous way.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 25 +++++++++----------------
+ 1 file changed, 9 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index f4942e554..68e0269cf 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -530,28 +530,21 @@ static const int mlxplat_rack_switch_channels[] = {
+ };
+ 
+ /* Platform rack switch mux data */
+-static struct i2c_mux_reg_platform_data mlxplat_rack_switch_mux_data[] = {
++static struct i2c_mux_regmap_platform_data mlxplat_rack_switch_mux_data[] = {
+ 	{
+ 		.parent = 1,
+-		.base_nr = MLXPLAT_CPLD_CH1,
+-		.write_only = 1,
+-		.reg = (void __iomem *)MLXPLAT_CPLD_LPC_REG1,
++		.chan_ids = mlxplat_rack_switch_channels,
++		.num_adaps = ARRAY_SIZE(mlxplat_rack_switch_channels),
++		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH1_OFFSET,
+ 		.reg_size = 1,
+-		.idle_in_use = 1,
+-		.values = mlxplat_rack_switch_channels,
+-		.n_values = ARRAY_SIZE(mlxplat_rack_switch_channels),
+ 	},
+ 	{
+ 		.parent = 1,
+-		.base_nr = MLXPLAT_CPLD_CH2_RACK_SWITCH,
+-		.write_only = 1,
+-		.reg = (void __iomem *)MLXPLAT_CPLD_LPC_REG2,
++		.chan_ids = mlxplat_msn21xx_channels,
++		.num_adaps = ARRAY_SIZE(mlxplat_msn21xx_channels),
++		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH2_OFFSET,
+ 		.reg_size = 1,
+-		.idle_in_use = 1,
+-		.values = mlxplat_msn21xx_channels,
+-		.n_values = ARRAY_SIZE(mlxplat_msn21xx_channels),
+ 	},
+-
+ };
+ 
+ /* Platform channels for ng800 system family */
+@@ -6102,7 +6095,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
+ 
+ 	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
+ 	mlxplat_mux_num = ARRAY_SIZE(mlxplat_rack_switch_mux_data);
+-	mlxplat_mux_data = mlxplat_rack_switch_mux_data;
++	mlxplat_mux_regmap_data = mlxplat_rack_switch_mux_data;
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_rack_switch_data;
+ 	mlxplat_hotplug->deferred_nr =
+ 		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
+@@ -6145,7 +6138,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+ 
+ 	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
+ 	mlxplat_mux_num = ARRAY_SIZE(mlxplat_rack_switch_mux_data);
+-	mlxplat_mux_data = mlxplat_rack_switch_mux_data;
++	mlxplat_mux_regmap_data = mlxplat_rack_switch_mux_data;
+ 	mlxplat_hotplug = &mlxplat_mlxcpld_l1_switch_data;
+ 	mlxplat_hotplug->deferred_nr =
+ 		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
+-- 
+2.20.1
+
