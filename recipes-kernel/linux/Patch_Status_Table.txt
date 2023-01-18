@@ -361,9 +361,7 @@ Kernel-5.10
 |0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch         |                                            | pending                                         |                                                              |
 |0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch         |                                            | pending                                         |                                                              |
 |0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch         |                                            | pending                                         |                                                              |
-|0196-platform-mellanox-Use-dynamic-I2C-channels-allocatio.patch         |                                            | pending                                         |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
 © 2021 GitHub, Inc.
->>>>>>> 62ec361... hw-mgmt: kernel patches: Add patches for dynamic I2C bus allocation and extra I2C features
