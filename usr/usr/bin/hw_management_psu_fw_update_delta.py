@@ -60,11 +60,17 @@ MFR_FWUPLOAD_REVISION = 0xd5
 MFR_MODEL_3000AB_10G = "DPS-3000AB-10 G"
 MFR_FWUPLOAD_STATUS_3000AB_10G = 0xd8
 
+MFR_MODEL_500AB = "DPS-550AB"
+
 def read_mfr_fw_revision(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_REVISION.
     """
-    ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 6)
+    mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
+    if mfr_model.startswith(MFR_MODEL_500AB):
+        ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
+    else:
+        ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 6)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())
         return ascii_str
