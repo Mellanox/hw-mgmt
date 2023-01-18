@@ -346,13 +346,24 @@ Kernel-5.10
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch         |                                            |                                                 | SN5600                                                       |
 |0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            | downstream for OPT-OS use only                  | SN5600                                                       |
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         | 525dd5aed67a2f4f7278116fb92a24e6a53e2622   | accepted                                        |                                                              |
-|0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch          |                                            | pending                                         |                                                              |
+|0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch          |                                            | downstream (disable upstream patch from 5.10.74)|                                                              |
 |0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch         |                                            | pending                                         |                                                              |
 |0183-platform-mellanox-Split-initialization-procedure.patch             |                                            | pending                                         |                                                              |
 |0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch          |                                            | pending                                         |                                                              |
 |0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch         |                                            | pending                                         |                                                              |
 |0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch         |                                            | pending                                         |                                                              |
+|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch         |                                            | pending                                         |                                                              |
+|0188-i2c-mux-Add-register-map-based-mux-driver.patch                    |                                            | pending                                         |                                                              |
+|0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch         |                                            | pending                                         |                                                              |
+|0190-i2c-mlxcpld-Modify-base-address-type.patch                         |                                            | pending                                         |                                                              |
+|0191-i2c-mlxcpld-Allow-to-configure-base-address-of-regis.patch         |                                            | pending                                         |                                                              |
+|0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch         |                                            | pending                                         |                                                              |
+|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch         |                                            | pending                                         |                                                              |
+|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch         |                                            | pending                                         |                                                              |
+|0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch         |                                            | pending                                         |                                                              |
+|0196-platform-mellanox-Use-dynamic-I2C-channels-allocatio.patch         |                                            | pending                                         |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
-© 2023 GitHub, Inc.
+© 2021 GitHub, Inc.
+>>>>>>> 62ec361... hw-mgmt: kernel patches: Add patches for dynamic I2C bus allocation and extra I2C features
