@@ -167,7 +167,6 @@ def pmbus_read_mfr_id(i2c_bus, i2c_addr):
     ret = pmbus_read_block(i2c_bus, i2c_addr, 0x99)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
-        print(ascii_str)
         return ascii_str
     return ''
 
@@ -178,7 +177,6 @@ def pmbus_read_mfr_model(i2c_bus, i2c_addr):
     ret = pmbus_read_block(i2c_bus, i2c_addr, 0x9a)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
-        print(ascii_str)
         return ascii_str
     return ''
 
@@ -189,7 +187,6 @@ def pmbus_read_mfr_revision(i2c_bus, i2c_addr):
     ret = pmbus_read_block(i2c_bus, i2c_addr, 0x9b)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
-        print(ascii_str)
         return ascii_str
     return ''
 
