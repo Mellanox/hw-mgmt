@@ -1,8 +1,8 @@
-From b5c31fc1e613f103e6634ee901468b5e4b6fb265 Mon Sep 17 00:00:00 2001
+From c864dc50c33e981d324ead905523c6f233805519 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 18 Jan 2023 19:12:12 +0200
-Subject: [PATCH backport 5.10 09/10] platform/mellanox: Add support for
- dynamic I2C channels infrastructure
+Subject: [PATCH backport 5.10 1/2] platform/mellanox: Add support for dynamic
+ I2C channels infrastructure
 
 Allow to support platform configuration for dynamically allocated I2C
 channels.
@@ -18,11 +18,11 @@ adapters data.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 67 +++++++++++++++++++++++++----
- 1 file changed, 58 insertions(+), 9 deletions(-)
+ drivers/platform/x86/mlx-platform.c | 69 ++++++++++++++++++++++++-----
+ 1 file changed, 59 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 5d96d5ffa..f4942e554 100644
+index 5d96d5ffa..d0b03dbec 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -14,6 +14,7 @@
@@ -104,17 +104,17 @@ index 5d96d5ffa..f4942e554 100644
 +			}
 +		}
 +	}
-+
+ 
+-	return mlxplat_post_init(priv);
 +	/* Start post initialization only after last nux segment is added */
 +	if (++priv->mux_added == mlxplat_mux_num)
 +		return mlxplat_post_init(priv);
- 
--	return mlxplat_post_init(priv);
++
 +	return 0;
  }
  
  static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
-@@ -6579,16 +6612,32 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
+@@ -6579,17 +6612,33 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
  	}
  
  	for (i = 0; i < mlxplat_mux_num; i++) {
@@ -145,12 +145,14 @@ index 5d96d5ffa..f4942e554 100644
  		}
  	}
  
+-	return mlxplat_i2c_mux_complition_notify(priv, NULL, NULL);
 +	if (mlxplat_mux_regmap_data && mlxplat_mux_regmap_data->completion_notify)
 +		return 0;
 +
- 	return mlxplat_i2c_mux_complition_notify(priv, NULL, NULL);
++	return mlxplat_post_init(priv);
  
  fail_platform_mux_register:
+ 	while (--i >= 0)
 -- 
 2.20.1
 
