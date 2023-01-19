@@ -50,6 +50,13 @@ case $board in
 			log_info "Communication channel is ready"
 		fi
 		;;
+	VMOD0017)
+		# Nvidia RM driver can be probed at system init before mlx_platform.
+		# NVlink I2C busses will be created and this can affect BSP I2C busses.
+		# Nvidia NVLink drivers are in blacklist and instaniated at the end of
+		# hw-management init.
+		modprobe nvidia_drm
+		;;
 	*)
 		;;
 esac
