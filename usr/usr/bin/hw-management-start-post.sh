@@ -50,13 +50,6 @@ case $board in
 			log_info "Communication channel is ready"
 		fi
 		;;
-	VMOD0017)
-		# Workaround: Disable Nvidia RM driver at system init, in order
-		# that NVlink I2C busses will not be created before platform driver.
-		# Enable power on PCIe slots at the end of hw-management init.
-		echo 1 > /sys/bus/pci/slots/20/power
-		echo 1 > /sys/bus/pci/slots/22/power
-		;;
 	*)
 		;;
 esac
