@@ -1,0 +1,39 @@
+From 46811a888db794ec7b8db4639191c859a4b5177a Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Fri, 9 Dec 2022 09:06:21 -0500
+Subject: [PATCH backport 5.10 63/63] mlxbf_gige: only initialize VSC PHY if
+ BF3
+
+This patch corrects the driver probe behavior that was
+always initializing the VSC PHY, regardless of SoC type.
+Now, the VSC PHY is only initialized if BF3.
+
+Change-Id: Id0c94743302886b4490ee1a2febb183a87208298
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+index af7caed11..599d88506 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
+@@ -20,7 +20,7 @@
+ #include "mlxbf_gige_regs.h"
+ #include "mlxbf_gige_uphy.h"
+ 
+-#define DRV_VERSION 2.1
++#define DRV_VERSION 2.2
+ 
+ #define MLXBF_GIGE_BF2_COREPLL_ADDR 0x02800c30
+ #define MLXBF_GIGE_BF2_COREPLL_SIZE 0x0000000c
+@@ -511,6 +511,7 @@ static int mlxbf_gige_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	// Initialize VSC8221 state, eventually move out of here
++	if (priv->hw_version == MLXBF_GIGE_VERSION_BF3)
+ 	{
+ 		u16 val;
+ 
+-- 
+2.20.1
+
