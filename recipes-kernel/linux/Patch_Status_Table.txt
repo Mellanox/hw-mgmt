@@ -361,6 +361,10 @@ Kernel-5.10
 |0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch         |                                            | pending                                         |                                                              |
 |0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch         |                                            | pending                                         |                                                              |
 |0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch         |                                            | pending                                         |                                                              |
+|0196-platform-mellanox-Relocate-mlx-platform-driver.patch               |                                            | pending                                         |                                                              |
+|0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch         |                                            | pending                                         |                                                              |
+|0198-platform-mellanox-Introduce-support-for-switches-bas.patch         |                                            | pending                                         |                                                              |
+|0199-platform-mellanox-mlx-platform-Add-reset-and-extend-.patch         |                                            | pending                                         |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
