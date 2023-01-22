@@ -487,6 +487,28 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0040/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0040/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
 
+# Power-converters and hotswap devices. They are supported by generic pmbus driver. Exact name is found from devtree file.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0010/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0010/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0011/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0011/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0012/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0012/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0013/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0013/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0016/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0016/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
+
 # IIO (max1363)
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add a2d %S %p %k"
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"

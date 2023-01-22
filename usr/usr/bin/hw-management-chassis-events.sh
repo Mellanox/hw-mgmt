@@ -771,7 +771,7 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
-	   [ "$2" == "hotswap" ]; then
+	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		# Get i2c voltmon prefix.
 		# For voltmon[0..100] name will not change - just return it.
 		# For voltmonX we will try to get name based on dev id/bus and system connect table.
@@ -1183,7 +1183,7 @@ else
 	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
-	   [ "$2" == "hotswap" ]; then
+	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
 		if [[ $prefix == "undefined" ]];
 		then
