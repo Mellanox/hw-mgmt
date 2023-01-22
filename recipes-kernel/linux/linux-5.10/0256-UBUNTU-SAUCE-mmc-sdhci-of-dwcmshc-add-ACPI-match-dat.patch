@@ -1,0 +1,62 @@
+From 57230245d2fa2014b88e8ee7e2ba80815107435e Mon Sep 17 00:00:00 2001
+From: Liming Sun <limings@nvidia.com>
+Date: Sun, 26 Jun 2022 21:56:45 -0400
+Subject: [PATCH backport 5.10 57/63] UBUNTU: SAUCE: mmc: sdhci-of-dwcmshc: add
+ ACPI match data for BlueField-3 SoC
+
+BugLink: https://launchpad.net/bugs/1980849
+
+Commit 08f3dff799d43 introduces the of_device_get_match_data()
+checking for some chip but breaks the BlueField-3 firmware which
+uses ACPI instead. This commit adds the ACPI match data and
+quirks/quirks2 to re-enable the support of BlueField-3 SoC.
+
+Signed-off-by: Liming Sun <limings@nvidia.com>
+Change-Id: I8e66b798c0313bac008dfd329bc374f8ef449365
+Signed-off-by: Ike Panhc <ike.pan@canonical.com>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
+index bac874ab0..173a9167a 100644
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -279,6 +279,13 @@ static const struct sdhci_pltfm_data sdhci_dwcmshc_pdata = {
+ 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
+ };
+ 
++static const struct sdhci_pltfm_data sdhci_dwcmshc_bf3_pdata = {
++	.ops = &sdhci_dwcmshc_ops,
++	.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
++	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
++		   SDHCI_QUIRK2_ACMD23_BROKEN,
++};
++
+ static const struct sdhci_pltfm_data sdhci_dwcmshc_rk3568_pdata = {
+ 	.ops = &sdhci_dwcmshc_rk3568_ops,
+ 	.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN |
+@@ -336,7 +343,10 @@ MODULE_DEVICE_TABLE(of, sdhci_dwcmshc_dt_ids);
+ 
+ #ifdef CONFIG_ACPI
+ static const struct acpi_device_id sdhci_dwcmshc_acpi_ids[] = {
+-	{ .id = "MLNXBF30" },
++	{
++		.id = "MLNXBF30",
++		.driver_data = (kernel_ulong_t)&sdhci_dwcmshc_bf3_pdata,
++	},
+ 	{}
+ };
+ #endif
+@@ -352,7 +362,7 @@ static int dwcmshc_probe(struct platform_device *pdev)
+ 	int err;
+ 	u32 extra;
+ 
+-	pltfm_data = of_device_get_match_data(&pdev->dev);
++	pltfm_data = device_get_match_data(&pdev->dev);
+ 	if (!pltfm_data) {
+ 		dev_err(&pdev->dev, "Error: No device match data found\n");
+ 		return -ENODEV;
+-- 
+2.20.1
+
