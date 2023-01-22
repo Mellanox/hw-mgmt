@@ -37,7 +37,8 @@ source hw-management-helpers.sh
 # Local constants and paths.
 CPLD3_VER_DEF="0"
  
-board=$(cat /sys/devices/virtual/dmi/id/board_name)
+board=$(< $board_type_file)
+sku=$(< $sku_file)
 cpld_num=$(cat $config_path/cpld_num)
 case $board in
 	VMOD0015)
@@ -56,6 +57,12 @@ case $board in
 		# Nvidia NVLink drivers are in blacklist and instaniated at the end of
 		# hw-management init.
 		modprobe nvidia_drm
+		;;
+	VMOD0010)
+		# Kong has the same issue as Goldstone (VMOD0017)
+		if [ "$sku" == "HI142" ]; then
+			modprobe nvidia_drm
+		fi
 		;;
 	*)
 		;;
