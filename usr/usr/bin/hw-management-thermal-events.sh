@@ -872,8 +872,16 @@ if [ "$1" == "add" ]; then
 		elif echo $mfr | grep -iq "Delta"; then
 			# Support FW update only for specific Delta PSU capacities
 			fw_ver="N/A"
+			fw_primary_ver="N/A"
 			if [ "$cap" == "550" -o "$cap" == "2000" -o "$cap" == "3000" ]; then
-				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+				if [ "$cap" == "550" ]; then
+					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f2)
+					fw_ver=$(echo $fw_ver_all | cut -d. -f3)
+				else
+					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
+					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
+				fi
 				if [ "$cap" == "3000" ] && [ "$board_type" == "VMOD0013" ]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
@@ -887,6 +895,7 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
+			echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
 		fi
 
 	fi
