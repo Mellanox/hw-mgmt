@@ -1,7 +1,7 @@
-From 8a706402fd710ad83a912760353a7cc8e41bd5fb Mon Sep 17 00:00:00 2001
+From 8f9032570ba6f1b6ddb6cca99ae7712d9e41ea0d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 14:55:49 +0000
-Subject: [PATCH backport v5.10.43 55/67] platform_data/mlxreg: Add new type to
+Subject: [PATCH backport 5.10 055/182] platform_data/mlxreg: Add new type to
  support modular systems
 
 Add new types for the Nvidia modular systems MSN4800 which could

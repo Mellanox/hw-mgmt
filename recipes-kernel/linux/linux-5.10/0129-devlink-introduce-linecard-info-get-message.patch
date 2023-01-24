@@ -1,8 +1,8 @@
-From f62f20bc47e2ae22c153534fa1fc025ed2819cf2 Mon Sep 17 00:00:00 2001
+From 13e29cf4f38755ae717615071b07cd438e8819e6 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 19 Feb 2021 09:36:15 +0100
-Subject: [PATCH backport for v5.10 129/156] devlink: introduce linecard info
- get message
+Subject: [PATCH backport 5.10 129/182] devlink: introduce linecard info get
+ message
 
 Allow the driver to provide per line card info get op to fill-up info,
 similar to the "devlink dev info".
@@ -75,7 +75,7 @@ index 5ace55666d27..2c9f7d584b48 100644
  	/* add new attributes above here, update the policy in devlink.c */
  
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 00806ceb6df6..661cc682d6d0 100644
+index b43e93ccc672..04f8038f8e23 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -1245,6 +1245,10 @@ struct devlink_linecard_type {
@@ -215,7 +215,7 @@ index 00806ceb6df6..661cc682d6d0 100644
  static int devlink_nl_sb_fill(struct sk_buff *msg, struct devlink *devlink,
  			      struct devlink_sb *devlink_sb,
  			      enum devlink_command cmd, u32 portid,
-@@ -5447,10 +5570,6 @@ static int devlink_nl_cmd_region_read_dumpit(struct sk_buff *skb,
+@@ -5455,10 +5578,6 @@ static int devlink_nl_cmd_region_read_dumpit(struct sk_buff *skb,
  	return err;
  }
  
@@ -226,7 +226,7 @@ index 00806ceb6df6..661cc682d6d0 100644
  int devlink_info_driver_name_put(struct devlink_info_req *req, const char *name)
  {
  	return nla_put_string(req->msg, DEVLINK_ATTR_INFO_DRIVER_NAME, name);
-@@ -8049,6 +8168,14 @@ static const struct genl_small_ops devlink_nl_ops[] = {
+@@ -8057,6 +8176,14 @@ static const struct genl_small_ops devlink_nl_ops[] = {
  		.internal_flags = DEVLINK_NL_FLAG_NEED_LINECARD |
  				  DEVLINK_NL_FLAG_NO_LOCK,
  	},

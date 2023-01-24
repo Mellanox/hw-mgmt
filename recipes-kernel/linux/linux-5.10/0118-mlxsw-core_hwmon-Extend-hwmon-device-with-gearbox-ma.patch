@@ -1,8 +1,8 @@
-From af590782a48218c310722cc171f138ac1a67cbce Mon Sep 17 00:00:00 2001
+From c627292817e68e29abdf5fd9be93340251d71f7a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:32 +0200
-Subject: [PATCH backport for v5.10 118/151] mlxsw: core_hwmon: Extend hwmon
- device with gearbox mapping field
+Subject: [PATCH backport 5.10 118/182] mlxsw: core_hwmon: Extend hwmon device
+ with gearbox mapping field
 
 Add gearbox mapping field to 'mlxsw_hwmon_dev' structure. It should
 provide the mapping for gearbox sensor indexes, given gearbox number.

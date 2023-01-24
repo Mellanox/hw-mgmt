@@ -1,8 +1,8 @@
-From a7ea57f715a01b3a94658cf4e70e9df593ff2bc3 Mon Sep 17 00:00:00 2001
+From 59c953deed31161dc358e6d397af2b5b0f5ee61c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 16:06:54 +0000
-Subject: [PATCH backport for v5.10 135/156] mlxsw: core_linecards: Add line
- card objects and implement provisioning
+Subject: [PATCH backport 5.10 135/182] mlxsw: core_linecards: Add line card
+ objects and implement provisioning
 
 Introduce objects for line cards and an infrastructure around that.
 Use devlink_linecard_create/destroy() to register the line card with
@@ -175,7 +175,7 @@ index 0ceb7dae95f6..d3c5d8289a85 100644
  #endif
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 new file mode 100644
-index 000000000000..f1a1e5cf6a5f
+index 000000000000..a324ce2436e8
 --- /dev/null
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -0,0 +1,775 @@
@@ -955,7 +955,7 @@ index 000000000000..f1a1e5cf6a5f
 +
 +MODULE_FIRMWARE(MLXSW_LINECARDS_INI_BUNDLE_FILE);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
-index dff8156ae1c3..5b2774b8ebfb 100644
+index e0424f490c6f..bc233a5c8a79 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 @@ -2076,6 +2076,72 @@ static void mlxsw_sp_pude_event_func(const struct mlxsw_reg_info *reg,

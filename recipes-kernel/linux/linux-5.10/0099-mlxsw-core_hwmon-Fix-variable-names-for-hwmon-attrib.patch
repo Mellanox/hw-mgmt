@@ -1,8 +1,8 @@
-From b7a250a8ac4f7b4c9bbcc8892d15402a1b50d14c Mon Sep 17 00:00:00 2001
+From 320a964b80a8f9245da0515a26c2d41e035b3d10 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:41 +0200
-Subject: [PATCH backport for v5.10 099/151] mlxsw: core_hwmon: Fix variable
- names for hwmon attributes
+Subject: [PATCH backport 5.10 099/182] mlxsw: core_hwmon: Fix variable names
+ for hwmon attributes
 
 Replace all local variables 'mlwsw_hwmon_attr' by 'mlxsw_hwmon_attr'.
 All variable prefixes should start with 'mlxsw' according to the naming

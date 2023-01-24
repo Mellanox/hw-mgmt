@@ -1,8 +1,8 @@
-From cadf2b402e5073a47f26742e0d46f8123f371ef4 Mon Sep 17 00:00:00 2001
+From 925c0bdeb184d3ec04cc6dd46f9e9b0c2f27ac7c Mon Sep 17 00:00:00 2001
 From: Dan Carpenter <dan.carpenter@oracle.com>
 Date: Wed, 10 Nov 2021 10:43:46 +0300
-Subject: [PATCH backport for v5.10 92/97] platform/mellanox: mlxreg-lc: fix
- error code in mlxreg_lc_create_static_devices()
+Subject: [PATCH backport 5.10 092/182] platform/mellanox: mlxreg-lc: fix error
+ code in mlxreg_lc_create_static_devices()
 
 This code should be using PTR_ERR() instead of IS_ERR().  And because
 it's using the wrong "dev->client" pointer, the IS_ERR() check will be
@@ -19,10 +19,10 @@ Signed-off-by: Hans de Goede <hdegoede@redhat.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
-index 96fe591a8dbe..ea8324020e44 100644
+index 2ddad96b154a..75c28179dd07 100644
 --- a/drivers/platform/mellanox/mlxreg-lc.c
 +++ b/drivers/platform/mellanox/mlxreg-lc.c
-@@ -413,7 +413,7 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
+@@ -420,7 +420,7 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
  				int size)
  {
  	struct mlxreg_hotplug_device *dev = devs;
@@ -31,7 +31,7 @@ index 96fe591a8dbe..ea8324020e44 100644
  
  	/* Create static I2C device feeding by auxiliary or main power. */
  	for (i = 0; i < size; i++, dev++) {
-@@ -423,6 +423,7 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
+@@ -430,6 +430,7 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
  				dev->brdinfo->type, dev->nr, dev->brdinfo->addr);
  
  			dev->adapter = NULL;
@@ -39,7 +39,7 @@ index 96fe591a8dbe..ea8324020e44 100644
  			goto fail_create_static_devices;
  		}
  	}
-@@ -435,7 +436,7 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
+@@ -442,7 +443,7 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
  		i2c_unregister_device(dev->client);
  		dev->client = NULL;
  	}

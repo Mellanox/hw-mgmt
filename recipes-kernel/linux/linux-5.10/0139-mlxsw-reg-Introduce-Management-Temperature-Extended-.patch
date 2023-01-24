@@ -1,7 +1,7 @@
-From 1b2f9036ada79cf984034d3e736fb1b09e516ca8 Mon Sep 17 00:00:00 2001
+From 44b270551552a48c2a0799f1660b7bfdd0c10519 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 12 May 2021 22:57:37 +0300
-Subject: [PATCH backport for v5.10 139/156] mlxsw: reg: Introduce Management
+Subject: [PATCH backport 5.10 139/182] mlxsw: reg: Introduce Management
  Temperature Extended Capabilities Register
 
 Introduce new register MTECR (Management Temperature Extended
@@ -16,7 +16,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 67 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 7d9936c3bb07..f71522b2cefb 100644
+index e060f054e0a9..5757c4f40277 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -10296,6 +10296,72 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,

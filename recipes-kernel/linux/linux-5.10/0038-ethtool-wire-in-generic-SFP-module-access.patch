@@ -1,7 +1,7 @@
-From d63d269955db70fe1b626a895e38841d431fcc5f Mon Sep 17 00:00:00 2001
+From 0d7b7f6e65905dbfcda016e81987587cd19bc3a4 Mon Sep 17 00:00:00 2001
 From: Andrew Lunn <andrew@lunn.ch>
 Date: Fri, 9 Apr 2021 11:06:41 +0300
-Subject: [PATCH backport v5.10.43 38/67] ethtool: wire in generic SFP module
+Subject: [PATCH backport 5.10 038/182] ethtool: wire in generic SFP module
  access
 
 If the device has a sfp bus attached, call its

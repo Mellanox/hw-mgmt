@@ -1,7 +1,7 @@
-From 4ff25aa6dd7b11d04d4a519963dbe739bb8951ec Mon Sep 17 00:00:00 2001
+From 1436eab9059e8f2a137ca657cc133dd6aabfe7f0 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 8 Feb 2021 22:16:04 +0200
-Subject: [PATCH backport v5.10.43 09/67] i2c: mux: mlxcpld: Extend driver to
+Subject: [PATCH backport 5.10 009/182] i2c: mux: mlxcpld: Extend driver to
  support word address space devices
 
 Extend driver to allow I2C routing control through CPLD devices with

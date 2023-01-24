@@ -1,8 +1,8 @@
-From 08c14b8d545a70b218297c767037ae62523b937d Mon Sep 17 00:00:00 2001
+From 7c2049bccef11b265fd4a4458b92277ea8ea97fc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:52 +0200
-Subject: [PATCH backport for v5.10 110/151] mlxsw: core_env: Pass slot index
- during PMAOS register write call
+Subject: [PATCH backport 5.10 110/182] mlxsw: core_env: Pass slot index during
+ PMAOS register write call
 
 Pass the slot index down to PMAOS pack helper alongside with the module.
 
@@ -46,7 +46,7 @@ index 8ab15d5bd7f5..b7c1fd3dbf45 100644
  				      MLXSW_REG_PMAOS_E_GENERATE_EVENT);
  		mlxsw_reg_pmaos_ee_set(pmaos_pl, true);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index ac4dd5e7181f..a78110256b62 100644
+index a5fa25d4bd8f..07f68fd1a4e5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -5481,9 +5481,10 @@ enum mlxsw_reg_pmaos_e {

@@ -1,7 +1,7 @@
-From c93d21b1cd28b1a57a40de5e03d1fc7ec7dd2fb6 Mon Sep 17 00:00:00 2001
+From 70a2f64a3d7b680a509c519015e4a46b6bc15ca4 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 6 Jan 2021 01:33:47 +0200
-Subject: [PATCH backport v5.10.43 03/67] i2c: mlxcpld: Add support for I2C bus
+Subject: [PATCH backport 5.10 003/182] i2c: mlxcpld: Add support for I2C bus
  frequency setting
 
 Add support for I2C bus frequency setting according to the specific

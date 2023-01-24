@@ -1,7 +1,7 @@
-From 4fca1dae2bfc8f847dd3cdbedc36132c77c4cdf6 Mon Sep 17 00:00:00 2001
+From fdcccb92ef348e32a9e3693f8a2e3df9dfa48ccf Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 6 Jul 2021 09:37:04 +0000
-Subject: [PATCH backport v5.10.43 46/67] i2c: mlxcpld: Reduce polling time for
+Subject: [PATCH backport 5.10 046/182] i2c: mlxcpld: Reduce polling time for
  performance improvement
 
 Decrease polling time 'MLXCPLD_I2C_POLL_TIME' from 400 usec to 200

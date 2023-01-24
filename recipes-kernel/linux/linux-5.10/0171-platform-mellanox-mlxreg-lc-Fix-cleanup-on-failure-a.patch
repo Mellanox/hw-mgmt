@@ -1,8 +1,8 @@
-From 68ff1efc9fdb309cd9093c4317634b601984ff6e Mon Sep 17 00:00:00 2001
+From 7a45b6a2a14c292e89a09afde8fcc7d1ceb20ebd Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Jun 2022 13:01:15 +0300
-Subject: [PATCH platform 1/1] platform/mellanox: mlxreg-lc: Fix cleanup on
- failure and add more verbosity in error flow
+Subject: [PATCH backport 5.10 171/182] platform/mellanox: mlxreg-lc: Fix
+ cleanup on failure and add more verbosity in error flow
 
 Clean client object in case of probing failure.
 Prevent running remove routine in case probing failed.
@@ -15,10 +15,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 63 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlxreg-lc.c b/drivers/platform/mellanox/mlxreg-lc.c
-index ea8324020..79d35a281 100644
+index 75c28179dd07..e3caccb1a528 100644
 --- a/drivers/platform/mellanox/mlxreg-lc.c
 +++ b/drivers/platform/mellanox/mlxreg-lc.c
-@@ -559,9 +559,6 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
+@@ -569,9 +569,6 @@ static int mlxreg_lc_event_handler(void *handle, enum mlxreg_hotplug_kind kind,
  	dev_info(mlxreg_lc->dev, "linecard#%d state %d event kind %d action %d\n",
  		 mlxreg_lc->data->slot, mlxreg_lc->state, kind, action);
  
@@ -28,7 +28,7 @@ index ea8324020..79d35a281 100644
  	switch (kind) {
  	case MLXREG_HOTPLUG_LC_SYNCED:
  		/*
-@@ -715,8 +712,12 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+@@ -725,8 +722,12 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
  	switch (regval) {
  	case MLXREG_LC_SN4800_C16:
  		err = mlxreg_lc_sn4800_c16_config_init(mlxreg_lc, regmap, data);
@@ -42,7 +42,7 @@ index ea8324020..79d35a281 100644
  		break;
  	default:
  		return -ENODEV;
-@@ -729,8 +730,11 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+@@ -739,8 +740,11 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
  	mlxreg_lc->mux = platform_device_register_resndata(dev, "i2c-mux-mlxcpld", data->hpdev.nr,
  							   NULL, 0, mlxreg_lc->mux_data,
  							   sizeof(*mlxreg_lc->mux_data));
@@ -55,7 +55,7 @@ index ea8324020..79d35a281 100644
  
  	/* Register IO access driver. */
  	if (mlxreg_lc->io_data) {
-@@ -739,6 +743,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+@@ -749,6 +753,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
  		platform_device_register_resndata(dev, "mlxreg-io", data->hpdev.nr, NULL, 0,
  						  mlxreg_lc->io_data, sizeof(*mlxreg_lc->io_data));
  		if (IS_ERR(mlxreg_lc->io_regs)) {
@@ -65,7 +65,7 @@ index ea8324020..79d35a281 100644
  			err = PTR_ERR(mlxreg_lc->io_regs);
  			goto fail_register_io;
  		}
-@@ -752,6 +759,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
+@@ -762,6 +769,9 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
  						  mlxreg_lc->led_data,
  						  sizeof(*mlxreg_lc->led_data));
  		if (IS_ERR(mlxreg_lc->led)) {
@@ -75,7 +75,7 @@ index ea8324020..79d35a281 100644
  			err = PTR_ERR(mlxreg_lc->led);
  			goto fail_register_led;
  		}
-@@ -808,7 +818,8 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+@@ -818,7 +828,8 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
  	if (!data->hpdev.adapter) {
  		dev_err(&pdev->dev, "Failed to get adapter for bus %d\n",
  			data->hpdev.nr);
@@ -85,7 +85,7 @@ index ea8324020..79d35a281 100644
  	}
  
  	/* Create device at the top of line card I2C tree.*/
-@@ -817,32 +828,40 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+@@ -827,32 +838,40 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
  	if (IS_ERR(data->hpdev.client)) {
  		dev_err(&pdev->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
  			data->hpdev.brdinfo->type, data->hpdev.nr, data->hpdev.brdinfo->addr);
@@ -135,7 +135,7 @@ index ea8324020..79d35a281 100644
  
  	par_pdata = data->hpdev.brdinfo->platform_data;
  	mlxreg_lc->par_regmap = par_pdata->regmap;
-@@ -853,12 +872,27 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
+@@ -863,12 +882,27 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
  	/* Configure line card. */
  	err = mlxreg_lc_config_init(mlxreg_lc, regmap, data);
  	if (err)
@@ -165,7 +165,7 @@ index ea8324020..79d35a281 100644
  	return err;
  }
  
-@@ -867,11 +901,18 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
+@@ -877,11 +911,18 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
  	struct mlxreg_core_data *data = dev_get_platdata(&pdev->dev);
  	struct mlxreg_lc *mlxreg_lc = platform_get_drvdata(pdev);
  

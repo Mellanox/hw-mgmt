@@ -1,7 +1,7 @@
-From 2b4379a83ce088b9ffa6510dbddad44de55452cf Mon Sep 17 00:00:00 2001
+From 15f2f79bffb77324a389b7e174f32406924d3a3a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:31 +0200
-Subject: [PATCH backport for v5.10 117/151] mlxsw: core_hwmon: Introduce slot
+Subject: [PATCH backport 5.10 117/182] mlxsw: core_hwmon: Introduce slot
  parameter in hwmon interfaces
 
 Add 'slot' parameter to 'mlxsw_hwmon_dev' structure. Use this parameter

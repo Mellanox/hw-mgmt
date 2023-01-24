@@ -1,7 +1,7 @@
-From bcbdb24a2f9f09eff689bfdc96d420d895b65562 Mon Sep 17 00:00:00 2001
+From f2b51f5d52f45a147feb6a5a8d05695849d19d46 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 8 Jul 2021 06:46:53 +0000
-Subject: [PATCH backport v5.10.43 42/67] ethtool: support FEC settings over
+Subject: [PATCH backport 5.10 042/182] ethtool: support FEC settings over
  netlink
 
 Backport from upstream commit 1e5d1f69d9fb8ea0679f9e85915e8e7fdacfbe7a
@@ -38,7 +38,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 4 insertions(+)
 
 diff --git a/include/uapi/linux/ethtool_netlink.h b/include/uapi/linux/ethtool_netlink.h
-index 9941ec3bc48a..1cc16df48c86 100644
+index 7dda2cee919b..8ac5c7e64314 100644
 --- a/include/uapi/linux/ethtool_netlink.h
 +++ b/include/uapi/linux/ethtool_netlink.h
 @@ -42,6 +42,8 @@ enum {

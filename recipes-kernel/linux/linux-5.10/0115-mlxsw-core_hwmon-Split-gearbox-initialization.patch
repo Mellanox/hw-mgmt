@@ -1,7 +1,7 @@
-From e267a2674662a0dd7ca0e16ca991728a20367a28 Mon Sep 17 00:00:00 2001
+From 1a451b46c16494cfa38bb47495ad632626502681 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:29 +0200
-Subject: [PATCH backport for v5.10 115/151] mlxsw: core_hwmon: Split gearbox
+Subject: [PATCH backport 5.10 115/182] mlxsw: core_hwmon: Split gearbox
  initialization
 
 Split gearbox initialization in two functions - the first one is to be

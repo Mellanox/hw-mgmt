@@ -1,7 +1,7 @@
-From 74176fe3454cc8a5c3c0375815d23f2db6ec920d Mon Sep 17 00:00:00 2001
+From 999214e1026baf68ff05a734a92e4cbb4cd8a073 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 25 Mar 2021 20:12:11 +0200
-Subject: [PATCH backport v5.10.43 63/67] Documentation/ABI: Add new line card
+Subject: [PATCH backport 5.10 063/182] Documentation/ABI: Add new line card
  attributes for mlxreg-io sysfs interfaces
 
 Add documentation for the new attributes for line cards:

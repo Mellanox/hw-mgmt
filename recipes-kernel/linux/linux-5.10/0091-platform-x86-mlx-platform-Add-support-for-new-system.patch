@@ -1,8 +1,8 @@
-From 0f3eac510ee3f0567e942fa77599d855a447b694 Mon Sep 17 00:00:00 2001
+From ececae8bc325e3b01f36fd694e45a4cbbad334e4 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sat, 23 Oct 2021 12:40:22 +0300
-Subject: [PATCH backport for v5.10 91/97] platform/x86: mlx-platform: Add
- support for new system SGN2410
+Subject: [PATCH backport 5.10 091/182] platform/x86: mlx-platform: Add support
+ for new system SGN2410
 
 Add support for new system type, which is a water-cooling flavor
 of the VMOD001 system class, equipped with 48xSFP28 and 8xQSFP28

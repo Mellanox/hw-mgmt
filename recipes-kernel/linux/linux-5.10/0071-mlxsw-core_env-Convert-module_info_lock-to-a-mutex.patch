@@ -1,7 +1,7 @@
-From c43ccced133f809baca20ebfe5de154581287af8 Mon Sep 17 00:00:00 2001
+From 0de1374694bd39c9d3e0a185c5da34506fd4aab9 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Sun, 15 Aug 2021 15:08:18 +0300
-Subject: [PATCH backport v.4.19 04/13] mlxsw: core_env: Convert
+Subject: [PATCH backport 5.10 071/182] mlxsw: core_env: Convert
  'module_info_lock' to a mutex
 
 After the previous patch, the lock is always taken in process context so

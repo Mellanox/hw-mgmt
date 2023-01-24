@@ -1,7 +1,7 @@
-From 4d8b81be5765968a18fdcb354d80ca384c9b1aa3 Mon Sep 17 00:00:00 2001
+From d07723d636eed0ac64b2903d2e5bc92af9abfe40 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 8 Feb 2021 22:16:06 +0200
-Subject: [PATCH backport v5.10.43 11/67] i2c: mux: mlxcpld: Add callback to
+Subject: [PATCH backport 5.10 011/182] i2c: mux: mlxcpld: Add callback to
  notify mux creation completion
 
 Add notification to inform caller that mux objects array has been

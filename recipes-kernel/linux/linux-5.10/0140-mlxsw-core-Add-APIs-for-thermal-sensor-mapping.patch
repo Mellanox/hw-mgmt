@@ -1,7 +1,7 @@
-From 78815e92676ba5424e87bf5aa6b919cc263c9d88 Mon Sep 17 00:00:00 2001
+From 3614c1e72e48e03c64ce88d269d97ee4743f9cc4 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 13 Dec 2021 12:29:10 +0000
-Subject: [PATCH backport for v5.10 140/156] mlxsw: core: Add APIs for thermal
+Subject: [PATCH backport 5.10 140/182] mlxsw: core: Add APIs for thermal
  sensor mapping
 
 Add APIs mlxsw_env_sensor_map_init() and mlxsw_env_sensor_map_fini(().

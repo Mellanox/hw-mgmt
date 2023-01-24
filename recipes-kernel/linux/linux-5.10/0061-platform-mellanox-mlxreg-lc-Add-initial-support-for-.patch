@@ -1,7 +1,7 @@
-From 2b315e1ca3fdfe15c5e7a0256295a0af50c7c47f Mon Sep 17 00:00:00 2001
+From e8d9090e50da28c82c3bbb7ff2db58aebd1c16ff Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 21:40:46 +0000
-Subject: [PATCH backport v5.10.43 61/67] platform/mellanox: mlxreg-lc: Add
+Subject: [PATCH backport 5.10 061/182] platform/mellanox: mlxreg-lc: Add
  initial support for Nvidia line card devices
 
 Provide support for the Nvidia MSN4800-XX line cards for MSN4800

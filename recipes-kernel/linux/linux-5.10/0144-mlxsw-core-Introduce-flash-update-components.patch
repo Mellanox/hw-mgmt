@@ -1,8 +1,8 @@
-From 5cfa7c6f4d93ba9cfadcdf3c908776d640232edb Mon Sep 17 00:00:00 2001
+From 1eb0843255d6e92aa96d0ea11a15ab1f86b20e4f Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 26 Feb 2021 18:40:28 +0100
-Subject: [PATCH backport for v5.10 144/156] mlxsw: core: Introduce flash
- update components
+Subject: [PATCH backport 5.10 144/182] mlxsw: core: Introduce flash update
+ components
 
 Introduce an infrastructure allowing to have multiple components for
 flashing purposes that can be registered from inside the driver. Convert

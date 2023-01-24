@@ -1,8 +1,8 @@
-From 2ab7d64da8f21bafbf203c9ac5d2c8375a5bec88 Mon Sep 17 00:00:00 2001
+From 8e3d1dbfd9cf686f9282d9b36f4ccc5ef3949ef5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 7 Feb 2021 22:59:53 +0200
-Subject: [PATCH backport for v5.10 67/97] platform/mellanox: Add dedicated
- match for system type QMB8700 (downstream)
+Subject: [PATCH backport 5.10 067/182] platform/mellanox: Add dedicated match
+ for system type QMB8700 (downstream)
 
 Use dedicated match function for QMB8700 system in order to work-around
 wrong CPLD register map.

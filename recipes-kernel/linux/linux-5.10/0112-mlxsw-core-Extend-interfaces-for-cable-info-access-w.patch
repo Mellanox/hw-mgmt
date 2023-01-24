@@ -1,7 +1,7 @@
-From e3438b0dec23f0ab7a81ec96596e5e8924571809 Mon Sep 17 00:00:00 2001
+From 0b0f4813bdd0b4ed70074d616f68bb6c774662bc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:53 +0200
-Subject: [PATCH backport for v5.10 112/151] mlxsw: core: Extend interfaces for
+Subject: [PATCH backport 5.10 112/182] mlxsw: core: Extend interfaces for
  cable info access with slot argument
 
 Extend all cable info APIs with 'slot_index' argument.
@@ -668,10 +668,10 @@ index 2bc4c4556895..5df54a5bf292 100644
  		dev_err(dev, "Failed to query module temperature thresholds\n");
  		return err;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 56e0291f1b37..3f9062f1ccce 100644
+index 21a7415c8ef5..4f84c4bb66af 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -159,13 +159,13 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
+@@ -151,13 +151,13 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
  	 * EEPROM if we got valid thresholds from MTMP.
  	 */
  	if (!emerg_temp || !crit_temp) {
@@ -769,7 +769,7 @@ index b2ffcfda8374..104f1ba0242f 100644
  }
  
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
-index 1a9978f501ba..dff8156ae1c3 100644
+index 4110e15c22c7..e0424f490c6f 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 @@ -1377,7 +1377,7 @@ static int mlxsw_sp_port_overheat_init_val_set(struct mlxsw_sp_port *mlxsw_sp_po

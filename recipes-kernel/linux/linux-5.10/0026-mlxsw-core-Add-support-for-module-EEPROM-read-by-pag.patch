@@ -1,7 +1,7 @@
-From 3eb2a259a02d49f2def5f389f642105608f8a310 Mon Sep 17 00:00:00 2001
+From 37a0a27a7d38597e4b60b4ff483a20a2cdfeaac6 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Mon, 21 Jun 2021 10:50:41 +0300
-Subject: [PATCH backport v5.10.43 26/67] mlxsw: core: Add support for module
+Subject: [PATCH backport 5.10 026/182] mlxsw: core: Add support for module
  EEPROM read by page
 
 Add support for ethtool_ops::get_module_eeprom_by_page() which allows
@@ -141,7 +141,7 @@ index 2b23f8a87862..0bf5bd0f8a7e 100644
  mlxsw_env_module_overheat_counter_get(struct mlxsw_core *mlxsw_core, u8 module,
  				      u64 *p_counter);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index c010db2c9dba..7644792f3c25 100644
+index 443dc44452ef..af4c9b44d9cf 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -112,10 +112,23 @@ mlxsw_m_get_module_eeprom(struct net_device *netdev, struct ethtool_eeprom *ee,

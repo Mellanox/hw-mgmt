@@ -1,8 +1,7 @@
-From d8ba0b563945161d8d42103bef981f8c9f227ca4 Mon Sep 17 00:00:00 2001
+From 7b7f5f88374c3377fc28e48a0bc77ae4aa783fda Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 7 Dec 2021 16:07:31 +0200
-Subject: [PATCH backport for v5.10 103/151] mlxsw: core: Remove unnecessary
- asserts
+Subject: [PATCH backport 5.10 103/182] mlxsw: core: Remove unnecessary asserts
 
 Remove unnecessary asserts for module index validation. Leave only one
 that is actually necessary in mlxsw_env_pmpe_listener_func() where the

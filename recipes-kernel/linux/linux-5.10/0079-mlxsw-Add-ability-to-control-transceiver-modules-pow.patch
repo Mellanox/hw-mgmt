@@ -1,7 +1,7 @@
-From 271416f5e220a70a6e522120bb780b6db81b934d Mon Sep 17 00:00:00 2001
+From 7c7e9508c2bdc91c3c1cbc345b0ce816388690e6 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Mon, 16 Aug 2021 16:58:34 +0300
-Subject: [PATCH backport v.4.19 12/13] mlxsw: Add ability to control
+Subject: [PATCH backport 5.10 079/182] mlxsw: Add ability to control
  transceiver modules' power mode
 
 Implement support for ethtool_ops::.get_module_power_mode and

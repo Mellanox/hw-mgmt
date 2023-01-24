@@ -1,8 +1,8 @@
-From 237481e69c7142240287b8a2a5be8808ff2700bf Mon Sep 17 00:00:00 2001
+From 51dcef46e453de30ef187afd4e7086d3af2ea432 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Tue, 22 Jun 2021 09:50:52 +0300
-Subject: [PATCH backport v5.10.43 30/67] ethtool: Validate module EEPROM
- offset as part of policy
+Subject: [PATCH backport 5.10 030/182] ethtool: Validate module EEPROM offset
+ as part of policy
 
 Validate the offset to read from module EEPROM as part of the netlink
 policy and remove the corresponding check from the code.
