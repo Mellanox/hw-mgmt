@@ -1,8 +1,8 @@
-From 28d50bea6e7578ee936687fbb9ca2f589433ea0d Mon Sep 17 00:00:00 2001
+From d7353e41900e4d6fa44fa5e51a483b9f01432846 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Thu, 25 Feb 2021 10:17:53 +0100
-Subject: [PATCH backport for v5.10 141/156] mlxsw: reg: Add Management
- DownStream Device Tunneling Register
+Subject: [PATCH backport 5.10 141/182] mlxsw: reg: Add Management DownStream
+ Device Tunneling Register
 
 The MDDT register allows deliver query and request messages
 (PRM registers, commands) to a DownStream device.
@@ -13,7 +13,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 91 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index f71522b2cefb..ce3842ed8460 100644
+index 5757c4f40277..7b71e9ae3d51 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -10481,6 +10481,96 @@ mlxsw_reg_mbct_unpack(const char *payload, u8 *p_slot_index,

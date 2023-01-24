@@ -1,7 +1,7 @@
-From 93819ac12f658cdc71ab649489bf12b90e57288f Mon Sep 17 00:00:00 2001
+From 4a9542f7b6208956b87c310942fa47b1afc45494 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 16:50:27 +0000
-Subject: [PATCH backport v5.10.43 57/67] platform/mellanox: mlxreg-hotplug:
+Subject: [PATCH backport 5.10 057/182] platform/mellanox: mlxreg-hotplug:
  Extend logic for hotplug devices operations
 
 Extend the structure 'mlxreg_hotplug_device" with platform device field

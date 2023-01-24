@@ -1,8 +1,8 @@
-From 4f79ee2867834dc27baff34dd3f2ecae732c4eb3 Mon Sep 17 00:00:00 2001
+From 907562d549fefb326456b5c8c9f4e881d6379431 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 22:20:35 +0000
-Subject: [PATCH backport for v5.10 65/97] platform/x86: mlx-platform: Extend
- FAN and LED config to support new MQM97xx systems
+Subject: [PATCH backport 5.10 065/182] platform/x86: mlx-platform: Extend FAN
+ and LED config to support new MQM97xx systems
 
 Add support for new system types "MQM97xx", which is based on Mellanox
 Quantum-2 ASIC. It provides up to 64x400GB/s (IB) full bidirectional

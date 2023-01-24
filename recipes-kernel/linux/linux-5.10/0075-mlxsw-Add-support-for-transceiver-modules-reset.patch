@@ -1,7 +1,7 @@
-From 633cb9a1453ffbaf9f1e9a12cbc8677010195331 Mon Sep 17 00:00:00 2001
+From 8d47608fe8545714121b1e9067c2431eefdb13fe Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Sun, 15 Aug 2021 18:12:37 +0300
-Subject: [PATCH backport v.4.19 08/13] mlxsw: Add support for transceiver
+Subject: [PATCH backport 5.10 075/182] mlxsw: Add support for transceiver
  modules reset
 
 Implement support for ethtool_ops::reset in order to reset transceiver

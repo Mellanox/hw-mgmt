@@ -1,8 +1,8 @@
-From ee7dc420450c366dfc14a60fe73c6167caa9274a Mon Sep 17 00:00:00 2001
+From 0e6b16e3aefc494a1e0a4b1a2c731f8a2fb6ec33 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 22:04:25 +0000
-Subject: [PATCH backport for v5.10 64/97] hwmon: (mlxreg-fan) Extend the
- maximum number of tachometers
+Subject: [PATCH backport 5.10 064/182] hwmon: (mlxreg-fan) Extend the maximum
+ number of tachometers
 
 Extend support of maximum tachometers from 12 to 14 in order to support
 new systems, equipped with more fans.
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 689233edff9d..530858d43204 100644
+index 89fe7b9fe26b..0f5b109817a7 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -12,7 +12,7 @@

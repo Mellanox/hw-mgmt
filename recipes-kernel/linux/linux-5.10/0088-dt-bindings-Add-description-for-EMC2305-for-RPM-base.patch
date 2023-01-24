@@ -1,7 +1,7 @@
-From f725a91ddff83408baefcb2ac7e81aeb478079f9 Mon Sep 17 00:00:00 2001
+From 2b007826486cb4d02e712789ee72a8175c8fa7bd Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sat, 16 Oct 2021 10:52:13 +0000
-Subject: [PATCH backport 5.10/Alligator 7/9] dt-bindings: Add description for
+Subject: [PATCH backport 5.10 088/182] dt-bindings: Add description for
  EMC2305 for RPM-based PWM Fan Speed Controller
 
 Michrochip EMC2305 RPM-based PWM Fan Speed Controller.
@@ -14,7 +14,7 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
 
 diff --git a/Documentation/devicetree/bindings/hwmon/emc2305.yaml b/Documentation/devicetree/bindings/hwmon/emc2305.yaml
 new file mode 100644
-index 000000000..8a46c02a3
+index 000000000000..8a46c02a3d83
 --- /dev/null
 +++ b/Documentation/devicetree/bindings/hwmon/emc2305.yaml
 @@ -0,0 +1,46 @@

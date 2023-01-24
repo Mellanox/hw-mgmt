@@ -1,7 +1,7 @@
-From cb6b96d443eb1947cab3b4995a1a4caa579bf238 Mon Sep 17 00:00:00 2001
+From e3a3f15e69b566577c2ebe0b6f3bc019476c6879 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 30 Dec 2021 16:02:59 +0000
-Subject: [PATCH mlxsw/net-next 151/156] mlxsw: minimal: Prepare driver for
+Subject: [PATCH backport 5.10 151/182] mlxsw: minimal: Prepare driver for
  modular system support
 
 As a preparation for line cards support:
@@ -24,7 +24,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 242 insertions(+), 51 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 30925f573..59c5053dc 100644
+index 30925f57362e..59c5053dc5fd 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -24,22 +24,40 @@ static const struct mlxsw_fw_rev mlxsw_m_fw_rev = {

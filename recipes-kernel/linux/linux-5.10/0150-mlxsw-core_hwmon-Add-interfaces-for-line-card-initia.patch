@@ -1,8 +1,8 @@
-From 91a790d90cf751b55c965db8155201f443d79ed8 Mon Sep 17 00:00:00 2001
+From 7405ad4281c96aedcf879357d03487556abed05d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 12 May 2021 22:57:42 +0300
-Subject: [PATCH backport for v5.10 150/156] mlxsw: core_hwmon: Add interfaces
- for line card initialization and de-initialization
+Subject: [PATCH backport 5.10 150/182] mlxsw: core_hwmon: Add interfaces for
+ line card initialization and de-initialization
 
 Add callback functions for line card 'hwmon' initialization and
 de-initialization. Each line card is associated with the relevant

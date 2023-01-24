@@ -1,7 +1,7 @@
-From 28c7f15b54d21dd09aedbc3369942c9336d09846 Mon Sep 17 00:00:00 2001
+From a47f1f27b1d6393a5a47d5de211ba36e5905b8c7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 25 Mar 2021 20:12:05 +0200
-Subject: [PATCH backport v5.10.43 62/67] Documentation/ABI: Add new attributes
+Subject: [PATCH backport 5.10 062/182] Documentation/ABI: Add new attributes
  for mlxreg-io sysfs interfaces
 
 Add documentation for the new attributes:

@@ -1,8 +1,8 @@
-From 5d52ea3e1f69d489b8cbda7a46faca511bdf7a3e Mon Sep 17 00:00:00 2001
+From 0e8bb4ec5d0133a9d3d3e307095aca57d47bfb36 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Sun, 4 Sep 2022 10:46:01 +0300
-Subject: [PATCH 2/4] Documentation/ABI: fix description of fix
- reset_pwr_converter_fail attribute.
+Subject: [PATCH backport 5.10 177/182] Documentation/ABI: fix description of
+ fix reset_pwr_converter_fail attribute.
 
 Change description of incorrect reset_voltmon_upgrade_fail atitribute
 name to reset_pwr_converter_fail.
@@ -14,7 +14,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/Documentation/ABI/stable/sysfs-driver-mlxreg-io b/Documentation/ABI/stable/sysfs-driver-mlxreg-io
-index 3914bb95e..06feaa986 100644
+index 0913a8daf767..ac503e84e7b3 100644
 --- a/Documentation/ABI/stable/sysfs-driver-mlxreg-io
 +++ b/Documentation/ABI/stable/sysfs-driver-mlxreg-io
 @@ -103,13 +103,13 @@ Description:	These files show the system reset cause, as following: power
@@ -34,5 +34,5 @@ index 3914bb95e..06feaa986 100644
  		Only one bit could be 1 at the same time, representing only
  		the last reset cause.
 -- 
-2.14.1
+2.20.1
 

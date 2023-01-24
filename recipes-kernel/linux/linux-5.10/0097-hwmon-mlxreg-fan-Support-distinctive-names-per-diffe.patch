@@ -1,8 +1,8 @@
-From 7bb1ee5e7b27024e9192c451b83c4a8c1ea3d1b8 Mon Sep 17 00:00:00 2001
+From 9e274525918eab0b820a88cf44238aae5d1a5b75 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 26 Sep 2021 08:35:41 +0300
-Subject: [PATCH backport for v5.10 97/97] hwmon: (mlxreg-fan) Support
- distinctive names per different cooling devices
+Subject: [PATCH backport 5.10 097/182] hwmon: (mlxreg-fan) Support distinctive
+ names per different cooling devices
 
 Provide different names for cooling devices registration to allow
 binding each cooling devices to relevant thermal zone. Thus, specific
@@ -18,7 +18,7 @@ Signed-off-by: Guenter Roeck <linux@roeck-us.net>
  1 file changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index f32a34b371ec..5afad62060cc 100644
+index 8e5cd6991929..4a8becdb0d58 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -263,6 +263,13 @@ mlxreg_fan_is_visible(const void *data, enum hwmon_sensor_types type, u32 attr,

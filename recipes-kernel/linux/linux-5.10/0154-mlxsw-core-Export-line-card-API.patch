@@ -1,7 +1,7 @@
-From b0d9c46c43d1bb70d9efe4d9721086ea6854f2c7 Mon Sep 17 00:00:00 2001
+From a89d212954b74f3169e3061a3623eadfb86441e6 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Dec 2021 09:31:32 +0000
-Subject: [PATCH backport for v5.10 154/156] mlxsw: core: Export line card API
+Subject: [PATCH backport 5.10 154/182] mlxsw: core: Export line card API
 
 Export API mlxsw_core_linecards() for being used by 'minimal' driver.
 

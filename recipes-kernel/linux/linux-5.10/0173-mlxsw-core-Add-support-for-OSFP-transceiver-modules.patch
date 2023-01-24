@@ -1,7 +1,7 @@
-From 2d0cae902b722594b17335e7aceb6500d9bb4525 Mon Sep 17 00:00:00 2001
+From f4a99113cce99f7c41e753ff1097120bc33b6951 Mon Sep 17 00:00:00 2001
 From: Danielle Ratson <danieller@nvidia.com>
 Date: Tue, 22 Feb 2022 19:17:03 +0200
-Subject: [PATCH platform backport v5.10 1/1] mlxsw: core: Add support for OSFP
+Subject: [PATCH backport 5.10 173/182] mlxsw: core: Add support for OSFP
  transceiver modules
 
 The driver can already dump the EEPROM contents of QSFP-DD transceiver
@@ -43,7 +43,7 @@ index 98f7cf672d9e..f9c770eec8f8 100644
  		 * type through the identifier value.
  		 */
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index ce3842ed8460..bec9d94b718a 100644
+index 7b71e9ae3d51..f8c828e057c8 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -8950,6 +8950,7 @@ enum mlxsw_reg_mcia_eeprom_module_info_id {

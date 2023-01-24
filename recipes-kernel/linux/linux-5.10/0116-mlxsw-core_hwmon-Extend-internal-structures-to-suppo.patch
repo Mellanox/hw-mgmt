@@ -1,7 +1,7 @@
-From 5e2e8d9529ba8ac474283f43bb287a8e1c030597 Mon Sep 17 00:00:00 2001
+From a18e5112ed12150e245e275e187ecd6d87d66b0e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:30 +0200
-Subject: [PATCH backport for v5.10 116/151] mlxsw: core_hwmon: Extend internal
+Subject: [PATCH backport 5.10 116/182] mlxsw: core_hwmon: Extend internal
  structures to support multi hwmon objects
 
 Currently, mlxsw supports a single hwmon device and registers it with

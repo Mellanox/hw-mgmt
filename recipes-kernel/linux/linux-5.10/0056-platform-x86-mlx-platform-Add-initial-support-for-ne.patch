@@ -1,8 +1,8 @@
-From 1fe47720483933d41d480ae51c3487a2f34e6e1a Mon Sep 17 00:00:00 2001
+From e30148789fa7c9554bfbac59e737d92301d09059 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 16:39:11 +0000
-Subject: [PATCH backport for v5.10 56/97] platform/x86: mlx-platform: Add
- initial support for new modular system
+Subject: [PATCH backport 5.10 056/182] platform/x86: mlx-platform: Add initial
+ support for new modular system
 
 Add initial chassis management support for Nvidia modular Ethernet
 switch systems MSN4800, providing a high performance switching solution

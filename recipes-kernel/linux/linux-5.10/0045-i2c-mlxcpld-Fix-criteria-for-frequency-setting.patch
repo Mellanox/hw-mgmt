@@ -1,7 +1,7 @@
-From af5a773207a5602dbc4bad8fcfc4db32af49880b Mon Sep 17 00:00:00 2001
+From a0ea663d696f2d67fc5ac8f33ab26b60b932f5cd Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sat, 10 Jul 2021 07:24:22 +0000
-Subject: [PATCH backport v5.10.43 45/67] i2c: mlxcpld: Fix criteria for
+Subject: [PATCH backport 5.10 045/182] i2c: mlxcpld: Fix criteria for
  frequency setting
 
 Value for getting frequency capability wrongly has been taken from

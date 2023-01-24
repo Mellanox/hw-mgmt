@@ -1,7 +1,7 @@
-From f0424930cf5aa34f9133dae2f2906c898d2c42a8 Mon Sep 17 00:00:00 2001
+From 36e27ec3550453192cdf3788a20f82d074122c58 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 8 Feb 2021 22:16:02 +0200
-Subject: [PATCH backport v5.10.43 07/67] i2c: mux: mlxcpld: Prepare mux
+Subject: [PATCH backport 5.10 007/182] i2c: mux: mlxcpld: Prepare mux
  selection infrastructure for two-byte support
 
 Allow to program register value zero to the mux register, which is

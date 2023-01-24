@@ -1,7 +1,7 @@
-From 2316fec2621475edab4f091ae2238e3cb7bf0158 Mon Sep 17 00:00:00 2001
+From fc25f37b0269b04b9853c2d62a80e0542f47506d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 16 Sep 2021 22:47:18 +0300
-Subject: [PATCH backport for v5.10 93/97] hwmon: (mlxreg-fan) Extend driver to
+Subject: [PATCH backport 5.10 093/182] hwmon: (mlxreg-fan) Extend driver to
  support multiply PWM
 
 Add additional PWM attributes in order to support the systems, which
@@ -17,7 +17,7 @@ Signed-off-by: Guenter Roeck <linux@roeck-us.net>
  1 file changed, 43 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 530858d43204..682093aa0c4c 100644
+index 0f5b109817a7..1a146cc4b0fd 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -13,6 +13,8 @@

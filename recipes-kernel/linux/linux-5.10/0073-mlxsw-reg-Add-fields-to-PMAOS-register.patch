@@ -1,7 +1,7 @@
-From fa007aaebb879a2ce7f5266c10f60027d3db4758 Mon Sep 17 00:00:00 2001
+From 1af02ef69c43c4ed19fee10181957fae8b3b3bd2 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Thu, 29 Jul 2021 15:15:23 +0300
-Subject: [PATCH backport v.4.19 06/13] mlxsw: reg: Add fields to PMAOS
+Subject: [PATCH backport 5.10 073/182] mlxsw: reg: Add fields to PMAOS
  register
 
 The Ports Module Administrative and Operational Status (PMAOS) register
@@ -15,7 +15,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 20e49df5780f..f30329af788c 100644
+index 04f0c96c8068..dd72443c295f 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -5415,7 +5415,15 @@ static inline void mlxsw_reg_pspa_pack(char *payload, u8 swid, u8 local_port)

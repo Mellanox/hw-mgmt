@@ -1,8 +1,8 @@
-From 8d4004dd8637acef5f9a27c28c84d64293793b67 Mon Sep 17 00:00:00 2001
+From d0a94e237cb6d2020a0a1c27f357a9c3bfc0b1d5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:43 +0200
-Subject: [PATCH backport for v5.10 101/151] mlxsw: core_thermal: Remove
- obsolete API for query resource
+Subject: [PATCH backport 5.10 101/182] mlxsw: core_thermal: Remove obsolete
+ API for query resource
 
 Remove obsolete API mlxsw_core_res_query_enabled(), which is only
 relevant for end-of-life SwitchX-2 ASICs. Support for these ASICs was
@@ -63,10 +63,10 @@ index 3788d02b5244..8b170ad92302 100644
  	err = mlxsw_reg_query(mlxsw_hwmon->core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index e5997b6a03b9..9b0cd6f7939b 100644
+index f471f03e0094..80942c78d9e5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -787,9 +787,6 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -746,9 +746,6 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
  	int i, err;
  
@@ -76,7 +76,7 @@ index e5997b6a03b9..9b0cd6f7939b 100644
  	mlxsw_reg_mgpir_pack(mgpir_pl);
  	err = mlxsw_reg_query(core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
-@@ -834,9 +831,6 @@ mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal)
+@@ -793,9 +790,6 @@ mlxsw_thermal_modules_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  
@@ -86,7 +86,7 @@ index e5997b6a03b9..9b0cd6f7939b 100644
  	for (i = thermal->tz_module_num - 1; i >= 0; i--)
  		mlxsw_thermal_module_fini(&thermal->tz_module_arr[i]);
  	kfree(thermal->tz_module_arr);
-@@ -884,9 +878,6 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -843,9 +837,6 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	int i;
  	int err;
  
@@ -96,7 +96,7 @@ index e5997b6a03b9..9b0cd6f7939b 100644
  	mlxsw_reg_mgpir_pack(mgpir_pl);
  	err = mlxsw_reg_query(core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
-@@ -930,9 +921,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal)
+@@ -889,9 +880,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal)
  {
  	int i;
  

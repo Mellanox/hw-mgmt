@@ -1,8 +1,8 @@
-From 5ebc9aabf005cb3a337363bf2c9ffc88b4e25391 Mon Sep 17 00:00:00 2001
+From da7c615b231402e3084dae855468be117538535c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 15 Dec 2021 08:59:14 +0000
-Subject: [PATCH backport for v5.10 152/156] mlxsw: core: Extend bus init
- function with event handler argument
+Subject: [PATCH backport 5.10 152/182] mlxsw: core: Extend bus init function
+ with event handler argument
 
 The purpose of new argument - is to introduce system event handler for
 treating line card activation / deactivation signals on modular system.
@@ -52,7 +52,7 @@ index 10ea541bb19d..b09f9013db77 100644
  	bool (*skb_transmit_busy)(void *bus_priv,
  				  const struct mlxsw_tx_info *tx_info);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-index 939b692ffc33..26e93f2c7ebf 100644
+index ce843ea91464..0cdb9b9d8353 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 @@ -509,7 +509,8 @@ static int mlxsw_i2c_skb_transmit(void *bus_priv, struct sk_buff *skb,
@@ -66,10 +66,10 @@ index 939b692ffc33..26e93f2c7ebf 100644
  	struct mlxsw_i2c *mlxsw_i2c = bus_priv;
  	char *mbox;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/pci.c b/drivers/net/ethernet/mellanox/mlxsw/pci.c
-index 641cdd81882b..627a1b63f12e 100644
+index dbb16ce25bdf..e8e91130cdf5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/pci.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/pci.c
-@@ -1408,9 +1408,12 @@ static void mlxsw_pci_free_irq_vectors(struct mlxsw_pci *mlxsw_pci)
+@@ -1411,9 +1411,12 @@ static void mlxsw_pci_free_irq_vectors(struct mlxsw_pci *mlxsw_pci)
  	pci_free_irq_vectors(mlxsw_pci->pdev);
  }
  

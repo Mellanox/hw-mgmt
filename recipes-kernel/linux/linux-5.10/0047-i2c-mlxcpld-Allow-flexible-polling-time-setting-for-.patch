@@ -1,7 +1,7 @@
-From 262aa0da8c16955819cd4531a5b62c9ea44d4f7d Mon Sep 17 00:00:00 2001
+From a0fb4893521ea063db085162385c1eac83cafb07 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 6 Jul 2021 18:23:46 +0000
-Subject: [PATCH backport v5.10.43 47/67] i2c: mlxcpld: Allow flexible polling
+Subject: [PATCH backport 5.10 047/182] i2c: mlxcpld: Allow flexible polling
  time setting for I2C transactions
 
 Allow polling time setting according to I2C frequency supported across

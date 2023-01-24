@@ -1,8 +1,8 @@
-From effc6f1ddd9141172b5d0653c2c4083e546281bd Mon Sep 17 00:00:00 2001
+From 4a49468e7fc7e94a83703215445d9b3919642eb9 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 29 Jan 2021 08:45:09 +0100
-Subject: [PATCH backport for v5.10 131/156] mlxsw: reg: Add Ports Mapping
- event Configuration Register
+Subject: [PATCH backport 5.10 131/182] mlxsw: reg: Add Ports Mapping event
+ Configuration Register
 
 The PMECR register use to enable/disable event trigger in case of
 local port mapping change.
@@ -13,7 +13,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 64 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 8138f55d85fc..1f8193c225e1 100644
+index 98c627ffe039..93e3366cfcb9 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -5524,6 +5524,69 @@ static inline void mlxsw_reg_pplr_pack(char *payload, u8 local_port,

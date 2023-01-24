@@ -1,8 +1,8 @@
-From 12be2c7e72fc74ed8651660b7922ac6a075f3375 Mon Sep 17 00:00:00 2001
+From 8b0f2061c6f8d799b7da9b7f50edb18208e67bb8 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 22 Jul 2022 01:15:43 +0300
-Subject: [PATCH platform backport v5.10 1/1] DS: mlxsw: core_linecards: Skip
- devlink and provisioning operation
+Subject: [PATCH backport 5.10 174/182] DS: mlxsw: core_linecards: Skip devlink
+ and provisioning operation
 
 Do not execute provisioning / unprovisioning flow in not upstream
 environment.
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 13 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index 2b081643ff54..4faf7da4aa54 100644
+index 3a2fdd22dc21..30665a6f3e4d 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -651,8 +651,11 @@ mlxsw_linecard_provision_set(struct mlxsw_core *mlxsw_core,

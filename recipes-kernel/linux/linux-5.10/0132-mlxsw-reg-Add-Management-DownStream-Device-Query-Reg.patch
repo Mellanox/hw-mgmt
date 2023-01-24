@@ -1,8 +1,8 @@
-From b9b87c69ab17e6ec6e2bc8959385158d609ed43e Mon Sep 17 00:00:00 2001
+From 5d8d4899f493e3b18712fc96a45eb020985740b1 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 3 Jan 2022 10:20:49 +0000
-Subject: [PATCH backport for v5.10 132/156] mlxsw: reg: Add Management
- DownStream Device Query Register
+Subject: [PATCH backport 5.10 132/182] mlxsw: reg: Add Management DownStream
+ Device Query Register
 
 The MDDQ register allows to query the DownStream device properties.
 
@@ -12,7 +12,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 234 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 1f8193c225e1..3a0973696dbc 100644
+index 93e3366cfcb9..ad7faeb95646 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -10296,6 +10296,239 @@ mlxsw_reg_mgpir_unpack(char *payload, u8 *num_of_devices,

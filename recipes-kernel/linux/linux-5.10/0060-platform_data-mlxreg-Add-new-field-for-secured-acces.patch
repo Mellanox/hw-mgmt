@@ -1,8 +1,8 @@
-From cb7138d2e1a656bb8ede63eab6a2ae98e9a69139 Mon Sep 17 00:00:00 2001
+From d48bd08b57cf84861e741ef8e5a2c4d3d142401c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 12 Jul 2021 21:39:51 +0000
-Subject: [PATCH backport v5.10.43 60/67] platform_data/mlxreg: Add new field
- for secured access
+Subject: [PATCH backport 5.10 060/182] platform_data/mlxreg: Add new field for
+ secured access
 
 Extend structure 'mlxreg_core_data' with the field "secured". The
 purpose of this field is to restrict access to some attributes, if

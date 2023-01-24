@@ -1,7 +1,7 @@
-From 4f14b82971a916ac748c8ac267b9cbe71c0f5e76 Mon Sep 17 00:00:00 2001
+From 19ba46cee9e3610173c050667eefa3ef6609f4fc Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Fri, 30 Jul 2021 17:46:31 +0300
-Subject: [PATCH backport v.4.19 11/13] mlxsw: reg: Add Management Cable IO and
+Subject: [PATCH backport 5.10 078/182] mlxsw: reg: Add Management Cable IO and
  Notifications register
 
 Add the Management Cable IO and Notifications register. It will be used
@@ -14,7 +14,7 @@ Signed-off-by: Ido Schimmel <idosch@nvidia.com>
  1 file changed, 34 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 9c9fab0ed371..ee0aed630540 100644
+index 0cc2fdaa459e..7f9b902049db 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -9289,6 +9289,39 @@ static inline void mlxsw_reg_mlcr_pack(char *payload, u8 local_port,

@@ -1,7 +1,7 @@
-From 6e3ada957a747ed7125d631a93add10cf065470d Mon Sep 17 00:00:00 2001
+From ff2f6198cb9d40eace6810ab48d99269e64d0f88 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 11 May 2021 08:56:18 +0300
-Subject: [PATCH backport v5.10.43 36/67] hwmon: (pmbus) Add support for MPS
+Subject: [PATCH backport 5.10 036/182] hwmon: (pmbus) Add support for MPS
  Multi-phase mp2888 controller
 
 Add support for mp2888 device from Monolithic Power Systems, Inc. (MPS)

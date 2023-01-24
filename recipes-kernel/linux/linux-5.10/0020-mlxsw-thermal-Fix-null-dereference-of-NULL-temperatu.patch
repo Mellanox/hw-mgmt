@@ -1,8 +1,8 @@
-From 79a019e52044094d5c88689f63c6f468d7e72e9e Mon Sep 17 00:00:00 2001
+From d64eceef0d6b71a60ba6d5981463c639c89b2cce Mon Sep 17 00:00:00 2001
 From: Colin Ian King <colin.king@canonical.com>
 Date: Wed, 9 Jun 2021 18:56:57 +0100
-Subject: [PATCH backport v5.10.43 20/67] mlxsw: thermal: Fix null dereference
- of NULL temperature parameter
+Subject: [PATCH backport 5.10 020/182] mlxsw: thermal: Fix null dereference of
+ NULL temperature parameter
 
 The call to mlxsw_thermal_module_temp_and_thresholds_get passes a NULL
 pointer for the temperature and this can be dereferenced in this function
@@ -19,10 +19,10 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index b96fb88aac0a..677a53f65008 100644
+index 1f9ae663e133..b29824448aa8 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -742,7 +742,7 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
+@@ -702,7 +702,7 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
  			  struct mlxsw_thermal *thermal, u8 module)
  {
  	struct mlxsw_thermal_module *module_tz;
@@ -31,7 +31,7 @@ index b96fb88aac0a..677a53f65008 100644
  	u16 sensor_index;
  
  	sensor_index = MLXSW_REG_MTMP_MODULE_INDEX_MIN + module;
-@@ -757,7 +757,7 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
+@@ -717,7 +717,7 @@ mlxsw_thermal_module_init(struct device *dev, struct mlxsw_core *core,
  	/* Initialize all trip point. */
  	mlxsw_thermal_module_trips_reset(module_tz);
  	/* Read module temperature and thresholds. */

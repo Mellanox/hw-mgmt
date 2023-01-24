@@ -1,7 +1,7 @@
-From a3b467566b25f6c559c635b52e9f7a6146b11f11 Mon Sep 17 00:00:00 2001
+From f00327b190cd2853d9e053eff7848d02b0e370cf Mon Sep 17 00:00:00 2001
 From: Bartosz Golaszewski <bgolaszewski@baylibre.com>
 Date: Mon, 26 Oct 2020 11:53:52 +0100
-Subject: [PATCH backport v5.10.43 13/67] hwmon: (pmbus) shrink code and remove
+Subject: [PATCH backport 5.10 013/182] hwmon: (pmbus) shrink code and remove
  pmbus_do_remove()
 
 The only action currently performed in pmbus_do_remove() is removing the
@@ -125,10 +125,10 @@ index 2c5b853d6c7f..aed7542d7ce5 100644
  };
  
 diff --git a/drivers/hwmon/pmbus/ibm-cffps.c b/drivers/hwmon/pmbus/ibm-cffps.c
-index 2fb7540ee952..d6bbbb223871 100644
+index da261d32450d..830003fe7024 100644
 --- a/drivers/hwmon/pmbus/ibm-cffps.c
 +++ b/drivers/hwmon/pmbus/ibm-cffps.c
-@@ -617,7 +617,6 @@ static struct i2c_driver ibm_cffps_driver = {
+@@ -623,7 +623,6 @@ static struct i2c_driver ibm_cffps_driver = {
  		.of_match_table = ibm_cffps_of_match,
  	},
  	.probe_new = ibm_cffps_probe,
@@ -197,10 +197,10 @@ index 3f1b826dac8a..789242ed72e5 100644
  };
  
 diff --git a/drivers/hwmon/pmbus/lm25066.c b/drivers/hwmon/pmbus/lm25066.c
-index 429172a42902..c75a6bf39641 100644
+index 17199a1104c7..9041a1c0f175 100644
 --- a/drivers/hwmon/pmbus/lm25066.c
 +++ b/drivers/hwmon/pmbus/lm25066.c
-@@ -508,7 +508,6 @@ static struct i2c_driver lm25066_driver = {
+@@ -531,7 +531,6 @@ static struct i2c_driver lm25066_driver = {
  		   .name = "lm25066",
  		   },
  	.probe_new = lm25066_probe,
@@ -317,7 +317,7 @@ index 4b2239a6afd3..329dc851fc59 100644
  };
  
 diff --git a/drivers/hwmon/pmbus/mp2975.c b/drivers/hwmon/pmbus/mp2975.c
-index 1c3e2a9453b1..60fbdb371332 100644
+index a41fe06e0ad4..74060bc477cf 100644
 --- a/drivers/hwmon/pmbus/mp2975.c
 +++ b/drivers/hwmon/pmbus/mp2975.c
 @@ -758,7 +758,6 @@ static struct i2c_driver mp2975_driver = {
@@ -341,10 +341,10 @@ index 20f1af9165c2..a1b4260e75b2 100644
  };
  
 diff --git a/drivers/hwmon/pmbus/pmbus.h b/drivers/hwmon/pmbus/pmbus.h
-index 88a5df2633fb..4c30ec89f5bf 100644
+index de27837e8527..c88ac5fd91f0 100644
 --- a/drivers/hwmon/pmbus/pmbus.h
 +++ b/drivers/hwmon/pmbus/pmbus.h
-@@ -490,7 +490,6 @@ void pmbus_clear_faults(struct i2c_client *client);
+@@ -491,7 +491,6 @@ void pmbus_clear_faults(struct i2c_client *client);
  bool pmbus_check_byte_register(struct i2c_client *client, int page, int reg);
  bool pmbus_check_word_register(struct i2c_client *client, int page, int reg);
  int pmbus_do_probe(struct i2c_client *client, struct pmbus_driver_info *info);
@@ -353,10 +353,10 @@ index 88a5df2633fb..4c30ec89f5bf 100644
  						      *client);
  int pmbus_get_fan_rate_device(struct i2c_client *client, int page, int id,
 diff --git a/drivers/hwmon/pmbus/pmbus_core.c b/drivers/hwmon/pmbus/pmbus_core.c
-index b0e2820a2d57..192442b3b7a2 100644
+index 117e3ce9c76a..34e677c0ab98 100644
 --- a/drivers/hwmon/pmbus/pmbus_core.c
 +++ b/drivers/hwmon/pmbus/pmbus_core.c
-@@ -2395,6 +2395,13 @@ static int pmbus_debugfs_set_pec(void *data, u64 val)
+@@ -2410,6 +2410,13 @@ static int pmbus_debugfs_set_pec(void *data, u64 val)
  DEFINE_DEBUGFS_ATTRIBUTE(pmbus_debugfs_ops_pec, pmbus_debugfs_get_pec,
  			 pmbus_debugfs_set_pec, "%llu\n");
  
@@ -370,7 +370,7 @@ index b0e2820a2d57..192442b3b7a2 100644
  static int pmbus_init_debugfs(struct i2c_client *client,
  			      struct pmbus_data *data)
  {
-@@ -2530,7 +2537,8 @@ static int pmbus_init_debugfs(struct i2c_client *client,
+@@ -2545,7 +2552,8 @@ static int pmbus_init_debugfs(struct i2c_client *client,
  		}
  	}
  
@@ -380,7 +380,7 @@ index b0e2820a2d57..192442b3b7a2 100644
  }
  #else
  static int pmbus_init_debugfs(struct i2c_client *client,
-@@ -2617,16 +2625,6 @@ int pmbus_do_probe(struct i2c_client *client, struct pmbus_driver_info *info)
+@@ -2632,16 +2640,6 @@ int pmbus_do_probe(struct i2c_client *client, struct pmbus_driver_info *info)
  }
  EXPORT_SYMBOL_GPL(pmbus_do_probe);
  

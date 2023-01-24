@@ -1,8 +1,8 @@
-From 03b40ee8d4592b404214c434fbfddd2e2a2f1c60 Mon Sep 17 00:00:00 2001
+From 441a7861ef61f4d0d55dee542d4704487694f68c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 06:11:50 +0000
-Subject: [PATCH backport for v5.10 109/151] mlxsw: reg: Extend MGPIR register
- with new slot fields
+Subject: [PATCH backport 5.10 109/182] mlxsw: reg: Extend MGPIR register with
+ new slot fields
 
 Extend MGPIR (Management General Peripheral Information Register) with
 new fields specifying the slot number and number of the slots available
@@ -81,10 +81,10 @@ index f4bc711a16cf..2bc4c4556895 100644
  	    !gbox_num)
  		return 0;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index 8d88633c9bcd..56e0291f1b37 100644
+index f4f0f8ce8597..21a7415c8ef5 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -787,13 +787,13 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+@@ -746,13 +746,13 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
  	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
  	int i, err;
  
@@ -100,7 +100,7 @@ index 8d88633c9bcd..56e0291f1b37 100644
  
  	thermal->tz_module_arr = kcalloc(thermal->tz_module_num,
  					 sizeof(*thermal->tz_module_arr),
-@@ -878,13 +878,13 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
+@@ -837,13 +837,13 @@ mlxsw_thermal_gearboxes_init(struct device *dev, struct mlxsw_core *core,
  	int i;
  	int err;
  
@@ -137,7 +137,7 @@ index 3d07c2dcf08d..b2ffcfda8374 100644
  		return 0;
  
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index e02caaf3f98c..ac4dd5e7181f 100644
+index aad0cb1497aa..a5fa25d4bd8f 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -10166,6 +10166,12 @@ enum mlxsw_reg_mgpir_device_type {

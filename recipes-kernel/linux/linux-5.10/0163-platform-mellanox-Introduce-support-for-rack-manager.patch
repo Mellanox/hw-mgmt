@@ -1,8 +1,8 @@
-From 1be273d1553206882efd4c9ce9db1e603ca05c3f Mon Sep 17 00:00:00 2001
+From 3ddb1633cbd4c914ac58b64247d5724ab7f2d6c3 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 14 Feb 2022 13:24:44 +0200
-Subject: [PATCH backport 5.10 04/17] platform: mellanox: Introduce support for
- rack manager switch
+Subject: [PATCH backport 5.10 163/182] platform: mellanox: Introduce support
+ for rack manager switch
 
 The rack switch is designed to provide high bandwidth, low latency
 connectivity using optical fiber as the primary interconnect.
@@ -21,7 +21,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 259 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 1d0c13c65..16754a7fd 100644
+index 1d0c13c653b3..3ad85934d6e3 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -90,6 +90,12 @@

@@ -1,8 +1,8 @@
-From 22c03cefac7b286b63aecd3fce4406116972a677 Mon Sep 17 00:00:00 2001
+From aba06998f55ba715e6161a427356fccc17b466fc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 3 Dec 2021 11:48:50 +0200
-Subject: [PATCH backport for v5.10 107/151] mlxsw: reg: Extend MCION register
- with new slot number field
+Subject: [PATCH backport 5.10 107/182] mlxsw: reg: Extend MCION register with
+ new slot number field
 
 Extend MCION (Management Cable IO and Notifications Register) with new
 field specifying the slot number. The purpose of this field is to
@@ -36,7 +36,7 @@ index a516c04ad19b..2ac8444aa8b2 100644
  	if (err) {
  		NL_SET_ERR_MSG_MOD(extack, "Failed to retrieve module's power mode");
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index f3c15048189f..1bcea6be570e 100644
+index bdbe198a9053..acde0cd00944 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -9327,6 +9327,12 @@ MLXSW_REG_DEFINE(mcion, MLXSW_REG_MCION_ID, MLXSW_REG_MCION_LEN);

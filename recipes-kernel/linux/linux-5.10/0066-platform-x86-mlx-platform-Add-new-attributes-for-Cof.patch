@@ -1,7 +1,7 @@
-From e5f841a7335664c1790db05745c40613e08c9d85 Mon Sep 17 00:00:00 2001
+From 74e69c1a32afbd2496dc0597de2610e4488d7810 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 13 Jul 2021 15:20:13 +0000
-Subject: [PATCH backport for v5.10 66/97] platform/x86: mlx-platform: Add new
+Subject: [PATCH backport 5.10 066/182] platform/x86: mlx-platform: Add new
  attributes for CoffeeLake COMEx based systems
 
 Add new attributes for systems equipped with CoffeeLake COMEx module to

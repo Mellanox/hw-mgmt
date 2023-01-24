@@ -1,8 +1,8 @@
-From 321e32b68e11bfd1caf90bc6d6fc13151a3025ee Mon Sep 17 00:00:00 2001
+From 933a623916a00d83616d653a82329750d94de0f1 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Dec 2021 09:40:34 +0000
-Subject: [PATCH mlxsw/net-next 156/156] mlxsw: minimal: Add interfaces for
- line card initialization and de-initialization
+Subject: [PATCH backport 5.10 156/182] mlxsw: minimal: Add interfaces for line
+ card initialization and de-initialization
 
 Add callback functions for line card 'netdevice' objects initialization
 and de-initialization. Each line card is associated with the set of
@@ -18,7 +18,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 70 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
-index 27afb28e4..0b605c6aa 100644
+index 27afb28e439f..0b605c6aa637 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
 @@ -549,6 +549,69 @@ static void mlxsw_m_sys_event_handler(struct mlxsw_core *mlxsw_core)

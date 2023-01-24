@@ -1,8 +1,8 @@
-From b2c6e188e2e8aff6f84815611a4cd23afd0a4cd7 Mon Sep 17 00:00:00 2001
+From 3c3be37747cb938fff1178f88d611eb00159297b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:28 +0200
-Subject: [PATCH backport for v5.10 114/151] mlxsw: core: Move port module
- events enablement to a separate function
+Subject: [PATCH backport 5.10 114/182] mlxsw: core: Move port module events
+ enablement to a separate function
 
 Use a separate function for enablement of port module events such
 plug/unplug and temperature threshold crossing. The motivation is to
