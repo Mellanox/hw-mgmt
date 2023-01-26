@@ -1458,7 +1458,7 @@ class fan_sensor(system_device):
         self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.fan_dir = self._read_dir()
         self.fan_dir_fail = False
-        self.drwr_param = self.fan_param[self.fan_dir]
+        self.drwr_param = self._get_fan_drwr_param()
         self.val_min_def = self.get_file_val("config/fan_min_speed", CONST.RPM_MIN_MAX["val_min"])
         self.val_max_def = self.get_file_val("config/fan_max_speed", CONST.RPM_MIN_MAX["val_max"])
         self.is_calibrated = False
@@ -1488,8 +1488,23 @@ class fan_sensor(system_device):
         self.rpm_valid_state = True
         self.fan_dir_fail = False
         self.fan_dir = self._read_dir()
-        self.drwr_param = self.fan_param[self.fan_dir]
+        self.drwr_param = self._get_fan_drwr_param()
         self.fan_shutdown(False)
+
+    # ----------------------------------------------------------------------
+    def _get_fan_drwr_param(self):
+        """
+        @summary: Get fan params from system configuration
+        @return: FAN params depending of fan dir
+        """
+        dir = self.fan_dir
+        param = None
+        if dir not in self.fan_param.keys():
+            self.log.error("Fan dir \"{}\" unsupported in configuration:\n{}".format(dir, self.fan_param))
+            raise AttributeError("Unsupported dir in configuration \"{}\"".format(dir))
+        else:
+            param = self.fan_param[self.fan_dir]
+        return param
 
     # ----------------------------------------------------------------------
     def _read_dir(self):
