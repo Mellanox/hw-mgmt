@@ -1,0 +1,7 @@
+0033-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch
+0034-mlxsw-Verify-the-accessed-index-doesn-t-exceed-the-a.patch
+0041-net-ethtool-clear-heap-allocations-for-ethtool-funct.patch
+0043-platform-mellanox-mlxreg-io-Fix-argument-base-in-kst.patch
+0044-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch
+0048-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch
+
