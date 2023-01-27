@@ -1207,8 +1207,8 @@ class thermal_module_sensor(system_device):
         """
         status = True
 
-        if self.value == 0 and self.val_max == 0:
-            self.log.debug("Module not support temp reading val:{} max:{}".format(self.value, self.val_max))
+        if self.value == 0 and self.val_max == 0 and self.val_min == 0:
+            self.log.debug("Module not supporting temp reading val:{} max:{}".format(self.value, self.val_max))
             status = False
 
         return status
@@ -1266,11 +1266,11 @@ class thermal_module_sensor(system_device):
         """
         self.fault_list = []
         module_fault = self.get_fault()
-        if module_fault:
+        """if module_fault:
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
             self.pwm = max(pwm, self.pwm)
             self.fault_list.append(CONST.UNTRUSTED_ERR)
-            self.log.warn("{} fault (untrusted). Set PWM {}".format(self.name, pwm))
+            self.log.warn("{} fault (untrusted). Set PWM {}".format(self.name, pwm))"""
 
         # sensor error reading counter
         if self.check_reading_file_err():
