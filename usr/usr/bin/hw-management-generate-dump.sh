@@ -37,6 +37,7 @@
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
+REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
 
 MODE=$1
 
@@ -103,6 +104,7 @@ dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
 dump_cmd "sensors" "sensors" "20"
 dump_cmd "iio_info" "iio_info" "5"
+dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 
 if [ -x "$(command -v i2cdetect)" ];   then
     run_cmd="for i in {0..17} ; do echo i2c bus \$i; i2cdetect -y \$i 2>/dev/null; done > $DUMP_FOLDER/i2c_scan"
