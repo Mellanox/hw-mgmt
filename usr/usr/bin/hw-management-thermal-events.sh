@@ -635,31 +635,34 @@ if [ "$1" == "add" ]; then
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
-		if [ "$board_type" == "VMOD0014" ]; then
-			sn2201_find_cpu_core_temp_ids
-		fi
 		for i in {1..16}; do
 			if [ -f "$3""$4"/temp"$i"_input ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
 				else
-					if [ "$board_type" != "VMOD0014" ]; then
-						id=$((i - 2))
-					else
+					id=$((i - 2))
+					if [ "$board_type" == "VMOD0014" ]; then
 					# Denverton CPU on SN2201 has ridicolous CPU Core numbers 6, 12 instead 0, 1
 					# These core id numbers also can differ in various CPU batches.
-						if [ "$i" == "$core0_temp_id" ]; then
-							id=0
-						elif [ "$i" == "$core1_temp_id" ]; then
-							id=1
+					# This was fixed in later version of coretemp driver e.g. in kernel 5.10.162 
+					# and core temperature is reported as in other Intel CPUs, core0 - temp2_input
+					# core1 - temp3_input. Check this case.
+						sn2201_find_cpu_core_temp_ids
+						if [ -f "$3""$4"/temp"$core0_temp_id"_input ] ||
+						   [ -f "$3""$4"/temp"$core1_temp_id"_input ]; then
+							if [ "$i" == "$core0_temp_id" ]; then
+								id=0
+							elif [ "$i" == "$core1_temp_id" ]; then
+								id=1
+							fi
 						fi
 					fi
 					name="core$id"
 				fi
-				ln -sf "$3""$4"/temp"$i"_input $thermal_path/cpu_$name
-				ln -sf "$3""$4"/temp"$i"_crit $thermal_path/cpu_"$name"_crit
-				ln -sf "$3""$4"/temp"$i"_max $thermal_path/cpu_"$name"_max
-				ln -sf "$3""$4"/temp"$i"_crit_alarm $alarm_path/cpu_"$name"_crit_alarm
+				check_n_link "$3""$4"/temp"$i"_input $thermal_path/cpu_$name
+				check_n_link "$3""$4"/temp"$i"_crit $thermal_path/cpu_"$name"_crit
+				check_n_link "$3""$4"/temp"$i"_max $thermal_path/cpu_"$name"_max
+				check_n_link "$3""$4"/temp"$i"_crit_alarm $alarm_path/cpu_"$name"_crit_alarm
 			fi
 		done
 	fi
