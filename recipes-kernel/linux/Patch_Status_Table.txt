@@ -366,11 +366,11 @@ Kernel-5.10
 |0198-platform-mellanox-Introduce-support-for-switches-bas.patch         |                                            | pending                                         |                                                              |
 |0199-platform-mellanox-mlx-platform-Add-reset-and-extend-.patch         |                                            | pending                                         |                                                              |
 |0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch         |                                            |                                                 |                                                              |
-|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch         |                                            |                                                 |                                                              |
-|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch         |                                            |                                                 |                                                              |
+|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch         | 2a5be6d1340c0fefcee8a6489cff7fd88a0d5b85   |                                                 | v5.10.162                                                    |
+|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch         | de24aceb07d426b6f1c59f33889d6a964770547b   |                                                 | v5.10.162                                                    |
 |0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                                |                                            |                                                 |                                                              |
-|0204-i2c-mlxbf-Fix-frequency-calculation.patch                          |                                            |                                                 |                                                              |
-|0205-i2c-mlxbf-support-lock-mechanism.patch                             |                                            |                                                 |                                                              |
+|0204-i2c-mlxbf-Fix-frequency-calculation.patch                          | 37f071ec327b04c83d47637c5e5c2199b39899ca   |                                                 | v5.10.162                                                    |
+|0205-i2c-mlxbf-support-lock-mechanism.patch                             | 86067ccfa1424a26491542d6f6d7546d40b61a10   |                                                 | v5.10.162                                                    |
 |0206-i2c-mlxbf-add-multi-slave-functionality.patch                      |                                            |                                                 |                                                              |
 |0207-i2c-mlxbf-support-BlueField-3-SoC.patch                            |                                            |                                                 |                                                              |
 |0208-i2c-mlxbf-remove-device-tree-support.patch                         |                                            |                                                 |                                                              |
@@ -430,6 +430,7 @@ Kernel-5.10
 |0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch                 |                                            |                                                 |                                                              |
 |0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch         |                                            |                                                 |                                                              |
 |0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch         |                                            |                                                 |                                                              |
+| 0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch           |                                            | Pending                                         | Bugfix                                                       |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
