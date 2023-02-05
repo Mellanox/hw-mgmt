@@ -64,7 +64,7 @@ Kernel-4.19
 |0064-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch         |                                            |                                                 | MQM8700 and E3597                                            |
 |0065-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch               |                                            |  accepted as bugfix                             | Modular SN4800                                               |
 |0066-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch         |                                            |  accepted for i2c-next                          | Modular SN4800                                               |
-|0067-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch         |                                            |  accepted for i2c-next                          | Modular SN4800                                               |
+|0067-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch         |                                            |  accepted for i2c-next                          | Modular SN4800                                               
 |0068-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch         |                                            |  accepted, applied as bug fix                   |                                                              |
 |0069-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch         |                                            |  pending approval                               | Modular SN4800                                               |
 |0070-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch         |                                            |  pending approval                               | Modular SN4800                                               |
@@ -347,6 +347,7 @@ Kernel-5.10
 |0179-DS-iio-pressure-icp20100-add-driver-for-InvenSense-ICP-.patch      |                                            | downstream for OPT-OS use only                  | SN5600                                                       |
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch         | 525dd5aed67a2f4f7278116fb92a24e6a53e2622   | accepted                                       |                                                              |
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch          |                                            | pending                                         | for kernel >= 5.10.74 only                                   |
+|0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch            |                                            | Pending                                         | Bugfix                                                       |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
