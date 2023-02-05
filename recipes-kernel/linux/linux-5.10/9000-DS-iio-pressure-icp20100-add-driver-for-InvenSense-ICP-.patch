@@ -1400,9 +1400,9 @@ index 000000000..2470305ed
 +		return ;
 +	}
 +
-+	pr_info("### Starting in Polling Mode for ODR_HZ %d stec Op Mode:%d ###",odr_hz, op_mode);
++	pr_devel("### Starting in Polling Mode for ODR_HZ %d stec Op Mode:%d ###",odr_hz, op_mode);
 +	icp201xx_app_warmup(st, op_mode,ICP201XX_MEAS_MODE_CONTINUOUS);
-+	pr_info("Polling Mode Set Done");
++	pr_devel("Polling Mode Set Done");
 +}
 +EXPORT_SYMBOL_GPL(inv_run_icp201xx_in_polling);
 +
