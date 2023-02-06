@@ -280,11 +280,11 @@ devtr_clean()
 devtr_check_supported_system_init_alternatives()
 {
 	case $cpu_type in
-		$BDW_CPU)
-			for key in "${!comex_bdw_alternatives[@]}"; do
-				comex_alternatives["$key"]="${comex_bdw_alternatives["$key"]}"
-			done
-			;;
+#		$BDW_CPU)
+#			for key in "${!comex_bdw_alternatives[@]}"; do
+#				comex_alternatives["$key"]="${comex_bdw_alternatives["$key"]}"
+#			done
+#			;;
 		$CFL_CPU)
 			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
 				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
@@ -318,53 +318,53 @@ devtr_check_supported_system_init_alternatives()
 			;;
 	esac
 	case $board_type in
-		VMOD0005)
-			case $sku in
-				HI100)	# MQM8700
-					for key in "${!mqm8700_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm8700_alternatives["$key"]}"
-					done
-					;;
-				*)
-					return 1
-					;;
-			esac
-			for key in "${!fan_type0_alternatives[@]}"; do
-				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
-			done
-			return 0
-			;;
-		VMOD0010)
-			case $sku in
-				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
-					for key in "${!msn4700_msn4600_alternatives[@]}"; do
-						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
-					done
-					;;
-				HI130)	# MQM9700
-					for key in "${!mqm97xx_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
-					done
-					;;
-				HI140) # MQM9520
-					for key in "${!mqm9520_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm9520_alternatives["$key"]}"
-					done
-					;;
-				HI141) # MQM9510
-					for key in "${!mqm9510_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm9510_alternatives["$key"]}"
-					done
-					;;
-				*)
-					return 1
-					;;
-			esac
-			for key in "${!fan_type0_alternatives[@]}"; do
-				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
-			done
-			return 0
-			;;
+#		VMOD0005)
+#			case $sku in
+#				HI100)	# MQM8700
+#					for key in "${!mqm8700_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm8700_alternatives["$key"]}"
+#					done
+#					;;
+#				*)
+#					return 1
+#					;;
+#			esac
+#			for key in "${!fan_type0_alternatives[@]}"; do
+#				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
+#			done
+#			return 0
+#			;;
+#		VMOD0010)
+#			case $sku in
+#				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
+#					for key in "${!msn4700_msn4600_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
+#					done
+#					;;
+#				HI130)	# MQM9700
+#					for key in "${!mqm97xx_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
+#					done
+#					;;
+#				HI140) # MQM9520
+#					for key in "${!mqm9520_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm9520_alternatives["$key"]}"
+#					done
+#					;;
+#				HI141) # MQM9510
+#					for key in "${!mqm9510_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm9510_alternatives["$key"]}"
+#					done
+#					;;
+#				*)
+#					return 1
+#					;;
+#			esac
+#			for key in "${!fan_type0_alternatives[@]}"; do
+#				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
+#			done
+#			return 0
+#			;;
 		VMOD0013)
 			case $sku in
 				HI144|HI147|HI148)	# ToDo Separate later on.
