@@ -742,15 +742,15 @@ if [ "$1" == "add" ]; then
 		if [ "$board_type" == "VMOD0014" ]; then
 			for i in {0..7}; do
 				if [ -f "$3""$4"/in_voltage"$i"_scale ]; then
-					ln -sf "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
+					check_n_link "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
 				fi
 			done
 		else
-			ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
+			check_n_link "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
 		fi
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
-				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
+				check_n_link "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
 			fi
 		done
 	fi
