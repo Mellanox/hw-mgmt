@@ -420,8 +420,8 @@ Kernel-5.10
 |0252-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch         |                                            |                                                 |                                                              |
 |0253-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch         |                                            |                                                 |                                                              |
 |0254-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch             |                                            |                                                 |                                                              |
-|0255-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-ACPI-match-dat.patch         |                                            |                                                 |                                                              |
-|0256-gpio-add-driver-for-Mellanox-BlueField-3-GPIO-contro.patch         |                                            |                                                 |                                                              |
+|0255-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch         |                                            |                                                 |                                                              |
+|0256-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch                 |                                            |                                                 |                                                              |
 |0257-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch         |                                            |                                                 |                                                              |
 |0258-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch         |                                            |                                                 |                                                              |
 |0259-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch         |                                            |                                                 |                                                              |
@@ -430,7 +430,9 @@ Kernel-5.10
 |0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch                 |                                            |                                                 |                                                              |
 |0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch         |                                            |                                                 |                                                              |
 |0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch         |                                            |                                                 |                                                              |
-| 0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch           |                                            | Pending                                         | Bugfix                                                       |
+|0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch            |                                            | Pending                                         | Bugfix                                                       |
+|0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch         |                                            |                                                 |                                                              |
+|0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch         |                                            |                                                 |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
