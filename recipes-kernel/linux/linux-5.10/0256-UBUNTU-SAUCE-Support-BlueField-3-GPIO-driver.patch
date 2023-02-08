@@ -1,36 +1,41 @@
-From adde5e5a38743a015483787cf4b674a4cef0d4a4 Mon Sep 17 00:00:00 2001
-From: Felix Radensky <fradensky@nvidia.com>
-Date: Mon, 21 Nov 2022 21:03:15 +0200
-Subject: [PATCH backport 5.10 58/63] gpio: add driver for Mellanox BlueField 3
- GPIO controller
+From a97cbefdc2d699a53b9717f4c11aadba176b7987 Mon Sep 17 00:00:00 2001
+From: Asmaa Mnebhi <asmaa@nvidia.com>
+Date: Thu, 27 Oct 2022 12:36:19 -0400
+Subject: [PATCH 02/12] UBUNTU: SAUCE: Support BlueField-3 GPIO driver
+X-NVConfidentiality: public
 
-This patch adds support for the GPIO controller used by
-Mellanox BlueField 3 SOCs.
+BugLink: https://bugs.launchpad.net/bugs/1994897
+
+This patch adds support for the BlueField-3 SoC GPIO driver which allows:
+- setting certain GPIOs as interrupts from other dependent drivers
+- ability to manipulate certain GPIO values from user space
 
 Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Acked-by: Cory Todd <cory.todd@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
 ---
- drivers/gpio/Kconfig       |   8 +
+ drivers/gpio/Kconfig       |   7 +
  drivers/gpio/Makefile      |   1 +
- drivers/gpio/gpio-mlxbf3.c | 340 +++++++++++++++++++++++++++++++++++++
- 3 files changed, 349 insertions(+)
+ drivers/gpio/gpio-mlxbf3.c | 340 +++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 348 insertions(+)
  create mode 100644 drivers/gpio/gpio-mlxbf3.c
 
 diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
-index 14751c7cc..cfe80310d 100644
+index d1300fc00..bf1b2b787 100644
 --- a/drivers/gpio/Kconfig
 +++ b/drivers/gpio/Kconfig
-@@ -1457,6 +1457,14 @@ config GPIO_MLXBF2
+@@ -1459,6 +1459,13 @@ config GPIO_MLXBF2
  	help
  	  Say Y here if you want GPIO support on Mellanox BlueField 2 SoC.
  
 +config GPIO_MLXBF3
-+	tristate "Mellanox BlueField-3 SoC GPIO"
++	tristate "Mellanox BlueField 3 SoC GPIO"
 +	depends on (MELLANOX_PLATFORM && ARM64 && ACPI) || (64BIT && COMPILE_TEST)
 +	select GPIO_GENERIC
-+	select GPIOLIB_IRQCHIP
 +	help
-+		Say Y here if you want GPIO support on Mellanox BlueField-3 SoC
-+          
++	  Say Y here if you want GPIO support on Mellanox BlueField 3 SoC.
++
  config GPIO_ML_IOH
  	tristate "OKI SEMICONDUCTOR ML7213 IOH GPIO support"
  	depends on X86 || COMPILE_TEST
@@ -393,5 +398,5 @@ index 000000000..45f0946ac
 +MODULE_LICENSE("Dual BSD/GPL");
 +MODULE_VERSION(DRV_VERSION);
 -- 
-2.20.1
+2.14.1
 
