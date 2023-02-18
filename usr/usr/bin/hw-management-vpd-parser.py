@@ -63,6 +63,7 @@ import sys
 import argparse
 import os.path
 import struct
+import binascii
 import zlib
 
 #############################
@@ -86,17 +87,34 @@ FRU_SANITY_FORMAT_FIELDS = ["tlv_header", "ver", "total_len"]
 SUPPORTED_FRU_VER = [1]
 
 # FRU fields description
-LC_FRU_ITEMS_FORMAT = {2 : {'type_name': "PRODUCT_NAME_VPD_FIELD", "format": "{}s"},
-                       3 : {'type_name': "PN_VPD_FIELD", "format": "{}s"},
-                       4 : {'type_name': "SN_VPD_FIELD", "format": "{}s"},
-                       5 : {'type_name': "MFG_DATE_FIELD", "format": "{}s"},
-                       6 : {'type_name': "SW_REV_FIELD", "format": "b"},
-                       7 : {'type_name': "HW_REV_FIELD", "format": "b"},
-                       8 : {'type_name': "PORT_NUM_FIELD", "format": "b"},
-                       9 : {'type_name': "PORT_SPEED_FIELD", "format": ">i"},
-                       10: {'type_name': "MANUFACTURER_VPD_FIELD", "format": "{}s"},
-                       11: {'type_name': "CHSUM_FIELD", "format": ">I"}
-                      }
+LC_VPD = { 2 : {'type_name': "PRODUCT_NAME_VPD_FIELD", "format": "{}s"},
+           3 : {'type_name': "PN_VPD_FIELD", "format": "{}s"},
+           4 : {'wtype_name': "SN_VPD_FIELD", "format": "{}s"},
+           5 : {'type_name': "MFG_DATE_FIELD", "format": "{}s"},
+           6 : {'type_name': "SW_REV_FIELD", "format": "b"},
+           7 : {'type_name': "HW_REV_FIELD", "format": "b"},
+           8 : {'type_name': "PORT_NUM_FIELD", "format": "b"},
+           9 : {'type_name': "PORT_SPEED_FIELD", "format": ">i"},
+           10: {'type_name': "MANUFACTURER_VPD_FIELD", "format": "{}s"},
+           11: {'type_name': "CHSUM_FIELD", "format": ">I"}
+          }
+
+SYSTEM_VPD = { 33: {'type_name': "Product Name", "format": "{}s"},
+               34 : {'type_name': "Part Number", "format": "{}s"},
+               35 : {'type_name': "Serial Number", "format": "{}s"},
+               36 : {'type_name': "Base MAC Address", "format": "{}s", "transform":"hex"},
+               37 : {'type_name': "Manufacture Date", "format": "{}s"},
+               38 : {'type_name': "Device Version", "format": "b"},
+               39 : {'type_name': "Label Revision", "format": "{}s"},
+               40 : {'type_name': "Platform Name", "format": "{}s"},
+               41 : {'type_name': "ONIE Version", "format": "{}s"},
+               42 : {'type_name': "MAC Addresses", "format": ">h"},
+               43 : {'type_name': "Manufacturer", "format": "{}s"},
+               45 : {'type_name': "Vendor", "format": "{}s "},
+               47 : {'type_name': "Service Tag", "format": "{}s"},
+               253: {'type_name': "Vendor Extension", "format": ""},
+               254: {'type_name': "CHSUM_FIELD", "format": ">I"}
+              }
 
 bin_decode = lambda val: val.decode('ascii').rstrip('\x00') if isinstance(val,bytes) else val
 
@@ -124,12 +142,12 @@ def fru_get_tlv_header(data_bin):
     @return: dictionary with parsed TLV header
     '''
     res_dict, size = parse_packed_data(data_bin, TLV_FORMAT, TLV_FIELDS)
-    if res_dict['size'] > 128:
+    if res_dict['size'] > 1024:
         return None, 0
 
     return res_dict, size
 
-def parse_fru_bin(data):
+def parse_fru_bin(data, FRU_ITEMS):
     '''
     @summary: main function. Takes binary FRU data and return dictionary with all parsed data
     @param data: binary data array
@@ -160,24 +178,29 @@ def parse_fru_bin(data):
     while pos < fru_dict['total_len'] + offset:
         blk_header, header_size = fru_get_tlv_header(data[pos:])
         pos += header_size
-        if blk_header['type'] not in list(LC_FRU_ITEMS_FORMAT.keys()):
+        if blk_header['type'] not in list(FRU_ITEMS.keys()):
             print("Not supported item type {}".format(blk_header['type']))
+            pos += blk_header['size']
             continue
-        item = LC_FRU_ITEMS_FORMAT[blk_header['type']]
+        item = FRU_ITEMS[blk_header['type']]
         item_format = item['format'].format(blk_header['size'])
+        if item_format:
+            _data = data[pos : pos+blk_header['size']]
+            val = struct.unpack(item_format, _data)[0]
+            if isinstance(val, str):
+                val = val.split('\x00', 1)[0]
+            elif 'I' in item_format:
+                val =  "{0:#0{1}x}".format(val,10).upper()
+    
+            if "transform" in item.keys():
+                transform = item["transform"]
+                if transform == "hex":
+                    val = binascii.hexlify(val)
+            val = bin_decode(val)
+            fru_dict['items'].append([item['type_name'], val])
+            fru_dict['items_dict'][item['type_name']] = val
 
-        _data = data[pos : pos+blk_header['size']]
-        val = struct.unpack(item_format, _data)[0]
-
-        if isinstance(val, str):
-            val = val.split('\x00', 1)[0]
-        elif 'I' in item_format:
-            val =  "{0:#0{1}x}".format(val,10).upper()
-        val = bin_decode(val)
-        fru_dict['items'].append([item['type_name'], val])
-        fru_dict['items_dict'][item['type_name']] = val
         pos += blk_header['size']
-
     return fru_dict
 
 def dump_fru(fru_dict):
@@ -241,6 +264,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Read and convert FRU binary file to human readable format")
     parser.add_argument('-i', '--input_file', dest='input', required=False, help='FRU binary file name', default=None)
     parser.add_argument('-o', '--output_file', dest='output', required=False, help='File to output parsed FRU fields', default=None)
+    parser.add_argument('-t', '--type', dest='vpd_type', required=False, help='VPD type', default="SYSTEM_VPD", choices=["LC_VPD","SYSTEM_VPD"])
     parser.add_argument('-v', '--version', dest='version', required=False, help='show version', action='store_const', const=True)
     args = parser.parse_args()
 
@@ -257,7 +281,7 @@ if __name__ == '__main__':
         print("Input file read error.")
         sys.exit(1)
 
-    fru_data_dict = parse_fru_bin(fru_data_bin)
+    fru_data_dict = parse_fru_bin(fru_data_bin, globals()[args.vpd_type])
     if not fru_data_dict:
         print("FRU parse error or wrong FRU file contents.")
         sys.exit(1)
@@ -272,3 +296,4 @@ if __name__ == '__main__':
     else:
         dump_fru(fru_data_dict)
     sys.exit(0)
+4
