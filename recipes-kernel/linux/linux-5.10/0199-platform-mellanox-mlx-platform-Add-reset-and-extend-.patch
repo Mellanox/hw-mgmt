@@ -1,8 +1,8 @@
-From 3ec8a9d5d86d808649673a67f8fb3c5db158ec40 Mon Sep 17 00:00:00 2001
+From a556177a2359c784e063f0914049ffd7f8d8852d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 22 Nov 2022 21:20:49 +0200
-Subject: [PATCH backport 5.10 4/4] platform: mellanox: mlx-platform: Add reset
- and extend poweroff callbacks
+Subject: [PATCH backport 5.10 087/150] platform: mellanox: mlx-platform: Add
+ reset and extend poweroff callbacks
 
 On ARM based systems reset and poweroff flow should include special
 actions against CPLD device for performing graceful operations.
@@ -17,7 +17,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 35 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 7c7481325..ce31b3646 100644
+index b1c8632d6..849fdf5de 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -43,6 +43,7 @@
@@ -108,7 +108,7 @@ index 7c7481325..ce31b3646 100644
  	pm_power_off = mlxplat_poweroff;
  
  	return 1;
-@@ -7013,8 +7039,15 @@ static int __init mlxplat_init(void)
+@@ -7012,8 +7038,15 @@ static int __init mlxplat_init(void)
  	if (err)
  		goto fail_regcache_sync;
  
@@ -124,7 +124,7 @@ index 7c7481325..ce31b3646 100644
  fail_regcache_sync:
  	mlxplat_pre_exit(priv);
  fail_mlxplat_i2c_main_init:
-@@ -7032,6 +7065,8 @@ static void __exit mlxplat_exit(void)
+@@ -7031,6 +7064,8 @@ static void __exit mlxplat_exit(void)
  
  	if (pm_power_off)
  		pm_power_off = NULL;

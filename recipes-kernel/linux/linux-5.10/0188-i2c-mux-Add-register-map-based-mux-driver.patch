@@ -1,7 +1,7 @@
-From 190667f3539f731332d4b5be9c4a3fc084b44282 Mon Sep 17 00:00:00 2001
+From 03195e7418ec41d0a118973a392165f11ba881cf Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 9 Nov 2022 12:22:12 +0200
-Subject: [PATCH backport 5.10 02/10] i2c: mux: Add register map based mux
+Subject: [PATCH backport 5.10 026/100] i2c: mux: Add register map based mux
  driver
 
 Add 'regmap' mux driver to allow virtual bus switching by setting a
@@ -9,34 +9,39 @@ single selector register.
 The 'regmap' is supposed to be passed to driver within a platform data
 by parent platform driver.
 
-The register can be on type of bus or mapped memory, supported by
-'regmap' infrastructure.
-
-Motivation is to support indirect access to register space.
+Motivation is to support indirect access to register space where
+selector register is located.
 For example, Lattice FPGA LFD2NX-40 device, being connected through
 PCIe bus provides SPI or LPC bus logic through PCIe-to-SPI or
-PCIe-to-LPC bridging. Thus, FPGA operates as host controller and some
-slave devices can be connected to it. For example:
-CPU (PCIe) -> FPGA (PCIe-to-SPI bridge) -> CPLD or another FPGA
-CPU (PCIe) -> FPGA (PCIe-to-LPC bridge) -> CPLD or another FPGA
-where 1-st FPGA connected to PCIe is located on carrier board, while
+PCIe-to-LPC bridging. Thus, FPGA operates a as host controller and
+some slave devices can be connected to it. For example:
+- CPU (PCIe) -> FPGA (PCIe-to-SPI bridge) -> CPLD or another FPGA.
+- CPU (PCIe) -> FPGA (PCIe-to-LPC bridge) -> CPLD or another FPGA.
+Where 1-st FPGA connected to PCIe is located on carrier board, while
 2-nd programming logic device is located on some switch board and
 cannot be connected to CPU PCIe root complex.
 
 In case mux selector register is located within the 2-nd device, SPI or
-LPC transaction is prepared sent by indirect access, through some
-pre-defined protocol.
+LPC transactions are sent indirectly through pre-defined protocol.
+
 To support such protocol reg_read()/reg_write() callbacks are provided
 to 'regmap' object and these callback implements required indirect
 access.
+
+For example, flow in reg_write() will be as following:
+- Verify there is no pending transactions.
+- Set address in PCIe register space.
+- Set data to be written in PCIe register space.
+- Activate write operation in PCIe register space.
+- LPC or SPI write transaction is performed.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/i2c/muxes/Kconfig                    |  12 ++
  drivers/i2c/muxes/Makefile                   |   1 +
- drivers/i2c/muxes/i2c-mux-regmap.c           | 121 +++++++++++++++++++
- include/linux/platform_data/i2c-mux-regmap.h |  34 ++++++
- 4 files changed, 168 insertions(+)
+ drivers/i2c/muxes/i2c-mux-regmap.c           | 123 +++++++++++++++++++
+ include/linux/platform_data/i2c-mux-regmap.h |  34 +++++
+ 4 files changed, 170 insertions(+)
  create mode 100644 drivers/i2c/muxes/i2c-mux-regmap.c
  create mode 100644 include/linux/platform_data/i2c-mux-regmap.h
 
@@ -76,10 +81,10 @@ index 6d9d865e8..092dca428 100644
  ccflags-$(CONFIG_I2C_DEBUG_BUS) := -DDEBUG
 diff --git a/drivers/i2c/muxes/i2c-mux-regmap.c b/drivers/i2c/muxes/i2c-mux-regmap.c
 new file mode 100644
-index 000000000..1ab5f94af
+index 000000000..e155c039a
 --- /dev/null
 +++ b/drivers/i2c/muxes/i2c-mux-regmap.c
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,123 @@
 +// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
 +/*
 + * Regmap i2c mux driver
@@ -184,6 +189,8 @@ index 000000000..1ab5f94af
 +	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
 +
 +	i2c_mux_del_adapters(muxc);
++	i2c_put_adapter(muxc->parent);
++
 +	return 0;
 +}
 +

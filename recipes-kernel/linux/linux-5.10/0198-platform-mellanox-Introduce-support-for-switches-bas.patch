@@ -1,8 +1,8 @@
-From 9709d1718317989f8f8d47157c08b066c58fbc00 Mon Sep 17 00:00:00 2001
+From bcdfc7d1d106889fa9af3404f252fb1260f5a0fd Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 15 Nov 2022 11:51:47 +0200
-Subject: [PATCH backport 5.10 3/4] platform: mellanox: Introduce support for
- switches based on BlueField-3/ARM64 COMe
+Subject: [PATCH backport 5.10 086/150] platform: mellanox: Introduce support
+ for switches based on BlueField-3/ARM64 COMe
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -42,7 +42,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 146 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index e346c5dd1..7c7481325 100644
+index f3df56c41..b1c8632d6 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -270,6 +270,7 @@
@@ -91,7 +91,7 @@ index e346c5dd1..7c7481325 100644
 +		.parent = 1,
 +		.chan_ids = mlxplat_default_regmap_mux_chan,
 +		.num_adaps = ARRAY_SIZE(mlxplat_default_regmap_mux_chan),
-+		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH3_OFFSET,
++		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH2_OFFSET,
 +		.reg_size = 1,
 +	},
 +
@@ -240,7 +240,7 @@ index e346c5dd1..7c7481325 100644
  	pci_set_master(pci_dev);
  
  	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, PLATFORM_DEVID_NONE,
-@@ -6783,7 +6929,6 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+@@ -6782,7 +6928,6 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  	nr = (nr == mlxplat_max_adap_num) ? -1 : nr;
  	mlxplat_i2c->regmap = priv->regmap;
  	mlxplat_i2c->handle = priv;
