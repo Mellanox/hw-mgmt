@@ -1,8 +1,8 @@
-From c50d74dae1f2efc487a29e2bcc34cf580d391070 Mon Sep 17 00:00:00 2001
+From e831f971fd9895b74c0966b3cf3cd2e18c2f8fca Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 10 Nov 2022 08:53:49 +0200
-Subject: [PATCH backport 5.10 2/4] platform: mellanox: Add initial support for
- PCIe based programming logic device
+Subject: [PATCH backport 5.10 085/150] platform: mellanox: Add initial support
+ for PCIe based programming logic device
 
 Extend driver to support logic implemented by FPGA device connected
 through PCIe bus.
@@ -22,7 +22,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 105 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d0b03dbec..e346c5dd1 100644
+index 773d110c9..f3df56c41 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -12,6 +12,7 @@

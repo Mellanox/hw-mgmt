@@ -1,8 +1,8 @@
-From 66efb7047c809f9842633869c565303b551fe4e3 Mon Sep 17 00:00:00 2001
+From f00081a6e0b7af5a0b85db3121afe3cc6a62f9e7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 11 Dec 2022 11:08:07 +0200
-Subject: [PATCH backport 5.10 3/5] platform: mellanox: Split logic in init and
- exit flow
+Subject: [PATCH backport 5.10 072/150] platform: mellanox: Split logic in init
+ and exit flow
 
 Split logic in mlxplat_init()/mlxplat_exit() routines.
 Separate initialization of I2C infrastructure and others platform
@@ -21,11 +21,11 @@ Thus initialization flow will be performed in synchronized order.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 314 ++++++++++++++++++----------
- 1 file changed, 205 insertions(+), 109 deletions(-)
+ drivers/platform/x86/mlx-platform.c | 313 ++++++++++++++++++----------
+ 1 file changed, 204 insertions(+), 109 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 199f22d72..057da0e6a 100644
+index 199f22d72..05a630135 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -321,6 +321,9 @@
@@ -133,7 +133,7 @@ index 199f22d72..057da0e6a 100644
 -			goto fail_platform_mux_register;
 -		}
 -	}
-+	int i, err;
++	int i = 0, err;
  
  	/* Add hotplug driver */
  	if (mlxplat_hotplug) {
@@ -261,7 +261,7 @@ index 199f22d72..057da0e6a 100644
  	for (i = MLXPLAT_CPLD_WD_MAX_DEVS - 1; i >= 0 ; i--)
  		platform_device_unregister(priv->pdev_wd[i]);
  	if (priv->pdev_fan)
-@@ -6610,12 +6532,186 @@ static void __exit mlxplat_exit(void)
+@@ -6610,13 +6532,186 @@ static void __exit mlxplat_exit(void)
  		platform_device_unregister(priv->pdev_led);
  	if (priv->pdev_hotplug)
  		platform_device_unregister(priv->pdev_hotplug);
@@ -275,7 +275,8 @@ index 199f22d72..057da0e6a 100644
 +
 +	return mlxplat_post_init(priv);
 +}
-+
+ 
+-	for (i = mlxplat_mux_num - 1; i >= 0 ; i--)
 +static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
 +{
 +	int i, err;
@@ -283,10 +284,9 @@ index 199f22d72..057da0e6a 100644
 +	if (!priv->pdev_i2c) {
 +		priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_NOTIFIED;
 +		return 0;
-+	} else {
-+		priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
 +	}
 +
++	priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
 +	for (i = 0; i < mlxplat_mux_num; i++) {
 +		priv->pdev_mux[i] = platform_device_register_resndata(&priv->pdev_i2c->dev,
 +								      "i2c-mux-reg", i, NULL, 0,
@@ -299,8 +299,7 @@ index 199f22d72..057da0e6a 100644
 +	}
 +
 +	return mlxplat_i2c_mux_complition_notify(priv, NULL, NULL);
- 
--	for (i = mlxplat_mux_num - 1; i >= 0 ; i--)
++
 +fail_platform_mux_register:
 +	while (--i >= 0)
  		platform_device_unregister(priv->pdev_mux[i]);
@@ -315,9 +314,10 @@ index 199f22d72..057da0e6a 100644
 +		if (priv->pdev_mux[i])
 +			platform_device_unregister(priv->pdev_mux[i]);
 +	}
-+
-+	mlxplat_post_exit();
-+}
+ 
+-	platform_device_unregister(priv->pdev_i2c);
+ 	mlxplat_post_exit();
+ }
 +
 +static int mlxplat_i2c_main_complition_notify(void *handle, int id)
 +{
@@ -405,8 +405,7 @@ index 199f22d72..057da0e6a 100644
 +		err = PTR_ERR(priv->regmap);
 +		goto fail_alloc;
 +	}
- 
--	platform_device_unregister(priv->pdev_i2c);
++
 +	/* Set default registers. */
 +	for (i = 0; i <  mlxplat_regmap_config->num_reg_defaults; i++) {
 +		err = regmap_write(priv->regmap,
@@ -433,7 +432,7 @@ index 199f22d72..057da0e6a 100644
 +fail_mlxplat_i2c_main_init:
 +fail_regmap_write:
 +fail_alloc:
- 	mlxplat_post_exit();
++	mlxplat_post_exit();
 +
 +	return err;
 +}
@@ -447,9 +446,10 @@ index 199f22d72..057da0e6a 100644
 +		pm_power_off = NULL;
 +	mlxplat_pre_exit(priv);
 +	mlxplat_i2c_main_exit(priv);
- }
++}
  module_exit(mlxplat_exit);
  
+ MODULE_AUTHOR("Vadim Pasternak (vadimp@mellanox.com)");
 -- 
 2.20.1
 

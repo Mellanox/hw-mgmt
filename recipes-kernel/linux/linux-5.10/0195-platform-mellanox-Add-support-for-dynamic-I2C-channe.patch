@@ -1,8 +1,8 @@
-From c864dc50c33e981d324ead905523c6f233805519 Mon Sep 17 00:00:00 2001
+From d1fbdc9c5bd0939362ebdb4d76a701cb938f3837 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 18 Jan 2023 19:12:12 +0200
-Subject: [PATCH backport 5.10 1/2] platform/mellanox: Add support for dynamic
- I2C channels infrastructure
+Subject: [PATCH backport 5.10 083/150] platform/mellanox: Add support for
+ dynamic I2C channels infrastructure
 
 Allow to support platform configuration for dynamically allocated I2C
 channels.
@@ -22,7 +22,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 59 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 5d96d5ffa..d0b03dbec 100644
+index 9d4cab937..773d110c9 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -14,6 +14,7 @@
@@ -114,9 +114,9 @@ index 5d96d5ffa..d0b03dbec 100644
  }
  
  static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
-@@ -6579,17 +6612,33 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
- 	}
+@@ -6578,17 +6611,33 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
  
+ 	priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
  	for (i = 0; i < mlxplat_mux_num; i++) {
 -		priv->pdev_mux[i] = platform_device_register_resndata(&priv->pdev_i2c->dev,
 -								      "i2c-mux-reg", i, NULL, 0,

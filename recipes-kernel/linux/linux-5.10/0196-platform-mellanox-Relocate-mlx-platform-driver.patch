@@ -1,8 +1,8 @@
-From 0f50da27101e7df900832cf1e479577ac2ee6772 Mon Sep 17 00:00:00 2001
+From 723dacff3d93f270a52195c895e2ddf233b146d7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 7 Nov 2022 11:52:34 +0200
-Subject: [PATCH backport 5.10 1/4] platform: mellanox: Relocate mlx-platform
- driver
+Subject: [PATCH backport 5.10 084/150] platform: mellanox: Relocate
+ mlx-platform driver
 
 Move 'mlx-platform' driver 'x86' to 'mellanox' folder.
 
@@ -19,7 +19,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  rename drivers/platform/{x86 => mellanox}/mlx-platform.c (100%)
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 7456f396c..5bd6ddd42 100644
+index 75e2bee17..ff8267329 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
 @@ -14,6 +14,18 @@ menuconfig MELLANOX_PLATFORM
