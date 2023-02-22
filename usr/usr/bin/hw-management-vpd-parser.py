@@ -296,4 +296,3 @@ if __name__ == '__main__':
     else:
         dump_fru(fru_data_dict)
     sys.exit(0)
-4
