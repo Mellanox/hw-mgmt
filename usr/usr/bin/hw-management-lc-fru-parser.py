@@ -162,9 +162,25 @@ def parse_fru_bin(data):
         pos += header_size
         if blk_header['type'] not in list(LC_FRU_ITEMS_FORMAT.keys()):
             print("Not supported item type {}".format(blk_header['type']))
+            pos += blk_header['size']
             continue
         item = LC_FRU_ITEMS_FORMAT[blk_header['type']]
         item_format = item['format'].format(blk_header['size'])
+        if item_format:
+            _data = data[pos : pos+blk_header['size']]
+            val = struct.unpack(item_format, _data)[0]
+            if isinstance(val, str):
+                val = val.split('\x00', 1)[0]
+            elif 'I' in item_format:
+                val =  "{0:#0{1}x}".format(val,10).upper()
+    
+            if "transform" in item.keys():
+                transform = item["transform"]
+                if transform == "hex":
+                    val = binascii.hexlify(val)
+            val = bin_decode(val)
+            fru_dict['items'].append([item['type_name'], val])
+            fru_dict['items_dict'][item['type_name']] = val
 
         _data = data[pos : pos+blk_header['size']]
         val = struct.unpack(item_format, _data)[0]

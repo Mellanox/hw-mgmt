@@ -190,14 +190,17 @@ get_fixed_fans_direction()
 	fan_direction=$(i2ctransfer -f -y 8 w2@0x51 0x01 0x02 r1 | cut -d'x' -f 2)	
 	case $fan_direction in
 	$fan_direction_exhaust)
-		echo 1 > $config_path/fixed_fans_dir
+		dir=1
 		;;
 	$fan_direction_intake)
-		echo 0 > $config_path/fixed_fans_dir
+		dir=0
 		;;
 	*)
+        # Unknown direction
+		dir=255
 		;;
 	esac
+	return $dir
 }
 
 # Get PSU direction based on VPD PN field
@@ -217,7 +220,13 @@ get_psu_fan_direction()
 	dir_char=""
 	pn="$(grep PN_VPD_FIELD $vpd_file)"
 	if [ -z $pn ]; then
-		return 2
+		if [ -f $config_path/fixed_fans_dir ]; then
+			dir=$(< $config_path/fixed_fans_dir) 
+		else
+			# Default dir "unknown" till it will not be detected later
+			dir=255
+		fi
+		return $dir
 	fi
 	MLX_REGEXP="MTEF-PS([R,F])"
 	NV_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
@@ -479,12 +488,13 @@ if [ "$1" == "add" ]; then
 
 		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
 			get_fixed_fans_direction
-			if [ -f $config_path/fixed_fans_dir ]; then
-				for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
-					cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
-					echo 1 > $thermal_path/fan"$i"_status
-				done
-			fi
+			dir=$?
+			echo $dir > $config_path/fixed_fans_dir
+
+			for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
+				echo $dir > $thermal_path/fan"$i"_dir
+				echo 1 > $thermal_path/fan"$i"_status
+			done
 		else
 			echo $fan_drwr_num > $config_path/fan_drwr_num
 		fi
