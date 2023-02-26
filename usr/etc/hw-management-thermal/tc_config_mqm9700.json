@@ -36,11 +36,11 @@
 		"P2C": {
 			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
 			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}}
-	},
+	}, 
 	"dev_parameters" : {
 		"asic":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3}, 
-		"module\\d+":     {"pwm_minx": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
-		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": 100000, "poll_time": 3},
+		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3},
 		"voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 100, "val_min": "!75000", "val_max": 85000, "poll_time": 30},
 		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 60, "val_min": 35000, "val_max": 55000, "poll_time": 30}

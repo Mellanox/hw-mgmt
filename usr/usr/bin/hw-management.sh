@@ -1199,11 +1199,9 @@ connect_msn4700_msn4600()
 	if [ "$sku" == "HI124" ]; then
 		# msn4600C with removed A2D
 		connect_table+=(${msn4600C_base_connect_table[@]})
-		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600.json"
 	else
         # msn4700/msn4600
 		connect_table+=(${msn4700_msn4600_base_connect_table[@]})
-		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600C.json"
 	fi
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
@@ -1282,11 +1280,13 @@ msn46xx_specific()
 	# this is MSN4600C
 	if [ "$sku" == "HI124" ]; then
 		thermal_type=$thermal_type_t8
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600C.json"
 		echo 11000 > $config_path/fan_max_speed
 		echo 2235 > $config_path/fan_min_speed
 	# this is MSN4600
 	else
 		thermal_type=$thermal_type_t12
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600.json"
 		echo 19500 > $config_path/fan_max_speed
 		echo 2800 > $config_path/fan_min_speed
 	fi
