@@ -50,7 +50,7 @@ dump_cmd () {
 	if [ -x "$(command -v $cmd_name)" ];
 	then
 		# ignore shellcheck message SC2016. Arguments should be single-quoted (')
-		run_cmd="$cmd > $DUMP_FOLDER/$output_fname"
+		run_cmd="$cmd & > $DUMP_FOLDER/$output_fname"
 		timeout "$timeout" bash -c "$run_cmd"
 	fi
 }
@@ -62,7 +62,9 @@ ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
     run_cmd="find -L $HW_MGMT_FOLDER -maxdepth 4 -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null"
-    timeout 60 bash -c "$run_cmd"
+    timeout 60 bash -c "$run_cmd" &> /dev/null
+    run_cmd="find $HW_MGMT_FOLDER/eeprom/  -name *info  -exec ls -la {} \; -exec hexdump -C {} \; > $DUMP_FOLDER/hw-management_fru_dump 2> /dev/null"
+    timeout 60 bash -c "$run_cmd" &> /dev/null
 fi
 
 if [ -z $MODE ] || [ $MODE != "compact" ]; then
