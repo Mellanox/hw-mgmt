@@ -111,6 +111,7 @@ leakage_count=0
 
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
+
 connect_table=()
 named_busses=()
 
@@ -2216,6 +2217,9 @@ pre_devtr_init()
 		*)
 			;;
 		esac
+		;;
+	VMOD0017)
+		echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	*)
 		;;
