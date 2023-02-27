@@ -434,6 +434,9 @@ Kernel-5.10
 |0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch         |                                            |                                                 |                                                              |
 |0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch         |                                            |                                                 |                                                              |
 |0268-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch         |                                            | downstream                                      |                                                              |
+|0269-platform-mellanox-Cosmetic-changes.patch                           |                                            |                                                 |                                                              |
+|0270-platform-mellanox-Fix-order-in-exit-flow.patch                     |                                            |                                                 |                                                              |
+|0271-platform-mellanox-Add-new-attributes.patch                         |                                            |                                                 |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
