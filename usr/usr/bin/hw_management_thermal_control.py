@@ -119,6 +119,7 @@ class CONST(object):
     # 1: port < fan, dir port to fan P2C  Fan t change not affect
     C2P = "C2P"
     P2C = "P2C"
+    DEF_DIR = "P2C"
 
     UNKNOWN = "Unknown"
 
@@ -1452,7 +1453,7 @@ class psu_fan_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        return "\"{}\" rpm:{}, faults:[{}] pwm: {}, {}".format(self.name, self.value, ",".join(self.fault_list), self.pwm, self.state)
+        return "\"{}\" rpm:{}, dir:{} faults:[{}] pwm: {}, {}".format(self.name, self.value, self.fan_dir, ",".join(self.fault_list), self.pwm, self.state)
 
 
 class fan_sensor(system_device):
@@ -1496,9 +1497,9 @@ class fan_sensor(system_device):
         self.pwm = self.pwm_min
         self.rpm_valid_state = True
         self.fan_dir_fail = False
+        self.fan_dir = self._read_dir()
         self.drwr_param = self._get_fan_drwr_param()
         self.fan_shutdown(False)
-        self.refresh_attr()
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -1517,10 +1518,14 @@ class fan_sensor(system_device):
         dir = self.fan_dir
         param = None
         if dir not in self.fan_param.keys():
-            self.log.error("Fan dir \"{}\" unsupported in configuration:\n{}".format(dir, self.fan_param))
-            raise AttributeError("Unsupported dir in configuration \"{}\"".format(dir))
-        else:
-            param = self.fan_param[self.fan_dir]
+            if dir == CONST.UNKNOWN:
+                self.log.info("{} dir \"{}\". Using default dir: P2C".format(self.name, dir))
+            else:
+                self.log.error("{} dir \"{}\" unsupported in configuration:\n{}".format(self.name, dir, self.fan_param))
+                self.log.error("Using default dir: P2C")
+            dir = CONST.DEF_DIR
+
+        param = self.fan_param[dir]
         return param
 
     # ----------------------------------------------------------------------
@@ -1974,20 +1979,25 @@ class ThermalManagement(hw_managemet_file_op):
         if self.check_file("config/system_flow_capability"):
             self.fan_flow_capability = self.read_file("config/system_flow_capability")
 
+        self.log.info("Collecting HW info...")
+
         try:
             self.max_tachos = int(self.read_file("config/max_tachos"))
+            self.log.info("Fan tacho:{}".format(self.max_tachos))
         except BaseException:
             self.log.error("Missing max tachos config.")
             sys.exit(1)
 
         try:
             self.fan_drwr_num = int(self.read_file("config/fan_drwr_num"))
+            self.log.info("Fan drwr:{}".format(self.fan_drwr_num))
         except BaseException:
             self.log.error("Missing fan_drwr_num config.")
             sys.exit(1)
 
         try:
             self.psu_count = int(self.read_file("config/hotplug_psus"))
+            self.log.info("PSU count:{}".format(self.psu_count))
         except BaseException:
             self.log.error("Missing hotplug_psus config.")
             sys.exit(1)
@@ -2004,11 +2014,14 @@ class ThermalManagement(hw_managemet_file_op):
             res = re.match(r'(voltmon[0-9]+_temp)_input', fname)
             if res:
                 self.voltmon_file_list.append(res.group(1))
+        self.log.info("voltmon count:{}".format(len(self.voltmon_file_list)))
 
         if self.fan_drwr_num:
             self.fan_drwr_capacity = int(self.max_tachos / self.fan_drwr_num)
         self.module_counter = int(self.get_file_val("config/module_counter", CONST.MODULE_COUNT_DEF))
+        self.log.info("module count:{}".format(self.module_counter))
         self.gearbox_counter = int(self.get_file_val("config/gearbox_counter", CONST.GEARBOX_COUNT_DEF))
+        self.log.info("gearbox count:{}".format(self.gearbox_counter))
 
     # ----------------------------------------------------------------------
     def _get_dev_obj(self, name_mask):
@@ -2220,7 +2233,7 @@ class ThermalManagement(hw_managemet_file_op):
             Signal handler for termination signals
         """
         if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
-            self.stop()
+            self.stop(reason="SIG {}".format(sig))
             self.exit.set()
 
             self.log.notice("Thermal control stopped")
@@ -2265,7 +2278,7 @@ class ThermalManagement(hw_managemet_file_op):
         else:
             self.log.warn("System config file {} missing. Applying default config.".format(config_file_name))
 
-        # 1. Init dmin tablex
+        # 1. Init dmin table
         if CONST.SYS_CONF_DMIN not in sys_config:
             self.log.info("Dmin table missing in system_config. Using default dmin table")
             thermal_table = TABLE_DEFAULT
@@ -2378,14 +2391,14 @@ class ThermalManagement(hw_managemet_file_op):
         self.write_file(CONST.PERIODIC_REPORT_FILE, self.periodic_report_time)
 
     # ----------------------------------------------------------------------
-    def start(self):
+    def start(self, reason=""):
         """
         @summary: Start sensor service.
         Used when suspend mode was de-asserted
         """
 
         if self.state != CONST.RUNNING:
-            self.log.notice("Thermal control state changed {} -> {}".format(self.state, CONST.RUNNING))
+            self.log.notice("Thermal control state changed {} -> {} reason:{})".format(self.state, CONST.RUNNING, reason))
             self.state = CONST.RUNNING
 
             for dev_obj in self.dev_obj_list:
@@ -2415,14 +2428,14 @@ class ThermalManagement(hw_managemet_file_op):
                 ambient_sensor = self._get_dev_obj("sensor_amb")
                 self.amb_tmp = ambient_sensor.get_value()
 
-    # ----------------------------------------------------------------------
-    def stop(self):
+    # ----------x------------------------------------------------------------
+    def stop(self, reason=""):
         """
         @summary: Stop sensor service and set PWM to PWM-MAX.
         Used when suspend mode was de-asserted  or when kill signal was revived
         """
         if self.state != CONST.STOPPED:
-            self.log.notice("Thermal control state changed {} -> {}".format(self.state, CONST.STOPPED))
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason))
             self.state = CONST.STOPPED
 
             if self.pwm_worker_timer:
@@ -2459,11 +2472,11 @@ class ThermalManagement(hw_managemet_file_op):
                 pass
 
             if self._is_suspend():
-                self.stop()
+                self.stop(reason="suspend")
                 self.exit.wait(5)
                 continue
             else:
-                self.start()
+                self.start(reason="resume")
 
             pwm_list = {}
             # set maximum next poll timestump = 60 seec
@@ -2591,11 +2604,11 @@ if __name__ == '__main__':
 
     try:
         thermal_management.init()
-        thermal_management.start()
+        thermal_management.start(reason="init")
         thermal_management.run()
     except BaseException as e:
         if str(e) != "1":
             thermal_management.log.info(traceback.format_exc())
-        thermal_management.stop()
+        thermal_management.stop(reason=str(e))
 
     sys.exit(0)
