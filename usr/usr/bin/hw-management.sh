@@ -602,12 +602,16 @@ set_jtag_gpio()
 			jtag_tms=24
 			jtag_tdo=27
 			jtag_tdi=28
+			echo 0x2094 > $config_path/jtag_rw_reg
+			echo 0x2095 > $config_path/jtag_ro_reg
 			;;
 		$CFL_CPU)
 			jtag_tdi=128
 			jtag_tdo=129
 			jtag_tms=130
 			jtag_tck=131
+			echo 0x2094 > $config_path/jtag_rw_reg
+			echo 0x2095 > $config_path/jtag_ro_reg
 			;;
 		$DNV_CPU)
 			jtag_tdi=86
