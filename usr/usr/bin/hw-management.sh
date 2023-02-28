@@ -449,29 +449,30 @@ p4262_base_connect_table=( \
 	pmbus 0x12 4 \
 	pmbus 0x13 4 \
 	pmbus 0x16 4 \
+	pmbus 0x17 4 \
 	pmbus 0x1b 4 \
 	tmp75 0x4d 4 \
 	tmp75 0x4e 4 \
 	24c502 0x50 4 \
-	tmp75 0x48 7 \
-	tmp75 0x49 7 \
-	tmp75 0x4a 7 \
-	tmp75 0x4b 7 \
-	tmp75 0x4c 7 \
-	tmp75 0x4d 7 \
-	tmp75 0x4e 7 \
-	tmp75 0x4f 7 \
+	adt75 0x48 7 \
+	adt75 0x49 7 \
+	adt75 0x4a 7 \
+	adt75 0x4b 7 \
+	adt75 0x4c 7 \
+	adt75 0x4d 7 \
+	adt75 0x4e 7 \
+	adt75 0x4f 7 \
 	24c502 0x50 7 \
 	24c512 0x51 8 \
 	24c512 0x52 8 )
 
 # TBD MS. Check exact components
 p4262_dynamic_i2c_bus_connect_table=( \
-	mp2975 0x62 26 voltmon1 \
-	mp2975 0x65 26 voltmon2 \
-	mp2975 0x67 26 voltmon3 \
-	mp2975 0x62 29 voltmon4 \
-	mp2975 0x65 29 voltmon5 )
+	mp2975 0x21 26 voltmon1 \
+	mp2975 0x23 26 voltmon2 \
+	mp2975 0x2a 26 voltmon3 \
+	mp2975 0x21 29 voltmon4 \
+	mp2975 0x23 29 voltmon5 )
 
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )

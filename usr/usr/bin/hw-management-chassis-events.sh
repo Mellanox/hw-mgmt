@@ -274,7 +274,7 @@ find_eeprom_name()
 	addr=$2
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		if [ "$board_type" == "VMOD0017" ] && [ "$addr" -ne "$vpd_i2c_addr" ]; then
+		if [ "$board_type" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
 			eeprom_name=ipmi_info
 		else
 			eeprom_name=vpd_info
