@@ -1,15 +1,15 @@
-From c376b57d8d7c8aacb1389f4936f3324736fd5f7d Mon Sep 17 00:00:00 2001
+From 96de5181b880adf2fd65fa85fbc3e0c74f976788 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 1 Mar 2023 17:49:08 +0000
-Subject: [PATCH backport 5.10 5/5] platform: mellanox: Add field upgrade
+Subject: [PATCH backport 5.10 5/6] platform: mellanox: Add field upgrade
  capability register
 
 Add new register to indicate the method of FPGA/CPLD field upgrade
 supported on the specific system.
 Currently two masks are available:
-b00 - filed upgrade through LPC gateway (new method introduced to
+b00 - field upgrade through LPC gateway (new method introduced to
       accelerate field upgrade process).
-b11 - filed upgrade through CPU GPIO pins (old method).
+b11 - field upgrade through CPU GPIO pins (old method).
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>

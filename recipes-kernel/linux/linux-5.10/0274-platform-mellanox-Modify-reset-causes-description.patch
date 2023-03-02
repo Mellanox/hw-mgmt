@@ -1,0 +1,58 @@
+From 710896547cb34df216b162b08bad83ce7c7ef2b1 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 2 Mar 2023 12:28:11 +0000
+Subject: [PATCH backport 5.10 6/6] platform: mellanox: Modify reset causes
+ description
+
+For system of classes VMOD0005, VMOD0010:
+- remove "reset_from_comex", since this cause doesn't define specific
+  reason.
+- add more speicific reasons "reset_sw_reset" and
+  "reset_aux_pwr_or_reload". Both are set along with removed
+  "reset_from_comex".
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 18 ++++++++++++------
+ 1 file changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index f674d9173..811812c3b 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -3832,12 +3832,6 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0444,
+ 	},
+-	{
+-		.label = "reset_from_comex",
+-		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+-		.mask = GENMASK(7, 0) & ~BIT(4),
+-		.mode = 0444,
+-	},
+ 	{
+ 		.label = "reset_from_asic",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
+@@ -3856,6 +3850,18 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(7),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "reset_sw_reset",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_aux_pwr_or_reload",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "reset_comex_pwr_fail",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
+-- 
+2.20.1
+

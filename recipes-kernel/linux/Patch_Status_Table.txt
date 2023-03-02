@@ -439,6 +439,7 @@ Kernel-5.10
 |0271-platform-mellanox-Add-new-attributes.patch                         |                                            |                                                 |                                                              |
 |0272-platform-mellanox-Change-register-offset-addresses.patch           |                                            |                                                 |                                                              |
 |0273-platform-mellanox-Add-field-upgrade-capability-regis.patch         |                                            |                                                 |                                                              |
+|0274-platform-mellanox-Modify-reset-causes-description.patch            |                                            |                                                 |                                                              |
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
  
