@@ -50,7 +50,7 @@ dump_cmd () {
 	if [ -x "$(command -v $cmd_name)" ];
 	then
 		# ignore shellcheck message SC2016. Arguments should be single-quoted (')
-		run_cmd="$cmd &> $DUMP_FOLDER/$output_fname"
+		run_cmd="$cmd 1> $DUMP_FOLDER/$output_fname 2> $DUMP_FOLDER/$output_fname"
 		timeout "$timeout" bash -c "$run_cmd"
 	fi
 }
@@ -74,6 +74,7 @@ if [ -z $MODE ] || [ $MODE != "compact" ]; then
 	dump_cmd "sx_sdk --version" "sx_sdk_ver" "10"
 fi
 
+[ -f /var/log/tc_log ] && cp /var/log/tc_* $DUMP_FOLDER/
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
 cp /usr/bin/hw-management* $DUMP_FOLDER/bin/
