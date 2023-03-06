@@ -260,7 +260,7 @@ Kernel-5.10
 |0091-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 4616e54795cc       | Feature upstream                         |            |                                                | 
 |0092-platform-mellanox-mlxreg-lc-fix-error-code-in-mlxreg.patch  | 287273a80be5       | Feature upstream                         |            |                                                | 
 |0093-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-P.patch  | 150f1e0c6fa8       | Feature upstream                         |            |                                                | 
-|0094-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch  | d7efb2ebc7b3       | Feature upstream; os[sonic]              |            |                                                | 
+|0094-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch  | d7efb2ebc7b3       | Feature upstream                         |            |                                                | 
 |0095-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                | 
 |0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                | 
 |0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                | 
@@ -344,7 +344,7 @@ Kernel-5.10
 |0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  |                    | Feature upstream                         |            | SN5600 accepted for platform-next              |  
 |0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  |                    | Feature upstream                         |            | SN5600 accepted for platform-next              | 
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch  |                    | Feature accepted                         |            | SN5600 accepted for platform-next              | 
-|0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Downstream                               |            | (temporary fix until new TC)                   | 
+|0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Rejected                                 |            | (temporary fix until new TC)                   | 
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                | 
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream                               |            | disable upstream patch, must exist from 5.10.74| 
 |0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  |                    | Feature accepted                         |            |                                                | 
