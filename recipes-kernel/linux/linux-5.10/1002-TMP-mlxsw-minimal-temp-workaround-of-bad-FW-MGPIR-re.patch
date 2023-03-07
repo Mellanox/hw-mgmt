@@ -1,0 +1,30 @@
+From c64ef63b207ee4e5e87e81ff5d28959bfb83befa Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Tue, 7 Mar 2023 19:26:48 +0000
+Subject: [PATCH v1 1/1] mlxsw: minimal: temp workaround of bad FW MGPIR
+ report.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 0b605c6aa637..dc85a3d68b9b 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -334,9 +334,9 @@ static int mlxsw_m_port_module_map(struct mlxsw_m *mlxsw_m, u8 slot_index,
+ 
+ 	port_mapping = mlxsw_m_port_mapping_get(mlxsw_m, slot_index,
+ 						local_port);
+-
++	/* Temporary commented until FW fix in MGPIR 
+ 	if (WARN_ON_ONCE(port_mapping->module_to_port >= mlxsw_m->max_ports))
+-		return -EINVAL;
++		return -EINVAL; */
+ 	mlxsw_env_module_port_map(mlxsw_m->core, slot_index, module);
+ 	port_mapping->module_to_port = local_port;
+ 	port_mapping->module = module;
+-- 
+2.14.1
+
