@@ -1,0 +1,28 @@
+From f6ec265ffd7a0df9554f3fa3f3410c0df3bea98d Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Wed, 8 Mar 2023 10:18:24 +0000
+Subject: [PATCH v1 1/1] Temporary Moose BU work-around of incorrect max_ports.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index a26c6d880928..52459b37ea96 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -116,6 +116,10 @@ static int mlxsw_ports_init(struct mlxsw_core *mlxsw_core)
+ 	else
+ 		mlxsw_core->max_ports = MLXSW_PORT_MAX_PORTS_DEFAULT + 1;
+ 
++	/* Temp Moose BU work-around */
++	if (mlxsw_core->max_ports == 1)
++		mlxsw_core->max_ports = 65;
++
+ 	mlxsw_core->ports = kcalloc(mlxsw_core->max_ports,
+ 				    sizeof(struct mlxsw_core_port), GFP_KERNEL);
+ 	if (!mlxsw_core->ports)
+-- 
+2.14.1
+
