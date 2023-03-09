@@ -32,6 +32,7 @@
 # ARISING IN A WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+from _weakref import ref
 
 """
 Created on Jan 20, 2023
@@ -46,6 +47,7 @@ import os
 import sys
 import argparse
 import re
+from collections import OrderedDict
 import pdb
 
 #############################
@@ -75,7 +77,7 @@ class CONST(object):
     DST = "dst"
 
     SERIES_DELIMITER = """\n# Patches updated from hw-mgmt {hw_mgmt_ver}\n"""
-    CONFIG_DELIMITER = """\n# New (changed) hw-mgmt {hw_mgmt_ver} kernel config flags\n"""
+    CONFIG_DELIMITER = """\n# New hw-mgmt {hw_mgmt_ver} kernel config flags\n"""
     REFERENCE_CONFIG = "kconfig.txt"
     DIFF_CONFIG = "kconfig.diff"
 
@@ -83,13 +85,13 @@ class CONST(object):
 # Local const
 #############################
 
-PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_accepted_filter"},
+PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_candidate_filter"},
                "feature accepted": {CONST.FILTER : "copy_to_candidate_filter"},
-               "feature pending":  {CONST.FILTER : "skip_patch_filter"},
+               "feature pending":  {CONST.FILTER : "copy_to_candidate_filter"},
                "downstream":       {CONST.FILTER : "copy_to_candidate_filter"},
                "bugfix upstream":  {CONST.FILTER : "copy_to_accepted_ver_filter"},
                "bugfix accepted" : {CONST.FILTER : "copy_to_candidate_filter"},
-               "bugfix pending":   {CONST.FILTER : "skip_patch_filter"},
+               "bugfix pending":   {CONST.FILTER : "copy_to_candidate_filter"},
                "rejected":         {CONST.FILTER : "skip_patch_filter"}
               }
 
@@ -314,7 +316,7 @@ def process_patch_list(patch_list):
     return True
 
 # ----------------------------------------------------------------------
-def update_series(patch_list, series_path, hw_mgmt_ver=""):
+def update_series(patch_list, series_path, delimiter=""):
     # Load seried file
     if not os.path.isfile(series_path):
         print ("Err. Series file {} missing.".format(series_path))
@@ -337,7 +339,7 @@ def update_series(patch_list, series_path, hw_mgmt_ver=""):
     if new_patch_list:
         print ("Updating series {}".format(series_path))
         siries_file = open(series_path, "a")
-        siries_file.write('{}\n'.format(CONST.SERIES_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)))
+        siries_file.write('{}\n'.format(delimiter))
         siries_file.write('\n'.join(new_patch_list))
         siries_file.close()
         print ("Updated")
@@ -347,8 +349,58 @@ def update_series(patch_list, series_path, hw_mgmt_ver=""):
     return 0
 
 # ----------------------------------------------------------------------
-def  process_config(src_root, dst_cfg):
-    # Load seried file
+def parse_config_line(config_option_line):
+    config_option_dict = {}
+
+    option = None
+    status = None
+    if "=" in config_option_line:
+        option_res = re.match(r'^(\S+)=(\S+)', config_option_line)
+        if option_res:
+            option = option_res.group(1)
+            status = option_res.group(2)
+    elif "is not set" in config_option_line:
+        option_res = re.match(r'#\s*(\S+) is not set', config_option_line)
+        if option_res:
+            option = option_res.group(1)
+            status = None
+    if option:
+        return option, status
+    else:
+       return None, None
+
+# ----------------------------------------------------------------------
+def produce_config_line(option, status):
+    if status == None:
+        config_option_line = "# {} is not set".format(option)
+    else:
+        config_option_line = "{}={}".format(option,status)
+
+    return config_option_line
+
+# ----------------------------------------------------------------------
+def load_config_to_dict(config_path):
+
+    if not os.path.isfile(config_path):
+        print ("Err. File {} missing.".format(config_path))
+        return False
+    config_file = open(config_path, "r")
+    config_file_lines = config_file.readlines()
+    config_file.close()
+    config_file_lines = trim_array_str(config_file_lines)
+
+    config_dict = {}
+    for line in config_file_lines:
+        option, status = parse_config_line(line)
+        if option:
+            config_dict[option] = status
+    return config_dict
+
+# ----------------------------------------------------------------------
+def process_config(src_root, dst_cfg, delimiter=""):
+    # Load src config file
+    ref_cfg_filenamee = "{}/{}".format(src_root, CONST.REFERENCE_CONFIG)
+    ref_config = load_config_to_dict(ref_cfg_filenamee)
 
     if not os.path.isfile(dst_cfg):
         print ("Err. Config file {} missing.".format(dst_cfg))
@@ -358,28 +410,39 @@ def  process_config(src_root, dst_cfg):
     src_config_file.close()
     src_config_file_lines = trim_array_str(src_config_file_lines)
 
-    # Load seried file
-    ref_cfg = "{}/{}".format(src_root, CONST.REFERENCE_CONFIG)
-
-    if not os.path.isfile(ref_cfg):
-        print ("Err. Config file {} missing.".format(ref_cfg))
-        return False
-    ref_config_file = open(ref_cfg, "r")
-    ref_config_file_lines = ref_config_file.readlines()
-    ref_config_file.close()
-    ref_config_file_lines = trim_array_str(ref_config_file_lines)
-
     dst_config_lines = []
-    for ref_config in ref_config_file_lines:
-        if ref_config not in src_config_file_lines:
-            print ("Missing config: {}".format(ref_config))
-            dst_config_lines.append(ref_config)
+    ref_config_keys = ref_config.keys()
+
+    for conf_line in src_config_file_lines:
+        option, status  = parse_config_line(conf_line)
+        if option and option in ref_config_keys:
+            conf_line_new = produce_config_line(option, ref_config[option])
+            if conf_line_new != conf_line:
+                print ("Change config: \"{}\" -> \"{}\"".format(conf_line, conf_line_new))
+            ref_config.pop(option)
+            ref_config_keys = ref_config.keys()
+        else:
+            conf_line_new = conf_line
+
+        dst_config_lines.append(conf_line_new)
+
+    if ref_config:
+        dst_config_lines.append(delimiter)
+
+    for key, val in ref_config.items():
+        conf_line_new = produce_config_line(key, val)
+        print ("Add config:    \"{}\"".format(conf_line_new))
+        dst_config_lines.append(conf_line_new)
+
     return dst_config_lines
 
+def get_tool_path():
+    tool_path = os.path.dirname(os.path.abspath(__file__))
+    return tool_path + "/"
 
 # ----------------------------------------------------------------------
 def get_hw_mgmt_ver():
-    tool_path = os.path.dirname(os.path.abspath(__file__))
+    tool_path = get_tool_path()
     changelog_path = "{}/../../debian/changelog".format(tool_path)
     changelog_file = open(changelog_path, "r")
     changelog_ver_line = changelog_file.readline().strip('\n')
@@ -409,8 +472,9 @@ if __name__ == '__main__':
                             required=True)
     CMD_PARSER.add_argument("-s", "--src_folder",
                             dest="src_folder",
-                            help="Src folder with hw-management kernel patches: /tmp/hw-management/recipes-kernel/linux/",
-                            default=True)
+                            help=argparse.SUPPRESS,
+                            default=None,
+                            required=False)
     CMD_PARSER.add_argument("--dst_accepted_folder",
                             dest="dst_accepted_folder",
                             help="Dst folder with accepted patches",
@@ -419,20 +483,18 @@ if __name__ == '__main__':
     CMD_PARSER.add_argument("--dst_candidate_folder",
                             dest="dst_candidate_folder",
                             help="Dst folder with candidate patches",
-                            required=False)
+                            required=True)
     CMD_PARSER.add_argument("--series_file",
                             dest="series_file",
                             help="Update series file located by passed path.\n"
                             "In case this argument is missing - skip series update\n"
-                            "All added patches will be added at the end of series",
-                            default=None,
-                            required=False)
+                            "All added patches will be added to the end of series",
+                            required=True)
     CMD_PARSER.add_argument("--config_file",
                             dest="config_file",
-                            help="Will create diff list of missing kernel CONFIG\n"
+                            help="Will update kernel CONFIG\n"
                             "In case this argument is missing - skip series update",
-                            default=None,
-                            required=False)
+                            required=True)
     CMD_PARSER.add_argument("--os_type",
                             dest="os_type",
                             help="Special integration type.\n"
@@ -449,6 +511,9 @@ if __name__ == '__main__':
     hw_mgmt_ver = get_hw_mgmt_ver()
     args = vars(CMD_PARSER.parse_args())
     src_folder = args["src_folder"]
+    if not src_folder:
+        src_folder = get_tool_path()
+
     accepted_folder = args["dst_accepted_folder"]
     candidate_folder = args["dst_candidate_folder"]
     k_version = args["k_version"]
@@ -484,13 +549,15 @@ if __name__ == '__main__':
 
         print ("-> Copy patches")
         res = process_patch_list(patch_table)
-        if res:
+        if not res:
+            print ("-> Copy patches error")
             sys.exit(1)
         print ("-> Copy patches done")
 
         if args["series_file"]:
             print ("-> Process series")
-            res = update_series(patch_table, args["series_file"], hw_mgmt_ver)
+            delimiter_line = CONST.SERIES_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
+            res = update_series(patch_table, args["series_file"], delimiter_line)
             if res:
                 sys.exit(1)
             print ("-> Update series done")
@@ -498,15 +565,13 @@ if __name__ == '__main__':
     config_file_name = args["config_file"]
     if config_file_name:
         print ("-> Processing config {}".format(args["config_file"]))
-        config_diff = process_config(src_folder, args["config_file"])
+        delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
+        config_res = process_config(src_folder, args["config_file"], delimiter_line)
 
-        if config_diff:
-            config_file = open(config_file_name, "a")
-            config_file.write(CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver))
-            config_file.write('\n'.join(config_diff))
+        if config_res:
+            config_file = open(config_file_name, "w")
+            config_file.write('\n'.join(config_res))
             config_file.close()
-            print ("-> Update config done")
-        else:
-            print ("-> No need to update config")
+        print ("-> Update config done")
 
     sys.exit(0)
