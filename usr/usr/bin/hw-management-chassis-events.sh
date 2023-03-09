@@ -883,6 +883,11 @@ if [ "$1" == "add" ]; then
 			;;
 		esac
 		name=$(echo "$5" | cut -d':' -f2)
+		# In newer switches the LED color is amber. This is a workaround
+		# to avoid driver changes.
+		if [ "$color" == "orange" ]; then
+			color="amber"
+		fi
 		color=$(echo "$5" | cut -d':' -f3)
 		ln -sf "$3""$4"/brightness $led_path/led_"$name"_"$color"
 		ln -sf "$3""$4"/trigger  $led_path/led_"$name"_"$color"_trigger
@@ -1235,6 +1240,11 @@ else
 		esac
 		name=$(echo "$5" | cut -d':' -f2)
 		color=$(echo "$5" | cut -d':' -f3)
+		# In newer switches the LED color is amber. This is a workaround
+		# to avoid driver changes.
+		if [ "$color" == "orange" ]; then
+			color="amber"
+		fi
 		unlink $led_path/led_"$name"_"$color"
 		unlink $led_path/led_"$name"_"$color"_delay_on
 		unlink $led_path/led_"$name"_"$color"_delay_off
