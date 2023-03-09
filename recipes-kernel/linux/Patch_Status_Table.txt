@@ -440,6 +440,9 @@ Kernel-5.10
 |0272-platform-mellanox-Change-register-offset-addresses.patch    |                    | Feature pending                          |            |                                                |
 |0273-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            |                                                |
 |0274-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
+|0275-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Feature upstream                         |            |                                                |
+|0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Feature pending                          |            |                                                |
+|0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
