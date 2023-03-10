@@ -1,0 +1,32 @@
+From 7346c6ad392ba227130aedc2bcdf3f5c6e87c443 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Fri, 10 Mar 2023 09:15:35 +0000
+Subject: [PATCH backport v.5.10 8/8] platform: mellanox: mlx-platform: Modify
+ graceful shutdown callback
+
+Use kernel_power_off() instead of kernel_halt() to pass through
+machine_power_off() -> pm_power_off(), otherwise axillary power does
+not go off.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 67865636e..f41344a2a 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -2509,7 +2509,7 @@ mlxplat_mlxcpld_l1_switch_pwr_events_handler(void *handle, enum mlxreg_hotplug_k
+ 					     u8 action)
+ {
+ 	dev_info(&mlxplat_dev->dev, "System shutdown due to short press of power button");
+-	kernel_halt();
++	kernel_power_off();
+ 	return 0;
+ }
+ 
+-- 
+2.20.1
+

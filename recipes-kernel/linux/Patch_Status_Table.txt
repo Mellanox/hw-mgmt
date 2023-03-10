@@ -328,7 +328,7 @@ Kernel-5.10
 |0160-platform-mellanox-Introduce-support-for-COMe-managem.patch  | 6995e711b69c       | Feature upstream                         |            | E3597                                          | 
 |0161-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 2deb92864348       | Feature upstream                         |            | E3597                                          | 
 |0162-platform-mellanox-Add-COME-board-revision-register.patch    | 095a2c189151       | Feature upstream                         |            |                                                | 
-|0163-platform-mellanox-Introduce-support-for-rack-manager.patch  |                    | Feature accepted                         |            | E3597 (accepted for platform-nexе)             | 
+|0163-platform-mellanox-Introduce-support-for-rack-manager.patch  | f8dacbf7da2e       | Feature upstream                         |            | E3597                                          | 
 |0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  | c7250b5d553c       | Feature upstream                         |            | relevant for CFL systems only                  | 
 |0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch  | 7964f8fc52b1       | Feature upstream                         |            |                                                | 
 |0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream                               |            | SN2201                                         | 
@@ -341,25 +341,25 @@ Kernel-5.10
 |0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                | 
 |0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch  |                    | Downstream                               |            | SN4800                                         | 
 |0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch  | 9054416afcb4       | Feature upstream                         |            |                                                | 
-|0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  |                    | Feature upstream                         |            | SN5600 accepted for platform-next              |  
-|0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  |                    | Feature upstream                         |            | SN5600 accepted for platform-next              | 
-|0178-platform-mellanox-Introduce-support-for-next-generat.patch  |                    | Feature accepted                         |            | SN5600 accepted for platform-next              | 
+|0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  | 488f0fca0db0       | Feature upstream                         |            | SN5600                                         |  
+|0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  | e7210563432a       | Feature upstream                         |            | SN5600                                         | 
+|0178-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         | 
 |0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Rejected                                 |            | (temporary fix until new TC)                   | 
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                | 
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream                               |            | disable upstream patch, must exist from 5.10.74| 
-|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  |                    | Feature accepted                         |            |                                                | 
-|0183-platform-mellanox-Split-initialization-procedure.patch      |                    | Feature accepted                         |            |                                                | 
-|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   |                    | Feature accepted                         |            |                                                | 
-|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  |                    | Feature accepted                         |            |                                                | 
-|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  |                    | Feature accepted                         |            |                                                | 
-|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  |                    | Feature accepted                         |            |                                                | 
+|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            |                                                | 
+|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            |                                                | 
+|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            |                                                | 
+|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                | 
+|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                | 
+|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                | 
 |0188-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                | 
 |0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                | 
 |0190-i2c-mlxcpld-Modify-base-address-type.patch                  |                    | Feature pending                          |            |                                                | 
 |0191-i2c-mlxcpld-Allow-to-configure-base-address-of-regis.patch  |                    | Feature pending                          |            |                                                | 
 |0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                | 
-|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  |                    | Feature accepted                         |            | accepted for platform-next                     |  
-|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  |                    | Feature accepted                         |            | accepted for platform-next                     | 
+|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            |                                                |  
+|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            |                                                | 
 |0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            |                                                | 
 |0196-platform-mellanox-Relocate-mlx-platform-driver.patch        |                    | Feature pending                          |            |                                                | 
 |0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                | 
@@ -443,6 +443,7 @@ Kernel-5.10
 |0275-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Feature upstream                         |            |                                                |
 |0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Feature pending                          |            |                                                |
 |0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            |                                                |
+|0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Feature pending                          |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
