@@ -144,7 +144,7 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_6"]="mp2975 0x68 5 voltmon7" \
 				["mp2975_7"]="mp2975 0x69 5 voltmon8" \
 				["mp2975_8"]="mp2975 0x6a 5 voltmon9" \
-				["mp2975_9"]="mp2975 0x6b 5 voltmon10" \
+				["mp2975_9"]="mp2975 0x6c 5 voltmon10" \
 				["mp2975_10"]="mp2975 0x6e 5 voltmon11" \
 				["xdpe15284_0"]="xdpe15284 0x62 5 voltmon1" \
 				["xdpe15284_1"]="xdpe15284 0x63 5 voltmon2" \

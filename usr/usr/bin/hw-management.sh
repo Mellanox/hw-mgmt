@@ -431,7 +431,7 @@ sn5600_base_connect_table=( \
 	mp2975 0x68 5 \
 	mp2975 0x69 5 \
 	mp2975 0x6a 5 \
-	mp2975 0x6b 5 \
+	mp2975 0x6c 5 \
 	mp2975 0x6e 5 \
 	tmp102 0x49 6 \
 	tmp102 0x4a 7 \
