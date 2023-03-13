@@ -1,23 +1,34 @@
-From 7346c6ad392ba227130aedc2bcdf3f5c6e87c443 Mon Sep 17 00:00:00 2001
+From 48da50331ff198b1d8e8d337465d9b131b04f59f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 10 Mar 2023 09:15:35 +0000
-Subject: [PATCH backport v.5.10 8/8] platform: mellanox: mlx-platform: Modify
- graceful shutdown callback
+Subject: [PATCH backport v.5.10 1/1] platform: mellanox: mlx-platform: Modify
+ graceful shutdown callback and power down mask
 
 Use kernel_power_off() instead of kernel_halt() to pass through
 machine_power_off() -> pm_power_off(), otherwise axillary power does
 not go off.
 
+Change "power down" bitmask.
+
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ drivers/platform/mellanox/mlx-platform.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 67865636e..f41344a2a 100644
+index 67865636e..497fbf990 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -227,7 +227,7 @@
+ 					 MLXPLAT_CPLD_AGGR_MASK_LC_SDWN)
+ #define MLXPLAT_CPLD_LOW_AGGR_MASK_LOW	0xc1
+ #define MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2	BIT(2)
+-#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	BIT(4)
++#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	BIT(5)
+ #define MLXPLAT_CPLD_LOW_AGGR_MASK_I2C	BIT(6)
+ #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
+ #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
 @@ -2509,7 +2509,7 @@ mlxplat_mlxcpld_l1_switch_pwr_events_handler(void *handle, enum mlxreg_hotplug_k
  					     u8 action)
  {
