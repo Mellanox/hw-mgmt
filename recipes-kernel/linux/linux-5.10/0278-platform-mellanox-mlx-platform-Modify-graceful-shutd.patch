@@ -1,4 +1,4 @@
-From 48da50331ff198b1d8e8d337465d9b131b04f59f Mon Sep 17 00:00:00 2001
+From 8b83fb501ac77d60e1cc30fac63e71f469ba0992 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 10 Mar 2023 09:15:35 +0000
 Subject: [PATCH backport v.5.10 1/1] platform: mellanox: mlx-platform: Modify
@@ -17,7 +17,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 67865636e..497fbf990 100644
+index 67865636e..55afb4c90 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -227,7 +227,7 @@
@@ -25,7 +25,7 @@ index 67865636e..497fbf990 100644
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_LOW	0xc1
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2	BIT(2)
 -#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	BIT(4)
-+#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	BIT(5)
++#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	GENMASK(5,4)
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_I2C	BIT(6)
  #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
