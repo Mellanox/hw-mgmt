@@ -96,6 +96,7 @@ spc4_pci_id=cf80
 quantum2_pci_id=d2f2
 nv3_pci_id=1af1
 nv4_pci_id=22a3
+nv4_rev_a1_pci_id=22a4
 leakage_count=0
 
 # Topology description and driver specification for ambient sensors and for
@@ -2160,6 +2161,10 @@ set_asic_pci_id()
 		;;
 	HI142|HI143|HI152)
 		asic_pci_id=$nv4_pci_id
+		check_asics=`lspci -nn | grep $asic_pci_id | awk '{print $1}'`
+		if [ -z "$check_asics" ]; then
+			asic_pci_id=$nv4_rev_a1_pci_id
+		fi
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num
