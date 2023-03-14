@@ -885,10 +885,10 @@ if [ "$1" == "add" ]; then
 		name=$(echo "$5" | cut -d':' -f2)
 		# In newer switches the LED color is amber. This is a workaround
 		# to avoid driver changes.
+		color=$(echo "$5" | cut -d':' -f3)
 		if [ "$color" == "orange" ]; then
 			color="amber"
 		fi
-		color=$(echo "$5" | cut -d':' -f3)
 		ln -sf "$3""$4"/brightness $led_path/led_"$name"_"$color"
 		ln -sf "$3""$4"/trigger  $led_path/led_"$name"_"$color"_trigger
 		ln -sf "$3""$4"/delay_on  $led_path/led_"$name"_"$color"_delay_on
