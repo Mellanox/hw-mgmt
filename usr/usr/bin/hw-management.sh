@@ -2333,6 +2333,7 @@ Options:
 			thermal control.
 	restart
 	force-reload	Performs hw-management 'stop' and the 'start.
+	reset-cause	Output system reset cause.
 "
 
 case $ACTION in
@@ -2391,6 +2392,11 @@ case $ACTION in
 		do_stop
 		sleep 3
 		do_start
+	;;
+	reset-cause)
+		for f in $system_path/reset_*;
+			do v=`cat $f`; attr=$(basename $f); if [ $v -eq 1 ]; then echo $attr; fi;
+		done
 	;;
 	*)
 		echo "$__usage"
