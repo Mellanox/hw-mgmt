@@ -1,0 +1,30 @@
+From fe599f0afef3e3822b8d2c2ab4f5a87de8ef918f Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 15 Mar 2023 19:23:20 +0000
+Subject: [PATCH backport v.5.10 1/1] platform: mellanox: mlx-platform: Modify
+ health signals polarity
+
+Change polarity of chassis health signals for L1 switch class.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index fa2e539b6..63137fcea 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -2640,7 +2640,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_l1_switch_events_items[] = {
+ 		.reg = MLXPLAT_CPLD_LPC_REG_BRD_OFFSET,
+ 		.mask = MLXPLAT_CPLD_L1_CHA_HEALTH_MASK,
+ 		.count = ARRAY_SIZE(mlxplat_mlxcpld_l1_switch_health_events_items_data),
+-		.inversed = 0,
++		.inversed = 1,
+ 		.health = false,
+ 		.ind = 8,
+ 	},
+-- 
+2.20.1
+
