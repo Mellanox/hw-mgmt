@@ -167,59 +167,59 @@ Kernel-5.10
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          | 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|0001-i2c-mlxcpld-Update-module-license.patch                     | f069291bd5fc       | Feature upstream                         |            |                                                | 
-|0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch  | cb9744178f33       | Feature upstream                         |            |                                                | 
-|0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch  | 66b0c2846ba8       | Feature upstream                         |            |                                                | 
-|0004-i2c-mux-mlxcpld-Update-module-license.patch                 | 337bc68c294d       | Feature upstream                         |            |                                                | 
-|0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch     | 98d29c410475       | Feature upstream                         |            |                                                | 
-|0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch     | 84af1b168c50       | Feature upstream                         |            |                                                | 
-|0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch  | 81566938083a       | Feature upstream                         |            |                                                | 
-|0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch  | cae5216387d1       | Feature upstream                         |            |                                                | 
-|0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch  | c52a1c5f5db5       | Feature upstream                         |            |                                                | 
-|0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch           | 699c0506543e       | Feature upstream                         |            |                                                | 
-|0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch  | a39bd92e92b9       | Feature upstream                         |            |                                                | 
-|0012-hwmon-mlxreg-fan-Add-support-for-fan-drawers-capabil.patch  | f7bf7eb2d734       | Feature upstream                         |            |                                                | 
-|0013-hwmon-pmbus-shrink-code-and-remove-pmbus_do_remove.patch    | 3bce071a301f       | Feature upstream; os[sonic]              |            |                                                | 
-|0014-thermal-drivers-core-Use-a-char-pointer-for-the-cool.patch  | 584837618100       | Bugfix upstream                          |  5.10.121  |                                                | 
-|0015-mlxsw-core-Remove-critical-trip-points-from-thermal-.patch  | d567fd6e82fa       | Feature upstream                         |            |                                                | 
-|0016-net-don-t-include-ethtool.h-from-netdevice.h.patch          | cc69837fcaf4       | Feature upstream                         |            |                                                | 
-|0017-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch  | 314dbb19f95b       | Feature upstream                         |            |                                                | 
-|0018-mlxsw-thermal-Add-function-for-reading-module-temper.patch  | e57977b34ab5       | Feature upstream                         |            |                                                | 
-|0019-mlxsw-thermal-Read-module-temperature-thresholds-usi.patch  | 72a64c2fe9d8       | Feature upstream                         |            |                                                | 
-|0020-mlxsw-thermal-Fix-null-dereference-of-NULL-temperatu.patch  | f3b5a8907543       | Feature upstream                         |            |                                                | 
-|0021-mlxsw-reg-Add-bank-number-to-MCIA-register.patch            | d51ea60e01f9       | Feature upstream                         |            |                                                | 
-|0022-mlxsw-reg-Document-possible-MCIA-status-values.patch        | cecefb3a6eeb       | Feature upstream                         |            |                                                | 
-|0023-ethtool-Allow-network-drivers-to-dump-arbitrary-EEPR.patch  | c781ff12a2f3       | Feature upstream                         |            |                                                | 
-|0024-net-ethtool-Export-helpers-for-getting-EEPROM-info.patch    | 95dfc7effd88       | Feature upstream                         |            |                                                | 
-|0025-ethtool-Add-fallback-to-get_module_eeprom-from-netli.patch  | 96d971e307cc       | Feature upstream                         |            |                                                | 
-|0026-mlxsw-core-Add-support-for-module-EEPROM-read-by-pag.patch  | 1e27b9e40803       | Feature upstream                         |            |                                                | 
-|0027-ethtool-Decrease-size-of-module-EEPROM-get-policy-ar.patch  | f5fe211d13af       | Feature upstream                         |            |                                                | 
-|0028-ethtool-Use-kernel-data-types-for-internal-EEPROM-st.patch  | b8c48be23c2d       | Feature upstream                         |            |                                                | 
-|0029-ethtool-Validate-module-EEPROM-length-as-part-of-pol.patch  | 0dc7dd02ba7a       | Feature upstream                         |            |                                                | 
-|0030-ethtool-Validate-module-EEPROM-offset-as-part-of-pol.patch  | 88f9a87afeee       | Feature upstream                         |            |                                                | 
-|0031-mlxsw-core_env-Read-module-temperature-thresholds-us.patch  | befc2048088a       | Feature upstream                         |            |                                                | 
-|0032-mlxsw-core_env-Avoid-unnecessary-memcpy-s.patch             | 911bd1b1f08f       | Feature upstream                         |            |                                                | 
-|0033-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch  | 2fd8d84ce309       | Bugfix upstream                          |  5.10.46   |                                                | 
-|0034-mlxsw-Verify-the-accessed-index-doesn-t-exceed-the-a.patch  | 0c1acde1d3d0       | Bugfix upstream                          |  5.10.83   |                                                | 
-|0035-hwmon-pmbus-Increase-maximum-number-of-phases-per-pa.patch  | e4db7719d037       | Feature upstream                         |            |                                                | 
-|0036-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch  | 0c1acde1d3d0       | Feature upstream; os[sonic]              |            |                                                | 
-|0037-dt-bindings-Add-MP2888-voltage-regulator-device.patch       | 9abfb52b5028       | Feature upstream                         |            |                                                | 
-|0038-ethtool-wire-in-generic-SFP-module-access.patch             | c97a31f66ebc       | Feature upstream                         |            |                                                | 
-|0039-ethtool-Fix-NULL-pointer-dereference-during-module-E.patch  | 51c96a561f24       | Feature upstream                         |            |                                                | 
-|0040-phy-sfp-add-netlink-SFP-support-to-generic-SFP-code.patch   | d740513f05a2       | Feature upstream                         |            |                                                | 
-|0041-net-ethtool-clear-heap-allocations-for-ethtool-funct.patch  | 80ec82e3d2c1       | Bugfix upstream                          |  5.10.47   |                                                | 
-|0042-ethtool-support-FEC-settings-over-netlink.patch             | 1e5d1f69d9fb       | Feature upstream                         |            |                                                | 
-|0043-platform-mellanox-mlxreg-io-Fix-argument-base-in-kst.patch  | 452dcfab9954       | Bugfix upstream                          |  5.10.75   |                                                | 
-|0044-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch  | 5fd56f11838d       | Bugfix upstream                          |  5.10.75   |                                                | 
-|0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch        | 52f57396c75a       | Feature upstream                         |            |                                                | 
+|0001-i2c-mlxcpld-Update-module-license.patch                     | f069291bd5fc       | Feature upstream                         |            |                                                |
+|0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch  | cb9744178f33       | Feature upstream                         |            |                                                |
+|0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch  | 66b0c2846ba8       | Feature upstream                         |            |                                                |
+|0004-i2c-mux-mlxcpld-Update-module-license.patch                 | 337bc68c294d       | Feature upstream                         |            |                                                |
+|0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch     | 98d29c410475       | Feature upstream                         |            |                                                |
+|0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch     | 84af1b168c50       | Feature upstream                         |            |                                                |
+|0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch  | 81566938083a       | Feature upstream                         |            |                                                |
+|0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch  | cae5216387d1       | Feature upstream                         |            |                                                |
+|0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch  | c52a1c5f5db5       | Feature upstream                         |            |                                                |
+|0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch           | 699c0506543e       | Feature upstream                         |            |                                                |
+|0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch  | a39bd92e92b9       | Feature upstream                         |            |                                                |
+|0012-hwmon-mlxreg-fan-Add-support-for-fan-drawers-capabil.patch  | f7bf7eb2d734       | Feature upstream                         |            |                                                |
+|0013-hwmon-pmbus-shrink-code-and-remove-pmbus_do_remove.patch    | 3bce071a301f       | Feature upstream; os[sonic]              |            |                                                |
+|0014-thermal-drivers-core-Use-a-char-pointer-for-the-cool.patch  | 584837618100       | Bugfix upstream                          |  5.10.121  |                                                |
+|0015-mlxsw-core-Remove-critical-trip-points-from-thermal-.patch  | d567fd6e82fa       | Feature upstream                         |            |                                                |
+|0016-net-don-t-include-ethtool.h-from-netdevice.h.patch          | cc69837fcaf4       | Feature upstream                         |            |                                                |
+|0017-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch  | 314dbb19f95b       | Feature upstream                         |            |                                                |
+|0018-mlxsw-thermal-Add-function-for-reading-module-temper.patch  | e57977b34ab5       | Feature upstream                         |            |                                                |
+|0019-mlxsw-thermal-Read-module-temperature-thresholds-usi.patch  | 72a64c2fe9d8       | Feature upstream                         |            |                                                |
+|0020-mlxsw-thermal-Fix-null-dereference-of-NULL-temperatu.patch  | f3b5a8907543       | Feature upstream                         |            |                                                |
+|0021-mlxsw-reg-Add-bank-number-to-MCIA-register.patch            | d51ea60e01f9       | Feature upstream                         |            |                                                |
+|0022-mlxsw-reg-Document-possible-MCIA-status-values.patch        | cecefb3a6eeb       | Feature upstream                         |            |                                                |
+|0023-ethtool-Allow-network-drivers-to-dump-arbitrary-EEPR.patch  | c781ff12a2f3       | Feature upstream                         |            |                                                |
+|0024-net-ethtool-Export-helpers-for-getting-EEPROM-info.patch    | 95dfc7effd88       | Feature upstream                         |            |                                                |
+|0025-ethtool-Add-fallback-to-get_module_eeprom-from-netli.patch  | 96d971e307cc       | Feature upstream                         |            |                                                |
+|0026-mlxsw-core-Add-support-for-module-EEPROM-read-by-pag.patch  | 1e27b9e40803       | Feature upstream                         |            |                                                |
+|0027-ethtool-Decrease-size-of-module-EEPROM-get-policy-ar.patch  | f5fe211d13af       | Feature upstream                         |            |                                                |
+|0028-ethtool-Use-kernel-data-types-for-internal-EEPROM-st.patch  | b8c48be23c2d       | Feature upstream                         |            |                                                |
+|0029-ethtool-Validate-module-EEPROM-length-as-part-of-pol.patch  | 0dc7dd02ba7a       | Feature upstream                         |            |                                                |
+|0030-ethtool-Validate-module-EEPROM-offset-as-part-of-pol.patch  | 88f9a87afeee       | Feature upstream                         |            |                                                |
+|0031-mlxsw-core_env-Read-module-temperature-thresholds-us.patch  | befc2048088a       | Feature upstream                         |            |                                                |
+|0032-mlxsw-core_env-Avoid-unnecessary-memcpy-s.patch             | 911bd1b1f08f       | Feature upstream                         |            |                                                |
+|0033-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch  | 2fd8d84ce309       | Bugfix upstream                          |  5.10.46   |                                                |
+|0034-mlxsw-Verify-the-accessed-index-doesn-t-exceed-the-a.patch  | 0c1acde1d3d0       | Bugfix upstream                          |  5.10.83   |                                                |
+|0035-hwmon-pmbus-Increase-maximum-number-of-phases-per-pa.patch  | e4db7719d037       | Feature upstream                         |            |                                                |
+|0036-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch  | 0c1acde1d3d0       | Feature upstream; os[sonic]              |            |                                                |
+|0037-dt-bindings-Add-MP2888-voltage-regulator-device.patch       | 9abfb52b5028       | Feature upstream                         |            |                                                |
+|0038-ethtool-wire-in-generic-SFP-module-access.patch             | c97a31f66ebc       | Feature upstream                         |            |                                                |
+|0039-ethtool-Fix-NULL-pointer-dereference-during-module-E.patch  | 51c96a561f24       | Feature upstream                         |            |                                                |
+|0040-phy-sfp-add-netlink-SFP-support-to-generic-SFP-code.patch   | d740513f05a2       | Feature upstream                         |            |                                                |
+|0041-net-ethtool-clear-heap-allocations-for-ethtool-funct.patch  | 80ec82e3d2c1       | Bugfix upstream                          |  5.10.47   |                                                |
+|0042-ethtool-support-FEC-settings-over-netlink.patch             | 1e5d1f69d9fb       | Feature upstream                         |            |                                                |
+|0043-platform-mellanox-mlxreg-io-Fix-argument-base-in-kst.patch  | 452dcfab9954       | Bugfix upstream                          |  5.10.75   |                                                |
+|0044-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch  | 5fd56f11838d       | Bugfix upstream                          |  5.10.75   |                                                |
+|0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch        | 52f57396c75a       | Feature upstream                         |            |                                                |
 |0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch  | 669b2e4aa1a8       | Feature upstream                         |            | (5.16)                                         | 
 |0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch  | 712d6617d0a2       | Feature upstream                         |            | (5.16)                                         | 
-|0048-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch  | 2292e2f685cd       | Bugfix upstream                          |  5.10.71   |                                                | 
+|0048-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch  | 2292e2f685cd       | Bugfix upstream                          |  5.10.71   |                                                |
 |0049-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Rejected; take[ALL]                      |            |Need to check patch apply. Can break patch apply| 
-|0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream                               |            |                                                | 
+|0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream                               |            |                                                |
 |0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream                               |            | Modular SN4800                                 | 
 |0052-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch  | e6fab7af6ba1       | Bugfix upstream                          |  5.10.71   | (note: has some issue)                         | 
-|0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                | 
+|0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                |
 |0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream                               |            | must exist in Sonic/CL from 4.9                | 
 |0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch  | aafa1cafedca       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              | 
 |0056-platform-x86-mlx-platform-Add-initial-support-for-ne.patch  | a5d8f57edfb4       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              | 
@@ -234,19 +234,19 @@ Kernel-5.10
 |0065-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch  | 9045512ca6cd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              | 
 |0066-platform-x86-mlx-platform-Add-new-attributes-for-Cof.patch  | 4289fd4ad43a       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              | 
 |0067-platform-mellanox-Add-dedicated-match-for-system-typ.patch  |                    | Downstream                               |            | for MQM8700                                    | 
-|0068-mlxsw-core-Initialize-switch-driver-last.patch              | 3d7a6f677905       | Feature upstream                         |            |                                                | 
-|0069-mlxsw-core-Remove-mlxsw_core_is_initialized.patch           | 25a91f835a7b       | Feature upstream                         |            |                                                | 
-|0070-mlxsw-core_env-Defer-handling-of-module-temperature-.patch  | 163f3d2dd01c       | Feature upstream                         |            |                                                | 
-|0071-mlxsw-core_env-Convert-module_info_lock-to-a-mutex.patch    | bd6e43f5953d       | Feature upstream                         |            |                                                | 
-|0072-mlxsw-Track-per-module-port-status.patch                    | 896f399be078       | Feature upstream                         |            |                                                | 
-|0073-mlxsw-reg-Add-fields-to-PMAOS-register.patch                | 8f4ebdb0a274       | Feature upstream                         |            |                                                | 
-|0074-mlxsw-Make-PMAOS-pack-function-more-generic.patch           | 8f4ebdb0a274       | Feature upstream                         |            |                                                | 
-|0075-mlxsw-Add-support-for-transceiver-modules-reset.patch       | 49fd3b645de8       | Feature upstream                         |            |                                                | 
-|0076-ethtool-Add-ability-to-control-transceiver-modules-p.patch  | 353407d917b2       | Feature upstream                         |            |                                                | 
-|0077-mlxsw-reg-Add-Port-Module-Memory-Map-Properties-regi.patch  | f10ba086f7e3       | Feature upstream                         |            |                                                | 
-|0078-mlxsw-reg-Add-Management-Cable-IO-and-Notifications-.patch  | fc53f5fb8037       | Feature upstream                         |            |                                                | 
-|0079-mlxsw-Add-ability-to-control-transceiver-modules-pow.patch  | 0455dc50bcca       | Feature upstream                         |            |                                                | 
-|0080-ethtool-Add-transceiver-module-extended-states.patch        | 3dfb51126064       | Feature upstream                         |            |                                                | 
+|0068-mlxsw-core-Initialize-switch-driver-last.patch              | 3d7a6f677905       | Feature upstream                         |            |                                                |
+|0069-mlxsw-core-Remove-mlxsw_core_is_initialized.patch           | 25a91f835a7b       | Feature upstream                         |            |                                                |
+|0070-mlxsw-core_env-Defer-handling-of-module-temperature-.patch  | 163f3d2dd01c       | Feature upstream                         |            |                                                |
+|0071-mlxsw-core_env-Convert-module_info_lock-to-a-mutex.patch    | bd6e43f5953d       | Feature upstream                         |            |                                                |
+|0072-mlxsw-Track-per-module-port-status.patch                    | 896f399be078       | Feature upstream                         |            |                                                |
+|0073-mlxsw-reg-Add-fields-to-PMAOS-register.patch                | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0074-mlxsw-Make-PMAOS-pack-function-more-generic.patch           | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0075-mlxsw-Add-support-for-transceiver-modules-reset.patch       | 49fd3b645de8       | Feature upstream                         |            |                                                |
+|0076-ethtool-Add-ability-to-control-transceiver-modules-p.patch  | 353407d917b2       | Feature upstream                         |            |                                                |
+|0077-mlxsw-reg-Add-Port-Module-Memory-Map-Properties-regi.patch  | f10ba086f7e3       | Feature upstream                         |            |                                                |
+|0078-mlxsw-reg-Add-Management-Cable-IO-and-Notifications-.patch  | fc53f5fb8037       | Feature upstream                         |            |                                                |
+|0079-mlxsw-Add-ability-to-control-transceiver-modules-pow.patch  | 0455dc50bcca       | Feature upstream                         |            |                                                |
+|0080-ethtool-Add-transceiver-module-extended-states.patch        | 3dfb51126064       | Feature upstream                         |            |                                                |
 |0081-platform-x86-mlx-platform-Add-support-for-multiply-c.patch  | 249606d37d20       | Feature upstream                         |            | (5.16)                                         | 
 |0082-mlxsw-core-Extend-external-cooling-device-whitelist-.patch  |                    | Feature pending                          |            | SN2201                                         | 
 |0083-platform_data-mlxreg-Add-field-for-notification-call.patch  | abcebcd39fe0       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             | 
@@ -257,13 +257,13 @@ Kernel-5.10
 |0088-dt-bindings-Add-description-for-EMC2305-for-RPM-base.patch  |                    | Rejected                                 |            | SN2201 (relevant for ARM ARCH only)            | 
 |0089-platform-mellanox-Add-support-for-new-SN2201-system.patch   | 662f24826f95       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             | 
 |0090-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch  | b1a9c69792ca       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             | 
-|0091-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 4616e54795cc       | Feature upstream                         |            |                                                | 
-|0092-platform-mellanox-mlxreg-lc-fix-error-code-in-mlxreg.patch  | 287273a80be5       | Feature upstream                         |            |                                                | 
-|0093-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-P.patch  | 150f1e0c6fa8       | Feature upstream                         |            |                                                | 
-|0094-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch  | d7efb2ebc7b3       | Feature upstream                         |            |                                                | 
-|0095-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                | 
-|0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                | 
-|0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                | 
+|0091-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 4616e54795cc       | Feature upstream                         |            |                                                |
+|0092-platform-mellanox-mlxreg-lc-fix-error-code-in-mlxreg.patch  | 287273a80be5       | Feature upstream                         |            |                                                |
+|0093-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-P.patch  | 150f1e0c6fa8       | Feature upstream                         |            |                                                |
+|0094-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch  | d7efb2ebc7b3       | Feature upstream                         |            |                                                |
+|0095-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                |
+|0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                |
+|0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                |
 |0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Feature upstream                         |            | Modular SN4800                                 | 
 |0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Feature upstream                         |            | Modular SN4800                                 | 
 |0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch  | bfb82c9cceac       | Feature upstream                         |            | Modular SN4800                                 | 
@@ -327,112 +327,112 @@ Kernel-5.10
 |0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch  | 08fdb6f3acae       | Feature upstream                         |            | E3597                                          | 
 |0160-platform-mellanox-Introduce-support-for-COMe-managem.patch  | 6995e711b69c       | Feature upstream                         |            | E3597                                          | 
 |0161-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 2deb92864348       | Feature upstream                         |            | E3597                                          | 
-|0162-platform-mellanox-Add-COME-board-revision-register.patch    | 095a2c189151       | Feature upstream                         |            |                                                | 
+|0162-platform-mellanox-Add-COME-board-revision-register.patch    | 095a2c189151       | Feature upstream                         |            |                                                |
 |0163-platform-mellanox-Introduce-support-for-rack-manager.patch  | f8dacbf7da2e       | Feature upstream                         |            | E3597                                          | 
 |0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  | c7250b5d553c       | Feature upstream                         |            | relevant for CFL systems only                  | 
-|0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch  | 7964f8fc52b1       | Feature upstream                         |            |                                                | 
+|0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch  | 7964f8fc52b1       | Feature upstream                         |            |                                                |
 |0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream                               |            | SN2201                                         | 
 |0167-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream                               |            | P2317 only                                     | 
 |0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch  |                    | Downstream                               |            | MQM8700 only                                   | 
 |0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch  |                    | Downstream                               |            | Sonic/ISSU                                     | 
-|0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                | 
+|0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
 |0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Feature upstream                         |            | Modular SN4800                                 | 
 |0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream                               |            | P4697                                          | 
-|0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                | 
+|0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                |
 |0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch  |                    | Downstream                               |            | SN4800                                         | 
-|0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch  | 9054416afcb4       | Feature upstream                         |            |                                                | 
+|0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch  | 9054416afcb4       | Feature upstream                         |            |                                                |
 |0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  | 488f0fca0db0       | Feature upstream                         |            | SN5600                                         |  
 |0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  | e7210563432a       | Feature upstream                         |            | SN5600                                         | 
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         | 
 |0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Rejected                                 |            | (temporary fix until new TC)                   | 
-|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                | 
+|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                |
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream                               |            | disable upstream patch, must exist from 5.10.74| 
-|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            |                                                | 
-|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            |                                                | 
-|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            |                                                | 
-|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                | 
-|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                | 
-|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                | 
-|0188-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                | 
-|0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                | 
-|0190-i2c-mlxcpld-Modify-base-address-type.patch                  |                    | Feature pending                          |            |                                                | 
-|0191-i2c-mlxcpld-Allow-to-configure-base-address-of-regis.patch  |                    | Feature pending                          |            |                                                | 
-|0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                | 
-|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            |                                                |  
-|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            |                                                | 
-|0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            |                                                | 
-|0196-platform-mellanox-Relocate-mlx-platform-driver.patch        |                    | Feature pending                          |            |                                                | 
-|0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                | 
-|0198-platform-mellanox-Introduce-support-for-switches-bas.patch  |                    | Feature pending                          |            |                                                | 
-|0199-platform-mellanox-mlx-platform-Add-reset-and-extend-.patch  |                    | Feature pending                          |            |                                                | 
-|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Feature pending                          |            |                                                | 
-|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  |                                                | 
-|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  |                                                | 
-|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Bugfix upstream                          |  5.10.162  |                                                | 
-|0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  |                                                | 
-|0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  |                                                | 
-|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Feature upstream                         |            |                                                | 
-|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Feature upstream                         |            |                                                | 
-|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Feature upstream                         |            |                                                | 
-|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Feature pending                          |            |                                                | 
-|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Feature upstream                         |            |                                                | 
-|0211-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Feature pending                          |            |                                                | 
-|0212-platform-mellanox-mlxbf-pmc-Add-Mellanox-BlueField-P.patch  | 1a218d312e65       | Feature upstream                         |            |                                                | 
-|0213-platform-mellanox-mlxbf-pmc-fix-kernel-doc-notation.patch   | 0c59e612c0b6       | Feature upstream                         |            |                                                | 
-|0214-platform-mellanox-mlxbf-pmc-Fix-an-IS_ERR-vs-NULL-bu.patch  | 804034c4ffc5       | Feature upstream                         |            |                                                | 
-|0215-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-pmc.patch   |                    | Feature pending                          |            |                                                | 
-|0216-UBUNTU-SAUCE-mlxbf_pmc-Fix-references-to-sprintf.patch      |                    | Feature pending                          |            |                                                | 
-|0217-UBUNTU-SAUCE-mlxbf-pmc-Fix-error-when-reading-unprog.patch  |                    | Feature pending                          |            |                                                | 
-|0218-UBUNTU-SAUCE-platform-mellanox-Add-mlx-trio-driver.patch    |                    | Feature pending                          |            |                                                | 
-|0219-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Feature upstream                         |            |                                                | 
-|0220-UBUNTU-SAUCE-pka-Add-pka-driver.patch                       |                    | Feature pending                          |            |                                                | 
-|0221-UBUNTU-SAUCE-platform-mellanox-Add-mlxbf-livefish-dr.patch  |                    | Feature pending                          |            |                                                | 
-|0222-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Feature upstream                         |            |                                                | 
-|0223-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Feature upstream                         |            |                                                | 
-|0224-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Feature upstream                         |            |                                                | 
-|0225-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Feature pending                          |            |                                                | 
-|0226-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Feature upstream                         |            |                                                | 
-|0227-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Feature upstream                         |            |                                                | 
-|0228-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Feature upstream                         |            |                                                | 
-|0229-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Feature upstream                         |            |                                                | 
-|0230-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Feature upstream                         |            |                                                | 
-|0231-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Feature upstream                         |            |                                                | 
-|0232-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Feature pending                          |            |                                                | 
-|0233-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            |                                                | 
-|0234-UBUNTU-SAUCE-mlxbf_gige-add-validation-of-ACPI-table.patch  |                    | Feature pending                          |            |                                                | 
-|0235-UBUNTU-SAUCE-mlxbf_gige-set-driver-version-to-1.27.patch    |                    | Feature pending                          |            |                                                | 
-|0236-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Feature pending                          |            |                                                | 
-|0237-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Feature upstream                         |            |                                                | 
-|0238-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Feature upstream                         |            |                                                | 
-|0239-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Feature pending                          |            |                                                | 
-|0240-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Feature pending                          |            |                                                | 
-|0241-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-Serdes-confi.patch  |                    | Feature pending                          |            |                                                | 
-|0242-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-ethtool_ops.patch   |                    | Feature pending                          |            |                                                | 
-|0243-UBUNTU-SAUCE-bluefield_edac-Add-SMC-support.patch           |                    | Feature pending                          |            |                                                | 
-|0244-UBUNTU-SAUCE-bluefield_edac-Update-license-and-copyr.patch  |                    | Feature pending                          |            |                                                | 
-|0245-gpio-mlxbf2-Convert-to-device-PM-ops.patch                  | dabe57c3a32d       | Feature upstream                         |            |                                                | 
-|0246-gpio-mlxbf2-Drop-wrong-use-of-ACPI_PTR.patch                | 603607e70e36       | Feature upstream                         |            |                                                | 
-|0247-gpio-mlxbf2-Use-devm_platform_ioremap_resource.patch        | 4e6864f8563d       | Feature upstream                         |            |                                                | 
-|0248-gpio-mlxbf2-Use-DEFINE_RES_MEM_NAMED-helper-macro.patch     | d0ef631d40ba       | Feature upstream                         |            |                                                | 
-|0249-gpio-mlxbf2-Introduce-IRQ-support.patch                     |                    | Feature pending                          |            |                                                | 
-|0250-UBUNTU-SAUCE-gpio-mlxbf2.c-support-driver-version.patch     |                    | Feature pending                          |            |                                                | 
-|0251-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Feature upstream                         |            |                                                | 
-|0252-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Feature upstream                         |            |                                                | 
-|0253-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Feature upstream                         |            |                                                | 
-|0254-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Feature upstream                         |            |                                                | 
-|0255-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Feature upstream                         |            |                                                | 
-|0256-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Feature pending                          |            |                                                | 
-|0257-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Feature pending                          |            |                                                | 
-|0258-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Feature pending                          |            |                                                | 
-|0259-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Feature pending                          |            |                                                | 
-|0260-UBUNTU-SAUCE-mlxbf-pka-Fix-kernel-crash-with-pka-TRN.patch  |                    | Feature pending                          |            |                                                | 
-|0261-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Feature pending                          |            |                                                | 
-|0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch          | b0b698b80c56       | Feature upstream                         |            |                                                | 
-|0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch  |                    | Feature pending                          |            |                                                | 
-|0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Feature pending                          |            |                                                | 
-|0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix accepted                          |            | accepted for v6 .3                             | 
-|0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch  |                    | Feature pending                          |            |                                                | 
-|0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Feature pending                          |            |                                                | 
+|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            |                                                |
+|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            |                                                |
+|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            |                                                |
+|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
+|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
+|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
+|0188-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
+|0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
+|0190-i2c-mlxcpld-Modify-base-address-type.patch                  |                    | Feature pending                          |            |                                                |
+|0191-i2c-mlxcpld-Allow-to-configure-base-address-of-regis.patch  |                    | Feature pending                          |            |                                                |
+|0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
+|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            |                                                |
+|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            |                                                |
+|0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            |                                                |
+|0196-platform-mellanox-Relocate-mlx-platform-driver.patch        |                    | Feature pending                          |            |                                                |
+|0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
+|0198-platform-mellanox-Introduce-support-for-switches-bas.patch  |                    | Feature pending                          |            |                                                |
+|0199-platform-mellanox-mlx-platform-Add-reset-and-extend-.patch  |                    | Feature pending                          |            |                                                |
+|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Feature pending                          |            |                                                |
+|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  |                                                |
+|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  |                                                |
+|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Bugfix upstream                          |  5.10.162  |                                                |
+|0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  |                                                |
+|0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  |                                                |
+|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Feature upstream                         |            |                                                |
+|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Feature upstream                         |            |                                                |
+|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Feature upstream                         |            |                                                |
+|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Feature pending                          |            |                                                |
+|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Feature upstream                         |            |                                                |
+|0211-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Feature pending                          |            |                                                |
+|0212-platform-mellanox-mlxbf-pmc-Add-Mellanox-BlueField-P.patch  | 1a218d312e65       | Feature upstream                         |            |                                                |
+|0213-platform-mellanox-mlxbf-pmc-fix-kernel-doc-notation.patch   | 0c59e612c0b6       | Feature upstream                         |            |                                                |
+|0214-platform-mellanox-mlxbf-pmc-Fix-an-IS_ERR-vs-NULL-bu.patch  | 804034c4ffc5       | Feature upstream                         |            |                                                |
+|0215-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-pmc.patch   |                    | Feature pending                          |            |                                                |
+|0216-UBUNTU-SAUCE-mlxbf_pmc-Fix-references-to-sprintf.patch      |                    | Feature pending                          |            |                                                |
+|0217-UBUNTU-SAUCE-mlxbf-pmc-Fix-error-when-reading-unprog.patch  |                    | Feature pending                          |            |                                                |
+|0218-UBUNTU-SAUCE-platform-mellanox-Add-mlx-trio-driver.patch    |                    | Feature pending                          |            |                                                |
+|0219-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Feature upstream                         |            |                                                |
+|0220-UBUNTU-SAUCE-pka-Add-pka-driver.patch                       |                    | Feature pending                          |            |                                                |
+|0221-UBUNTU-SAUCE-platform-mellanox-Add-mlxbf-livefish-dr.patch  |                    | Feature pending                          |            |                                                |
+|0222-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Feature upstream                         |            |                                                |
+|0223-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Feature upstream                         |            |                                                |
+|0224-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Feature upstream                         |            |                                                |
+|0225-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Feature pending                          |            |                                                |
+|0226-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Feature upstream                         |            |                                                |
+|0227-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Feature upstream                         |            |                                                |
+|0228-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Feature upstream                         |            |                                                |
+|0229-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Feature upstream                         |            |                                                |
+|0230-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Feature upstream                         |            |                                                |
+|0231-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Feature upstream                         |            |                                                |
+|0232-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Feature pending                          |            |                                                |
+|0233-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            |                                                |
+|0234-UBUNTU-SAUCE-mlxbf_gige-add-validation-of-ACPI-table.patch  |                    | Feature pending                          |            |                                                |
+|0235-UBUNTU-SAUCE-mlxbf_gige-set-driver-version-to-1.27.patch    |                    | Feature pending                          |            |                                                |
+|0236-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Feature pending                          |            |                                                |
+|0237-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Feature upstream                         |            |                                                |
+|0238-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Feature upstream                         |            |                                                |
+|0239-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Feature pending                          |            |                                                |
+|0240-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Feature pending                          |            |                                                |
+|0241-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-Serdes-confi.patch  |                    | Feature pending                          |            |                                                |
+|0242-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-ethtool_ops.patch   |                    | Feature pending                          |            |                                                |
+|0243-UBUNTU-SAUCE-bluefield_edac-Add-SMC-support.patch           |                    | Feature pending                          |            |                                                |
+|0244-UBUNTU-SAUCE-bluefield_edac-Update-license-and-copyr.patch  |                    | Feature pending                          |            |                                                |
+|0245-gpio-mlxbf2-Convert-to-device-PM-ops.patch                  | dabe57c3a32d       | Feature upstream                         |            |                                                |
+|0246-gpio-mlxbf2-Drop-wrong-use-of-ACPI_PTR.patch                | 603607e70e36       | Feature upstream                         |            |                                                |
+|0247-gpio-mlxbf2-Use-devm_platform_ioremap_resource.patch        | 4e6864f8563d       | Feature upstream                         |            |                                                |
+|0248-gpio-mlxbf2-Use-DEFINE_RES_MEM_NAMED-helper-macro.patch     | d0ef631d40ba       | Feature upstream                         |            |                                                |
+|0249-gpio-mlxbf2-Introduce-IRQ-support.patch                     |                    | Feature pending                          |            |                                                |
+|0250-UBUNTU-SAUCE-gpio-mlxbf2.c-support-driver-version.patch     |                    | Feature pending                          |            |                                                |
+|0251-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Feature upstream                         |            |                                                |
+|0252-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Feature upstream                         |            |                                                |
+|0253-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Feature upstream                         |            |                                                |
+|0254-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Feature upstream                         |            |                                                |
+|0255-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Feature upstream                         |            |                                                |
+|0256-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Feature pending                          |            |                                                |
+|0257-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Feature pending                          |            |                                                |
+|0258-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Feature pending                          |            |                                                |
+|0259-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Feature pending                          |            |                                                |
+|0260-UBUNTU-SAUCE-mlxbf-pka-Fix-kernel-crash-with-pka-TRN.patch  |                    | Feature pending                          |            |                                                |
+|0261-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Feature pending                          |            |                                                |
+|0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch          | b0b698b80c56       | Feature upstream                         |            |                                                |
+|0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch  |                    | Feature pending                          |            |                                                |
+|0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Feature pending                          |            |                                                |
+|0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix accepted                          |  5.10.173  |                                                | 
+|0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch  |                    | Feature pending                          |            |                                                |
+|0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Feature pending                          |            |                                                |
 |0268-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch  |                    | Downstream                               |            |                                                |
 |0269-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
 |0270-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Feature pending                          |            |                                                |
@@ -444,6 +444,7 @@ Kernel-5.10
 |0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Feature pending                          |            |                                                |
 |0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            |                                                |
 |0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Feature pending                          |            |                                                |
+|0279-platform-mellanox-mlx-platform-Modify-health-signals.patch  |                    | Feature pending                          |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:

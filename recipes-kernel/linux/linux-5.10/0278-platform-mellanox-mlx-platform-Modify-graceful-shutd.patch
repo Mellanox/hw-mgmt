@@ -1,4 +1,4 @@
-From 8b83fb501ac77d60e1cc30fac63e71f469ba0992 Mon Sep 17 00:00:00 2001
+From 28dcb8423a00e0f253ebd90bf16ddb6c540519d5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 10 Mar 2023 09:15:35 +0000
 Subject: [PATCH backport v.5.10 1/1] platform: mellanox: mlx-platform: Modify
@@ -8,16 +8,18 @@ Use kernel_power_off() instead of kernel_halt() to pass through
 machine_power_off() -> pm_power_off(), otherwise axillary power does
 not go off.
 
+Call kernel_power_off() only for positive action.
+
 Change "power down" bitmask.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 67865636e..55afb4c90 100644
+index 67865636e..fa2e539b6 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -227,7 +227,7 @@
@@ -25,16 +27,21 @@ index 67865636e..55afb4c90 100644
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_LOW	0xc1
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2	BIT(2)
 -#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	BIT(4)
-+#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	GENMASK(5,4)
++#define MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT	GENMASK(5, 4)
  #define MLXPLAT_CPLD_LOW_AGGR_MASK_I2C	BIT(6)
  #define MLXPLAT_CPLD_PSU_MASK		GENMASK(1, 0)
  #define MLXPLAT_CPLD_PWR_MASK		GENMASK(1, 0)
-@@ -2509,7 +2509,7 @@ mlxplat_mlxcpld_l1_switch_pwr_events_handler(void *handle, enum mlxreg_hotplug_k
+@@ -2508,8 +2508,11 @@ static int
+ mlxplat_mlxcpld_l1_switch_pwr_events_handler(void *handle, enum mlxreg_hotplug_kind kind,
  					     u8 action)
  {
- 	dev_info(&mlxplat_dev->dev, "System shutdown due to short press of power button");
+-	dev_info(&mlxplat_dev->dev, "System shutdown due to short press of power button");
 -	kernel_halt();
-+	kernel_power_off();
++	if (action) {
++		dev_info(&mlxplat_dev->dev, "System shutdown due to short press of power button");
++		kernel_power_off();
++	}
++
  	return 0;
  }
  
