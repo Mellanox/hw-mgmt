@@ -444,6 +444,9 @@ Kernel-5.10
 |0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Feature pending                          |            |                                                |
 |0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            |                                                |
 |0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Feature pending                          |            |                                                |
+|0279-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            |                                                |
+|0280-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            |                                                |
+|0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
