@@ -275,8 +275,6 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         take_list = patch_status.get(CONST.TAKE_PATCH, [])
         skip_list = patch_status.get(CONST.SKIP_PATCH, [])
         os_list = patch_status.get(CONST.OS_ALT_PATCH, [])
-        patch_src_folder = src_folder + os_folder.format(kver=kver_major)
-        patch[CONST.SRC] = "{}/{}".format(patch_src_folder, patch[CONST.PATCH_NAME])
 
         filter_name = patch_status[CONST.FILTER]
         filter_fn = globals()[filter_name]
@@ -292,6 +290,8 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         if nos in skip_list or "ALL" in skip_list or dst_folder == None:
             continue
 
+        patch_src_folder = src_folder + os_folder.format(kver=kver_major)
+        patch[CONST.SRC] = "{}/{}".format(patch_src_folder, patch[CONST.PATCH_NAME])
         patch[CONST.DST] = "{}/{}".format(dst_folder, patch[CONST.PATCH_NAME])
 
 # ----------------------------------------------------------------------
