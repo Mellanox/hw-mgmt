@@ -218,7 +218,7 @@ Kernel-5.10
 |0049-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Rejected; take[ALL]                      |            |Need to check patch apply. Can break patch apply| 
 |0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream                               |            |                                                | 
 |0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream                               |            | Modular SN4800                                 | 
-|0052-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch  | e6fab7af6ba1       | Bugfix upstream                          |  5.10.71   | (note: has some issue)                         | 
+|0052-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch  | e6fab7af6ba1       | Bugfix upstream; os[sonic]               |  5.10.71   | (note: has some issue)                         | 
 |0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                | 
 |0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream                               |            | must exist in Sonic/CL from 4.9                | 
 |0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch  | aafa1cafedca       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              | 
