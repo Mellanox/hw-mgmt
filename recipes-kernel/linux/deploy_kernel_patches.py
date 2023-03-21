@@ -285,6 +285,8 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
                 dst_folder = candidate_folder
 
         if nos in os_list:
+            if not dst_folder:
+                dst_folder = candidate_folder
             os_folder = CONST.PATCH_OS_SUBFOLDERS[nos]
 
         if nos in skip_list or "ALL" in skip_list or dst_folder == None:
@@ -494,7 +496,7 @@ if __name__ == '__main__':
                             dest="config_file",
                             help="Will update kernel CONFIG\n"
                             "In case this argument is missing - skip series update",
-                            required=True)
+                            required=False)
     CMD_PARSER.add_argument("--os_type",
                             dest="os_type",
                             help="Special integration type.\n"
