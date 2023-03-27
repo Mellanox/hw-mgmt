@@ -85,7 +85,7 @@ class CONST(object):
 # Local const
 #############################
 
-PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_accepted_filter"},
+PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_candidate_filter"},
                "feature accepted": {CONST.FILTER : "copy_to_candidate_filter"},
                "feature pending":  {CONST.FILTER : "copy_to_candidate_filter"},
                "downstream":       {CONST.FILTER : "copy_to_candidate_filter"},
