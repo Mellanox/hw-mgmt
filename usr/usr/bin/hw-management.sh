@@ -435,7 +435,7 @@ sn5600_base_connect_table=( \
 	mp2975 0x68 5 \
 	mp2975 0x69 5 \
 	mp2975 0x6a 5 \
-	mp2975 0x6b 5 \
+	mp2975 0x6c 5 \
 	mp2975 0x6e 5 \
 	tmp102 0x49 6 \
 	tmp102 0x4a 7 \
@@ -1033,7 +1033,7 @@ msn27xx_msb_msx_specific()
 
 	set_spc1_port_cpld
 
-dcx	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
@@ -1097,8 +1097,8 @@ mqmxxx_msn37x_msn34x_specific()
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
-		HI112|HI116)
-			# msn3700/msn3700C
+		HI112)
+			# msn3700
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
 		;;
