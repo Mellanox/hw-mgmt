@@ -344,15 +344,15 @@ Kernel-5.10
 |0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  | 488f0fca0db0       | Feature upstream                         |            | SN5600                                         |  
 |0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  | e7210563432a       | Feature upstream                         |            | SN5600                                         | 
 |0178-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         | 
-|0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Rejected                                 |            | (temporary fix until new TC)                   | 
-|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                | 
+|0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Rejected                                 |            | (temporary fix until new TC)                 | 
+|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                               | 
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream                               |            | disable upstream patch, must exist from 5.10.74| 
-|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                               | 
-|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            |                                                | 
-|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            |                                                | 
-|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                | 
-|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                | 
-|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                | 
+|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                         | 
+|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3-COME                                       | 
+|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3-COME                                       | 
+|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                               | 
+|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                               | 
+|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            | BF3-COME                                              | 
 |0188-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            | BF3-COME                                       | 
 |0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            | BF3-COME                                       | 
 |0190-i2c-mlxcpld-Modify-base-address-type.patch                  |                    | Feature pending                          |            | BF3-COME                                       | 
