@@ -1,7 +1,7 @@
-From c6b355da5b1b91cfe2426505f92ab1a760b0f5d4 Mon Sep 17 00:00:00 2001
+From ff35f857e936ddd68635b390c789b203c7cbbbc2 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 10 Dec 2020 18:51:11 +0200
-Subject: [PATCH backport v5.10.43 01/67] i2c: mlxcpld: Update module license
+Subject: [PATCH backport 5.10 001/182] i2c: mlxcpld: Update module license
 
 Update license to SPDX-License.
 

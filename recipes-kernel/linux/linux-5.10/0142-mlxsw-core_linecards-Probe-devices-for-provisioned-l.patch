@@ -1,8 +1,8 @@
-From 8eacd42179ec7c19624489636bdcd794955762b4 Mon Sep 17 00:00:00 2001
+From 51f5cf36b8b2c94d8a71bfa17d5f71257048c314 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 26 Feb 2021 13:15:09 +0100
-Subject: [PATCH backport for v5.10 142/156] mlxsw: core_linecards: Probe
- devices for provisioned line card and attach them
+Subject: [PATCH backport 5.10 142/182] mlxsw: core_linecards: Probe devices
+ for provisioned line card and attach them
 
 In case the line card is provisioned, go over all possible existing
 devices (gearboxes) on it and attach them, so devlink core is aware of
@@ -29,7 +29,7 @@ index 8e738ddb39c8..593470d14815 100644
  
  struct mlxsw_linecard_types_info;
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
-index 938ce360833f..8b1c1ecc3280 100644
+index 134437f49219..720ad6d82798 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_linecards.c
 @@ -64,27 +64,120 @@ static const char *mlxsw_linecard_type_name(struct mlxsw_linecard *linecard)

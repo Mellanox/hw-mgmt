@@ -1,8 +1,8 @@
-From f01b26d5532e023685a2411c28416e5f6c0db1cd Mon Sep 17 00:00:00 2001
+From fe0bf4454c709fa1ddb5fa105e88f2d57cb5ef5a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 14 Dec 2021 10:57:27 +0200
-Subject: [PATCH backport for v5.10 113/151] mlxsw: core: Extend port module
- data structures for line cards
+Subject: [PATCH backport 5.10 113/182] mlxsw: core: Extend port module data
+ structures for line cards
 
 The port module core is tasked with module operations such as setting
 power mode policy and reset. The per-module information is currently

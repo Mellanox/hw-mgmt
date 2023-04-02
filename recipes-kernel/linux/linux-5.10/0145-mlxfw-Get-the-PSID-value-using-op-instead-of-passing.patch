@@ -1,7 +1,7 @@
-From 8841748fd48463164f0cda051df82664068e9a67 Mon Sep 17 00:00:00 2001
+From 81cb237570a4d0251455d17e073337f73c1b4aa9 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Fri, 4 Jun 2021 10:25:35 +0200
-Subject: [PATCH backport for v5.10 145/156] mlxfw: Get the PSID value using op
+Subject: [PATCH backport 5.10 145/182] mlxfw: Get the PSID value using op
  instead of passing it in struct
 
 In preparation for line card device flashing, where the PSID is going to

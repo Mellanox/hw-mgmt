@@ -1,7 +1,7 @@
-From 46915a4ffa750174d31de0ca5aa0bbcb0f8fdbb1 Mon Sep 17 00:00:00 2001
+From 1832955f5b8d4f7dc9e20d4e860564d798f6d24c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 25 Mar 2021 20:12:07 +0200
-Subject: [PATCH backport v5.10.43 59/67] platform/mellanox: mlxreg-io: Extend
+Subject: [PATCH backport 5.10 059/182] platform/mellanox: mlxreg-io: Extend
  number of hwmon attributes
 
 Extend maximum number of the attributes, exposed to 'sysfs'.

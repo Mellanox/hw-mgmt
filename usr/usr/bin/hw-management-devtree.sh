@@ -39,13 +39,15 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts375")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts375" ["e"]="tmp75")
 
 declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4")
 
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
-declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus")
+declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus")
+
+declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
 
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
@@ -144,7 +146,7 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_6"]="mp2975 0x68 5 voltmon7" \
 				["mp2975_7"]="mp2975 0x69 5 voltmon8" \
 				["mp2975_8"]="mp2975 0x6a 5 voltmon9" \
-				["mp2975_9"]="mp2975 0x6b 5 voltmon10" \
+				["mp2975_9"]="mp2975 0x6c 5 voltmon10" \
 				["mp2975_10"]="mp2975 0x6e 5 voltmon11" \
 				["xdpe15284_0"]="xdpe15284 0x62 5 voltmon1" \
 				["xdpe15284_1"]="xdpe15284 0x63 5 voltmon2" \
@@ -160,6 +162,29 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="tmp102 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 system_eeprom")
+
+declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
+			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
+			       ["tmp75_1"]="tmp75 0x49 7 port_temp2" \
+			       ["adt75_1"]="adt75 0x49 7 port_temp2" \
+			       ["tmp75_2"]="tmp75 0x4a 7 port_temp3" \
+			       ["adt75_2"]="adt75 0x4a 7 port_temp3" \
+			       ["tmp75_3"]="tmp75 0x4b 7 port_temp4" \
+			       ["adt75_3"]="adt75 0x4b 7 port_temp4" \
+			       ["tmp75_4"]="tmp75 0x4c 7 fan_temp1" \
+			       ["adt75_4"]="adt75 0x4c 7 fan_temp1" \
+			       ["tmp75_5"]="tmp75 0x4d 7 fan_temp2" \
+			       ["adt75_5"]="adt75 0x4d 7 fan_temp2" \
+			       ["tmp75_6"]="tmp75 0x4e 7 fan_temp3" \
+			       ["adt75_6"]="adt75 0x4e 7 fan_temp3" \
+			       ["tmp75_7"]="tmp75 0x4f 7 fan_temp4" \
+			       ["adt75_7"]="adt75 0x4f 7 fan_temp4" \
+			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
+			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
+			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
+
+declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
+				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBios
@@ -182,6 +207,19 @@ declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["icp201xx_0"]="icp201xx 0x63 4 press_sens1" \
 				   ["icp201xx_1"]="icp201xx 0x64 4 press_sens2" \
 				   ["max11603_0"]="max11603 0x6d 4 pwrb_a2d")
+
+declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
+				   ["pmbus_0"]="pmbus 0x12 4 pdb_pwr_conv1" \
+				   ["pmbus_1"]="pmbus 0x13 4 pdb_pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x16 4 pdb_pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x17 4 pdb_pwr_conv4" \
+				   ["pmbus_4"]="pmbus 0x1b 4 pdb_pwr_conv5" \
+				   ["tmp75_0"]="tmp75 0x4d 4 pdb_temp1" \
+				   ["adt75_0"]="tmp75 0x4d 4 pdb_temp1" \
+				   ["tmp75_1"]="tmp75 0x4e 4 pdb_temp2" \
+				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
+				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
+				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
@@ -242,11 +280,11 @@ devtr_clean()
 devtr_check_supported_system_init_alternatives()
 {
 	case $cpu_type in
-		$BDW_CPU)
-			for key in "${!comex_bdw_alternatives[@]}"; do
-				comex_alternatives["$key"]="${comex_bdw_alternatives["$key"]}"
-			done
-			;;
+#		$BDW_CPU)
+#			for key in "${!comex_bdw_alternatives[@]}"; do
+#				comex_alternatives["$key"]="${comex_bdw_alternatives["$key"]}"
+#			done
+#			;;
 		$CFL_CPU)
 			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
 				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
@@ -256,8 +294,22 @@ devtr_check_supported_system_init_alternatives()
 					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
 				done
 			else
-				for key in "${!comex_bdw_alternatives[@]}"; do
+				for key in "${!comex_cfl_alternatives[@]}"; do
 					comex_alternatives["$key"]="${comex_cfl_alternatives["$key"]}"
+				done
+			fi
+			;;
+		$BF3_CPU)
+			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
+				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
+				for key in "${!comex_bf3_alternatives[@]}"; do
+					curr_component=(${comex_bf3_alternatives["$key"]})
+					curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
+					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
+				done
+			else
+				for key in "${!comex_bf3_alternatives[@]}"; do
+					comex_alternatives["$key"]="${comex_bf3_alternatives["$key"]}"
 				done
 			fi
 			;;
@@ -266,53 +318,53 @@ devtr_check_supported_system_init_alternatives()
 			;;
 	esac
 	case $board_type in
-		VMOD0005)
-			case $sku in
-				HI100)	# MQM8700
-					for key in "${!mqm8700_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm8700_alternatives["$key"]}"
-					done
-					;;
-				*)
-					return 1
-					;;
-			esac
-			for key in "${!fan_type0_alternatives[@]}"; do
-				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
-			done
-			return 0
-			;;
-		VMOD0010)
-			case $sku in
-				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
-					for key in "${!msn4700_msn4600_alternatives[@]}"; do
-						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
-					done
-					;;
-				HI130)	# MQM9700
-					for key in "${!mqm97xx_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
-					done
-					;;
-				HI140) # MQM9520
-					for key in "${!mqm9520_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm9520_alternatives["$key"]}"
-					done
-					;;
-				HI141) # MQM9510
-					for key in "${!mqm9510_alternatives[@]}"; do
-						swb_alternatives["$key"]="${mqm9510_alternatives["$key"]}"
-					done
-					;;
-				*)
-					return 1
-					;;
-			esac
-			for key in "${!fan_type0_alternatives[@]}"; do
-				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
-			done
-			return 0
-			;;
+#		VMOD0005)
+#			case $sku in
+#				HI100)	# MQM8700
+#					for key in "${!mqm8700_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm8700_alternatives["$key"]}"
+#					done
+#					;;
+#				*)
+#					return 1
+#					;;
+#			esac
+#			for key in "${!fan_type0_alternatives[@]}"; do
+#				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
+#			done
+#			return 0
+#			;;
+#		VMOD0010)
+#			case $sku in
+#				HI122|HI123|HI124|HI125)	# Leopard, Liger, Tigon, Leo
+#					for key in "${!msn4700_msn4600_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
+#					done
+#					;;
+#				HI130)	# MQM9700
+#					for key in "${!mqm97xx_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
+#					done
+#					;;
+#				HI140) # MQM9520
+#					for key in "${!mqm9520_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm9520_alternatives["$key"]}"
+#					done
+#					;;
+#				HI141) # MQM9510
+#					for key in "${!mqm9510_alternatives[@]}"; do
+#						swb_alternatives["$key"]="${mqm9510_alternatives["$key"]}"
+#					done
+#					;;
+#				*)
+#					return 1
+#					;;
+#			esac
+#			for key in "${!fan_type0_alternatives[@]}"; do
+#				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
+#			done
+#			return 0
+#			;;
 		VMOD0013)
 			case $sku in
 				HI144|HI147|HI148)	# ToDo Separate later on.
@@ -332,6 +384,15 @@ devtr_check_supported_system_init_alternatives()
 			done
 			for key in "${!clk_type0_alternatives[@]}"; do
 				clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
+			done
+			return 0
+			;;
+		VMOD0017)
+			for key in "${!p4262_alternatives[@]}"; do
+				swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
+			done
+			for key in "${!pwr_type1_alternatives[@]}"; do
+				pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
 			done
 			return 0
 			;;
@@ -399,7 +460,7 @@ devtr_check_board_components()
 			;;
 	esac
 
-	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; brd=0
+	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; h_cnt=0; brd=0
 	curr_component=()
 	for comp in "${comp_arr[@]}"; do
 		# Skip 1st tuple in board string. It desctibes board name and number.
@@ -521,6 +582,21 @@ devtr_check_board_components()
 				fi
 				o_cnt=$((o_cnt+1))
 				;;
+			H)	# Hot-swap
+				if [ "$component_key" == "0" ]; then
+					h_cnt=$((h_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${h_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				echo -n "${alternative_comp} " >> "$devtree_file"
+				if [ $devtr_verb_display -eq 1 ]; then
+					log_info "DBG: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+					echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				fi
+				h_cnt=$((h_cnt+1))
+				;;
 			*)
 				log_err "Incorrect SMBios BOM encoded category. Category key ${category_key}"
 				return 1
@@ -541,7 +617,7 @@ devtr_check_board_components()
 # $4 - board type (VMOD)
 # $5 - system SKU
 # $6 - location of devtree file
-# $7 - CPU type: BDW_CPU, CFL_CPU
+# $7 - CPU type: BDW_CPU, CFL_CPU, BF3_CPU
 devtr_check_smbios_device_description()
 {
 	system_ver_str=$(<$system_ver_file)

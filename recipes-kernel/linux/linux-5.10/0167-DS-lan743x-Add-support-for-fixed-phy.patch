@@ -1,7 +1,7 @@
-From 0d712bde8af7487ec673427b290d6c626b702111 Mon Sep 17 00:00:00 2001
+From 12b2a85b4b3bb17f44611b9c320fd4e84915b122 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 6 May 2022 16:52:53 +0300
-Subject: [PATCH backport 5.10 06/17] DS: lan743x: Add support for fixed phy
+Subject: [PATCH backport 5.10 167/182] DS: lan743x: Add support for fixed phy
 
 Add support for fixed phy for non DTS architecture.
 
@@ -12,7 +12,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 33 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/ethernet/microchip/Kconfig b/drivers/net/ethernet/microchip/Kconfig
-index d0f6dfe0d..6c66b55bc 100644
+index d0f6dfe0dcf3..6c66b55bc811 100644
 --- a/drivers/net/ethernet/microchip/Kconfig
 +++ b/drivers/net/ethernet/microchip/Kconfig
 @@ -54,4 +54,15 @@ config LAN743X
@@ -32,7 +32,7 @@ index d0f6dfe0d..6c66b55bc 100644
 +
  endif # NET_VENDOR_MICROCHIP
 diff --git a/drivers/net/ethernet/microchip/lan743x_main.c b/drivers/net/ethernet/microchip/lan743x_main.c
-index 8947c3a62..5a05ae865 100644
+index 481f89d193f7..b6250a7469da 100644
 --- a/drivers/net/ethernet/microchip/lan743x_main.c
 +++ b/drivers/net/ethernet/microchip/lan743x_main.c
 @@ -798,6 +798,7 @@ static int lan743x_mac_init(struct lan743x_adapter *adapter)
@@ -43,7 +43,7 @@ index 8947c3a62..5a05ae865 100644
  	data &= ~(MAC_CR_ADD_ | MAC_CR_ASD_);
  	data |= MAC_CR_CNTR_RST_;
  	lan743x_csr_write(adapter, MAC_CR, data);
-@@ -1008,7 +1009,10 @@ static void lan743x_phy_close(struct lan743x_adapter *adapter)
+@@ -1002,7 +1003,10 @@ static void lan743x_phy_close(struct lan743x_adapter *adapter)
  	struct net_device *netdev = adapter->netdev;
  
  	phy_stop(netdev->phydev);
@@ -55,7 +55,7 @@ index 8947c3a62..5a05ae865 100644
  	netdev->phydev = NULL;
  }
  
-@@ -1044,11 +1048,24 @@ static int lan743x_phy_open(struct lan743x_adapter *adapter)
+@@ -1038,11 +1042,24 @@ static int lan743x_phy_open(struct lan743x_adapter *adapter)
  
  	if (!phydev) {
  		/* try internal phy */
@@ -82,7 +82,7 @@ index 8947c3a62..5a05ae865 100644
  		ret = phy_connect_direct(netdev, phydev,
  					 lan743x_phy_link_status_change,
  					 adapter->phy_mode);
-@@ -1065,7 +1082,8 @@ static int lan743x_phy_open(struct lan743x_adapter *adapter)
+@@ -1059,7 +1076,8 @@ static int lan743x_phy_open(struct lan743x_adapter *adapter)
  	phy->fc_autoneg = phydev->autoneg;
  
  	phy_start(phydev);

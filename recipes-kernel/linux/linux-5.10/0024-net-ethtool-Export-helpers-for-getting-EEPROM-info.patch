@@ -1,7 +1,7 @@
-From d97ac32056d3f8b40fa2fe4f952e7bdedaa82824 Mon Sep 17 00:00:00 2001
+From a7f17fca2ddb48f6f4505a17a68e8014ffe52af2 Mon Sep 17 00:00:00 2001
 From: Andrew Lunn <andrew@lunn.ch>
 Date: Fri, 9 Apr 2021 11:06:38 +0300
-Subject: [PATCH backport v5.10.43 24/67] net: ethtool: Export helpers for
+Subject: [PATCH backport 5.10 024/182] net: ethtool: Export helpers for
  getting EEPROM info
 
 There are two ways to retrieve information from SFP EEPROMs.  Many
@@ -34,10 +34,10 @@ index 3d9251c95a8b..955cd1e8b3fe 100644
 +
  #endif /* _ETHTOOL_COMMON_H */
 diff --git a/net/ethtool/ioctl.c b/net/ethtool/ioctl.c
-index 2917af3f5ac1..e27460223866 100644
+index 80d2a00d3097..3aee0a25e443 100644
 --- a/net/ethtool/ioctl.c
 +++ b/net/ethtool/ioctl.c
-@@ -2176,8 +2176,8 @@ static int ethtool_get_ts_info(struct net_device *dev, void __user *useraddr)
+@@ -2280,8 +2280,8 @@ static int ethtool_get_ts_info(struct net_device *dev, void __user *useraddr)
  	return 0;
  }
  
@@ -48,7 +48,7 @@ index 2917af3f5ac1..e27460223866 100644
  {
  	const struct ethtool_ops *ops = dev->ethtool_ops;
  	struct phy_device *phydev = dev->phydev;
-@@ -2203,7 +2203,7 @@ static int ethtool_get_module_info(struct net_device *dev,
+@@ -2307,7 +2307,7 @@ static int ethtool_get_module_info(struct net_device *dev,
  	if (copy_from_user(&modinfo, useraddr, sizeof(modinfo)))
  		return -EFAULT;
  
@@ -57,7 +57,7 @@ index 2917af3f5ac1..e27460223866 100644
  	if (ret)
  		return ret;
  
-@@ -2213,8 +2213,8 @@ static int ethtool_get_module_info(struct net_device *dev,
+@@ -2317,8 +2317,8 @@ static int ethtool_get_module_info(struct net_device *dev,
  	return 0;
  }
  
@@ -68,7 +68,7 @@ index 2917af3f5ac1..e27460223866 100644
  {
  	const struct ethtool_ops *ops = dev->ethtool_ops;
  	struct phy_device *phydev = dev->phydev;
-@@ -2237,12 +2237,12 @@ static int ethtool_get_module_eeprom(struct net_device *dev,
+@@ -2341,12 +2341,12 @@ static int ethtool_get_module_eeprom(struct net_device *dev,
  	int ret;
  	struct ethtool_modinfo modinfo;
  

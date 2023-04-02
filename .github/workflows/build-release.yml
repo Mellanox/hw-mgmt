@@ -20,6 +20,7 @@ jobs:
       - name: Build deb & rpm packages
         run: |
           debuild -us -uc -d
+          debuild -us -uc -b -aarm64
           cd rpm
           chmod a+x ./gen_rpm.sh
           ./gen_rpm.sh

@@ -1,8 +1,8 @@
-From d35845f7b94f4dd4e55374ceafaf0c47e0482e0c Mon Sep 17 00:00:00 2001
+From 36a2e4e93d7d1ca2ed670b4cf827400ba367e290 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 08:57:27 +0000
-Subject: [PATCH backport for v5.10 125/151] devlink: add support to create
- line card and expose to user
+Subject: [PATCH backport 5.10 125/182] devlink: add support to create line
+ card and expose to user
 
 Extend the devlink API so the driver is going to be able to create and
 destroy linecard instances. There can be multiple line cards per devlink
@@ -111,7 +111,7 @@ index cf89c318f2ac..ff07ad596035 100644
  
  	__DEVLINK_ATTR_MAX,
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 90badb6f7227..4b0f23b1b1ea 100644
+index 72047750dcd9..645fe0612b53 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -91,6 +91,25 @@ static const struct nla_policy devlink_function_nl_policy[DEVLINK_PORT_FUNCTION_
@@ -401,7 +401,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  static int devlink_nl_sb_fill(struct sk_buff *msg, struct devlink *devlink,
  			      struct devlink_sb *devlink_sb,
  			      enum devlink_command cmd, u32 portid,
-@@ -7586,6 +7810,19 @@ static const struct nla_policy devlink_nl_policy[DEVLINK_ATTR_MAX + 1] = {
+@@ -7594,6 +7818,19 @@ static const struct nla_policy devlink_nl_policy[DEVLINK_ATTR_MAX + 1] = {
  	[DEVLINK_ATTR_RELOAD_ACTION] = NLA_POLICY_RANGE(NLA_U8, DEVLINK_RELOAD_ACTION_DRIVER_REINIT,
  							DEVLINK_RELOAD_ACTION_MAX),
  	[DEVLINK_ATTR_RELOAD_LIMITS] = NLA_POLICY_BITFIELD32(DEVLINK_RELOAD_LIMITS_VALID_MASK),
@@ -421,7 +421,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  };
  
  static const struct genl_small_ops devlink_nl_ops[] = {
-@@ -7625,6 +7862,14 @@ static const struct genl_small_ops devlink_nl_ops[] = {
+@@ -7633,6 +7870,14 @@ static const struct genl_small_ops devlink_nl_ops[] = {
  		.flags = GENL_ADMIN_PERM,
  		.internal_flags = DEVLINK_NL_FLAG_NO_LOCK,
  	},
@@ -436,7 +436,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  	{
  		.cmd = DEVLINK_CMD_SB_GET,
  		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
-@@ -7974,6 +8219,7 @@ struct devlink *devlink_alloc(const struct devlink_ops *ops, size_t priv_size)
+@@ -7980,6 +8225,7 @@ struct devlink *devlink_alloc(const struct devlink_ops *ops, size_t priv_size)
  	xa_init_flags(&devlink->snapshot_ids, XA_FLAGS_ALLOC);
  	__devlink_net_set(devlink, &init_net);
  	INIT_LIST_HEAD(&devlink->port_list);
@@ -444,7 +444,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  	INIT_LIST_HEAD(&devlink->sb_list);
  	INIT_LIST_HEAD_RCU(&devlink->dpipe_table_list);
  	INIT_LIST_HEAD(&devlink->resource_list);
-@@ -7985,6 +8231,8 @@ struct devlink *devlink_alloc(const struct devlink_ops *ops, size_t priv_size)
+@@ -7991,6 +8237,8 @@ struct devlink *devlink_alloc(const struct devlink_ops *ops, size_t priv_size)
  	INIT_LIST_HEAD(&devlink->trap_policer_list);
  	mutex_init(&devlink->lock);
  	mutex_init(&devlink->reporters_lock);
@@ -453,7 +453,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  	return devlink;
  }
  EXPORT_SYMBOL_GPL(devlink_alloc);
-@@ -8065,6 +8313,7 @@ EXPORT_SYMBOL_GPL(devlink_reload_disable);
+@@ -8071,6 +8319,7 @@ EXPORT_SYMBOL_GPL(devlink_reload_disable);
   */
  void devlink_free(struct devlink *devlink)
  {
@@ -461,7 +461,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  	mutex_destroy(&devlink->reporters_lock);
  	mutex_destroy(&devlink->lock);
  	WARN_ON(!list_empty(&devlink->trap_policer_list));
-@@ -8076,6 +8325,7 @@ void devlink_free(struct devlink *devlink)
+@@ -8082,6 +8331,7 @@ void devlink_free(struct devlink *devlink)
  	WARN_ON(!list_empty(&devlink->resource_list));
  	WARN_ON(!list_empty(&devlink->dpipe_table_list));
  	WARN_ON(!list_empty(&devlink->sb_list));
@@ -469,7 +469,7 @@ index 90badb6f7227..4b0f23b1b1ea 100644
  	WARN_ON(!list_empty(&devlink->port_list));
  
  	xa_destroy(&devlink->snapshot_ids);
-@@ -8421,6 +8671,57 @@ static int __devlink_port_phys_port_name_get(struct devlink_port *devlink_port,
+@@ -8427,6 +8677,57 @@ static int __devlink_port_phys_port_name_get(struct devlink_port *devlink_port,
  	return 0;
  }
  

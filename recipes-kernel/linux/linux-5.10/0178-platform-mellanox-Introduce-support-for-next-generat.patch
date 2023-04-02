@@ -1,8 +1,8 @@
-From 6aabbd215bca0ed7d34d9f4ca6a7af1df80785bd Mon Sep 17 00:00:00 2001
+From 30a9045deb3da304b03f8451fad1a8d79a849da9 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Sun, 4 Sep 2022 14:03:58 +0300
-Subject: [PATCH backport 5.10 1/7] platform: mellanox: Introduce support for
- next-generation 800GB/s ethernet switch.
+Subject: [PATCH backport 5.10 178/182] platform: mellanox: Introduce support
+ for next-generation 800GB/s ethernet switch.
 
 Introduce support for Nvidia next-generation 800GB/s ethernet switch - SN5600.
 SN5600 is 51.2 Tbps Ethernet switch based on Nvidia Spectrum-4 ASIC.
@@ -25,7 +25,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 178 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index b9ea12fad..af8da374e 100644
+index 3f29ab98480d..4bbe1d8f016d 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -255,6 +255,7 @@

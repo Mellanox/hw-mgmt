@@ -1,7 +1,7 @@
-From 835f21571a0f370142572e1d336b34b6b87330bd Mon Sep 17 00:00:00 2001
+From a0e62e8df42c4ae6eabba2ea0c2d076d8c8d06fb Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 16:26:43 +0000
-Subject: [PATCH backport for v5.10 137/156] mlxsw: core: Extend driver ops by
+Subject: [PATCH backport 5.10 137/182] mlxsw: core: Extend driver ops by
  remove selected ports op
 
 In case of line card implementation, the core has to have a way to
@@ -62,7 +62,7 @@ index ecd91bb8ca77..70f97ef74a2c 100644
  			   unsigned int sb_index, u16 pool_index,
  			   struct devlink_sb_pool_info *pool_info);
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
-index 5b2774b8ebfb..466eb206d6f0 100644
+index bc233a5c8a79..82acff318dcd 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 @@ -1736,6 +1736,20 @@ static void mlxsw_sp_ports_remove(struct mlxsw_sp *mlxsw_sp)

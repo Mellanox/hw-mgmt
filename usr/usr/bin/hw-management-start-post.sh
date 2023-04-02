@@ -37,7 +37,8 @@ source hw-management-helpers.sh
 # Local constants and paths.
 CPLD3_VER_DEF="0"
  
-board=$(cat /sys/devices/virtual/dmi/id/board_name)
+board=$(< $board_type_file)
+sku=$(< $sku_file)
 cpld_num=$(cat $config_path/cpld_num)
 case $board in
 	VMOD0015)
@@ -48,6 +49,19 @@ case $board in
 		else
 			echo 1 > $system_path/comm_chnl_ready
 			log_info "Communication channel is ready"
+		fi
+		;;
+	VMOD0017)
+		# Nvidia RM driver can be probed at system init before mlx_platform.
+		# NVlink I2C busses will be created and this can affect BSP I2C busses.
+		# Nvidia NVLink drivers are in blacklist and instaniated at the end of
+		# hw-management init.
+		modprobe nvidia_drm
+		;;
+	VMOD0010)
+		# Kong has the same issue as Goldstone (VMOD0017)
+		if [ "$sku" == "HI142" ]; then
+			modprobe nvidia_drm
 		fi
 		;;
 	*)

@@ -1,7 +1,7 @@
-From ed0cb4d3eab7d48cefcf94bc9b516ffa2ef18c33 Mon Sep 17 00:00:00 2001
+From b99eea2d9ce7ba73de38b82a7ed2057a777d4893 Mon Sep 17 00:00:00 2001
 From: Mykola Kostenok <c_mykolak@nvidia.com>
 Date: Tue, 8 Jun 2021 15:44:12 +0300
-Subject: [PATCH backport v5.10.43 31/67] mlxsw: core_env: Read module
+Subject: [PATCH backport 5.10 031/182] mlxsw: core_env: Read module
  temperature thresholds using MTMP register
 
 Currently, module temperature thresholds are obtained from Management

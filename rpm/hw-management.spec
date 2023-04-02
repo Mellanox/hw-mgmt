@@ -105,6 +105,7 @@ install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROO
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
 install -m 0755 usr/usr/bin/iorw $RPM_BUILD_ROOT/usr/bin/iorw
+install -m 0755 usr/usr/bin/iorw.sh $RPM_BUILD_ROOT/usr/bin/iorw.sh
 install -m 0755 usr/usr/bin/sxd_read_cpld_ver.py $RPM_BUILD_ROOT/usr/bin/sxd_read_cpld_ver.py
 install -m 0755 debian/hw-management.hw-management.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management.service
 install -m 0755 debian/hw-management.hw-management-tc.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-tc.service

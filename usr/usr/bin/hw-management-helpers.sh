@@ -53,6 +53,7 @@ system_ver_file=/sys/devices/virtual/dmi/id/product_version
 devtree_file=$config_path/devtree
 i2c_bus_def_off_eeprom_cpu_file=$config_path/i2c_bus_def_off_eeprom_cpu
 i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
+l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
 
 # Thermal type constants
 thermal_type_t1=1
@@ -84,14 +85,18 @@ i2c_bus_offset=0
 cpu_type=
 
 # CPU Family + CPU Model should idintify exact CPU architecture
-# IVB - Ivy-Bridge; RNG - Atom Rangeley
-# BDW - Broadwell-DE; CFL - Coffee Lake
-# DNV - Denverton;
+# IVB - Ivy-Bridge
+# RNG - Atom Rangeley
+# BDW - Broadwell-DE
+# CFL - Coffee Lake
+# DNV - Denverton
+# BF3 - BlueField-3
 IVB_CPU=0x63A
 RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 DNV_CPU=0x65F
+BF3_CPU=0xD42
 
 log_err()
 {
@@ -105,14 +110,23 @@ log_info()
 
 check_cpu_type()
 {
-    if [ ! -f $config_path/cpu_type ]; then
-        family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
-        model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
-        cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
-        echo $cpu_type > $config_path/cpu_type
-    else
-        cpu_type=$(cat $config_path/cpu_type)
-    fi  
+	if [ ! -f $config_path/cpu_type ]; then
+		# ARM CPU provide "CPU part" field, x86 does not. Check for ARM first.
+		cpu_pn=$(grep -m1 "CPU part" /proc/cpuinfo | awk '{print $4}')
+		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
+		cpu_pn=0x$cpu_pn
+		if [ "$cpu_pn" == "$BF3_CPU" ]; then
+			echo $cpu_pn > $config_path/cpu_type
+			return 0
+		fi
+
+		family_num=$(grep -m1 "cpu family" /proc/cpuinfo | awk '{print $4}')
+		model_num=$(grep -m1 model /proc/cpuinfo | awk '{print $3}')
+		cpu_type=$(printf "0x%X%X" "$family_num" "$model_num")
+		echo $cpu_type > $config_path/cpu_type
+	else
+		cpu_type=$(cat $config_path/cpu_type)
+	fi
 }
 
 find_i2c_bus()

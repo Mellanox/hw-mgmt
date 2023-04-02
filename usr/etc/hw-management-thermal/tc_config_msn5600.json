@@ -1,0 +1,50 @@
+ {
+	"dmin" : {
+		"C2P": {
+			"untrusted": {"-127:25": 30, "26:35": 40, "36:120": 50},
+			"fan_err": {
+				"tacho": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"psu_err":  {
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"sensor_read_error" :  {"-127:25": 30, "26:35": 40, "36:120": 50}
+		},
+		"P2C": {
+			"untrusted": {"-127:25": 30, "26:35": 40, "36:120": 50},
+			"fan_err": {
+				"tacho": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"psu_err":  {
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"sensor_read_error" :  {"-127:25": 30, "26:35": 40, "36:120": 50}
+		}
+	},
+	"psu_fan_pwm_decode" : {"0:100": -1},
+	"fan_trend" : {
+        	"C2P": {
+			"0" : {"rpm_min":4143, "rpm_max":13500, "slope": 132, "pwm_min" : 30, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":3891, "rpm_max":12603, "slope": 123, "pwm_min" : 30, "pwm_max_reduction" : 10}},
+		"P2C": {
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10}
+		}
+	},
+	"dev_parameters" : {
+		"asic":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3}, 
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3},
+		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"sensor_amb":     {"pwm_min": 60, "pwm_max" : 60, "val_min": 30000, "val_max": 55000, "poll_time": 30},
+		"voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
+		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
+	}
+}
+
+ 

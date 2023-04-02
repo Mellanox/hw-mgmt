@@ -1,7 +1,7 @@
-From 549a00397548638c6cee01860be6f3b2a7b6f3be Mon Sep 17 00:00:00 2001
+From 675042fec21be3fbd12388b239676608759f0497 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 19 Jul 2021 17:07:02 +0000
-Subject: [PATCH backport v5.10.43 54/67] mlxsw: minimal: Simplify method of
+Subject: [PATCH backport 5.10 054/182] mlxsw: minimal: Simplify method of
  modules number detection
 
 Remove unnecessary access to PMLP register, used to find the number of

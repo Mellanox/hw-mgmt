@@ -1,8 +1,8 @@
-From 20fd2ae5a319b7fe8fa4aa13e2bd548e29bcff34 Mon Sep 17 00:00:00 2001
+From b8243b5c2fdb9871cd55a864b95e197ced9ad532 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 22 Dec 2021 15:11:36 +0000
-Subject: [PATCH backport for v5.10 130/156] devlink: introduce linecard info
- get message
+Subject: [PATCH backport 5.10 130/182] devlink: introduce linecard info get
+ message
 
 Allow the driver to provide per line card info get op to fill-up info,
 similar to the "devlink dev info".
@@ -79,7 +79,7 @@ index 2c9f7d584b48..bac94c3c1bb0 100644
  	/* add new attributes above here, update the policy in devlink.c */
  
 diff --git a/net/core/devlink.c b/net/core/devlink.c
-index 661cc682d6d0..27b930dddec1 100644
+index 04f8038f8e23..ca014f40ac02 100644
 --- a/net/core/devlink.c
 +++ b/net/core/devlink.c
 @@ -1249,6 +1249,59 @@ struct devlink_info_req {
@@ -239,7 +239,7 @@ index 661cc682d6d0..27b930dddec1 100644
  	genlmsg_end(msg, hdr);
  	return 0;
  
-@@ -9062,6 +9184,7 @@ devlink_linecard_create(struct devlink *devlink, unsigned int linecard_index,
+@@ -9068,6 +9190,7 @@ devlink_linecard_create(struct devlink *devlink, unsigned int linecard_index,
  	linecard->priv = priv;
  	linecard->state = DEVLINK_LINECARD_STATE_UNPROVISIONED;
  	mutex_init(&linecard->state_lock);
@@ -247,7 +247,7 @@ index 661cc682d6d0..27b930dddec1 100644
  
  	err = devlink_linecard_types_init(linecard);
  	if (err) {
-@@ -9090,6 +9213,7 @@ void devlink_linecard_destroy(struct devlink_linecard *linecard)
+@@ -9096,6 +9219,7 @@ void devlink_linecard_destroy(struct devlink_linecard *linecard)
  
  	devlink_linecard_notify(linecard, DEVLINK_CMD_LINECARD_DEL);
  	devlink_linecard_types_fini(linecard);
@@ -255,7 +255,7 @@ index 661cc682d6d0..27b930dddec1 100644
  	mutex_lock(&devlink->linecards_lock);
  	list_del(&linecard->list);
  	mutex_unlock(&devlink->linecards_lock);
-@@ -9097,6 +9221,47 @@ void devlink_linecard_destroy(struct devlink_linecard *linecard)
+@@ -9103,6 +9227,47 @@ void devlink_linecard_destroy(struct devlink_linecard *linecard)
  }
  EXPORT_SYMBOL_GPL(devlink_linecard_destroy);
  
@@ -303,7 +303,7 @@ index 661cc682d6d0..27b930dddec1 100644
  /**
   *	devlink_linecard_provision_set - Set provisioning on linecard
   *
-@@ -9123,6 +9288,7 @@ EXPORT_SYMBOL_GPL(devlink_linecard_provision_set);
+@@ -9129,6 +9294,7 @@ EXPORT_SYMBOL_GPL(devlink_linecard_provision_set);
  void devlink_linecard_provision_clear(struct devlink_linecard *linecard)
  {
  	mutex_lock(&linecard->state_lock);

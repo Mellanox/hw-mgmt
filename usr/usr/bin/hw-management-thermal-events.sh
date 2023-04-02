@@ -43,6 +43,8 @@ max_pwm=4
 max_lcs=8
 max_erots=2
 max_leakage=8
+max_health_events=4
+max_power_events=1
 min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
@@ -190,14 +192,17 @@ get_fixed_fans_direction()
 	fan_direction=$(i2ctransfer -f -y 8 w2@0x51 0x01 0x02 r1 | cut -d'x' -f 2)	
 	case $fan_direction in
 	$fan_direction_exhaust)
-		echo 1 > $config_path/fixed_fans_dir
+		dir=1
 		;;
 	$fan_direction_intake)
-		echo 0 > $config_path/fixed_fans_dir
+		dir=0
 		;;
 	*)
+        # Unknown direction
+		dir=255
 		;;
 	esac
+	return $dir
 }
 
 # Get PSU direction based on VPD PN field
@@ -208,8 +213,8 @@ get_fixed_fans_direction()
 # Input parameters:
 # 1 - "$psu_name"
 # Return FAN direction
-# 0 - Forward (C2P)
-# 1 - Reverse (P2C)
+# 0 - Reverse (C2P)
+# 1 - Forward(P2C)
 # 2 - unknown (read error or field missing)
 get_psu_fan_direction()
 {
@@ -217,7 +222,13 @@ get_psu_fan_direction()
 	dir_char=""
 	pn="$(grep PN_VPD_FIELD $vpd_file)"
 	if [ -z $pn ]; then
-		return 2
+		if [ -f $config_path/fixed_fans_dir ]; then
+			dir=$(< $config_path/fixed_fans_dir) 
+		else
+			# Default dir "unknown" till it will not be detected later
+			dir=255
+		fi
+		return $dir
 	fi
 	MLX_REGEXP="MTEF-PS([R,F])"
 	NV_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
@@ -230,9 +241,9 @@ get_psu_fan_direction()
 			dir_char="${BASH_REMATCH[1]}"
 		fi
 	fi
-	if [ $dir_char == "F" ]; then
+	if [ $dir_char == "R" ]; then
 		return 0
-	elif [ $dir_char == "R" ]; then
+	elif [ $dir_char == "F" ]; then
 		return 1
 	else
 		return 2
@@ -479,12 +490,13 @@ if [ "$1" == "add" ]; then
 
 		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
 			get_fixed_fans_direction
-			if [ -f $config_path/fixed_fans_dir ]; then
-				for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
-					cat $config_path/fixed_fans_dir > $thermal_path/fan"$i"_dir
-					echo 1 > $thermal_path/fan"$i"_status
-				done
-			fi
+			dir=$?
+			echo $dir > $config_path/fixed_fans_dir
+
+			for i in $(seq 1 "$(< $config_path/fan_drwr_num)"); do
+				echo $dir > $thermal_path/fan"$i"_dir
+				echo 1 > $thermal_path/fan"$i"_status
+			done
 		else
 			echo $fan_drwr_num > $config_path/fan_drwr_num
 		fi
@@ -614,34 +626,53 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
 		done
+		for ((i=0; i<=max_health_events; i+=1)); do
+			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
+				ln -sf "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
+				event=$(< $system_path/${l1_switch_health_events[$i]})
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/${l1_switch_health_events[$i]}
+				fi
+			fi
+		done
+		if [ -f "$3""$4"/power_button ]; then
+			ln -sf "$3""$4"/power_button $system_path/power_button
+			event=$(< $system_path/power_button)
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $events_path/power_button
+			fi
+		fi
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
-		if [ "$board_type" == "VMOD0014" ]; then
-			sn2201_find_cpu_core_temp_ids
-		fi
 		for i in {1..16}; do
 			if [ -f "$3""$4"/temp"$i"_input ]; then
 				if [ $i -eq 1 ]; then
 					name="pack"
 				else
-					if [ "$board_type" != "VMOD0014" ]; then
-						id=$((i - 2))
-					else
+					id=$((i - 2))
+					if [ "$board_type" == "VMOD0014" ]; then
 					# Denverton CPU on SN2201 has ridicolous CPU Core numbers 6, 12 instead 0, 1
 					# These core id numbers also can differ in various CPU batches.
-						if [ "$i" == "$core0_temp_id" ]; then
-							id=0
-						elif [ "$i" == "$core1_temp_id" ]; then
-							id=1
+					# This was fixed in later version of coretemp driver e.g. in kernel 5.10.162 
+					# and core temperature is reported as in other Intel CPUs, core0 - temp2_input
+					# core1 - temp3_input. Check this case.
+						sn2201_find_cpu_core_temp_ids
+						if [ -f "$3""$4"/temp"$core0_temp_id"_input ] ||
+						   [ -f "$3""$4"/temp"$core1_temp_id"_input ]; then
+							if [ "$i" == "$core0_temp_id" ]; then
+								id=0
+							elif [ "$i" == "$core1_temp_id" ]; then
+								id=1
+							fi
 						fi
 					fi
 					name="core$id"
 				fi
-				ln -sf "$3""$4"/temp"$i"_input $thermal_path/cpu_$name
-				ln -sf "$3""$4"/temp"$i"_crit $thermal_path/cpu_"$name"_crit
-				ln -sf "$3""$4"/temp"$i"_max $thermal_path/cpu_"$name"_max
-				ln -sf "$3""$4"/temp"$i"_crit_alarm $alarm_path/cpu_"$name"_crit_alarm
+				check_n_link "$3""$4"/temp"$i"_input $thermal_path/cpu_$name
+				check_n_link "$3""$4"/temp"$i"_crit $thermal_path/cpu_"$name"_crit
+				check_n_link "$3""$4"/temp"$i"_max $thermal_path/cpu_"$name"_max
+				check_n_link "$3""$4"/temp"$i"_crit_alarm $alarm_path/cpu_"$name"_crit_alarm
 			fi
 		done
 	fi
@@ -854,8 +885,16 @@ if [ "$1" == "add" ]; then
 		elif echo $mfr | grep -iq "Delta"; then
 			# Support FW update only for specific Delta PSU capacities
 			fw_ver="N/A"
+			fw_primary_ver="N/A"
 			if [ "$cap" == "550" -o "$cap" == "2000" -o "$cap" == "3000" ]; then
-				fw_ver=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr)
+				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr | tr -dc '[[:print:]]')
+				if [ "$cap" == "550" ]; then
+					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f2)
+					fw_ver=$(echo $fw_ver_all | cut -d. -f3)
+				else
+					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
+					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
+				fi
 				if [ "$cap" == "3000" ] && [ "$board_type" == "VMOD0013" ]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
@@ -869,6 +908,7 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
+			echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
 		fi
 
 	fi
@@ -1129,6 +1169,10 @@ else
 		for ((i=1; i<=asic_num; i+=1)); do
 			/usr/bin/hw-management.sh chipdown "$i"
 		done
+		for ((i=0; i<=max_health_events; i+=1)); do
+			check_n_unlink $system_path/${l1_switch_health_events[$i]}
+		done
+		check_n_unlink  $system_path/power_button
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack

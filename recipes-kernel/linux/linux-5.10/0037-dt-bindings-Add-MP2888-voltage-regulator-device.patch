@@ -1,7 +1,7 @@
-From 1d8f377c4dc536770abdd6215903d4c01a3dfcb9 Mon Sep 17 00:00:00 2001
+From f5c7f2a6c2443f8991fef683ad7bd8b2cddf5415 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Tue, 11 May 2021 08:56:19 +0300
-Subject: [PATCH backport v5.10.43 37/67] dt-bindings: Add MP2888 voltage
+Subject: [PATCH backport 5.10 037/182] dt-bindings: Add MP2888 voltage
  regulator device
 
 Monolithic Power Systems, Inc. (MPS) dual-loop, digital, multi-phase

@@ -1,7 +1,7 @@
-From 3ede25fb793e9061df17088818797a9033fcf7b7 Mon Sep 17 00:00:00 2001
+From 890ffa911705403d5f56ec57bf92f74b65758c87 Mon Sep 17 00:00:00 2001
 From: Mykola Kostenok <c_mykolak@nvidia.com>
 Date: Tue, 8 Jun 2021 15:44:13 +0300
-Subject: [PATCH backport v5.10.43 18/67] mlxsw: thermal: Add function for
+Subject: [PATCH backport 5.10 018/182] mlxsw: thermal: Add function for
  reading module temperature and thresholds
 
 Provide new function mlxsw_thermal_module_temp_and_thresholds_get() for
@@ -22,10 +22,10 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 35 insertions(+), 15 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-index cb1b68b6bf47..0983e4d4f888 100644
+index a1025177c6ae..abbe02546164 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
-@@ -420,29 +420,49 @@ static int mlxsw_thermal_module_unbind(struct thermal_zone_device *tzdev,
+@@ -412,29 +412,49 @@ static int mlxsw_thermal_module_unbind(struct thermal_zone_device *tzdev,
  	return err;
  }
  

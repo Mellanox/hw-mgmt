@@ -1,7 +1,7 @@
-From 905e264cdc094639fc824f88a9df14812bc7b66a Mon Sep 17 00:00:00 2001
+From 25fccd5aed1494cc8882fe2e9f43f520bea6b734 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 2 Jun 2022 15:34:53 +0300
-Subject: [PATCH v5.10 ISSU WA 1/1] TMP: mlxsw: i2c: Prevent transaction
+Subject: [PATCH backport 5.10 169/182] TMP: mlxsw: i2c: Prevent transaction
  execution for special chip states
 
 Do not run transaction in cases chip is in reset or in-service update
@@ -20,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 30 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/cmd.h b/drivers/net/ethernet/mellanox/mlxsw/cmd.h
-index 5ffdfb532..a7d47da97 100644
+index 91f68fb0b420..d8ecb8c8a269 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/cmd.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/cmd.h
 @@ -149,6 +149,8 @@ enum mlxsw_cmd_status {
@@ -42,7 +42,7 @@ index 5ffdfb532..a7d47da97 100644
  		return "BAD_PKT";
  	default:
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-index 778bc9054..27f1c06dc 100644
+index 015f6dbe0f8a..ba31540f12a2 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 @@ -76,6 +76,7 @@

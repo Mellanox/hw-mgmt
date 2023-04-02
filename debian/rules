@@ -18,10 +18,15 @@ override_dh_auto_install:
 	cp usr/etc/modules-load.d/* debian/$(pname)/etc/modules-load.d
 	dh_installdirs -p$(pname) usr/bin
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
+ifeq ($(DEB_HOST_ARCH),arm64)
+	rm -f debian/$(pname)/usr/bin/iorw
+endif
 	dh_installdirs -p$(pname) lib/udev/rules.d/
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
 	dh_installdirs -p$(pname) etc/hw-management-sensors
 	cp usr/etc/hw-management-sensors/* debian/$(pname)/etc/hw-management-sensors
+	dh_installdirs -p$(pname) etc/hw-management-thermal
+	cp usr/etc/hw-management-thermal/* debian/$(pname)/etc/hw-management-thermal
 
 override_dh_installinit:
 	dh_installinit --name=hw-management
@@ -29,6 +34,7 @@ override_dh_installinit:
 
 override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management
+	dh_systemd_enable --name=hw-management-tc
 
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management

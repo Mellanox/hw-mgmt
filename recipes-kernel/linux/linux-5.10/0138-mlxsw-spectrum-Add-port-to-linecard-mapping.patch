@@ -1,8 +1,8 @@
-From b11c20f3497441748b3d59ee5b5ffdda67107e00 Mon Sep 17 00:00:00 2001
+From 718b7aec4ec4c7e3c327b2ffbf43b27126688836 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 3 Jan 2022 11:22:42 +0000
-Subject: [PATCH backport for v5.10 138/156] mlxsw: spectrum: Add port to
- linecard mapping
+Subject: [PATCH backport 5.10 138/182] mlxsw: spectrum: Add port to linecard
+ mapping
 
 For each port get slot_index using PMLP register. For ports residing
 on a linecard, identify it with the linecard by setting mapping
@@ -110,7 +110,7 @@ index 104f1ba0242f..30925f57362e 100644
  				   0, mlxsw_m->base_mac,
  				   sizeof(mlxsw_m->base_mac));
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
-index 466eb206d6f0..efef091e0005 100644
+index 82acff318dcd..c87267d002c6 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/spectrum.c
 @@ -1399,7 +1399,7 @@ static int mlxsw_sp_port_create(struct mlxsw_sp *mlxsw_sp, u8 local_port,

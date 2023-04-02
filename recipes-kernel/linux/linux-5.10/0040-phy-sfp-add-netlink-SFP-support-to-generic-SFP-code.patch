@@ -1,7 +1,7 @@
-From 7b080fe95eaa4949449274a8180f4f3f484b8f0d Mon Sep 17 00:00:00 2001
+From 8d067ab81436b720438e85423718bdb590092a2a Mon Sep 17 00:00:00 2001
 From: Andrew Lunn <andrew@lunn.ch>
 Date: Fri, 9 Apr 2021 11:06:40 +0300
-Subject: [PATCH backport v5.10.43 40/67] phy: sfp: add netlink SFP support to
+Subject: [PATCH backport 5.10 040/182] phy: sfp: add netlink SFP support to
  generic SFP code
 
 The new netlink API for reading SFP data requires a new op to be
@@ -26,10 +26,10 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  4 files changed, 58 insertions(+)
 
 diff --git a/drivers/net/phy/sfp-bus.c b/drivers/net/phy/sfp-bus.c
-index 4cf874fb5c5b..4866b71d72ed 100644
+index 850915a37f4c..d973110c2868 100644
 --- a/drivers/net/phy/sfp-bus.c
 +++ b/drivers/net/phy/sfp-bus.c
-@@ -538,6 +538,26 @@ int sfp_get_module_eeprom(struct sfp_bus *bus, struct ethtool_eeprom *ee,
+@@ -544,6 +544,26 @@ int sfp_get_module_eeprom(struct sfp_bus *bus, struct ethtool_eeprom *ee,
  }
  EXPORT_SYMBOL_GPL(sfp_get_module_eeprom);
  
@@ -57,10 +57,10 @@ index 4cf874fb5c5b..4866b71d72ed 100644
   * sfp_upstream_start() - Inform the SFP that the network device is up
   * @bus: a pointer to the &struct sfp_bus structure for the sfp module
 diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
-index 2fff62695455..0d964b6ba47e 100644
+index dcbe278086dc..cc171c0087db 100644
 --- a/drivers/net/phy/sfp.c
 +++ b/drivers/net/phy/sfp.c
-@@ -2278,6 +2278,30 @@ static int sfp_module_eeprom(struct sfp *sfp, struct ethtool_eeprom *ee,
+@@ -2302,6 +2302,30 @@ static int sfp_module_eeprom(struct sfp *sfp, struct ethtool_eeprom *ee,
  	return 0;
  }
  
@@ -91,7 +91,7 @@ index 2fff62695455..0d964b6ba47e 100644
  static const struct sfp_socket_ops sfp_module_ops = {
  	.attach = sfp_attach,
  	.detach = sfp_detach,
-@@ -2285,6 +2309,7 @@ static const struct sfp_socket_ops sfp_module_ops = {
+@@ -2309,6 +2333,7 @@ static const struct sfp_socket_ops sfp_module_ops = {
  	.stop = sfp_stop,
  	.module_info = sfp_module_info,
  	.module_eeprom = sfp_module_eeprom,

@@ -36,6 +36,7 @@ board_type=$(< $board_type_file)
 sku=$(< $sku_file)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
+i2c_bus_def_off_eeprom_cartridge=7
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
@@ -44,6 +45,7 @@ i2c_bus_def_off_eeprom_fan2=12
 i2c_bus_def_off_eeprom_fan3=13
 i2c_bus_def_off_eeprom_fan4=14
 i2c_bus_def_off_eeprom_mgmt=45
+vpd_i2c_addr=0x51
 psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
@@ -272,7 +274,11 @@ find_eeprom_name()
 	addr=$2
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		eeprom_name=vpd_info
+		if [ "$board_type" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
+			eeprom_name=ipmi_info
+		else
+			eeprom_name=vpd_info
+		fi
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cpu" ]; then
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
@@ -284,6 +290,9 @@ find_eeprom_name()
 			elif [ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
 				eeprom_name=psu2_info
 			fi
+			;;
+		VMOD0017)
+			eeprom_name=pdb_eeprom
 			;;
 		*)
 			if [ "$addr" = "$psu1_i2c_addr" ]; then
@@ -311,6 +320,8 @@ find_eeprom_name()
 		eeprom_name=fan4_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_mgmt" ]; then
 		eeprom_name=mgmt_info
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cartridge" ]; then
+		eeprom_name=cable_cartridge_eeprom 
 	elif [ "$bus" -eq 0 ]; then
 		:
 	else
@@ -403,6 +414,10 @@ function set_fan_direction()
 	case $attribute in
 	fan*)
 		if [ -f $config_path/fan_dir_eeprom ]; then
+			return
+		fi
+		# Check if CPLD fan direction is exists
+		if [ ! -f $system_path/fan_dir ]; then
 			return
 		fi
 		fan_dir=$(< $system_path/fan_dir)
@@ -738,15 +753,15 @@ if [ "$1" == "add" ]; then
 		if [ "$board_type" == "VMOD0014" ]; then
 			for i in {0..7}; do
 				if [ -f "$3""$4"/in_voltage"$i"_scale ]; then
-					ln -sf "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
+					check_n_link "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
 				fi
 			done
 		else
-			ln -sf "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
+			check_n_link "$3""$4"/in_voltage-voltage_scale $environment_path/"$2"_"$iio_name"_voltage_scale
 		fi
 		for i in {0..7}; do
 			if [ -f "$3""$4"/in_voltage"$i"_raw ]; then
-				ln -sf "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
+				check_n_link "$3""$4"/in_voltage"$i"_raw $environment_path/"$2"_"$iio_name"_raw_"$i"
 			fi
 		done
 	fi
@@ -756,7 +771,7 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
-	   [ "$2" == "hotswap" ]; then
+	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		# Get i2c voltmon prefix.
 		# For voltmon[0..100] name will not change - just return it.
 		# For voltmonX we will try to get name based on dev id/bus and system connect table.
@@ -1013,7 +1028,7 @@ if [ "$1" == "add" ]; then
 				eeprom_path="$hw_management_path"/lc"$linecard_num"/eeprom
 				# Parse VPD.
 				if [ "$eeprom_name" == "fru" ]; then
-					hw-management-lc-fru-parser.py -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
+					hw-management-vpd-parser.py -t LC_VPD -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_parsed
 					if [ $? -ne 0 ]; then
 						echo "Failed to parse linecard VPD" > "$eeprom_path"/vpd_parsed
 					fi
@@ -1042,18 +1057,24 @@ if [ "$1" == "add" ]; then
 			else
 				fan_dir_offset=$fan_dir_offset_in_vpd_eeprom_pn
 			fi
-			fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
-			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
-			case $fan_direction in
-			$fan_direction_exhaust)
-				echo 1 > $thermal_path/"${fan_prefix}"_dir
-				;;
-			$fan_direction_intake)
-				echo 0 > $thermal_path/"${fan_prefix}"_dir
-				;;
-			*)
-				;;
-			esac
+			# We need to read FAN direction from eeprom if cpld fan direction exists
+			if [ ! -f $system_path/fan_dir ]; then
+				fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
+				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
+				case $fan_direction in
+				$fan_direction_exhaust)
+					echo 1 > $thermal_path/"${fan_prefix}"_dir
+					;;
+				$fan_direction_intake)
+					echo 0 > $thermal_path/"${fan_prefix}"_dir
+					;;
+				*)
+					;;
+				esac
+			fi
+			;;
+		vpd_info)
+			hw-management-vpd-parser.py -t SYSTEM_VPD -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_data
 			;;
 		*)
 			;;
@@ -1170,7 +1191,7 @@ else
 	   [ "$2" == "voltmon7" ] || [ "$2" == "voltmon12" ] ||
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
-	   [ "$2" == "hotswap" ]; then
+	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
 		if [[ $prefix == "undefined" ]];
 		then

@@ -1,8 +1,8 @@
-From 9a4b63159d9939e465cee17d0a0bd5d091243cc5 Mon Sep 17 00:00:00 2001
+From 14d65a09a9b77a5ed632a73ff006042d26be3226 Mon Sep 17 00:00:00 2001
 From: Jiri Pirko <jiri@nvidia.com>
 Date: Tue, 19 Jan 2021 12:16:58 +0100
-Subject: [PATCH backport for v5.10 133/156] mlxsw: reg: Add Management
- DownStream Device Control Register
+Subject: [PATCH backport 5.10 133/182] mlxsw: reg: Add Management DownStream
+ Device Control Register
 
 The MDDC register allows control downstream devices and line cards.
 
@@ -12,7 +12,7 @@ Signed-off-by: Jiri Pirko <jiri@nvidia.com>
  1 file changed, 37 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/reg.h b/drivers/net/ethernet/mellanox/mlxsw/reg.h
-index 3a0973696dbc..8f97f33c94e0 100644
+index ad7faeb95646..cddfe5702140 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/reg.h
 +++ b/drivers/net/ethernet/mellanox/mlxsw/reg.h
 @@ -10529,6 +10529,42 @@ mlxsw_reg_mddq_slot_name_unpack(const char *payload, char *slot_ascii_name)

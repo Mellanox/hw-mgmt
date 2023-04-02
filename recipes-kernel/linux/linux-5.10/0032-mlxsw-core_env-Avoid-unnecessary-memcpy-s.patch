@@ -1,7 +1,7 @@
-From c9e04231335df922d8546f74099a35b1b34bf3eb Mon Sep 17 00:00:00 2001
+From 3aed771d128c6c2789da04ec0d09f11688d17855 Mon Sep 17 00:00:00 2001
 From: Ido Schimmel <idosch@nvidia.com>
 Date: Thu, 24 Jun 2021 22:47:24 +0300
-Subject: [PATCH backport v5.10.43 32/67] mlxsw: core_env: Avoid unnecessary
+Subject: [PATCH backport 5.10 032/182] mlxsw: core_env: Avoid unnecessary
  memcpy()s
 
 Simply get a pointer to the data in the register payload instead of

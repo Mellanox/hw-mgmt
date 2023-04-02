@@ -1,7 +1,7 @@
-From 5af891abad80bb1850b73682fd111d06d1576222 Mon Sep 17 00:00:00 2001
+From 66cfe84c9fd69ec5f98e1ff2888898ea24d4f7ae Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 26 Sep 2021 08:35:40 +0300
-Subject: [PATCH backport for v5.10 96/97] hwmon: (mlxreg-fan) Modify PWM
+Subject: [PATCH backport 5.10 096/182] hwmon: (mlxreg-fan) Modify PWM
  connectivity validation
 
 Validate PWM connectivity only for additional PWM - "pwm1" is connected
@@ -18,7 +18,7 @@ Signed-off-by: Guenter Roeck <linux@roeck-us.net>
  1 file changed, 8 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 6831bfe6cbaa..f32a34b371ec 100644
+index feab9ec6a6ca..8e5cd6991929 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -488,9 +488,14 @@ static int mlxreg_fan_config(struct mlxreg_fan *fan,

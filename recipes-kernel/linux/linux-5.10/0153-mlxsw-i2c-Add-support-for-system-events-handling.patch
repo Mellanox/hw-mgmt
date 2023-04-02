@@ -1,7 +1,7 @@
-From 56abd848ef5fde48532dfa3921e5fc0569fff09d Mon Sep 17 00:00:00 2001
+From 4cc4f0a420eddc9157f8749a5ec133f998d17974 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Dec 2021 09:12:58 +0000
-Subject: [PATCH backport for v5.10 153/156] mlxsw: i2c: Add support for system
+Subject: [PATCH backport 5.10 153/182] mlxsw: i2c: Add support for system
  events handling
 
 Extend i2c bus driver with interrupt handler to support system specific
@@ -18,7 +18,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 110 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-index 26e93f2c7ebf..778bc9054e34 100644
+index 0cdb9b9d8353..015f6dbe0f8a 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 @@ -9,6 +9,7 @@
@@ -185,7 +185,7 @@ index 26e93f2c7ebf..778bc9054e34 100644
  	return 0;
  
  errout:
-@@ -660,6 +768,8 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
+@@ -661,6 +769,8 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
  {
  	struct mlxsw_i2c *mlxsw_i2c = i2c_get_clientdata(client);
  

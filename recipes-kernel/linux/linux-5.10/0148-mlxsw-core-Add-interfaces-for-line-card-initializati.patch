@@ -1,8 +1,8 @@
-From a6dd31fd7a0f0f8119c7d814f905490170e27fb1 Mon Sep 17 00:00:00 2001
+From d037308b118ee4a1ccf557dc3f1c47b81bb62c4c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 13 Dec 2021 12:54:36 +0000
-Subject: [PATCH backport for v5.10 148/156] mlxsw: core: Add interfaces for
- line card initialization and de-initialization
+Subject: [PATCH backport 5.10 148/182] mlxsw: core: Add interfaces for line
+ card initialization and de-initialization
 
 Add callback functions for line card cables info initialization and
 de-initialization.
