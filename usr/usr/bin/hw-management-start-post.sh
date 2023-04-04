@@ -72,3 +72,4 @@ if [ ! -f /var/run/hw-management/system/cpld_base ]; then
 	timeout 5 bash -c 'until [ -f /var/run/hw-management/system/cpld_base ]; do sleep 0.2; done'
 fi
 
+# Fix FAN tacho order  
