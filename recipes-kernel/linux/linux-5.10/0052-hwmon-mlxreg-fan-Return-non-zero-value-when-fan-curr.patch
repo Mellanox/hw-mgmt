@@ -93,7 +93,7 @@ index 116681fde33d..689233edff9d 100644
 +		 * For configuration non-zero value is to be returned to avoid thermal
 +		 * statistics update.
 +		 */
-+		config = 0; /*1*/;
++		config = 1;
  		state -= MLXREG_FAN_MAX_STATE;
  		for (i = 0; i < state; i++)
  			fan->cooling_levels[i] = state;
