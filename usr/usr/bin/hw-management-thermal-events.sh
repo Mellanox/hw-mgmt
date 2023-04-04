@@ -55,6 +55,8 @@ fan_drwr_num=0
 fan_direction_exhaust=46
 fan_direction_intake=52
 
+FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
 	i2c_asic_bus_default=6
@@ -314,14 +316,12 @@ if [ "$1" == "add" ]; then
 					echo "$name" > "$cpath"/cooling_name
 				fi
 				if [ -f "$cpath"/fan_inversed ]; then
-					inv=$(< "$cpath"/fan_inversed)
+					declare -a fan_map="($(< $cpath/fan_inversed))"
+				else
+					fan_map=(${FAN_MAP_DEF[@]})
 				fi
 				for ((i=1; i<=max_tachos; i+=1)); do
-					if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
-						j=$i
-					else
-						j=$((inv - i))
-					fi
+					j=${fan_map[i-1]}
 					if [ -f "$3""$4"/fan"$i"_input ]; then
 						ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
 						ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
