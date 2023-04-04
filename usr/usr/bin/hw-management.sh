@@ -874,7 +874,7 @@ msn274x_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo 5 > $config_path/fan_inversed
+	echo "4 3 2 1" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
@@ -893,7 +893,7 @@ msn21xx_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 13000 > $config_path/psu_fan_max
 	echo 1040 > $config_path/psu_fan_min
-	echo 5 > $config_path/fan_inversed
+	echo "4 3 2 1" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
 	echo 4 > $config_path/fan_drwr_num
@@ -919,7 +919,7 @@ msn24xx_specific()
 			echo 5400 > $config_path/fan_min_speed
 			echo 18000 > $config_path/psu_fan_max
 			echo 2000 > $config_path/psu_fan_min
-			echo 9 > $config_path/fan_inversed
+			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 			echo 24c02 > $config_path/psu_eeprom_type
 			;;
 	esac
@@ -961,7 +961,7 @@ msn27xx_msb_msx_specific()
 			echo 1500 > $config_path/fan_min_speed
 			echo 18000 > $config_path/psu_fan_max
 			echo 2000 > $config_path/psu_fan_min
-			echo 9 > $config_path/fan_inversed
+			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 			echo 24c02 > $config_path/psu_eeprom_type
 			;;
 	esac
@@ -996,7 +996,7 @@ msn201x_specific()
 	echo 4500 > $config_path/fan_min_speed
 	echo 13000 > $config_path/psu_fan_max
 	echo 1040 > $config_path/psu_fan_min
-	echo 5 > $config_path/fan_inversed
+	echo "4 3 2 1" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
 	echo 4 > $config_path/fan_drwr_num
@@ -1150,7 +1150,7 @@ msn24102_specific()
 	echo 5400 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
@@ -1172,7 +1172,7 @@ msn27002_msb78002_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
