@@ -63,6 +63,7 @@ class CONST(object):
     PATCH_TABLE_DELIMITER = "----------------------"
     PATCH_OS_SUBFOLDERS = {"default" : "./linux-{kver}",
                            "sonic" : "./linux-{kver}/sonic",
+                           "opt" : "./linux-{kver}/sonic",
                            "cumulus" : "./linux-{kver}/cumulus"}
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
@@ -280,16 +281,23 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         filter_fn = globals()[filter_name]
         dst_folder = filter_fn(patch, accepted_folder, candidate_folder, kver)
 
-        if nos in take_list or "ALL" in take_list:
+        take_strong = nos in take_list or nos in os_list
+        skip_strong = nos in skip_list
+        if (take_strong and skip_strong) or ("ALL" in take_list and "ALL" in skip_list) or "ALL" in os_list:
+             print ("ERR: Conflict in patch status options\n{} : {}".format(patch[CONST.PATCH_NAME], patch[CONST.STATUS]))
+             sys.exit(1)
+
+        if skip_strong:
+            continue
+        elif take_strong:
             if not dst_folder:
                 dst_folder = candidate_folder
-
-        if nos in os_list:
+            if nos in os_list:
+                os_folder = CONST.PATCH_OS_SUBFOLDERS[nos]
+        elif "ALL" in take_list:
             if not dst_folder:
                 dst_folder = candidate_folder
-            os_folder = CONST.PATCH_OS_SUBFOLDERS[nos]
-
-        if nos in skip_list or "ALL" in skip_list or dst_folder == None:
+        elif "ALL" in skip_list or dst_folder == None:
             continue
 
         patch_src_folder = src_folder + os_folder.format(kver=kver_major)
@@ -502,7 +510,7 @@ if __name__ == '__main__':
                             help="Special integration type.\n"
                             "In case this argument is missing - don't apply special integration rule\n",
                             default="None",
-                            choices=["None", "sonic", "cumulus"],
+                            choices=["None", "sonic","opt", "cumulus"],
                             required=False)
     CMD_PARSER.add_argument("--verbose",
                             dest="verbose",
