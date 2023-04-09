@@ -629,5 +629,5 @@ SUBSYSTEM=="net", ACTION=="move", DRIVERS=="mlxsw_minimal", RUN+="/usr/bin/hw-ma
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add cpld %S %p"
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0048", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm cpld %S %p"
 # SDK
-SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
-SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
