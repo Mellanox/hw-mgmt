@@ -272,13 +272,13 @@ PSU_PWM_DECODE_DEF = {"0:10": 10,
                       "91:100": 100}
 
 SYS_FAN_PARAM_DEF = {
-        "C2P": {
-            "0": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30},
-            "1": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30}},
-        "P2C": {
-            "0": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30},
-            "1": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30}}
-    }
+    "C2P": {
+        "0": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30},
+        "1": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30}},
+    "P2C": {
+        "0": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30},
+        "1": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30}}
+}
 
 TABLE_DEFAULT = {
     CONST.C2P: {
@@ -750,7 +750,7 @@ class system_device(hw_managemet_file_op):
         self.name = name
         self.type = self.sensors_config["type"]
         self.log.info("Init {0} ({1})".format(self.name, self.type))
-        self.log.debug("sensor config:\n{}".format(json.dumps(self.sensors_config, indent = 4)))
+        self.log.debug("sensor config:\n{}".format(json.dumps(self.sensors_config, indent=4)))
         self.base_file_name = self.sensors_config.get("base_file_name", None)
         self.file_input = "{}{}".format(self.base_file_name, self.sensors_config.get("input_suffix", ""))
         self.enable = int(self.sensors_config.get("enable", 1))
@@ -1156,7 +1156,7 @@ class thermal_module_sensor(system_device):
         try:
             self.write_file(tz_policy_filename, "user_space")
             self.write_file(tz_mode_filename, "disabled")
-        except:
+        except BaseException:
             pass
 
     # ----------------------------------------------------------------------
@@ -1233,6 +1233,7 @@ class thermal_module_sensor(system_device):
                 # handle case if cable was replsed by the other cable with the sensor
                 if value != 0 and self.val_min == 0 and self.val_max == 0:
                     self.log.info("{} refreshing min/max arttribures by the rule: val({}) min({}) max({})".format(self.name,
+                                                                                                                  value,
                                                                                                                   self.val_min,
                                                                                                                   self.val_max))
                     self.refresh_attr()
@@ -1263,8 +1264,8 @@ class thermal_module_sensor(system_device):
         @summary: handle sensor errors
         """
         self.fault_list = []
-        module_fault = self.get_fault()
-        """if module_fault:
+        """module_fault = self.get_fault()
+        if module_fault:
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.UNTRUSTED_ERR], interpolated=False)
             self.pwm = max(pwm, self.pwm)
             self.fault_list.append(CONST.UNTRUSTED_ERR)
@@ -1304,7 +1305,7 @@ class psu_fan_sensor(system_device):
         self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
         self.refresh_attr()
         self.pwm_last = CONST.PWM_MIN
-        
+
     # ----------------------------------------------------------------------
     def refresh_attr(self):
         """
@@ -1356,27 +1357,30 @@ class psu_fan_sensor(system_device):
         @param pwm: PWM level value <= 100%
         """
         self.log.info("Write {} PWM {}".format(self.name, pwm))
-        present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
-        if present == 1:
-            psu_pwm, _, _ = g_get_range_val(self.pwm_decode, pwm)
-            if not psu_pwm:
-                self.log.warning("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
+        try:
+            present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
+            if present == 1:
+                psu_pwm, _, _ = g_get_range_val(self.pwm_decode, pwm)
+                if not psu_pwm:
+                    self.log.warning("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
 
-            if psu_pwm == -1:
-                self.log.debug("{} PWM value {}. It means PWM should not be shanged".format(self.name, pwm))
-                # no need to change PSU PWM
-                return
+                if psu_pwm == -1:
+                    self.log.debug("{} PWM value {}. It means PWM should not be shanged".format(self.name, pwm))
+                    # no need to change PSU PWM
+                    return
 
-            if psu_pwm < CONST.PWM_PSU_MIN:
-                psu_pwm = CONST.PWM_PSU_MIN
+                if psu_pwm < CONST.PWM_PSU_MIN:
+                    psu_pwm = CONST.PWM_PSU_MIN
 
-            self.pwm_last = psu_pwm
-            bus = self.read_file("config/{0}_i2c_bus".format(self.base_file_name))
-            addr = self.read_file("config/{0}_i2c_addr".format(self.base_file_name))
-            command = self.read_file("config/fan_command")
-            i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm)
-            self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
-            subprocess.call(i2c_cmd, shell=True)
+                self.pwm_last = psu_pwm
+                bus = self.read_file("config/{0}_i2c_bus".format(self.base_file_name))
+                addr = self.read_file("config/{0}_i2c_addr".format(self.base_file_name))
+                command = self.read_file("config/fan_command")
+                i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm)
+                self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
+                subprocess.call(i2c_cmd, shell=True)
+        except BaseException:
+            self.log.error("{} set PWM error".format(self.name))
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1515,17 +1519,17 @@ class fan_sensor(system_device):
         @summary: Get fan params from system configuration
         @return: FAN params depending of fan dir
         """
-        dir = self.fan_dir
+        fan_dir = self.fan_dir
         param = None
-        if dir not in self.fan_param.keys():
-            if dir == CONST.UNKNOWN:
-                self.log.info("{} dir \"{}\". Using default dir: P2C".format(self.name, dir))
+        if fan_dir not in self.fan_param.keys():
+            if fan_dir == CONST.UNKNOWN:
+                self.log.info("{} dir \"{}\". Using default dir: P2C".format(self.name, fan_dir))
             else:
-                self.log.error("{} dir \"{}\" unsupported in configuration:\n{}".format(self.name, dir, self.fan_param))
+                self.log.error("{} dir \"{}\" unsupported in configuration:\n{}".format(self.name, fan_dir, self.fan_param))
                 self.log.error("Using default dir: P2C")
-            dir = CONST.DEF_DIR
+            fan_dir = CONST.DEF_DIR
 
-        param = self.fan_param[dir]
+        param = self.fan_param[fan_dir]
         return param
 
     # ----------------------------------------------------------------------
@@ -1584,7 +1588,13 @@ class fan_sensor(system_device):
     def _validate_rpm(self):
         """
         """
-        pwm_curr = self.read_pwm()
+        try:
+            pwm_curr = self.read_pwm()
+            self.handle_reading_file_err("thermal/pwm1", reset=True)
+        except BaseException:
+            self.log.error("Read PWM error")
+            self.handle_reading_file_err("thermal/pwm1")
+            return False
 
         for tacho_idx in range(self.tacho_cnt):
             fan_param = self.drwr_param[str(tacho_idx)]
@@ -1593,7 +1603,7 @@ class fan_sensor(system_device):
                 rpm_real = self.thermal_read_file_int(rpm_file_name)
             except BaseException:
                 self.log.warn("value reading from file: {}".format(rpm_file_name))
-                rpm_real = self.value
+                rpm_real = self.value[tacho_idx]
 
             rpm_min = int(fan_param["rpm_min"])
             if rpm_min == 0:
@@ -1625,18 +1635,18 @@ class fan_sensor(system_device):
                     rpm_calcuated = slope * pwm_curr + b
                     rpm_diff = abs(rpm_real - rpm_calcuated)
                     rpm_diff_norm = float(rpm_diff) / rpm_calcuated
-                    self.log.debug("validate_rpm:{} b:{} rpm_calcuated:{} rpm_diff:{} rpm_diff_norm:{}".format(self.name,
-                                                                                                               b,
-                                                                                                               rpm_calcuated,
-                                                                                                               rpm_diff,
-                                                                                                               rpm_diff_norm))
+                    self.log.debug("validate_rpm:{} b:{} rpm_calcuated:{} rpm_diff:{} rpm_diff_norm:{:.2f}".format(self.name,
+                                                                                                                   b,
+                                                                                                                   rpm_calcuated,
+                                                                                                                   rpm_diff,
+                                                                                                                   rpm_diff_norm))
                     if rpm_diff_norm >= rpm_tolerance:
-                        self.log.warn("{} tacho {}: {} too much different {}% than calculated {} pwm  {}".format(self.name,
-                                                                                                                 tacho_idx,
-                                                                                                                 rpm_real,
-                                                                                                                 rpm_diff_norm*100,
-                                                                                                                 rpm_calcuated,
-                                                                                                                 pwm_curr))
+                        self.log.warn("{} tacho {}: {} too much different {:.2f}% than calculated {} pwm  {}".format(self.name,
+                                                                                                                     tacho_idx,
+                                                                                                                     rpm_real,
+                                                                                                                     rpm_diff_norm*100,
+                                                                                                                     rpm_calcuated,
+                                                                                                                     pwm_curr))
                         return False
         return True
 
@@ -1650,12 +1660,31 @@ class fan_sensor(system_device):
         if pwm_val < CONST.PWM_MIN:
             pwm_val = CONST.PWM_MIN
 
-        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
-        pwn_curr = self.read_pwm()
-        if pwm_val == pwn_curr:
+        try:
+            pwm_curr = self.read_pwm()
+        except BaseException:
+            self.log.error("Read PWM error")
             return
 
-        self.write_pwm(pwm_val)
+        if pwm_val == pwm_curr:
+            return
+
+        pwm_jump = abs(pwm_val - pwm_curr)
+
+        # For big PWM jumpls - wse longer FAN relax timeout
+        relax_time = (pwm_jump * self.rpm_relax_timeout) / 20
+        if relax_time > self.rpm_relax_timeout * 2:
+            relax_time = self.rpm_relax_timeout * 2
+        elif relax_time < self.rpm_relax_timeout / 2:
+            relax_time = self.rpm_relax_timeout / 2
+        self.log.debug("{} pwm_change:{} relax_time:{}".format(self.name, pwm_jump, relax_time))
+        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
+
+        try:
+            self.write_pwm(pwm_val)
+        except BaseException:
+            self.log.error("Write PWM error")
+
 
     # ----------------------------------------------------------------------
     def get_dir(self):
@@ -1950,7 +1979,11 @@ class ThermalManagement(hw_managemet_file_op):
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target))
-        self.write_pwm(self.pwm_target)
+        try:
+            self.write_pwm(self.pwm_target)
+        except BaseException:
+            self.log.error("Missing PWM link. Possible hw-management is not running")
+            sys.exit(1)
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
@@ -2110,7 +2143,12 @@ class ThermalManagement(hw_managemet_file_op):
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
         else:
-            pwm_real = self.read_pwm()
+            try:
+                pwm_real = self.read_pwm()
+            except BaseException:
+                self.log.error("Read PWM error. Possible hw-management is not running")
+                return
+
             if pwm_real != self.pwm:
                 self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm_target))
                 self._update_chassis_fan_speed(self.pwm)
@@ -2119,7 +2157,12 @@ class ThermalManagement(hw_managemet_file_op):
     def _pwm_worker(self):
         ''
         if self.pwm_target == self.pwm:
-            pwm_real = self.read_pwm()
+            try:
+                pwm_real = self.read_pwm()
+            except BaseException:
+                self.log.error("Read PWM error. Possible hw-management is not running")
+                return
+
             if pwm_real != self.pwm:
                 self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm))
                 self._update_chassis_fan_speed(self.pwm)
