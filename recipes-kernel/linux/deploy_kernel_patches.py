@@ -67,6 +67,9 @@ class CONST(object):
                            "cumulus" : "./linux-{kver}/cumulus"}
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
+    PATCH_DST = "dst_type"
+    PATCH_ACCEPTED = "accepted"
+    PATCH_CANDIDATE = "candidate"
 
     # internal string const
     OS_ALT_PATCH = "os"
@@ -86,13 +89,14 @@ class CONST(object):
 # Local const
 #############################
 
-PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_candidate_filter"},
-               "feature accepted": {CONST.FILTER : "copy_to_candidate_filter"},
-               "feature pending":  {CONST.FILTER : "copy_to_candidate_filter"},
+PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_accepted_filter"},
+               "feature accepted": {CONST.FILTER : "copy_to_accepted_filter"},
+               "feature pending":  {CONST.FILTER : "copy_to_accepted_filter"},
                "downstream":       {CONST.FILTER : "copy_to_candidate_filter"},
-               "bugfix upstream":  {CONST.FILTER : "copy_to_accepted_ver_filter"},
-               "bugfix accepted" : {CONST.FILTER : "copy_to_candidate_filter"},
-               "bugfix pending":   {CONST.FILTER : "copy_to_candidate_filter"},
+               "downstream accepted": {CONST.FILTER : "copy_to_accepted_filter"},
+               "bugfix upstream":  {CONST.FILTER : "copy_to_accepted_filter"},
+               "bugfix accepted" : {CONST.FILTER : "copy_to_accepted_filter"},
+               "bugfix pending":   {CONST.FILTER : "copy_to_accepted_filter"},
                "rejected":         {CONST.FILTER : "skip_patch_filter"}
               }
 
@@ -209,61 +213,66 @@ def load_patch_table(path, k_version):
                                                                             patch_status_line))
                         return None
                     table_line[CONST.STATUS] = patch_status
+                    table_line[CONST.PATCH_DST] = None
                     table.append(table_line)
 
     return table
 
 # ----------------------------------------------------------------------
 def copy_to_accepted_filter(patch, accepted_folder, candidate_folder, kver):
+    ret = accepted_folder
     if patch[CONST.SUBVERSION]:
         patch_kver_lst = patch[CONST.SUBVERSION].split('.')
         target_kver_lst = kver.split('.')
         if len(patch_kver_lst) != 3:
             print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-            return None
-        if int(patch_kver_lst[2]) > int(target_kver_lst[2]):
-            return accepted_folder
-        return None
-
-    return accepted_folder
+            ret = None
+        elif int(patch_kver_lst[2]) <= int(target_kver_lst[2]):
+            ret = None
+    patch[CONST.PATCH_DST] = CONST.PATCH_ACCEPTED
+    return ret
 
 # ----------------------------------------------------------------------
 def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
+    ret = candidate_folder
     if patch[CONST.SUBVERSION]:
         patch_kver_lst = patch[CONST.SUBVERSION].split('.')
         target_kver_lst = kver.split('.')
         if len(patch_kver_lst) != 3:
             print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-            return None
-        if int(patch_kver_lst[2]) > int(target_kver_lst[2]):
-            return candidate_folder
-        return None
-    return candidate_folder
+            ret =  None
+        elif int(patch_kver_lst[2]) <= int(target_kver_lst[2]):
+            ret =  candidate_folder
+    patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
+    return ret
 
 # ----------------------------------------------------------------------
 def copy_to_accepted_ver_filter(patch, accepted_folder, candidate_folder, kver):
+    ret = None
     patch_kver_lst = patch[CONST.SUBVERSION].split('.')
     target_kver_lst = kver.split('.')
     if len(patch_kver_lst) != 3:
         print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-        return None
-    if int(patch_kver_lst[2]) > int(target_kver_lst[2]):
-        return accepted_folder
-    return None
+    elif int(patch_kver_lst[2]) > int(target_kver_lst[2]):
+        ret = accepted_folder
+    patch[CONST.PATCH_DST] = CONST.PATCH_ACCEPTED
+    return ret
 
 # ----------------------------------------------------------------------
 def copy_to_candidate_ver_filter(patch, accepted_folder, candidate_folder, kver):
+    ret = None
     patch_kver_lst = patch[CONST.SUBVERSION].split('.')
     target_kver_lst = kver.split('.')
     if len(patch_kver_lst) != 3:
         print("Err: patch {} subversion \"{}\" not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-        return None
-    if patch_kver_lst[2] > target_kver_lst[2]:
-        return candidate_folder
-    return None
+    elif patch_kver_lst[2] > target_kver_lst[2]:
+        ret =  candidate_folder
+    patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
+    return ret
 
 # ----------------------------------------------------------------------
 def skip_patch_filter(patch, accepted_folder, candidate_folder, kver):
+    patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return None
 
 # ----------------------------------------------------------------------
@@ -326,7 +335,7 @@ def process_patch_list(patch_list):
     return True
 
 # ----------------------------------------------------------------------
-def update_series(patch_list, series_path, delimiter=""):
+def update_series(patch_list, series_path, delimiter="", dst_type = None):
     # Load seried file
     if not os.path.isfile(series_path):
         print ("Err. Series file {} missing.".format(series_path))
@@ -340,7 +349,9 @@ def update_series(patch_list, series_path, delimiter=""):
     for patch in patch_list:
         if CONST.DST not in patch.keys():
             continue
-
+        # Add patches onsy from specific dst  
+        if dst_type and patch[CONST.PATCH_DST] != dst_type:
+            continue
         patch_name = patch[CONST.PATCH_NAME]
         if patch_name not in siries_file_lines:
             print("Add to sieries {}".format(patch_name))
@@ -452,6 +463,7 @@ def get_tool_path():
 
 # ----------------------------------------------------------------------
 def get_hw_mgmt_ver():
+    ver = ""
     tool_path = get_tool_path()
     changelog_path = "{}/../../debian/changelog".format(tool_path)
     changelog_file = open(changelog_path, "r")
@@ -536,41 +548,49 @@ if __name__ == '__main__':
 
     patch_table = None
     config_diff = None
-    if candidate_folder:
-        print ("-> Process patches")
 
-        patch_table = load_patch_table(src_folder, k_version_major)
-        if not patch_table:
-            print ("Can't load patch table from folder {}".format(src_folder))
-            sys.exit(1)
+    print ("-> Process patches")
+    patch_table = load_patch_table(src_folder, k_version_major)
+    if not patch_table:
+        print ("Can't load patch table from folder {}".format(src_folder))
+        sys.exit(1)
 
-        if not accepted_folder:
-            accepted_folder = candidate_folder
-            print ("Accepted folder not specified.\nAll patches will be copied to: {}".format(candidate_folder))
+    if not accepted_folder:
+        print ("Accepted folder not specified.\nAll patches will be copied to: {}".format(candidate_folder))
         filter_patch_list(patch_table,
+                          src_folder,
+                          candidate_folder,
+                          candidate_folder,
+                          k_version,
+                          args["os_type"])
+    else:
+         filter_patch_list(patch_table,
                           src_folder,
                           accepted_folder,
                           candidate_folder,
                           k_version,
                           args["os_type"])
 
-        if args["verbose"]:
-            print_patch_all(patch_table)
+    if args["verbose"]:
+        print_patch_all(patch_table)
 
-        print ("-> Copy patches")
-        res = process_patch_list(patch_table)
-        if not res:
-            print ("-> Copy patches error")
+    print ("-> Copy patches")
+    res = process_patch_list(patch_table)
+    if not res:
+        print ("-> Copy patches error")
+        sys.exit(1)
+    print ("-> Copy patches done")
+
+    if args["series_file"]:
+        print ("-> Process series")
+        delimiter_line = CONST.SERIES_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
+        res = update_series(patch_table, 
+                            args["series_file"], 
+                            delimiter_line, 
+                            dst_type=CONST.PATCH_ACCEPTED if accepted_folder else None)
+        if res:
             sys.exit(1)
-        print ("-> Copy patches done")
-
-        if args["series_file"]:
-            print ("-> Process series")
-            delimiter_line = CONST.SERIES_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-            res = update_series(patch_table, args["series_file"], delimiter_line)
-            if res:
-                sys.exit(1)
-            print ("-> Update series done")
+        print ("-> Update series done")
 
     config_file_name = args["config_file"]
     if config_file_name:
