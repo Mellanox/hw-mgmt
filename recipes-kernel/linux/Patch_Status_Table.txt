@@ -220,7 +220,7 @@ Kernel-5.10
 |0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream                               |            | Modular SN4800                                 |
 |0052-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch  | e6fab7af6ba1       | Bugfix upstream                          |  5.10.71   |                                                |
 |0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                |
-|0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream                               |            | must exist in Sonic/CL from 4.9                |
+|0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream accepted                      |            | must exist in Sonic/CL from 4.9                |
 |0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch  | aafa1cafedca       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
 |0056-platform-x86-mlx-platform-Add-initial-support-for-ne.patch  | a5d8f57edfb4       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
 |0057-platform-mellanox-mlxreg-hotplug-Extend-logic-for-ho.patch  | bb1023b6da37       | Feature upstream                         |            | Modular SN4800  accepted in (5.16)             |
@@ -233,7 +233,7 @@ Kernel-5.10
 |0064-hwmon-mlxreg-fan-Extend-the-maximum-number-of-tachom.patch  | bc8de07e8812       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
 |0065-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch  | 9045512ca6cd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
 |0066-platform-x86-mlx-platform-Add-new-attributes-for-Cof.patch  | 4289fd4ad43a       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
-|0067-platform-mellanox-Add-dedicated-match-for-system-typ.patch  |                    | Downstream                               |            | for MQM8700                                    |
+|0067-platform-mellanox-Add-dedicated-match-for-system-typ.patch  |                    | Downstream accepted                      |            | for MQM8700                                    |
 |0068-mlxsw-core-Initialize-switch-driver-last.patch              | 3d7a6f677905       | Feature upstream                         |            |                                                |
 |0069-mlxsw-core-Remove-mlxsw_core_is_initialized.patch           | 25a91f835a7b       | Feature upstream                         |            |                                                |
 |0070-mlxsw-core_env-Defer-handling-of-module-temperature-.patch  | 163f3d2dd01c       | Feature upstream                         |            |                                                |
@@ -337,7 +337,7 @@ Kernel-5.10
 |0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch  |                    | Downstream                               |            | Sonic/ISSU                                     |
 |0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
 |0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Feature upstream                         |            | Modular SN4800                                 |
-|0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream                               |            | P4697                                          |
+|0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream accepted                      |            | P4697                                          |
 |0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                |
 |0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch  |                    | Downstream                               |            | SN4800                                         |
 |0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch  | 9054416afcb4       | Feature upstream                         |            |                                                |
@@ -457,6 +457,7 @@ Feature upstream: Has commit Id in upstream
 Feature accepted: Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
 Feature pending:  Pending maintainer review or not sent yet
 downstream:       Not plan to upstream
+downstream accepted: Not plan to upstream but following patches depend on this. This patch will be taken to the accepted list.
 Bugfix upstream:  Has commit Id in upstream and backported as bugfix  | v5.10.145
 Bugfix accepted:  Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
 Bugfix pending:   Bugfix pending maintainer review or not sent yet
