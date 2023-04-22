@@ -349,7 +349,7 @@ def update_series(patch_list, series_path, delimiter="", dst_type = None):
     for patch in patch_list:
         if CONST.DST not in patch.keys():
             continue
-        # Add patches onsy from specific dst  
+        # Add patches only from specific dst
         if dst_type and patch[CONST.PATCH_DST] != dst_type:
             continue
         patch_name = patch[CONST.PATCH_NAME]
@@ -587,7 +587,7 @@ if __name__ == '__main__':
         res = update_series(patch_table, 
                             args["series_file"], 
                             delimiter_line, 
-                            dst_type=CONST.PATCH_ACCEPTED if accepted_folder else None)
+                            dst_type=None)
         if res:
             sys.exit(1)
         print ("-> Update series done")

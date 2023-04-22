@@ -332,7 +332,7 @@ Kernel-5.10
 |0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  | c7250b5d553c       | Feature upstream                         |            | relevant for CFL systems only                  |
 |0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch  | 7964f8fc52b1       | Feature upstream                         |            |                                                |
 |0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream                               |            | SN2201                                         |
-|0167-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream                               |            | P2317 only                                     |
+|0167-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream accepted                      |            | P2317 only                                     |
 |0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch  |                    | Downstream                               |            | MQM8700 only                                   |
 |0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch  |                    | Downstream                               |            | Sonic/ISSU                                     |
 |0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
