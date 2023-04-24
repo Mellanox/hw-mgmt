@@ -2261,8 +2261,9 @@ class ThermalManagement(hw_managemet_file_op):
 
         fault_cnt = 0
         for dev_obj in self.dev_obj_list:
-            if dev_obj.get_fault_list():
-                fault_cnt += 1
+            if dev_obj.state == CONST.RUNNING:
+                if dev_obj.get_fault_list():
+                    fault_cnt += 1
         return fault_cnt
 
     # ----------------------------------------------------------------------
