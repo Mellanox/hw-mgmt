@@ -1482,6 +1482,7 @@ class fan_sensor(system_device):
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
         self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
+        self.pwm_set = self.read_pwm()
 
         self.rpm_valid_state = True
 
@@ -1504,6 +1505,7 @@ class fan_sensor(system_device):
         self.fan_dir = self._read_dir()
         self.drwr_param = self._get_fan_drwr_param()
         self.fan_shutdown(False)
+        self.pwm_set = self.read_pwm()
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -1660,16 +1662,10 @@ class fan_sensor(system_device):
         if pwm_val < CONST.PWM_MIN:
             pwm_val = CONST.PWM_MIN
 
-        try:
-            pwm_curr = self.read_pwm()
-        except BaseException:
-            self.log.error("Read PWM error")
+        if pwm_val == self.pwm_set:
             return
 
-        if pwm_val == pwm_curr:
-            return
-
-        pwm_jump = abs(pwm_val - pwm_curr)
+        pwm_jump = abs(pwm_val - self.pwm_set)
 
         # For big PWM jumpls - wse longer FAN relax timeout
         relax_time = (pwm_jump * self.rpm_relax_timeout) / 20
@@ -1678,13 +1674,13 @@ class fan_sensor(system_device):
         elif relax_time < self.rpm_relax_timeout / 2:
             relax_time = self.rpm_relax_timeout / 2
         self.log.debug("{} pwm_change:{} relax_time:{}".format(self.name, pwm_jump, relax_time))
-        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
+        self.rpm_relax_timestump = current_milli_time() + relax_time
 
+        self.pwm_set = pwm_val
         try:
             self.write_pwm(pwm_val)
         except BaseException:
             self.log.error("Write PWM error")
-
 
     # ----------------------------------------------------------------------
     def get_dir(self):
@@ -2500,7 +2496,8 @@ class ThermalManagement(hw_managemet_file_op):
         """
         @summary:  main thermal control loop
         """
-
+        fault_cnt_old = 0
+        fault_cnt = 0
         self.log.notice("********************************")
         self.log.notice("Run thermal control")
         self.log.notice("********************************")
@@ -2543,6 +2540,9 @@ class ThermalManagement(hw_managemet_file_op):
             fault_cnt = self.get_fault_cnt()
             if fault_cnt > CONST.TOTAL_MAX_ERR_COUNT:
                 pwm_list["total_err_cnt({})>{}".format(fault_cnt, CONST.TOTAL_MAX_ERR_COUNT)] = CONST.PWM_MAX
+            elif fault_cnt_old  > CONST.TOTAL_MAX_ERR_COUNT:
+                self.log.info("'total_err_cnt>2' error flag clear")
+            fault_cnt_old = fault_cnt
 
             pwm, name = self._pwm_get_max(pwm_list)
             self.log.debug("Result PWM {}".format(pwm))
@@ -2638,7 +2638,7 @@ if __name__ == '__main__':
                         DEBUG = 10
                         NOTSET = 0
                         """,
-                            type=int, default=20)
+                            type=int, default=10)
     CMD_PARSER.add_argument("-r", "--root_folder",
                             dest=CONST.HW_MGMT_ROOT,
                             help="Define custom hw-management root folder",
