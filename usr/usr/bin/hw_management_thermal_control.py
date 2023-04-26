@@ -1376,6 +1376,13 @@ class psu_fan_sensor(system_device):
                 bus = self.read_file("config/{0}_i2c_bus".format(self.base_file_name))
                 addr = self.read_file("config/{0}_i2c_addr".format(self.base_file_name))
                 command = self.read_file("config/fan_command")
+                fan_config_command = self.read_file("config/fan_config_command")
+                fan_speed_units= self.read_file("config/fan_speed_units")
+
+                # Set fan speed units (percentage or RPM)
+                i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, fan_config_command, fan_speed_units)
+                subprocess.call(i2c_cmd, shell=True)
+                # Set fan speed
                 i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm)
                 self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
                 subprocess.call(i2c_cmd, shell=True)
@@ -2638,7 +2645,7 @@ if __name__ == '__main__':
                         DEBUG = 10
                         NOTSET = 0
                         """,
-                            type=int, default=10)
+                            type=int, default=20)
     CMD_PARSER.add_argument("-r", "--root_folder",
                             dest=CONST.HW_MGMT_ROOT,
                             help="Define custom hw-management root folder",
