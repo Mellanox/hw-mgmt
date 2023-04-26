@@ -669,7 +669,8 @@ set_jtag_gpio()
 			;;
 	esac
 
-	if find /sys/class/gpio/gpiochip* | grep -q base; then
+	find /sys/class/gpio/gpiochip*/ 2>&1 | grep -q base
+	if [ $? -ne 0 ]; then
 		echo "gpio controller driver is not loaded"
 		return 1
 	fi
