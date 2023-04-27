@@ -1972,6 +1972,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
         self.state = CONST.UNCONFIGURED
+        self.fan_drwr_num = 0
 
         signal.signal(signal.SIGTERM, self.sig_handler)
         signal.signal(signal.SIGINT, self.sig_handler)
@@ -2127,6 +2128,15 @@ class ThermalManagement(hw_managemet_file_op):
         @summary: Set target PWM for the system
         @param pwm: target PWM value
         """
+        if self.state == CONST.UNCONFIGURED:
+            self.log.info("TC is not configureed. Try to set PWM1 to {}".format(pwm))
+            try:
+                self.write_pwm(pwm)
+            except BaseException:
+                self.log.error("Missing PWM link. Possible hw-management is not running")
+                sys.exit(1)
+            return
+
         pwm = int(pwm)
         if pwm > CONST.PWM_MAX:
             pwm = CONST.PWM_MAX
@@ -2482,9 +2492,6 @@ class ThermalManagement(hw_managemet_file_op):
         Used when suspend mode was de-asserted  or when kill signal was revived
         """
         if self.state != CONST.STOPPED:
-            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason))
-            self.state = CONST.STOPPED
-
             if self.pwm_worker_timer:
                 self.pwm_worker_timer.stop()
                 self.pwm_worker_timer = None
@@ -2497,6 +2504,9 @@ class ThermalManagement(hw_managemet_file_op):
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     dev_obj.stop()
+
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason))
+            self.state = CONST.STOPPED
 
     # ----------------------------------------------------------------------
     def run(self):
