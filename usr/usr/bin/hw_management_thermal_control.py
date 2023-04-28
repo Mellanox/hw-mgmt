@@ -485,16 +485,20 @@ class Logger(object):
         if use_syslog:
             if sys.platform == "darwin":
                 address = "/var/run/syslog"
-            elif sys.platform == "linux":
-                address = "/dev/log"
             else:
-                address = ("localhost", 514)
+                if os.path.exists("/dev/log"):
+                    address = "/dev/log"
+                else:
+                    address = ("localhost", 514)
             facility = SysLogHandler.LOG_SYSLOG
-            syslog_handler = SysLogHandler(address=address, facility=facility)
-            syslog_handler.setLevel(logging.INFO + 5)
+            try:
+                syslog_handler = SysLogHandler(address=address, facility=facility)
+                syslog_handler.setLevel(logging.INFO + 5)
 
-            syslog_handler.setFormatter(logging.Formatter("hw-management-tc: %(levelname)s - %(message)s"))
-            self.logger.addHandler(syslog_handler)
+                syslog_handler.setFormatter(logging.Formatter("hw-management-tc: %(levelname)s - %(message)s"))
+                self.logger.addHandler(syslog_handler)
+            except IOError as err:
+                print("Can't init syslog {} address {}".format(str(err), address))
 
     def set_loglevel(self, verbosity):
         """
@@ -511,8 +515,11 @@ class Logger(object):
             Log "debug" message.
         @param msg: message to save to log
         """
-        if self.logger:
-            self.logger.debug(msg)
+        try:
+            if self.logger:
+                self.logger.debug(msg)
+        except:
+            pass
 
     def info(self, msg=""):
         """
@@ -520,8 +527,11 @@ class Logger(object):
             Log "info" message.
         @param msg: message to save to log
         """
-        if self.logger:
-            self.logger.info(msg)
+        try:
+            if self.logger:
+                self.logger.info(msg)
+        except:
+            pass
 
     def notice(self, msg=""):
         """
@@ -529,8 +539,11 @@ class Logger(object):
             Log "notice" message.
         @param msg: message to save to log
         """
-        if self.logger:
-            self.logger.log(logging.INFO + 5, msg)
+        try:
+            if self.logger:
+                self.logger.log(logging.INFO + 5, msg)
+        except:
+            pass
 
     def warn(self, msg=""):
         """
@@ -538,8 +551,11 @@ class Logger(object):
             Log "warn" message.
         @param msg: message to save to log
         """
-        if self.logger:
-            self.logger.warning(msg)
+        try:
+            if self.logger:
+                self.logger.warning(msg)
+        except:
+            pass
 
     def error(self, msg=""):
         """
@@ -547,8 +563,11 @@ class Logger(object):
             Log "error" message.
         @param msg: message to save to log
         """
-        if self.logger:
-            self.logger.error(msg)
+        try:
+            if self.logger:
+                self.logger.error(msg)
+        except:
+            pass
 
 
 class RepeatedTimer(object):
