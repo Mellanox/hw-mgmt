@@ -11,7 +11,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.5.2
       - name: Install build packages
         run: |
           sudo apt-get update
@@ -26,7 +26,7 @@ jobs:
           ./gen_rpm.sh
           
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v0.1.15
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
