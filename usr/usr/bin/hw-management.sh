@@ -1855,6 +1855,7 @@ check_system()
 			p4262_specific
 			;;
 		VMOD0016)
+		"BlueField SoC")
 			mqmxxx_bf3_common
 			;;
 		*)
