@@ -130,8 +130,7 @@ class CONST(object):
     THERMAL_WAIT_FOR_CONFIG = 120
 
     # Default period for printing TC report (in sec.)
-    # Note: set report time to 5 min on release
-    PERIODIC_REPORT_TIME = 1 * 20
+    PERIODIC_REPORT_TIME = 1 * 60
 
     # Default sensor configuration if not 0configured other value
     SENSOR_POLL_TIME_DEF = 30
@@ -882,19 +881,27 @@ class system_device(hw_managemet_file_op):
         """
 
     # ----------------------------------------------------------------------
-    def handle_reading_file_err(self, filename, reset=False):
+    def handle_reading_file_err(self, filename, reset=False, print_log=True):
         """
         @summary: Handle file errors. Saving read error counter for each file
         @param filename: file name to be handled
         @param  reset: 1- increment errors counter for file, 0 - reset error counter for the file
         """
+        err_cnt = self.err_fread_err_counter_dict.get(filename, None)
+        err_level= self.err_fread_max
         if not reset:
-            if filename in self.err_fread_err_counter_dict.keys():
-                self.err_fread_err_counter_dict[filename] += 1
+            if err_cnt:
+                err_cnt += 1
             else:
-                self.err_fread_err_counter_dict[filename] = 1
+                err_cnt = 1
+
+            if print_log and err_cnt < err_level:
+                self.log.warn("{}: file:{} read error {} times".format(self.name, filename, err_cnt))
         else:
-            self.err_fread_err_counter_dict[filename] = 0
+            if err_cnt and err_cnt != 0 and print_log:
+                 self.log.notice("{}: file:{} read OK".format(self.name, filename))
+            err_cnt = 0
+        self.err_fread_err_counter_dict[filename] = err_cnt
 
      # ----------------------------------------------------------------------
     def check_reading_file_err(self):
@@ -905,7 +912,9 @@ class system_device(hw_managemet_file_op):
         err_keys = []
         for key, val in self.err_fread_err_counter_dict.items():
             if val >= self.err_fread_max:
-                self.log.error("{}: read file {} errors count {}".format(self.name, key, val))
+                # to reduse log: print err message first 5 times and then only each 10's message 
+                if val <= (self.err_fread_max + 5) or divmod(val, 10)[1] == 0:
+                    self.log.error("{}: read file {} errors count {}".format(self.name, key, val))
                 err_keys.append(key)
         return err_keys
 
@@ -1109,7 +1118,7 @@ class thermal_sensor(system_device):
         pwm = self.pwm_min
         value = self.value
         if not self.check_file(self.file_input):
-            self.log.warn("{}: missing file {}".format(self.name, self.file_input))
+            self.log.info("{}: missing file {}".format(self.name, self.file_input))
             self.handle_reading_file_err(self.file_input)
         else:
             try:
@@ -1117,7 +1126,7 @@ class thermal_sensor(system_device):
                 self.handle_reading_file_err(self.file_input, reset=True)
                 value = int(temperature / CONST.TEMP_SENSOR_SCALE)
             except BaseException:
-                self.log.error("Wrong value reading from file: {}".format(self.file_input))
+                self.log.info("Wrong value reading from file: {}".format(self.file_input))
                 self.handle_reading_file_err(self.file_input)
         self.update_value(value)
 
@@ -1358,14 +1367,14 @@ class psu_fan_sensor(system_device):
         psu_status_filename = "thermal/{}_status".format(self.base_file_name)
         psu_status = 0
         if not self.check_file(psu_status_filename):
-            self.log.warn("Missing file {} dev: {}".format(psu_status_filename, self.name))
+            self.log.info("Missing file {} dev: {}".format(psu_status_filename, self.name))
             self.handle_reading_file_err(psu_status_filename)
         else:
             try:
                 psu_status = int(self.read_file(psu_status_filename))
                 self.handle_reading_file_err(psu_status_filename, reset=True)
             except BaseException:
-                self.log.error("Can't read {}".format(psu_status_filename))
+                self.log.info("Can't read {}".format(psu_status_filename))
                 self.handle_reading_file_err(psu_status_filename)
         return psu_status
 
@@ -1416,7 +1425,7 @@ class psu_fan_sensor(system_device):
         self.pwm = self.pwm_min
         rpm_file_name = "thermal/{}".format(self.file_input)
         if not self.check_file(rpm_file_name):
-            self.log.warn("Missing file {} dev: {}".format(rpm_file_name, self.name))
+            self.log.info("Missing file {} dev: {}".format(rpm_file_name, self.name))
             self.handle_reading_file_err(rpm_file_name)
         else:
             try:
@@ -1584,7 +1593,7 @@ class fan_sensor(system_device):
         status_filename = "thermal/fan{}_status".format(self.fan_drwr_id)
         status = None
         if not self.check_file(status_filename):
-            self.log.warn("Missing file {} dev: {}".format(status_filename, self.name))
+            self.log.info("Missing file {} dev: {}".format(status_filename, self.name))
             self.handle_reading_file_err(status_filename)
         else:
             try:
@@ -1775,7 +1784,7 @@ class fan_sensor(system_device):
         for tacho_id in range(0, self.tacho_cnt):
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
-                self.log.warn("Missing file {} dev: {}".format(rpm_file_name, self.name))
+                self.log.info("Missing file {} dev: {}".format(rpm_file_name, self.name))
                 self.handle_reading_file_err(rpm_file_name)
             else:
                 try:
@@ -1879,7 +1888,7 @@ class ambiant_thermal_sensor(system_device):
         for sensor_name, file_name in self.base_file_name.items():
             sens_file_name = "thermal/{}".format(file_name)
             if not self.check_file(sens_file_name):
-                self.log.warn("{}: missing file {}".format(self.name, sens_file_name))
+                self.log.info("{}: missing file {}".format(self.name, sens_file_name))
                 self.handle_reading_file_err(sens_file_name)
             else:
                 try:
@@ -2612,18 +2621,18 @@ class ThermalManagement(hw_managemet_file_op):
         else:
             mlxsw_tmp = "N/A"
 
-        self.log.notice("Thermal periodic report")
-        self.log.notice("================================")
-        self.log.notice("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
-        self.log.notice("Cooling(%) {} ({})".format(self.pwm_target, self.pwm_change_reason))
-        self.log.notice("dir:{}".format(flow_dir))
-        self.log.notice("================================")
+        self.log.info("Thermal periodic report")
+        self.log.info("================================")
+        self.log.info("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
+        self.log.info("Cooling(%) {} ({})".format(self.pwm_target, self.pwm_change_reason))
+        self.log.info("dir:{}".format(flow_dir))
+        self.log.info("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
                 obj_info_str = dev_obj.info()
                 if obj_info_str:
-                    self.log.notice(obj_info_str)
-        self.log.notice("================================")
+                    self.log.info(obj_info_str)
+        self.log.info("================================")
 
 
 def str2bool_argparse(val):
