@@ -2413,7 +2413,6 @@ do_chip_up_down()
 	0)
 		lock_service_state_change
 		chipup_delay=$(< $config_path/chipup_delay)
-		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
@@ -2451,7 +2450,6 @@ do_chip_up_down()
 			unlock_service_state_change
 			return
 		fi
-		echo 0 > $config_path/suspend
 		unlock_service_state_change
 		;;
 	*)
