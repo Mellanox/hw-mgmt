@@ -302,7 +302,7 @@ find_eeprom_name()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				if [ $sku == "HI144" ]; then
+				if [[ $sku == "HI144"  ||  $sku == "HI147" ]]; then
 					eeprom_name=psu2_info
 				else
 					eeprom_name=psu4_info
@@ -363,7 +363,7 @@ find_eeprom_name_on_remove()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				if [ $sku == "HI144" ]; then
+				if [[ $sku == "HI144" || $sku == "HI147" ]]; then
 					eeprom_name=psu2_info
 				else
 					eeprom_name=psu4_info
