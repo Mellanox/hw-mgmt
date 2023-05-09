@@ -2181,6 +2181,9 @@ class ThermalManagement(hw_managemet_file_op):
         @summary: Set target PWM for the system
         @param pwm: target PWM value
         """
+        if self.exit and self.exit.is_set():
+            return;
+
         if self.state == CONST.UNCONFIGURED:
             self.log.info("TC is not configureed. Try to set PWM1 to {}".format(pwm))
             try:
@@ -2347,7 +2350,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.exit.set()
 
             self.log.notice("Thermal control stopped",1)
-            sys.exit(1)
+            os.kill(os.getpid(), signal.SIGINT)
 
     # ----------------------------------------------------------------------
     def load_configuration(self):
