@@ -195,7 +195,8 @@ declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
 				   ["stts751_0"]="stts751 0x49 7 fan_amb")
 
 declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
-				   ["adt75_0"]="adt75 0x49 6 fan_amb")
+				   ["adt75_0"]="adt75 0x49 6 fan_amb" \
+				   ["stts751_0"]="stts751 0x49 6 fan_amb")
 
 # Currently system can have just multiple clock boards.
 declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
@@ -368,7 +369,7 @@ devtr_check_supported_system_init_alternatives()
 #			;;
 		VMOD0013)
 			case $sku in
-				HI144|HI147|HI148)	# ToDo Separate later on.
+				HI144|HI147|HI148)	# ToDo Separate Ibex HI148 if it will be required
 					for key in "${!sn5600_alternatives[@]}"; do
 						swb_alternatives["$key"]="${sn5600_alternatives["$key"]}"
 					done

@@ -1723,7 +1723,7 @@ sn56xx_specific()
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2800 > $config_path/fan_min_speed
-	echo 25000 > $config_path/psu_fan_max
+	echo 32500 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
@@ -1732,7 +1732,11 @@ sn56xx_specific()
 	hotplug_pwrs=2
 	hotplug_psus=2
 	psu2_i2c_addr=0x5a
-	echo 4 > $config_path/cpld_num
+	if [ "$sku" == "HI147" ]; then
+		echo 5 > $config_path/cpld_num
+	else
+		echo 4 > $config_path/cpld_num
+	fi
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
@@ -2240,7 +2244,7 @@ pre_devtr_init()
 	case $board_type in
 	VMOD0013)
 		case $sku in
-		HI144|HI147|HI148)	# ToDo Possible change for Hippo, Ibex
+		HI144|HI147|HI148)	# ToDo Possible change for Ibex
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			echo 2 > "$config_path"/clk_brd_num
 			echo 3 > "$config_path"/clk_brd_addr_offset
