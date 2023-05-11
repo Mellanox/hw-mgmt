@@ -44,7 +44,8 @@
 		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 60, "val_min": 35000, "val_max": 55000, "poll_time": 30},
 		"voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
-	}
+	},
+	"asic_config" : {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": true, "fan_control": true}}
 }
 
  
