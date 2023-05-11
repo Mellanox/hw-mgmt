@@ -93,6 +93,7 @@ class CONST(object):
     SYS_CONF_FAN_PARAM = "fan_trend"
     SYS_CONF_DEV_PARAM = "dev_parameters"
     SYS_CONF_SENSORS_CONF = "sensors_config"
+    SYS_CONF_ASIC_PARAM = "asic_config"
 
     # *************************
     # Folders definition
@@ -127,7 +128,7 @@ class CONST(object):
     UNTRUSTED_ERR = "untrusted"
 
     # delay before TC start (sec)
-    THERMAL_WAIT_FOR_CONFIG = 120
+    THERMAL_WAIT_FOR_CONFIG = 60
 
     # Default period for printing TC report (in sec.)
     PERIODIC_REPORT_TIME = 1 * 60
@@ -312,6 +313,7 @@ TABLE_DEFAULT = {
     }
 }
 
+ASIC_CONF_DEFAULT = {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": True, "fan_control": True}}
 
 # ----------------------------------------------------------------------
 def str2bool(val):
@@ -1741,7 +1743,7 @@ class fan_sensor(system_device):
         try:
             self.write_pwm(pwm_val)
         except BaseException:
-            self.log.error("Write PWM error")
+            self.log.error("Write PWM error",1)
 
     # ----------------------------------------------------------------------
     def get_dir(self):
@@ -2035,6 +2037,11 @@ class ThermalManagement(hw_managemet_file_op):
 
         self.load_configuration()
 
+        if not self.is_pwm_exists():
+            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for PWM init",1)
+            while not self.is_pwm_exists():
+                self.exit.wait(10)
+
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target),1)
         try:
@@ -2046,6 +2053,11 @@ class ThermalManagement(hw_managemet_file_op):
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
             self.exit.wait(thermal_delay)
+        
+        if not self.is_fan_tacho_init():
+            self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for FAN init",1)
+            while not self.is_fan_tacho_init():
+                self.exit.wait(10)
 
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG),1)
         self.exit.wait(CONST.THERMAL_WAIT_FOR_CONFIG)
@@ -2170,6 +2182,9 @@ class ThermalManagement(hw_managemet_file_op):
         @return: None
         """
         self.log.info("Update chassis FAN PWM {}".format(pwm_val))
+        if not self.is_pwm_exists():
+            self.log.warn("Missing PWM link".format(pwm_val))
+            return
         for fan_idx in range(1, self.fan_drwr_num + 1):
             fan_obj = self._get_dev_obj("fan{}.*".format(fan_idx))
             if fan_obj:
@@ -2185,7 +2200,7 @@ class ThermalManagement(hw_managemet_file_op):
             return;
 
         if self.state == CONST.UNCONFIGURED:
-            self.log.info("TC is not configureed. Try to set PWM1 to {}".format(pwm))
+            self.log.info("TC is not configureed. Try to force set PWM1 {}%%".format(pwm))
             try:
                 self.write_pwm(pwm)
             except BaseException:
@@ -2219,7 +2234,7 @@ class ThermalManagement(hw_managemet_file_op):
                 return
 
             if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm_target),1)
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm_target),0)
                 self._update_chassis_fan_speed(self.pwm)
 
     # ----------------------------------------------------------------------
@@ -2233,7 +2248,7 @@ class ThermalManagement(hw_managemet_file_op):
                 return
 
             if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm),1)
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm),0)
                 self._update_chassis_fan_speed(self.pwm)
             self.pwm_worker_timer.stop()
             return
@@ -2336,6 +2351,28 @@ class ThermalManagement(hw_managemet_file_op):
         return fault_cnt
 
     # ----------------------------------------------------------------------
+    def is_pwm_exists(self):
+        ""
+        ret = True
+        if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
+            try:
+                self.read_pwm()
+            except Exception: 
+                ret = False
+        return ret
+
+    # ----------------------------------------------------------------------
+    def is_fan_tacho_init(self):
+        ""
+        ret = True
+        tacho_cnt = 0
+        if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"] is True:
+            if self.check_file("config/max_tachos"):
+                tacho_cnt = self.read_file("config/max_tachos")
+            ret = True if tacho_cnt else False
+        return ret
+
+    # ----------------------------------------------------------------------
     def _pwm_strategy_avg(self, pwm_list):
         return float(sum(pwm_list)) / len(pwm_list)
 
@@ -2350,7 +2387,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.exit.set()
 
             self.log.notice("Thermal control stopped",1)
-            os.kill(os.getpid(), signal.SIGINT)
+            os._exit(0)
 
     # ----------------------------------------------------------------------
     def load_configuration(self):
@@ -2415,6 +2452,12 @@ class ThermalManagement(hw_managemet_file_op):
         # 5. Init sensors config table
         if CONST.SYS_CONF_SENSORS_CONF not in sys_config:
             sys_config[CONST.SYS_CONF_SENSORS_CONF] = {}
+        
+        # 6. Init ASIC config
+        if CONST.SYS_CONF_ASIC_PARAM not in sys_config:
+            self.log.info("Fan Parameters table missing in system_config. Init it from local")
+            sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
+        
 
         self.sys_config = sys_config
 
@@ -2584,6 +2627,16 @@ class ThermalManagement(hw_managemet_file_op):
                     self.log.set_loglevel(self.cmd_arg["verbosity"])
             except BaseException:
                 pass
+
+            if not self.is_fan_tacho_init():
+                self.stop(reason="Missing FANs")
+                self.exit.wait(5)
+                continue
+
+            if not self.is_pwm_exists():
+                self.stop(reason="Missing PWM")
+                self.exit.wait(5)
+                continue
 
             if self._is_suspend():
                 self.stop(reason="suspend")
