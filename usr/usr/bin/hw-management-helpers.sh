@@ -175,6 +175,7 @@ check_n_link()
     if [ -f "$1" ];
     then
         ln -sf "$1" "$2"
+	hw-management-labels-maker.sh "$2"
     fi
 }
 
