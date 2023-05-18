@@ -172,6 +172,7 @@ class CONST(object):
     FAN_DRWR_COUNT_DEF = 6
     FAN_TACHO_COUNT_DEF = 6
     MODULE_COUNT_DEF = 16
+    MODULE_COUNT_MAX = 128
     GEARBOX_COUNT_DEF = 0
 
     # Consistent file read  errors for set error state
@@ -869,6 +870,7 @@ class system_device(hw_managemet_file_op):
             return
 
         self.pwm = self.pwm_min
+        self.last_pwm = self.pwm
         self.log.info("Stopping {}".format(self.name))
         self.state = CONST.STOPPED
 
@@ -915,7 +917,7 @@ class system_device(hw_managemet_file_op):
         @param  reset: 1- increment errors counter for file, 0 - reset error counter for the file
         """
         err_cnt = self.err_fread_err_counter_dict.get(filename, None)
-        err_level= self.err_fread_max
+        err_level = self.err_fread_max
         if not reset:
             if err_cnt:
                 err_cnt += 1
@@ -926,7 +928,7 @@ class system_device(hw_managemet_file_op):
                 self.log.warn("{}: file:{} read error {} times".format(self.name, filename, err_cnt))
         else:
             if err_cnt and err_cnt != 0 and print_log:
-                 self.log.notice("{}: file:{} read OK".format(self.name, filename))
+                self.log.notice("{}: file:{} read OK".format(self.name, filename))
             err_cnt = 0
         self.err_fread_err_counter_dict[filename] = err_cnt
 
@@ -939,7 +941,7 @@ class system_device(hw_managemet_file_op):
         err_keys = []
         for key, val in self.err_fread_err_counter_dict.items():
             if val >= self.err_fread_max:
-                # to reduse log: print err message first 5 times and then only each 10's message 
+                # to reduse log: print err message first 5 times and then only each 10's message
                 if val <= (self.err_fread_max + 5) or divmod(val, 100)[1] == 0:
                     self.log.error("{}: read file {} errors count {}".format(self.name, key, val))
                 err_keys.append(key)
@@ -1432,7 +1434,7 @@ class psu_fan_sensor(system_device):
                 addr = self.read_file("config/{0}_i2c_addr".format(self.base_file_name))
                 command = self.read_file("config/fan_command")
                 fan_config_command = self.read_file("config/fan_config_command")
-                fan_speed_units= self.read_file("config/fan_speed_units")
+                fan_speed_units = self.read_file("config/fan_speed_units")
 
                 # Set fan speed units (percentage or RPM)
                 i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, fan_config_command, fan_speed_units)
@@ -1442,7 +1444,7 @@ class psu_fan_sensor(system_device):
                 self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
                 subprocess.call(i2c_cmd, shell=True)
         except BaseException:
-            self.log.error("{} set PWM error".format(self.name),1)
+            self.log.error("{} set PWM error".format(self.name), 1)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1538,8 +1540,8 @@ class fan_sensor(system_device):
         self.fan_dir = self._read_dir()
         self.fan_dir_fail = False
         self.drwr_param = self._get_fan_drwr_param()
-        self.val_min_def = self.get_file_val("config/fan_min_speed", CONST.RPM_MIN_MAX["val_min"])
-        self.val_max_def = self.get_file_val("config/fan_max_speed", CONST.RPM_MIN_MAX["val_max"])
+        self.val_min_def = self.get_file_val("thermal/fan{}_min".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_min"])
+        self.val_max_def = self.get_file_val("thermal/fan{}_max".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_max"])
         self.is_calibrated = False
 
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
@@ -1556,8 +1558,8 @@ class fan_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_min_def = self.get_file_val("config/fan_min_speed", CONST.RPM_MIN_MAX["val_min"])
-        self.val_max_def = self.get_file_val("config/fan_max_speed", CONST.RPM_MIN_MAX["val_max"])
+        self.val_min_def = self.get_file_val("thermal/fan{}_min".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_min"])
+        self.val_max_def = self.get_file_val("thermal/fan{}_max".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_max"])
 
         self.value = [0] * self.tacho_cnt
 
@@ -1743,7 +1745,7 @@ class fan_sensor(system_device):
         try:
             self.write_pwm(pwm_val)
         except BaseException:
-            self.log.error("Write PWM error",1)
+            self.log.error("Write PWM error")
 
     # ----------------------------------------------------------------------
     def get_dir(self):
@@ -1912,7 +1914,7 @@ class ambiant_thermal_sensor(system_device):
         """
         pwm = self.pwm_min
 
-        # reading all amb8 sensors
+        # reading all amb sensors
         for sensor_name, file_name in self.base_file_name.items():
             sens_file_name = "thermal/{}".format(file_name)
             if not self.check_file(sens_file_name):
@@ -2002,7 +2004,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         hw_managemet_file_op.__init__(self, cmd_arg)
         self.log = Logger(cmd_arg[CONST.LOG_USE_SYSLOG], cmd_arg[CONST.LOG_FILE], cmd_arg["verbosity"])
-        self.log.notice("Preinit thermal control",1)
+        self.log.notice("Preinit thermal control", 1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
         except BaseException:
@@ -2038,31 +2040,31 @@ class ThermalManagement(hw_managemet_file_op):
         self.load_configuration()
 
         if not self.is_pwm_exists():
-            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for PWM init",1)
+            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for PWM init", 1)
             while not self.is_pwm_exists():
                 self.exit.wait(10)
 
         # Set PWM to the default state while we are waiting for system configuration
-        self.log.notice("Set FAN PWM {}".format(self.pwm_target),1)
+        self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
         try:
             self.write_pwm(self.pwm_target)
         except BaseException:
-            self.log.error("Missing PWM link. Possible hw-management is not running",1)
-            sys.exit(1)
+            self.log.error("Set PWM failed. Possible hw-management/SDK is not running", 1)
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
             self.exit.wait(thermal_delay)
-        
+
         if not self.is_fan_tacho_init():
-            self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for FAN init",1)
+            self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for FAN init", 1)
             while not self.is_fan_tacho_init():
                 self.exit.wait(10)
 
-        self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG),1)
+        self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
         self.exit.wait(CONST.THERMAL_WAIT_FOR_CONFIG)
         self._collect_hw_info()
         self.amb_tmp = CONST.TEMP_INIT_VAL_DEF
+        self.module_counter = 0
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -2073,7 +2075,6 @@ class ThermalManagement(hw_managemet_file_op):
         self.fan_drwr_num = CONST.FAN_DRWR_COUNT_DEF
         self.psu_count = CONST.PSU_COUNT_DEF
         self.psu_pwr_count = CONST.PSU_COUNT_DEF
-        self.module_counter = CONST.MODULE_COUNT_DEF
         self.gearbox_counter = CONST.GEARBOX_COUNT_DEF
         self.fan_flow_capability = CONST.UNKNOWN
         self.voltmon_file_list = []
@@ -2087,27 +2088,27 @@ class ThermalManagement(hw_managemet_file_op):
             self.max_tachos = int(self.read_file("config/max_tachos"))
             self.log.info("Fan tacho:{}".format(self.max_tachos))
         except BaseException:
-            self.log.error("Missing max tachos config.",1)
+            self.log.error("Missing max tachos config.", 1)
             sys.exit(1)
 
         try:
             self.fan_drwr_num = int(self.read_file("config/fan_drwr_num"))
             self.log.info("Fan drwr:{}".format(self.fan_drwr_num))
         except BaseException:
-            self.log.error("Missing fan_drwr_num config.",1)
+            self.log.error("Missing fan_drwr_num config.", 1)
             sys.exit(1)
 
         try:
             self.psu_count = int(self.read_file("config/hotplug_psus"))
             self.log.info("PSU count:{}".format(self.psu_count))
         except BaseException:
-            self.log.error("Missing hotplug_psus config.",1)
+            self.log.error("Missing hotplug_psus config.", 1)
             sys.exit(1)
 
         try:
             self.psu_pwr_count = int(self.read_file("config/hotplug_pwrs"))
         except BaseException:
-            self.log.error("Missing hotplug_pwrs config.",1)
+            self.log.error("Missing hotplug_pwrs config.", 1)
             sys.exit(1)
 
         # Find voltmon temp sensors
@@ -2120,8 +2121,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         if self.fan_drwr_num:
             self.fan_drwr_capacity = int(self.max_tachos / self.fan_drwr_num)
-        self.module_counter = int(self.get_file_val("config/module_counter", CONST.MODULE_COUNT_DEF))
-        self.log.info("module count:{}".format(self.module_counter))
+
         self.gearbox_counter = int(self.get_file_val("config/gearbox_counter", CONST.GEARBOX_COUNT_DEF))
         self.log.info("gearbox count:{}".format(self.gearbox_counter))
 
@@ -2134,6 +2134,41 @@ class ThermalManagement(hw_managemet_file_op):
             if re.match(name_mask, dev_obj.name):
                 return dev_obj
         return None
+
+    # ----------------------------------------------------------------------
+    def _add_dev_obj(self, dev_name):
+        """
+        @summary: add device object by it's name
+        """
+        self.log.info("Add dev {}".format(dev_name))
+        dev_obj = self._get_dev_obj(dev_name)
+        if dev_obj:
+            return dev_obj
+
+        dev_class_name = self.sys_config[CONST.SYS_CONF_SENSORS_CONF][dev_name]["type"]
+        try:
+            dev_class_ = globals()[dev_class_name]
+        except Exception as err:
+            self.log.error("Unknown dev class {}".format(err.message))
+            return None
+
+        dev_obj = dev_class_(self.cmd_arg, self.sys_config, dev_name, self.log)
+        if not dev_obj:
+            self.log.error("{} create failed".format(dev_name))
+            return None
+
+        self.dev_obj_list.append(dev_obj)
+        return dev_obj
+
+    # ----------------------------------------------------------------------
+    def _rm_dev_obj(self, name):
+        """
+        @summary: Remove device object by it's name
+        """
+        dev_obj = self._get_dev_obj(name)
+        if dev_obj:
+            self.log.info("Rm dev {}".format(name))
+            self.dev_obj_list.remove(dev_obj)
 
     # ---------------------------------------------------------------------
     def _get_chassis_fan_dir(self):
@@ -2197,15 +2232,15 @@ class ThermalManagement(hw_managemet_file_op):
         @param pwm: target PWM value
         """
         if self.exit and self.exit.is_set():
-            return;
+            return
 
         if self.state == CONST.UNCONFIGURED:
             self.log.info("TC is not configureed. Try to force set PWM1 {}%%".format(pwm))
             try:
                 self.write_pwm(pwm)
             except BaseException:
-                self.log.error("Missing PWM link. Possible hw-management is not running",1)
-                sys.exit(1)
+                self.log.error("Set PWM failed. Possible hw-management/SDK is not running", 1)
+
             return
 
         pwm = int(pwm)
@@ -2230,11 +2265,11 @@ class ThermalManagement(hw_managemet_file_op):
             try:
                 pwm_real = self.read_pwm()
             except BaseException:
-                self.log.error("Read PWM error. Possible hw-management is not running",1)
+                self.log.error("Read PWM error. Possible hw-management is not running", 1)
                 return
 
             if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm_target),0)
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm_target))
                 self._update_chassis_fan_speed(self.pwm)
 
     # ----------------------------------------------------------------------
@@ -2244,11 +2279,11 @@ class ThermalManagement(hw_managemet_file_op):
             try:
                 pwm_real = self.read_pwm()
             except BaseException:
-                self.log.error("Read PWM error. Possible hw-management is not running",1)
+                self.log.error("Read PWM error. Possible hw-management is not running", 1)
                 return
 
             if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm),0)
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm))
                 self._update_chassis_fan_speed(self.pwm)
             self.pwm_worker_timer.stop()
             return
@@ -2357,7 +2392,7 @@ class ThermalManagement(hw_managemet_file_op):
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
             try:
                 self.read_pwm()
-            except Exception: 
+            except Exception:
                 ret = False
         return ret
 
@@ -2377,6 +2412,27 @@ class ThermalManagement(hw_managemet_file_op):
         return float(sum(pwm_list)) / len(pwm_list)
 
     # ----------------------------------------------------------------------
+    def module_scan(self):
+        ""
+        self.log.info("module_scan")
+
+        module_count = int(self.get_file_val("config/module_counter", 0))
+        if module_count != self.module_counter:
+            self.log.info("Module counter updated {} -> {}".format(self.module_counter, module_count))
+            module_counter = 0
+            for idx in range(1, CONST.MODULE_COUNT_MAX):
+                module_name = "module{}".format(idx)
+                if self.check_file("thermal/{}_temp_input".format(module_name)):
+                    self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_name})
+                    self._add_dev_obj(module_name)
+                    module_counter += 1
+                else:
+                    self._rm_dev_obj(module_name)
+
+            self.module_counter = module_counter
+            self.log.info("module count:{}".format(self.module_counter))
+
+    # ----------------------------------------------------------------------
     def sig_handler(self, sig, frame):
         """
         @summary:
@@ -2386,7 +2442,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.stop(reason="SIG {}".format(sig))
             self.exit.set()
 
-            self.log.notice("Thermal control stopped",1)
+            self.log.notice("Thermal control stopped", 1)
             os._exit(0)
 
     # ----------------------------------------------------------------------
@@ -2424,9 +2480,9 @@ class ThermalManagement(hw_managemet_file_op):
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
                 except Exception:
-                    self.log.error("System config file {} broken. Applying default config.".format(config_file_name),1)
+                    self.log.error("System config file {} broken. Applying default config.".format(config_file_name), 1)
         else:
-            self.log.warn("System config file {} missing. Applying default config.".format(config_file_name),1)
+            self.log.warn("System config file {} missing. Applying default config.".format(config_file_name), 1)
 
         # 1. Init dmin table
         if CONST.SYS_CONF_DMIN not in sys_config:
@@ -2452,7 +2508,7 @@ class ThermalManagement(hw_managemet_file_op):
         # 5. Init sensors config table
         if CONST.SYS_CONF_SENSORS_CONF not in sys_config:
             sys_config[CONST.SYS_CONF_SENSORS_CONF] = {}
-        
+
         # 6. Init ASIC config
         if CONST.SYS_CONF_ASIC_PARAM not in sys_config:
             self.log.info("Fan Parameters table missing in system_config. Init it from local")
@@ -2480,10 +2536,6 @@ class ThermalManagement(hw_managemet_file_op):
         for fan_idx in range(1, self.fan_drwr_num + 1):
             name = "fan{}".format(fan_idx)
             self._sensor_add_config("fan_sensor", name, {"base_file_name": name, "drwr_id": fan_idx, "tacho_cnt": self.fan_drwr_capacity})
-
-        for module_idx in range(1, self.module_counter + 1):
-            name = "module{}".format(module_idx)
-            self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": name})
 
         for gearbox_idx in range(1, self.gearbox_counter + 1):
             name = "gearbox{}".format(gearbox_idx)
@@ -2515,14 +2567,16 @@ class ThermalManagement(hw_managemet_file_op):
         if self.check_file("thermal/comex_amb"):
             self._sensor_add_config("thermal_sensor", "comex_amb", {"base_file_name": "thermal/comex_amb"})
 
+        self.module_scan()
+
     # ----------------------------------------------------------------------
     def init(self):
         """
         @summary: Init thermal-control main
         """
-        self.log.notice("********************************",1)
-        self.log.notice("Init thermal control ver: v.{}".format(VERSION),1)
-        self.log.notice("********************************",1)
+        self.log.notice("********************************", 1)
+        self.log.notice("Init thermal control ver: v.{}".format(VERSION), 1)
+        self.log.notice("********************************", 1)
 
         self.init_sensor_configuration()
 
@@ -2532,17 +2586,11 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.debug("System config dump\n{}".format(json.dumps(self.sys_config, sort_keys=True, indent=4)))
 
         for key, val in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
-            try:
-                dev_class_ = globals()[val["type"]]
-            except Exception as err:
-                self.log.error("Unknown dev class {}".format(err.message))
-                continue
-            dev_obj = dev_class_(self.cmd_arg, self.sys_config, key, self.log)
+            dev_obj = self._add_dev_obj(key)
             if not dev_obj:
                 self.log.error("{} create failed".format(key))
                 sys.exit(1)
 
-            self.dev_obj_list.append(dev_obj)
         self.dev_obj_list.sort(key=lambda x: x.name)
         self.write_file(CONST.PERIODIC_REPORT_FILE, self.periodic_report_time)
 
@@ -2554,7 +2602,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
 
         if self.state != CONST.RUNNING:
-            self.log.notice("Thermal control state changed {} -> {} reason:{})".format(self.state, CONST.RUNNING, reason),1)
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason), 1)
             self.state = CONST.RUNNING
 
             for dev_obj in self.dev_obj_list:
@@ -2604,7 +2652,7 @@ class ThermalManagement(hw_managemet_file_op):
                 if dev_obj.enable:
                     dev_obj.stop()
 
-            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason),1)
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), 1)
             self.state = CONST.STOPPED
 
     # ----------------------------------------------------------------------
@@ -2614,10 +2662,10 @@ class ThermalManagement(hw_managemet_file_op):
         """
         fault_cnt_old = 0
         fault_cnt = 0
-        self.log.notice("********************************",1)
-        self.log.notice("Thermal control is running",1)
-        self.log.notice("********************************",1)
-
+        self.log.notice("********************************", 1)
+        self.log.notice("Thermal control is running", 1)
+        self.log.notice("********************************", 1)
+        module_scan_timeout = 0
         # main loop
         while not self.exit.is_set():
             try:
@@ -2645,6 +2693,10 @@ class ThermalManagement(hw_managemet_file_op):
             else:
                 self.start(reason="resume")
 
+            if current_milli_time() >= module_scan_timeout:
+                self.module_scan()
+                module_scan_timeout = current_milli_time() + 30 * 1000
+
             pwm_list = {}
             # set maximum next poll timestump = 60 seec
             timestump_next = current_milli_time() + 60 * 1000
@@ -2666,7 +2718,7 @@ class ThermalManagement(hw_managemet_file_op):
             fault_cnt = self.get_fault_cnt()
             if fault_cnt > CONST.TOTAL_MAX_ERR_COUNT:
                 pwm_list["total_err_cnt({})>{}".format(fault_cnt, CONST.TOTAL_MAX_ERR_COUNT)] = CONST.PWM_MAX
-            elif fault_cnt_old  > CONST.TOTAL_MAX_ERR_COUNT:
+            elif fault_cnt_old > CONST.TOTAL_MAX_ERR_COUNT:
                 self.log.info("'total_err_cnt>2' error flag clear")
             fault_cnt_old = fault_cnt
 
