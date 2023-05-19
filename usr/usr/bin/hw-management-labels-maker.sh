@@ -30,154 +30,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+source hw-management-helpers.sh
 set -x
+sku=$(< $sku_file)
 hw_management_path=/var/run/hw-management
 ui_path=$hw_management_path/ui 
 
-declare -A label_array=( \
-	["comex_voltmon1_in1"]="PMIC-1_PSU_12V_Rail_in1" \
-	["comex_voltmon1_in2"]="PMIC-1_PSU_12V_Rail_in2" \
-	["comex_voltmon1_in3"]="PMIC-1_ASIC_0.8V_VCORE_Rail_(out)" \
-	["comex_voltmon1_in4"]="PMIC-1_ASIC_1.2V_Rail_(out)" \
-	["comex_voltmon1_temp1"]="PMIC-1_Temp_1" \
-	["comex_voltmon1_temp2"]="PMIC-1_Temp_2" \
-	["comex_voltmon1_power1"]="PMIC-1_ASIC_0.8V_VCORE_Rail_Pwr_(out)" \
-	["comex_voltmon1_power1"]="PMIC-1_ASIC_1.2V_Rail_Pwr_(out)" \
-	["comex_voltmon1_curr1"]="PMIC-1_ASIC_0.8V_VCORE_Rail_Curr_(out)" \
-	["comex_voltmon1_curr2"]="PMIC-1_ASIC_1.2V_Rail_Curr_out" \
-	["voltmon1_in1"]="PMIC-1_PSU_12V_Rail_(in1)" \
-	["voltmon1_in2"]="PMIC-1_PSU_12V_Rail_(in2)" \
-	["voltmon1_in3"]="PMIC-1_ASIC_0.8V_VCORE_Rail_(out)" \
-	["voltmon1_in4"]="PMIC-1_ASIC_1.2V_Rail_(out)" \
-	["voltmon1_temp1"]="PMIC-1_Temp_1" \
-	["voltmon1_temp2"]="PMIC-1_Temp_2" \
-	["voltmon1_power1"]="PMIC-1_ASIC_0.8V_VCORE_Rail_Pwr_(out)" \
-	["voltmon1_power2"]="PMIC-1_ASIC_1.2V_Rail_Pwr_(out)" \
-	["voltmon1_curr1"]="PMIC-1_ASIC_0.8V_VCORE_Rail_Curr_(out)" \
-	["voltmon1_curr2"]="PMIC-1_ASIC_1.2V_Rail_Curr_(out)" \
-)
+# Obtain label file (/var/run/hw-management/config/lm_sensors_labels).
+json_file=$hw_management_path/config/lm_sensors_labels
 
-declare -A labels_mqm9700_rev1_array=( \
-	["asic_amb"]="Ambient_ASIC_Temp" \
-	["fan_amb"]="Ambient_Fan_Side_Temp_(air_intake)" \
-	["port_amb"]="Ambient_Port_Side_Temp_(air_exhaust)" \
-	["comex_amb"]="Ambient_COMEX_Temp" \
-	["voltmon1_in1"]="PMIC-1_PSU_12V_Rail_(in1)" \
-	["voltmon1_in2"]="PMIC-1_OSFP_PORTS_P01_P08_Rail_(out1)" \
-	["voltmon1_in3"]="PMIC-1_OSFP_PORTS_P09_P16_Rail_(out2)" \
-	["voltmon1_temp1"]="PMIC-1_OSFP_PORTS_P01_P08_Temp_1" \
-	["voltmon1_temp2"]="PMIC-1_OSFP_PORTS_P09_P16_Temp_2" \
-	["voltmon1_power1"]="PMIC-1_12V_OSFP_PORT_P01_P16_(in)" \
-	["voltmon1_power2"]="PMIC-1_OSFP_P01_P08_Rail_Pwr_(out1)" \
-	["voltmon1_power3"]="PMIC-1_OSFP_P09_P16_Rail_Pwr_(out2)" \
-	["voltmon1_curr1"]="PMIC-1_12V_OSFP_P01_P08_Rail_Curr_(in1)" \
-	["voltmon1_curr2"]="PMIC-1_OSFP_P01_P8_Rail_Curr_(out1)" \
-	["voltmon1_curr3"]="PMIC-1_OSFP_P09_P16_Rail_Curr_(out2)" \
-	["voltmon1_curr4"]="PMIC-1_OSFP_P09_P16_Rail_Curr_(out2)" \
-	["voltmon2_in1"]="PMIC-2_PSU_12V_Rail_(in1)" \
-	["voltmon2_in2"]="PMIC-2_OSFP_PORTS_P17_P24_Rail_(out1)" \
-	["voltmon2_in3"]="PMIC-2_OSFP_PORTS_P25_P32_Rail_(out2)" \
-	["voltmon2_temp1"]="PMIC-2_OSFP_PORTS_P17_P24_Temp_1" \
-	["voltmon2_temp2"]="PMIC-2_OSFP_PORTS_P25_P32_Temp_2" \
-	["voltmon2_power1"]="PMIC-2_12V_OSFP_PORT_P17_P32_(in)" \
-	["voltmon2_power2"]="PMIC-2_OSFP_P17_P24_Rail_Pwr_(out1)" \
-	["voltmon2_power3"]="PMIC-2_OSFP_P25_P32_Rail_Pwr_(out2)" \
-	["voltmon2_curr1"]="PMIC-2_12V_OSFP_P17_P24_Rail_Curr_(in1)" \
-	["voltmon2_curr2"]="PMIC-2_OSFP_P17_P24_Rail_Curr_(out1)" \
-	["voltmon2_curr3"]="PMIC-2_OSFP_P25_P32_Rail_Curr_(out2)" \
-	["voltmon3_in1"]="PMIC-3_PSU_12V_Rail_(in1)" \
-	["voltmon3_in2"]="PMIC-3_ASIC_VCORE_MAIN_Rail_(out1)" \
-	["voltmon3_temp1"]="PMIC-3_ASIC_VCORE_MAIN_Temp_1" \
-	["voltmon3_power1"]="PMIC-3_12V_ASIC_VCORE_MAIN_Rail_Pwr_(in)" \
-	["voltmon3_power2"]="PMIC-3_ASIC_VCORE_MAIN_Rail_Pwr_(out1)" \
-	["voltmon3_curr1"]="PMIC-3_12V_ASIC_VCORE_MAIN_Rail_Curr_(in1)" \
-	["voltmon3_curr2"]="PMIC-3_ASIC_VCORE_MAIN_Rail_Curr_(out1)" \
-	["voltmon4_in1"]="PMIC-4_PSU_12V_Rail_(in)" \
-	["voltmon4_in2"]="PMIC-4_HVDD_1.2V_EAST_Rail_(out1)" \
-	["voltmon4_in3"]="PMIC-4_DVDD_0.9V_EAST_Rail_(out2)" \
-	["voltmon4_temp1"]="PMIC-4_HVDD_1.2V_EAST_Rail_Temp" \
-	["voltmon4_power1"]="PMIC-4_12V_HVDD_1.2V_DVDD_0.9V_EAST_(in)" \
-	["voltmon4_power2"]="PMIC-4_HVDD_1.2V_EAST_Rail_Pwr_(out1)" \
-	["voltmon4_power3"]="PMIC-4_DVDD_0.9V_EAST_Rail_Pwr_(out2)" \
-	["voltmon4_curr1"]="PMIC-4_12V_HVDD_1.2V_EAST_Rail_Curr_(in)" \
-	["voltmon4_curr2"]="PMIC-4_HVDD_1.2V_EAST_Rail_Curr_(out1)" \
-	["voltmon4_curr3"]="PMIC-4_DVDD_0.9V_EAST_Rail_Curr_(out2)" \
-	["voltmon5_in1"]="PMIC-5_PSU_12V_Rail_(in)" \
-	["voltmon5_in2"]="PMIC-5_HVDD_1.2V_WEST_Rail_(out1)" \
-	["voltmon5_in3"]="PMIC-5_DVDD_0.9V_WEST_Rail_(out2)" \
-	["voltmon5_temp1"]="PMIC-5_HVDD_1.2V_WEST_Rail_Temp" \
-	["voltmon5_power1"]="PMIC-5_12V_HVDD_1.2V_DVDD_0.9V_WEST_(in)" \
-	["voltmon5_power2"]="PMIC-5_HVDD_1.2V_WEST_Rail_Pwr_(out1)" \
-	["voltmon5_power3"]="PMIC-5_DVDD_0.9V_WEST_Rail_Pwr_(out2)" \
-	["voltmon5_curr1"]="PMIC-5_12V_HVDD_1.2V_WEST_Rail_Curr_(in)" \
-	["voltmon5_curr2"]="PMIC-5_HVDD_1.2V_WEST_Rail_Curr_(out1)" \
-	["voltmon5_curr3"]="PMIC-5_DVDD_0.9V_WEST_Rail_Curr_(out2)" \
-	["voltmon6_in1"]="PMIC-6_PSU_12V_Rail_(in1)" \
-	["voltmon6_in2"]="PMIC-6_PSU_12V_Rail_(in2)" \
-	["voltmon6_in3"]="PMIC-6_HVDD_1.2V_WEST_Rail_(out1)" \
-	["voltmon6_in4"]="PMIC-6_DVDD_0.9V_WEST_Rail_(out2)" \
-	["voltmon6_temp1"]="PMIC-6_HVDD_1.2V_WEST_Rail_Temp1" \
-	["voltmon6_temp2"]="PMIC-6_DVDD_0.9V_WEST_Rail_Temp2" \
-	["voltmon6_power1"]="PMIC-6_12V_HVDD_1.2V_DVDD_0.9V_WEST_(in1)" \
-	["voltmon6_power2"]="PMIC-6_12V_HVDD_1.2V_DVDD_0.9V_WEST_(in2)" \
-	["voltmon6_power3"]="PMIC-6_HVDD_1.2V_WEST_Rail_Pwr_(out1)" \
-	["voltmon6_power4"]="PMIC-6_DVDD_0.9V_WEST_Rail_Pwr_(out2)" \
-	["voltmon6_curr1"]="PMIC-6_12V_HVDD_1.2V_WEST_Rail_Curr_(in1)" \
-	["voltmon6_curr2"]="PMIC-6_12V_DVDD_0.9V_WEST_Rail_Curr_(in2)" \
-	["voltmon6_curr3"]="PMIC-6_HVDD_1.2V_WEST_Rail_Curr_(out1)" \
-	["voltmon6_curr4"]="PMIC-6_DVDD_0.9V_WEST_Rail_Curr_(out2)" \
-	["comex_voltmon1_in1"]="PMIC-1_PSU_12V_Rail_(vin)" \
-	["comex_voltmon1_in2"]="PMIC-1_COMEX_VCORE_(out1)" \
-	["comex_voltmon1_in3"]="PMIC-1_COMEX_VCCSA_(out2)" \
-	["comex_voltmon1_temp1"]="PMIC-1_Temp" \
-	["comex_voltmon1_power1"]="PMIC-1_COMEX_Pwr_(pin)" \
-	["comex_voltmon1_power2"]="PMIC-1_COMEX_VCORE_Pwr_(pout1)" \
-	["comex_voltmon1_power3"]="PMIC-1_COMEX_VCCSA_Pwr_(pout2)" \
-	["comex_voltmon1_curr1"]="PMIC-1_COMEX_Curr_(iin)" \
-	["comex_voltmon1_curr2"]="PMIC-1_COMEX_VCORE_Rail_Curr_(out1)" \
-	["comex_voltmon1_curr3"]="PMIC-1_COMEX_VCCSA_Rail_Curr_(out2)" \
-	["psu1_volt_in"]="PSU-1(L)_220V_Rail_(in)" \
-	["psu1_volt"]="PSU-1(L)_12V_Rail_(out)" \
-	["psu1_fan"]="PSU-1(L)_Fan_1" \
-	["psu1_temp1"]="PSU-1(L)_Temp_1" \
-	["psu1_temp2"]="PSU-1(L)_Temp_2" \
-	["psu1_temp3"]="PSU-1(L)_Temp_3" \
-	["psu1_power_in"]="PSU-1(L)_220V_Rail_Pwr_(in)" \
-	["psu1_power"]="PSU-1(L)_12V_Rail_Pwr_(out)" \
-	["psu1_curr_in"]="PSU-1(L)_220V_Rail_Curr_(in)" \
-	["psu1_curr"]="PSU-1(L)_12V_Rail_Curr_(out)" \
-	["psu2_volt_in"]="PSU-2(R)_220V_Rail_(in)" \
-	["psu2_volt"]="PSU-2(R)_12V_Rail_(out)" \
-	["psu2_fan"]="PSU-2(R)_Fan_1" \
-	["psu2_temp1"]="PSU-2(R)_Temp_1" \
-	["psu2_temp2"]="PSU-2(R)_Temp_2" \
-	["psu2_temp3"]="PSU-2(R)_Temp_3" \
-	["psu2_power_in"]="PSU-2(R)_220V_Rail_Pwr_(in)" \
-	["psu2_power"]="PSU-2(R)_12V_Rail_Pwr_(out)" \
-	["psu2_curr_in"]="PSU-2(R)_220V_Rail_Curr_(in)" \
-	["psu2_curr"]="PSU-2(R)_12V_Rail_Curr_(out)" \
-	["fan1"]="Chassis_Fan_Drawer-1_Tach_1" \
-	["fan2"]="Chassis_Fan_Drawer-1_Tach_2" \
-	["fan3"]="Chassis_Fan_Drawer-2_Tach_1" \
-	["fan4"]="Chassis_Fan_Drawer-2_Tach_2" \
-	["fan5"]="Chassis_Fan_Drawer-3_Tach_1" \
-	["fan6"]="Chassis_Fan_Drawer-3_Tach_2" \
-	["fan7"]="Chassis_Fan_Drawer-4_Tach_1" \
-	["fan8"]="Chassis_Fan_Drawer-4_Tach_2" \
-	["fan9"]="Chassis_Fan_Drawer-5_Tach_1" \
-	["fan10"]="Chassis_Fan_Drawer-5_Tach_2" \
-	["fan11"]="Chassis_Fan_Drawer-6_Tach_1" \
-	["fan12"]="Chassis_Fan_Drawer-6_Tach_2" \
-	["fan13"]="Chassis_Fan_Drawer-7_Tach_1" \
-	["fan14"]="Chassis_Fan_Drawer-7_Tach_2" \
-)
-
-declare -A labels_scale_mqm9700_rev1_array=( \
-	["voltmon1_in2"]="2" \
-	["voltmon1_in3"]="2" \
-	["voltmon2_in2"]="2" \
-	["voltmon2_in3"]="2" \
-)
+# Check if the dictionary has already been loaded
+if [ ! -f "/tmp/sensor_labels_dictionary.pkl" ]; then
+    # Call the Python program to load the JSON file and store the dictionary
+    hw_management_parse_labels.py --json_file "$json_file"
+fi
 
 # One prefix index, f.e. "voltmon1"
 get_label_files1()
@@ -286,7 +152,8 @@ make_labels()
 		;;
 	esac
 
-	label_name=${labels_mqm9700_rev1_array[$key]}
+	# label_name=${labels_mqm9700_rev1_array[$key]}
+	label_name=$(hw_management_parse_labels.py --get_value --label "labels_mqm9700_rev1_array" --key "$key")
 	[ -z "$label_name" ] && return 0
 	label_dir="$ui_path"/"$folder"/"$subfolder"/"$label_name"
 	if [ ! -d "$label_dir" ]; then
@@ -299,5 +166,11 @@ make_labels()
 }
 
 # Check SKU and run the below only for relevant.
-# Obtain label file (/var/run/hw-management/config/lm-sensors-labels).
-make_labels "$1"
+case $sku in
+	HI130)
+		# Only for Gorilla 
+		make_labels "$1"
+		;;
+	*)
+		# Do nothing
+esac
