@@ -1,27 +1,5 @@
 {
 	"name": "mqm9700",
-	"label_array" : {
-			"comex_voltmon1_in1" : "PMIC-1_PSU_12V_Rail_in1",
-			"comex_voltmon1_in2" : "PMIC-1_PSU_12V_Rail_in2",
-			"comex_voltmon1_in3" : "PMIC-1_ASIC_0.8V_VCORE_Rail_(out)",
-			"comex_voltmon1_in4" : "PMIC-1_ASIC_1.2V_Rail_(out)",
-			"comex_voltmon1_temp1" : "PMIC-1_Temp_1",
-			"comex_voltmon1_temp2" : "PMIC-1_Temp_2",
-			"comex_voltmon1_power1" : "PMIC-1_ASIC_0.8V_VCORE_Rail_Pwr_(out)",
-			"comex_voltmon1_power1" : "PMIC-1_ASIC_1.2V_Rail_Pwr_(out)",
-			"comex_voltmon1_curr1" : "PMIC-1_ASIC_0.8V_VCORE_Rail_Curr_(out)",
-			"comex_voltmon1_curr2" : "PMIC-1_ASIC_1.2V_Rail_Curr_out",
-			"voltmon1_in1" : "PMIC-1_PSU_12V_Rail_(in1)",
-			"voltmon1_in2" : "PMIC-1_PSU_12V_Rail_(in2)",
-			"voltmon1_in3" : "PMIC-1_ASIC_0.8V_VCORE_Rail_(out)",
-			"voltmon1_in4" : "PMIC-1_ASIC_1.2V_Rail_(out)",
-			"voltmon1_temp1" : "PMIC-1_Temp_1",
-			"voltmon1_temp2" : "PMIC-1_Temp_2",
-			"voltmon1_power1" : "PMIC-1_ASIC_0.8V_VCORE_Rail_Pwr_(out)",
-			"voltmon1_power2" : "PMIC-1_ASIC_1.2V_Rail_Pwr_(out)",
-			"voltmon1_curr1" : "PMIC-1_ASIC_0.8V_VCORE_Rail_Curr_(out)",
-			"voltmon1_curr2" : "PMIC-1_ASIC_1.2V_Rail_Curr_(out)"
-		},
 	"labels_mqm9700_rev1_array" : {
 		"asic_amb" : "Ambient_ASIC_Temp",
 		"fan_amb" : "Ambient_Fan_Side_Temp_(air_intake)",

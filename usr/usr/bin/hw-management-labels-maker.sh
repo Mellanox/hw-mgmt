@@ -78,6 +78,7 @@ get_label_files2()
 make_labels()
 {
 	local attr_full_name="$1"
+	local oper="$2"
 	local folder
 	local subfolder
 	local key
@@ -152,24 +153,30 @@ make_labels()
 		;;
 	esac
 
-	# label_name=${labels_mqm9700_rev1_array[$key]}
 	label_name=$(hw_management_parse_labels.py --get_value --label "labels_mqm9700_rev1_array" --key "$key")
 	[ -z "$label_name" ] && return 0
 	label_dir="$ui_path"/"$folder"/"$subfolder"/"$label_name"
-	if [ ! -d "$label_dir" ]; then
-		mkdir -p "$label_dir"
+
+	if [ "$oper" == "link" ]; then
+		if [ ! -d "$label_dir" ]; then
+			mkdir -p "$label_dir"
+		fi
+		ln -sf "$attr_full_name" "$label_dir/$attr_file"
+		scale=$(hw_management_parse_labels.py --get_value --label "labels_scale_mqm9700_rev1_array" --key "$key")
+		[ -z "$scale" ] && return 0
+		echo "$scale" > "$label_dir"/scale
+	else
+		unlink "$label_dir/$attr_file"
+		[ -f "$label_dir"/scale ] && rm -f "$label_dir"/scale
+		rmdir "$label_dir"
 	fi
-	ln -sf "$attr_full_name" "$label_dir/$attr_file"
-	scale=${labels_scale_mqm9700_rev1_array[$key]}
-	[ -z "$scale" ] && return 0
-	echo "$scale" > "$label_dir"/scale
 }
 
 # Check SKU and run the below only for relevant.
 case $sku in
 	HI130)
 		# Only for Gorilla 
-		make_labels "$1"
+		make_labels "$1" "$2"
 		;;
 	*)
 		# Do nothing

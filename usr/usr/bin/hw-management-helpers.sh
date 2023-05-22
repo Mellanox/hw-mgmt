@@ -175,7 +175,7 @@ check_n_link()
     if [ -f "$1" ];
     then
         ln -sf "$1" "$2"
-	hw-management-labels-maker.sh "$2"
+	hw-management-labels-maker.sh "$2" "link"
     fi
 }
 
@@ -187,6 +187,7 @@ check_n_unlink()
     if [ -L "$1" ];
     then
         unlink "$1"
+        hw-management-labels-maker.sh "$1" "unlink"
     fi
 }
 
