@@ -223,7 +223,7 @@ get_psu_fan_direction()
 	vpd_file=$1
 	dir_char=""
 	pn="$(grep PN_VPD_FIELD $vpd_file)"
-	if [ -z $pn ]; then
+	if [[ -z ${pn} ]]; then
 		if [ -f $config_path/fixed_fans_dir ]; then
 			dir=$(< $config_path/fixed_fans_dir) 
 		else

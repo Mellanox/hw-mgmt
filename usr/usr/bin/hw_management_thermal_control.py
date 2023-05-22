@@ -2511,7 +2511,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         # 6. Init ASIC config
         if CONST.SYS_CONF_ASIC_PARAM not in sys_config:
-            self.log.info("Fan Parameters table missing in system_config. Init it from local")
+            self.log.info("ASIC specific parameters table missing in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
         
 
