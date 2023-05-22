@@ -3,6 +3,7 @@
 import argparse
 import json
 import pickle
+import re
 
 def load_json(json_file):
     # Load JSON file contents
@@ -24,9 +25,10 @@ def load_dictionary(dictionary_file):
 def retrieve_value(dictionary, label, key):
     # Retrieve value for the given key from the dictionary
     if label in dictionary:
-        return dictionary[label][key]
-    else:
-        return None
+        for element in dictionary[label].keys():
+            if re.match(element, key):
+                return dictionary[label][element]
+    return None
 
 def main():
     parser = argparse.ArgumentParser(description='JSON Dictionary')

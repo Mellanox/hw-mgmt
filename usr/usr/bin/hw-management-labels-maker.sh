@@ -128,7 +128,7 @@ make_labels()
 		subfolder="power"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	psu1_curr*|psu2_curr*|psu1_curr*|psu2_curr*)
+	psu1_curr*|psu2_curr*|psu3_curr*|psu4_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
@@ -166,9 +166,13 @@ make_labels()
 		[ -z "$scale" ] && return 0
 		echo "$scale" > "$label_dir"/scale
 	else
-		unlink "$label_dir/$attr_file"
+		if [ -z "$attr_file" ]; then
+			unlink "$label_dir/$key"
+		else
+			unlink "$label_dir/$attr_file"
+		fi
+
 		[ -f "$label_dir"/scale ] && rm -f "$label_dir"/scale
-		rmdir "$label_dir"
 	fi
 }
 
