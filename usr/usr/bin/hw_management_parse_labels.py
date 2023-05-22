@@ -53,7 +53,7 @@ def main():
         if value is not None:
             print(f"{value}")
         else:
-            print(f"Key '{args.key}' not found in the dictionary.")
+            print("")
 
     else:
         parser.print_help()
