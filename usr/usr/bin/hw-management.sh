@@ -1397,6 +1397,7 @@ mqm97xx_specific()
 {
 	local voltmon_connection_table=()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
+	lm_sensors_labels="$lm_sensors_configs_path/mqm9700_sensors_labels.json"
 	if [ -e "$devtree_file" ]; then
 		lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 	else
@@ -1458,6 +1459,7 @@ mqm97xx_specific()
 	fi
 
 	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
+	echo 0 > "$config_path"/labels_ready
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
@@ -2356,6 +2358,9 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+	fi
+	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then
+		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
 	fi
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		ln -sf $thermal_control_config $config_path/tc_config.json

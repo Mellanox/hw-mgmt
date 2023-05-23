@@ -135,14 +135,14 @@ psu_connect_power_sensor()
 	# First check and connect sensor
 	if [ -f "$sysfs_sensor_path"_input ];
 	then
-		ln -sf "$sysfs_sensor_path"_input "$power_path"/"$sensor_name"
+		check_n_link "$sysfs_sensor_path"_input "$power_path"/"$sensor_name"
 		touch "$power_path"/"$sensor_name"_capability
 		for attr_name in ${psu_sensor_attr_list[*]}
 		do
 			sysfs_sensor_attr_path="$sysfs_sensor_path"_$attr_name
 			if [ -f "$sysfs_sensor_attr_path" ];
 			then
-				ln -sf "$sysfs_sensor_attr_path" "$power_path"/"$sensor_name"_"$attr_name"
+				check_n_link "$sysfs_sensor_attr_path" "$power_path"/"$sensor_name"_"$attr_name"
 				echo -n "$attr_name " >> "$power_path"/"$sensor_name"_capability
 			fi
 		done
@@ -223,7 +223,7 @@ get_psu_fan_direction()
 	vpd_file=$1
 	dir_char=""
 	pn="$(grep PN_VPD_FIELD $vpd_file)"
-	if [[ -z ${pn} ]]; then
+	if [ -z $pn ]; then
 		if [ -f $config_path/fixed_fans_dir ]; then
 			dir=$(< $config_path/fixed_fans_dir) 
 		else
@@ -273,13 +273,13 @@ if [ "$1" == "add" ]; then
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
-			ln -sf "$3""$4"/temp1_input $thermal_path/comex_amb
+			check_n_link "$3""$4"/temp1_input $thermal_path/comex_amb
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
 		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
-			ln -sf "$3""$4"/temp2_input $thermal_path/pciesw_amb
+			check_n_link "$3""$4"/temp2_input $thermal_path/pciesw_amb
 		else
-			ln -sf "$3""$4"/temp1_input $thermal_path/"$2"
+			check_n_link "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
 		;;
 	esac
@@ -311,10 +311,10 @@ if [ "$1" == "add" ]; then
 			fi
 
 			if [ "$name" == "mlxsw" ]; then
-				ln -sf "$3$4" $cpath/asic_hwmon
-				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				check_n_link "$3$4" $cpath/asic_hwmon
+				check_n_link "$3""$4"/temp1_input "$tpath"/asic
 				if [ -f "$3""$4"/pwm1 ]; then
-					ln -sf "$3""$4"/pwm1 "$tpath"/pwm1
+					check_n_link "$3""$4"/pwm1 "$tpath"/pwm1
 					echo "$name" > "$cpath"/cooling_name
 				fi
 				if [ -f "$cpath"/fan_inversed ]; then
@@ -325,9 +325,9 @@ if [ "$1" == "add" ]; then
 				for ((i=1; i<=max_tachos; i+=1)); do
 					j=${fan_map[i-1]}
 					if [ -f "$3""$4"/fan"$i"_input ]; then
-						ln -sf "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
-						ln -sf "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
-						ln -sf "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
+						check_n_link "$3""$4"/fan"$i"_input "$tpath"/fan"$j"_speed_get
+						check_n_link "$3""$4"/pwm1 "$tpath"/fan"$j"_speed_set
+						check_n_link "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
 						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
 						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
 						# Save max_tachos to config
@@ -352,10 +352,10 @@ if [ "$1" == "add" ]; then
 							else
 								j="$i"
 							fi
-							ln -sf "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
-							ln -sf "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
-							ln -sf "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
-							ln -sf "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
+							check_n_link "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
+							check_n_link "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
+							check_n_link "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
+							check_n_link "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
 							lock_service_state_change
 							change_file_counter "$cpath"/module_counter 1
 							if [ "$lcmatch" == "linecard" ]; then
@@ -370,7 +370,7 @@ if [ "$1" == "add" ]; then
 							if [ "$lcmatch" == "linecard" ]; then
 								change_file_counter "$config_path"/gearbox_counter 1
 							fi
-							ln -sf "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							check_n_link "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
 							unlock_service_state_change
 							;;
 						*)
@@ -385,7 +385,7 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "regfan" ]; then
 		name=$(< "$3""$4"/name)
 		echo "$name" > $config_path/cooling_name
-		ln -sf "$3""$4"/pwm1 $thermal_path/pwm1
+		check_n_link "$3""$4"/pwm1 $thermal_path/pwm1
 		for ((i=1; i<=max_pwm; i+=1)); do
 			check_n_link "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
 		done
@@ -399,9 +399,9 @@ if [ "$1" == "add" ]; then
 				j=$((inv - i))
 			fi
 			if [ -f "$3""$4"/fan"$i"_input ]; then
-				ln -sf "$3""$4"/fan"$i"_input $thermal_path/fan"$j"_speed_get
-				ln -sf "$3""$4"/pwm1 $thermal_path/fan"$j"_speed_set
-				ln -sf "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
+				check_n_link "$3""$4"/fan"$i"_input $thermal_path/fan"$j"_speed_get
+				check_n_link "$3""$4"/pwm1 $thermal_path/fan"$j"_speed_set
+				check_n_link "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
 				check_n_link $config_path/fan_min_speed $thermal_path/fan"$j"_min
 				check_n_link $config_path/fan_max_speed $thermal_path/fan"$j"_max
 				# Save max_tachos to config.
@@ -430,12 +430,12 @@ if [ "$1" == "add" ]; then
 		   [ "$zoneptype" == "mlxsw-module" ] ||
 		   [ "$zoneptype" == "mlxsw-gearbox" ]; then
 			mkdir $tpath/"$zonetype"
-			ln -sf "$3""$4"/mode $tpath/"$zonetype"/thermal_zone_mode
-			ln -sf "$3""$4"/policy $tpath/"$zonetype"/thermal_zone_policy
-			ln -sf "$3""$4"/trip_point_0_temp $tpath/"$zonetype"/temp_trip_norm
-			ln -sf "$3""$4"/trip_point_1_temp $tpath/"$zonetype"/temp_trip_high
-			ln -sf "$3""$4"/trip_point_2_temp $tpath/"$zonetype"/temp_trip_hot
-			ln -sf "$3""$4"/temp $tpath/"$zonetype"/thermal_zone_temp
+			check_n_link "$3""$4"/mode $tpath/"$zonetype"/thermal_zone_mode
+			check_n_link "$3""$4"/policy $tpath/"$zonetype"/thermal_zone_policy
+			check_n_link "$3""$4"/trip_point_0_temp $tpath/"$zonetype"/temp_trip_norm
+			check_n_link "$3""$4"/trip_point_1_temp $tpath/"$zonetype"/temp_trip_high
+			check_n_link "$3""$4"/trip_point_2_temp $tpath/"$zonetype"/temp_trip_hot
+			check_n_link "$3""$4"/temp $tpath/"$zonetype"/thermal_zone_temp
 			check_n_link $tpath/"$zonetype"/thermal_zone_temp_emul
 			# Create entry with hardcoded value for compatibility with user space.
 			if [ "$zoneptype" == "mlxsw" ] || [ "$zoneptype" == "mlxsw-gearbox" ]; then
@@ -483,7 +483,7 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "hotplug" ]; then
 		for ((i=1; i<=max_tachos; i+=1)); do
 			if [ -f "$3""$4"/fan$i ]; then
-				ln -sf "$3""$4"/fan$i $thermal_path/fan"$i"_status
+				check_n_link "$3""$4"/fan$i $thermal_path/fan"$i"_status
 				event=$(< $thermal_path/fan"$i"_status)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/fan"$i"
@@ -507,14 +507,14 @@ if [ "$1" == "add" ]; then
 
 		for ((i=1; i<=max_psus; i+=1)); do
 			if [ -f "$3""$4"/psu$i ]; then
-				ln -sf "$3""$4"/psu$i $thermal_path/psu"$i"_status
+				check_n_link "$3""$4"/psu$i $thermal_path/psu"$i"_status
 				event=$(< $thermal_path/psu"$i"_status)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/psu"$i"
 				fi
 			fi
 			if [ -f "$3""$4"/pwr$i ]; then
-				ln -sf "$3""$4"/pwr$i $thermal_path/psu"$i"_pwr_status
+				check_n_link "$3""$4"/pwr$i $thermal_path/psu"$i"_pwr_status
 				event=$(< "$thermal_path"/psu"$i"_pwr_status)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/pwr"$i"
@@ -523,49 +523,49 @@ if [ "$1" == "add" ]; then
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_active ]; then
-				ln -sf "$3""$4"/lc"$i"_active $system_path/lc"$i"_active
+				check_n_link "$3""$4"/lc"$i"_active $system_path/lc"$i"_active
 				event=$(< $system_path/lc"$i"_active)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_active
 				fi
 			fi
 			if [ -f "$3""$4"/lc"$i"_powered ]; then
-				ln -sf "$3""$4"/lc"$i"_powered $system_path/lc"$i"_powered
+				check_n_link "$3""$4"/lc"$i"_powered $system_path/lc"$i"_powered
 				event=$(< $system_path/lc"$i"_powered)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_powered
 				fi
 			fi
 			if [ -f "$3""$4"/lc"$i"_present ]; then
-				ln -sf "$3""$4"/lc"$i"_present $system_path/lc"$i"_present
+				check_n_link "$3""$4"/lc"$i"_present $system_path/lc"$i"_present
 				event=$(< $system_path/lc"$i"_present)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_present
 				fi
 			fi
 			if [ -f "$3""$4"/lc"$i"_ready ]; then
-				ln -sf "$3""$4"/lc"$i"_ready $system_path/lc"$i"_ready
+				check_n_link "$3""$4"/lc"$i"_ready $system_path/lc"$i"_ready
 				event=$(< $system_path/lc"$i"_ready)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_ready
 				fi
 			fi
 			if [ -f "$3""$4"/lc"$i"_shutdown ]; then
-				ln -sf "$3""$4"/lc"$i"_shutdown $system_path/lc"$i"_shutdown
+				check_n_link "$3""$4"/lc"$i"_shutdown $system_path/lc"$i"_shutdown
 				event=$(< $system_path/lc"$i"_shutdown)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_shutdown
 				fi
 			fi
 			if [ -f "$3""$4"/lc"$i"_synced ]; then
-				ln -sf "$3""$4"/lc"$i"_synced $system_path/lc"$i"_synced
+				check_n_link "$3""$4"/lc"$i"_synced $system_path/lc"$i"_synced
 				event=$(< $system_path/lc"$i"_synced)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_synced
 				fi
 			fi
 			if [ -f "$3""$4"/lc"$i"_verified ]; then
-				ln -sf "$3""$4"/lc"$i"_verified $system_path/lc"$i"_verified
+				check_n_link "$3""$4"/lc"$i"_verified $system_path/lc"$i"_verified
 				event=$(< $system_path/lc"$i"_verified)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/lc"$i"_verified
@@ -574,14 +574,14 @@ if [ "$1" == "add" ]; then
 		done
 		for ((i=1; i<=max_erots; i+=1)); do
 			if [ -f "$3""$4"/erot"$i"_ap ]; then
-				ln -sf "$3""$4"/erot"$i"_ap $system_path/erot"$i"_ap
+				check_n_link "$3""$4"/erot"$i"_ap $system_path/erot"$i"_ap
 				event=$(< $system_path/erot"$i"_ap)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/erot"$i"_ap
 				fi
 			fi
 			if [ -f "$3""$4"/erot"$i"_error ]; then
-				ln -sf "$3""$4"/erot"$i"_error $system_path/erot"$i"_error
+				check_n_link "$3""$4"/erot"$i"_error $system_path/erot"$i"_error
 				event=$(< $system_path/erot"$i"_error)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/erot"$i"_error
@@ -590,7 +590,7 @@ if [ "$1" == "add" ]; then
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
 			if [ -f "$3""$4"/leakage$i ]; then
-				ln -sf "$3""$4"/leakage$i $system_path/leakage"$i"
+				check_n_link "$3""$4"/leakage$i $system_path/leakage"$i"
 				event=$(< $system_path/leakage"$i")
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/leakage"$i"
@@ -598,7 +598,7 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 		if [ -f "$3""$4"/leakage_rope ]; then
-			ln -sf "$3""$4"/leakage_rope $system_path/leakage_rope
+			check_n_link "$3""$4"/leakage_rope $system_path/leakage_rope
 			event=$(< $system_path/leakage_rope)
 			if [ "$event" -eq 1 ]; then
 				echo 1 > $events_path/leakage_rope
@@ -632,7 +632,7 @@ if [ "$1" == "add" ]; then
 		done
 		for ((i=0; i<=max_health_events; i+=1)); do
 			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
-				ln -sf "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
+				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
 				event=$(< $system_path/${l1_switch_health_events[$i]})
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/${l1_switch_health_events[$i]}
@@ -640,7 +640,7 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 		if [ -f "$3""$4"/power_button ]; then
-			ln -sf "$3""$4"/power_button $system_path/power_button
+			check_n_link "$3""$4"/power_button $system_path/power_button
 			event=$(< $system_path/power_button)
 			if [ "$event" -eq 1 ]; then
 				echo 1 > $events_path/power_button
@@ -683,7 +683,7 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "pch_temp" ]; then
 		name=$(<"$3""$4"/name)
 		if [ "$name" == "pch_cannonlake" ]; then
-			ln -sf "$3""$4"/temp1_input $thermal_path/pch_temp
+			check_n_link "$3""$4"/temp1_input $thermal_path/pch_temp
 		fi
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
@@ -727,7 +727,7 @@ if [ "$1" == "add" ]; then
 				exit 0
 			;;
 		esac
-		find "$5""$3" -iname 'temp1_*' -exec sh -c 'ln -sf $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
+		find "$5""$3" -iname 'temp1_*' -exec sh -c 'check_n_link $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
@@ -934,14 +934,14 @@ if [ "$1" == "add" ]; then
 				if [ -f "$3""$4"/temp"$i"_input ]; then
 					label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
 					name=$(echo "$label" | awk '{print tolower($0)}')
-					ln -sf "$3""$4"/temp"$i"_input "$thermal_path"/"$dev_name"_"$name"
+					check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/"$dev_name"_"$name"
 					# Make links only to 1st sensor - Composite temperature.
 					# Normaslized composite temperature values are taken to thermal management.
 					if [ "$i" -eq 1 ]; then
-						ln -sf "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
-						ln -sf "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
+						check_n_link "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
+						check_n_link "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
 						if [ -e "$3""$4"/temp1_min ]; then
-							ln -sf "$3""$4"/temp1_min "$thermal_path"/"$dev_name"_"$name"_min
+							check_n_link "$3""$4"/temp1_min "$thermal_path"/"$dev_name"_"$name"_min
 						fi
 					fi
 				fi
