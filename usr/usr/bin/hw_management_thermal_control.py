@@ -314,7 +314,7 @@ TABLE_DEFAULT = {
     }
 }
 
-ASIC_CONF_DEFAULT = {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": True, "fan_control": True}}
+ASIC_CONF_DEFAULT = {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": False, "fan_control": False}}
 
 # ----------------------------------------------------------------------
 def str2bool(val):
