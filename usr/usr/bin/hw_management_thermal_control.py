@@ -37,7 +37,7 @@
 Created on Oct 01, 2022
 
 Author: Oleksandr Shamray <oleksandrs@nvidia.com>
-Version: 2.0.0
+Version: 2.0.1
 
 Description:
 System Thermal control tool
@@ -67,7 +67,7 @@ import pdb
 #############################
 # pylint: disable=c0301,W0105
 
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 
 #############################
@@ -512,6 +512,16 @@ class Logger(object):
             except IOError as err:
                 print("Can't init syslog {} address {}".format(str(err), address))
 
+    def stop(self):
+        """
+        @summary:
+            Cleanup and Stop logger
+        """
+        logging.shutdown()
+        handler_list = self.logger.handlers[:]
+        for handler in handler_list:
+            self.logger.removeHandler(handler)
+    
     def set_loglevel(self, verbosity):
         """
         @summary:
@@ -2004,7 +2014,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         hw_managemet_file_op.__init__(self, cmd_arg)
         self.log = Logger(cmd_arg[CONST.LOG_USE_SYSLOG], cmd_arg[CONST.LOG_FILE], cmd_arg["verbosity"])
-        self.log.notice("Preinit thermal control", 1)
+        self.log.notice("Preinit thermal control ver {}".format(VERSION), 1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
         except BaseException:
@@ -2036,12 +2046,14 @@ class ThermalManagement(hw_managemet_file_op):
         signal.signal(signal.SIGINT, self.sig_handler)
         signal.signal(signal.SIGHUP, self.sig_handler)
         self.exit = Event()
+        self.exit_flag = False
 
         self.load_configuration()
 
         if not self.is_pwm_exists():
-            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for PWM init", 1)
+            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for ASIC init", 1)
             while not self.is_pwm_exists():
+                self.log.notice("Wait...")
                 self.exit.wait(10)
 
         # Set PWM to the default state while we are waiting for system configuration
@@ -2056,8 +2068,9 @@ class ThermalManagement(hw_managemet_file_op):
             self.exit.wait(thermal_delay)
 
         if not self.is_fan_tacho_init():
-            self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for FAN init", 1)
+            self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for ASIC init", 1)
             while not self.is_fan_tacho_init():
+                self.log.notice("Wait...")
                 self.exit.wait(10)
 
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
@@ -2231,16 +2244,12 @@ class ThermalManagement(hw_managemet_file_op):
         @summary: Set target PWM for the system
         @param pwm: target PWM value
         """
-        if self.exit and self.exit.is_set():
-            return
-
         if self.state == CONST.UNCONFIGURED:
-            self.log.info("TC is not configureed. Try to force set PWM1 {}%%".format(pwm))
+            self.log.info("TC is not configureed. Try to force set PWM1 {}%".format(pwm))
             try:
                 self.write_pwm(pwm)
             except BaseException:
                 self.log.error("Set PWM failed. Possible hw-management/SDK is not running", 1)
-
             return
 
         pwm = int(pwm)
@@ -2249,7 +2258,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         if pwm != self.pwm_target:
             if reason:
-                reason_notice = 'reason:"{}"'.format(reason)
+                reason_notice = reason
             else:
                 reason_notice = ""
             self.pwm_change_reason = reason_notice
@@ -2414,11 +2423,9 @@ class ThermalManagement(hw_managemet_file_op):
     # ----------------------------------------------------------------------
     def module_scan(self):
         ""
-        self.log.info("module_scan")
-
         module_count = int(self.get_file_val("config/module_counter", 0))
         if module_count != self.module_counter:
-            self.log.info("Module counter updated {} -> {}".format(self.module_counter, module_count))
+            self.log.info("Module counter changed {} -> {}".format(self.module_counter, module_count))
             module_counter = 0
             for idx in range(1, CONST.MODULE_COUNT_MAX):
                 module_name = "module{}".format(idx)
@@ -2439,10 +2446,11 @@ class ThermalManagement(hw_managemet_file_op):
             Signal handler for termination signals
         """
         if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
+            self.exit_flag = True
             self.stop(reason="SIG {}".format(sig))
-            self.exit.set()
 
             self.log.notice("Thermal control stopped", 1)
+            self.log.stop()
             os._exit(0)
 
     # ----------------------------------------------------------------------
@@ -2647,13 +2655,13 @@ class ThermalManagement(hw_managemet_file_op):
                 self.periodic_report_worker_timer.stop()
                 self.periodic_report_worker_timer = None
 
-            self._set_pwm(CONST.PWM_MAX, reason="TC stop")
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     dev_obj.stop()
 
             self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), 1)
             self.state = CONST.STOPPED
+            self._set_pwm(CONST.PWM_MAX, reason="TC stop")
 
     # ----------------------------------------------------------------------
     def run(self):
@@ -2667,7 +2675,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************", 1)
         module_scan_timeout = 0
         # main loop
-        while not self.exit.is_set():
+        while not self.exit.is_set() or not self.exit_flag:
             try:
                 log_level = int(self.read_file(CONST.LOG_LEVEL_FILENAME))
                 if log_level != self.cmd_arg["verbosity"]:
