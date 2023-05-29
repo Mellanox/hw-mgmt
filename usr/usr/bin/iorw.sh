@@ -32,8 +32,8 @@
 ################################################################################
 
 # Regmap files in debugfs
-REGMAP_REGISTERS=/sys/kernel/debug/regmap/mlxplat/registers
-REGMAP_RANGE=/sys/kernel/debug/regmap/mlxplat/range
+REGMAP_REGISTERS=/sys/kernel/debug/regmap/MLNXBF49:00/registers
+REGMAP_RANGE=/sys/kernel/debug/regmap/MLNXBF49:00/range
 
 # Operation codes
 NO_OP=0

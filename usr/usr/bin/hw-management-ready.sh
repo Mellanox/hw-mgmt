@@ -58,8 +58,14 @@ VMOD0014)
 	fi
 	;;
 *)
-	if [ ! -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; then
-		timeout 180 bash -c 'until [ -d /sys/devices/platform/mlxplat/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
+	arch=$(uname -m)
+	if [ "$arch" = "aarch64" ]; then
+		plat_path=/sys/devices/platform/MLNXBF49:00
+	else
+		plat_path=/sys/devices/platform/mlxplat
+	fi
+	if [ ! -d ${plat_path}/mlxreg-hotplug/hwmon ]; then
+		timeout 180 bash -c 'until [ -d ${plat_path}/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
 	fi
 	;;
 esac

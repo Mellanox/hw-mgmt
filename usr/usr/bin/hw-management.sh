@@ -556,7 +556,13 @@ function find_regio_sysfs_path_helper()
 		done
 		;;
 	*)
-		for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
+		arch=$(uname -m)
+		if [ "$arch" = "aarch64" ]; then
+			plat_path=/sys/devices/platform/MLNXBF49:00
+		else
+			plat_path=/sys/devices/platform/mlxplat
+		fi
+		for path in ${plat_path}/mlxreg-io/hwmon/hwmon*; do
 			if [ -d "$path" ]; then
 				name=$(cut "$path"/name -d' ' -f 1)
 				if [ "$name" == "mlxreg_io" ]; then
@@ -680,8 +686,14 @@ set_jtag_gpio()
 		fi
 
 		if [ "$board_type" != "VMOD0014" ]; then
-			if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
-				ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+			arch=$(uname -m)
+			if [ "$arch" = "aarch64" ]; then
+				plat_path=/sys/devices/platform/MLNXBF49:00
+			else
+				plat_path=/sys/devices/platform/mlxplat
+			fi
+			if find ${plat_path}/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+				ln -sf ${plat_path}/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
 			fi
 		fi
 	fi
