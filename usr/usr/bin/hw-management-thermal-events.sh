@@ -801,7 +801,12 @@ if [ "$1" == "add" ]; then
 		if [ "$board_type" == "VMOD0014" ]; then
 			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		else
-			eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+			arch=$(uname -m)
+			if [ "$arch" = "aarch64" ]; then
+				eeprom_file=/sys/devices/platform/MLNXBF49:00/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+			else
+				eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+			fi
 		fi
 		# Verify if PS unit is equipped with EEPROM. If yes – connect driver.
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
