@@ -38,6 +38,7 @@ DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
+REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
 
 MODE=$1
 
@@ -57,6 +58,14 @@ dump_cmd () {
 
 rm -rf $DUMP_FOLDER
 mkdir $DUMP_FOLDER
+
+arch=$(uname -m)
+if [ "$arch" = "aarch64" ]; then
+	regmap_plat_path=/sys/kernel/debug/regmap/MLNXBF49:00
+	REGMAP_FILE=${REGMAP_FILE_ARM64}
+else
+	regmap_plat_path=/sys/kernel/debug/regmap/mlxplat
+fi
 
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
@@ -90,12 +99,12 @@ VMOD0014)
 	fi
 	;;
 *)
-	if [ -f "/sys/kernel/debug/regmap/mlxplat/registers" ]; then
-		cat /sys/kernel/debug/regmap/mlxplat/registers > $DUMP_FOLDER/registers
+	if [ -f "${regmap_plat_path}/registers" ]; then
+		cat ${regmap_plat_path}/registers > $DUMP_FOLDER/registers
 	fi
 
-	if [ -f "/sys/kernel/debug/regmap/mlxplat/access" ]; then
-		 cat /sys/kernel/debug/regmap/mlxplat/access > $DUMP_FOLDER/access
+	if [ -f "${regmap_plat_path}/access" ]; then
+		 cat ${regmap_plat_path}/access > $DUMP_FOLDER/access
 	fi
 	;;
 esac
