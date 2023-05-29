@@ -818,7 +818,6 @@ add_cpu_board_to_connection_table()
 			esac
 			;;
 		$CFL_CPU)
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
 				# MQM9700, P4697 removed A2D from CFL
 				HI130|HI142|HI152)  # TBD MS. Which other systems have CFL comex with A2D
@@ -831,7 +830,18 @@ add_cpu_board_to_connection_table()
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		$BF3_CPU)
-			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+			case $sku in
+				# MQM9700+BF3
+				HI151)
+					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+					;;
+				# MSN4700+BF3
+				HI156)
+					cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+					;;
+			esac
 			;;
 		*)
 			log_err "$product is not supported"
@@ -1652,6 +1662,22 @@ msn_spc3_common()
 	esac
 }
 
+bf3_common()
+{
+	case $sku in
+		HI151)
+			mqm97xx_specific
+			;;
+		HI156)
+			msn47xx_specific
+			;;
+		*)
+			echo "Unsupported BF3 platform"
+			exit 0
+			;;
+	esac
+}
+
 msn48xx_specific()
 {
 	local cpu_bus_offset=51
@@ -1802,31 +1828,6 @@ p4262_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
-mqmxxx_bf3_common()
-{
-	local voltmon_connection_table=()
-
-	lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-	if [ ! -e "$devtree_file" ]; then
-		# Bring-up note:
-		# SMBIOS might be not ready for bring-up - use here specific configuration
-		# available for bring-up stage.
-		connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
-		voltmon_connection_table=(${mqm97xx_mps_voltmon_connect_table[@]})
-	fi
-
-	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
-	add_come_named_busses
-	thermal_type=$thermal_type_def
-	max_tachos=14
-	hotplug_fans=7
-	echo 29500 > $config_path/fan_max_speed
-	echo 5000 > $config_path/fan_min_speed
-	echo 23000 > $config_path/psu_fan_max
-	echo 4600 > $config_path/psu_fan_min
-	echo 3 > $config_path/cpld_num
-}
-
 check_system()
 {
 	# Check ODM
@@ -1871,7 +1872,7 @@ check_system()
 			p4262_specific
 			;;
 		VMOD0016)
-			mqmxxx_bf3_common
+			bf3_common
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -1913,14 +1914,7 @@ check_system()
 					msn46xx_specific
 					;;
 				MQM97*)
-					case $cpu_type in
-						$BF3_CPU)
-							mqmxxx_bf3_common
-							;;
-						*)
-							mqm97xx_specific
-							;;
-					esac
+					mqm97xx_specific
 					;;
 				MQM87*)
 					mqm87xx_specific
@@ -1946,7 +1940,7 @@ check_system()
 								mqmxxx_msn37x_msn34x_specific
 								;;
 							$BF3_CPU)
-								mqmxxx_bf3_common
+								bf3_common
 								;;
 							*)
 								log_err "$product is not supported"
@@ -1954,8 +1948,16 @@ check_system()
 								;;
 						esac
 					else
-						log_err "$product is not supported"
-						exit 0
+						case $cpu_type in
+							# First BF3 BU systems will have only SKU configured in SMBIOS
+							$BF3_CPU)
+								bf3_common
+								;;
+							*)
+								log_err "$product is not supported"
+								exit 0
+								;;
+						esac
 					fi
 					;;
 			esac
@@ -2184,10 +2186,10 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126)
+	HI122|HI123|HI124|HI126|HI156)
 		asic_pci_id=$spc3_pci_id
 		;;
-	HI130|HI140|HI141)
+	HI130|HI140|HI141|HI151)
 		asic_pci_id=$quantum2_pci_id
 		;;
 	HI144|HI147|HI148)
