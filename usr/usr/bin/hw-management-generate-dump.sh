@@ -1,6 +1,6 @@
 #!/bin/sh
 ##################################################################################
-# Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -118,10 +118,6 @@ dump_cmd "sensors" "sensors" "20"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 
-if [ -x "$(command -v i2cdetect)" ];   then
-    run_cmd="for i in {0..17} ; do echo i2c bus \$i; i2cdetect -y \$i 2>/dev/null; done > $DUMP_FOLDER/i2c_scan"
-    timeout 60 bash -c "$run_cmd"
-fi
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
