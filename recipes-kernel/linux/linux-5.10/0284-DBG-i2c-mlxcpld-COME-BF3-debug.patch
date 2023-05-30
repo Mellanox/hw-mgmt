@@ -1,19 +1,18 @@
-From 02c5911e46d5dc57d63fa2517e3a3358aa97d3f5 Mon Sep 17 00:00:00 2001
+From 28c879aa06f7dd11ea836a9223cb39dca5d63d99 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
-Subject: [PATCH i2c-next 1/1] DBG: i2c: mlxcpld: COME BF3 debug
+Subject: [PATCH BF3 debug 1/1] DBG: i2c: mlxcpld: COME BF3 debug
 
 To be merged to previous two TMP patches.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/i2c/busses/i2c-mlxcpld.c           |  13 +-
- drivers/platform/mellanox/mlx-platform.c   | 207 +++++++++++++++------
- drivers/platform/mellanox/mlxreg-hotplug.c |   2 +-
- 3 files changed, 158 insertions(+), 64 deletions(-)
+ drivers/i2c/busses/i2c-mlxcpld.c         |   6 +-
+ drivers/platform/mellanox/mlx-platform.c | 121 +++++++++++++++--------
+ 2 files changed, 81 insertions(+), 46 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
-index 1e095c2ab..9c7311c23 100644
+index 1e095c2ab..6efe794d8 100644
 --- a/drivers/i2c/busses/i2c-mlxcpld.c
 +++ b/drivers/i2c/busses/i2c-mlxcpld.c
 @@ -53,8 +53,6 @@
@@ -43,25 +42,11 @@ index 1e095c2ab..9c7311c23 100644
  
  	switch (datalen) {
  	case 1:
-@@ -640,6 +638,13 @@ static int mlxcpld_i2c_probe(struct platform_device *pdev)
- 
- 		if (pdata->addr)
- 			priv->addr = pdata->addr;
-+{
-+int k;
-+printk("%s(%d) priv->addr %pS\n", __func__, __LINE__, priv->addr);
-+for (k=0;k<10;k++)
-+	printk("%s(%d) off 0x%08x val 0x%08x\n", __func__, __LINE__, k, ioread8(priv->addr + k));
-+}
-+
- 	}
- 
- 	/* Register with i2c layer */
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d86168685..6ec16d1a3 100644
+index d86168685..7f60b67b9 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -334,7 +334,9 @@
+@@ -334,14 +334,16 @@
  
  /* Lattice FPGA PCI configuration */
  #define PCI_VENDOR_ID_LATTICE			0x1204
@@ -72,57 +57,24 @@ index d86168685..6ec16d1a3 100644
  #define MLXPLAT_FPGA_PCI_BAR0_SIZE		0x4000
  #define MLXPLAT_FPGA_PCI_BASE_OFFSET		0x00000000
  #define MLXPLAT_FPGA_PCI_MSB_ADDR		0x25
-@@ -5877,12 +5879,13 @@ static int mlxplat_fpga_completion_wait(struct mlxplat_mlxcpld_regmap_context *c
- 	end = jiffies + msecs_to_jiffies(MLXPLAT_FPGA_PCI_TO);
- 	do {
- 		status = ioread8(ctx->base + MLXPLAT_FPGA_PCI_STAT_OFFSET);
-+//printk("%s(%d) READ STATUS base %pS read %pS off 0x%08x status value 0x%08x\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_STAT_OFFSET, MLXPLAT_FPGA_PCI_STAT_OFFSET, status);
- 		if (!(status & MLXPLAT_FPGA_PCI_COMPLETED))
- 			return 0;
- 		cond_resched();
- 	} while (time_before(jiffies, end));
--
--	return -EIO;
-+//printk("%s(%d) offset 0x%08x status 0x%08x - ignore!!!!\n", __func__, __LINE__, MLXPLAT_FPGA_PCI_STAT_OFFSET, status);
-+	/*return -EIO;*/return 0;
- }
+ #define MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET	MLXPLAT_FPGA_PCI_BASE_OFFSET
+ #define MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x01)
+-#define MLXPLAT_FPGA_PCI_DATA_IN_OFFSET		(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x02)
+-#define MLXPLAT_FPGA_PCI_DATA_OUT_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x03)
++#define MLXPLAT_FPGA_PCI_DATA_OUT_OFFSET	(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x02)
++#define MLXPLAT_FPGA_PCI_DATA_IN_OFFSET		(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x03)
+ #define MLXPLAT_FPGA_PCI_CTRL_OFFSET		(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x04)
+ #define MLXPLAT_FPGA_PCI_STAT_OFFSET		(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x05)
  
- /* Read callback for indirect register map access */
-@@ -5898,9 +5901,12 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
+@@ -5897,6 +5899,7 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
+ 		return err;
  
  	/* Set address in register space */
++
  	iowrite8(MLXPLAT_FPGA_PCI_MSB_ADDR, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
-+//printk("%s(%d) WRITE ADDR base %pS at %pS off 0x%08x value 0x%08x\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET, MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET, MLXPLAT_FPGA_PCI_MSB_ADDR);
  	iowrite8(reg, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET);
-+//printk("%s(%d) WRITE ADDR base %pS at %pS off 0x%08x value 0x%08x\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET, MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET, reg);
  	/* Activate read operation */
- 	iowrite8(MLXPLAT_FPGA_PCI_CTRL_READ, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
-+//printk("%s(%d) WRITE ACTIVATE READ base %pS at %pS off 0x%08x value 0x%08lx\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET, MLXPLAT_FPGA_PCI_CTRL_OFFSET, MLXPLAT_FPGA_PCI_CTRL_READ);
- 	/* Verify transaction completion */
- 	err = mlxplat_fpga_completion_wait(ctx);
- 	if (err)
-@@ -5908,6 +5914,7 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
- 
- 	/* Read data */
- 	*val = ioread8(ctx->base + MLXPLAT_FPGA_PCI_DATA_IN_OFFSET);
-+//printk("%s(%d) READ VALUE base %pS at %pS off 0x%08x status value 0x%08x\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_DATA_IN_OFFSET, MLXPLAT_FPGA_PCI_DATA_IN_OFFSET, *val);
- 
- 	return 0;
- }
-@@ -5925,19 +5932,22 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
- 
- 	/* Set address in register space */
- 	iowrite8(MLXPLAT_FPGA_PCI_MSB_ADDR, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
-+//printk("%s(%d) WRITE ADDR base %pS at %pS off 0x%08x status value 0x%08x\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET, MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET, MLXPLAT_FPGA_PCI_MSB_ADDR);
- 	iowrite8(reg, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET);
-+//printk("%s(%d) WRITE ADDR base %pS at %pS off 0x%08x status value 0x%08x\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET, MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET, reg);
- 	/* Set data to be written */
- 	iowrite8(val, ctx->base + MLXPLAT_FPGA_PCI_DATA_OUT_OFFSET);
- 	/* Activate write operation */
- 	iowrite8(MLXPLAT_FPGA_PCI_CTRL_WRITE, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
-+//printk("%s(%d) WRITE ACTIVATE WRITE base %pS at %pS off 0x%08x status value 0x%08lx\n", __func__, __LINE__, ctx->base, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET, MLXPLAT_FPGA_PCI_CTRL_OFFSET, MLXPLAT_FPGA_PCI_CTRL_WRITE);
- 
- 	return 0;
+@@ -5935,9 +5938,9 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
  }
  
  static const struct regmap_config mlxplat_fpga_regmap_config_bf3_comex_default = {
@@ -134,7 +86,7 @@ index d86168685..6ec16d1a3 100644
  	.cache_type = REGCACHE_FLAT,
  	.writeable_reg = mlxplat_mlxcpld_writeable_reg,
  	.readable_reg = mlxplat_mlxcpld_readable_reg,
-@@ -5966,7 +5976,10 @@ static struct mlxreg_core_platform_data
+@@ -5966,7 +5969,10 @@ static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
  static struct spi_board_info *mlxplat_spi;
@@ -146,33 +98,20 @@ index d86168685..6ec16d1a3 100644
  
  /* Platform default reset function */
  static int mlxplat_reboot_notifier(struct notifier_block *nb, unsigned long action, void *unused)
-@@ -6366,7 +6379,7 @@ static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_
- 	mlxplat_regmap_config = &mlxplat_fpga_regmap_config_bf3_comex_default;
- 	mlxplat_reboot_nb = &mlxplat_reboot_default_nb;
- 	pm_power_off = mlxplat_poweroff;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	return 1;
- }
- 
-@@ -6634,13 +6647,14 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
- 					unsigned int *hotplug_resources_size)
+@@ -6635,12 +6641,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
  {
  	int err;
+ 
+-	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, PLATFORM_DEVID_NONE,
+-						      mlxplat_lpc_resources,
+-						      ARRAY_SIZE(mlxplat_lpc_resources));
+-	if (IS_ERR(mlxplat_dev))
+-		return PTR_ERR(mlxplat_dev);
 -
-+printk("%s(%d)\n", __func__, __LINE__);
-+#if 0
- 	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, PLATFORM_DEVID_NONE,
- 						      mlxplat_lpc_resources,
- 						      ARRAY_SIZE(mlxplat_lpc_resources));
- 	if (IS_ERR(mlxplat_dev))
- 		return PTR_ERR(mlxplat_dev);
--
-+#endif
  	mlxplat_mlxcpld_regmap_ctx.base = devm_ioport_map(&mlxplat_dev->dev,
  							  mlxplat_lpc_resources[1].start, 1);
  	if (!mlxplat_mlxcpld_regmap_ctx.base) {
-@@ -6664,84 +6678,138 @@ static void mlxplat_lpc_cpld_device_exit(void)
+@@ -6664,13 +6664,14 @@ static void mlxplat_lpc_cpld_device_exit(void)
  }
  
  static int
@@ -184,54 +123,32 @@ index d86168685..6ec16d1a3 100644
 +	void __iomem *pci_mem_addr;
  	struct pci_dev *pci_dev;
  	int err;
--
+ 
 -	pci_dev = pci_get_device(PCI_VENDOR_ID_LATTICE, PCI_DEVICE_ID_LATTICE_LFD2NX40, NULL);
-+u16 cmd; printk("%s(%d) PCI %s\n",__func__, __LINE__, res_name);
 +	pci_dev = pci_get_device(PCI_VENDOR_ID_LATTICE, device, NULL);
  	if (!pci_dev)
  		return -ENODEV;
--
-+#if 0
- 	err = pci_enable_device(pci_dev);
- 	if (err) {
- 		dev_err(&pci_dev->dev, "pci_enable_device failed with error %d\n", err);
+ 
+@@ -6680,7 +6681,7 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  		goto fail_pci_enable_device;
  	}
--
+ 
 -	err = pci_request_region(pci_dev, 0, "mlxplat_fpga");
-+#else
-+	pci_read_config_word(pci_dev, PCI_COMMAND, &cmd);
-+	printk("%s9%d) cmd 0x%04x\n", __func__, __LINE__, cmd);
-+	//if (!(cmd & PCI_COMMAND_MEMORY)) {
-+	//	cmd |= PCI_COMMAND_MEMORY;
-+	//	pci_write_config_word(pdev, PCI_COMMAND, cmd);
-+	//}
-+#endif
 +	err = pci_request_region(pci_dev, 0, res_name);
  	if (err) {
  		dev_err(&pci_dev->dev, "pci_request_regions failed with error %d\n", err);
  		goto fail_pci_request_regions;
- 	}
- 
-+#if 0	
- 	err = dma_set_mask_and_coherent(&pci_dev->dev, DMA_BIT_MASK(64));
- 	if (err) {
-+printk("%s(%d)\n", __func__, __LINE__);
- 		err = dma_set_mask(&pci_dev->dev, DMA_BIT_MASK(32));
- 		if (err) {
- 			dev_err(&pci_dev->dev, "dma_set_mask failed with error %d\n", err);
- 			goto fail_pci_set_dma_mask;
+@@ -6695,31 +6696,22 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  		}
  	}
-+#endif
-+	pci_set_master(pci_dev);
  
 -	if (pci_resource_len(pci_dev, 0) < MLXPLAT_FPGA_PCI_BAR0_SIZE) {
 -		dev_err(&mlxplat_dev->dev, "invalid PCI region size\n");
 -		err = -EINVAL;
 -		goto fail_pci_resource_len_check;
 -	}
--
++	pci_set_master(pci_dev);
+ 
 -	mlxplat_mlxcpld_regmap_ctx.base = devm_ioremap(&pci_dev->dev,
 -						       pci_resource_start(pci_dev, 0),
 -						       pci_resource_len(pci_dev, 0));
@@ -249,21 +166,17 @@ index d86168685..6ec16d1a3 100644
 -	*hotplug_resources = mlxplat_mlxfpga_resources;
 -	*hotplug_resources_size = ARRAY_SIZE(mlxplat_mlxfpga_resources);
 -	*fpga_dev = pci_dev;
--
 +	*pci_bridge = pci_dev;
 +	*pci_bridge_addr = pci_mem_addr;
-+printk("%s(%d) size %lld base %pS \n",__func__, __LINE__, pci_resource_len(pci_dev, 0), pci_mem_addr);
+ 
  	return 0;
  
  fail_ioremap:
 -fail_pci_resource_len_check:
--fail_pci_set_dma_mask:
-+//fail_pci_set_dma_mask:
+ fail_pci_set_dma_mask:
  	pci_release_regions(pci_dev);
  fail_pci_request_regions:
- 	pci_disable_device(pci_dev);
--fail_pci_enable_device:
-+//fail_pci_enable_device:
+@@ -6728,12 +6720,58 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  	return err;
  }
  
@@ -279,16 +192,14 @@ index d86168685..6ec16d1a3 100644
 +	iounmap(pci_bridge_addr);
 +	pci_release_regions(pci_bridge);
 +	pci_disable_device(pci_bridge);
- }
++}
 +\
- 
- static int
--mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_resources_size)
++
++static int
 +mlxplat_pci_fpga_devices_init(struct resource **hotplug_resources,
 +			      unsigned int *hotplug_resources_size)
- {
- 	int err;
-+printk("%s(%d)\n",__func__, __LINE__);
++{
++	int err;
 +
 +	err = mlxplat_pci_fpga_device_init(PCI_DEVICE_ID_LATTICE_LPC_BRIDGE,
 +					   "mlxplat_lpc_bridge", &lpc_bridge,
@@ -310,7 +221,7 @@ index d86168685..6ec16d1a3 100644
 +
 +	*hotplug_resources = mlxplat_mlxfpga_resources;
 +	*hotplug_resources_size = ARRAY_SIZE(mlxplat_mlxfpga_resources);
-+printk("%s(%d)\n",__func__, __LINE__);
++
 +	return 0;
 +
 +mlxplat_pci_fpga_device_init_jtag_fail:
@@ -323,64 +234,33 @@ index d86168685..6ec16d1a3 100644
 +
 +static void mlxplat_pci_fpga_devices_exit(void)
 +{
-+printk("%s(%d)\n", __func__, __LINE__);
-+	/* platform_device_unregister(mlxplat_dev); */
-+printk("%s(%d)\n", __func__, __LINE__);
 +	mlxplat_pci_fpga_device_exit(jtag_bridge, jtag_bridge_addr);
-+printk("%s(%d)\n", __func__, __LINE__);
 +	mlxplat_pci_fpga_device_exit(i2c_bridge, i2c_bridge_addr);
-+printk("%s(%d)\n", __func__, __LINE__);
 +	mlxplat_pci_fpga_device_exit(lpc_bridge, mlxplat_mlxcpld_regmap_ctx.base);
-+printk("%s(%d)\n", __func__, __LINE__);
-+}
+ }
+ 
+ static int
+@@ -6741,7 +6779,7 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
+ {
+ 	int err;
  
 -	err = mlxplat_pci_fpga_device_init(hotplug_resources, hotplug_resources_size, &fpga_dev);
-+static int
-+mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_resources_size)
-+{
-+	int err;
-+printk("%s(%d)\n", __func__, __LINE__);
 +	err = mlxplat_pci_fpga_devices_init(hotplug_resources, hotplug_resources_size);
  	if (err == -ENODEV)
  		return mlxplat_lpc_cpld_device_init(hotplug_resources, hotplug_resources_size);
  
-@@ -6750,8 +6818,9 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
+@@ -6750,8 +6788,8 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
  
  static void mlxplat_post_exit(void)
  {
 -	if (fpga_dev)
 -		mlxplat_pci_fpga_device_exit();
-+printk("%s(%d)\n", __func__, __LINE__);
 +	if (lpc_bridge)
 +		mlxplat_pci_fpga_devices_exit();
  	else
  		mlxplat_lpc_cpld_device_exit();
  }
-@@ -6890,9 +6959,11 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
- 			struct mlxreg_core_data *data = item->data;
- 
- 			for (j = 0; j < item->count; j++, data++) {
-+printk("%s(%d) nr %d adap %d\n", __func__, __LINE__, data->hpdev.nr, adapters[data->hpdev.nr - 2]->nr);
- 				if (data->hpdev.nr != MLXPLAT_CPLD_NR_NONE)
- 					data->hpdev.nr = adapters[data->hpdev.nr - 2]->nr;
- 			}
-+printk("%s(%d) nr %d\n", __func__, __LINE__, data->hpdev.nr);
- 		}
- 	}
- 
-@@ -6972,18 +7043,18 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
- 
- 	if (!mlxplat_i2c)
- 		return 0;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	err = mlxplat_mlxcpld_verify_bus_topology(&nr);
- 	if (nr < 0)
- 		goto fail_mlxplat_mlxcpld_verify_bus_topology;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	nr = (nr == mlxplat_max_adap_num) ? -1 : nr;
- 	mlxplat_i2c->regmap = priv->regmap;
+@@ -6982,8 +7020,8 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  	mlxplat_i2c->handle = priv;
  
  	/* Set mapped base address of I2C-LPC bridge over PCIe */
@@ -391,131 +271,14 @@ index d86168685..6ec16d1a3 100644
  	priv->pdev_i2c = platform_device_register_resndata(&mlxplat_dev->dev, "i2c_mlxcpld",
  							   nr, priv->hotplug_resources,
  							   priv->hotplug_resources_size,
-@@ -7021,9 +7092,10 @@ static int mlxplat_probe(struct platform_device *pdev)
- 	struct acpi_device *acpi_dev;
- 	struct mlxplat_priv *priv;
- 	int irq_fpga = 0, i, err;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	acpi_dev = ACPI_COMPANION(&pdev->dev);
- 	if (acpi_dev) {
-+printk("%s(%d)\n", __func__, __LINE__);
- 		irq_fpga = acpi_dev_gpio_irq_get(acpi_dev, 0);
- 		if (irq_fpga < 0)
- 			return -ENODEV;
-@@ -7032,14 +7104,14 @@ static int mlxplat_probe(struct platform_device *pdev)
- 	err = mlxplat_pre_init(&hotplug_resources, &hotplug_resources_size);
- 	if (err)
- 		return err;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	mlxplat_dev = pdev;
- 	priv = devm_kzalloc(&mlxplat_dev->dev, sizeof(struct mlxplat_priv),
- 			    GFP_KERNEL);
- 	if (!priv) {
- 		err = -ENOMEM;
- 		goto fail_alloc;
--	}
-+	}printk("%s(%d)\n", __func__, __LINE__);
- 	platform_set_drvdata(mlxplat_dev, priv);
- 	priv->hotplug_resources = hotplug_resources;
- 	priv->hotplug_resources_size = hotplug_resources_size;
-@@ -7047,7 +7119,7 @@ static int mlxplat_probe(struct platform_device *pdev)
+@@ -7047,7 +7085,6 @@ static int mlxplat_probe(struct platform_device *pdev)
  
  	if (!mlxplat_regmap_config)
  		mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config;
 -
-+printk("%s(%d)\n", __func__, __LINE__);
  	priv->regmap = devm_regmap_init(&mlxplat_dev->dev, NULL,
  					&mlxplat_mlxcpld_regmap_ctx,
  					mlxplat_regmap_config);
-@@ -7056,6 +7128,23 @@ static int mlxplat_probe(struct platform_device *pdev)
- 		goto fail_alloc;
- 	}
- 
-+{
-+	for(i = 0; i <=5; i++)
-+		printk("%s(%d) read8 off %pS value 0x%08x\n", __func__, __LINE__, mlxplat_mlxcpld_regmap_ctx.base + i, ioread8(mlxplat_mlxcpld_regmap_ctx.base + i));
-+	for(i = 0; i <=5; i++)
-+		printk("%s(%d) read16 off %pS value 0x%08x\n", __func__, __LINE__, mlxplat_mlxcpld_regmap_ctx.base + i, ioread16(mlxplat_mlxcpld_regmap_ctx.base + i*2));
-+	for(i = 0; i <=5; i++)
-+		printk("%s(%d) read32 off %pS value 0x%08x\n", __func__, __LINE__, mlxplat_mlxcpld_regmap_ctx.base + i, ioread32(mlxplat_mlxcpld_regmap_ctx.base + i*4));
-+	for(i = 0; i <=5; i++)
-+		iowrite8(0x55, mlxplat_mlxcpld_regmap_ctx.base + i);
-+	for(i = 0; i <=5; i++)
-+		printk("%s(%d) read after write 0x00 off %pS value 0x%08x\n", __func__, __LINE__, mlxplat_mlxcpld_regmap_ctx.base + i, ioread8(mlxplat_mlxcpld_regmap_ctx.base + i));
-+	for(i = 0; i <=5; i++)
-+		iowrite8(0x00, mlxplat_mlxcpld_regmap_ctx.base + i);
-+	for(i = 0; i <=5; i++)
-+		printk("%s(%d) read after write 0x00 off %pS value 0x%08x\n", __func__, __LINE__, mlxplat_mlxcpld_regmap_ctx.base + i, ioread8(mlxplat_mlxcpld_regmap_ctx.base + i));
-+}
-+
- 	/* Set default registers. */
- 	for (i = 0; i <  mlxplat_regmap_config->num_reg_defaults; i++) {
- 		err = regmap_write(priv->regmap,
-@@ -7064,11 +7153,11 @@ static int mlxplat_probe(struct platform_device *pdev)
- 		if (err)
- 			goto fail_regmap_write;
- 	}
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	err = mlxplat_i2c_main_init(priv);
- 	if (err)
- 		goto fail_mlxplat_i2c_main_init;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	/* Sync registers with hardware. */
- 	regcache_mark_dirty(priv->regmap);
- 	err = regcache_sync(priv->regmap);
-@@ -7080,7 +7169,7 @@ static int mlxplat_probe(struct platform_device *pdev)
- 		if (err)
- 			goto fail_register_reboot_notifier;
- 	}
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	return 0;
- 
- fail_register_reboot_notifier:
-@@ -7097,7 +7186,7 @@ static int mlxplat_probe(struct platform_device *pdev)
- static int mlxplat_remove(struct platform_device *pdev)
- {
- 	struct mlxplat_priv *priv = platform_get_drvdata(mlxplat_dev);
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	if (pm_power_off)
- 		pm_power_off = NULL;
- 	if (mlxplat_reboot_nb)
-@@ -7127,14 +7216,14 @@ static struct platform_driver mlxplat_driver = {
- static int __init mlxplat_init(void)
- {
- 	int err;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	if (!dmi_check_system(mlxplat_dmi_table))
- 		return -ENODEV;
--
-+printk("%s(%d)\n", __func__, __LINE__);
- 	err = platform_driver_register(&mlxplat_driver);
- 	if (err)
- 		return err;
--	return 0;
-+	return 0;printk("%s(%d)\n", __func__, __LINE__);
- }
- module_init(mlxplat_init);
- 
-diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
-index c5abedd35..61d505815 100644
---- a/drivers/platform/mellanox/mlxreg-hotplug.c
-+++ b/drivers/platform/mellanox/mlxreg-hotplug.c
-@@ -723,7 +723,7 @@ static int mlxreg_hotplug_probe(struct platform_device *pdev)
- 	struct mlxreg_hotplug_priv_data *priv;
- 	struct i2c_adapter *deferred_adap;
- 	int err;
--
-+return 0;
- 	pdata = dev_get_platdata(&pdev->dev);
- 	if (!pdata) {
- 		dev_err(&pdev->dev, "Failed to get platform data.\n");
 -- 
 2.20.1
 
