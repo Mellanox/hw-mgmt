@@ -1,4 +1,4 @@
-From 28c879aa06f7dd11ea836a9223cb39dca5d63d99 Mon Sep 17 00:00:00 2001
+From 8bbc1b62eed4e54025a2c60bf7e8fd9ec2ee0b65 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
 Subject: [PATCH BF3 debug 1/1] DBG: i2c: mlxcpld: COME BF3 debug
@@ -7,12 +7,12 @@ To be merged to previous two TMP patches.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/i2c/busses/i2c-mlxcpld.c         |   6 +-
+ drivers/i2c/busses/i2c-mlxcpld.c         |  20 ++--
  drivers/platform/mellanox/mlx-platform.c | 121 +++++++++++++++--------
- 2 files changed, 81 insertions(+), 46 deletions(-)
+ 2 files changed, 85 insertions(+), 56 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
-index 1e095c2ab..6efe794d8 100644
+index 1e095c2ab..59708a1a1 100644
 --- a/drivers/i2c/busses/i2c-mlxcpld.c
 +++ b/drivers/i2c/busses/i2c-mlxcpld.c
 @@ -53,8 +53,6 @@
@@ -24,6 +24,28 @@ index 1e095c2ab..6efe794d8 100644
  enum mlxcpld_i2c_frequency {
  	MLXCPLD_I2C_FREQ_1000KHZ = 1,
  	MLXCPLD_I2C_FREQ_400KHZ = 2,
+@@ -154,8 +152,8 @@ static void mlxcpld_i2c_lpc_write_buf_io(u8 *data, u8 len, void __iomem *addr)
+ {
+ 	int i;
+ 
+-	for (i = 0; i < len - len % 4; i += 4)
+-		iowrite32(*(u32 *)(data + i), addr + i);
++	for (i = 0; i < len - len % 2; i += 2)
++		iowrite16(*(u16 *)(data + i), addr + i);
+ 	for (; i < len; ++i)
+ 		iowrite8(*(data + i), addr + i);
+ }
+@@ -164,8 +162,8 @@ static void mlxcpld_i2c_lpc_read_buf_io(u8 *data, u8 len, void __iomem *addr)
+ {
+ 	int i;
+ 
+-	for (i = 0; i < len - len % 4; i += 4)
+-		*(u32 *)(data + i) = ioread32(addr + i);
++	for (i = 0; i < len - len % 2; i += 2)
++		*(u16 *)(data + i) = ioread16(addr + i);
+ 	for (; i < len; ++i)
+ 		*(data + i) = ioread8(addr + i);
+ }
 @@ -173,7 +171,7 @@ static void mlxcpld_i2c_lpc_read_buf_io(u8 *data, u8 len, void __iomem *addr)
  static void mlxcpld_i2c_read_comm_io(struct mlxcpld_i2c_priv *priv, u8 offs,
  				     u8 *data, u8 datalen)
@@ -33,7 +55,17 @@ index 1e095c2ab..6efe794d8 100644
  
  	switch (datalen) {
  	case 1:
-@@ -198,7 +196,7 @@ static void mlxcpld_i2c_read_comm_io(struct mlxcpld_i2c_priv *priv, u8 offs,
+@@ -186,9 +184,6 @@ static void mlxcpld_i2c_read_comm_io(struct mlxcpld_i2c_priv *priv, u8 offs,
+ 		*((u16 *)data) = ioread16(addr);
+ 		*(data + 2) = ioread8(addr + 2);
+ 		break;
+-	case 4:
+-		*((u32 *)data) = ioread32(addr);
+-		break;
+ 	default:
+ 		mlxcpld_i2c_lpc_read_buf_io(data, datalen, addr);
+ 		break;
+@@ -198,7 +193,7 @@ static void mlxcpld_i2c_read_comm_io(struct mlxcpld_i2c_priv *priv, u8 offs,
  static void mlxcpld_i2c_write_comm_io(struct mlxcpld_i2c_priv *priv, u8 offs,
  				      u8 *data, u8 datalen)
  {
@@ -42,6 +74,16 @@ index 1e095c2ab..6efe794d8 100644
  
  	switch (datalen) {
  	case 1:
+@@ -211,9 +206,6 @@ static void mlxcpld_i2c_write_comm_io(struct mlxcpld_i2c_priv *priv, u8 offs,
+ 		iowrite16(*((u16 *)data), addr);
+ 		iowrite8(*(data + 2), addr + 2);
+ 		break;
+-	case 4:
+-		iowrite32(*((u32 *)data), addr);
+-		break;
+ 	default:
+ 		mlxcpld_i2c_lpc_write_buf_io(data, datalen, addr);
+ 		break;
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
 index d86168685..7f60b67b9 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
