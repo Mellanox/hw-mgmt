@@ -164,6 +164,7 @@ class CONST(object):
     # PWM smoothing in time
     PWM_MAX_REDUCTION = 8
     PWM_WORKER_POLL_TIME = 5
+    PWM_VALIDATE_TIME = 30
     # FAN RPM tolerance in percent
     FAN_RPM_TOLERANCE = 30
 
@@ -521,7 +522,7 @@ class Logger(object):
         handler_list = self.logger.handlers[:]
         for handler in handler_list:
             self.logger.removeHandler(handler)
-    
+
     def set_loglevel(self, verbosity):
         """
         @summary:
@@ -644,6 +645,7 @@ class RepeatedTimer(object):
         """
         if immediately_run:
             self.function()
+            self.stop()
 
         if not self.is_running:
             self._timer = Timer(self.interval, self._run)
@@ -773,26 +775,46 @@ class hw_managemet_file_op(object):
         os.remove(filename)
 
     # ----------------------------------------------------------------------
-    def write_pwm(self, pwm):
+    def write_pwm(self, pwm, validate=False):
         """
         @summary:
             write value tp PWM file.
         @param pwm: PWM value in persent 0..100
+        @param validate: Make read-after-write validation. Return Tru in case no error
         """
-        pwm_out = int(pwm * 255 / 100)
-        self.write_file("thermal/pwm1", pwm_out)
+        ret = True
+        try:
+            pwm_out = int(pwm * 255 / 100)
+            if self.check_file("thermal/pwm1"):
+                self.write_file("thermal/pwm1", pwm_out)
+            else:
+                ret = False
+        except BaseException:
+            ret = False
+
+        if validate:
+            pwm_get = self.read_pwm()
+            ret = pwm == pwm_get
+        return ret
+
 
     # ----------------------------------------------------------------------
-    def read_pwm(self):
+    def read_pwm(self, default_val=None):
         """
         @summary:
             read PWM from hw-management/thermal tree.
         @param filename: file to read from {hw-management-folder}/thermal/filename
+        @param default_val: return valuse in case of read error
         @return: int value from file
         """
-        pwm = int(self.read_file("thermal/pwm1"))
-        pwm_out = int(pwm / 2.55 + 0.5)
-        return int(pwm_out)
+        pwm_out = default_val
+        try:
+            pwm = int(self.read_file("thermal/pwm1"))
+            pwm_out = int(pwm / 2.55 + 0.5)
+        except BaseException:
+            pass
+
+        return pwm_out
 
 
 class system_device(hw_managemet_file_op):
@@ -1557,7 +1579,7 @@ class fan_sensor(system_device):
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
         self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
-        self.pwm_set = self.read_pwm()
+        self.pwm_set = self.read_pwm(CONST.PWM_MIN)
 
         self.rpm_valid_state = True
 
@@ -1580,7 +1602,7 @@ class fan_sensor(system_device):
         self.fan_dir = self._read_dir()
         self.drwr_param = self._get_fan_drwr_param()
         self.fan_shutdown(False)
-        self.pwm_set = self.read_pwm()
+        self.pwm_set = self.read_pwm(CONST.PWM_MIN)
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -1665,10 +1687,10 @@ class fan_sensor(system_device):
     def _validate_rpm(self):
         """
         """
-        try:
-            pwm_curr = self.read_pwm()
+        pwm_curr = self.read_pwm()
+        if pwm_curr:
             self.handle_reading_file_err("thermal/pwm1", reset=True)
-        except BaseException:
+        else:
             self.log.error("Read PWM error")
             self.handle_reading_file_err("thermal/pwm1")
             return False
@@ -1692,8 +1714,7 @@ class fan_sensor(system_device):
 
             rpm_tolerance = float(fan_param.get("rpm_tolerance", CONST.FAN_RPM_TOLERANCE))/100
             pwm_min = int(fan_param["pwm_min"])
-            slope = int(fan_param["slope"])
-            self.log.debug("Real:{} min:{} max:{} slope{} validate rpm".format(rpm_real, rpm_min, rpm_max, slope))
+            self.log.debug("Real:{} min:{} max:{}".format(rpm_real, rpm_min, rpm_max))
             # 1. Check fan speed in range with tolerance
             if rpm_real < rpm_min*(1-rpm_tolerance) or rpm_real > rpm_max*(1+rpm_tolerance):
                 self.log.info("{} tacho{}={} out of RPM range {}:{}".format(self.name,
@@ -1706,8 +1727,9 @@ class fan_sensor(system_device):
              # 2. Check fan trend
             if pwm_curr >= pwm_min:
                 # if FAN spped stabilized after the last change
-                if self.rpm_relax_timestump <= current_milli_time():
+                if self.rpm_relax_timestump <= current_milli_time() and pwm_curr == self.pwm_set:
                     # claculate speed
+                    slope = int(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
                     rpm_calcuated = slope * pwm_curr + b
                     rpm_diff = abs(rpm_real - rpm_calcuated)
@@ -1718,17 +1740,17 @@ class fan_sensor(system_device):
                                                                                                                    rpm_diff,
                                                                                                                    rpm_diff_norm))
                     if rpm_diff_norm >= rpm_tolerance:
-                        self.log.warn("{} tacho {}: {} too much different {:.2f}% than calculated {} pwm  {}".format(self.name,
-                                                                                                                     tacho_idx,
-                                                                                                                     rpm_real,
-                                                                                                                     rpm_diff_norm*100,
-                                                                                                                     rpm_calcuated,
-                                                                                                                     pwm_curr))
+                        self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} pwm  {}".format(self.name,
+                                                                                                                    tacho_idx,
+                                                                                                                    rpm_real,
+                                                                                                                    rpm_diff_norm*100,
+                                                                                                                    rpm_calcuated,
+                                                                                                                    pwm_curr))
                         return False
         return True
 
     # ----------------------------------------------------------------------
-    def set_pwm(self, pwm_val):
+    def set_pwm(self, pwm_val, force=False):
         """
         @summary: Set PWM level for chassis FAN
         @param pwm_val: PWM level value <= 100%
@@ -1737,7 +1759,7 @@ class fan_sensor(system_device):
         if pwm_val < CONST.PWM_MIN:
             pwm_val = CONST.PWM_MIN
 
-        if pwm_val == self.pwm_set:
+        if pwm_val == self.pwm_set and not force:
             return
 
         pwm_jump = abs(pwm_val - self.pwm_set)
@@ -1748,14 +1770,13 @@ class fan_sensor(system_device):
             relax_time = self.rpm_relax_timeout * 2
         elif relax_time < self.rpm_relax_timeout / 2:
             relax_time = self.rpm_relax_timeout / 2
-        self.log.debug("{} pwm_change:{} relax_time:{}".format(self.name, pwm_jump, relax_time))
         self.rpm_relax_timestump = current_milli_time() + relax_time
+        self.log.debug("{} pwm jump by:{} relax_time:{} timestump {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestump))
 
         self.pwm_set = pwm_val
-        try:
-            self.write_pwm(pwm_val)
-        except BaseException:
-            self.log.error("Write PWM error")
+
+        if not self.write_pwm(pwm_val, validate=True):
+            self.log.warn("PWM write validation mismatch set:{} get:{}".format(pwm_val, self.read_pwm()))
 
     # ----------------------------------------------------------------------
     def get_dir(self):
@@ -2039,6 +2060,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
         self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
+        self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
         self.state = CONST.UNCONFIGURED
         self.fan_drwr_num = 0
 
@@ -2058,14 +2080,16 @@ class ThermalManagement(hw_managemet_file_op):
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
-        try:
-            self.write_pwm(self.pwm_target)
-        except BaseException:
-            self.log.error("Set PWM failed. Possible hw-management/SDK is not running", 1)
+        if not self.write_pwm(self.pwm_target, validate=True):
+            self.log.warn("PWM write validation mismatch set:{} get:{}".format(self.pwm_target, self.read_pwm()))
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
-            self.exit.wait(thermal_delay)
+            timeout = current_milli_time() + 1000 * thermal_delay
+            while timeout > current_milli_time():
+                if not self.write_pwm(self.pwm_target):
+                    self.log.info("Set PWM failed. Possible SDK is not started")
+                self.exit.wait(2)
 
         if not self.is_fan_tacho_init():
             self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for ASIC init", 1)
@@ -2074,7 +2098,12 @@ class ThermalManagement(hw_managemet_file_op):
                 self.exit.wait(10)
 
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
-        self.exit.wait(CONST.THERMAL_WAIT_FOR_CONFIG)
+        timeout = current_milli_time() + 1000 * CONST.THERMAL_WAIT_FOR_CONFIG
+        while timeout > current_milli_time():
+            if not self.write_pwm(self.pwm_target):
+                self.log.info("Set PWM failed. Possible SDK is not started")
+            self.exit.wait(2)
+
         self._collect_hw_info()
         self.amb_tmp = CONST.TEMP_INIT_VAL_DEF
         self.module_counter = 0
@@ -2223,7 +2252,7 @@ class ThermalManagement(hw_managemet_file_op):
                 psu_obj.set_pwm(pwm)
 
     # ----------------------------------------------------------------------
-    def _update_chassis_fan_speed(self, pwm_val):
+    def _update_chassis_fan_speed(self, pwm_val, force=False):
         """
         @summary:
             Set chassis fan PWM
@@ -2236,7 +2265,7 @@ class ThermalManagement(hw_managemet_file_op):
         for fan_idx in range(1, self.fan_drwr_num + 1):
             fan_obj = self._get_dev_obj("fan{}.*".format(fan_idx))
             if fan_obj:
-                fan_obj.set_pwm(pwm_val)
+                fan_obj.set_pwm(pwm_val, force)
 
     # ----------------------------------------------------------------------
     def _set_pwm(self, pwm, reason=""):
@@ -2246,10 +2275,9 @@ class ThermalManagement(hw_managemet_file_op):
         """
         if self.state == CONST.UNCONFIGURED:
             self.log.info("TC is not configureed. Try to force set PWM1 {}%".format(pwm))
-            try:
-                self.write_pwm(pwm)
-            except BaseException:
-                self.log.error("Set PWM failed. Possible hw-management/SDK is not running", 1)
+            if not self.write_pwm(pwm, validate=True):
+                self.log.warn("PWM write validation mismatch set:{} get:{}".format(pwm, self.read_pwm()))
+
             return
 
         pwm = int(pwm)
@@ -2270,30 +2298,29 @@ class ThermalManagement(hw_managemet_file_op):
             else:
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
-        else:
-            try:
-                pwm_real = self.read_pwm()
-            except BaseException:
-                self.log.error("Read PWM error. Possible hw-management is not running", 1)
-                return
-
-            if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm_target))
-                self._update_chassis_fan_speed(self.pwm)
-
-    # ----------------------------------------------------------------------
-    def _pwm_worker(self):
-        ''
-        if self.pwm_target == self.pwm:
-            try:
-                pwm_real = self.read_pwm()
-            except BaseException:
+        elif current_milli_time() > self.pwm_validate_timeout:
+            self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
+            pwm_real = self.read_pwm()
+            if not pwm_real:
                 self.log.error("Read PWM error. Possible hw-management is not running", 1)
                 return
 
             if pwm_real != self.pwm:
                 self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm))
-                self._update_chassis_fan_speed(self.pwm)
+                self._update_chassis_fan_speed(self.pwm, True)
+
+    # ----------------------------------------------------------------------
+    def _pwm_worker(self):
+        ''
+        if self.pwm_target == self.pwm:
+            pwm_real = self.read_pwm()
+            if not pwm_real:
+                self.log.error("Read PWM error. Possible hw-management is not running", 1)
+                return
+
+            if pwm_real != self.pwm:
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm))
+                self._update_chassis_fan_speed(self.pwm, True)
             self.pwm_worker_timer.stop()
             return
 
@@ -2399,9 +2426,7 @@ class ThermalManagement(hw_managemet_file_op):
         ""
         ret = True
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
-            try:
-                self.read_pwm()
-            except Exception:
+            if not self.read_pwm():
                 ret = False
         return ret
 
@@ -2521,7 +2546,6 @@ class ThermalManagement(hw_managemet_file_op):
         if CONST.SYS_CONF_ASIC_PARAM not in sys_config:
             self.log.info("ASIC specific parameters table missing in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
-        
 
         self.sys_config = sys_config
 
@@ -2765,7 +2789,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.info("Thermal periodic report")
         self.log.info("================================")
         self.log.info("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
-        self.log.info("Cooling(%) {} ({})".format(self.pwm_target, self.pwm_change_reason))
+        self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
         self.log.info("dir:{}".format(flow_dir))
         self.log.info("================================")
         for dev_obj in self.dev_obj_list:
