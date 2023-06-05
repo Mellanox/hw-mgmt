@@ -144,6 +144,14 @@ find_i2c_bus()
             name=$(cut $folder/name -d' ' -f 1)
             if [ "$name" == "i2c-mlxcpld" ]; then
                 i2c_bus_offset=$((i-1))
+		case $sku in
+		HI151|H156)
+			i2c_bus_offset=$((i2c_bus_offset-1))
+			;;
+		default)
+			;;
+		esac
+
                 echo $i2c_bus_offset > $config_path/i2c_bus_offset
                 return
             fi

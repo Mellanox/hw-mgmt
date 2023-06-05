@@ -157,6 +157,11 @@ cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
+bf3_come_connection_table=(	tmp421 0x1f 15 \
+				mp2975 0x69 15 \
+				mp2975 0x6a 15 \
+				24c32 0x50 16)
+
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			lm75 0x4a 7 \
@@ -665,10 +670,10 @@ set_jtag_gpio()
 			jtag_tdo=89
 			;;
 		$BF3_CPU)
-			jtag_tdi=11
-			jtag_tck=55
-			jtag_tms=54
-			jtag_tdo=12
+			jtag_tdi=11	# 11 MLNXBF33:01
+			jtag_tdo=12	# 12 MLNXBF33:01
+			jtag_tck=23 	# 55 MLNXBF33:00
+			jtag_tms=22	# 54 MLNXBF33:00
 			;;
 		*)
 			return 0
@@ -715,20 +720,49 @@ set_jtag_gpio()
 			log_err "CPU GPIO chip was not found"
 		fi
 	else
-		gpiobase=$(</sys/class/gpio/gpiochip*/base)
+		case $sku in
+		# BF3 COME has 2 gpiochips - both are use for JTAG bit-banging.
+		HI151|H156)
+			for gpiochip in /sys/class/gpio/*; do
+				if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
+					gpiolabel=$(<"$gpiochip"/label)
+					if [ "$gpiolabel" == "MLNXBF33:00" ]; then
+						gpiobase0=$(<"$gpiochip"/base)
+					fi
+					if [ "$gpiolabel" == "MLNXBF33:01" ]; then
+						gpiobase1=$(<"$gpiochip"/base)
+					fi
+				fi
+			done
+			;;
+		default)
+			gpiobase=$(</sys/class/gpio/gpiochip*/base)
+			;;
+		esac
 	fi
 
-	gpio_tck=$((gpiobase+jtag_tck))
-	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
-
-	gpio_tms=$((gpiobase+jtag_tms))
-	echo $gpio_tms > /sys/class/gpio/"$export_unexport"
-
-	gpio_tdo=$((gpiobase+jtag_tdo))
-	echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
-
-	gpio_tdi=$((gpiobase+jtag_tdi))
-	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+	case $sku in
+	HI151|H156)
+		# Two gpiochips - both are use for JTAG bit-banging.
+		gpio_tck=$((gpiobase0+jtag_tck))
+		echo $gpio_tck > /sys/class/gpio/"$export_unexport"
+		gpio_tms=$((gpiobase0+jtag_tms))
+		echo $gpio_tms > /sys/class/gpio/"$export_unexport"
+		gpio_tdo=$((gpiobase1+jtag_tdo))
+		echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
+		gpio_tdi=$((gpiobase1+jtag_tdi))
+		echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+		;;
+	default)
+		gpio_tck=$((gpiobase+jtag_tck))
+		echo $gpio_tck > /sys/class/gpio/"$export_unexport"
+		gpio_tms=$((gpiobase+jtag_tms))
+		echo $gpio_tms > /sys/class/gpio/"$export_unexport"
+		gpio_tdo=$((gpiobase+jtag_tdo))
+		echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
+		gpio_tdi=$((gpiobase+jtag_tdi))
+		echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+	esac
 
 	# In SN2201 system. 
 	# GPIO0 for CPU request to reset the Main Board I2C Mux.
@@ -833,12 +867,12 @@ add_cpu_board_to_connection_table()
 			case $sku in
 				# MQM9700+BF3
 				HI151)
-					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					cpu_connection_table=( ${bf3_come_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
 				# MSN4700+BF3
 				HI156)
-					cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+					cpu_connection_table=( ${bf3_come_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
 					;;
 			esac
@@ -1667,9 +1701,11 @@ bf3_common()
 	case $sku in
 		HI151)
 			mqm97xx_specific
+			i2c_asic_bus_default=0
 			;;
 		HI156)
 			msn47xx_specific
+			i2c_asic_bus_default=0
 			;;
 		*)
 			echo "Unsupported BF3 platform"
@@ -1924,6 +1960,7 @@ check_system()
 				*)
 					# Check marginal system, system without SMBIOS customization,
 					# only on old types of Mellanox switches.
+					cpu_type=$(cat $config_path/cpu_type)
 					if grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor ; then
 						case $cpu_type in
 							$RNG_CPU)
