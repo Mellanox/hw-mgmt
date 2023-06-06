@@ -1,0 +1,29 @@
+From 8bc51a1c995ffe5f0864b3451b1769c072b316e5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 6 Jun 2023 08:38:14 +0000
+Subject: [PATCH BF3 debug 1/1] DBG: gpio: mlxbf3: Add gpio 5 to valid mask
+
+Add pin 5 to valid mask to allow system interrupt to
+utilize this pin.
+Change should be apply to ACPI table.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/gpio/gpio-mlxbf3.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpio/gpio-mlxbf3.c b/drivers/gpio/gpio-mlxbf3.c
+index 51dce3ae1..c97343670 100644
+--- a/drivers/gpio/gpio-mlxbf3.c
++++ b/drivers/gpio/gpio-mlxbf3.c
+@@ -205,6 +205,7 @@ static int mlxbf3_gpio_probe(struct platform_device *pdev)
+ 
+ 	gs->valid_mask = 0x0;
+ 	device_property_read_u32(dev, "valid_mask", &gs->valid_mask);
++	gs->valid_mask |= BIT(5);
+ 
+ 	gc = &gs->gc;
+ 
+-- 
+2.20.1
+
