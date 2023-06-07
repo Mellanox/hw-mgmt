@@ -1250,9 +1250,10 @@ msn24102_specific()
 msn27002_msb78002_specific()
 {
 	local cpu_bus_offset=18
-	# This system do not use auto detected cpu conection table.
-	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
-	add_cpu_board_to_connection_table $cpu_bus_offset
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -2256,6 +2257,15 @@ set_asic_pci_id()
 pre_devtr_init()
 {
 	case $board_type in
+	VMOD0009)
+		case $sku in
+		HI117)
+			echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
+		;;
 	VMOD0013)
 		case $sku in
 		HI144|HI147|HI148)	# ToDo Possible change for Ibex
