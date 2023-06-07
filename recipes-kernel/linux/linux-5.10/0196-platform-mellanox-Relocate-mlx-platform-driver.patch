@@ -22,13 +22,14 @@ diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconf
 index 75e2bee17..ff8267329 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -14,6 +14,18 @@ menuconfig MELLANOX_PLATFORM
+@@ -14,6 +14,19 @@ menuconfig MELLANOX_PLATFORM
  
  if MELLANOX_PLATFORM
  
 +config MLX_PLATFORM
 +	tristate "Mellanox Technologies platform support"
-+	depends on I2C && REGMAP
++	depends on I2C
++	select REGMAP
 +	help
 +	  This option enables system support for the Mellanox Technologies
 +	  platform. The Mellanox systems provide data center networking
@@ -61,13 +62,14 @@ diff --git a/drivers/platform/x86/Kconfig b/drivers/platform/x86/Kconfig
 index a1858689d..4270d4c17 100644
 --- a/drivers/platform/x86/Kconfig
 +++ b/drivers/platform/x86/Kconfig
-@@ -1193,18 +1193,6 @@ config I2C_MULTI_INSTANTIATE
+@@ -1193,19 +1193,6 @@ config I2C_MULTI_INSTANTIATE
  	  To compile this driver as a module, choose M here: the module
  	  will be called i2c-multi-instantiate.
  
 -config MLX_PLATFORM
 -	tristate "Mellanox Technologies platform support"
--	depends on I2C && REGMAP
+-	depends on I2C
+-	select REGMAP
 -	help
 -	  This option enables system support for the Mellanox Technologies
 -	  platform. The Mellanox systems provide data center networking

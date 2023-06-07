@@ -361,6 +361,7 @@ Kernel-5.10
 |0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            | BF3-COME                                       |
 |0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            | BF3-COME                                       |
 |0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0195-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch  |                    | Bugfix upstream                          | 5.10.175   | BF3-COME accepted in 6.1                       |
 |0196-platform-mellanox-Relocate-mlx-platform-driver.patch        |                    | Feature pending                          |            | BF3-COME                                       |
 |0197-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0198-platform-mellanox-Introduce-support-for-switches-bas.patch  |                    | Feature pending                          |            | BF3-COME                                       |
@@ -368,7 +369,7 @@ Kernel-5.10
 |0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
 |0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
+|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Feature upstream                         |            | BF3-COME                                       |
 |0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
 |0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
 |0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Feature upstream                         |            | BF3-COME                                       |
@@ -430,7 +431,7 @@ Kernel-5.10
 |0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch          | b0b698b80c56       | Feature upstream                         |            | BF3-COME                                       |
 |0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix accepted                          |            | accepted for v6 .3                             |
+|0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix upstream                          | 5.10.173   |                                                |
 |0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0268-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch  |                    | Downstream                               |            |                                                |
