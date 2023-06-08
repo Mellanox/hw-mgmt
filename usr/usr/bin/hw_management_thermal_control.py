@@ -214,7 +214,7 @@ SENSOR_DEF_CONFIG = {
                          "val_min": 4500, "val_max": 20000, "poll_time": 5,
                          "input_suffix": "_fan1_speed_get", "refresh_attr_period": 1 * 60
                         },
-    r'fan\d+':          {"type": "fan_sensor",
+    r'drwr\d+':          {"type": "fan_sensor",
                          "val_min": 4500, "val_max": 20000, "poll_time": 5,
                          "refresh_attr_period": 1 * 60
                         },
@@ -521,6 +521,7 @@ class Logger(object):
         logging.shutdown()
         handler_list = self.logger.handlers[:]
         for handler in handler_list:
+            handler.close()
             self.logger.removeHandler(handler)
 
     def set_loglevel(self, verbosity):
@@ -2225,7 +2226,7 @@ class ThermalManagement(hw_managemet_file_op):
         c2p_count = 0
         p2c_count = 0
         for dev_obj in self.dev_obj_list:
-            if re.match(r'fan\d+', dev_obj.name):
+            if re.match(r'drwr\d+', dev_obj.name):
                 fan_dir = dev_obj.fan_dir
                 if fan_dir == CONST.C2P:
                     c2p_count += 1
@@ -2262,8 +2263,8 @@ class ThermalManagement(hw_managemet_file_op):
         if not self.is_pwm_exists():
             self.log.warn("Missing PWM link".format(pwm_val))
             return
-        for fan_idx in range(1, self.fan_drwr_num + 1):
-            fan_obj = self._get_dev_obj("fan{}.*".format(fan_idx))
+        for drwr_idx in range(1, self.fan_drwr_num + 1):
+            fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
             if fan_obj:
                 fan_obj.set_pwm(pwm_val, force)
 
@@ -2476,6 +2477,7 @@ class ThermalManagement(hw_managemet_file_op):
 
             self.log.notice("Thermal control stopped", 1)
             self.log.stop()
+            time.sleep( 200 / 1000)
             os._exit(0)
 
     # ----------------------------------------------------------------------
@@ -2525,7 +2527,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         # 2. Init PSU fan speed vs system fan speed table
         if CONST.SYS_CONF_FAN_PWM not in sys_config:
-            self.log.info("PSU fan speed vs system fan speed table missing in system_config. Init it from local.")
+            self.log.info("PSU fan speed vs system fan speed table missing in system_config. Set to default.")
             sys_config[CONST.SYS_CONF_FAN_PWM] = PSU_PWM_DECODE_DEF
 
         # 3. Init Fan Parameters table
@@ -2566,7 +2568,7 @@ class ThermalManagement(hw_managemet_file_op):
             self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
 
         for fan_idx in range(1, self.fan_drwr_num + 1):
-            name = "fan{}".format(fan_idx)
+            name = "drwr{}".format(fan_idx)
             self._sensor_add_config("fan_sensor", name, {"base_file_name": name, "drwr_id": fan_idx, "tacho_cnt": self.fan_drwr_capacity})
 
         for gearbox_idx in range(1, self.gearbox_counter + 1):
@@ -2642,7 +2644,7 @@ class ThermalManagement(hw_managemet_file_op):
                     dev_obj.start()
 
             # get FAN max reduction from any of FAN
-            fan_obj = self._get_dev_obj(r'fan\d+')
+            fan_obj = self._get_dev_obj(r'drwr\d+')
             if fan_obj:
                 self.pwm_max_reduction = fan_obj.get_max_reduction()
 
