@@ -1267,6 +1267,8 @@ msn27002_msb78002_specific()
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
+	lm_sensors_config="$lm_sensors_configs_path/msn27002_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	get_i2c_bus_frequency_default
 }
 
