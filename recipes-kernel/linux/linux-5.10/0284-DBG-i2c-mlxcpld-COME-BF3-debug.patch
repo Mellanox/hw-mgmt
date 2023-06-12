@@ -1,15 +1,15 @@
-From 8bbc1b62eed4e54025a2c60bf7e8fd9ec2ee0b65 Mon Sep 17 00:00:00 2001
+From 027a136d82b09da7e8b0a3a64ca35acbb0ac3d13 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
-Subject: [PATCH BF3 debug 1/1] DBG: i2c: mlxcpld: COME BF3 debug
+Subject: [PATH backport 1/1] DBG: i2c: mlxcpld: COME BF3 debug
 
 To be merged to previous two TMP patches.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/i2c/busses/i2c-mlxcpld.c         |  20 ++--
- drivers/platform/mellanox/mlx-platform.c | 121 +++++++++++++++--------
- 2 files changed, 85 insertions(+), 56 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 125 +++++++++++++++--------
+ 2 files changed, 87 insertions(+), 58 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
 index 1e095c2ab..59708a1a1 100644
@@ -85,10 +85,10 @@ index 1e095c2ab..59708a1a1 100644
  		mlxcpld_i2c_lpc_write_buf_io(data, datalen, addr);
  		break;
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d86168685..7f60b67b9 100644
+index d86168685..617f59a0a 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -334,14 +334,16 @@
+@@ -334,20 +334,22 @@
  
  /* Lattice FPGA PCI configuration */
  #define PCI_VENDOR_ID_LATTICE			0x1204
@@ -108,6 +108,13 @@ index d86168685..7f60b67b9 100644
  #define MLXPLAT_FPGA_PCI_CTRL_OFFSET		(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x04)
  #define MLXPLAT_FPGA_PCI_STAT_OFFSET		(MLXPLAT_FPGA_PCI_BASE_OFFSET + 0x05)
  
+ #define MLXPLAT_FPGA_PCI_CTRL_READ	BIT(0)
+ #define MLXPLAT_FPGA_PCI_CTRL_WRITE	BIT(1)
+-#define MLXPLAT_FPGA_PCI_COMPLETED	BIT(0)
++#define MLXPLAT_FPGA_PCI_COMPLETED	GENMASK(1, 0)
+ #define MLXPLAT_FPGA_PCI_TO		50 /* usec */
+ 
+ /* mlxplat_priv - platform private data
 @@ -5897,6 +5899,7 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
  		return err;
  
@@ -116,7 +123,12 @@ index d86168685..7f60b67b9 100644
  	iowrite8(MLXPLAT_FPGA_PCI_MSB_ADDR, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
  	iowrite8(reg, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET);
  	/* Activate read operation */
-@@ -5935,9 +5938,9 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
+@@ -5931,13 +5934,13 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
+ 	/* Activate write operation */
+ 	iowrite8(MLXPLAT_FPGA_PCI_CTRL_WRITE, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
+ 
+-	return 0;
++	return mlxplat_fpga_completion_wait(ctx);
  }
  
  static const struct regmap_config mlxplat_fpga_regmap_config_bf3_comex_default = {
