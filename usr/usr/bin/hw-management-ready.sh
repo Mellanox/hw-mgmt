@@ -65,6 +65,7 @@ VMOD0014)
 		plat_path=/sys/devices/platform/mlxplat
 	fi
 	if [ ! -d ${plat_path}/mlxreg-hotplug/hwmon ]; then
+		export plat_path
 		timeout 180 bash -c 'until [ -d ${plat_path}/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
 	fi
 	;;
