@@ -642,7 +642,8 @@ set_sodimm_temp_limits()
 
 set_jtag_gpio()
 {
-	export_unexport=$1
+	local export_unexport=$1
+	local cpu_type=$(cat $config_path/cpu_type)
 	# Check where supported and assign appropriate GPIO pin numbers
 	# for JTAG bit-banging operations.
 	# GPIO pin numbers are offset from gpiobase.
@@ -722,7 +723,7 @@ set_jtag_gpio()
 	else
 		case $sku in
 		# BF3 COME has 2 gpiochips - both are use for JTAG bit-banging.
-		HI151|H156)
+		HI151|HI156)
 			for gpiochip in /sys/class/gpio/*; do
 				if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
 					gpiolabel=$(<"$gpiochip"/label)
@@ -742,7 +743,7 @@ set_jtag_gpio()
 	fi
 
 	case $sku in
-	HI151|H156)
+	HI151|HI156)
 		# Two gpiochips - both are use for JTAG bit-banging.
 		gpio_tck=$((gpiobase0+jtag_tck))
 		echo $gpio_tck > /sys/class/gpio/"$export_unexport"
@@ -762,6 +763,7 @@ set_jtag_gpio()
 		echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
 		gpio_tdi=$((gpiobase+jtag_tdi))
 		echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+		;;
 	esac
 
 	# In SN2201 system. 
@@ -800,6 +802,7 @@ add_cpu_board_to_connection_table()
 	local cpu_connection_table=()
 	local cpu_voltmon_connection_table=()
 	local HW_REV=255
+	local cpu_type=$(cat $config_path/cpu_type)
 
 	regio_path=$(find_regio_sysfs_path)
 	if [ $? -eq 0 ]; then
