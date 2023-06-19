@@ -43,16 +43,29 @@ WR_OP=2
 # Print help message
 usage()
 {
-	echo "iorw -r/w [-b <base_addr>] [-o <offset>] [-l <len>] [-v <value>] [-f <filename>] [-F] [-q] [-h]"
+	echo "$(basename $0) [-r] [-w] [-o <offset>] [-l <length>] [-v <value>] [-f <filename>] [-q] [-h]"
 	echo "-r - perform read operation"
 	echo "-w - perform write operation"
-	echo "-b - base_addr, for backward compatibility only, same as offset"
 	echo "-o - offset, can be omitted, default is 0"
 	echo "-l - number of registers to read/write; can be omitted only for read - full dump in this case"
 	echo "-v - value for write operation"
 	echo "-f - file to store output values"
 	echo "-q - quiet, when used with -f option, store output in file without printing to terminal"
 	echo "-h - display this help"
+	echo
+	echo "Note: Hexadecimal values of offset, length and value should be prefixed with 0x"
+	echo
+	echo "Examples:"
+	echo "Read all registers"
+	echo "   $(basename $0) -r"
+	echo "Read all registers starting at offset 0x10"
+	echo "   $(basename $0) -r -o 0x10"
+	echo "Read 20 registers starting at offset 0x10"
+	echo "   $(basename $0) -r -o 0x10 -l 20"
+	echo "Write 0x06 at offset 0x10"
+	echo "   $(basename $0) -w -o 0x10 -v 0x06 -l 1"
+	echo "Write 0x01, 0x02 and 0x03 at offsets 0x10, 0x11 and 0x12"
+	echo "   $(basename $0) -w -o 0x10 -v 0x01:0x02:0x03 -l 3"
 }
 
 # Get first register in regmap
@@ -73,7 +86,7 @@ get_regmap_size()
 	local first=$(get_regmap_first_reg)
 	local last=$(get_regmap_last_reg)
 
-	printf "%d" $((${last}-${first}+1))
+	printf "%d" $((last-first+1))
 }
 
 # Get regmap register size in bytes
@@ -81,7 +94,7 @@ get_regmap_reg_size()
 {
 	local nibbles=$(head -n 1 ${REGMAP_REGISTERS} | cut -d" " -f2 | tr -d "[:space:]" | wc -c)
 
-	printf "%d" $((${nibbles}/2))
+	printf "%d" $((nibbles/2))
 }
 
 # Get maximum possible value of regmap register
@@ -91,7 +104,7 @@ get_regmap_max_reg_val()
 	local bits=$((bytes*8))
 
 	# Use left shift to calculate power of 2
-	printf "%d" $(((1<<${bits})-1))
+	printf "%d" $(((1<<bits)-1))
 }
 
 # Check regmap range validity
@@ -108,7 +121,7 @@ valid_range()
 
 	# Get first and last registers in range
 	local range_first=${off}
-	local range_last=$((${off}+${len}-1))
+	local range_last=$((off+len-1))
 
 	# Check if range is valid
 	if [ ${range_first} -ge ${map_first} ] && [ ${range_last} -le ${map_last} ]; then
@@ -147,11 +160,11 @@ valid_write_val()
 #   1. Global variable 'quiet' controls output to terminal
 do_print()
 {
-	if [ ! -z "$file" ]; then
-		if [ $quiet -eq 1 ]; then
-			printf "$@" >> $file
+	if [ ! -z "${file}" ]; then
+		if [ ${quiet} -eq 1 ]; then
+			printf "$@" >> ${file}
 		else
-			printf "$@" | tee -a $file
+			printf "$@" | tee -a ${file}
 		fi
 	else
 		printf "$@"
@@ -165,6 +178,7 @@ do_print()
 #   1. Global variable 'data' holds register values
 #   2. Global variable 'file' holds log file name
 #   3. Parameter 'len' matches the number of values in 'data'
+#   4. Number of registers in regmap does not exceed 256
 io_print_data()
 {
 	local off=$1
@@ -177,7 +191,7 @@ io_print_data()
 
 	# Handle single register value
 	if [ ${len} -eq 1 ]; then
-		do_print "IO reg 0x%04x = 0x%02x\n" $off 0x${data}
+		do_print "IO reg 0x%02x = 0x%02x\n" ${off} 0x${data}
 		return
 	fi
 
@@ -185,7 +199,11 @@ io_print_data()
 	local i=0
 	for val in ${data}; do
 		if [ $((i % 16)) -eq 0 ]; then
-			do_print "\n%04x: %02x " ${off} 0x${val}
+			if [ ${i} -eq 0 ]; then
+				do_print "%02x: %02x " ${off} 0x${val}
+			else
+				do_print "\n%02x: %02x " ${off} 0x${val}
+			fi
 		else
 			do_print "%02x " 0x${val}
 		fi
@@ -196,8 +214,8 @@ io_print_data()
 }
 
 # Read regmap register range
-# @off - offset of first register - decimal
-# @len - number of registers to read - decimal
+# @off - offset of the first register - decimal
+# @len - number of registers to read  - decimal
 # Assumptions:
 #   1. Global variable 'data' holds register values
 io_read()
@@ -205,13 +223,13 @@ io_read()
 	local off=$1
 	local len=$2
 
-	data=$(grep -A $((len-1)) ^$(printf "%02x" ${off}) ${REGMAP_REGISTERS} | cut -d" " -f2)
-	io_print_data $off $len
+	data=$(tail -n +$((off+1)) ${REGMAP_REGISTERS} | head -n ${len} | cut -d" " -f2)
+	io_print_data ${off} ${len}
 }
 
 # Write regmap register range
-# @off  - offset of first register - decimal
-# @data - colon separated values to be written
+# @off  - offset of the first register - decimal
+# @data - list of colon separated values to be written
 # @len  - number of registers to write - decimal
 # Assumptions:
 #   1. Hexadecimal values in 'data' are prefixed with 0x
@@ -222,22 +240,22 @@ io_write()
 	local len=$3
 
 	# Check that 'len' parameter matches the number of registers in 'data'
-	local data_len=$(echo $data | awk -F: '{print NF}')
+	local data_len=$(echo ${data} | awk -F: '{print NF}')
 	if [ ${len} -ne ${data_len} ]; then
 		echo "Invalid write data, doesn't match write length"
 		return 1
 	fi
 
 	# Split data into individual register values
-	local values=$(echo $data | awk -F: '{for (i=0; ++i <= NF;) print $i}')
+	local values=$(echo ${data} | awk -F: '{for (i=0; ++i <= NF;) print $i}')
 
 	# Iterate over register values and perform regmap write
 	for val in ${values}; do
-		if ! valid_write_val $val; then
-			echo "Invalid write data:" $val
+		if ! valid_write_val ${val}; then
+			echo "Invalid write value:" ${val}
 			return 1
 		else
-			printf "%x %x" $off $val >> ${REGMAP_REGISTERS}
+			printf "%x %x" ${off} ${val} > ${REGMAP_REGISTERS}
 		fi
 		off=$((off+1))
 	done
@@ -253,27 +271,18 @@ if [ ! -f ${REGMAP_REGISTERS} ] || [ ! -f ${REGMAP_RANGE} ]; then
 	exit 1
 fi
 
-# Check regmap register size validity
-reg_size=$(get_regmap_reg_size)
-if [ ${reg_size} -ne 1 ] && [ ${reg_size} -ne 2 ] && [ ${reg_size} -ne 4 ]; then
-	echo "Unsupported register size ${reg_size}, should be 1, 2 or 4"
-	exit 1
-fi
-
 # Set default values
-length=$(get_regmap_size)
 offset=$(get_regmap_first_reg)
 max_reg_val=$(get_regmap_max_reg_val)
 io_op=${NO_OP}
 quiet=0
 file=
 value=
+length=
 
-while getopts "b:f:l:o:v:rwqh" arg; do
+# Parse command line parameters
+while getopts "f:l:o:v:rwqh" arg; do
 	case "${arg}" in
-		b)
-			offset=${OPTARG}
-			;;
 		f)
 			file=${OPTARG}
 			;;
@@ -322,23 +331,38 @@ if [ "${io_op}" -eq "${WR_OP}" ] && [ -z "${value}" ]; then
 	exit 1
 fi
 
+# Length for write option should be specified
+if [ "${io_op}" -eq "${WR_OP}" ] && [ -z "${length}" ]; then
+	echo "Error: write length not specified"
+	usage
+	exit 1
+fi
+
 # Check offset parameter validity
 offset=$(printf "%d" ${offset} 2>/dev/null)
 if [ $? -ne 0 ]; then
-	echo "Error: incorrect offset ${offset}"
+	printf "Error: invalid offset 0x%x\n" ${offset}
 	exit 1
+fi
+
+# Set default length for read, if not specified
+if [ -z "${length}" ]; then
+	length=$(get_regmap_size)
+	if [ ${offset} -gt 0 ] && [ ${offset} -lt ${length} ]; then
+		length=$((length-offset))
+	fi
 fi
 
 # Check length parameter validity
 length=$(printf "%d" ${length} 2>/dev/null)
 if [ $? -ne 0 ]; then
-	echo "Error: incorrect length ${length}"
+	printf "Error: invalid length %d" ${length}
 	exit 1
 fi
 
 # Check range validity
 if ! valid_range ${offset} ${length}; then
-	echo "Error: incorrect range: start = ${offset}, len = ${length}"
+	printf "Error: invalid range: start=0x%x length=%d\n" ${offset} ${length}
 	exit 1
 fi
 
