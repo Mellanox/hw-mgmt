@@ -145,7 +145,7 @@ find_i2c_bus()
             if [ "$name" == "i2c-mlxcpld" ]; then
                 i2c_bus_offset=$((i-1))
 		case $sku in
-		HI151|H156)
+		HI151|HI156)
 			i2c_bus_offset=$((i2c_bus_offset-1))
 			;;
 		default)
