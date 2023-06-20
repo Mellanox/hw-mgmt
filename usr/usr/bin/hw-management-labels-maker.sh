@@ -102,7 +102,6 @@ make_labels()
 	comex_voltmon1_temp*|comex_voltmon2_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
-		echo 4 subfolder $subfolder key $key folder  $folder attr_name $attr_name attr_file $attr_file >> /tmp/test
 		;;
 	voltmon1_in*|voltmon2_in*|voltmon3_in*|voltmon4_in*|voltmon5_in*|voltmon6_in*|voltmon7_in*|voltmon8_in*|voltmon9_in*|voltmon10_in*|voltmon11_in*|voltmon12_in*)
 		subfolder="voltage"
@@ -155,7 +154,7 @@ make_labels()
 
 	label_name=$(hw_management_parse_labels.py --get_value --label "labels_mqm9700_rev1_array" --key "$key")
 	[ -z "$label_name" ] && return 0
-	label_dir="$ui_path"/"$folder"/"$subfolder"/"$label_name"
+	label_dir="$ui_path"/"$subfolder"/"$folder"/"$label_name"
 
 	if [ "$oper" == "link" ]; then
 		if [ ! -d "$label_dir" ]; then
