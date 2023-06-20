@@ -342,7 +342,11 @@ if [ "$1" == "add" ]; then
 						case $label in
 						*front*)
 							if [ "$name" == "mlxsw" ]; then
-								j=$((i-1))
+								# For some new platforms MTCAP register provides the count of
+								# ASIC sensors plus additional platform sensors. So its better
+								# to extract the module number from label which will contain the
+								# string "front panel xxx". 'xxx' is the module number.
+								j=$(echo $label | awk '{print $3}' | sed 's/^0*//')
 							else
 								j="$i"
 							fi
