@@ -1222,6 +1222,7 @@ msn38xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn3800.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3800_sensors.conf"
 }
 
