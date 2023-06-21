@@ -1459,6 +1459,7 @@ mqm97xx_specific()
 	fi
 
 	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
+	echo 0 > "$config_path"/labels_ready
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7

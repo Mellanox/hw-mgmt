@@ -1,6 +1,6 @@
 #!/bin/bash
 ##################################################################################
-# Copyright (c) 2020 - 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,53 +31,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
 
-# Local constants and paths.
-CPLD3_VER_DEF="0"
- 
-board=$(< $board_type_file)
-sku=$(< $sku_file)
-cpld_num=$(cat $config_path/cpld_num)
-case $board in
-	VMOD0015)
-		# Special case to inform external node (BMC) that system ready
-		# for telemetry communication.
-		if [ ! -L $system_path/comm_chnl_ready ]; then
-			log_err "Missed attrubute comm_chnl_ready."
-		else
-			echo 1 > $system_path/comm_chnl_ready
-			log_info "Communication channel is ready"
-		fi
-		;;
-	VMOD0017)
-		# Nvidia RM driver can be probed at system init before mlx_platform.
-		# NVlink I2C busses will be created and this can affect BSP I2C busses.
-		# Nvidia NVLink drivers are in blacklist and instaniated at the end of
-		# hw-management init.
-		modprobe nvidia_drm
-		;;
-	VMOD0010)
-		# Kong has the same issue as Goldstone (VMOD0017)
-		if [ "$sku" == "HI142" ]; then
-			modprobe nvidia_drm
-		fi
-		;;
-	*)
-		;;
-esac
+LABEL_MAKER_SCRIPT="hw-management-labels-maker.sh"
 
-if [ ! -f /var/run/hw-management/system/cpld_base ]; then
-	timeout 5 bash -c 'until [ -f /var/run/hw-management/system/cpld_base ]; do sleep 0.2; done'
-fi
+check_label_progress()
+{
+	label_progress=`ps -aux | grep "$LABEL_MAKER_SCRIPT" | grep -v grep`
+	[ -z "$label_progress" ] && echo 0 || echo 1
+}
 
-## Check SKU and run the below only for relevant.
-case $sku in
-	HI130)
-		# Only for MQM9700
-		hw-management-label-init-complete.sh &
-		;;
-	*)
-		# Do nothing
-esac
+while [ $(check_label_progress) -eq 1 ];
+do
+	sleep 2
+done
+
+echo 1 > "$config_path"/labels_ready
+log_info "Labels data base is ready"
+
