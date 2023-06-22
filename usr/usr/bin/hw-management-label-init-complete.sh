@@ -41,6 +41,9 @@ check_label_progress()
 	[ -z "$label_progress" ] && echo 0 || echo 1
 }
 
+# Wait for the process to kick in
+sleep 20
+
 while [ $(check_label_progress) -eq 1 ];
 do
 	sleep 2
