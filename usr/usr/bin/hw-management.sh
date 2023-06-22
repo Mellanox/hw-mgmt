@@ -1205,6 +1205,7 @@ msn_xh3000_specific()
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
 	echo 3 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
@@ -1554,6 +1555,7 @@ e3597_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/e3597_sensors.conf"
 }
 
@@ -1594,6 +1596,7 @@ p4697_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/p4697_sensors.conf"
 }
 
