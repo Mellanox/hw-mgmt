@@ -2072,12 +2072,16 @@ class ThermalManagement(hw_managemet_file_op):
         self.exit_flag = False
 
         self.load_configuration()
-
+        if not self.sys_config.get("platform_support", 1):
+            self.log.notice("Platform Board:{}, SKU:{} is not supported.".format(self.board_type, self.sku), 1)
+            sys.exit(0)
+        
         if not self.is_pwm_exists():
             self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for ASIC init", 1)
             while not self.is_pwm_exists():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
+                
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
@@ -2488,7 +2492,9 @@ class ThermalManagement(hw_managemet_file_op):
         board_type_file = "/sys/devices/virtual/dmi/id/board_name"
         sku_file = "/sys/devices/virtual/dmi/id/product_sku"
         system_ver_file = "/sys/devices/virtual/dmi/id/product_version"
-
+        self.board_type = "Unknown"
+        self.sku = "Unknown"
+        
         if os.path.isfile(board_type_file):
             with open(board_type_file, "r") as content_file:
                 self.board_type = content_file.read().rstrip("\n")
