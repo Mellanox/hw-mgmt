@@ -671,10 +671,10 @@ set_jtag_gpio()
 			jtag_tdo=89
 			;;
 		$BF3_CPU)
-			jtag_tdi=11	# 11 MLNXBF33:01
-			jtag_tdo=12	# 12 MLNXBF33:01
-			jtag_tck=23 	# 55 MLNXBF33:00
-			jtag_tms=22	# 54 MLNXBF33:00
+			jtag_tdi=11	# 11 MLNXBF33:00
+			jtag_tdo=12	# 12 MLNXBF33:00
+			jtag_tck=23 	# 55 MLNXBF33:01
+			jtag_tms=22	# 54 MLNXBF33:01
 			;;
 		*)
 			return 0
@@ -728,10 +728,10 @@ set_jtag_gpio()
 				if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
 					gpiolabel=$(<"$gpiochip"/label)
 					if [ "$gpiolabel" == "MLNXBF33:00" ]; then
-						gpiobase0=$(<"$gpiochip"/base)
+						gpiobase1=$(<"$gpiochip"/base)
 					fi
 					if [ "$gpiolabel" == "MLNXBF33:01" ]; then
-						gpiobase1=$(<"$gpiochip"/base)
+						gpiobase0=$(<"$gpiochip"/base)
 					fi
 				fi
 			done
@@ -753,6 +753,12 @@ set_jtag_gpio()
 		echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
 		gpio_tdi=$((gpiobase1+jtag_tdi))
 		echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+
+		if [ "$export_unexport" == "export" ]; then
+			echo out > /sys/class/gpio/gpio"$gpio_tck"/direction
+			echo out > /sys/class/gpio/gpio"$gpio_tms"/direction
+			echo out > /sys/class/gpio/gpio"$gpio_tdi"/direction
+		fi
 		;;
 	default)
 		gpio_tck=$((gpiobase+jtag_tck))
@@ -1715,6 +1721,11 @@ bf3_common()
 			exit 0
 			;;
 	esac
+
+	jtag_bridge_offset=`cat /proc/iomem | grep mlxplat_jtag_bridge | awk -F '-' '{print $1}'`
+	echo $jtag_bridge_offset > $config_path/jtag_bridge_offset
+	jtag_pci=`lspci | grep Lattice | grep 9c30 | awk '{print $1}'`
+	ln -s /sys/bus/pci/devices/0000:"$jtag_pci"/resource0 $config_path/jtag_bridge
 }
 
 msn48xx_specific()
