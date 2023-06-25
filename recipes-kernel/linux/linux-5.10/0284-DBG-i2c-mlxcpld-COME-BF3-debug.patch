@@ -1,18 +1,18 @@
-From 027a136d82b09da7e8b0a3a64ca35acbb0ac3d13 Mon Sep 17 00:00:00 2001
+From d58de81c5fe006dee446e8620e4af4fd572f4f89 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
-Subject: [PATH backport 1/1] DBG: i2c: mlxcpld: COME BF3 debug
+Subject: [PATCH backport 5.10 3/8] DBG: i2c: mlxcpld: COME BF3 debug
 
 To be merged to previous two TMP patches.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/i2c/busses/i2c-mlxcpld.c         |  20 ++--
+ drivers/i2c/busses/i2c-mlxcpld.c         |  26 ++---
  drivers/platform/mellanox/mlx-platform.c | 125 +++++++++++++++--------
- 2 files changed, 87 insertions(+), 58 deletions(-)
+ 2 files changed, 90 insertions(+), 61 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
-index 1e095c2ab..59708a1a1 100644
+index 1e095c2ab..18176bdbc 100644
 --- a/drivers/i2c/busses/i2c-mlxcpld.c
 +++ b/drivers/i2c/busses/i2c-mlxcpld.c
 @@ -53,8 +53,6 @@
@@ -84,6 +84,22 @@ index 1e095c2ab..59708a1a1 100644
  	default:
  		mlxcpld_i2c_lpc_write_buf_io(data, datalen, addr);
  		break;
+@@ -634,12 +626,12 @@ static int mlxcpld_i2c_probe(struct platform_device *pdev)
+ 	/* Set I2C bus frequency if platform data provides this info. */
+ 	pdata = dev_get_platdata(&pdev->dev);
+ 	if (pdata) {
++		if (pdata->addr)
++			priv->addr = pdata->addr;
++
+ 		err = mlxcpld_i2c_set_frequency(priv, pdata);
+ 		if (err)
+ 			goto mlxcpld_i2_probe_failed;
+-
+-		if (pdata->addr)
+-			priv->addr = pdata->addr;
+ 	}
+ 
+ 	/* Register with i2c layer */
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
 index d86168685..617f59a0a 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
