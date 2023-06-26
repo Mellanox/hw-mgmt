@@ -174,7 +174,6 @@ class CONST(object):
     PSU_COUNT_DEF = 2
     FAN_DRWR_COUNT_DEF = 6
     FAN_TACHO_COUNT_DEF = 6
-    MODULE_COUNT_DEF = 16
     MODULE_COUNT_MAX = 128
     GEARBOX_COUNT_DEF = 0
 
@@ -228,7 +227,7 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_tme": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
-    r'asic':            {"type": "thermal_module_sensor",
+    r'asic\d*':         {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
                          "value_hyst": 2, "input_smooth_level": 1
                         },
@@ -317,7 +316,7 @@ TABLE_DEFAULT = {
     }
 }
 
-ASIC_CONF_DEFAULT = {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": False, "fan_control": False}}
+ASIC_CONF_DEFAULT = {"1":  {"pwm_control": False, "fan_control": False}}
 
 # ----------------------------------------------------------------------
 def str2bool(val):
@@ -2156,12 +2155,20 @@ class ThermalManagement(hw_managemet_file_op):
         self.psu_pwr_count = CONST.PSU_COUNT_DEF
         self.gearbox_counter = CONST.GEARBOX_COUNT_DEF
         self.fan_flow_capability = CONST.UNKNOWN
+        self.asic_counter = 1
         self.voltmon_file_list = []
 
         if self.check_file("config/system_flow_capability"):
             self.fan_flow_capability = self.read_file("config/system_flow_capability")
 
         self.log.info("Collecting HW info...")
+
+        try:
+            self.asic_counter = int(self.read_file("config/asic_num"))
+            self.log.info("ASIC num:{}".format(self.max_tachos))
+        except BaseException:
+            self.log.error("Missing ASIC num config.", 1)
+            sys.exit(1)
 
         try:
             self.max_tachos = int(self.read_file("config/max_tachos"))
@@ -2497,8 +2504,8 @@ class ThermalManagement(hw_managemet_file_op):
                 else:
                     self._rm_dev_obj(module_name)
 
+            self.log.info("Modules added {} of {}".format(module_counter, module_count))
             self.module_counter = module_counter
-            self.log.info("module count:{}".format(self.module_counter))
 
     # ----------------------------------------------------------------------
     def sig_handler(self, sig, frame):
@@ -2617,7 +2624,11 @@ class ThermalManagement(hw_managemet_file_op):
             in_file = "thermal/{}".format(name)
             self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
 
-        self._sensor_add_config("thermal_module_sensor", "asic", {"base_file_name": "asic"})
+        for asic_idx in range(1, self.asic_counter + 1):
+            asic_basename_idx = "" if  asic_idx==1 else asic_idx
+            self._sensor_add_config("thermal_module_sensor", 
+                                    "asic{}".format(asic_idx), 
+                                    {"base_file_name": "asic{}".format(asic_basename_idx)})
 
         if self.check_file("thermal/cpu_pack"):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
@@ -2821,15 +2832,19 @@ class ThermalManagement(hw_managemet_file_op):
             amb_tmp = "-"
             flow_dir = "-"
 
-        mlxsw_sensor = self._get_dev_obj("asic")
-        if mlxsw_sensor:
-            mlxsw_tmp = mlxsw_sensor.get_value()
-        else:
-            mlxsw_tmp = "N/A"
+        asic_info=""
+        for asic_idx in range(1, self.asic_counter + 1):
+            asic_name = "asic{}".format(asic_idx)
+            asic_obj = self._get_dev_obj(asic_name)
+            if asic_obj:
+                asic_tmp = asic_obj.get_value()
+            else:
+                asic_tmp = "N/A"
+            asic_info += " {} {},".format(asic_name, asic_tmp)
 
         self.log.info("Thermal periodic report")
         self.log.info("================================")
-        self.log.info("Temperature(C): asic {}, amb {}".format(mlxsw_tmp, amb_tmp))
+        self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
         self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
         self.log.info("dir:{}".format(flow_dir))
         self.log.info("================================")
