@@ -139,6 +139,7 @@ class CONST(object):
     TEMP_SENSOR_SCALE = 1000.0
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
+    AMB_TEMP_ERR_VAL = 255 
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -965,7 +966,7 @@ class system_device(hw_managemet_file_op):
             err_cnt = 0
         self.err_fread_err_counter_dict[filename] = err_cnt
 
-     # ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def check_reading_file_err(self):
         """
         @summary: Compare error counter for each file with the threshold
@@ -979,6 +980,15 @@ class system_device(hw_managemet_file_op):
                     self.log.error("{}: read file {} errors count {}".format(self.name, key, val))
                 err_keys.append(key)
         return err_keys
+
+    # ----------------------------------------------------------------------
+    def get_reading_file_err(self, filename):
+        """
+        @summary: Get file read error counter
+        @param: filename: filename for read error cnt
+        @return: number of read errors
+        """
+        return self.err_fread_err_counter_dict(filename, 0)
 
     # ----------------------------------------------------------------------
     def get_pwm(self):
@@ -1126,6 +1136,13 @@ class system_device(hw_managemet_file_op):
         @summary: get fault list
         """
         return self.fault_list
+
+    # ----------------------------------------------------------------------
+    def get_fault_cnt(self):
+        """
+        @summary: get fault count
+        """
+        return 1 if self.fault_list else 0
 
     # ----------------------------------------------------------------------
     def process(self, thermal_table, flow_dir, amb_tmp):
@@ -1940,6 +1957,16 @@ class ambiant_thermal_sensor(system_device):
         self.flow_dir = flow_dir
 
     # ----------------------------------------------------------------------
+    def get_fault_cnt(self):
+        """
+        @summary: get fault count
+        """
+        err_cnt = len(self.check_reading_file_err())
+        if not err_cnt:
+            err_cnt = 1 if self.fault_list else 0 
+        return err_cnt
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
@@ -1962,6 +1989,9 @@ class ambiant_thermal_sensor(system_device):
                 except BaseException:
                     self.log.error("Error value reading from file: {}".format(self.base_file_name))
                     self.handle_reading_file_err(sens_file_name)
+            # in case of multiple error - set sesor to ignore
+            if sens_file_name in self.check_reading_file_err():
+                self.value_dict[file_name] = CONST.AMB_TEMP_ERR_VAL
 
         sensor_name_min = min(self.value_dict, key=self.value_dict.get)
         value = self.value_dict[sensor_name_min]
@@ -1980,7 +2010,6 @@ class ambiant_thermal_sensor(system_device):
             pwm = self.calculate_pwm_formula()
 
         self.pwm = pwm
-        #g_get_dmin(thermal_table, self.value, [self.flow_dir, self.trusted], interpolated=True)
 
     # ----------------------------------------------------------------------
     def handle_err(self, thermal_table, flow_dir, amb_tmp):
@@ -1991,7 +2020,7 @@ class ambiant_thermal_sensor(system_device):
         # sensor error reading counter
         if self.check_reading_file_err():
             self.fault_list.append("sensor_read")
-            pwm = g_get_dmin(thermal_table, 60, [self.flow_dir, "sensor_err"])
+            pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, "sensor_err"])
             self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return None
@@ -2004,6 +2033,8 @@ class ambiant_thermal_sensor(system_device):
         sens_val = ""
         sensor_name_min = min(self.value_dict, key=self.value_dict.get)
         for key, val in self.value_dict.items():
+            if val >= self.val_max:
+                val = "err"
             sens_val += "{}:{} ".format(key, val)
         info_str = "\"{}\" {}({}), dir:{}, faults:[{}] pwm:{}, {}".format(self.name,
                                                                           sens_val,
@@ -2413,7 +2444,7 @@ class ThermalManagement(hw_managemet_file_op):
         return pwm_max, name
 
     # ----------------------------------------------------------------------
-    def get_fault_cnt(self):
+    def get_total_fault_cnt(self):
         """
         @summary: get error count (total error kinds) for sensor
         @return: total raised error flags count
@@ -2422,8 +2453,7 @@ class ThermalManagement(hw_managemet_file_op):
         fault_cnt = 0
         for dev_obj in self.dev_obj_list:
             if dev_obj.state == CONST.RUNNING:
-                if dev_obj.get_fault_list():
-                    fault_cnt += 1
+                fault_cnt += dev_obj.get_fault_cnt()
         return fault_cnt
 
     # ----------------------------------------------------------------------
@@ -2755,7 +2785,7 @@ class ThermalManagement(hw_managemet_file_op):
 
                     obj_timestump = dev_obj.get_timestump()
                     timestump_next = min(obj_timestump, timestump_next)
-            fault_cnt = self.get_fault_cnt()
+            fault_cnt = self.get_total_fault_cnt()
             if fault_cnt > CONST.TOTAL_MAX_ERR_COUNT:
                 pwm_list["total_err_cnt({})>{}".format(fault_cnt, CONST.TOTAL_MAX_ERR_COUNT)] = CONST.PWM_MAX
             elif fault_cnt_old > CONST.TOTAL_MAX_ERR_COUNT:
@@ -2783,6 +2813,8 @@ class ThermalManagement(hw_managemet_file_op):
         ambient_sensor = self._get_dev_obj("sensor_amb")
         if ambient_sensor:
             amb_tmp = ambient_sensor.get_value()
+            if amb_tmp == CONST.AMB_TEMP_ERR_VAL:
+                amb_tmp = "err"
             flow_dir = self.system_flow_dir
         else:
             amb_tmp = "-"
