@@ -123,6 +123,7 @@ class CONST(object):
     DEF_DIR = "P2C"
 
     UNKNOWN = "Unknown"
+    SENSOR_ERR = "sensor_read_error"
 
     # error types
     UNTRUSTED_ERR = "untrusted"
@@ -297,7 +298,7 @@ TABLE_DEFAULT = {
             "direction": {"-127:120": 100},
             "fault": {"-127:120": 100},
         },
-        "sensor_err": {"-127:120": 100}
+        CONST.SENSOR_ERR: {"-127:120": 100}
     },
     CONST.P2C: {
         CONST.UNTRUSTED_ERR: {"-127:120": 60},
@@ -312,7 +313,7 @@ TABLE_DEFAULT = {
             "direction": {"-127:120": 100},
             "fault": {"-127:120": 100},
         },
-        "sensor_err": {"-127:120": 100}
+        CONST.SENSOR_ERR: {"-127:120": 100}
     }
 }
 
@@ -1232,7 +1233,7 @@ class thermal_sensor(system_device):
         # sensor error reading counter
         if self.check_reading_file_err():
             self.fault_list.append("sensor_read")
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "sensor_err"])
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_ERR])
             self.pwm = max(pwm, self.pwm)
 
         self._update_pwm()
@@ -1561,7 +1562,7 @@ class psu_fan_sensor(system_device):
         # sensor error reading counter
         if self.check_reading_file_err():
             self.fault_list.append("sensor_read")
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "sensor_err"])
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_ERR])
             self.pwm = max(pwm, self.pwm)
 
         self._update_pwm()
@@ -1917,7 +1918,7 @@ class fan_sensor(system_device):
         # sensor error reading counter
         if self.check_reading_file_err():
             self.fault_list.append("sensor_read")
-            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, "sensor_err"])
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_ERR])
             self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return
@@ -2020,7 +2021,7 @@ class ambiant_thermal_sensor(system_device):
         # sensor error reading counter
         if self.check_reading_file_err():
             self.fault_list.append("sensor_read")
-            pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, "sensor_err"])
+            pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, CONST.SENSOR_ERR])
             self.pwm = max(pwm, self.pwm)
         self._update_pwm()
         return None
