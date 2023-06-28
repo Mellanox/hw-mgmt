@@ -1,15 +1,15 @@
-From d58de81c5fe006dee446e8620e4af4fd572f4f89 Mon Sep 17 00:00:00 2001
+From e32c34840495e2fa7a6dca214ecf4f8e29365f37 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
-Subject: [PATCH backport 5.10 3/8] DBG: i2c: mlxcpld: COME BF3 debug
+Subject: [PATCH backport 5.10 8/8] DBG: i2c: mlxcpld: COME BF3 debug
 
 To be merged to previous two TMP patches.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/i2c/busses/i2c-mlxcpld.c         |  26 ++---
- drivers/platform/mellanox/mlx-platform.c | 125 +++++++++++++++--------
- 2 files changed, 90 insertions(+), 61 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 137 +++++++++++++++--------
+ 2 files changed, 100 insertions(+), 63 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
 index 1e095c2ab..18176bdbc 100644
@@ -101,7 +101,7 @@ index 1e095c2ab..18176bdbc 100644
  
  	/* Register with i2c layer */
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d86168685..617f59a0a 100644
+index d86168685..d0b2b6e31 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -334,20 +334,22 @@
@@ -131,7 +131,22 @@ index d86168685..617f59a0a 100644
  #define MLXPLAT_FPGA_PCI_TO		50 /* usec */
  
  /* mlxplat_priv - platform private data
-@@ -5897,6 +5899,7 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
+@@ -5740,6 +5742,14 @@ static const struct reg_default mlxplat_mlxcpld_regmap_ng400[] = {
+ 	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
+ };
+ 
++static const struct reg_default mlxplat_mlxcpld_regmap_bf3[] = {
++	{ MLXPLAT_CPLD_LPC_REG_GP2_OFFSET, 0xc1 },
++	{ MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET, 0x00 },
++	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
++	{ MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET, 0x00 },
++	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
++};
++
+ static const struct reg_default mlxplat_mlxcpld_regmap_rack_switch[] = {
+ 	{ MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET, MLXPLAT_REGMAP_NVSWITCH_PWM_DEFAULT },
+ 	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
+@@ -5897,6 +5907,7 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
  		return err;
  
  	/* Set address in register space */
@@ -139,7 +154,7 @@ index d86168685..617f59a0a 100644
  	iowrite8(MLXPLAT_FPGA_PCI_MSB_ADDR, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
  	iowrite8(reg, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET);
  	/* Activate read operation */
-@@ -5931,13 +5934,13 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
+@@ -5931,19 +5942,19 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
  	/* Activate write operation */
  	iowrite8(MLXPLAT_FPGA_PCI_CTRL_WRITE, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
  
@@ -156,7 +171,15 @@ index d86168685..617f59a0a 100644
  	.cache_type = REGCACHE_FLAT,
  	.writeable_reg = mlxplat_mlxcpld_writeable_reg,
  	.readable_reg = mlxplat_mlxcpld_readable_reg,
-@@ -5966,7 +5969,10 @@ static struct mlxreg_core_platform_data
+ 	.volatile_reg = mlxplat_mlxcpld_volatile_reg,
+-	.reg_defaults = mlxplat_mlxcpld_regmap_ng400,
+-	.num_reg_defaults = ARRAY_SIZE(mlxplat_mlxcpld_regmap_ng400),
++	.reg_defaults = mlxplat_mlxcpld_regmap_bf3,
++	.num_reg_defaults = ARRAY_SIZE(mlxplat_mlxcpld_regmap_bf3),
+ 	.reg_read = mlxplat_fpga_reg_read,
+ 	.reg_write = mlxplat_fpga_reg_write,
+ };
+@@ -5966,7 +5977,10 @@ static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
  static struct spi_board_info *mlxplat_spi;
@@ -168,7 +191,7 @@ index d86168685..617f59a0a 100644
  
  /* Platform default reset function */
  static int mlxplat_reboot_notifier(struct notifier_block *nb, unsigned long action, void *unused)
-@@ -6635,12 +6641,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
+@@ -6635,12 +6649,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
  {
  	int err;
  
@@ -181,7 +204,7 @@ index d86168685..617f59a0a 100644
  	mlxplat_mlxcpld_regmap_ctx.base = devm_ioport_map(&mlxplat_dev->dev,
  							  mlxplat_lpc_resources[1].start, 1);
  	if (!mlxplat_mlxcpld_regmap_ctx.base) {
-@@ -6664,13 +6664,14 @@ static void mlxplat_lpc_cpld_device_exit(void)
+@@ -6664,13 +6672,14 @@ static void mlxplat_lpc_cpld_device_exit(void)
  }
  
  static int
@@ -199,7 +222,7 @@ index d86168685..617f59a0a 100644
  	if (!pci_dev)
  		return -ENODEV;
  
-@@ -6680,7 +6681,7 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+@@ -6680,7 +6689,7 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  		goto fail_pci_enable_device;
  	}
  
@@ -208,7 +231,7 @@ index d86168685..617f59a0a 100644
  	if (err) {
  		dev_err(&pci_dev->dev, "pci_request_regions failed with error %d\n", err);
  		goto fail_pci_request_regions;
-@@ -6695,31 +6696,22 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+@@ -6695,31 +6704,22 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  		}
  	}
  
@@ -246,7 +269,7 @@ index d86168685..617f59a0a 100644
  fail_pci_set_dma_mask:
  	pci_release_regions(pci_dev);
  fail_pci_request_regions:
-@@ -6728,12 +6720,58 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+@@ -6728,12 +6728,58 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  	return err;
  }
  
@@ -310,7 +333,7 @@ index d86168685..617f59a0a 100644
  }
  
  static int
-@@ -6741,7 +6779,7 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
+@@ -6741,7 +6787,7 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
  {
  	int err;
  
@@ -319,7 +342,7 @@ index d86168685..617f59a0a 100644
  	if (err == -ENODEV)
  		return mlxplat_lpc_cpld_device_init(hotplug_resources, hotplug_resources_size);
  
-@@ -6750,8 +6788,8 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
+@@ -6750,8 +6796,8 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
  
  static void mlxplat_post_exit(void)
  {
@@ -330,7 +353,7 @@ index d86168685..617f59a0a 100644
  	else
  		mlxplat_lpc_cpld_device_exit();
  }
-@@ -6982,8 +7020,8 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+@@ -6982,8 +7028,8 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  	mlxplat_i2c->handle = priv;
  
  	/* Set mapped base address of I2C-LPC bridge over PCIe */
@@ -341,7 +364,7 @@ index d86168685..617f59a0a 100644
  	priv->pdev_i2c = platform_device_register_resndata(&mlxplat_dev->dev, "i2c_mlxcpld",
  							   nr, priv->hotplug_resources,
  							   priv->hotplug_resources_size,
-@@ -7047,7 +7085,6 @@ static int mlxplat_probe(struct platform_device *pdev)
+@@ -7047,7 +7093,6 @@ static int mlxplat_probe(struct platform_device *pdev)
  
  	if (!mlxplat_regmap_config)
  		mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config;

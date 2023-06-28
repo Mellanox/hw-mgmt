@@ -157,6 +157,9 @@ cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
+cpu_type3_mps_voltmon_connection_table=(	mp2975 0x6a 15 comex_voltmon1 \
+						mp2975 0x6b 15 comex_voltmon2)
+
 bf3_come_connection_table=(	tmp421 0x1f 15 \
 				mp2975 0x69 15 \
 				mp2975 0x6a 15 \
@@ -882,7 +885,7 @@ add_cpu_board_to_connection_table()
 				# MSN4700+BF3
 				HI156)
 					cpu_connection_table=( ${bf3_come_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type3_mps_voltmon_connection_table[@]} )
 					;;
 			esac
 			;;
