@@ -450,6 +450,7 @@ Kernel-5.10
 |0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
 |0282-platform-mellanox-mlx-platform-add-support-of-5th-CP.patch  |                    | Feature pending                          |            | P4262                                          |
 |0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            | SN3750SX                                       |
+|0284-platform-mellanox-mlx-platform-fix-CPLD4-PN-report.patch    |                    | Bugfix pending                           |            | SN5600                                         |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
