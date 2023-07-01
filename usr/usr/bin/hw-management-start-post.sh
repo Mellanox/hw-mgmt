@@ -76,7 +76,14 @@ fi
 case $sku in
 	HI130)
 		# Only for MQM9700
-		hw-management-label-init-complete.sh &
+                if [ -e "$ui_tree_archive" ]; then
+                    # Extract the ui_tree archive to /var/run/hw-management
+                    tar xfz "$ui_tree_archive" -C "$hw_management_path"
+                    echo 1 > "$config_path"/labels_ready
+                    log_info "Labels data base is ready"
+                else
+		    hw-management-label-init-complete.sh &
+                fi
 		;;
 	*)
 		# Do nothing
