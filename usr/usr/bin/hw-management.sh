@@ -2336,6 +2336,7 @@ do_start()
 	connect_platform
 	sleep 1
 	enable_vpd_wp
+	echo 0 > $config_path/events_ready
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
