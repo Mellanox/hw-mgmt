@@ -1054,6 +1054,10 @@ if [ "$1" == "add" ]; then
 				esac
 			fi
 			;;
+		vpd_info)
+			hw-management-vpd-parser.py -t SYSTEM_VPD -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_data
+			echo 1 > $config_path/events_ready
+			;;
 		*)
 			;;
 		esac
