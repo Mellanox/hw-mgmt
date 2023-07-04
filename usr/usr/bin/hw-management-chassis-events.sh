@@ -833,6 +833,10 @@ if [ "$1" == "add" ]; then
 			for i in {1..2}; do
 				check_n_link "$3""$4"/temp"$i"_input $thermal_path/"$prefix"_temp"$i"_input
 				check_n_link "$3""$4"/temp"$i"_max $thermal_path/"$prefix"_temp"$i"_max
+                                if [[ $sku == "HI130" ]]; then
+				    check_n_link "$3""$4"/temp"$i"_crit $thermal_path/"$prefix"_temp"$i"_crit
+				    check_n_link "$3""$4"/temp"$i"_lcrit $thermal_path/"$prefix"_temp"$i"_lcrit
+                                fi
 			done
 
 			for i in {1..3}; do
@@ -841,6 +845,10 @@ if [ "$1" == "add" ]; then
 				if [ ! $sensor_id -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
 
+                                        if [[ $sku == "HI130" ]]; then
+                                            check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
+                                            check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+                                        fi
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
