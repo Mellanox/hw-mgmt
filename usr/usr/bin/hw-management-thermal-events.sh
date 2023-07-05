@@ -314,7 +314,7 @@ if [ "$1" == "add" ]; then
 				ln -sf "$3$4" $cpath/asic_hwmon
 				ln -sf "$3""$4"/temp1_input "$tpath"/asic
 				if [ -f "$3""$4"/pwm1 ]; then
-					check_n_link -sf "$3""$4"/pwm1 "$tpath"/pwm1
+					ln -sf  "$3""$4"/pwm1 "$tpath"/pwm1
 					echo "$name" > "$cpath"/cooling_name
 				fi
 				if [ -f "$cpath"/fan_inversed ]; then
@@ -735,7 +735,7 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		psu_name="$2"
-		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4
+		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
 		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
 		fi
@@ -904,7 +904,7 @@ if [ "$1" == "add" ]; then
 					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
 				fi
-				if [ "$cap" == "3000" ] && [ "$board_type" == "VMOD0013" ]; then
+				if [[ "$cap" == "3000" &&  $sku == "HI144" ]]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
 					fi
@@ -1208,8 +1208,8 @@ else
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
 		psu_name="$2"
-		# Moose system has PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
-		if [[ $sku == "HI144" ]] && [[ "$2" == "psu4" ]]; then
+		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
+		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
 		fi
 		find_i2c_bus
