@@ -2361,8 +2361,8 @@ do_start()
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
 	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then 
-        ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
-    fi 
+		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
+	fi 
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		ln -sf $thermal_control_config $config_path/tc_config.json
 	else

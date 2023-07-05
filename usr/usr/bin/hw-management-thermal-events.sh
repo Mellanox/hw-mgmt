@@ -311,10 +311,10 @@ if [ "$1" == "add" ]; then
 			fi
 
 			if [ "$name" == "mlxsw" ]; then
-				check_n_link "$3$4" $cpath/asic_hwmon
-				check_n_link "$3""$4"/temp1_input "$tpath"/asic
+				ln -sf "$3$4" $cpath/asic_hwmon
+				ln -sf "$3""$4"/temp1_input "$tpath"/asic
 				if [ -f "$3""$4"/pwm1 ]; then
-					check_n_link "$3""$4"/pwm1 "$tpath"/pwm1
+					check_n_link -sf "$3""$4"/pwm1 "$tpath"/pwm1
 					echo "$name" > "$cpath"/cooling_name
 				fi
 				if [ -f "$cpath"/fan_inversed ]; then
@@ -727,7 +727,7 @@ if [ "$1" == "add" ]; then
 				exit 0
 			;;
 		esac
-		find "$5""$3" -iname 'temp1_*' -exec sh -c 'check_n_link $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
+		find "$5""$3" -iname 'temp1_*' -exec sh -c 'ln -sf $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
