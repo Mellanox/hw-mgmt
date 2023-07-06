@@ -2065,6 +2065,19 @@ get_asic2_bus()
 	return $((asic_bus))
 }
 
+load_modules()
+{
+	depmod -a 2>/dev/null
+	# Some modules are not present in all the kernel
+	# versions. Use this function to load those modules
+	# which need to be loaded based on their availability
+	if ! lsmod | grep -q "drivetemp"; then
+		if [ -f /lib/modules/`uname -r`/kernel/drivers/hwmon/drivetemp.ko ]; then
+			modprobe drivetemp
+		fi
+	fi
+}
+
 set_config_data()
 {
 	for ((idx=1; idx<=psu_count; idx+=1)); do
@@ -2318,6 +2331,7 @@ do_start()
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
+	load_modules
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
@@ -2328,7 +2342,6 @@ do_start()
 		get_asic2_bus
 	fi
 	touch $udev_ready
-	depmod -a 2>/dev/null
 	set_config_data
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
