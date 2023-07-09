@@ -458,6 +458,8 @@ Kernel-5.10
 |0289-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Feature pending                          |            | BF3-COME                                       |
 |0290-DBG-gpio-mlxbf3-Add-gpio-5-to-valid-mask.patch              |                    | Downstream                               |            | BF3-COME                                       |
 |0291-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            |                                                |
+|0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            | BF3-COME                                       |
+|0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Feature pending                          |            |                                                |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
