@@ -99,6 +99,7 @@ nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 leakage_count=0
+asic_chipup_retry=2
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -2478,6 +2479,13 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
+
+			if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon ]; then
+				# chipup command failed.
+				unlock_service_state_change
+				return 1
+			fi
+
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -2487,9 +2495,10 @@ do_chip_up_down()
 			fi
 		else
 			unlock_service_state_change
-			return
+			return 0
 		fi
 		unlock_service_state_change
+		return 0
 		;;
 	*)
 		exit 1
@@ -2553,7 +2562,31 @@ case $ACTION in
 	;;
 	chipup)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 1 "$2" "$3"
+			asic_retry="$asic_chipup_retry"
+			asic_chipup_rc=1
+
+			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" > 0 ]; do
+				do_chip_up_down 1 "$2" "$3"
+				asic_chipup_rc=$?
+				if [ "$asic_chipup_rc" -ne 0 ];then
+					do_chip_up_down 0 "$2" "$3"
+				else
+					exit 0
+				fi
+
+				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
+					# Start I2C tracer.
+					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
+					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
+				else
+					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_bus"$2"_log
+					echo 0>/sys/kernel/debug/tracing/trace
+				fi
+
+				asic_retry=$((asic_retry-1))
+			done
+			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
+			log_info "chipup failed for $2 $3"
 		fi
 	;;
 	chipdown)
