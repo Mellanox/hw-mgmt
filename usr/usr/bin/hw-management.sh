@@ -100,6 +100,7 @@ nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 leakage_count=0
 asic_chipup_retry=2
+chipup_log_size=4096
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -2578,9 +2579,10 @@ case $ACTION in
 			asic_retry="$asic_chipup_retry"
 			asic_chipup_rc=1
 
-			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" > 0 ]; do
+			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
 				do_chip_up_down 1 "$2" "$3"
 				asic_chipup_rc=$?
+				asic_index="$2"
 				if [ "$asic_chipup_rc" -ne 0 ];then
 					do_chip_up_down 0 "$2" "$3"
 				else
@@ -2592,14 +2594,22 @@ case $ACTION in
 					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
 					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
 				else
-					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_bus"$2"_log
+					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_trace_log
 					echo 0>/sys/kernel/debug/tracing/trace
 				fi
 
 				asic_retry=$((asic_retry-1))
 			done
 			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
-			log_info "chipup failed for $2 $3"
+			log_info "chipup failed for ASIC $asic_index"
+
+			# Check log size in (bytes) and rotate if necessary.
+			file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
+			if [ $file_size -gt $chipup_log_size ]; then
+				timestamp=`date +%s`
+				mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
+				touch /var/log/chipup_i2c_trace_log
+			fi
 		fi
 	;;
 	chipdown)
