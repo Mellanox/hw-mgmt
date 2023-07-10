@@ -84,6 +84,7 @@ if [ -z $MODE ] || [ $MODE != "compact" ]; then
 fi
 
 [ -f /var/log/tc_log ] && cp /var/log/tc_* $DUMP_FOLDER/
+[ -f /var/log/chipup_i2c_trace_log ] && cp /var/log/chipup_i2c_trace_* $DUMP_FOLDER/
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
 cp /usr/bin/hw?management* $DUMP_FOLDER/bin/
