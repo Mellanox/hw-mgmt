@@ -2165,7 +2165,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         try:
             self.asic_counter = int(self.read_file("config/asic_num"))
-            self.log.info("ASIC num:{}".format(self.max_tachos))
+            self.log.info("ASIC num:{}".format(self.asic_counter))
         except BaseException:
             self.log.error("Missing ASIC num config.", 1)
             sys.exit(1)
