@@ -2519,6 +2519,20 @@ do_chip_up_down()
 	esac
 }
 
+check_simx()
+{
+	case $sku in
+		HI130|HI122)
+			# Let the initialization go through
+			;;
+		*)
+			if [ -n "$(lspci -vvv | grep SimX)" ]; then
+				exit 0
+			fi
+			;;
+	esac
+}
+
 do_chip_down()
 {
 	# Delete ASIC device
@@ -2550,6 +2564,8 @@ Options:
 	force-reload	Performs hw-management 'stop' and the 'start.
 	reset-cause	Output system reset cause.
 "
+
+check_simx
 
 case $ACTION in
 	start)
