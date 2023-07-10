@@ -388,14 +388,12 @@ if [ "$1" == "add" ]; then
 			check_n_link "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
 		done
 		if [ -f $config_path/fan_inversed ]; then
-			inv=$(< $config_path/fan_inversed)
+			declare -a fan_map="($(< $config_path/fan_inversed))"
+		else
+			fan_map=(${FAN_MAP_DEF[@]})
 		fi
 		for ((i=1; i<=max_tachos; i+=1)); do
-			if [ -z "$inv" ] || [ "${inv}" -eq 0 ]; then
-				j=$i
-			else
-				j=$((inv - i))
-			fi
+			j=${fan_map[i-1]}
 			if [ -f "$3""$4"/fan"$i"_input ]; then
 				ln -sf "$3""$4"/fan"$i"_input $thermal_path/fan"$j"_speed_get
 				ln -sf "$3""$4"/pwm1 $thermal_path/fan"$j"_speed_set
