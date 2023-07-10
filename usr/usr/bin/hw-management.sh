@@ -1172,7 +1172,6 @@ msn27002_msb78002_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
