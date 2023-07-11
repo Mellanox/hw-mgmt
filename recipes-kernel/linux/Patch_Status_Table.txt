@@ -334,7 +334,7 @@ Kernel-5.10
 |0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream accepted                      |            | SN2201                                         |
 |0167-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream                               |            | P2317 only                                     |
 |0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch  |                    | Downstream                               |            | MQM8700 only                                   |
-|0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch  |                    | Downstream                               |            | Sonic/ISSU                                     |
+|0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
 |0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Feature upstream                         |            | Modular SN4800                                 |
 |0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream accepted                      |            | P4697                                          |
