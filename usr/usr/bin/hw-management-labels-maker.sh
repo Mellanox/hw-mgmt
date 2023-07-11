@@ -174,13 +174,3 @@ make_labels()
 		[ -f "$label_dir"/scale ] && rm -f "$label_dir"/scale
 	fi
 }
-
-# Check SKU and run the below only for relevant.
-case $sku in
-	HI130)
-		# Only for Gorilla 
-		make_labels "$1" "$2"
-		;;
-	*)
-		# Do nothing
-esac

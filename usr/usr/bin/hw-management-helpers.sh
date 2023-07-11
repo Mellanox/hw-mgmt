@@ -168,6 +168,15 @@ unlock_service_state_change()
     /usr/bin/flock -u ${LOCKFD}
 }
 
+check_labels_enabled()
+{
+    if [ "$ui_tree_sku" = "HI130" ] && [ ! -e "$ui_tree_archive" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Check if file exists and create soft link
 # $1 - file path
 # $2 - link path
@@ -177,7 +186,7 @@ check_n_link()
     if [ -f "$1" ];
     then
         ln -sf "$1" "$2"
-        if [ ! -e "$ui_tree_archive" ]; then
+        if  check_labels_enabled; then
             hw-management-labels-maker.sh "$2" "link" > /dev/null 2>&1 &
         fi
     fi
@@ -191,7 +200,7 @@ check_n_unlink()
     if [ -L "$1" ];
     then
         unlink "$1"
-        if [ ! -e "$ui_tree_archive" ]; then
+        if check_labels_enabled; then
 	    hw-management-labels-maker.sh "$1" "unlink" > /dev/null 2>&1 &
         fi
     fi
