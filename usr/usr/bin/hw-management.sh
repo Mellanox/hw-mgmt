@@ -2067,7 +2067,6 @@ get_asic2_bus()
 
 load_modules()
 {
-	depmod -a 2>/dev/null
 	# Some modules are not present in all the kernel
 	# versions. Use this function to load those modules
 	# which need to be loaded based on their availability
@@ -2342,6 +2341,7 @@ do_start()
 		get_asic2_bus
 	fi
 	touch $udev_ready
+	depmod -a 2>/dev/null
 	set_config_data
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
