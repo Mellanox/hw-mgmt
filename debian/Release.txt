@@ -1,4 +1,88 @@
 ================================================================================
+- V.7.0030.1000
+- Wed , 12 July 2023 
+--------------------------------------------------------------------------------
+
+- New features 
+    o  add support for SN5600 ASIC enabled - GA level.
+    o  add support for SN5600/MQM9700 MFT’s quicker CPLD update flow
+    o  add support for MQM9700 show voltage CLI labels
+    o  add support for MSN27002 Panther-Comex respin
+
+- Bug fixes
+	Issue		Title	
+	#3430203	Incorrect FAN tacho order on systems with inversed FAN order	
+	#3438388	TC : psu/fan_blacklist not working (sensor which were blocked were not ignored in PWM calculation).	
+	#3447459	kernel integration tool:  fail during DVS-OS build	
+	#3446102        AttributeError: 'ThermalManagement' object has no attribute 'fan_drwr_num'	
+	#3445789        TC: hw_management_thermal_control.py[11773]: error: [Errno 101] Network is unreachable']	
+	#3479181	TC: [PWM in Thermal Algorithm] | pwm doesn't increase to max value after reboot on SPC1	
+	#3482761	TC: [PWM in Thermal Algorithm | Unexpected pwm1 value 100 after clean install of OS	
+	#3491842        r-leopard-29 sh[8563]: --- Logging error -	
+	#3469070        TC:  blacklist doesn't work as expected , bad sensor after inserting to blacklist still recognizes as bad sensor by hw-management	
+	#3452101        TC: Syslog is flooded with error/warning messages (error every 6 seconds) for platforms with one PSU connected to power | Every 1h new log file is created (Degradation from previous RC)	
+	#3393287	I2C bus is stuck - Unable to probe I2C bus 2-0048, which causes /var/run/hw-management/config/sfp_counter, module_counter to be zero and pmon docker unable to start	
+	#3465854        TC:  sometimes hw-management-tc exited with Error "Missing max tachos config" on SPC1	
+	#3493132	Komodo 3750 200G post Respin - The fans are continuously running at their maximum speed	
+			Relevant 5.10 patches:
+			0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch
+	#3509363	HW-MGMT service failed to start.	
+	#3481808	TC: hw-management-tc.service service failed to start after warmboot enabled on nv-xh3000hse-02 (atos) platform	
+	#3519355	TC: sensor_read_error for cpu_pack doesn't work	
+	#3516804	Moose| The CPLD4 version is not as expected after upgrade to newer version	
+			Relevant 5.10 patches:
+			0284-platform-mellanox-mlx-platform-fix-CPLD4-PN-report.patch
+	#3412851	[NVUE] Traceback in NVUE log after CL installation. /usr/cumulus/bin/decode-syseeprom : ERROR : [Errno 13] Permission denied: '/run/hw-management/eeprom/vpd_info'	
+	#3522603	mlx-4600/4600C/4700: fan2 and fan3 ALARM on all switch mlx-4600/4600C/4700	
+	#3507860	[201911] hw-management failed to initialize due to "mlxsw_minimal 2-0048: Fail to register core bus		
+	#3516754	systemd[1]: systemd-modules-load.service: Failed with result 'exit-code'		
+	#3529307	hw-mgmt documentation: System returns "amber" color when FAN/PSU has some issue , but in user manual "amber" not exists		
+	#3485095	r-tigris-18(MSN3800) during running test: test_mgmt_reset Check reset causes failed  - unnecessary 180 sec delay in case mlxplt path is not ready quick enough		
+	#3447830	I2C bus is getting stuck, recovered only by a power cycle		
+	N/A		TC: Fix TC start on SPC1 systems : On SPC1 systems FAN tacho and PWM is controlled by ASIC FW. If ASIC is not initialized we will not have pwm and fan_tacho links in hw-management folder. 
+			It can cause errors and stop TC. This fix adds a wait loop till ASIC FW will be initialized		
+	N/A		sn2100, sn2010: Thermal: Fan dir is not readable in these systems and requires 1 set of dmin values for both P2C/C2P dir.		
+	N/A		TC: Remove suspend/resume on asic down/up which is not needed for new TC		
+	N/A		TC: Fix unneeded tc suspend due PSU being pulled out scenario		
+	N/A		Fix missing fan attributes on Panther-Comex system		
+	N/A		TC: Fix coverItly scan findings in TC python script - Fix thermal log ASCI count info message		
+	N/A		TC: Fix rare error message which can happens on TC stop		
+	N/A		TC: Add dynamic sfp module add/remove		
+	N/A		TC: Add thermal data tables for SN3800		
+	N/A		TC: add special treatment in case of multiple ambient sensors in case some are reading OK while others are reading error		
+
+ - Known issues and limitations:
+    o Patch 0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch should be applied 
+      for kernel >= 5.10.74 only, to avoid thermal control interface issues
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0030.0500
 - Wed , 29 March 2023 
 --------------------------------------------------------------------------------
