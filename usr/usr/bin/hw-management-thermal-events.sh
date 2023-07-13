@@ -258,7 +258,7 @@ if [ "$1" == "add" ]; then
 		exit 0
 	fi
 	case "$2" in
-		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
+		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
@@ -978,7 +978,7 @@ elif [ "$1" == "change" ]; then
 	fi
 else
 	case "$2" in
-		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb)
+		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
