@@ -459,7 +459,7 @@ Kernel-5.10
 |0291-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            |                                                |
 |0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            | BF3-COME                                       |
 |0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Feature pending                          |            |                                                |
-|0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending                          |            |                                                |
+|0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending; os[sonic,opt]           |            |                                                |
 |0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
 |0296-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0297-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Feature pending                          |            | BF3-COME                                       |
