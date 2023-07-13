@@ -460,7 +460,15 @@ Kernel-5.10
 |0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            | BF3-COME                                       |
 |0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Feature pending                          |            |                                                |
 |0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending                          |            |                                                |
-| 0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch           |                    | Feature pending                          |            |                                                |
+|0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
+|0296-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0297-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Feature pending                          |            | BF3-COME                                       |
+|0298-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Feature pending                          |            | BF3-COME                                       |
+|0299-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3-COME                                       |
+|0300-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3-COME                                       |
+|0301-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0302-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0303-UBUNTU-SAUCE-Add-BF3-related-ACPI-config-and-Ring-de.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
