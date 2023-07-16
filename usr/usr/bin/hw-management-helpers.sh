@@ -54,6 +54,8 @@ devtree_file=$config_path/devtree
 i2c_bus_def_off_eeprom_cpu_file=$config_path/i2c_bus_def_off_eeprom_cpu
 i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
 l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
+ui_tree_sku=`cat $sku_file`
+ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
 
 # Thermal type constants
 thermal_type_t1=1
@@ -166,6 +168,15 @@ unlock_service_state_change()
     /usr/bin/flock -u ${LOCKFD}
 }
 
+check_labels_enabled()
+{
+    if [ "$ui_tree_sku" = "HI130" ] && [ ! -e "$ui_tree_archive" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Check if file exists and create soft link
 # $1 - file path
 # $2 - link path
@@ -175,6 +186,9 @@ check_n_link()
     if [ -f "$1" ];
     then
         ln -sf "$1" "$2"
+        if  check_labels_enabled; then
+            hw-management-labels-maker.sh "$2" "link" > /dev/null 2>&1 &
+        fi
     fi
 }
 
@@ -186,6 +200,9 @@ check_n_unlink()
     if [ -L "$1" ];
     then
         unlink "$1"
+        if check_labels_enabled; then
+	    hw-management-labels-maker.sh "$1" "unlink" > /dev/null 2>&1 &
+        fi
     fi
 }
 

@@ -99,6 +99,8 @@ nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 leakage_count=0
+asic_chipup_retry=2
+chipup_log_size=4096
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -556,7 +558,13 @@ function find_regio_sysfs_path_helper()
 		done
 		;;
 	*)
-		for path in /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*; do
+		arch=$(uname -m)
+		if [ "$arch" = "aarch64" ]; then
+			plat_path=/sys/devices/platform/MLNXBF49:00
+		else
+			plat_path=/sys/devices/platform/mlxplat
+		fi
+		for path in ${plat_path}/mlxreg-io/hwmon/hwmon*; do
 			if [ -d "$path" ]; then
 				name=$(cut "$path"/name -d' ' -f 1)
 				if [ "$name" == "mlxreg_io" ]; then
@@ -669,7 +677,8 @@ set_jtag_gpio()
 			;;
 	esac
 
-	if find /sys/class/gpio/gpiochip* | grep -q base; then
+	find /sys/class/gpio/gpiochip*/ 2>&1 | grep -q base
+	if [ $? -ne 0 ]; then
 		echo "gpio controller driver is not loaded"
 		return 1
 	fi
@@ -680,8 +689,14 @@ set_jtag_gpio()
 		fi
 
 		if [ "$board_type" != "VMOD0014" ]; then
-			if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
-				ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+			arch=$(uname -m)
+			if [ "$arch" = "aarch64" ]; then
+				plat_path=/sys/devices/platform/MLNXBF49:00
+			else
+				plat_path=/sys/devices/platform/mlxplat
+			fi
+			if find ${plat_path}/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+				ln -sf ${plat_path}/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
 			fi
 		fi
 	fi
@@ -805,7 +820,6 @@ add_cpu_board_to_connection_table()
 			esac
 			;;
 		$CFL_CPU)
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
 			case $sku in
 				# MQM9700, P4697 removed A2D from CFL
 				HI130|HI142|HI152)  # TBD MS. Which other systems have CFL comex with A2D
@@ -818,7 +832,18 @@ add_cpu_board_to_connection_table()
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		$BF3_CPU)
-			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+			case $sku in
+				# MQM9700+BF3
+				HI151)
+					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+					;;
+				# MSN4700+BF3
+				HI156)
+					cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+					;;
+			esac
 			;;
 		*)
 			log_err "$product is not supported"
@@ -927,7 +952,7 @@ msn274x_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo 5 > $config_path/fan_inversed
+	echo "4 3 2 1" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
@@ -946,7 +971,7 @@ msn21xx_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 13000 > $config_path/psu_fan_max
 	echo 1040 > $config_path/psu_fan_min
-	echo 5 > $config_path/fan_inversed
+	echo "4 3 2 1" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2100.json"
@@ -973,7 +998,7 @@ msn24xx_specific()
 			echo 5400 > $config_path/fan_min_speed
 			echo 18000 > $config_path/psu_fan_max
 			echo 2000 > $config_path/psu_fan_min
-			echo 9 > $config_path/fan_inversed
+			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 			echo 24c02 > $config_path/psu_eeprom_type
 			;;
 	esac
@@ -1015,7 +1040,7 @@ msn27xx_msb_msx_specific()
 			echo 1500 > $config_path/fan_min_speed
 			echo 18000 > $config_path/psu_fan_max
 			echo 2000 > $config_path/psu_fan_min
-			echo 9 > $config_path/fan_inversed
+			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 			echo 24c02 > $config_path/psu_eeprom_type
 			;;
 	esac
@@ -1051,7 +1076,7 @@ msn201x_specific()
 	echo 4500 > $config_path/fan_min_speed
 	echo 13000 > $config_path/psu_fan_max
 	echo 1040 > $config_path/psu_fan_min
-	echo 5 > $config_path/fan_inversed
+	echo "4 3 2 1" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2010.json"
@@ -1182,6 +1207,7 @@ msn_xh3000_specific()
 	tune_thermal_type=1
 	thermal_type=$thermal_type_t5
 	echo 3 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 	get_i2c_bus_frequency_default
 }
@@ -1199,6 +1225,7 @@ msn38xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn3800.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3800_sensors.conf"
 }
 
@@ -1216,7 +1243,7 @@ msn24102_specific()
 	echo 5400 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
+	echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
@@ -1227,9 +1254,10 @@ msn24102_specific()
 msn27002_msb78002_specific()
 {
 	local cpu_bus_offset=18
-	# This system do not use auto detected cpu conection table.
-	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
-	add_cpu_board_to_connection_table $cpu_bus_offset
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
 
 	thermal_type=$thermal_type_t1
 	max_tachos=8
@@ -1238,11 +1266,12 @@ msn27002_msb78002_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo 9 > $config_path/fan_inversed
 	echo 4 > $config_path/cpld_num
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
+	lm_sensors_config="$lm_sensors_configs_path/msn27002_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	get_i2c_bus_frequency_default
 }
 
@@ -1369,6 +1398,7 @@ mqm97xx_specific()
 {
 	local voltmon_connection_table=()
 	lm_sensors_config="$lm_sensors_configs_path/mqm9700_sensors.conf"
+	lm_sensors_labels="$lm_sensors_configs_path/mqm9700_sensors_labels.json"
 	if [ -e "$devtree_file" ]; then
 		lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
 	else
@@ -1430,6 +1460,7 @@ mqm97xx_specific()
 	fi
 
 	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
+	echo 0 > "$config_path"/labels_ready
 	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
@@ -1527,6 +1558,7 @@ e3597_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/e3597_sensors.conf"
 }
 
@@ -1567,6 +1599,7 @@ p4697_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/p4697_sensors.conf"
 }
 
@@ -1636,6 +1669,22 @@ msn_spc3_common()
 		*)
 			msn47xx_specific
 		;;
+	esac
+}
+
+bf3_common()
+{
+	case $sku in
+		HI151)
+			mqm97xx_specific
+			;;
+		HI156)
+			msn47xx_specific
+			;;
+		*)
+			echo "Unsupported BF3 platform"
+			exit 0
+			;;
 	esac
 }
 
@@ -1722,7 +1771,7 @@ sn56xx_specific()
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2800 > $config_path/fan_min_speed
-	echo 25000 > $config_path/psu_fan_max
+	echo 32500 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
@@ -1731,7 +1780,11 @@ sn56xx_specific()
 	hotplug_pwrs=2
 	hotplug_psus=2
 	psu2_i2c_addr=0x5a
-	echo 4 > $config_path/cpld_num
+	if [ "$sku" == "HI147" ]; then
+		echo 5 > $config_path/cpld_num
+	else
+		echo 4 > $config_path/cpld_num
+	fi
 	lm_sensors_config="$lm_sensors_configs_path/sn5600_sensors.conf"
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
@@ -1785,31 +1838,6 @@ p4262_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
-mqmxxx_bf3_common()
-{
-	local voltmon_connection_table=()
-
-	lm_sensors_config="$lm_sensors_configs_path/mqm9700_rev1_sensors.conf"
-	if [ ! -e "$devtree_file" ]; then
-		# Bring-up note:
-		# SMBIOS might be not ready for bring-up - use here specific configuration
-		# available for bring-up stage.
-		connect_table+=(${mqm97xx_rev1_base_connect_table[@]})
-		voltmon_connection_table=(${mqm97xx_mps_voltmon_connect_table[@]})
-	fi
-
-	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
-	add_come_named_busses
-	thermal_type=$thermal_type_def
-	max_tachos=14
-	hotplug_fans=7
-	echo 29500 > $config_path/fan_max_speed
-	echo 5000 > $config_path/fan_min_speed
-	echo 23000 > $config_path/psu_fan_max
-	echo 4600 > $config_path/psu_fan_min
-	echo 3 > $config_path/cpld_num
-}
-
 check_system()
 {
 	# Check ODM
@@ -1854,7 +1882,7 @@ check_system()
 			p4262_specific
 			;;
 		VMOD0016)
-			mqmxxx_bf3_common
+			bf3_common
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -1896,14 +1924,7 @@ check_system()
 					msn46xx_specific
 					;;
 				MQM97*)
-					case $cpu_type in
-						$BF3_CPU)
-							mqmxxx_bf3_common
-							;;
-						*)
-							mqm97xx_specific
-							;;
-					esac
+					mqm97xx_specific
 					;;
 				MQM87*)
 					mqm87xx_specific
@@ -1929,7 +1950,7 @@ check_system()
 								mqmxxx_msn37x_msn34x_specific
 								;;
 							$BF3_CPU)
-								mqmxxx_bf3_common
+								bf3_common
 								;;
 							*)
 								log_err "$product is not supported"
@@ -1937,8 +1958,16 @@ check_system()
 								;;
 						esac
 					else
-						log_err "$product is not supported"
-						exit 0
+						case $cpu_type in
+							# First BF3 BU systems will have only SKU configured in SMBIOS
+							$BF3_CPU)
+								bf3_common
+								;;
+							*)
+								log_err "$product is not supported"
+								exit 0
+								;;
+						esac
 					fi
 					;;
 			esac
@@ -2035,6 +2064,18 @@ get_asic2_bus()
 		asic_bus=$(cat $config_path/asic2_i2c_bus_id)
 	fi
 	return $((asic_bus))
+}
+
+load_modules()
+{
+	# Some modules are not present in all the kernel
+	# versions. Use this function to load those modules
+	# which need to be loaded based on their availability
+	if ! lsmod | grep -q "drivetemp"; then
+		if [ -f /lib/modules/`uname -r`/kernel/drivers/hwmon/drivetemp.ko ]; then
+			modprobe drivetemp
+		fi
+	fi
 }
 
 set_config_data()
@@ -2167,10 +2208,10 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126)
+	HI122|HI123|HI124|HI126|HI156)
 		asic_pci_id=$spc3_pci_id
 		;;
-	HI130|HI140|HI141)
+	HI130|HI140|HI141|HI151)
 		asic_pci_id=$quantum2_pci_id
 		;;
 	HI144|HI147|HI148)
@@ -2237,9 +2278,18 @@ set_asic_pci_id()
 pre_devtr_init()
 {
 	case $board_type in
+	VMOD0009)
+		case $sku in
+		HI117)
+			echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
+		;;
 	VMOD0013)
 		case $sku in
-		HI144|HI147|HI148)	# ToDo Possible change for Hippo, Ibex
+		HI144|HI147|HI148)	# ToDo Possible change for Ibex
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			echo 2 > "$config_path"/clk_brd_num
 			echo 3 > "$config_path"/clk_brd_addr_offset
@@ -2281,6 +2331,7 @@ do_start()
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
+	load_modules
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
@@ -2301,6 +2352,7 @@ do_start()
 	connect_platform
 	sleep 1
 	enable_vpd_wp
+	echo 0 > $config_path/events_ready
 	/usr/bin/hw-management-start-post.sh
 
 	if [ -f $config_path/max_tachos ]; then
@@ -2322,6 +2374,9 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
+	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then 
+		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
+	fi 
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		ln -sf $thermal_control_config $config_path/tc_config.json
 	else
@@ -2412,7 +2467,6 @@ do_chip_up_down()
 	0)
 		lock_service_state_change
 		chipup_delay=$(< $config_path/chipup_delay)
-		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
@@ -2439,6 +2493,13 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
+
+			if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon ]; then
+				# chipup command failed.
+				unlock_service_state_change
+				return 1
+			fi
+
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -2448,14 +2509,28 @@ do_chip_up_down()
 			fi
 		else
 			unlock_service_state_change
-			return
+			return 0
 		fi
-		echo 0 > $config_path/suspend
 		unlock_service_state_change
+		return 0
 		;;
 	*)
 		exit 1
 		;;
+	esac
+}
+
+check_simx()
+{
+	case $sku in
+		HI130|HI122)
+			# Let the initialization go through
+			;;
+		*)
+			if [ -n "$(lspci -vvv | grep SimX)" ]; then
+				exit 0
+			fi
+			;;
 	esac
 }
 
@@ -2491,6 +2566,8 @@ Options:
 	reset-cause	Output system reset cause.
 "
 
+check_simx
+
 case $ACTION in
 	start)
 		if [ -d /var/run/hw-management ]; then
@@ -2515,7 +2592,40 @@ case $ACTION in
 	;;
 	chipup)
 		if [ -d /var/run/hw-management ]; then
-			do_chip_up_down 1 "$2" "$3"
+			asic_retry="$asic_chipup_retry"
+			asic_chipup_rc=1
+
+			while [ "$asic_chipup_rc" -ne 0 ] && [ "$asic_retry" -gt 0 ]; do
+				do_chip_up_down 1 "$2" "$3"
+				asic_chipup_rc=$?
+				asic_index="$2"
+				if [ "$asic_chipup_rc" -ne 0 ];then
+					do_chip_up_down 0 "$2" "$3"
+				else
+					exit 0
+				fi
+
+				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
+					# Start I2C tracer.
+					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
+					echo adapter_nr=="$2" >/sys/kernel/debug/tracing/events/i2c/filter
+				else
+					cat /sys/kernel/debug/tracing/trace >> /var/log/chipup_i2c_trace_log
+					echo 0>/sys/kernel/debug/tracing/trace
+				fi
+
+				asic_retry=$((asic_retry-1))
+			done
+			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
+			log_info "chipup failed for ASIC $asic_index"
+
+			# Check log size in (bytes) and rotate if necessary.
+			file_size=`du -b /var/log/chipup_i2c_trace_log | tr -s '\t' ' ' | cut -d' ' -f1`
+			if [ $file_size -gt $chipup_log_size ]; then
+				timestamp=`date +%s`
+				mv /var/log/chipup_i2c_trace_log /var/log/chipup_i2c_trace_log.$timestamp
+				touch /var/log/chipup_i2c_trace_log
+			fi
 		fi
 	;;
 	chipdown)

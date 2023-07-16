@@ -1,6 +1,6 @@
 #!/bin/sh
 ##################################################################################
-# Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -38,6 +38,7 @@ DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
+REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
 
 MODE=$1
 
@@ -58,6 +59,14 @@ dump_cmd () {
 rm -rf $DUMP_FOLDER
 mkdir $DUMP_FOLDER
 
+arch=$(uname -m)
+if [ "$arch" = "aarch64" ]; then
+	regmap_plat_path=/sys/kernel/debug/regmap/MLNXBF49:00
+	REGMAP_FILE=${REGMAP_FILE_ARM64}
+else
+	regmap_plat_path=/sys/kernel/debug/regmap/mlxplat
+fi
+
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
@@ -75,9 +84,10 @@ if [ -z $MODE ] || [ $MODE != "compact" ]; then
 fi
 
 [ -f /var/log/tc_log ] && cp /var/log/tc_* $DUMP_FOLDER/
+[ -f /var/log/chipup_i2c_trace_log ] && cp /var/log/chipup_i2c_trace_* $DUMP_FOLDER/
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
-cp /usr/bin/hw-management* $DUMP_FOLDER/bin/
+cp /usr/bin/hw?management* $DUMP_FOLDER/bin/
 cat /etc/os-release >> $DUMP_FOLDER/sys_version
 cat /proc/interrupts > $DUMP_FOLDER/interrupts
 case $board_type in
@@ -90,12 +100,12 @@ VMOD0014)
 	fi
 	;;
 *)
-	if [ -f "/sys/kernel/debug/regmap/mlxplat/registers" ]; then
-		cat /sys/kernel/debug/regmap/mlxplat/registers > $DUMP_FOLDER/registers
+	if [ -f "${regmap_plat_path}/registers" ]; then
+		cat ${regmap_plat_path}/registers > $DUMP_FOLDER/registers
 	fi
 
-	if [ -f "/sys/kernel/debug/regmap/mlxplat/access" ]; then
-		 cat /sys/kernel/debug/regmap/mlxplat/access > $DUMP_FOLDER/access
+	if [ -f "${regmap_plat_path}/access" ]; then
+		 cat ${regmap_plat_path}/access > $DUMP_FOLDER/access
 	fi
 	;;
 esac
@@ -109,10 +119,6 @@ dump_cmd "sensors" "sensors" "20"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 
-if [ -x "$(command -v i2cdetect)" ];   then
-    run_cmd="for i in {0..17} ; do echo i2c bus \$i; i2cdetect -y \$i 2>/dev/null; done > $DUMP_FOLDER/i2c_scan"
-    timeout 60 bash -c "$run_cmd"
-fi
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
