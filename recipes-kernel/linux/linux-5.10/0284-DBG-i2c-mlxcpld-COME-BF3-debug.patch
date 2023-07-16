@@ -1,4 +1,4 @@
-From 54133b2a4122057dc3e76741dcb87a5b49e2752e Mon Sep 17 00:00:00 2001
+From 8c6dff7276797b52497918417809aa98850ebe58 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
 Subject: [PATCH backport 5.10.179 02/10] DBG: i2c: mlxcpld: COME BF3 debug
@@ -8,8 +8,8 @@ To be merged to previous two TMP patches.
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/i2c/busses/i2c-mlxcpld.c         |  26 ++--
- drivers/platform/mellanox/mlx-platform.c | 157 ++++++++++++++++-------
- 2 files changed, 118 insertions(+), 65 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 189 +++++++++++++++++------
+ 2 files changed, 149 insertions(+), 66 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
 index 1e095c2ab..18176bdbc 100644
@@ -101,19 +101,20 @@ index 1e095c2ab..18176bdbc 100644
  
  	/* Register with i2c layer */
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d86168685..039c4dead 100644
+index d86168685..04063671c 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -180,6 +180,8 @@
+@@ -180,6 +180,9 @@
  #define MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET	0xfb
  #define MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET	0xfc
  #define MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET	0xfd
 +#define MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET	0x100
++#define MLXPLAT_CPLD_LPC_REG_EXT_MID_OFFSET	0x195
 +#define MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET	0x1ff
  #define MLXPLAT_CPLD_LPC_IO_RANGE		0x100
  
  #define MLXPLAT_CPLD_LPC_PIO_OFFSET		0x10000UL
-@@ -334,20 +336,23 @@
+@@ -334,20 +337,23 @@
  
  /* Lattice FPGA PCI configuration */
  #define PCI_VENDOR_ID_LATTICE			0x1204
@@ -141,7 +142,28 @@ index d86168685..039c4dead 100644
  #define MLXPLAT_FPGA_PCI_TO		50 /* usec */
  
  /* mlxplat_priv - platform private data
-@@ -5396,6 +5401,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -383,6 +389,7 @@ struct mlxplat_priv {
+ 
+ static struct platform_device *mlxplat_dev;
+ static int mlxplat_i2c_main_complition_notify(void *handle, int id);
++static void __iomem *i2c_bridge_addr, *jtag_bridge_addr;
+ 
+ /* Regions for LPC I2C controller and LPC base register space */
+ static const struct resource mlxplat_lpc_resources[] = {
+@@ -3793,6 +3800,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(7),
+ 		.mode = 0644,
+ 	},
++	{
++		.label = "kexec_activated",
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0644,
++	},
+ 	{
+ 		.label = "clk_brd_prog_en",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
+@@ -5396,6 +5409,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET:
@@ -149,7 +171,7 @@ index d86168685..039c4dead 100644
  		return true;
  	}
  	return false;
-@@ -5557,6 +5563,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -5557,6 +5571,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -157,7 +179,7 @@ index d86168685..039c4dead 100644
  		return true;
  	}
  	return false;
-@@ -5710,6 +5717,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -5710,6 +5725,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -165,7 +187,7 @@ index d86168685..039c4dead 100644
  		return true;
  	}
  	return false;
-@@ -5740,6 +5748,14 @@ static const struct reg_default mlxplat_mlxcpld_regmap_ng400[] = {
+@@ -5740,6 +5756,14 @@ static const struct reg_default mlxplat_mlxcpld_regmap_ng400[] = {
  	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
  };
  
@@ -180,45 +202,66 @@ index d86168685..039c4dead 100644
  static const struct reg_default mlxplat_mlxcpld_regmap_rack_switch[] = {
  	{ MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET, MLXPLAT_REGMAP_NVSWITCH_PWM_DEFAULT },
  	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
-@@ -5889,6 +5905,7 @@ static int mlxplat_fpga_completion_wait(struct mlxplat_mlxcpld_regmap_context *c
+@@ -5889,15 +5913,30 @@ static int mlxplat_fpga_completion_wait(struct mlxplat_mlxcpld_regmap_context *c
  static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *val)
  {
  	struct mlxplat_mlxcpld_regmap_context *ctx = context;
 +	unsigned int msb_off = MLXPLAT_FPGA_PCI_MSB_ADDR;
  	int err;
  
++	if (reg >= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET) {
++		if (reg <= MLXPLAT_CPLD_LPC_REG_EXT_MID_OFFSET) {
++			/* Access to 2-nd FPGA bank */
++			*val = ioread8(i2c_bridge_addr + reg -
++				       MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET);
++			return 0;
++		}
++		else {
++			/* Access to 3-rd FPGA bank */
++			reg -= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET;
++			msb_off = MLXPLAT_FPGA_PCI_MSB_EXT_ADDR;
++		}
++	}
++
  	/* Verify there is no pending transactions */
-@@ -5897,7 +5914,11 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
+ 	err = mlxplat_fpga_completion_wait(ctx);
+ 	if (err)
  		return err;
  
  	/* Set address in register space */
 -	iowrite8(MLXPLAT_FPGA_PCI_MSB_ADDR, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
-+	if (reg >= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET) {
-+		reg -= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET;
-+		msb_off = MLXPLAT_FPGA_PCI_MSB_EXT_ADDR;
-+	}
 +	iowrite8(msb_off, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
  	iowrite8(reg, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET);
  	/* Activate read operation */
  	iowrite8(MLXPLAT_FPGA_PCI_CTRL_READ, ctx->base + MLXPLAT_FPGA_PCI_CTRL_OFFSET);
-@@ -5916,6 +5937,7 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
+@@ -5916,34 +5955,49 @@ static int mlxplat_fpga_reg_read(void *context, unsigned int reg, unsigned int *
  static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int val)
  {
  	struct mlxplat_mlxcpld_regmap_context *ctx = context;
 +	unsigned int msb_off = MLXPLAT_FPGA_PCI_MSB_ADDR;
  	int err;
  
++	if (reg >= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET) {
++		if (reg <= MLXPLAT_CPLD_LPC_REG_EXT_MID_OFFSET) {
++			/* Access to 2-nd FPGA bank */
++			iowrite8(val, i2c_bridge_addr + reg - MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET);
++			wmb();
++			return 0;
++		}
++		else {
++			/* Access to 3-rd FPGA bank */
++			reg -= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET;
++			msb_off = MLXPLAT_FPGA_PCI_MSB_EXT_ADDR;
++		}
++	}
++
  	/* Verify there is no pending transactions */
-@@ -5924,26 +5946,31 @@ static int mlxplat_fpga_reg_write(void *context, unsigned int reg, unsigned int
+ 	err = mlxplat_fpga_completion_wait(ctx);
+ 	if (err)
  		return err;
  
  	/* Set address in register space */
 -	iowrite8(MLXPLAT_FPGA_PCI_MSB_ADDR, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
-+	/* Set address in register space */
-+	if (reg >= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET) {
-+		reg -= MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET;
-+		msb_off = MLXPLAT_FPGA_PCI_MSB_EXT_ADDR;
-+	}
 +	iowrite8(msb_off, ctx->base + MLXPLAT_FPGA_PCI_MSB_ADDR_OFFSET);
  	iowrite8(reg, ctx->base + MLXPLAT_FPGA_PCI_LSB_ADDR_OFFSET);
  	/* Set data to be written */
@@ -247,7 +290,7 @@ index d86168685..039c4dead 100644
  	.reg_read = mlxplat_fpga_reg_read,
  	.reg_write = mlxplat_fpga_reg_write,
  };
-@@ -5966,7 +5993,10 @@ static struct mlxreg_core_platform_data
+@@ -5966,14 +6020,20 @@ static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
  static struct spi_board_info *mlxplat_spi;
@@ -255,11 +298,22 @@ index d86168685..039c4dead 100644
 +static struct pci_dev *lpc_bridge;
 +static struct pci_dev *i2c_bridge;
 +static struct pci_dev *jtag_bridge;
-+void __iomem *i2c_bridge_addr, *jtag_bridge_addr;
  
  /* Platform default reset function */
  static int mlxplat_reboot_notifier(struct notifier_block *nb, unsigned long action, void *unused)
-@@ -6635,12 +6665,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
+ {
+ 	struct mlxplat_priv *priv = platform_get_drvdata(mlxplat_dev);
++	u32 regval;
++	int ret;
++
++	ret = regmap_read(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET, &regval);
+ 
+-	if (action == SYS_RESTART)
++	if (action == SYS_RESTART && !ret && (regval & BIT(0)))
+ 		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET,
+ 			     MLXPLAT_CPLD_RESET_MASK);
+ 
+@@ -6635,12 +6695,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
  {
  	int err;
  
@@ -272,7 +326,7 @@ index d86168685..039c4dead 100644
  	mlxplat_mlxcpld_regmap_ctx.base = devm_ioport_map(&mlxplat_dev->dev,
  							  mlxplat_lpc_resources[1].start, 1);
  	if (!mlxplat_mlxcpld_regmap_ctx.base) {
-@@ -6664,13 +6688,14 @@ static void mlxplat_lpc_cpld_device_exit(void)
+@@ -6664,13 +6718,14 @@ static void mlxplat_lpc_cpld_device_exit(void)
  }
  
  static int
@@ -290,7 +344,7 @@ index d86168685..039c4dead 100644
  	if (!pci_dev)
  		return -ENODEV;
  
-@@ -6680,7 +6705,7 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+@@ -6680,7 +6735,7 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  		goto fail_pci_enable_device;
  	}
  
@@ -299,7 +353,7 @@ index d86168685..039c4dead 100644
  	if (err) {
  		dev_err(&pci_dev->dev, "pci_request_regions failed with error %d\n", err);
  		goto fail_pci_request_regions;
-@@ -6695,31 +6720,22 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+@@ -6695,31 +6750,22 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  		}
  	}
  
@@ -337,7 +391,7 @@ index d86168685..039c4dead 100644
  fail_pci_set_dma_mask:
  	pci_release_regions(pci_dev);
  fail_pci_request_regions:
-@@ -6728,12 +6744,58 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
+@@ -6728,12 +6774,58 @@ mlxplat_pci_fpga_device_init(struct resource **hotplug_resources,
  	return err;
  }
  
@@ -401,7 +455,7 @@ index d86168685..039c4dead 100644
  }
  
  static int
-@@ -6741,7 +6803,7 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
+@@ -6741,7 +6833,7 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
  {
  	int err;
  
@@ -410,7 +464,7 @@ index d86168685..039c4dead 100644
  	if (err == -ENODEV)
  		return mlxplat_lpc_cpld_device_init(hotplug_resources, hotplug_resources_size);
  
-@@ -6750,8 +6812,8 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
+@@ -6750,8 +6842,8 @@ mlxplat_pre_init(struct resource **hotplug_resources, unsigned int *hotplug_reso
  
  static void mlxplat_post_exit(void)
  {
@@ -421,7 +475,7 @@ index d86168685..039c4dead 100644
  	else
  		mlxplat_lpc_cpld_device_exit();
  }
-@@ -6982,8 +7044,8 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+@@ -6982,8 +7074,8 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  	mlxplat_i2c->handle = priv;
  
  	/* Set mapped base address of I2C-LPC bridge over PCIe */
@@ -432,7 +486,7 @@ index d86168685..039c4dead 100644
  	priv->pdev_i2c = platform_device_register_resndata(&mlxplat_dev->dev, "i2c_mlxcpld",
  							   nr, priv->hotplug_resources,
  							   priv->hotplug_resources_size,
-@@ -7047,7 +7109,6 @@ static int mlxplat_probe(struct platform_device *pdev)
+@@ -7047,7 +7139,6 @@ static int mlxplat_probe(struct platform_device *pdev)
  
  	if (!mlxplat_regmap_config)
  		mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config;
