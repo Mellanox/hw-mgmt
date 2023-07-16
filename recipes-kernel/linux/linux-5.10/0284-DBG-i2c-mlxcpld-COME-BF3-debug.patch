@@ -1,4 +1,4 @@
-From 8c6dff7276797b52497918417809aa98850ebe58 Mon Sep 17 00:00:00 2001
+From c5986dd37434d70b16dca26fc2181489fb9ad271 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Fri, 12 May 2023 06:28:18 +0000
 Subject: [PATCH backport 5.10.179 02/10] DBG: i2c: mlxcpld: COME BF3 debug
@@ -7,9 +7,9 @@ To be merged to previous two TMP patches.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/i2c/busses/i2c-mlxcpld.c         |  26 ++--
- drivers/platform/mellanox/mlx-platform.c | 189 +++++++++++++++++------
- 2 files changed, 149 insertions(+), 66 deletions(-)
+ drivers/i2c/busses/i2c-mlxcpld.c         |  26 +--
+ drivers/platform/mellanox/mlx-platform.c | 199 +++++++++++++++++------
+ 2 files changed, 154 insertions(+), 71 deletions(-)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
 index 1e095c2ab..18176bdbc 100644
@@ -101,9 +101,23 @@ index 1e095c2ab..18176bdbc 100644
  
  	/* Register with i2c layer */
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d86168685..04063671c 100644
+index d86168685..0037f5528 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -38,12 +38,12 @@
+ #define MLXPLAT_CPLD_LPC_REG_CPLD3_PN1_OFFSET	0x09
+ #define MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET	0x0a
+ #define MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET	0x0b
++#define MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET	0x17
+ #define MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET	0x19
+ #define MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET	0x1c
+ #define MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET	0x1d
+ #define MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET	0x1e
+ #define MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET	0x1f
+-#define MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET	0x19
+ #define MLXPLAT_CPLD_LPC_REG_LED1_OFFSET	0x20
+ #define MLXPLAT_CPLD_LPC_REG_LED2_OFFSET	0x21
+ #define MLXPLAT_CPLD_LPC_REG_LED3_OFFSET	0x22
 @@ -180,6 +180,9 @@
  #define MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET	0xfb
  #define MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET	0xfc
@@ -150,19 +164,30 @@ index d86168685..04063671c 100644
  
  /* Regions for LPC I2C controller and LPC base register space */
  static const struct resource mlxplat_lpc_resources[] = {
-@@ -3793,6 +3800,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
- 		.mask = GENMASK(7, 0) & ~BIT(7),
- 		.mode = 0644,
+@@ -3781,6 +3788,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(2),
+ 		.mode = 0444,
  	},
 +	{
 +		.label = "kexec_activated",
-+		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(0),
++		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
 +		.mode = 0644,
 +	},
  	{
- 		.label = "clk_brd_prog_en",
- 		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
+ 		.label = "erot1_reset",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
+@@ -5311,9 +5324,9 @@ static struct mlxreg_core_platform_data mlxplat_mlxcpld_wd_set_type3[] = {
+ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+ {
+ 	switch (reg) {
++	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED1_OFFSET:
+-	case MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
 @@ -5396,6 +5409,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET:
@@ -171,6 +196,20 @@ index d86168685..04063671c 100644
  		return true;
  	}
  	return false;
+@@ -5416,12 +5430,12 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD3_PN1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED1_OFFSET:
+-	case MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
 @@ -5557,6 +5571,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
@@ -179,6 +218,20 @@ index d86168685..04063671c 100644
  		return true;
  	}
  	return false;
+@@ -5577,12 +5592,12 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD3_PN1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
++	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED1_OFFSET:
+-	case MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED2_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED3_OFFSET:
+ 	case MLXPLAT_CPLD_LPC_REG_LED4_OFFSET:
 @@ -5710,6 +5725,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
@@ -290,7 +343,7 @@ index d86168685..04063671c 100644
  	.reg_read = mlxplat_fpga_reg_read,
  	.reg_write = mlxplat_fpga_reg_write,
  };
-@@ -5966,14 +6020,20 @@ static struct mlxreg_core_platform_data
+@@ -5966,15 +6020,21 @@ static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
  static struct spi_board_info *mlxplat_spi;
@@ -306,13 +359,15 @@ index d86168685..04063671c 100644
 +	u32 regval;
 +	int ret;
 +
-+	ret = regmap_read(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET, &regval);
++	ret = regmap_read(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET, &regval);
  
 -	if (action == SYS_RESTART)
-+	if (action == SYS_RESTART && !ret && (regval & BIT(0)))
- 		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET,
+-		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_PG_RST_OFFSET,
++	if (action == SYS_RESTART && !ret && !(regval & BIT(0)))
++		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
  			     MLXPLAT_CPLD_RESET_MASK);
  
+ 	return NOTIFY_DONE;
 @@ -6635,12 +6695,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
  {
  	int err;

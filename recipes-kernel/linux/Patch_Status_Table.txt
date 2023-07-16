@@ -468,6 +468,7 @@ Kernel-5.10
 |0301-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0302-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0303-UBUNTU-SAUCE-Add-BF3-related-ACPI-config-and-Ring-de.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0304-platform-mellanox-mlx-platform-add-support-of-5th-CP.patch  |                    | Feature pending                          |            |                                                |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
