@@ -2057,14 +2057,14 @@ class ThermalManagement(hw_managemet_file_op):
             Provide system monitoring and thermal control
     """
 
-    def __init__(self, cmd_arg):
+    def __init__(self, cmd_arg, logger):
         """
         @summary:
             Init  thermal algorithm
         @param params: global thermal configuration
         """
         hw_managemet_file_op.__init__(self, cmd_arg)
-        self.log = Logger(cmd_arg[CONST.LOG_USE_SYSLOG], cmd_arg[CONST.LOG_FILE], cmd_arg["verbosity"])
+        self.log = logger
         self.log.notice("Preinit thermal control ver {}".format(VERSION), 1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
@@ -2908,15 +2908,17 @@ if __name__ == '__main__':
                             help="Define custom hw-management root folder",
                             default=CONST.HW_MGMT_FOLDER_DEF)
     args = vars(CMD_PARSER.parse_args())
-    thermal_management = ThermalManagement(args)
+    logger = Logger(args[CONST.LOG_USE_SYSLOG], args[CONST.LOG_FILE], args["verbosity"])
 
     try:
+        thermal_management = ThermalManagement(args, logger)
         thermal_management.init()
         thermal_management.start(reason="init")
         thermal_management.run()
     except BaseException as e:
-        if str(e) != "1":
-            thermal_management.log.info(traceback.format_exc())
-        thermal_management.stop(reason=str(e))
+        logger.info(traceback.format_exc())
+        if thermal_management:
+            thermal_management.stop(reason="crash ({})".format(str(e)))
+            sys.exit(1)
 
     sys.exit(0)
