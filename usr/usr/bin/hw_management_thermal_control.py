@@ -735,14 +735,12 @@ class hw_managemet_file_op(object):
         @param scale: scale factor multiply with file value
         @return: int value
         """
-        val = None
+        val = def_val
         if self.check_file(filename):
             try:
                 val = int(self.read_file(filename)) / scale
-            except ValueError:
+            except:
                 pass
-        if val is None:
-            val = def_val
         return val
 
     # ----------------------------------------------------------------------
