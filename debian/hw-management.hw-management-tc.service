@@ -5,10 +5,16 @@ Requires=hw-management.service
 PartOf=hw-management.service
 Documentation=man:hw-management-tc.service(8)
 
+StartLimitIntervalSec=1200
+StartLimitBurst=5
+
 [Service]
 ExecStart=/bin/sh -c "/usr/bin/hw_management_thermal_control.py"
 ExecStop=/bin/kill $MAINPID
 TimeoutStopSec=1
+
+Restart=on-failure
+RestartSec=60s
 
 [Install]
 WantedBy=multi-user.target
