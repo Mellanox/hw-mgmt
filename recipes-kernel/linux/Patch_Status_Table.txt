@@ -349,6 +349,7 @@ Kernel-5.10
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream                               |            | disable upstream patch, must exist from 5.10.74|
 |0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix upstream                          | 5.10.173   |                                                |
 |0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            | SN3750SX                                       |
+|0285-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            | SN2201                                         |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
