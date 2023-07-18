@@ -116,7 +116,8 @@ check_cpu_type()
 		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
 		cpu_pn=0x$cpu_pn
 		if [ "$cpu_pn" == "$BF3_CPU" ]; then
-			echo $cpu_pn > $config_path/cpu_type
+			cpu_type=$cpu_pn
+			echo $cpu_type > $config_path/cpu_type
 			return 0
 		fi
 
