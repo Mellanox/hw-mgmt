@@ -342,6 +342,10 @@ devtr_check_supported_system_init_alternatives()
 				done
 			fi
 			;;
+		$DNV_CPU)
+			# Silent exit
+			return 1
+			;;
 		*)
 			log_info "SMBIOS BOM: unsupported cpu_type: ${cpu_type}"
 			return 1
