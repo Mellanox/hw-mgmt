@@ -673,12 +673,6 @@ set_jtag_gpio()
 			jtag_tms=88
 			jtag_tdo=89
 			;;
-		$BF3_CPU)
-			jtag_tdi=11	# 11 MLNXBF33:00
-			jtag_tdo=12	# 12 MLNXBF33:00
-			jtag_tck=23 	# 55 MLNXBF33:01
-			jtag_tms=22	# 54 MLNXBF33:01
-			;;
 		*)
 			return 0
 			;;
@@ -696,14 +690,8 @@ set_jtag_gpio()
 		fi
 
 		if [ "$board_type" != "VMOD0014" ]; then
-			arch=$(uname -m)
-			if [ "$arch" = "aarch64" ]; then
-				plat_path=/sys/devices/platform/MLNXBF49:00
-			else
-				plat_path=/sys/devices/platform/mlxplat
-			fi
-			if find ${plat_path}/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
-				ln -sf ${plat_path}/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+			if find /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+				ln -sf /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
 			fi
 		fi
 	fi
@@ -724,56 +712,17 @@ set_jtag_gpio()
 			log_err "CPU GPIO chip was not found"
 		fi
 	else
-		case $sku in
-		# BF3 COME has 2 gpiochips - both are use for JTAG bit-banging.
-		HI151|HI156)
-			for gpiochip in /sys/class/gpio/*; do
-				if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
-					gpiolabel=$(<"$gpiochip"/label)
-					if [ "$gpiolabel" == "MLNXBF33:00" ]; then
-						gpiobase1=$(<"$gpiochip"/base)
-					fi
-					if [ "$gpiolabel" == "MLNXBF33:01" ]; then
-						gpiobase0=$(<"$gpiochip"/base)
-					fi
-				fi
-			done
-			;;
-		default)
-			gpiobase=$(</sys/class/gpio/gpiochip*/base)
-			;;
-		esac
+		gpiobase=$(</sys/class/gpio/gpiochip*/base)
 	fi
 
-	case $sku in
-	HI151|HI156)
-		# Two gpiochips - both are use for JTAG bit-banging.
-		gpio_tck=$((gpiobase0+jtag_tck))
-		echo $gpio_tck > /sys/class/gpio/"$export_unexport"
-		gpio_tms=$((gpiobase0+jtag_tms))
-		echo $gpio_tms > /sys/class/gpio/"$export_unexport"
-		gpio_tdo=$((gpiobase1+jtag_tdo))
-		echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
-		gpio_tdi=$((gpiobase1+jtag_tdi))
-		echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
-
-		if [ "$export_unexport" == "export" ]; then
-			echo out > /sys/class/gpio/gpio"$gpio_tck"/direction
-			echo out > /sys/class/gpio/gpio"$gpio_tms"/direction
-			echo out > /sys/class/gpio/gpio"$gpio_tdi"/direction
-		fi
-		;;
-	default)
-		gpio_tck=$((gpiobase+jtag_tck))
-		echo $gpio_tck > /sys/class/gpio/"$export_unexport"
-		gpio_tms=$((gpiobase+jtag_tms))
-		echo $gpio_tms > /sys/class/gpio/"$export_unexport"
-		gpio_tdo=$((gpiobase+jtag_tdo))
-		echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
-		gpio_tdi=$((gpiobase+jtag_tdi))
-		echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
-		;;
-	esac
+	gpio_tck=$((gpiobase+jtag_tck))
+	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
+	gpio_tms=$((gpiobase+jtag_tms))
+	echo $gpio_tms > /sys/class/gpio/"$export_unexport"
+	gpio_tdo=$((gpiobase+jtag_tdo))
+	echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
+	gpio_tdi=$((gpiobase+jtag_tdi))
+	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
 
 	# In SN2201 system. 
 	# GPIO0 for CPU request to reset the Main Board I2C Mux.
@@ -1728,7 +1677,14 @@ bf3_common()
 	jtag_bridge_offset=`cat /proc/iomem | grep mlxplat_jtag_bridge | awk -F '-' '{print $1}'`
 	echo $jtag_bridge_offset > $config_path/jtag_bridge_offset
 	jtag_pci=`lspci | grep Lattice | grep 9c30 | awk '{print $1}'`
-	ln -s /sys/bus/pci/devices/0000:"$jtag_pci"/resource0 $config_path/jtag_bridge
+	check_n_link /sys/bus/pci/devices/0000:"$jtag_pci"/resource0 $config_path/jtag_bridge
+
+	if find /sys/devices/platform/MLNXBF49:00/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+		if [ ! -d $jtag_path ]; then
+			mkdir $jtag_path
+		fi
+		check_n_link /sys/devices/platform/MLNXBF49:00/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+	fi
 }
 
 msn48xx_specific()
