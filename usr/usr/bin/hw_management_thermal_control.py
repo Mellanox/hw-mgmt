@@ -2103,14 +2103,15 @@ class ThermalManagement(hw_managemet_file_op):
         self.load_configuration()
         if not self.sys_config.get("platform_support", 1):
             self.log.notice("Platform Board:{}, SKU:{} is not supported.".format(self.board_type, self.sku), 1)
-            sys.exit(0)
-        
+            self.log.notice("Set TC to idle.")
+            while True:
+                time.sleep(60)
+
         if not self.is_pwm_exists():
             self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for ASIC init", 1)
             while not self.is_pwm_exists():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
-                
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
