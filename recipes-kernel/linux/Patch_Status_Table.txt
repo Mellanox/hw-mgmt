@@ -474,6 +474,7 @@ Kernel-5.10
 |0307-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Feature pending                          |            |                                                |
 |0308-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Feature pending                          |            |                                                |
 |0309-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Feature pending                          |            |                                                |
+|0310-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
