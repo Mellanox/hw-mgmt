@@ -1,7 +1,7 @@
-From 718e3bbae9b7c4967f1f2602a8efc950012f3e99 Mon Sep 17 00:00:00 2001
+From 56a981896813baa4a379e460f53c7428c9fea87c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Thu, 20 Jul 2023 11:01:56 +0000
-Subject: [PATCH backport 5.10.179 2/4] leds: mlxreg: Add support for new
+Date: Sun, 23 Jul 2023 09:57:51 +0000
+Subject: [PATCH backport 5.10.179 1/2] leds: mlxreg: Add support for new
  flavour of capability register
 
 LED platform data is common across the various systems, while LED
@@ -24,14 +24,14 @@ bitmask or counter.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/leds/leds-mlxreg.c | 12 +++++++++---
- 1 file changed, 9 insertions(+), 3 deletions(-)
+ drivers/leds/leds-mlxreg.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
-index 137ba5afa..1152550f2 100644
+index 6241a3407..131064817 100644
 --- a/drivers/leds/leds-mlxreg.c
 +++ b/drivers/leds/leds-mlxreg.c
-@@ -230,16 +230,22 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
+@@ -243,12 +243,19 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
  				dev_err(&priv->pdev->dev, "Failed to query capability register\n");
  				return err;
  			}
@@ -53,10 +53,6 @@ index 137ba5afa..1152550f2 100644
  			 */
  			data->bit &= MLXREG_LED_CAPABILITY_CLEAR;
  		}
--
- 		led_cdev = &led_data->led_cdev;
- 		led_data->data_parent = priv;
- 		if (strstr(data->label, "red") ||
 -- 
 2.20.1
 
