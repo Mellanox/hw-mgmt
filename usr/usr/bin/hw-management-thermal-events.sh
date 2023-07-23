@@ -803,7 +803,7 @@ if [ "$1" == "add" ]; then
 		else
 			arch=$(uname -m)
 			if [ "$arch" = "aarch64" ]; then
-				eeprom_file=/sys/devices/platform/MLNXBF49:00/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+				eeprom_file=/sys/devices/platform/MLNXBF49:00/i2c_mlxcpld.2/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 			else
 				eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 			fi
