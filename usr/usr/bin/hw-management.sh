@@ -159,6 +159,14 @@ cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
+cpu_type3_mps_voltmon_connection_table=(	mp2975 0x6a 15 comex_voltmon1 \
+						mp2975 0x6b 15 comex_voltmon2)
+
+bf3_come_connection_table=(	tmp421 0x1f 15 \
+				mp2975 0x69 15 \
+				mp2975 0x6a 15 \
+				24c32 0x50 16)
+
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
 			lm75 0x4a 7 \
@@ -639,7 +647,8 @@ set_sodimm_temp_limits()
 
 set_jtag_gpio()
 {
-	export_unexport=$1
+	local export_unexport=$1
+	local cpu_type=$(cat $config_path/cpu_type)
 	# Check where supported and assign appropriate GPIO pin numbers
 	# for JTAG bit-banging operations.
 	# GPIO pin numbers are offset from gpiobase.
@@ -665,12 +674,6 @@ set_jtag_gpio()
 			jtag_tck=87
 			jtag_tms=88
 			jtag_tdo=89
-			;;
-		$BF3_CPU)
-			jtag_tdi=11
-			jtag_tck=55
-			jtag_tms=54
-			jtag_tdo=12
 			;;
 		*)
 			return 0
@@ -722,13 +725,10 @@ set_jtag_gpio()
 
 	gpio_tck=$((gpiobase+jtag_tck))
 	echo $gpio_tck > /sys/class/gpio/"$export_unexport"
-
 	gpio_tms=$((gpiobase+jtag_tms))
 	echo $gpio_tms > /sys/class/gpio/"$export_unexport"
-
 	gpio_tdo=$((gpiobase+jtag_tdo))
 	echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
-
 	gpio_tdi=$((gpiobase+jtag_tdi))
 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
 
@@ -768,6 +768,7 @@ add_cpu_board_to_connection_table()
 	local cpu_connection_table=()
 	local cpu_voltmon_connection_table=()
 	local HW_REV=255
+	local cpu_type=$(cat $config_path/cpu_type)
 
 	regio_path=$(find_regio_sysfs_path)
 	if [ $? -eq 0 ]; then
@@ -835,13 +836,13 @@ add_cpu_board_to_connection_table()
 			case $sku in
 				# MQM9700+BF3
 				HI151)
-					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					cpu_connection_table=( ${bf3_come_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
 				# MSN4700+BF3
 				HI156)
-					cpu_connection_table=( ${cpu_type1_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type1_tps_voltmon_connection_table[@]} )
+					cpu_connection_table=( ${bf3_come_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type3_mps_voltmon_connection_table[@]} )
 					;;
 			esac
 			;;
@@ -1677,9 +1678,11 @@ bf3_common()
 	case $sku in
 		HI151)
 			mqm97xx_specific
+			i2c_asic_bus_default=0
 			;;
 		HI156)
 			msn47xx_specific
+			i2c_asic_bus_default=0
 			;;
 		*)
 			echo "Unsupported BF3 platform"
@@ -1938,6 +1941,7 @@ check_system()
 				*)
 					# Check marginal system, system without SMBIOS customization,
 					# only on old types of Mellanox switches.
+					cpu_type=$(cat $config_path/cpu_type)
 					if grep -q "Mellanox Technologies" /sys/devices/virtual/dmi/id/chassis_vendor ; then
 						case $cpu_type in
 							$RNG_CPU)
