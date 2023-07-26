@@ -1,0 +1,30 @@
+From 9d1445f643cd5da0a03e55272034a0f363e02751 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 6 Jun 2023 08:38:14 +0000
+Subject: [PATCH backport 5.10 2/3] DBG: gpio: mlxbf3: Add gpio 5 to valid mask
+
+Add pin 5 to valid mask to allow system interrupt to
+utilize this pin.
+Add JTAG pins 11, 12, 22, 23.
+Change should be apply to ACPI table.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/gpio/gpio-mlxbf3.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpio/gpio-mlxbf3.c b/drivers/gpio/gpio-mlxbf3.c
+index 51dce3ae1..8abeb020f 100644
+--- a/drivers/gpio/gpio-mlxbf3.c
++++ b/drivers/gpio/gpio-mlxbf3.c
+@@ -205,6 +205,7 @@ static int mlxbf3_gpio_probe(struct platform_device *pdev)
+ 
+ 	gs->valid_mask = 0x0;
+ 	device_property_read_u32(dev, "valid_mask", &gs->valid_mask);
++	gs->valid_mask |= BIT(5)|BIT(11)|BIT(12)|BIT(22)|BIT(23);
+ 
+ 	gc = &gs->gc;
+ 
+-- 
+2.20.1
+

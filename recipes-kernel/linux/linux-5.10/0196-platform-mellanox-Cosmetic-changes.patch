@@ -1,21 +1,21 @@
-From da7c9365e155de2a038cbc1cded3a56ea9a363aa Mon Sep 17 00:00:00 2001
+From c7eceb2f19867f9130ef0d7aaf0e71d4d367fd45 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Mon, 27 Feb 2023 15:24:43 +0000
-Subject: [PATCH backport 5.10 1/3] platform: mellanox: Cosmetic changes
+Date: Sun, 23 Jul 2023 20:27:02 +0000
+Subject: [PATCH backport 5.10.179 07/26] platform: mellanox: Cosmetic changes
 
 Fix routines and labels names by s/topology/topology.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 14 +++++++-------
+ drivers/platform/x86/mlx-platform.c | 14 +++++++-------
  1 file changed, 7 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 849fdf5de..656056089 100644
---- a/drivers/platform/mellanox/mlx-platform.c
-+++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -6876,7 +6876,7 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index d0b03dbec..a65fd187c 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -6600,7 +6600,7 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
  	return 0;
  }
  
@@ -24,7 +24,7 @@ index 849fdf5de..656056089 100644
  {
  	int i, err;
  
-@@ -6921,7 +6921,7 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
+@@ -6646,7 +6646,7 @@ static int mlxplat_i2c_mux_topolgy_init(struct mlxplat_priv *priv)
  	return err;
  }
  
@@ -33,7 +33,7 @@ index 849fdf5de..656056089 100644
  {
  	int i;
  
-@@ -6937,7 +6937,7 @@ static int mlxplat_i2c_main_complition_notify(void *handle, int id)
+@@ -6662,7 +6662,7 @@ static int mlxplat_i2c_main_complition_notify(void *handle, int id)
  {
  	struct mlxplat_priv *priv = handle;
  
@@ -42,7 +42,7 @@ index 849fdf5de..656056089 100644
  }
  
  static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
-@@ -6964,14 +6964,14 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+@@ -6690,14 +6690,14 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  	}
  
  	if (priv->i2c_main_init_status == MLXPLAT_I2C_MAIN_BUS_NOTIFIED) {
@@ -60,7 +60,7 @@ index 849fdf5de..656056089 100644
  fail_platform_i2c_register:
  fail_mlxplat_mlxcpld_verify_bus_topology:
  	return err;
-@@ -6979,7 +6979,7 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+@@ -6705,7 +6705,7 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  
  static void mlxplat_i2c_main_exit(struct mlxplat_priv *priv)
  {

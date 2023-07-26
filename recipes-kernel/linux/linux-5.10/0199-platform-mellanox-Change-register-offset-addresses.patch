@@ -1,22 +1,22 @@
-From 020ab13e16f943bb66da221507f83634a7d9ca05 Mon Sep 17 00:00:00 2001
+From 2354ada9b4448f63e11b1c173e75d463d18ba52f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Wed, 1 Mar 2023 17:21:48 +0000
-Subject: [PATCH backport 5.10 4/5] platform: mellanox: Change register offset
- addresses
+Date: Sun, 23 Jul 2023 21:08:38 +0000
+Subject: [PATCH backport 5.10.179 10/26] platform: mellanox: Change register
+ offset addresses
 
 Move debug register offsets to different location due to hardware changes.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 8 ++++----
+ drivers/platform/x86/mlx-platform.c | 8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 4eb327720..b5d51673f 100644
---- a/drivers/platform/mellanox/mlx-platform.c
-+++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -66,10 +66,6 @@
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 87159b135..acb5ab87b 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -64,10 +64,6 @@
  #define MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET	0x37
  #define MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET	0x3a
  #define MLXPLAT_CPLD_LPC_REG_AGGR_MASK_OFFSET	0x3b
@@ -27,7 +27,7 @@ index 4eb327720..b5d51673f 100644
  #define MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET	0x40
  #define MLXPLAT_CPLD_LPC_REG_AGGRLO_MASK_OFFSET	0x41
  #define MLXPLAT_CPLD_LPC_REG_AGGRCO_OFFSET	0x42
-@@ -130,6 +126,10 @@
+@@ -128,6 +124,10 @@
  #define MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET	0xaa
  #define MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET	0xab
  #define MLXPLAT_CPLD_LPC_REG_LC_PWR_ON		0xb2

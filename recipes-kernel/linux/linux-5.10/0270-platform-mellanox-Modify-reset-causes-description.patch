@@ -1,8 +1,8 @@
-From f8a0954053e6e06070ed399e1810bea089ba36bd Mon Sep 17 00:00:00 2001
+From b17ab6fa8467ca78a8dc789e0c60e01e7073b0af Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Thu, 2 Mar 2023 12:28:11 +0000
-Subject: [PATCH backport v.5.10 4/8] platform: mellanox: Modify reset causes
- description
+Date: Sun, 23 Jul 2023 21:25:49 +0000
+Subject: [PATCH backport 5.10.179 12/26] platform: mellanox: Modify reset
+ causes description
 
 For system of classes VMOD0005, VMOD0010:
 - remove "reset_from_comex", since this cause doesn't define specific
@@ -13,14 +13,14 @@ For system of classes VMOD0005, VMOD0010:
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 12 ++++++------
+ drivers/platform/x86/mlx-platform.c | 12 ++++++------
  1 file changed, 6 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 486a3e8da..67865636e 100644
---- a/drivers/platform/mellanox/mlx-platform.c
-+++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -3832,12 +3832,6 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index fdf8a7fda..9ea183b2e 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -3788,12 +3788,6 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(2),
  		.mode = 0444,
  	},
@@ -33,7 +33,7 @@ index 486a3e8da..67865636e 100644
  	{
  		.label = "reset_from_asic",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
-@@ -3856,6 +3850,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -3812,6 +3806,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(7),
  		.mode = 0444,
  	},
