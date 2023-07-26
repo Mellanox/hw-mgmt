@@ -20,6 +20,8 @@ override_dh_auto_install:
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
 ifeq ($(DEB_HOST_ARCH),arm64)
 	rm -f debian/$(pname)/usr/bin/iorw
+	dh_installdirs -p$(pname) lib/systemd/system-shutdown
+	cp usr/usr/bin/hw-management-kexec-notifier.sh debian/$(pname)/lib/systemd/system-shutdown
 endif
 	dh_installdirs -p$(pname) lib/udev/rules.d/
 	cp usr/lib/udev/rules.d/* debian/$(pname)/lib/udev/rules.d/
