@@ -1,9 +1,10 @@
-From 6cb8f4e432f8209a3775877d690a979a2e786afc Mon Sep 17 00:00:00 2001
+From 662dc486502c7d15c25837bd140909f6d191ad50 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Mon, 27 Feb 2023 18:56:09 +0000
-Subject: [PATCH backport 5.10 3/3] platform: mellanox: Add new attributes
+Date: Sun, 23 Jul 2023 21:05:12 +0000
+Subject: [PATCH backport 5.10.179 09/26] platform: mellanox: Add new
+ attributes
 
-Add two new attributes:
+Add new attribute:
 "lid_open" - to indicate system intrusion detection.
 "reset_long_pwr_pb" - to indicate that system has been reset due to
 long press of power button.
@@ -11,14 +12,14 @@ long press of power button.
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 12 ++++++++++++
+ drivers/platform/x86/mlx-platform.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
-diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 42fd7e4e0..4eb327720 100644
---- a/drivers/platform/mellanox/mlx-platform.c
-+++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -4067,6 +4067,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index b7297a08b..87159b135 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -4023,6 +4023,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(1),
  		.mode = 0444,
  	},
@@ -31,7 +32,7 @@ index 42fd7e4e0..4eb327720 100644
  	{
  		.label = "clk_brd1_boot_fail",
  		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
-@@ -4706,6 +4712,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_chassis_blade_regs_io_data[] = {
+@@ -4662,6 +4668,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_chassis_blade_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(6),
  		.mode = 0444,
  	},

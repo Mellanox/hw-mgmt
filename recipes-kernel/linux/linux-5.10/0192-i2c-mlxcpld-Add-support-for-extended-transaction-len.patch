@@ -1,8 +1,8 @@
-From 22447625fff0e742b3dc9c2f78bbaac29b1f1031 Mon Sep 17 00:00:00 2001
+From 9d8281549dd2288eeb45690f7b69ed87725411cc Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 27 Nov 2022 10:43:23 +0200
-Subject: [PATCH backport 5.10 06/10] i2c: mlxcpld: Add support for extended
- transaction length for i2c-mlxcpld
+Date: Mon, 24 Jul 2023 12:48:08 +0000
+Subject: [PATCH backport 5.10.179 03/26] i2c: mlxcpld: Add support for
+ extended transaction length for i2c-mlxcpld
 
 Add support for extended length of read and write transactions.
 New FPGA logic allows to increase size of the read and write
@@ -13,12 +13,13 @@ transaction length - 128 bytes for read transactions and 132 for write
 transactions.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
  drivers/i2c/busses/i2c-mlxcpld.c | 10 ++++++++++
  1 file changed, 10 insertions(+)
 
 diff --git a/drivers/i2c/busses/i2c-mlxcpld.c b/drivers/i2c/busses/i2c-mlxcpld.c
-index cd5401ce4..0e1807be7 100644
+index e52b66ad1..27a7c75b1 100644
 --- a/drivers/i2c/busses/i2c-mlxcpld.c
 +++ b/drivers/i2c/busses/i2c-mlxcpld.c
 @@ -22,6 +22,7 @@
@@ -29,7 +30,7 @@ index cd5401ce4..0e1807be7 100644
  #define MLXCPLD_I2C_DATA_SZ_MASK	GENMASK(6, 5)
  #define MLXCPLD_I2C_SMBUS_BLK_BIT	BIT(7)
  #define MLXCPLD_I2C_MAX_ADDR_LEN	4
-@@ -466,6 +467,13 @@ static const struct i2c_adapter_quirks mlxcpld_i2c_quirks_ext = {
+@@ -541,6 +542,13 @@ static const struct i2c_adapter_quirks mlxcpld_i2c_quirks_ext = {
  	.max_comb_1st_msg_len = 4,
  };
  
@@ -43,7 +44,7 @@ index cd5401ce4..0e1807be7 100644
  static struct i2c_adapter mlxcpld_i2c_adapter = {
  	.owner          = THIS_MODULE,
  	.name           = "i2c-mlxcpld",
-@@ -550,6 +558,8 @@ static int mlxcpld_i2c_probe(struct platform_device *pdev)
+@@ -625,6 +633,8 @@ static int mlxcpld_i2c_probe(struct platform_device *pdev)
  	/* Check support for extended transaction length */
  	if ((val & MLXCPLD_I2C_DATA_SZ_MASK) == MLXCPLD_I2C_DATA_SZ_BIT)
  		mlxcpld_i2c_adapter.quirks = &mlxcpld_i2c_quirks_ext;
