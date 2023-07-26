@@ -448,10 +448,36 @@ Kernel-5.10
 |0279-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | P4262                                          |
 |0280-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            | P4262                                          |
 |0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
-|0282-platform-mellanox-mlx-platform-add-support-of-5th-CP.patch  |                    | Feature pending                          |            | P4262                                          |
-|0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            | SN3750SX                                       |
 |0284-platform-mellanox-mlx-platform-fix-CPLD4-PN-report.patch    |                    | Bugfix pending                           |            | SN5600                                         |
 |0285-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0282-TMP-platform-mellanox-mlx-platform-Follow-up-patch-f.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0283-TMP-i2c-mlxcpld-Follow-up-patch-for-COME-BF3-support.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0284-DBG-i2c-mlxcpld-COME-BF3-debug.patch                        |                    | Feature pending                          |            | BF3-COME                                       |
+|0285-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0286-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0287-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             |                    | Feature pending                          |            | BF3-COME                                       |
+|0288-UBUNTU-SAUCE-gpio-mmio-handle-ngpios-properly-in-bgp.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0289-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Feature pending                          |            | BF3-COME                                       |
+|0291-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            |                                                |
+|0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            | BF3-COME                                       |
+|0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Feature pending                          |            |                                                |
+|0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending; os[sonic,opt]           |            |                                                |
+|0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
+|0296-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0298-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Feature pending                          |            | BF3-COME                                       |
+|0299-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3-COME                                       |
+|0300-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3-COME                                       |
+|0301-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0302-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0303-UBUNTU-SAUCE-Add-BF3-related-ACPI-config-and-Ring-de.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0304-platform-mellanox-mlx-platform-add-support-of-5th-CP.patch  |                    | Feature pending                          |            |                                                |
+|0305-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Feature pending                          |            |                                                |
+|0306-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Rejected                                 |            |                                                |
+|0307-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Feature pending                          |            |                                                |
+|0308-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Feature pending                          |            |                                                |
+|0309-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Feature pending                          |            |                                                |
+|0310-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
+|0311-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            |                                                |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |

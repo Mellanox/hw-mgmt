@@ -400,7 +400,7 @@ def produce_config_line(option, status):
     return config_option_line
 
 # ----------------------------------------------------------------------
-def load_config_to_dict(config_path):
+def load_config_to_dict(config_path, arch):
 
     if not os.path.isfile(config_path):
         print ("Err. File {} missing.".format(config_path))
@@ -411,18 +411,27 @@ def load_config_to_dict(config_path):
     config_file_lines = trim_array_str(config_file_lines)
 
     config_dict = {}
+    curr_arch = None
     for line in config_file_lines:
-        option, status = parse_config_line(line)
-        if option:
-            config_dict[option] = status
+        re_arch = re.match(r'.*\[([a-z0-9]+)\]', line)
+        if re_arch:
+            curr_arch = re_arch.group(1)
+            continue
+        if curr_arch == arch:
+            option, status = parse_config_line(line)
+            if option:
+                config_dict[option] = status
     return config_dict
 
 # ----------------------------------------------------------------------
-def process_config(src_root, dst_cfg, delimiter=""):
+def process_config(src_root, dst_cfg, delimiter="", arch="amd64"):
     # Load src config file
-    ref_cfg_filenamee = "{}/{}".format(src_root, CONST.REFERENCE_CONFIG)
-    ref_config = load_config_to_dict(ref_cfg_filenamee)
-
+    ref_cfg_filename = "{}/{}".format(src_root, CONST.REFERENCE_CONFIG)
+    ref_config = load_config_to_dict(ref_cfg_filename, arch)
+    if not ref_config:
+        print ("Err. Not found target arch [{}] in ref config file {}.".format(arch, ref_cfg_filename))
+    else:
+        print ("Trget arch [{}]".format(arch))
     if not os.path.isfile(dst_cfg):
         print ("Err. Config file {} missing.".format(dst_cfg))
         return False
@@ -524,6 +533,12 @@ if __name__ == '__main__':
                             default="None",
                             choices=["None", "sonic","opt", "cumulus"],
                             required=False)
+    CMD_PARSER.add_argument("--arch",
+                            dest="arch",
+                            help="Arch type amd64/arm64/...",
+                            default="amd64",
+                            choices=["amd64", "arm64"],
+                            required=False)
     CMD_PARSER.add_argument("--verbose",
                             dest="verbose",
                             help="Verbose output",
@@ -596,7 +611,7 @@ if __name__ == '__main__':
     if config_file_name:
         print ("-> Processing config {}".format(args["config_file"]))
         delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-        config_res = process_config(src_folder, args["config_file"], delimiter_line)
+        config_res = process_config(src_folder, args["config_file"], delimiter_line, arch = args["arch"])
 
         if config_res:
             config_file = open(config_file_name, "w")

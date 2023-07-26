@@ -118,7 +118,8 @@ check_cpu_type()
 		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
 		cpu_pn=0x$cpu_pn
 		if [ "$cpu_pn" == "$BF3_CPU" ]; then
-			echo $cpu_pn > $config_path/cpu_type
+			cpu_type=$cpu_pn
+			echo $cpu_type > $config_path/cpu_type
 			return 0
 		fi
 
@@ -146,6 +147,14 @@ find_i2c_bus()
             name=$(cut $folder/name -d' ' -f 1)
             if [ "$name" == "i2c-mlxcpld" ]; then
                 i2c_bus_offset=$((i-1))
+		case $sku in
+		HI151|HI156)
+			i2c_bus_offset=$((i2c_bus_offset-1))
+			;;
+		default)
+			;;
+		esac
+
                 echo $i2c_bus_offset > $config_path/i2c_bus_offset
                 return
             fi
