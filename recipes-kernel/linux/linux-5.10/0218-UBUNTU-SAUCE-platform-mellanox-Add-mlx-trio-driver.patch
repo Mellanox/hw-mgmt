@@ -1,7 +1,7 @@
-From 15bbb9ee03e015587b9bd704f36c85177fba563a Mon Sep 17 00:00:00 2001
+From a7aca6953b14d7b69c7930104d05381f6ccbbd19 Mon Sep 17 00:00:00 2001
 From: Shravan Kumar Ramani <shravankr@nvidia.com>
 Date: Tue, 5 Jul 2022 11:11:45 -0400
-Subject: [PATCH backport 5.10 19/63] UBUNTU: SAUCE: platform/mellanox: Add
+Subject: [PATCH backport 5.10 044/100] UBUNTU: SAUCE: platform/mellanox: Add
  mlx-trio driver
 
 BugLink: https://bugs.launchpad.net/bugs/1980754
@@ -22,10 +22,10 @@ Signed-off-by: Ike Panhc <ike.pan@canonical.com>
  create mode 100644 drivers/platform/mellanox/trio_regs.h
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index b0d2c3343..5d329350a 100644
+index 09c7829e9..2f4794545 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -90,6 +90,13 @@ config MLXBF_PMC
+@@ -78,6 +78,13 @@ config MLXBF_PMC
  	  to performance monitoring counters within various blocks in the
  	  Mellanox BlueField SoC via a sysfs interface.
  
@@ -40,10 +40,10 @@ index b0d2c3343..5d329350a 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on REGMAP
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index ba56485cb..161fad566 100644
+index 04703c041..a0a073adb 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -7,6 +7,7 @@ obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
+@@ -6,6 +6,7 @@
  obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
  obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
  obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o

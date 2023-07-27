@@ -1,7 +1,7 @@
-From c1e48283efef4faeee6b601fc679ea228bd8d6ef Mon Sep 17 00:00:00 2001
+From ead6fda608543e656bd417d01069d37cadf46c1d Mon Sep 17 00:00:00 2001
 From: Mahantesh Salimath <mahantesh@nvidia.com>
 Date: Thu, 30 Jun 2022 16:46:50 -0400
-Subject: [PATCH backport 5.10 21/63] UBUNTU: SAUCE: pka: Add pka driver.
+Subject: [PATCH backport 5.10 045/100] UBUNTU: SAUCE: pka: Add pka driver.
 
 BugLink: https://bugs.launchpad.net/bugs/1980415
 
@@ -44,10 +44,10 @@ Signed-off-by: Ike Panhc <ike.pan@canonical.com>
  create mode 100644 drivers/platform/mellanox/mlxbf_pka/mlxbf_pka_ring.h
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 5d329350a..946bc2375 100644
+index 2f4794545..c9afaa4a1 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -97,6 +97,8 @@ config MLXBF_TRIO
+@@ -85,6 +85,8 @@ config MLXBF_TRIO
  	 This driver supports the TRIO PCIe root complex interface on
  	 Mellanox BlueField SoCs.
  
@@ -57,10 +57,10 @@ index 5d329350a..946bc2375 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on REGMAP
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 161fad566..046347d3a 100644
+index a0a073adb..8da47fd9f 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -12,3 +12,4 @@ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
+@@ -11,3 +11,4 @@ obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o

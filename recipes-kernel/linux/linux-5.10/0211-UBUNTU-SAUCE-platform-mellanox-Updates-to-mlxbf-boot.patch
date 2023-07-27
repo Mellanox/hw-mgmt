@@ -1,8 +1,8 @@
-From 988b360c98ef157e37818f5f7db322c129d3dfb9 Mon Sep 17 00:00:00 2001
+From 64027dc7292a676e157b41248eef0489a1ab0fcc Mon Sep 17 00:00:00 2001
 From: Shravan Kumar Ramani <shravankr@nvidia.com>
 Date: Wed, 6 Jul 2022 07:37:22 -0400
-Subject: [PATCH backport 5.10 12/63] UBUNTU: SAUCE: platform/mellanox: Updates
- to mlxbf-bootctl
+Subject: [PATCH backport 5.10 032/100] UBUNTU: SAUCE: platform/mellanox:
+ Updates to mlxbf-bootctl
 
 BugLink: https://launchpad.net/bugs/1980832
 

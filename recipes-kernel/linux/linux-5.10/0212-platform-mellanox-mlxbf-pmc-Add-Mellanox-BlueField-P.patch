@@ -1,7 +1,7 @@
-From 4a2c58ddcfdcff3afbc62c170c4fc7bbf73a5a9f Mon Sep 17 00:00:00 2001
+From 99c0dabe4476773e93d07f5a349ccf8eb836450c Mon Sep 17 00:00:00 2001
 From: Shravan Kumar Ramani <shravankr@nvidia.com>
 Date: Thu, 8 Oct 2020 08:37:17 -0400
-Subject: [PATCH backport 5.10 13/63] platform/mellanox: mlxbf-pmc: Add
+Subject: [PATCH backport 5.10 035/100] platform/mellanox: mlxbf-pmc: Add
  Mellanox BlueField PMC driver
 
 The performance modules in BlueField are present in several hardware
@@ -39,10 +39,10 @@ Signed-off-by: Hans de Goede <hdegoede@redhat.com>
  create mode 100644 drivers/platform/mellanox/mlxbf-pmc.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 5bd6ddd42..b0d2c3343 100644
+index 75e2bee17..09c7829e9 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -80,6 +80,16 @@ config MLXBF_BOOTCTL
+@@ -68,6 +68,16 @@ config MLXBF_BOOTCTL
  	  to the userspace tools, to be used in conjunction with the eMMC
  	  device driver to do necessary initial swap of the boot partition.
  
@@ -60,12 +60,12 @@ index 5bd6ddd42..b0d2c3343 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on REGMAP
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 23919e56a..ba56485cb 100644
+index 6af37ee88..04703c041 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -5,6 +5,7 @@
+@@ -4,6 +4,7 @@
+ # Mellanox Platform-Specific Drivers
  #
- obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
  obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
 +obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
  obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
