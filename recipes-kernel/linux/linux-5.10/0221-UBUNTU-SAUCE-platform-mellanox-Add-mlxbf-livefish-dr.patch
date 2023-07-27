@@ -39,17 +39,16 @@ index 946bc2375..a5231c23a 100644
  	tristate "Mellanox BlueField Performance Monitoring Counters driver"
  	depends on ARM64
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 046347d3a..7c6393ebe 100644
+index 837b748db1f6..be5b83bd765e 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -8,6 +8,7 @@ obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
+@@ -7,5 +7,6 @@ obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
  obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
  obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
  obj-$(CONFIG_MLXBF_TRIO)	+= mlx-trio.o
 +obj-$(CONFIG_MLXBF_LIVEFISH)	+= mlxbf-livefish.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
- obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 diff --git a/drivers/platform/mellanox/mlxbf-livefish.c b/drivers/platform/mellanox/mlxbf-livefish.c
 new file mode 100644
 index 000000000..c6150117d
