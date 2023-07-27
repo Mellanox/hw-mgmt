@@ -40,17 +40,16 @@ index b0d2c3343..5d329350a 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on REGMAP
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index ba56485cb..161fad566 100644
+index 000ddaa74c98..837b748db1f6 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -7,6 +7,7 @@ obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
+@@ -6,5 +6,6 @@
  obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
  obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
  obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
 +obj-$(CONFIG_MLXBF_TRIO)	+= mlx-trio.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
- obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 diff --git a/drivers/platform/mellanox/mlx-trio.c b/drivers/platform/mellanox/mlx-trio.c
 new file mode 100644
 index 000000000..849006e9c
