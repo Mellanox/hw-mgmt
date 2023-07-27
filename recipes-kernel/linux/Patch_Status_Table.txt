@@ -444,7 +444,6 @@ Kernel-5.10
 |0280-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            | P4262                                          |
 |0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
 |0282-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
-|0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            | SN3750SX                                       |
 |0284-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
 |0285-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0286-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Feature pending                          |            | BF3-COME                                       |
