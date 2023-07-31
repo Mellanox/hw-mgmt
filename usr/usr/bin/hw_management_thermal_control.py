@@ -2514,7 +2514,8 @@ class ThermalManagement(hw_managemet_file_op):
         """
         if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
             self.exit_flag = True
-            self.stop(reason="SIG {}".format(sig))
+            if self.sys_config.get("platform_support", 1):
+                self.stop(reason="SIG {}".format(sig))
 
             self.log.notice("Thermal control stopped", 1)
             self.log.stop()
@@ -2717,7 +2718,7 @@ class ThermalManagement(hw_managemet_file_op):
     def stop(self, reason=""):
         """
         @summary: Stop sensor service and set PWM to PWM-MAX.
-        Used when suspend mode was de-asserted  or when kill signal was revived
+        Used when suspend mode was de-asserted or when kill signal was revived
         """
         if self.state != CONST.STOPPED:
             if self.pwm_worker_timer:
