@@ -1789,6 +1789,7 @@ sn56xx_specific()
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn5600.json"
 }
 
 sn_spc4_common()
