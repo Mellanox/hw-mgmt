@@ -808,7 +808,7 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100|HI122|HI123)
+						HI116|HI112|HI124|HI100|HI122|HI123|MSN3700|MSN3700C)
 							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
@@ -1123,12 +1123,12 @@ mqmxxx_msn37x_msn34x_specific()
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
-		HI112)
+		HI112|MSN3700)
 			# msn3700
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
 		;;
-		HI116)
+		HI116|MSN3700C)
 			# mmsn3700C
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
