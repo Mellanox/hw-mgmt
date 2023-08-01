@@ -477,6 +477,13 @@ Kernel-5.10
 |0316-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
 |0317-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Feature pending                          |            |                                                |
 |0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Feature pending                          |            |                                                |
+|0319-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Feature pending                          |            | BF3-COME                                       |
+|0320-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0321-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Feature pending                          |            | BF3-COME                                       |
+|0322-UBUNTU-SAUCE-mlxbf-tmfifo.c-Amend-previous-tmfifo-pa.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0323-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Feature pending                          |            | BF3-COME                                       |
+|0324-mlxbf_gige-fix-white-space-in-mlxbf_gige_eth_ioctl.patch    |                    | Feature pending                          |            | BF3-COME                                       |
+|0325-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
