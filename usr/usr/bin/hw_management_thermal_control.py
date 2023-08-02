@@ -1250,7 +1250,6 @@ class thermal_module_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        # Disable kernel control for this thermal zone
         self.refresh_attr()
         if "asic" in self.base_file_name:
             tz_name = "mlxsw"
@@ -1258,9 +1257,15 @@ class thermal_module_sensor(system_device):
             tz_name = "mlxsw-{}".format(self.base_file_name)
         tz_policy_filename = "thermal/{}/thermal_zone_policy".format(tz_name)
         tz_mode_filename = "thermal/{}/thermal_zone_mode".format(tz_name)
+    
+        self.log.info("Configure module {} policy".format(tz_name))
+        # Disable kernel control for this thermal zone
         try:
-            self.write_file(tz_policy_filename, "user_space")
-            self.write_file(tz_mode_filename, "disabled")
+            policy = self.read_file(tz_policy_filename)
+            # do not set policy if tz already configured
+            if "user_space" not in policy:
+                self.write_file(tz_policy_filename, "user_space")
+                self.write_file(tz_mode_filename, "disabled")
         except BaseException:
             pass
 
@@ -1330,6 +1335,9 @@ class thermal_module_sensor(system_device):
         else:
             try:
                 temperature = int(self.read_file(temp_read_file))
+                if temp_read_file in self.check_reading_file_err():
+                    # senor returned back. Reconfigure module.
+                    self.sensor_configure()
                 self.handle_reading_file_err(temp_read_file, reset=True)
                 temperature /= CONST.TEMP_SENSOR_SCALE
                 self.log.debug("{} value:{}".format(self.name, temperature))
