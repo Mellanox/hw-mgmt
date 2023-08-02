@@ -399,15 +399,11 @@ Kernel-5.10
 |0231-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Feature upstream                         |            | BF3-COME                                       |
 |0232-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0233-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0234-UBUNTU-SAUCE-mlxbf_gige-add-validation-of-ACPI-table.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0235-UBUNTU-SAUCE-mlxbf_gige-set-driver-version-to-1.27.patch    |                    | Feature pending                          |            | BF3-COME                                       |
 |0236-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0237-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Feature upstream                         |            | BF3-COME                                       |
 |0238-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Feature upstream                         |            | BF3-COME                                       |
 |0239-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0240-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0241-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-Serdes-confi.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0242-UBUNTU-SAUCE-mlxbf_gige-add-BlueField-3-ethtool_ops.patch   |                    | Feature pending                          |            | BF3-COME                                       |
 |0243-UBUNTU-SAUCE-bluefield_edac-Add-SMC-support.patch           |                    | Feature pending                          |            | BF3-COME                                       |
 |0244-UBUNTU-SAUCE-bluefield_edac-Update-license-and-copyr.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0245-gpio-mlxbf2-Convert-to-device-PM-ops.patch                  | dabe57c3a32d       | Feature upstream                         |            | BF3-COME                                       |
