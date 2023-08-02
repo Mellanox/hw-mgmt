@@ -140,7 +140,7 @@ class CONST(object):
     TEMP_SENSOR_SCALE = 1000.0
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
-    AMB_TEMP_ERR_VAL = 255 
+    AMB_TEMP_ERR_VAL = 255
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -215,7 +215,7 @@ SENSOR_DEF_CONFIG = {
                          "val_min": 4500, "val_max": 20000, "poll_time": 5,
                          "input_suffix": "_fan1_speed_get", "refresh_attr_period": 1 * 60
                         },
-    r'drwr\d+':          {"type": "fan_sensor",
+    r'drwr\d+':         {"type": "fan_sensor",
                          "val_min": 4500, "val_max": 20000, "poll_time": 5,
                          "refresh_attr_period": 1 * 60
                         },
@@ -283,7 +283,7 @@ SYS_FAN_PARAM_DEF = {
         "1": {"rpm_min": 3000, "rpm_max": 35000, "slope": 200, "pwm_min": 101, "pwm_max_reduction": 10, "rpm_tolerance": 30}}
 }
 
-TABLE_DEFAULT = {
+DMIN_TABLE_DEFAULT = {
     CONST.C2P: {
         CONST.UNTRUSTED_ERR: {"-127:120": 60},
         "fan_err": {
@@ -821,9 +821,9 @@ class system_device(hw_managemet_file_op):
     """
     @summary: base class for system sensors
     """
-    def __init__(self, cmd_arg, sys_config, name, logger):
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
         hw_managemet_file_op.__init__(self, cmd_arg)
-        self.log = logger
+        self.log = tc_logger
         self.sensors_config = sys_config[CONST.SYS_CONF_SENSORS_CONF][name]
         self.name = name
         self.type = self.sensors_config["type"]
@@ -1176,8 +1176,8 @@ class thermal_sensor(system_device):
     @summary: base class for simple thermal sensors
     can be used for cpu/sodimm/psu/voltmon/etc. thermal sensors
     """
-    def __init__(self, cmd_arg, sys_config, name, logger):
-        system_device.__init__(self, cmd_arg, sys_config, name, logger)
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
@@ -1242,8 +1242,8 @@ class thermal_module_sensor(system_device):
     @summary: base class for modules sensor
     can be used for mlxsw/gearbox modules thermal sensor
     """
-    def __init__(self, cmd_arg, sys_config, name, logger):
-        system_device.__init__(self, cmd_arg, sys_config, name, logger)
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
@@ -1391,8 +1391,8 @@ class psu_fan_sensor(system_device):
     @summary: base class for PSU device
     Can be used for Control of PSU temperature/RPM
     """
-    def __init__(self, cmd_arg, sys_config, name, logger):
-        system_device.__init__(self, cmd_arg, sys_config, name, logger)
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
         self.prsnt_err_pwm_min = self.get_file_val("config/pwm_min_psu_not_present")
         self.pwm_decode = sys_config.get(CONST.SYS_CONF_FAN_PWM, PSU_PWM_DECODE_DEF)
@@ -1578,8 +1578,8 @@ class fan_sensor(system_device):
     @summary: base class for FAN device
     Can be used for Control FAN RPM/state.
     """
-    def __init__(self, cmd_arg, sys_config, name, logger):
-        system_device.__init__(self, cmd_arg, sys_config, name, logger)
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
         self.fan_param = sys_config.get(CONST.SYS_CONF_FAN_PARAM, SYS_FAN_PARAM_DEF)
         self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
@@ -1934,8 +1934,8 @@ class ambiant_thermal_sensor(system_device):
     @summary: base class for ambient sensor. Ambient temperature is a combination
     of several temp sensors like port_amb and fan_amb
     """
-    def __init__(self, cmd_arg, sys_config, name, logger):
-        system_device.__init__(self, cmd_arg, sys_config, name, logger)
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.value_dict = {CONST.FAN_SENS: 0, CONST.PORT_SENS: 0}
         self.flow_dir = CONST.C2P
 
@@ -1961,7 +1961,7 @@ class ambiant_thermal_sensor(system_device):
         """
         err_cnt = len(self.check_reading_file_err())
         if not err_cnt:
-            err_cnt = 1 if self.fault_list else 0 
+            err_cnt = 1 if self.fault_list else 0
         return err_cnt
 
     # ----------------------------------------------------------------------
@@ -2057,14 +2057,14 @@ class ThermalManagement(hw_managemet_file_op):
             Provide system monitoring and thermal control
     """
 
-    def __init__(self, cmd_arg, logger):
+    def __init__(self, cmd_arg, tc_logger):
         """
         @summary:
             Init  thermal algorithm
         @param params: global thermal configuration
         """
         hw_managemet_file_op.__init__(self, cmd_arg)
-        self.log = logger
+        self.log = tc_logger
         self.log.notice("Preinit thermal control ver {}".format(VERSION), 1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
@@ -2465,7 +2465,10 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     def is_pwm_exists(self):
-        ""
+        """
+        @summary: checking if PWM link exists.
+        Applicable only for systems with PWM control through ASIC
+        """
         ret = True
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
             if not self.read_pwm():
@@ -2474,7 +2477,10 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     def is_fan_tacho_init(self):
-        ""
+        """
+        @summary: checking if fan tacho readlink exists.
+        Applicable only for systems with fan_tach reading through ASIC
+        """
         ret = True
         tacho_cnt = 0
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"] is True:
@@ -2489,7 +2495,10 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     def module_scan(self):
-        ""
+        """
+        @summary: scanning available SFP module sensors 
+        and dynamically adding/removing module sensors 
+        """        
         module_count = int(self.get_file_val("config/module_counter", 0))
         if module_count != self.module_counter:
             self.log.info("Module counter changed {} -> {}".format(self.module_counter, module_count))
@@ -2507,7 +2516,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.module_counter = module_counter
 
     # ----------------------------------------------------------------------
-    def sig_handler(self, sig, frame):
+    def sig_handler(self, sig, *_):
         """
         @summary:
             Signal handler for termination signals
@@ -2519,7 +2528,7 @@ class ThermalManagement(hw_managemet_file_op):
 
             self.log.notice("Thermal control stopped", 1)
             self.log.stop()
-            time.sleep( 200 / 1000)
+            time.sleep(200 / 1000)
             os._exit(0)
 
     # ----------------------------------------------------------------------
@@ -2532,7 +2541,7 @@ class ThermalManagement(hw_managemet_file_op):
         system_ver_file = "/sys/devices/virtual/dmi/id/product_version"
         self.board_type = "Unknown"
         self.sku = "Unknown"
-        
+
         if os.path.isfile(board_type_file):
             with open(board_type_file, "r") as content_file:
                 self.board_type = content_file.read().rstrip("\n")
@@ -2566,7 +2575,7 @@ class ThermalManagement(hw_managemet_file_op):
         # 1. Init dmin table
         if CONST.SYS_CONF_DMIN not in sys_config:
             self.log.info("Dmin table missing in system_config. Using default dmin table")
-            thermal_table = TABLE_DEFAULT
+            thermal_table = DMIN_TABLE_DEFAULT
             sys_config[CONST.SYS_CONF_DMIN] = thermal_table
 
         # 2. Init PSU fan speed vs system fan speed table
@@ -2625,9 +2634,9 @@ class ThermalManagement(hw_managemet_file_op):
             self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
 
         for asic_idx in range(1, self.asic_counter + 1):
-            asic_basename_idx = "" if  asic_idx==1 else asic_idx
-            self._sensor_add_config("thermal_module_sensor", 
-                                    "asic{}".format(asic_idx), 
+            asic_basename_idx = "" if  asic_idx == 1 else asic_idx
+            self._sensor_add_config("thermal_module_sensor",
+                                    "asic{}".format(asic_idx),
                                     {"base_file_name": "asic{}".format(asic_basename_idx)})
 
         if self.check_file("thermal/cpu_pack"):
@@ -2832,7 +2841,7 @@ class ThermalManagement(hw_managemet_file_op):
             amb_tmp = "-"
             flow_dir = "-"
 
-        asic_info=""
+        asic_info = ""
         for asic_idx in range(1, self.asic_counter + 1):
             asic_name = "asic{}".format(asic_idx)
             asic_obj = self._get_dev_obj(asic_name)
