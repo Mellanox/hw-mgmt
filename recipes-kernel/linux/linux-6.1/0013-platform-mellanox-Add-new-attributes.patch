@@ -1,0 +1,49 @@
+From 5a62b06d78f9055a0899ec31e32094d21f701a72 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 23 Jul 2023 21:05:12 +0000
+Subject: [PATCH backport 6.1.42 13/85] platform: mellanox: Add new attributes
+
+Add new attribute:
+"lid_open" - to indicate system intrusion detection.
+"reset_long_pwr_pb" - to indicate that system has been reset due to
+long press of power button.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 5fb3348023a7..9d060a04e6ec 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -3792,6 +3792,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(1),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "lid_open",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "clk_brd1_boot_fail",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
+@@ -4431,6 +4437,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_chassis_blade_regs_io_data[] = {
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
+ 		.mode = 0444,
+ 	},
++	{
++		.label = "reset_long_pwr_pb",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0444,
++	},
+ 	{
+ 		.label = "pwr_cycle",
+ 		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
+-- 
+2.20.1
+

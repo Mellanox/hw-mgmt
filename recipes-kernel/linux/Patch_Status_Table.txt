@@ -485,6 +485,98 @@ Kernel-5.10
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+Kernel-6.1
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-platform-mellanox-Introduce-support-for-rack-manager.patch  | f8dacbf7da2e       | Feature upstream                         |            | E3597                                          |
+|0002-platform-mellanox-Change-reset_pwr_converter_fail-at.patch  | 488f0fca0db0       | Feature upstream                         |            |                                                |
+|0003-platform-mellanox-Cosmetic-changes-rename-to-more-co.patch  | acc6ea304590       | Feature upstream                         |            |                                                |
+|0004-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         |
+|0005-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
+|0006-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3-COME                                       |
+|0007-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3-COME                                       |
+|0008-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
+|0009-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc781566       | Feature upstream                         |            | BF3-COME                                       |
+|0010-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357       | Feature upstream                         |            | BF3-COME                                       |
+|0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3-COME                                       |
+|0012-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
+|0013-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
+|0014-platform-mellanox-Change-register-offset-addresses.patch    |                    | Feature pending                          |            |                                                |
+|0015-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            |                                                |
+|0016-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
+|0017-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Feature pending                          |            |                                                |
+|0018-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Feature pending                          |            |                                                |
+|0019-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            |                                                |
+|0020-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            |                                                |
+|0021-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
+|0022-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
+|0023-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
+|0024-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
+|0025-platform-mellanox-mlx-platform-Add-reset-callback.patch     |                    | Feature pending                          |            |                                                |
+|0026-platform-mellanox-mlx-platform-Prepare-driver-to-all.patch  |                    | Feature pending                          |            |                                                |
+|0027-platform-mellanox-mlx-platform-Introduce-ACPI-init-f.patch  |                    | Feature pending                          |            |                                                |
+|0028-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
+|0029-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  |                    | Feature pending                          |            |                                                |
+|0030-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
+|0031-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
+|0032-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            |                                                |
+|0033-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
+|0034-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
+|0035-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
+|0036-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Feature pending                          |            |                                                |
+|0037-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            |                                                |
+|0038-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            |                                                |
+|0039-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Feature pending                          |            |                                                |
+|0040-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Feature pending                          |            |                                                |
+|0041-mlxsw-core-Extend-external-cooling-device-whitelist-.patch  |                    | Feature pending                          |            |                                                |
+|0042-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Feature pending                          |            |                                                |
+|0043-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
+|0044-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Feature pending                          |            |                                                |
+|0045-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Feature pending                          |            |                                                |
+|0046-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Feature pending                          |            |                                                |
+|0047-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Feature pending                          |            |                                                |
+|0048-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending                          |            |                                                |
+|0049-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
+|0050-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Feature pending                          |            |                                                |
+|0051-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
+|0052-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Feature pending                          |            | BF3 (FT purpose)                               |
+|0053-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|0054-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream                               |            | IB only                                        |
+|0055-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Feature pending                          |            |                                                |
+|0056-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
+|0057-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Feature pending                          |            |                                                |
+|0058-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Feature pending                          |            |                                                |
+|0059-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream accepted                      |            | for MQM8700                                    |
+|0060-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream accepted                      |            | P4697/P4262                                    |
+|0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf        | Feature upstream                         |            | BF3                                            |
+|0062-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             | d11f932808dc       | Feature upstream                         |            | BF3                                            |
+|0063-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          | cd33f216d241       | Feature upstream                         |            | BF3                                            |
+|0064-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Feature pending                          |            |                                                |
+|0065-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Feature pending                          |            | BF3-COME                                       |
+|0066-UBUNTU-SAUCE-sdhci-of-dwcmshc-Enable-host-V4-support.patch  | 95921151e043       | Feature upstream                         |            | BF3                                            |
+|0067-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  | cfd4ea4815d1       | Feature upstream                         |            | BF3                                            |
+|0068-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Feature pending                          |            | BF3                                            |
+|0069-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Feature pending                          |            | BF3                                            |
+|0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            | BF3                                            |
+|0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Feature pending                          |            | BF3                                            |
+|0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           |                    | Feature pending                          |            | BF3                                            |
+|0073-mlxbf_gige-support-10M-1|00M-1G-speeds-on-BlueField-3.patch |                    | Feature pending                          |            | BF3                                            |
+|0074-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Feature pending                          |            | BF3                                            |
+|0075-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Bugfix pending                           |            | BF3                                            |
+|0076-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Feature pending                          |            | BF3                                            |
+|0077-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Feature pending                          |            | BF3                                            |
+|0078-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature pending                          |            | BF3                                            |
+|0079-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Feature pending                          |            | BF3                                            |
+|0080-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Feature pending                          |            | BF3                                            |
+|0081-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Feature pending                          |            | BF3                                            |
+|0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3                                            |
+|0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3                                            |
+|0084-pinctrl-mlxbf3-set-varaiable-mlxbf3_pmx_funcs-storag.patch  | 743d3336029f       | Feature upstream                         |            | BF3                                            |
+|9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Legend:
 Feature upstream: Has commit Id in upstream
 Feature accepted: Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
