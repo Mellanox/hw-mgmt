@@ -551,9 +551,8 @@ Kernel-6.1
 |0060-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream accepted                      |            | P4697/P4262                                    |
 |0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf        | Feature upstream                         |            | BF3                                            |
 |0062-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             | d11f932808dc       | Feature upstream                         |            | BF3                                            |
-|0063-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          | cd33f216d241       | Feature upstream                         |            | BF3                                            |
-|0064-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Feature pending                          |            |                                                |
-|0065-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Feature pending                          |            | BF3-COME                                       |
+|0063-gpio-mlxbf3-Add-gpio-driver-support.patch                   | cd33f216d241       | Feature upstream                         |            | BF3                                            |
+|0064-pinctrl-mlxbf3-set-varaiable-mlxbf3_pmx_funcs-storag.patch  | 743d3336029f       | Feature upstream                         |            | BF3                                            |
 |0066-UBUNTU-SAUCE-sdhci-of-dwcmshc-Enable-host-V4-support.patch  | 95921151e043       | Feature upstream                         |            | BF3                                            |
 |0067-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  | cfd4ea4815d1       | Feature upstream                         |            | BF3                                            |
 |0068-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Feature pending                          |            | BF3                                            |
@@ -561,7 +560,7 @@ Kernel-6.1
 |0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            | BF3                                            |
 |0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Feature pending                          |            | BF3                                            |
 |0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           |                    | Feature pending                          |            | BF3                                            |
-|0073-mlxbf_gige-support-10M-1|00M-1G-speeds-on-BlueField-3.patch |                    | Feature pending                          |            | BF3                                            |
+|0073-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  |                    | Feature pending                          |            | BF3                                            |
 |0074-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Feature pending                          |            | BF3                                            |
 |0075-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Bugfix pending                           |            | BF3                                            |
 |0076-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Feature pending                          |            | BF3                                            |
@@ -572,7 +571,7 @@ Kernel-6.1
 |0081-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Feature pending                          |            | BF3                                            |
 |0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3                                            |
 |0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3                                            |
-|0084-pinctrl-mlxbf3-set-varaiable-mlxbf3_pmx_funcs-storag.patch  | 743d3336029f       | Feature upstream                         |            | BF3                                            |
+|0084-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Bugfix pending                           |            | BF3                                            |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
-From f3d49deda009d6b15af96139954f9925933a7d3e Mon Sep 17 00:00:00 2001
+From 00cba650c86f494b4a5905d89d304fef2380b0b7 Mon Sep 17 00:00:00 2001
 From: Tom Rix <trix@redhat.com>
 Date: Mon, 3 Apr 2023 20:45:01 -0400
-Subject: [PATCH backport 6.1.42 86/86] pinctrl: mlxbf3: set varaiable
+Subject: [PATCH backport 6.1.42 2/2] pinctrl: mlxbf3: set varaiable
  mlxbf3_pmx_funcs storage-class-specifier to static
 
 smatch reports
@@ -31,5 +31,5 @@ index 3698f7bbd88d..d9944e6a0af9 100644
  	PINCTRL_PINFUNCTION("gpiofunc", mlxbf3_gpiofunc_group_names, 1),
  };
 -- 
-2.20.1
+2.25.1
 
