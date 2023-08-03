@@ -445,10 +445,14 @@ if [ "$1" == "add" ]; then
 			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
 				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
-			# Disable kernel thermal algorthm on liquid cooled systems
-			if [[ $sku == "HI140" ]] || [[ $sku == "HI141" ]]; then
-				if [ -x /usr/bin/hw-management-liquid-cooling.sh ]; then
-					/usr/bin/hw-management-liquid-cooling.sh $tpath/"$zonetype"
+
+			if [ -d $tpath/"$zonetype" ]; then
+				sleep 0.1
+				echo "disabled" > $tpath/"$zonetype"/thermal_zone_mode
+				echo "user_space" > $tpath/"$zonetype"/thermal_zone_policy
+				# Fixup race condition for main thermal zone.
+				if [ -f /var/run/hw-management/thermal/mlxsw/thermal_zone_mode ]; then
+					echo "disabled" > /var/run/hw-management/thermal/mlxsw/thermal_zone_mode
 				fi
 			fi
 		fi
