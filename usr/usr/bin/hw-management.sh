@@ -1689,6 +1689,18 @@ bf3_common()
 			exit 0
 			;;
 	esac
+
+	jtag_bridge_offset=`cat /proc/iomem | grep mlxplat_jtag_bridge | awk -F '-' '{print $1}'`
+	echo $jtag_bridge_offset > $config_path/jtag_bridge_offset
+	jtag_pci=`lspci | grep Lattice | grep 9c30 | awk '{print $1}'`
+	check_n_link /sys/bus/pci/devices/0000:"$jtag_pci"/resource0 $config_path/jtag_bridge
+
+	if find /sys/devices/platform/MLNXBF49:00/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+		if [ ! -d $jtag_path ]; then
+			mkdir $jtag_path
+		fi
+		check_n_link /sys/devices/platform/MLNXBF49:00/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+	fi
 }
 
 msn48xx_specific()
