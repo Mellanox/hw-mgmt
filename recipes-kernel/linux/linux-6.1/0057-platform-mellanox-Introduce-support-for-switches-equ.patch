@@ -87,7 +87,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
 +		.parent = 1,
 +		.chan_ids = mlxplat_default_regmap_mux_chan,
 +		.num_adaps = ARRAY_SIZE(mlxplat_default_regmap_mux_chan),
-+		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH3_OFFSET,
++		.sel_reg_addr = MLXPLAT_CPLD_LPC_REG_I2C_CH2_OFFSET,
 +		.reg_size = 1,
 +	},
 +
