@@ -33,7 +33,6 @@
 source hw-management-helpers.sh
 set -x
 sku=$(< $sku_file)
-hw_management_path=/var/run/hw-management
 ui_path=$hw_management_path/ui 
 
 # Obtain label file (/var/run/hw-management/config/lm_sensors_labels).
@@ -174,3 +173,5 @@ make_labels()
 		[ -f "$label_dir"/scale ] && rm -f "$label_dir"/scale
 	fi
 }
+
+make_labels "$1" "$2"

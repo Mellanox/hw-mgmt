@@ -445,10 +445,14 @@ if [ "$1" == "add" ]; then
 			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
 				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
-			# Disable kernel thermal algorthm on liquid cooled systems
-			if [[ $sku == "HI140" ]] || [[ $sku == "HI141" ]]; then
-				if [ -x /usr/bin/hw-management-liquid-cooling.sh ]; then
-					/usr/bin/hw-management-liquid-cooling.sh $tpath/"$zonetype"
+
+			if [ -d $tpath/"$zonetype" ]; then
+				sleep 0.1
+				echo "disabled" > $tpath/"$zonetype"/thermal_zone_mode
+				echo "user_space" > $tpath/"$zonetype"/thermal_zone_policy
+				# Fixup race condition for main thermal zone.
+				if [ -f /var/run/hw-management/thermal/mlxsw/thermal_zone_mode ]; then
+					echo "disabled" > /var/run/hw-management/thermal/mlxsw/thermal_zone_mode
 				fi
 			fi
 		fi
@@ -754,12 +758,12 @@ if [ "$1" == "add" ]; then
 		# Set default fan speed
 		psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		# Add thermal attributes
-		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp
-		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp_max
-		check_n_link "$5""$3"/temp1_max_alarm $thermal_path/"$psu_name"_temp_max_alarm
+		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp1
+		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp1_max
+		check_n_link "$5""$3"/temp1_max_alarm $alarm_path/"$psu_name"_temp1_max_alarm
 		check_n_link "$5""$3"/temp2_input $thermal_path/"$psu_name"_temp2
 		check_n_link "$5""$3"/temp2_max $thermal_path/"$psu_name"_temp2_max
-		check_n_link "$5""$3"/temp2_max_alarm $thermal_path/"$psu_name"_temp2_max_alarm
+		check_n_link "$5""$3"/temp2_max_alarm $alarm_path/"$psu_name"_temp2_max_alarm
 		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$psu_name"_fan1_alarm
 		check_n_link "$5""$3"/power1_alarm $alarm_path/"$psu_name"_power1_alarm
 		check_n_link "$5""$3"/fan1_input $thermal_path/"$psu_name"_fan1_speed_get

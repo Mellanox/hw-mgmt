@@ -2194,6 +2194,9 @@ create_symbolic_links()
 	if [ ! -f "$config_path/sfp_counter" ]; then
 		echo 0 > "$config_path"/sfp_counter
 	fi
+	if [ ! -f "$config_path/asic_chipup_counter" ]; then
+		echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
+	fi
 }
 
 remove_symbolic_links()
@@ -2607,9 +2610,11 @@ case $ACTION in
 				if [ "$asic_chipup_rc" -ne 0 ];then
 					do_chip_up_down 0 "$2" "$3"
 				else
+					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
 					exit 0
 				fi
 
+				asic_retry=$(< $config_path/asic_chipup_counter)
 				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
 					# Start I2C tracer.
 					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
@@ -2619,7 +2624,7 @@ case $ACTION in
 					echo 0>/sys/kernel/debug/tracing/trace
 				fi
 
-				asic_retry=$((asic_retry-1))
+				change_file_counter $config_path/asic_chipup_counter -1
 			done
 			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
 			log_info "chipup failed for ASIC $asic_index"
