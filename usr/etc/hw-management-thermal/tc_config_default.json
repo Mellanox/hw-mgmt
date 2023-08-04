@@ -1,4 +1,5 @@
  {
+	"name": "default",
 	"dmin" : {
 		"C2P": {
 			"untrusted": {"-127:120": 100},

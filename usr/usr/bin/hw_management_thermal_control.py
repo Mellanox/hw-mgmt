@@ -94,6 +94,7 @@ class CONST(object):
     SYS_CONF_DEV_PARAM = "dev_parameters"
     SYS_CONF_SENSORS_CONF = "sensors_config"
     SYS_CONF_ASIC_PARAM = "asic_config"
+    SYS_CONF_SENSOR_LIST_PARAM = "sensor_list"
 
     # *************************
     # Folders definition
@@ -175,7 +176,6 @@ class CONST(object):
     FAN_DRWR_COUNT_DEF = 6
     FAN_TACHO_COUNT_DEF = 6
     MODULE_COUNT_MAX = 128
-    GEARBOX_COUNT_DEF = 0
 
     # Consistent file read  errors for set error state
     SENSOR_FREAD_FAIL_TIMES = 3
@@ -1250,6 +1250,7 @@ class thermal_module_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
+        # Disable kernel control for this thermal zone
         self.refresh_attr()
         if "asic" in self.base_file_name:
             tz_name = "mlxsw"
@@ -1257,15 +1258,9 @@ class thermal_module_sensor(system_device):
             tz_name = "mlxsw-{}".format(self.base_file_name)
         tz_policy_filename = "thermal/{}/thermal_zone_policy".format(tz_name)
         tz_mode_filename = "thermal/{}/thermal_zone_mode".format(tz_name)
-    
-        self.log.info("Configure module {} policy".format(tz_name))
-        # Disable kernel control for this thermal zone
         try:
-            policy = self.read_file(tz_policy_filename)
-            # do not set policy if tz already configured
-            if "user_space" not in policy:
-                self.write_file(tz_policy_filename, "user_space")
-                self.write_file(tz_mode_filename, "disabled")
+            self.write_file(tz_policy_filename, "user_space")
+            self.write_file(tz_mode_filename, "disabled")
         except BaseException:
             pass
 
@@ -1335,9 +1330,6 @@ class thermal_module_sensor(system_device):
         else:
             try:
                 temperature = int(self.read_file(temp_read_file))
-                if temp_read_file in self.check_reading_file_err():
-                    # senor returned back. Reconfigure module.
-                    self.sensor_configure()
                 self.handle_reading_file_err(temp_read_file, reset=True)
                 temperature /= CONST.TEMP_SENSOR_SCALE
                 self.log.debug("{} value:{}".format(self.name, temperature))
@@ -2064,6 +2056,19 @@ class ThermalManagement(hw_managemet_file_op):
             Main class of thermal algorithm.
             Provide system monitoring and thermal control
     """
+    
+    """
+    functions which adding sensor configuration by the sensor name
+    """
+    ADD_SENSOR_HANDLER = {r'psu\d+': "add_psu_sensor",
+                          r'drwr\d+':"add_fan_drwr_sensor",
+                          r'module\d*':"add_module_sensor",
+                          r'cpu':"add_cpu_sensor",
+                          r'voltmon\d+':"add_voltmon_sensor",
+                          r'asic\d+':"add_asic_sensor",
+                          r'sodimm\d+':"add_sodimm_sensor",
+                          r'sensor_amb':"add_amb_sensor"
+                         }
 
     def __init__(self, cmd_arg, tc_logger):
         """
@@ -2150,6 +2155,7 @@ class ThermalManagement(hw_managemet_file_op):
         self._collect_hw_info()
         self.amb_tmp = CONST.TEMP_INIT_VAL_DEF
         self.module_counter = 0
+        self.gearbox_counter = 0
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -2160,19 +2166,20 @@ class ThermalManagement(hw_managemet_file_op):
         self.fan_drwr_num = CONST.FAN_DRWR_COUNT_DEF
         self.psu_count = CONST.PSU_COUNT_DEF
         self.psu_pwr_count = CONST.PSU_COUNT_DEF
-        self.gearbox_counter = CONST.GEARBOX_COUNT_DEF
         self.fan_flow_capability = CONST.UNKNOWN
         self.asic_counter = 1
-        self.voltmon_file_list = []
 
         if self.check_file("config/system_flow_capability"):
             self.fan_flow_capability = self.read_file("config/system_flow_capability")
 
         self.log.info("Collecting HW info...")
+        sensor_list = self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM]
 
+        # Collect asic sensors
         try:
             self.asic_counter = int(self.read_file("config/asic_num"))
-            self.log.info("ASIC num:{}".format(self.asic_counter))
+            for asic_idx in range(1, self.asic_counter + 1):
+                sensor_list.append("asic{}".format(asic_idx))
         except BaseException:
             self.log.error("Missing ASIC num config.", 1)
             sys.exit(1)
@@ -2184,16 +2191,23 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.error("Missing max tachos config.", 1)
             sys.exit(1)
 
+        # Collect FAN DRWR sensors
         try:
             self.fan_drwr_num = int(self.read_file("config/fan_drwr_num"))
-            self.log.info("Fan drwr:{}".format(self.fan_drwr_num))
+            for drwr_idx in range(1, self.fan_drwr_num + 1):
+                sensor_list.append("drwr{}".format(drwr_idx))
         except BaseException:
             self.log.error("Missing fan_drwr_num config.", 1)
             sys.exit(1)
 
+        if self.fan_drwr_num:
+            self.fan_drwr_capacity = int(self.max_tachos / self.fan_drwr_num)
+
+        # Collect PSU sensors
         try:
             self.psu_count = int(self.read_file("config/hotplug_psus"))
-            self.log.info("PSU count:{}".format(self.psu_count))
+            for psu_idx in range(1, self.psu_count + 1):
+                sensor_list.append("psu{}".format(psu_idx))
         except BaseException:
             self.log.error("Missing hotplug_psus config.", 1)
             sys.exit(1)
@@ -2204,19 +2218,29 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.error("Missing hotplug_pwrs config.", 1)
             sys.exit(1)
 
-        # Find voltmon temp sensors
+        # Collect voltmon sensors
         file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
         for fname in file_list:
-            res = re.match(r'(voltmon[0-9]+_temp1)_input', fname)
+            res = re.match(r'(voltmon[0-9]+)_temp1_input', fname)
             if res:
-                self.voltmon_file_list.append(res.group(1))
-        self.log.info("voltmon count:{}".format(len(self.voltmon_file_list)))
+                sensor_list.append(res.group(1))
 
-        if self.fan_drwr_num:
-            self.fan_drwr_capacity = int(self.max_tachos / self.fan_drwr_num)
+        # Add cpu sensor
+        if "cpu" not in sensor_list:
+            sensor_list.append("cpu")
 
-        self.gearbox_counter = int(self.get_file_val("config/gearbox_counter", CONST.GEARBOX_COUNT_DEF))
-        self.log.info("gearbox count:{}".format(self.gearbox_counter))
+        # Collect sodimm sensors
+        for sodimm_idx in range(1, 5):
+            if self.check_file("thermal/sodimm{}_input".format(sodimm_idx)):
+                sensor_list.append("sodimm{}".format(sodimm_idx))
+
+        sensor_list.append("sensor_amb")
+        # remove duplications & soort
+        sensor_list = list(set(sensor_list))
+        sensor_list.sort()
+
+        self.log.info("Sensors enabled on system: {}".format(sensor_list))
+        self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = sensor_list
 
     # ----------------------------------------------------------------------
     def _get_dev_obj(self, name_mask):
@@ -2523,6 +2547,22 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.info("Modules added {} of {}".format(module_counter, module_count))
             self.module_counter = module_counter
 
+        gearbox_count = int(self.get_file_val("config/gearbox_counter", 0))
+        if gearbox_count != self.gearbox_counter:
+            self.log.info("Gearbox counter changed {} -> {}".format(self.gearbox_counter, gearbox_count))
+            gearbox_counter = 0
+            for idx in range(1, CONST.MODULE_COUNT_MAX):
+                gearbox_name = "gearbox{}".format(idx)
+                if self.check_file("thermal/{}_temp_input".format(gearbox_name)):
+                    self._sensor_add_config("thermal_module_sensor", gearbox_name, {"base_file_name": gearbox_name})
+                    self._add_dev_obj(gearbox_name)
+                    gearbox_counter += 1
+                else:
+                    self._rm_dev_obj(gearbox_name)
+
+            self.log.info("Gearboxes added {} of {}".format(gearbox_counter, gearbox_count))
+            self.gearbox_counter = gearbox_counter
+
     # ----------------------------------------------------------------------
     def sig_handler(self, sig, *_):
         """
@@ -2610,63 +2650,74 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.info("ASIC specific parameters table missing in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
 
+        if CONST.SYS_CONF_SENSOR_LIST_PARAM not in sys_config:
+            self.log.info("Static sensor list missing in system_config. Init it from local")
+            sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = []
+
         self.sys_config = sys_config
 
     # ----------------------------------------------------------------------
-    def init_sensor_configuration(self):
-        """
-        @summary: Init sensor configuration based on system type and information from
-        hw-management configuration folder
-        """
+    def add_psu_sensor(self, name):
+        fan_name = "{}_fan".format(name)
+        in_file = name
+        self._sensor_add_config("psu_fan_sensor", fan_name, {"base_file_name": in_file})
 
-        for psu_idx in range(1, self.psu_count + 1):
-            name = "psu{}_fan".format(psu_idx)
-            in_file = "psu{}".format(psu_idx)
-            self._sensor_add_config("psu_fan_sensor", name, {"base_file_name": in_file})
+        temp_name = "{}_temp".format(name)
+        in_file = "thermal/{}_temp".format(name)
+        self._sensor_add_config("thermal_sensor", temp_name, {"base_file_name": in_file})
 
-            name = "psu{}_temp".format(psu_idx)
-            in_file = "thermal/psu{}_temp".format(psu_idx)
-            self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
+    # ----------------------------------------------------------------------
+    def add_fan_drwr_sensor(self, name):
+        res = re.match(r'drwr([0-9]+)', name)
+        if res:
+            drwr_idx = (res.group(1))
 
-        for fan_idx in range(1, self.fan_drwr_num + 1):
-            name = "drwr{}".format(fan_idx)
-            self._sensor_add_config("fan_sensor", name, {"base_file_name": name, "drwr_id": fan_idx, "tacho_cnt": self.fan_drwr_capacity})
+        self._sensor_add_config("fan_sensor", name, {"base_file_name": name, "drwr_id": drwr_idx, "tacho_cnt": self.fan_drwr_capacity})
 
-        for gearbox_idx in range(1, self.gearbox_counter + 1):
-            name = "gearbox{}".format(gearbox_idx)
-            self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": name})
-
-        for voltmon in self.voltmon_file_list:
-            name = voltmon
-            in_file = "thermal/{}".format(name)
-            self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
-
-        for asic_idx in range(1, self.asic_counter + 1):
-            asic_basename_idx = "" if  asic_idx == 1 else asic_idx
-            self._sensor_add_config("thermal_module_sensor",
-                                    "asic{}".format(asic_idx),
-                                    {"base_file_name": "asic{}".format(asic_basename_idx)})
-
+    # ----------------------------------------------------------------------
+    def add_cpu_sensor(self, name):
         if self.check_file("thermal/cpu_pack"):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
         elif self.check_file("thermal/cpu_core1"):
             self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_file_name": "thermal/cpu_core1"})
+        else:
+            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
 
-        self._sensor_add_config("ambiant_thermal_sensor", "sensor_amb")
+    # ----------------------------------------------------------------------
+    def add_voltmon_sensor(self, name):
+        in_file = "thermal/{}_temp1".format(name)
+        sensor_name = "{}_temp".format(name)
+        self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
 
-        # scanning for extra sensors (SODIMM 1-4)
-        for sodimm_idx in range(1, 5):
-            name = "sodimm{}_temp".format(sodimm_idx)
-            if self.check_file("thermal/{}_input".format(name)):
-                self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
+    # ----------------------------------------------------------------------
+    def add_asic_sensor(self, name):
+        asic_basename = "asic" if  name == "asic1" else name
+        self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": asic_basename})
 
-        if self.check_file("thermal/pch_temp"):
-            self._sensor_add_config("thermal_sensor", "pch", {"base_file_name": "thermal/pch"})
+    # ----------------------------------------------------------------------
+    def add_sodimm_sensor(self, name):
+        temp_name = "{}_temp".format(name)
+        self._sensor_add_config("thermal_sensor", temp_name, {"base_file_name": "thermal/{}".format(temp_name)})
 
-        if self.check_file("thermal/comex_amb"):
-            self._sensor_add_config("thermal_sensor", "comex_amb", {"base_file_name": "thermal/comex_amb"})
+    # ----------------------------------------------------------------------
+    def add_module_sensor(self, name):
+        self._sensor_add_config("thermal_module_sensor", name, {"base_file_name": name})
 
-        self.module_scan()
+    # ----------------------------------------------------------------------
+    def add_amb_sensor(self, name):
+        self._sensor_add_config("ambiant_thermal_sensor", name)
+
+# ----------------------------------------------------------------------
+    def add_sensors(self):
+        """
+        @summary: Add sensor configuration based on sensor list
+        """   
+        for sensor_name in self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM]:
+            for config_handler_mask in self.ADD_SENSOR_HANDLER.keys():
+                if re.match(config_handler_mask, sensor_name):
+                    fn_name = self.ADD_SENSOR_HANDLER[config_handler_mask]
+                    init_fn = getattr(self, fn_name)
+                    init_fn(sensor_name)
 
     # ----------------------------------------------------------------------
     def init(self):
@@ -2677,7 +2728,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Init thermal control ver: v.{}".format(VERSION), 1)
         self.log.notice("********************************", 1)
 
-        self.init_sensor_configuration()
+        self.add_sensors()
 
         # Set initial PWM to maximum
         self._set_pwm(CONST.PWM_MAX, reason="Set initial PWM")
@@ -2689,6 +2740,7 @@ class ThermalManagement(hw_managemet_file_op):
             if not dev_obj:
                 self.log.error("{} create failed".format(key))
                 sys.exit(1)
+        self.module_scan()
 
         self.dev_obj_list.sort(key=lambda x: x.name)
         self.write_file(CONST.PERIODIC_REPORT_FILE, self.periodic_report_time)
