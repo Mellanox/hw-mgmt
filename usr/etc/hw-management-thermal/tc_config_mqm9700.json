@@ -44,5 +44,6 @@
 		"voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 100, "val_min": "!75000", "val_max": 85000, "poll_time": 30},
 		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 60, "val_min": 35000, "val_max": 55000, "poll_time": 30}
-	}
+	},
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "psu1", "psu2", "sensor_amb", "voltmon1", "voltmon3", "voltmon4", "voltmon5", "voltmon6"]
 }

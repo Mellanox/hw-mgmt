@@ -1,4 +1,5 @@
  {
+	"name": "msn2210",
 	"dmin" : {
 		"C2P": {
 			"untrusted": {"-127:20": 30, "21:25": 40, "26:30": 50, "31:35": 60, "36:40": 70, "41:120": 80},
@@ -44,5 +45,6 @@
 		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!80000", "val_max": "!125000",  "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
 	},
-	"asic_config" : {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": true, "fan_control": true}}
+	"asic_config" : {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": true, "fan_control": true}},
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "psu1", "psu2", "sensor_amb"]
 }

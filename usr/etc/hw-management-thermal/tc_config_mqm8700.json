@@ -1,4 +1,5 @@
  {
+	"name": "mqm8700",
 	"dmin" : {
 		"C2P": {
 			"untrusted": {"-127:25": 20, "26:40": 30, "41:120": 40},
@@ -44,5 +45,6 @@
 		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 50, "val_min": 30000, "val_max": 50000, "poll_time": 30},
 		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!70000", "val_max": "!125000",  "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
-	}
+	},
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "psu1", "psu2", "sensor_amb", "voltmon1", "voltmon2"]
 }
