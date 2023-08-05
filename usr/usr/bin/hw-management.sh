@@ -1679,10 +1679,12 @@ bf3_common()
 		HI151)
 			mqm97xx_specific
 			i2c_asic_bus_default=0
+			echo 15 > $config_path/cx_default_i2c_bus
 			;;
 		HI156)
 			msn47xx_specific
 			i2c_asic_bus_default=0
+			echo 15 > $config_path/cx_default_i2c_bus
 			;;
 		*)
 			echo "Unsupported BF3 platform"
@@ -1721,7 +1723,7 @@ msn48xx_specific()
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
-	echo 14 > $config_path/pcie_default_i2c_bus
+	echo 14 > $config_path/cx_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
 }
