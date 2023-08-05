@@ -49,7 +49,7 @@ min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
-pciesw_i2c_bus=0
+cx_i2c_bus=0
 fan_full_speed_code=20
 # Static variable to keep track the number of fan drawers
 fan_drwr_num=0
@@ -258,26 +258,30 @@ if [ "$1" == "add" ]; then
 		exit 0
 	fi
 	case "$2" in
-		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
-		if [ -f $config_path/pcie_default_i2c_bus ]; then
-			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
-			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		if [ -f $config_path/cx_default_i2c_bus ]; then
+			cx_i2c_bus=$(< $config_path/cx_default_i2c_bus)
+			cx_i2c_bus=$((cx_i2c_bus+i2c_bus_offset))
 		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
-			check_n_link "$3""$4"/temp1_input $thermal_path/comex_amb
+			if [ $2 == cx_amb ]; then
+				check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
+			else
+				check_n_link "$3""$4"/temp1_input $thermal_path/comex_amb
+			fi
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
-		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
-			check_n_link "$3""$4"/temp2_input $thermal_path/pciesw_amb
+		elif [ $bus -eq $cx_i2c_bus ]; then
+			check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
 		else
 			check_n_link "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
@@ -980,28 +984,32 @@ elif [ "$1" == "change" ]; then
 	fi
 else
 	case "$2" in
-		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
-		if [ -f $config_path/pcie_default_i2c_bus ]; then
-			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
-			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		if [ -f $config_path/cx_default_i2c_bus ]; then
+			cx_i2c_bus=$(< $config_path/cx_default_i2c_bus)
+			cx_i2c_bus=$((cx_i2c_bus+i2c_bus_offset))
 		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
-			unlink $thermal_path/comex_amb
+			if [ $2 == cx_amb ]; then
+				unlink $thermal_path/cx_amb
+			else
+				unlink $thermal_path/comex_amb
+			fi
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
-		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
-			unlink $thermal_path/pciesw_amb
+		elif [ "$bus" == "$cx_i2c_bus" ]; then
+			unlink $thermal_path/cx_amb
 		else
-			unlink $thermal_path/$
+			unlink $thermal_path/"$2"
 		fi
 		;;
 	esac
