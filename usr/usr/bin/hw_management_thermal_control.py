@@ -2199,7 +2199,7 @@ class ThermalManagement(hw_managemet_file_op):
         # Find voltmon temp sensors
         file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
         for fname in file_list:
-            res = re.match(r'(voltmon[0-9]+_temp)_input', fname)
+            res = re.match(r'(voltmon[0-9]+_temp1)_input', fname)
             if res:
                 self.voltmon_file_list.append(res.group(1))
         self.log.info("voltmon count:{}".format(len(self.voltmon_file_list)))
