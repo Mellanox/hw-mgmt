@@ -2436,17 +2436,6 @@ do_chip_up_down()
 					;;
 			esac
 			;;
-		VMOD0010)
-			case $sku in
-				HI140|HI141)
-					# Chip up / down operations are to be performed for ASIC virtual address 0x37.
-					i2c_asic_addr_name=0037
-					i2c_asic_addr=0x37
-					;;
-				*)
-					;;
-			esac
-			;;
 		VMOD0011)
 			# Chip up / down operations are to be performed for ASIC virtual address 0x37.
 			i2c_asic_addr_name=0037
