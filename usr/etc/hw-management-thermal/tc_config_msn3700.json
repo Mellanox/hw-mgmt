@@ -31,10 +31,10 @@
 	"fan_trend" : {
 		"C2P": {
 			"0" : {"rpm_min":5400, "rpm_max":23000, "slope": 221, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":4800, "rpm_max":20500, "slope": 195, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
+			"1" : {"rpm_min":4800, "rpm_max":20500, "slope": 196, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
 		"P2C": {
 			"0" : {"rpm_min":5400, "rpm_max":23000, "slope": 221, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":4800, "rpm_max":20500, "slope": 195, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
+			"1" : {"rpm_min":4800, "rpm_max":20500, "slope": 196, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
 		}
 	},
 	"dev_parameters" : {
