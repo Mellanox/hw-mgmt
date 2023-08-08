@@ -1,7 +1,7 @@
-From d86898e51cb14630da1d1b4b0c6b4fb6200f9261 Mon Sep 17 00:00:00 2001
+From cf4adb9d63d684594f50d8897808cd2f07be4efa Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 30 Jul 2023 20:50:15 +0000
-Subject: [PATCH backport 6.1.42 25/85] platform: mellanox: mlx-platform: Add
+Subject: [PATCH backport 6.1.42 1/1] platform: mellanox: mlx-platform: Add
  reset callback
 
 On L1 switches reset should include special actions against CPLD device
@@ -15,7 +15,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 43 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 1010064d54e9..83a9e0ce2ab7 100644
+index 1010064d54e9..b577ce572ab1 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -35,6 +35,7 @@
@@ -93,8 +93,8 @@ index 1010064d54e9..83a9e0ce2ab7 100644
 +
 +	ret = regmap_read(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET, &regval);
 +
-+	if (action == SYS_RESTART && !ret && !(regval & BIT(0)))
-+		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
++	if (action == SYS_RESTART && !ret && regval & BIT(0))
++		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET,
 +			     MLXPLAT_CPLD_RESET_MASK);
 +
 +	return NOTIFY_DONE;
