@@ -810,16 +810,17 @@ if [ "$1" == "add" ]; then
 			# For SN2201 indexes are from 0 to 9.
 			for i in {0..9}; do 
 				check_n_link "$3""$4"/in"$i"_input $environment_path/"$2"_in"$i"_input
-
 				check_n_link "$3""$4"/in"$i"_alarm $alarm_path/"$2"_in"$i"_alarm
-
 				check_n_link "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
-
 				check_n_link "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
-
 				check_n_link "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
-
 				check_n_link "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
+				check_n_link "$3""$4"/temp1_input $thermal_path/"$prefix"_temp1_input
+				check_n_link "$3""$4"/temp1_max $thermal_path/"$prefix"_temp1_max
+				check_n_link "$3""$4"/temp1_crit $thermal_path/"$prefix"_temp1_crit
+				check_n_link "$3""$4"/temp1_lcrit $thermal_path/"$prefix"_temp1_lcrit
+				check_n_link "$3""$4"/temp1_max_alarm $alarm_path/"$prefix"_temp1_max_alarm
+				check_n_link "$3""$4"/temp1_crit_alarm $alarm_path/"$prefix"_temp1_crit_alarm
 			done
 			;;
 		*)
