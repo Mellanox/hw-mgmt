@@ -257,6 +257,13 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 3,
                          "input_suffix": "_input"
                         },
+    r'drivetemp':       {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60
+                        },
+    r'ibc\d+':          {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60,
+                         "input_suffix": "_input"
+                        },
     r'ctx_amb\d*':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
                          "input_suffix": "_input"
@@ -2072,7 +2079,10 @@ class ThermalManagement(hw_managemet_file_op):
                           r'asic\d+':"add_asic_sensor",
                           r'sodimm\d+':"add_sodimm_sensor",
                           r'sensor_amb':"add_amb_sensor",
+                          r'drivetemp':"add_drivetemp_sensor",
+                          r'ibc\d*':"add_ibc_sensor",
                           r'ctx_amb\d*':"add_connectx_sensor"
+
                          }
 
     def __init__(self, cmd_arg, tc_logger):
@@ -2230,16 +2240,23 @@ class ThermalManagement(hw_managemet_file_op):
             if res:
                 sensor_list.append(res.group(1))
 
+            res = re.match(r'pwr_conv([0-9]+)_temp1_input', fname)
+            if res:
+                sensor_list.append("ibc{}".format(res.group(1)))
+
         # Add cpu sensor
         if "cpu" not in sensor_list:
             sensor_list.append("cpu")
 
         # Collect sodimm sensors
         for sodimm_idx in range(1, 5):
-            if self.check_file("thermal/sodimm{}_input".format(sodimm_idx)):
+            if self.check_file("thermal/sodimm{}_temp_input".format(sodimm_idx)):
                 sensor_list.append("sodimm{}".format(sodimm_idx))
 
         sensor_list.append("sensor_amb")
+
+        if self.check_file("thermal/drivetemp"):
+            sensor_list.append("drivetemp")
         # remove duplications & soort
         sensor_list = list(set(sensor_list))
         sensor_list.sort()
@@ -2340,7 +2357,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         self.log.info("Update chassis FAN PWM {}".format(pwm_val))
         if not self.is_pwm_exists():
-            self.log.warn("Missing PWM link".format(pwm_val))
+            self.log.warn("Missing PWM link {}".format(pwm_val))
             return
         for drwr_idx in range(1, self.fan_drwr_num + 1):
             fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
@@ -2533,9 +2550,9 @@ class ThermalManagement(hw_managemet_file_op):
     # ----------------------------------------------------------------------
     def module_scan(self):
         """
-        @summary: scanning available SFP module sensors 
-        and dynamically adding/removing module sensors 
-        """        
+        @summary: scanning available SFP module/gearboxes
+        and dynamically adding/removing module sensors
+        """
         module_count = int(self.get_file_val("config/module_counter", 0))
         if module_count != self.module_counter:
             self.log.info("Module counter changed {} -> {}".format(self.module_counter, module_count))
@@ -2680,7 +2697,7 @@ class ThermalManagement(hw_managemet_file_op):
         self._sensor_add_config("fan_sensor", name, {"base_file_name": name, "drwr_id": drwr_idx, "tacho_cnt": self.fan_drwr_capacity})
 
     # ----------------------------------------------------------------------
-    def add_cpu_sensor(self, name):
+    def add_cpu_sensor(self, *_):
         if self.check_file("thermal/cpu_pack"):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
         elif self.check_file("thermal/cpu_core1"):
@@ -2715,16 +2732,28 @@ class ThermalManagement(hw_managemet_file_op):
         self._sensor_add_config("ambiant_thermal_sensor", name)
 
     # ----------------------------------------------------------------------
+    def add_drivetemp_sensor(self, name):
+        in_file = "thermal/{}".format(name)
+        self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_ibc_sensor(self, name):
+        idx = name[3:]
+        in_file = "thermal/pwr_conv{}_temp1".format(idx)
+        sensor_name = "{}".format(name)
+        self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
     def add_connectx_sensor(self, name):
         self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
 
-# ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def add_sensors(self):
         """
         @summary: Add sensor configuration based on sensor list
-        """   
+        """
         for sensor_name in self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM]:
-            for config_handler_mask in self.ADD_SENSOR_HANDLER.keys():
+            for config_handler_mask in self.ADD_SENSOR_HANDLER:
                 if re.match(config_handler_mask, sensor_name):
                     fn_name = self.ADD_SENSOR_HANDLER[config_handler_mask]
                     init_fn = getattr(self, fn_name)
@@ -2746,7 +2775,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         self.log.debug("System config dump\n{}".format(json.dumps(self.sys_config, sort_keys=True, indent=4)))
 
-        for key, val in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
+        for key, _ in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
             dev_obj = self._add_dev_obj(key)
             if not dev_obj:
                 self.log.error("{} create failed".format(key))
