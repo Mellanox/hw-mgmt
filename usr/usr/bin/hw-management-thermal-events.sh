@@ -317,6 +317,10 @@ if [ "$1" == "add" ]; then
 			if [ "$name" == "mlxsw" ]; then
 				ln -sf "$3$4" $cpath/asic_hwmon
 				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				echo 105000 > $tpath/asic_temp_emergency
+				echo 85000 > $tpath/asic_temp_crit
+				echo 75000 > $tpath/asic_temp_norm
+
 				if [ -f "$3""$4"/pwm1 ]; then
 					ln -sf  "$3""$4"/pwm1 "$tpath"/pwm1
 					echo "$name" > "$cpath"/cooling_name
