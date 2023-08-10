@@ -1211,8 +1211,8 @@ class thermal_sensor(system_device):
         else:
             try:
                 temperature = int(self.read_file(self.file_input))
-                self.handle_reading_file_err(self.file_input, reset=True)
                 value = int(temperature / CONST.TEMP_SENSOR_SCALE)
+                self.handle_reading_file_err(self.file_input, reset=True)
             except BaseException:
                 self.log.info("Wrong value reading from file: {}".format(self.file_input))
                 self.handle_reading_file_err(self.file_input)
@@ -1269,11 +1269,12 @@ class thermal_module_sensor(system_device):
             tz_name = "mlxsw-{}".format(self.base_file_name)
         tz_policy_filename = "thermal/{}/thermal_zone_policy".format(tz_name)
         tz_mode_filename = "thermal/{}/thermal_zone_mode".format(tz_name)
-        try:
-            self.write_file(tz_policy_filename, "user_space")
-            self.write_file(tz_mode_filename, "disabled")
-        except BaseException:
-            pass
+        if self.check_file(tz_policy_filename) or self.check_file(tz_mode_filename):
+            try:
+                self.write_file(tz_policy_filename, "user_space")
+                self.write_file(tz_mode_filename, "disabled")
+            except BaseException:
+                pass
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -1341,11 +1342,11 @@ class thermal_module_sensor(system_device):
         else:
             try:
                 temperature = int(self.read_file(temp_read_file))
-                self.handle_reading_file_err(temp_read_file, reset=True)
                 temperature /= CONST.TEMP_SENSOR_SCALE
                 self.log.debug("{} value:{}".format(self.name, temperature))
                 # for modules that is not equipped with thermal sensor temperature returns zero
                 value = int(temperature)
+                self.handle_reading_file_err(temp_read_file, reset=True)
                 # handle case if cable was replsed by the other cable with the sensor
                 if value != 0 and self.val_min == 0 and self.val_max == 0:
                     self.log.info("{} refreshing min/max arttribures by the rule: val({}) min({}) max({})".format(self.name,
