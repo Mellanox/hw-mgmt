@@ -112,6 +112,7 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/i2c-*/*-001*/hwmon/hwmon*", 
 
 # NVME temp
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon/hwmon*", DRIVERS=="nvme", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add nvme_temp %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon*", DRIVERS=="nvme", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add nvme_temp %S %p"
 
 # SSD temp
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:*/ata*/host*/*/*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add drivetemp %S %p"
