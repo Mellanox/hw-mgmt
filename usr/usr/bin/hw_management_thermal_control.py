@@ -2067,7 +2067,7 @@ class ThermalManagement(hw_managemet_file_op):
             Main class of thermal algorithm.
             Provide system monitoring and thermal control
     """
-    
+
     """
     functions which adding sensor configuration by the sensor name
     """
@@ -2082,7 +2082,6 @@ class ThermalManagement(hw_managemet_file_op):
                           r'drivetemp':"add_drivetemp_sensor",
                           r'ibc\d*':"add_ibc_sensor",
                           r'ctx_amb\d*':"add_connectx_sensor"
-
                          }
 
     def __init__(self, cmd_arg, tc_logger):
