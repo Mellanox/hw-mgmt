@@ -364,7 +364,7 @@ Kernel-5.10
 |0196-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
 |0197-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
 |0198-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
-|0199-platform-mellanox-Change-register-offset-addresses.patch    |                    | Feature pending                          |            | P4262                                          |
+|0199-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            | P4262                                          |
 |0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Feature pending                          |            | BF3-COME                                       |
 |0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
 |0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
@@ -435,7 +435,7 @@ Kernel-5.10
 |0275-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Feature upstream                         |            | SN5600                                         |
 |0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Feature pending                          |            | SN5600                                         |
 |0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            | SN5600                                         |
-|0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Feature pending                          |            | SN5600                                         |
+|0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | SN5600                                         |
 |0279-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | P4262                                          |
 |0280-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            | P4262                                          |
 |0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
@@ -502,11 +502,11 @@ Kernel-6.1
 |0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3-COME                                       |
 |0012-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
 |0013-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
-|0014-platform-mellanox-Change-register-offset-addresses.patch    |                    | Feature pending                          |            |                                                |
+|0014-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            |                                                |
 |0015-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            |                                                |
 |0016-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
-|0017-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Feature pending                          |            |                                                |
-|0018-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Feature pending                          |            |                                                |
+|0017-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            |                                                |
+|0018-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            |                                                |
 |0019-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            |                                                |
 |0020-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            |                                                |
 |0021-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
@@ -572,6 +572,7 @@ Kernel-6.1
 |0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3                                            |
 |0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3                                            |
 |0084-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Bugfix pending                           |            | BF3                                            |
+|0085-i2c-mlxcpld-Downstream-WA-to-avoid-error-for-SMBUS-r.patch  |                    | Downstream accepted                      |            | WA for hw bug                                  |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
