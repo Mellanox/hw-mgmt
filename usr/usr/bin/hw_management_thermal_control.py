@@ -264,6 +264,10 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60,
                          "input_suffix": "_input"
                         },
+    r'ctx_amb\d*':       {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
+                         "input_suffix": "_input"
+                        }
 }
 
 
@@ -2076,7 +2080,8 @@ class ThermalManagement(hw_managemet_file_op):
                           r'sodimm\d+':"add_sodimm_sensor",
                           r'sensor_amb':"add_amb_sensor",
                           r'drivetemp':"add_drivetemp_sensor",
-                          r'ibc\d*':"add_ibc_sensor"
+                          r'ibc\d*':"add_ibc_sensor",
+                          r'ctx_amb\d*':"add_connectx_sensor"
                          }
 
     def __init__(self, cmd_arg, tc_logger):
@@ -2696,8 +2701,10 @@ class ThermalManagement(hw_managemet_file_op):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
         elif self.check_file("thermal/cpu_core1"):
             self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_file_name": "thermal/cpu_core1"})
+        elif self.check_file("thermal/core_temp"):
+            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/core_temp"})
         else:
-            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
+            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_core_sensor"})
 
     # ----------------------------------------------------------------------
     def add_voltmon_sensor(self, name):
@@ -2734,6 +2741,10 @@ class ThermalManagement(hw_managemet_file_op):
         in_file = "thermal/pwr_conv{}_temp1".format(idx)
         sensor_name = "{}".format(name)
         self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_connectx_sensor(self, name):
+        self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
 
     # ----------------------------------------------------------------------
     def add_sensors(self):
