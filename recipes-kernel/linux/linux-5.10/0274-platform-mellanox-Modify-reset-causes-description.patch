@@ -4,6 +4,8 @@ Date: Thu, 2 Mar 2023 12:28:11 +0000
 Subject: [PATCH backport v.5.10 4/8] platform: mellanox: Modify reset causes
  description
 
+Link: https://patchwork.kernel.org/project/platform-driver-x86/patch/20230814203406.12399-4-vadimp@nvidia.com/
+
 For system of classes VMOD0005, VMOD0010:
 - remove "reset_from_comex", since this cause doesn't define specific
   reason.
