@@ -1,7 +1,8 @@
-From f52400405962144c91b77fb826b9bb8f0f56e779 Mon Sep 17 00:00:00 2001
+From f8a0954053e6e06070ed399e1810bea089ba36bd Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 23 Jul 2023 21:25:49 +0000
-Subject: platform: mellanox: Modify reset causes description
+Date: Thu, 2 Mar 2023 12:28:11 +0000
+Subject: [PATCH backport v.5.10 4/8] platform: mellanox: Modify reset causes
+ description
 
 Link: https://patchwork.kernel.org/project/platform-driver-x86/patch/20230814203406.12399-4-vadimp@nvidia.com/
 
@@ -13,16 +14,15 @@ For system of classes VMOD0005, VMOD0010:
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
-Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 12 ++++++------
+ drivers/platform/mellanox/mlx-platform.c | 12 ++++++------
  1 file changed, 6 insertions(+), 6 deletions(-)
 
-diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index d0bb2becf712..d02f76073e24 100644
---- a/drivers/platform/x86/mlx-platform.c
-+++ b/drivers/platform/x86/mlx-platform.c
-@@ -2965,12 +2965,6 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 486a3e8da..67865636e 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -3832,12 +3832,6 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(2),
  		.mode = 0444,
  	},
@@ -35,7 +35,7 @@ index d0bb2becf712..d02f76073e24 100644
  	{
  		.label = "reset_from_asic",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
-@@ -2989,6 +2983,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -3856,6 +3850,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(7),
  		.mode = 0444,
  	},
@@ -49,5 +49,5 @@ index d0bb2becf712..d02f76073e24 100644
  		.label = "reset_comex_pwr_fail",
  		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 -- 
-2.14.1
+2.20.1
 
