@@ -1,19 +1,22 @@
-From eef4b86f6ad2a220547851e39571bd7663d9f669 Mon Sep 17 00:00:00 2001
+From 3c3fbec3ebc2df518c0e1db05a7f14b3f39ef25f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 23 Jul 2023 21:08:38 +0000
-Subject: [PATCH backport 6.1.42 14/85] platform: mellanox: Change register
- offset addresses
+Date: Sun, 13 Aug 2023 08:37:35 +0000
+Subject: [PATH backport v6.1 15/32] platform: mellanox: Change register offset
+ addresses
 
 Move debug register offsets to different location due to hardware changes.
 
+Fixes: dd635e33b5c9 ("platform: mellanox: Introduce support of new Nvidia L1 switch")
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+Link: https://lore.kernel.org/r/20230813083735.39090-5-vadimp@nvidia.com
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
 ---
  drivers/platform/x86/mlx-platform.c | 8 ++++----
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 9d060a04e6ec..4da81628314a 100644
+index 240bc3174caf..7d33977d9c60 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -62,10 +62,6 @@

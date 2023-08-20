@@ -1,8 +1,10 @@
-From 4b0915090954e5218ad8870a9b5244e5a633c6df Mon Sep 17 00:00:00 2001
+From c3e2605f6350ab19e38352e4c8b3b78621bf8a2f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 30 Jul 2023 21:17:07 +0000
-Subject: [PATCH backport 6.1.42 30/85] platform: mellanox: Add initial support
+Subject: [PATH backport v6.1 28/32] platform: mellanox: Add initial support
  for PCIe based programming logic device
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39644.html
 
 Extend driver to support logic implemented by FPGA device connected
 through PCIe bus.
@@ -28,7 +30,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 132 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 88bc4680c4b8..26a0c34d4a42 100644
+index 3eccb6628ccc..44f107965832 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -12,6 +12,7 @@
@@ -39,7 +41,7 @@ index 88bc4680c4b8..26a0c34d4a42 100644
  #include <linux/platform_device.h>
  #include <linux/platform_data/i2c-mux-reg.h>
  #include <linux/platform_data/mlxreg.h>
-@@ -330,6 +331,12 @@
+@@ -331,6 +332,12 @@
  #define MLXPLAT_I2C_MAIN_BUS_NOTIFIED		0x01
  #define MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED	0x02
  
@@ -52,7 +54,7 @@ index 88bc4680c4b8..26a0c34d4a42 100644
  /* mlxplat_priv - platform private data
   * @pdev_i2c - i2c controller platform device
   * @pdev_mux - array of mux platform devices
-@@ -361,6 +368,7 @@ struct mlxplat_priv {
+@@ -362,6 +369,7 @@ struct mlxplat_priv {
  
  static struct platform_device *mlxplat_dev;
  static int mlxplat_i2c_main_complition_notify(void *handle, int id);
@@ -60,7 +62,7 @@ index 88bc4680c4b8..26a0c34d4a42 100644
  
  /* Regions for LPC I2C controller and LPC base register space */
  static const struct resource mlxplat_lpc_resources[] = {
-@@ -5543,6 +5551,9 @@ static struct mlxreg_core_platform_data *mlxplat_fan;
+@@ -5544,6 +5552,9 @@ static struct mlxreg_core_platform_data *mlxplat_fan;
  static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
@@ -70,7 +72,7 @@ index 88bc4680c4b8..26a0c34d4a42 100644
  
  /* Platform default reset function */
  static int mlxplat_reboot_notifier(struct notifier_block *nb, unsigned long action, void *unused)
-@@ -6171,15 +6182,131 @@ static void mlxplat_lpc_cpld_device_exit(void)
+@@ -6172,15 +6183,131 @@ static void mlxplat_lpc_cpld_device_exit(void)
  {
  }
  
@@ -204,7 +206,7 @@ index 88bc4680c4b8..26a0c34d4a42 100644
  }
  
  static int mlxplat_post_init(struct mlxplat_priv *priv)
-@@ -6365,6 +6492,9 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
+@@ -6366,6 +6493,9 @@ static int mlxplat_i2c_main_init(struct mlxplat_priv *priv)
  	mlxplat_i2c->regmap = priv->regmap;
  	mlxplat_i2c->handle = priv;
  

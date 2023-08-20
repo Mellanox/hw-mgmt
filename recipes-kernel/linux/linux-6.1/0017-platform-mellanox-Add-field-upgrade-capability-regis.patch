@@ -1,8 +1,10 @@
-From dafc342bb8331196ff3af236246920dbf3ab50d4 Mon Sep 17 00:00:00 2001
+From 02ec65e86e92d25eaf0280db68cc045a97e70ea5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 23 Jul 2023 21:13:52 +0000
-Subject: [PATCH backport 6.1.42 15/85] platform: mellanox: Add field upgrade
+Subject: [PATH backport v6.1 17/32] platform: mellanox: Add field upgrade
  capability register
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39635.html
 
 Add new register to indicate the method of FPGA/CPLD field upgrade
 supported on the specific system.
@@ -18,7 +20,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 12 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 4da81628314a..bba7c13ab78d 100644
+index 26748c285ddc..647a10252c2f 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -62,6 +62,7 @@
@@ -35,10 +37,10 @@ index 4da81628314a..bba7c13ab78d 100644
  #define MLXPLAT_CPLD_EROT_MASK		GENMASK(1, 0)
 +#define MLXPLAT_CPLD_FU_CAP_MASK	GENMASK(1, 0)
  #define MLXPLAT_CPLD_PWR_BUTTON_MASK	BIT(0)
- #define MLXPLAT_CPLD_LATCH_RST_MASK	BIT(5)
+ #define MLXPLAT_CPLD_LATCH_RST_MASK	BIT(6)
  #define MLXPLAT_CPLD_THERMAL1_PDB_MASK	BIT(3)
 @@ -3680,6 +3682,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
- 		.mask = GENMASK(7, 0) & ~BIT(5),
+ 		.mask = GENMASK(7, 0) & ~BIT(6),
  		.mode = 0200,
  	},
 +	{

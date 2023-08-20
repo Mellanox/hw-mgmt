@@ -1,8 +1,8 @@
-From 6d4e1596a4945bcba6ef8b997d0dea59b8b8f1bf Mon Sep 17 00:00:00 2001
+From 7831c5d10460c08cb5837827784677e0286d14e7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 30 Jul 2023 21:31:54 +0000
-Subject: [PATCH backport 6.1.42 32/85] platform/mellanox: Add support for
- dynamic I2C channels infrastructure
+Subject: [PATH backport v6.1 53/54] platform/mellanox: Add support for dynamic
+ I2C channels infrastructure
 
 Allow to support platform configuration for dynamically allocated I2C
 channels.
@@ -23,7 +23,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 59 insertions(+), 10 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 26a0c34d4a42..04be8aeb23e9 100644
+index 44f107965832..9021597b5446 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -15,6 +15,7 @@
@@ -34,7 +34,7 @@ index 26a0c34d4a42..04be8aeb23e9 100644
  #include <linux/platform_data/mlxreg.h>
  #include <linux/reboot.h>
  #include <linux/regmap.h>
-@@ -349,6 +350,7 @@
+@@ -350,6 +351,7 @@
   * @hotplug_resources: system hotplug resources
   * @hotplug_resources_size: size of system hotplug resources
   * @hi2c_main_init_status: init status of I2C main bus
@@ -42,7 +42,7 @@ index 26a0c34d4a42..04be8aeb23e9 100644
   * @irq_fpga: FPGA IRQ number
   */
  struct mlxplat_priv {
-@@ -363,6 +365,7 @@ struct mlxplat_priv {
+@@ -364,6 +366,7 @@ struct mlxplat_priv {
  	struct resource *hotplug_resources;
  	unsigned int hotplug_resources_size;
  	u8 i2c_main_init_status;
@@ -50,7 +50,7 @@ index 26a0c34d4a42..04be8aeb23e9 100644
  	int irq_fpga;
  };
  
-@@ -452,7 +455,9 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
+@@ -453,7 +456,9 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
  /* Platform mux configuration variables */
  static int mlxplat_max_adap_num;
  static int mlxplat_mux_num;
@@ -60,7 +60,7 @@ index 26a0c34d4a42..04be8aeb23e9 100644
  static struct notifier_block *mlxplat_reboot_nb;
  
  /* Platform extended mux data */
-@@ -6125,12 +6130,17 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -6126,12 +6131,17 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	/* Shift adapter ids, since expected parent adapter is not free. */
  	*nr = i;
  	for (i = 0; i < mlxplat_mux_num; i++) {
@@ -82,7 +82,7 @@ index 26a0c34d4a42..04be8aeb23e9 100644
  		mlxplat_hotplug->shift_nr = shift;
  
  	return 0;
-@@ -6427,8 +6437,31 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
+@@ -6428,8 +6438,31 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
  				  struct i2c_adapter *adapters[])
  {
  	struct mlxplat_priv *priv = handle;
@@ -115,7 +115,7 @@ index 26a0c34d4a42..04be8aeb23e9 100644
  }
  
  static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
-@@ -6442,17 +6475,33 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
+@@ -6443,17 +6476,33 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
  
  	priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
  	for (i = 0; i < mlxplat_mux_num; i++) {

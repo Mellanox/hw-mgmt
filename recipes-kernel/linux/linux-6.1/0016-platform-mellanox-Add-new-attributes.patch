@@ -1,7 +1,9 @@
-From 5a62b06d78f9055a0899ec31e32094d21f701a72 Mon Sep 17 00:00:00 2001
+From 65441ac095819a650d3197f750b6c04a734abdc3 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 23 Jul 2023 21:05:12 +0000
-Subject: [PATCH backport 6.1.42 13/85] platform: mellanox: Add new attributes
+Subject: [PATH backport v6.1 16/32] platform: mellanox: Add new attributes
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39632.html
 
 Add new attribute:
 "lid_open" - to indicate system intrusion detection.
@@ -15,7 +17,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 12 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 5fb3348023a7..9d060a04e6ec 100644
+index 7d33977d9c60..26748c285ddc 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -3792,6 +3792,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {

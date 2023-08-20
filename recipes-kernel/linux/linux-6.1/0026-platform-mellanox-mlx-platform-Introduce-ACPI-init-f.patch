@@ -1,32 +1,39 @@
-From 9bb0e35b1a1ac63ea12bb47cebf17615cd73d59e Mon Sep 17 00:00:00 2001
+From 003ecc1dc963e5bc53be9796139431e3189f31c2 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 08:53:07 +0000
-Subject: [PATCH backport 6.1.42 27/85] platform: mellanox: mlx-platform:
+Subject: [PATH backport v6.1 26/32] platform: mellanox: mlx-platform:
  Introduce ACPI init flow
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39643.html
 
 Introduce support for ACPI initialization flow - add ACPI match hook.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 10 ++++++++++
- 1 file changed, 10 insertions(+)
+ drivers/platform/x86/mlx-platform.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index f331315c1bd9..ea9a286b5032 100644
+index 73f887614e04..feedfba0acf3 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -6398,6 +6398,9 @@ static int mlxplat_probe(struct platform_device *pdev)
+@@ -6396,9 +6396,14 @@ static int mlxplat_probe(struct platform_device *pdev)
+ {
+ 	unsigned int hotplug_resources_size = 0;
+ 	struct resource *hotplug_resources = NULL;
++	struct acpi_device *acpi_dev;
  	struct mlxplat_priv *priv;
  	int i, err;
  
-+	if (ACPI_COMPANION(&pdev->dev))
++	acpi_dev = ACPI_COMPANION(&pdev->dev);
++	if (acpi_dev)
 +		mlxplat_dev = pdev;
 +
  	err = mlxplat_pre_init(&hotplug_resources, &hotplug_resources_size);
  	if (err)
  		return err;
-@@ -6475,9 +6478,16 @@ static int mlxplat_remove(struct platform_device *pdev)
+@@ -6476,9 +6481,16 @@ static int mlxplat_remove(struct platform_device *pdev)
  	return 0;
  }
  

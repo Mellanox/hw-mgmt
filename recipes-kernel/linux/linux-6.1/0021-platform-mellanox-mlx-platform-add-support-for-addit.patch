@@ -1,8 +1,10 @@
-From b1173f3820b65816fd434ca04d97e7f8eb75f3ef Mon Sep 17 00:00:00 2001
+From baa136fc6b3c26501c77070a73abd2d6f95b462a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 05:54:47 +0000
-Subject: [PATCH backport 6.1.42 22/85] platform: mellanox: mlx-platform: add
+Subject: [PATH backport v6.1 21/32] platform: mellanox: mlx-platform: add
  support for additional CPLD
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39641.html
 
 Extend to support 5-th CPLD version, PN and minimal version registers.
 

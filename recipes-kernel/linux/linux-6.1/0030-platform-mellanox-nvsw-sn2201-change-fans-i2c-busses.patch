@@ -1,14 +1,18 @@
-From 102dbb9978a36570c340ce71740dbb2083f400e2 Mon Sep 17 00:00:00 2001
+From ddec9cfeb44ed194cadee824f3f49c057bf7a560 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Wed, 12 Jul 2023 14:26:38 +0000
-Subject: [PATCH backport 6.1.42 50/85] platform: mellanox: nvsw-sn2201: change
+Subject: [PATH backport v6.1 30/32] platform: mellanox: nvsw-sn2201: change
  fans i2c busses.
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39647.html
 
 Define the exact i2c bus (adapter number) of fans on the SN2201 system.
 This will cause fan's EEPROMs be connected already from nvsw-sn2201
 platform driver and not from user space after receiving udev events.
 
 Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/platform/mellanox/nvsw-sn2201.c | 12 ++++++++----
  1 file changed, 8 insertions(+), 4 deletions(-)

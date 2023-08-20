@@ -1,22 +1,24 @@
-From 3d23cda7b0b20dcd18b8244345ecf6d081adb772 Mon Sep 17 00:00:00 2001
+From 7f7f1a8c4df413bc1faf50d4f5cd77f3f5f19796 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 10:10:52 +0000
-Subject: [PATCH backport 6.1.42 28/85] platform: mellanox: mlx-platform: Get
+Subject: [PATH backport v6.1 27/32] platform: mellanox: mlx-platform: Get
  interrupt line through ACPI
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39645.html
 
 Add support for getting system interrupt line from ACPI table.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 15 +++++++++++++--
- 1 file changed, 13 insertions(+), 2 deletions(-)
+ drivers/platform/x86/mlx-platform.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index ea9a286b5032..88bc4680c4b8 100644
+index feedfba0acf3..3eccb6628ccc 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -342,6 +342,7 @@
+@@ -343,6 +343,7 @@
   * @hotplug_resources: system hotplug resources
   * @hotplug_resources_size: size of system hotplug resources
   * @hi2c_main_init_status: init status of I2C main bus
@@ -24,7 +26,7 @@ index ea9a286b5032..88bc4680c4b8 100644
   */
  struct mlxplat_priv {
  	struct platform_device *pdev_i2c;
-@@ -355,6 +356,7 @@ struct mlxplat_priv {
+@@ -356,6 +357,7 @@ struct mlxplat_priv {
  	struct resource *hotplug_resources;
  	unsigned int hotplug_resources_size;
  	u8 i2c_main_init_status;
@@ -32,7 +34,7 @@ index ea9a286b5032..88bc4680c4b8 100644
  };
  
  static struct platform_device *mlxplat_dev;
-@@ -6187,6 +6189,8 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+@@ -6188,6 +6190,8 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
  	/* Add hotplug driver */
  	if (mlxplat_hotplug) {
  		mlxplat_hotplug->regmap = priv->regmap;
@@ -41,17 +43,15 @@ index ea9a286b5032..88bc4680c4b8 100644
  		priv->pdev_hotplug =
  		platform_device_register_resndata(&mlxplat_dev->dev,
  						  "mlxreg-hotplug", PLATFORM_DEVID_NONE,
-@@ -6395,11 +6399,17 @@ static int mlxplat_probe(struct platform_device *pdev)
- {
- 	unsigned int hotplug_resources_size = 0;
+@@ -6398,11 +6402,15 @@ static int mlxplat_probe(struct platform_device *pdev)
  	struct resource *hotplug_resources = NULL;
-+	struct acpi_device *acpi_dev;
+ 	struct acpi_device *acpi_dev;
  	struct mlxplat_priv *priv;
 -	int i, err;
 +	int irq_fpga = 0, i, err;
  
--	if (ACPI_COMPANION(&pdev->dev))
-+	acpi_dev = ACPI_COMPANION(&pdev->dev);
+ 	acpi_dev = ACPI_COMPANION(&pdev->dev);
+-	if (acpi_dev)
 +	if (acpi_dev) {
 +		irq_fpga = acpi_dev_gpio_irq_get(acpi_dev, 0);
 +		if (irq_fpga < 0)
@@ -61,7 +61,7 @@ index ea9a286b5032..88bc4680c4b8 100644
  
  	err = mlxplat_pre_init(&hotplug_resources, &hotplug_resources_size);
  	if (err)
-@@ -6414,6 +6424,7 @@ static int mlxplat_probe(struct platform_device *pdev)
+@@ -6417,6 +6425,7 @@ static int mlxplat_probe(struct platform_device *pdev)
  	platform_set_drvdata(mlxplat_dev, priv);
  	priv->hotplug_resources = hotplug_resources;
  	priv->hotplug_resources_size = hotplug_resources_size;

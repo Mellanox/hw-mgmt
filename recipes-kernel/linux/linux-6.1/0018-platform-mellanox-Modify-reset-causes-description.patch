@@ -1,13 +1,15 @@
-From e721a2e3e859f8e6e45ae3cef2faa514c44ef196 Mon Sep 17 00:00:00 2001
+From 153daa685be413192d55d015d8387becaa6b58b2 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 23 Jul 2023 21:25:49 +0000
-Subject: [PATCH backport 6.1.42 16/85] platform: mellanox: Modify reset causes
+Subject: [PATH backport v6.1 18/32] platform: mellanox: Modify reset causes
  description
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39636.html
 
 For system of classes VMOD0005, VMOD0010:
 - remove "reset_from_comex", since this cause doesn't define specific
   reason.
-- add more speicific reason "reset_sw_reset", which is set along with
+- add more specific reason "reset_sw_reset", which is set along with
   removed "reset_from_comex".
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
@@ -17,7 +19,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index bba7c13ab78d..a8b2bf17dae9 100644
+index 647a10252c2f..5b0579752afb 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -3556,12 +3556,6 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {

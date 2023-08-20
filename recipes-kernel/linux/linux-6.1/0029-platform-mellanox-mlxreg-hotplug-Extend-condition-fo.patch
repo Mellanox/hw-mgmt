@@ -1,8 +1,10 @@
-From 45a13061d64b7a13cbccca9396ec0b5880fcc5ae Mon Sep 17 00:00:00 2001
+From 4c391b315de93194876fb0a5a3faf6b02becf776 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Mar 2023 15:04:26 +0000
-Subject: [PATCH backport 6.1.42 19/85] platform/mellanox: mlxreg-hotplug:
- Extend condition for notification callback processing
+Subject: [PATH backport v6.1 29/32] platform/mellanox: mlxreg-hotplug: Extend
+ condition for notification callback processing
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39646.html
 
 Allow processing of notification callback in routine
 mlxreg_hotplug_device_create() in case hotplug object is configured

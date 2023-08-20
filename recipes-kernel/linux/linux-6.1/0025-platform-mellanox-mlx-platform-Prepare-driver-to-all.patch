@@ -1,8 +1,10 @@
-From ff016d9bc58ed1a0fe277f09d6ca88a85f4574d5 Mon Sep 17 00:00:00 2001
+From 72ca44d6df08d42b18489a68cdb7217481394149 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 08:36:36 +0000
-Subject: [PATCH backport 6.1.42 26/85] platform: mellanox: mlx-platform:
- Prepare driver to allow probing through ACPI infrastructure
+Subject: [PATH backport v6.1 25/32] platform: mellanox: mlx-platform: Prepare
+ driver to allow probing through ACPI infrastructure
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39642.html
 
 Currently driver is activated through DMI hooks.
 Prepare driver to allow activation also through ACPI trigger.
@@ -18,10 +20,10 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 61 insertions(+), 30 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 83a9e0ce2ab7..f331315c1bd9 100644
+index 296569492a71..73f887614e04 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
-@@ -5573,6 +5573,17 @@ static void mlxplat_poweroff(void)
+@@ -5574,6 +5574,17 @@ static void mlxplat_poweroff(void)
  	kernel_halt();
  }
  
@@ -39,7 +41,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -5593,7 +5604,7 @@ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
+@@ -5594,7 +5605,7 @@ static int __init mlxplat_dmi_default_matched(const struct dmi_system_id *dmi)
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
  
@@ -48,7 +50,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi)
-@@ -5616,7 +5627,7 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
+@@ -5617,7 +5628,7 @@ static int __init mlxplat_dmi_default_wc_matched(const struct dmi_system_id *dmi
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
  
@@ -57,7 +59,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_default_eth_wc_blade_matched(const struct dmi_system_id *dmi)
-@@ -5641,7 +5652,7 @@ static int __init mlxplat_dmi_default_eth_wc_blade_matched(const struct dmi_syst
+@@ -5642,7 +5653,7 @@ static int __init mlxplat_dmi_default_eth_wc_blade_matched(const struct dmi_syst
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng;
  
@@ -66,7 +68,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
-@@ -5664,7 +5675,7 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
+@@ -5665,7 +5676,7 @@ static int __init mlxplat_dmi_msn21xx_matched(const struct dmi_system_id *dmi)
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
  
@@ -75,7 +77,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
-@@ -5687,7 +5698,7 @@ static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
+@@ -5688,7 +5699,7 @@ static int __init mlxplat_dmi_msn274x_matched(const struct dmi_system_id *dmi)
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
  
@@ -84,7 +86,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
-@@ -5710,7 +5721,7 @@ static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
+@@ -5711,7 +5722,7 @@ static int __init mlxplat_dmi_msn201x_matched(const struct dmi_system_id *dmi)
  	mlxplat_wd_data[0] = &mlxplat_mlxcpld_wd_set_type1[0];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
  
@@ -93,7 +95,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
-@@ -5736,7 +5747,7 @@ static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
+@@ -5737,7 +5748,7 @@ static int __init mlxplat_dmi_qmb7xx_matched(const struct dmi_system_id *dmi)
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng;
  
@@ -102,7 +104,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
-@@ -5761,7 +5772,7 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
+@@ -5762,7 +5773,7 @@ static int __init mlxplat_dmi_comex_matched(const struct dmi_system_id *dmi)
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_default_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_comex;
  
@@ -111,7 +113,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
-@@ -5787,7 +5798,7 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+@@ -5788,7 +5799,7 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
  
@@ -120,7 +122,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
-@@ -5807,7 +5818,7 @@ static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
+@@ -5808,7 +5819,7 @@ static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_eth_modular;
  
@@ -129,7 +131,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_chassis_blade_matched(const struct dmi_system_id *dmi)
-@@ -5829,7 +5840,7 @@ static int __init mlxplat_dmi_chassis_blade_matched(const struct dmi_system_id *
+@@ -5830,7 +5841,7 @@ static int __init mlxplat_dmi_chassis_blade_matched(const struct dmi_system_id *
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
  
@@ -138,7 +140,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dmi)
-@@ -5850,7 +5861,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
+@@ -5851,7 +5862,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
  
@@ -147,7 +149,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
-@@ -5871,7 +5882,7 @@ static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
+@@ -5872,7 +5883,7 @@ static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_ng400;
  
@@ -156,7 +158,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
-@@ -5894,7 +5905,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -5895,7 +5906,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	pm_power_off = mlxplat_poweroff;
  	mlxplat_reboot_nb = &mlxplat_reboot_default_nb;
  
@@ -165,7 +167,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
-@@ -6138,12 +6149,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
+@@ -6139,12 +6150,6 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
  {
  	int err;
  
@@ -178,7 +180,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  	mlxplat_mlxcpld_regmap_ctx.base = devm_ioport_map(&mlxplat_dev->dev,
  							  mlxplat_lpc_resources[1].start, 1);
  	if (!mlxplat_mlxcpld_regmap_ctx.base) {
-@@ -6157,13 +6162,11 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
+@@ -6158,13 +6163,11 @@ static int mlxplat_lpc_cpld_device_init(struct resource **hotplug_resources,
  	return 0;
  
  fail_devm_ioport_map:
@@ -192,7 +194,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  }
  
  static int
-@@ -6388,16 +6391,13 @@ static void mlxplat_i2c_main_exit(struct mlxplat_priv *priv)
+@@ -6389,16 +6392,13 @@ static void mlxplat_i2c_main_exit(struct mlxplat_priv *priv)
  		platform_device_unregister(priv->pdev_i2c);
  }
  
@@ -212,7 +214,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  	err = mlxplat_pre_init(&hotplug_resources, &hotplug_resources_size);
  	if (err)
  		return err;
-@@ -6460,9 +6460,8 @@ static int __init mlxplat_init(void)
+@@ -6461,9 +6461,8 @@ static int __init mlxplat_init(void)
  
  	return err;
  }
@@ -223,7 +225,7 @@ index 83a9e0ce2ab7..f331315c1bd9 100644
  {
  	struct mlxplat_priv *priv = platform_get_drvdata(mlxplat_dev);
  
-@@ -6473,6 +6472,38 @@ static void __exit mlxplat_exit(void)
+@@ -6474,6 +6473,38 @@ static void __exit mlxplat_exit(void)
  	mlxplat_pre_exit(priv);
  	mlxplat_i2c_main_exit(priv);
  	mlxplat_post_exit();

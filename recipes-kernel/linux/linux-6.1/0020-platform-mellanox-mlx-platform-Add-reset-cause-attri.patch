@@ -1,8 +1,10 @@
-From ad8766186b391364fc372a9142962df352148ac2 Mon Sep 17 00:00:00 2001
+From 9a981f2c8011e3840eb126404cb77a476f77e2c7 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 05:20:15 +0000
-Subject: [PATCH backport 6.1.42 21/85] platform: mellanox: mlx-platform: Add
+Subject: [PATH backport v6.1 20/32] platform: mellanox: mlx-platform: Add
  reset cause attribute
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39638.html
 
 Extend IO registers description for some system types with reset cause
 attribute "reset_swb_dc_dc_pwr_fail" to indicate reset caused by switch
