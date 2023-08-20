@@ -1,8 +1,8 @@
-From 0825bf3401a4c1af2b83dd163eb52581e2e6a068 Mon Sep 17 00:00:00 2001
+From 3e4ff8f2195a3dc7b04bb5a1b9fd6b655f78a75e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 11:10:50 +0000
-Subject: [PATCH backport 6.1.42 57/85] platform: mellanox: Introduce support
- for switches equipped with new FPGA device
+Subject: [PATH backport v6.1 54/54] platform: mellanox: Introduce support for
+ switches equipped with new FPGA device
 
 Add support for Nvidia MQM97xx and MSN47xx family switches equipped with
 new FPGA device.
@@ -24,7 +24,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 196 insertions(+)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 04be8aeb23e9..bf1fc139e397 100644
+index 9021597b5446..46958810e972 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -183,6 +183,9 @@
@@ -37,7 +37,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  #define MLXPLAT_CPLD_LPC_IO_RANGE		0x100
  
  #define MLXPLAT_CPLD_LPC_PIO_OFFSET		0x10000UL
-@@ -276,6 +279,7 @@
+@@ -277,6 +280,7 @@
  /* Maximum number of possible physical buses equipped on system */
  #define MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM	16
  #define MLXPLAT_CPLD_MAX_PHYS_EXT_ADAPTER_NUM	24
@@ -45,7 +45,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  
  /* Number of channels in group */
  #define MLXPLAT_CPLD_GRP_CHNL_NUM		8
-@@ -337,6 +341,21 @@
+@@ -338,6 +342,21 @@
  #define PCI_DEVICE_ID_LATTICE_I2C_BRIDGE	0x9c2f
  #define PCI_DEVICE_ID_LATTICE_JTAG_BRIDGE	0x9c30
  #define PCI_DEVICE_ID_LATTICE_LPC_BRIDGE	0x9c32
@@ -67,7 +67,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  
  /* mlxplat_priv - platform private data
   * @pdev_i2c - i2c controller platform device
-@@ -452,6 +471,28 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
+@@ -453,6 +472,28 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
  
  };
  
@@ -96,7 +96,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  /* Platform mux configuration variables */
  static int mlxplat_max_adap_num;
  static int mlxplat_mux_num;
-@@ -3539,6 +3580,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -3540,6 +3581,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(2),
  		.mode = 0200,
  	},
@@ -109,7 +109,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  	{
  		.label = "erot1_reset",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
-@@ -5064,6 +5111,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -5065,6 +5112,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET:
@@ -117,7 +117,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  		return true;
  	}
  	return false;
-@@ -5229,6 +5277,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -5230,6 +5278,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -125,7 +125,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  		return true;
  	}
  	return false;
-@@ -5386,6 +5435,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -5387,6 +5436,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -133,7 +133,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  		return true;
  	}
  	return false;
-@@ -5416,6 +5466,14 @@ static const struct reg_default mlxplat_mlxcpld_regmap_ng400[] = {
+@@ -5417,6 +5467,14 @@ static const struct reg_default mlxplat_mlxcpld_regmap_ng400[] = {
  	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
  };
  
@@ -148,7 +148,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  static const struct reg_default mlxplat_mlxcpld_regmap_rack_switch[] = {
  	{ MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET, MLXPLAT_REGMAP_NVSWITCH_PWM_DEFAULT },
  	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
-@@ -5544,6 +5602,114 @@ static const struct regmap_config mlxplat_mlxcpld_regmap_config_eth_modular = {
+@@ -5545,6 +5603,114 @@ static const struct regmap_config mlxplat_mlxcpld_regmap_config_eth_modular = {
  	.reg_write = mlxplat_mlxcpld_reg_write,
  };
  
@@ -263,7 +263,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  static struct resource mlxplat_mlxcpld_resources[] = {
  	[0] = DEFINE_RES_IRQ_NAMED(MLXPLAT_CPLD_LPC_SYSIRQ, "mlxreg-hotplug"),
  };
-@@ -5926,6 +6092,30 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -5927,6 +6093,30 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -294,7 +294,7 @@ index 04be8aeb23e9..bf1fc139e397 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -6014,6 +6204,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -6015,6 +6205,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0015"),
  		},
  	},

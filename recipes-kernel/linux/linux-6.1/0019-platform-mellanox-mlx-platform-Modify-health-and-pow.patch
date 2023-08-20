@@ -1,8 +1,10 @@
-From 102d8f12f50954e6ddee769ff1e0b6d10acc4199 Mon Sep 17 00:00:00 2001
+From 05834de8484930c01d705e078e63eb44fbacd362 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 23 Jul 2023 21:42:37 +0000
-Subject: [PATCH backport 6.1.42 20/85] platform: mellanox: mlx-platform:
- Modify health and power hotplug action
+Subject: [PATH backport v6.1 19/32] platform: mellanox: mlx-platform: Modify
+ health and power hotplug action
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39634.html
 
 Set explicitly hotplug event action for health and power signals for
 L1 switch as "MLXREG_HOTPLUG_DEVICE_NO_ACTION" in order to allow

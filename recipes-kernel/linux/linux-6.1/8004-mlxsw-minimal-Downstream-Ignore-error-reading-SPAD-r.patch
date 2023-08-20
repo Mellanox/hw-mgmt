@@ -1,8 +1,8 @@
-From e8653eefc4abb98b9f57848072e1e525622fdbc8 Mon Sep 17 00:00:00 2001
+From a742d55ed36a0bd3b6346563665b951dad9ad469 Mon Sep 17 00:00:00 2001
 From: root <root@fit-build-116.mtl.labs.mlnx>
 Date: Tue, 5 Apr 2022 21:35:55 +0300
-Subject: [PATCH backport 6.1.42 54/85] mlxsw: minimal: Downstream: Ignore
- error reading SPAD register
+Subject: [PATH backport v6.1 2/3] mlxsw: minimal: Downstream: Ignore error
+ reading SPAD register
 
 SPAD register is not supported for IB systems.
 

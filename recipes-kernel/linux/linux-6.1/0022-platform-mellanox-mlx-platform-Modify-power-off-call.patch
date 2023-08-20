@@ -1,10 +1,18 @@
-From b993c66ac934bf8b8d0e7749b5bee1dc8ca4e29d Mon Sep 17 00:00:00 2001
+From cca82c5a6efc06d8d9b5c7b8b83054ff09363bc4 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 24 Jul 2023 06:22:13 +0000
-Subject: [PATCH backport 6.1.42 23/85] platform: mellanox: mlx-platform:
- Modify power off callback
+Subject: [PATH backport v6.1 22/32] platform: mellanox: mlx-platform: Modify
+ power off callback
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39639.html
 
 Extend platform power off callback with kernel_halt() call.
+
+When powering off, the process involves setting a halt bit in the
+register space, which is then activated after a certain delay and
+power off auxiliary power. By invoking `kernel_halt()` within this
+timeframe, the intention is to facilitate a clean system power-off
+sequence.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>

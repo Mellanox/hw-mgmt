@@ -7,6 +7,8 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
+26e118eaUpstream commit [98cf5ec0b53198e643d5fa8d99b73b49]
+
 Currently hotplug configuration in logic device assumes that all items
 are provided with no holes.
 Thus, any group of hotplug events, associated with the specific
@@ -20,6 +22,8 @@ while others can be skipped.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+Link: https://lore.kernel.org/r/20230208063331.15560-10-vadimp@nvidia.com
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
 ---
  drivers/platform/mellanox/mlxreg-hotplug.c | 28 ++++++++++++++++++----
  1 file changed, 23 insertions(+), 5 deletions(-)

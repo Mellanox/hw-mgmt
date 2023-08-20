@@ -1,8 +1,10 @@
-From cf4adb9d63d684594f50d8897808cd2f07be4efa Mon Sep 17 00:00:00 2001
+From c581e018f6e8f1bf81b75b118a96425abf7dcc2b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 30 Jul 2023 20:50:15 +0000
-Subject: [PATCH backport 6.1.42 1/1] platform: mellanox: mlx-platform: Add
+Subject: [PATH backport v6.1 24/32] platform: mellanox: mlx-platform: Add
  reset callback
+
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39640.html
 
 On L1 switches reset should include special actions against CPLD device
 for performing graceful operations.
@@ -11,11 +13,11 @@ For that purpose, special PLATFORM_RESET# signal should be indicated.
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/x86/mlx-platform.c | 45 +++++++++++++++++++++++++++--
- 1 file changed, 43 insertions(+), 2 deletions(-)
+ drivers/platform/x86/mlx-platform.c | 46 +++++++++++++++++++++++++++--
+ 1 file changed, 44 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
-index 1010064d54e9..b577ce572ab1 100644
+index 1010064d54e9..296569492a71 100644
 --- a/drivers/platform/x86/mlx-platform.c
 +++ b/drivers/platform/x86/mlx-platform.c
 @@ -35,6 +35,7 @@
@@ -26,15 +28,23 @@ index 1010064d54e9..b577ce572ab1 100644
  #define MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET	0x19
  #define MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET	0x1c
  #define MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET	0x1d
-@@ -265,6 +266,7 @@
+@@ -254,6 +255,7 @@
+ 					 MLXPLAT_CPLD_PWM_PG_MASK)
+ #define MLXPLAT_CPLD_I2C_CAP_BIT	0x04
+ #define MLXPLAT_CPLD_I2C_CAP_MASK	GENMASK(5, MLXPLAT_CPLD_I2C_CAP_BIT)
++#define MLXPLAT_CPLD_SYS_RESET_MASK	BIT(0)
+ 
+ /* Masks for aggregation for comex carriers */
+ #define MLXPLAT_CPLD_AGGR_MASK_CARRIER	BIT(1)
+@@ -265,6 +267,7 @@
  #define MLXPLAT_CPLD_LPC_LC_MASK	GENMASK(7, 0)
  
  #define MLXPLAT_CPLD_HALT_MASK		BIT(3)
-+#define MLXPLAT_CPLD_RESET_MASK		0xfe
++#define MLXPLAT_CPLD_RESET_MASK		GENMASK(7, 1)
  
  /* Default I2C parent bus number */
  #define MLXPLAT_CPLD_PHYS_ADAPTER_DEF_NR	1
-@@ -441,6 +443,7 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
+@@ -441,6 +444,7 @@ static struct i2c_mux_reg_platform_data mlxplat_default_mux_data[] = {
  static int mlxplat_max_adap_num;
  static int mlxplat_mux_num;
  static struct i2c_mux_reg_platform_data *mlxplat_mux_data;
@@ -42,7 +52,7 @@ index 1010064d54e9..b577ce572ab1 100644
  
  /* Platform extended mux data */
  static struct i2c_mux_reg_platform_data mlxplat_extended_mux_data[] = {
-@@ -2361,8 +2364,11 @@ static int
+@@ -2361,8 +2365,11 @@ static int
  mlxplat_mlxcpld_l1_switch_pwr_events_handler(void *handle, enum mlxreg_hotplug_kind kind,
  					     u8 action)
  {
@@ -56,7 +66,7 @@ index 1010064d54e9..b577ce572ab1 100644
  	return 0;
  }
  
-@@ -4957,6 +4963,7 @@ static struct mlxreg_core_platform_data mlxplat_mlxcpld_wd_set_type3[] = {
+@@ -4957,6 +4964,7 @@ static struct mlxreg_core_platform_data mlxplat_mlxcpld_wd_set_type3[] = {
  static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  {
  	switch (reg) {
@@ -64,7 +74,7 @@ index 1010064d54e9..b577ce572ab1 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED2_OFFSET:
-@@ -5065,6 +5072,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -5065,6 +5073,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
@@ -72,7 +82,7 @@ index 1010064d54e9..b577ce572ab1 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET:
-@@ -5229,6 +5237,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -5229,6 +5238,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
@@ -80,7 +90,7 @@ index 1010064d54e9..b577ce572ab1 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET:
-@@ -5533,11 +5542,33 @@ static struct mlxreg_core_platform_data
+@@ -5533,11 +5543,33 @@ static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
  
@@ -93,7 +103,7 @@ index 1010064d54e9..b577ce572ab1 100644
 +
 +	ret = regmap_read(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET, &regval);
 +
-+	if (action == SYS_RESTART && !ret && regval & BIT(0))
++	if (action == SYS_RESTART && !ret && regval & MLXPLAT_CPLD_SYS_RESET_MASK)
 +		regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET,
 +			     MLXPLAT_CPLD_RESET_MASK);
 +
@@ -114,7 +124,7 @@ index 1010064d54e9..b577ce572ab1 100644
  	regmap_write(priv->regmap, MLXPLAT_CPLD_LPC_REG_GP1_OFFSET, MLXPLAT_CPLD_HALT_MASK);
  	kernel_halt();
  }
-@@ -5861,6 +5892,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -5861,6 +5893,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
  	pm_power_off = mlxplat_poweroff;
@@ -122,7 +132,7 @@ index 1010064d54e9..b577ce572ab1 100644
  
  	return 1;
  }
-@@ -6410,8 +6442,15 @@ static int __init mlxplat_init(void)
+@@ -6410,8 +6443,15 @@ static int __init mlxplat_init(void)
  	if (err)
  		goto fail_regcache_sync;
  
@@ -138,7 +148,7 @@ index 1010064d54e9..b577ce572ab1 100644
  fail_regcache_sync:
  	mlxplat_pre_exit(priv);
  fail_mlxplat_i2c_main_init:
-@@ -6429,6 +6468,8 @@ static void __exit mlxplat_exit(void)
+@@ -6429,6 +6469,8 @@ static void __exit mlxplat_exit(void)
  
  	if (pm_power_off)
  		pm_power_off = NULL;

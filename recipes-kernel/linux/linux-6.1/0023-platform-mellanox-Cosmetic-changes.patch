@@ -1,9 +1,11 @@
-From 6eab8b9a86035c3f2a9ce953d172c78ce6f5d2e9 Mon Sep 17 00:00:00 2001
+From 851d7b63b861b5f042ec40ee148c7a4503cdee0e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 30 Jul 2023 20:35:23 +0000
-Subject: [PATCH backport 6.1.42 24/85] platform: mellanox: Cosmetic changes
+Subject: [PATH backport v6.1 23/32] platform: mellanox: Cosmetic changes
 
-Fix routines and labels names by s/topology/topology.
+Link: https://www.spinics.net/lists/platform-driver-x86/msg39637.html
+
+Fix routines and labels names by s/topolgy/topology.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
