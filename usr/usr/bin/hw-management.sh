@@ -1349,6 +1349,10 @@ msn46xx_specific()
 				1|3)
 					connect_msn4700_msn4600_A1
 				;;
+				2)
+					connect_msn4700_msn4600
+					lm_sensors_config="$lm_sensors_configs_path/msn4600c_2_sensors.conf"
+				;;
 				*)
 					connect_msn4700_msn4600
 				;;
