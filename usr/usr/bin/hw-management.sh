@@ -1690,6 +1690,7 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 bf3_common()
