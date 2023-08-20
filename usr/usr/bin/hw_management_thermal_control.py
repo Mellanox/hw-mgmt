@@ -2254,8 +2254,6 @@ class ThermalManagement(hw_managemet_file_op):
 
         sensor_list.append("sensor_amb")
 
-        if self.check_file("thermal/drivetemp"):
-            sensor_list.append("drivetemp")
         # remove duplications & soort
         sensor_list = list(set(sensor_list))
         sensor_list.sort()
