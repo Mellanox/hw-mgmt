@@ -1174,6 +1174,7 @@ sn3750sx_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn3750sx_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn3750.json" 
 	get_i2c_bus_frequency_default
 }
 
