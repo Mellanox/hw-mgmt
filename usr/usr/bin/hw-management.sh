@@ -101,7 +101,7 @@ nv4_rev_a1_pci_id=22a4
 leakage_count=0
 asic_chipup_retry=2
 chipup_log_size=4096
-reset_dflt_attr_num=19
+reset_dflt_attr_num=18
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -1690,6 +1690,7 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 bf3_common()
