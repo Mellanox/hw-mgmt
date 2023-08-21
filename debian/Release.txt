@@ -1,14 +1,16 @@
 ================================================================================
-- V.7.0030.1008
-- Tue , 08 Aug 2023 
+- V.7.0030.1010
+- Mon , 21 Aug 2023 
 --------------------------------------------------------------------------------
 
 - Bug fixes
     Issue	Title	
-    #3567299    TC: Moose: MSN-9N402-00RI-7N0: Thermal Algorithm doesn’t decrease under 60% fan PWM  
-    #3567934    TC: Moose: json file comes with sensor_amb min value is 60 but it should be 30 
+    #3505271    Sensors not as expected on tigon setup 
+    #3544619    platform_tests/test_reboot.py::test_watchdog_reboot Failed, reboot cause showing unknown
 
  - Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU 
     o Patch 0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch should be applied 
       for kernel >= 5.10.74 only, to avoid thermal control interface issues
     o This version disables system reset in thermal algorithm
