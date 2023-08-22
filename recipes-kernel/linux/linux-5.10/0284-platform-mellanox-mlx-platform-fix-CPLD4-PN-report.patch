@@ -3,6 +3,10 @@ From: Michael Shych <michaelsh@nvidia.com>
 Date: Wed, 28 Jun 2023 12:23:43 +0000
 Subject: [PATCH v1 1/1] platform: mellanox: mlx-platform: fix CPLD4 PN report.
 
+Add two lines from upstream commits:
+[9045512ca6cdb221cd1ed32d483eac3c30c53bed]
+[ae1aabf44bd672a07c4fa3ef56f069ed7daa7823]
+
 Fix PN report of CPLD4.
 
 Signed-off-by: Michael Shych <michaelsh@nvidia.com>
