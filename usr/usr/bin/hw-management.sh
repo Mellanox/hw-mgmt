@@ -95,6 +95,7 @@ quantum2_pci_id=d2f2
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 leakage_count=0
+reset_dflt_attr_num=18
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -878,6 +879,7 @@ msn274x_specific()
 	echo 2 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn21xx_specific()
@@ -898,6 +900,7 @@ msn21xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
 	echo 4 > $config_path/fan_drwr_num
 	echo 1 > $config_path/fixed_fans_system
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn24xx_specific()
@@ -931,6 +934,7 @@ msn24xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	set_spc1_port_cpld
 	cpld=$(< $config_path/cpld_port)
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn27xx_msb_msx_specific()
@@ -981,6 +985,7 @@ msn27xx_msb_msx_specific()
 
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn201x_specific()
@@ -1001,6 +1006,7 @@ msn201x_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
 	echo 4 > $config_path/fan_drwr_num
 	echo 1 > $config_path/fixed_fans_system
+	echo 8 > $config_path/reset_attr_num
 }
 
 connect_msn3700()
@@ -1066,6 +1072,7 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	get_i2c_bus_frequency_default
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 sn3750sx_specific()
@@ -1101,6 +1108,7 @@ msn3420_specific()
 	echo 3 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn_xh3000_specific()
@@ -1134,6 +1142,7 @@ msn38xx_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3800_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn24102_specific()
@@ -1156,6 +1165,7 @@ msn24102_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
 	get_i2c_bus_frequency_default
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn27002_msb78002_specific()
@@ -1177,6 +1187,7 @@ msn27002_msb78002_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
 	get_i2c_bus_frequency_default
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 connect_msn4700_msn4600()
@@ -1278,6 +1289,7 @@ msn46xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn3510_specific()
@@ -1293,6 +1305,7 @@ msn3510_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 mqm97xx_specific()
@@ -1367,6 +1380,7 @@ mqm97xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 mqm9510_specific()
@@ -1496,6 +1510,7 @@ p4697_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/p4697_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn_spc2_common()
@@ -1535,6 +1550,7 @@ msn_spc2_common()
 			mqmxxx_msn37x_msn34x_specific
 			;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn_spc3_common()
@@ -1565,6 +1581,7 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn48xx_specific()
@@ -1588,6 +1605,7 @@ msn48xx_specific()
 	echo 14 > $config_path/pcie_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 sn2201_specific()
@@ -1623,6 +1641,7 @@ sn2201_specific()
 	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
+	echo 13 > $config_path/reset_attr_num
 }
 
 p2317_specific()
@@ -1636,6 +1655,7 @@ p2317_specific()
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
 	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 sn56xx_specific()
@@ -1682,6 +1702,7 @@ sn_spc4_common()
 			sn56xx_specific
 		;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 check_system()

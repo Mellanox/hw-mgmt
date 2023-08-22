@@ -719,6 +719,17 @@ handle_cpld_versions()
 	echo "$str" > $system_path/cpld
 }
 
+check_reset_attrs()
+{
+	attrname="$1"
+	if [[ "$attrname" == "reset_"* ]]; then
+		reset_attr_count=$((reset_attr_count+1))
+		if [ $reset_attr_count -eq $reset_attr_num ]; then
+			check_n_init $config_path/reset_attr_ready 1
+		fi
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -902,6 +913,8 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
+		reset_attr_num=$(< $config_path/reset_attr_num)
+		reset_attrr_count=0
 		linecard=0
 		# Detect if it belongs to line card or to main board.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
@@ -932,6 +945,7 @@ if [ "$1" == "add" ]; then
 				   [ "$attrname" != "uevent" ] &&
 				   [ "$attrname" != "name" ] && [ "$take" -ne 0 ] ; then
 					ln -sf "$3""$4"/"$attrname" $system_path/"$attrname"
+					check_reset_attrs "$attrname"
 				fi
 			done
 			handle_cpld_versions "$cpld_num"
