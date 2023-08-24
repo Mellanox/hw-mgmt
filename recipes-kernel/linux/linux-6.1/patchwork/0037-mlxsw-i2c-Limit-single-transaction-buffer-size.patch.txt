@@ -1,1 +1,1 @@
-https://github.com/jpirko/linux_mlxsw/commit/162fc0c49b08baf613b1fba211f4d9852845b5b8
+https://lore.kernel.org/all/5745ac4931a39021987addbabd38ca9aec0ab4dd.1692882703.git.petrm@nvidia.com/T/#m21281b772a59128afe1b4aedff01d67513207ebd
