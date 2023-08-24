@@ -530,7 +530,7 @@ Kernel-6.1
 |0040-mlxsw-core-Extend-allowed-list-of-external-cooling-d.patch  |                    | Feature pending                          |            |                                                |
 |0041-mlxsw-i2c-Utilize-standard-macros-for-dividing-buffe.patch  |                    | Feature pending                          |            |                                                |
 |0042-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream                               |            |                                                |
-|0043-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Downstream                               |            |                                                |
+|0043-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
 |0044-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream                               |            |                                                |
 |0045-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream                               |            |                                                |
 |0046-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream                               |            |                                                |
