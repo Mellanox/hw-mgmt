@@ -738,7 +738,7 @@ add_cpu_board_to_connection_table()
 				;;
 				2|4)
 					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type1_xpds_voltmon_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_xpde_voltmon_connection_table[@]} )
 				;;
 				*)
 					# COMEX BWD regular version not support HW_REV register
@@ -1262,6 +1262,10 @@ msn46xx_specific()
 			case $sys_ver in
 				1|3)
 					connect_msn4700_msn4600_A1
+				;;
+				2)
+					connect_msn4700_msn4600
+					lm_sensors_config="$lm_sensors_configs_path/msn4600c_2_sensors.conf"
 				;;
 				*)
 					connect_msn4700_msn4600
