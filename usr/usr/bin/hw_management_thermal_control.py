@@ -1515,9 +1515,7 @@ class psu_fan_sensor(system_device):
         # if PSU is plugged in then PSU fan missing is not an error
         psu_status = self._get_status()
         rpm_file_name = "thermal/{}".format(self.file_input)
-        if psu_status == 0:
-            self.handle_reading_file_err(rpm_file_name)
-        elif self.check_file(rpm_file_name):
+        if psu_status == 1:
             try:
                 value = int(self.read_file(rpm_file_name))
                 self.handle_reading_file_err(rpm_file_name, reset=True)
@@ -1996,7 +1994,7 @@ class ambiant_thermal_sensor(system_device):
                     self.value_dict[file_name] = int(temperature)
                     self.log.debug("{} {} value {}".format(self.name, sens_file_name, temperature))
                 except BaseException:
-                    self.log.error("Error value reading from file: {}".format(self.base_file_name))
+                    self.log.error("Error value reading from file: {}".format(sens_file_name))
                     self.handle_reading_file_err(sens_file_name)
             # in case of multiple error - set sesor to ignore
             if sens_file_name in self.check_reading_file_err():
@@ -2388,7 +2386,7 @@ class ThermalManagement(hw_managemet_file_op):
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
             if self.pwm_worker_timer:
-                self.pwm_worker_timer.start(True)
+                self.pwm_worker_timer.start( self.pwm_target > self.pwm )
             else:
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
