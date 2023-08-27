@@ -2523,9 +2523,12 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
 			restore_i2c_bus_frequency_default
+		else
+			unlock_service_state_change
+			return 0
 		fi
 		echo 0 > $config_path/sfp_counter
-		unlock_service_state_change
+		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		;;
 	1)
 		lock_service_state_change
@@ -2561,7 +2564,13 @@ do_chip_up_down()
 			unlock_service_state_change
 			return 0
 		fi
-		unlock_service_state_change
+		if [ ! -f "$config_path/asic_chipup_completed" ]; then
+			echo 0 > "$config_path/asic_chipup_completed"
+		fi
+		if [ ! -f "$config_path/asics_init_done" ]; then
+			echo 0 > "$config_path/asics_init_done"
+		fi
+		unlock_service_state_change_update_and_match "$config_path/asic_chipup_completed" 1 "$config_path/asic_num" "$config_path/asics_init_done"
 		return 0
 		;;
 	*)
