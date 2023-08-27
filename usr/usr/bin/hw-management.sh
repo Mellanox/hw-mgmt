@@ -1504,7 +1504,7 @@ mqm9520_specific()
 		add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
-	i2c_asic2_bus_default=10
+	asic_i2c_buses=(2 10)
 	i2c_bus_def_off_eeprom_cpu=24
 	i2c_comex_mon_bus_default=23
 	thermal_type=$thermal_type_def
@@ -2034,37 +2034,33 @@ enable_vpd_wp()
 	fi
 }
 
-get_asic_bus()
+set_asic_i2c_bus()
 {
-	if [ ! -f $config_path/asic_bus ]; then
-		find_i2c_bus
+	local asic_bus
+	local asic_num=1
+	local i2c_bus_offset
+
+	if [ -f "$config_path/asic_num" ]; then
+		asic_num=$(< $config_path/asic_num)
+	fi
+
+	find_i2c_bus
+	i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+
+	if [ ${asic_num} -eq 1 ]; then
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
 		echo $asic_bus > $config_path/asic_bus
 		echo $asic_bus > $config_path/asic1_i2c_bus_id
-	else
-		asic_bus=$(cat $config_path/asic_bus)
+		return
 	fi
-	return $((asic_bus))
-}
 
-get_asic2_bus()
-{
-	if [ ! -f "$config_path/asic_num" ]; then
-		return 0
-	fi
-	asic_num=$(< $config_path/asic_num)
-	if [ "$asic_num" -eq 1 ]; then
-		return 0
-	fi
-	i2c_asic_bus=$i2c_asic2_bus_default
-	if [ ! -f $config_path/asic2_i2c_bus_id ]; then
-		find_i2c_bus
-		asic_bus=$((i2c_asic_bus+i2c_bus_offset))
-		echo $asic_bus > $config_path/asic2_i2c_bus_id
-	else
-		asic_bus=$(cat $config_path/asic2_i2c_bus_id)
-	fi
-	return $((asic_bus))
+	for ((i=1; i<=${asic_num}; i++)); do
+		if [ ! -f $config_path/asic${i}_i2c_bus_id ]; then
+			asic_i2c_bus=${asic_i2c_buses[$((i-1))]}
+			asic_i2c_bus=$((asic_i2c_bus+i2c_bus_offset))
+			echo $asic_i2c_bus > $config_path/asic${i}_i2c_bus_id
+		fi
+	done
 }
 
 load_modules()
@@ -2339,8 +2335,7 @@ do_start()
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
-		get_asic_bus
-		get_asic2_bus
+		set_asic_i2c_bus
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
@@ -2410,9 +2405,10 @@ do_stop()
 
 do_chip_up_down()
 {
-	action=$1
-	asic_index=$2
-	pci_bus=$3
+	local action=$1
+	local asic_index=$2
+	local asic_pci_bus=$3
+	local asic_i2c_bus
 
 	if [ -f "$config_path"/asic_control ]; then
 		asic_control=$(< $config_path/asic_control)
@@ -2446,25 +2442,27 @@ do_chip_up_down()
 			;;
 	esac
 
-	map_asic_pci_to_i2c_bus $pci_bus
-	bus=$?
-	if [ $bus -eq 0 ]; then
-		get_asic_bus
-		bus=$?
+	if [ ! -z "${asic_pci_bus}" ]; then
+		map_asic_pci_to_i2c_bus ${asic_pci_bus}
+		asic_i2c_bus=$?
+	elif [ -f $config_path/asic${asic_index}_i2c_bus_id ]; then
+		asic_i2c_bus=$(< $config_path/asic${asic_index}_i2c_bus_id)
+	else
+		asic_i2c_bus=$(< $config_path/asic_i2c_bus_id)
 	fi
 
 	case $action in
 	0)
 		lock_service_state_change
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
+		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			set_i2c_bus_frequency_400KHz
-			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
+			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/delete_device
 			restore_i2c_bus_frequency_default
 		fi
-		echo 0 > $config_path/sfp_counter
+		#echo 0 > $config_path/sfp_counter
 		unlock_service_state_change
 		;;
 	1)
@@ -2477,14 +2475,14 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
 			set_i2c_bus_frequency_400KHz
-			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
+			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
 			restore_i2c_bus_frequency_default
 
-			if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon ]; then
+			if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon ]; then
 				# chipup command failed.
 				unlock_service_state_change
 				return 1
