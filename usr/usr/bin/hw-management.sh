@@ -2290,6 +2290,19 @@ do_chip_up_down()
 	case $action in
 	0)
 		lock_service_state_change
+
+		# If FAN PWM is controllded by ASIC - set it to 100%
+		pwm_link=$thermal_path/pwm1
+		if [ -L ${pwm_link} ] && [ -e ${pwm_link} ];
+		then
+			pwm_src=$(readlink -f ${pwm_link})
+			asic_i2c_add=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-"$bus"/"$bus"-"$i2c_asic_addr_name"
+			if [[ "$pwm_src" == *"$asic_i2c_add"* ]]; then
+				echo  255 > $pwm_link
+				log_info "Set PWM to maximum speed prior fan driver removing."
+			fi
+		fi
+
 		chipup_delay=$(< $config_path/chipup_delay)
 		echo 1 > $config_path/suspend
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
