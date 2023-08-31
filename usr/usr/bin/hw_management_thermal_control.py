@@ -1522,7 +1522,8 @@ class psu_fan_sensor(system_device):
                 self.update_value(value)
                 self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
-                self.handle_reading_file_err(rpm_file_name)
+                self.update_value(-1)
+                pass
         return
 
     # ----------------------------------------------------------------------
@@ -2386,7 +2387,7 @@ class ThermalManagement(hw_managemet_file_op):
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
             if self.pwm_worker_timer:
-                self.pwm_worker_timer.start( self.pwm_target > self.pwm )
+                self.pwm_worker_timer.start(True)
             else:
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
