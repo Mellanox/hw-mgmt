@@ -264,64 +264,71 @@ Kernel-5.10
 |0095-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                |
 |0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                |
 |0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                |
-|0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Feature upstream                         |            | Modular SN4800                                 |
-|0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Feature upstream                         |            | Modular SN4800                                 |
-|0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch  | bfb82c9cceac       | Feature upstream                         |            | Modular SN4800                                 |
-|0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch  | 719fc0662cdc       | Feature upstream                         |            | Modular SN4800                                 |
-|0103-mlxsw-core-Remove-unnecessary-asserts.patch                 | af9911c569d5       | Feature upstream                         |            | Modular SN4800                                 |
-|0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch  | d30bed29a718       | Feature upstream                         |            | Modular SN4800                                 |
-|0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch  | c6e6ad703ed2       | Feature upstream                         |            | Modular SN4800                                 |
-|0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch  | 89dd6fcd07f9       | Feature upstream                         |            | Modular SN4800                                 |
-|0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch  | 655cbb1d7530       | Feature upstream                         |            | Modular SN4800                                 |
-|0108-mlxsw-reg-Extend-PMMP-register-with-new-slot-number-.patch  | 7cb85d3c696e       | Feature upstream                         |            | Modular SN4800                                 |
-|0109-mlxsw-reg-Extend-MGPIR-register-with-new-slot-fields.patch  | b691602c6f96       | Feature upstream                         |            | Modular SN4800                                 |
-|0110-mlxsw-core_env-Pass-slot-index-during-PMAOS-register.patch  | 64e65a540e6d       | Feature upstream                         |            | Modular SN4800                                 |
-|0111-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch  | e94295e0ed27       | Feature upstream                         |            | Modular SN4800                                 |
-|0112-mlxsw-core-Extend-interfaces-for-cable-info-access-w.patch  | 349454526f5f       | Feature upstream                         |            | Modular SN4800                                 |
-|0113-mlxsw-core-Extend-port-module-data-structures-for-li.patch  | e5b6a5bac8cc       | Feature upstream                         |            | Modular SN4800                                 |
-|0114-mlxsw-core-Move-port-module-events-enablement-to-a-s.patch  | b244143a085e       | Feature upstream                         |            | Modular SN4800                                 |
-|0115-mlxsw-core_hwmon-Split-gearbox-initialization.patch         |                    | Feature accepted                         |            | Modular SN4800 squashed (required rebasing)    |
-|0116-mlxsw-core_hwmon-Extend-internal-structures-to-suppo.patch  | b890ad418e1f       | Feature upstream                         |            | Modular SN4800                                 |
-|0117-mlxsw-core_hwmon-Introduce-slot-parameter-in-hwmon-i.patch  | fd27849dd6fd       | Feature upstream                         |            | Modular SN4800                                 |
-|0118-mlxsw-core_hwmon-Extend-hwmon-device-with-gearbox-ma.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0119-mlxsw-core_thermal-Extend-internal-structures-to-sup.patch  | ef0df4fa324a       | Feature upstream                         |            | Modular SN4800                                 |
-|0120-mlxsw-core_thermal-Split-gearbox-initialization.patch       |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0121-mlxsw-core_thermal-Extend-thermal-area-with-gearbox-.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0122-mlxsw-core_thermal-Add-line-card-id-prefix-to-line-c.patch  | 6d94449a7d7d       | Feature upstream                         |            | Modular SN4800                                 |
-|0123-mlxsw-core_thermal-Use-exact-name-of-cooling-devices.patch  | 739d56bc635e       | Feature upstream                         |            | Modular SN4800                                 |
-|0124-mlxsw-core_thermal-Use-common-define-for-thermal-zon.patch  | 03978fb88b06       | Feature upstream                         |            | Modular SN4800                                 |
-|0125-devlink-add-support-to-create-line-card-and-expose-t.patch  | c246f9b5fd61       | Feature upstream                         |            | Modular SN4800                                 |
-|0126-devlink-implement-line-card-provisioning.patch              | fcdc8ce23a30       | Feature upstream                         |            | Modular SN4800                                 |
-|0127-devlink-implement-line-card-active-state.patch              | fc9f50d5b366       | Feature upstream                         |            | Modular SN4800                                 |
-|0128-devlink-add-port-to-line-card-relationship-set.patch        | b83758598538       | Feature upstream                         |            | Modular SN4800                                 |
-|0129-devlink-introduce-linecard-info-get-message.patch           | 276910aecc6a       | Feature upstream                         |            | Modular SN4800                                 |
-|0130-devlink-introduce-linecard-info-get-message.patch           |                    | Feature upstream                         |            | Modular SN4800                                 |
-|0131-mlxsw-reg-Add-Ports-Mapping-event-Configuration-Regi.patch  | ebf0c5341731       | Feature upstream                         |            | Modular SN4800                                 |
-|0132-mlxsw-reg-Add-Management-DownStream-Device-Query-Reg.patch  | 505f524dc660       | Feature upstream                         |            | Modular SN4800                                 |
-|0133-mlxsw-reg-Add-Management-DownStream-Device-Control-R.patch  | 5290a8ff2e11       | Feature upstream                         |            | Modular SN4800                                 |
-|0134-mlxsw-reg-Add-Management-Binary-Code-Transfer-Regist.patch  | 5bade5aa4afc       | Feature upstream                         |            | Modular SN4800                                 |
-|0135-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch  | b217127e5e4e       | Feature upstream                         |            | Modular SN4800                                 |
-|0136-mlxsw-core_linecards-Implement-line-card-activation-.patch  | ee7a70fa671b       | Feature upstream                         |            | Modular SN4800                                 |
-|0137-mlxsw-core-Extend-driver-ops-by-remove-selected-port.patch  | 45bf3b7267e0       | Feature upstream                         |            | Modular SN4800                                 |
-|0138-mlxsw-spectrum-Add-port-to-linecard-mapping.patch           | 6445eef0f600       | Feature upstream                         |            | Modular SN4800                                 |
-|0139-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0140-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch        |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Feature upstream                         |            | Modular SN4800                                 |
-|0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Feature upstream                         |            | Modular SN4800                                 |
-|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Feature upstream                         |            | Modular SN4800                                 |
-|0148-mlxsw-core-Add-interfaces-for-line-card-initializati.patch  | 06a0fc43bb10       | Feature upstream                         |            | Modular SN4800                                 |
-|0149-mlxsw-core_thermal-Add-interfaces-for-line-card-init.patch  | f11a323da46c       | Feature upstream                         |            | Modular SN4800                                 |
-|0150-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch  | 99a03b3193f6       | Feature upstream                         |            | Modular SN4800                                 |
-|0151-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0152-mlxsw-core-Extend-bus-init-function-with-event-handl.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0153-mlxsw-i2c-Add-support-for-system-events-handling.patch      | 33fa6909a263       | Feature upstream                         |            | Modular SN4800                                 |
-|0154-mlxsw-core-Export-line-card-API.patch                       |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0155-mlxsw-minimal-Add-system-event-handler.patch                |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
-|0156-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch  |                    | Feature upstream                         |            | Modular SN4800 squashed (required rebasing)    |
+|0097-1-mlxsw-Use-u16-for-local_port-field.patch                  |                    | Feature pending                          |            |                                                |
+|0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch                    |                    | Feature pending                          |            |                                                |
+|0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch          |                    | Feature pending                          |            |                                                |
+|0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch           |                    | Downstream                               |            |                                                |
+|0098-2-Revert-mlxsw-i2c-Fix-chunk-size-setting.patch             |                    | Downstream                               |            |                                                |
+|0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch   |                    | Downstream                               |            |                                                |
+|0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Downstream                               |            | Modular SN4800                                 |
+|0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Downstream                               |            | Modular SN4800                                 |
+|0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch  | bfb82c9cceac       | Downstream                               |            | Modular SN4800                                 |
+|0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch  | 719fc0662cdc       | Downstream                               |            | Modular SN4800                                 |
+|0103-mlxsw-core-Remove-unnecessary-asserts.patch                 | af9911c569d5       | Downstream                               |            | Modular SN4800                                 |
+|0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch  | d30bed29a718       | Downstream                               |            | Modular SN4800                                 |
+|0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch  | c6e6ad703ed2       | Downstream                               |            | Modular SN4800                                 |
+|0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch  | 89dd6fcd07f9       | Downstream                               |            | Modular SN4800                                 |
+|0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch  | 655cbb1d7530       | Downstream                               |            | Modular SN4800                                 |
+|0108-mlxsw-reg-Extend-PMMP-register-with-new-slot-number-.patch  | 7cb85d3c696e       | Downstream                               |            | Modular SN4800                                 |
+|0109-mlxsw-reg-Extend-MGPIR-register-with-new-slot-fields.patch  | b691602c6f96       | Downstream                               |            | Modular SN4800                                 |
+|0110-mlxsw-core_env-Pass-slot-index-during-PMAOS-register.patch  | 64e65a540e6d       | Downstream                               |            | Modular SN4800                                 |
+|0111-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch  | e94295e0ed27       | Downstream                               |            | Modular SN4800                                 |
+|0112-mlxsw-core-Extend-interfaces-for-cable-info-access-w.patch  | 349454526f5f       | Downstream                               |            | Modular SN4800                                 |
+|0113-mlxsw-core-Extend-port-module-data-structures-for-li.patch  | e5b6a5bac8cc       | Downstream                               |            | Modular SN4800                                 |
+|0114-mlxsw-core-Move-port-module-events-enablement-to-a-s.patch  | b244143a085e       | Downstream                               |            | Modular SN4800                                 |
+|0115-mlxsw-core_hwmon-Split-gearbox-initialization.patch         |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0116-mlxsw-core_hwmon-Extend-internal-structures-to-suppo.patch  | b890ad418e1f       | Downstream                               |            | Modular SN4800                                 |
+|0117-mlxsw-core_hwmon-Introduce-slot-parameter-in-hwmon-i.patch  | fd27849dd6fd       | Downstream                               |            | Modular SN4800                                 |
+|0118-mlxsw-core_hwmon-Extend-hwmon-device-with-gearbox-ma.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0119-mlxsw-core_thermal-Extend-internal-structures-to-sup.patch  | ef0df4fa324a       | Downstream                               |            | Modular SN4800                                 |
+|0120-mlxsw-core_thermal-Split-gearbox-initialization.patch       |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0121-mlxsw-core_thermal-Extend-thermal-area-with-gearbox-.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0122-mlxsw-core_thermal-Add-line-card-id-prefix-to-line-c.patch  | 6d94449a7d7d       | Downstream                               |            | Modular SN4800                                 |
+|0123-mlxsw-core_thermal-Use-exact-name-of-cooling-devices.patch  | 739d56bc635e       | Downstream                               |            | Modular SN4800                                 |
+|0124-mlxsw-core_thermal-Use-common-define-for-thermal-zon.patch  | 03978fb88b06       | Downstream                               |            | Modular SN4800                                 |
+|0125-devlink-add-support-to-create-line-card-and-expose-t.patch  | c246f9b5fd61       | Downstream                               |            | Modular SN4800                                 |
+|0126-devlink-implement-line-card-provisioning.patch              | fcdc8ce23a30       | Downstream                               |            | Modular SN4800                                 |
+|0127-devlink-implement-line-card-active-state.patch              | fc9f50d5b366       | Downstream                               |            | Modular SN4800                                 |
+|0128-devlink-add-port-to-line-card-relationship-set.patch        | b83758598538       | Downstream                               |            | Modular SN4800                                 |
+|0129-devlink-introduce-linecard-info-get-message.patch           | 276910aecc6a       | Downstream                               |            | Modular SN4800                                 |
+|0130-devlink-introduce-linecard-info-get-message.patch           |                    | Downstream                               |            | Modular SN4800                                 |
+|0131-mlxsw-reg-Add-Ports-Mapping-event-Configuration-Regi.patch  | ebf0c5341731       | Downstream                               |            | Modular SN4800                                 |
+|0132-mlxsw-reg-Add-Management-DownStream-Device-Query-Reg.patch  | 505f524dc660       | Downstream                               |            | Modular SN4800                                 |
+|0133-mlxsw-reg-Add-Management-DownStream-Device-Control-R.patch  | 5290a8ff2e11       | Downstream                               |            | Modular SN4800                                 |
+|0134-mlxsw-reg-Add-Management-Binary-Code-Transfer-Regist.patch  | 5bade5aa4afc       | Downstream                               |            | Modular SN4800                                 |
+|0135-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch  | b217127e5e4e       | Downstream                               |            | Modular SN4800                                 |
+|0136-mlxsw-core_linecards-Implement-line-card-activation-.patch  | ee7a70fa671b       | Downstream                               |            | Modular SN4800                                 |
+|0137-mlxsw-core-Extend-driver-ops-by-remove-selected-port.patch  | 45bf3b7267e0       | Downstream                               |            | Modular SN4800                                 |
+|0138-mlxsw-spectrum-Add-port-to-linecard-mapping.patch           | 6445eef0f600       | Downstream                               |            | Modular SN4800                                 |
+|0139-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0140-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch        |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Downstream                               |            | Modular SN4800                                 |
+|0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Downstream                               |            | Modular SN4800                                 |
+|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Downstream                               |            | Modular SN4800                                 |
+|0148-mlxsw-core-Add-interfaces-for-line-card-initializati.patch  | 06a0fc43bb10       | Downstream                               |            | Modular SN4800                                 |
+|0149-mlxsw-core_thermal-Add-interfaces-for-line-card-init.patch  | f11a323da46c       | Downstream                               |            | Modular SN4800                                 |
+|0150-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch  | 99a03b3193f6       | Downstream                               |            | Modular SN4800                                 |
+|0151-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0152-mlxsw-core-Extend-bus-init-function-with-event-handl.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0152-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch      |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|0153-mlxsw-i2c-Add-support-for-system-events-handling.patch      | 33fa6909a263       | Downstream                               |            | Modular SN4800                                 |
+|0154-mlxsw-core-Export-line-card-API.patch                       |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0155-mlxsw-minimal-Add-system-event-handler.patch                |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
+|0156-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch  |                    | Downstream                               |            | Modular SN4800 squashed (required rebasing)    |
 |0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch  | e05d6b658fcd       | Feature upstream                         |            | E3597                                          |
 |0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch  | 7bf8a14dedaf       | Feature upstream                         |            | E3597                                          |
 |0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch  | 08fdb6f3acae       | Feature upstream                         |            | E3597                                          |
@@ -334,9 +341,8 @@ Kernel-5.10
 |0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream accepted                      |            | SN2201                                         |
 |0167-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream                               |            | P2317 only                                     |
 |0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch  |                    | Downstream                               |            | MQM8700 only                                   |
-|0169-TMP-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
-|0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Feature upstream                         |            | Modular SN4800                                 |
+|0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Downstream                               |            | Modular SN4800                                 |
 |0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream accepted                      |            | P4697                                          |
 |0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                |
 |0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch  |                    | Downstream                               |            | SN4800                                         |
@@ -365,121 +371,121 @@ Kernel-5.10
 |0197-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
 |0198-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
 |0199-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            | P4262                                          |
-|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Downstream                          |            | BF3-COME                                       |
 |0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
 |0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Feature upstream                         |            | BF3-COME                                       |
+|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Downstream                               |            | BF3-COME                                       |
 |0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
 |0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Feature upstream                         |            | BF3-COME                                       |
-|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Feature upstream                         |            | BF3-COME                                       |
-|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Feature upstream                         |            | BF3-COME                                       |
-|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Feature pending                          |            | BF3-COME                                       |
-|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Feature upstream                         |            | BF3-COME                                       |
-|0211-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0212-platform-mellanox-mlxbf-pmc-Add-Mellanox-BlueField-P.patch  | 1a218d312e65       | Feature upstream                         |            | BF3-COME                                       |
-|0213-platform-mellanox-mlxbf-pmc-fix-kernel-doc-notation.patch   | 0c59e612c0b6       | Feature upstream                         |            | BF3-COME                                       |
-|0214-platform-mellanox-mlxbf-pmc-Fix-an-IS_ERR-vs-NULL-bu.patch  | 804034c4ffc5       | Feature upstream                         |            | BF3-COME                                       |
-|0215-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-pmc.patch   |                    | Feature pending                          |            | BF3-COME                                       |
-|0216-UBUNTU-SAUCE-mlxbf_pmc-Fix-references-to-sprintf.patch      |                    | Feature pending                          |            | BF3-COME                                       |
-|0217-UBUNTU-SAUCE-mlxbf-pmc-Fix-error-when-reading-unprog.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0218-UBUNTU-SAUCE-platform-mellanox-Add-mlx-trio-driver.patch    |                    | Feature pending                          |            | BF3-COME                                       |
-|0219-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Feature upstream                         |            | BF3-COME                                       |
-|0220-UBUNTU-SAUCE-pka-Add-pka-driver.patch                       |                    | Feature pending                          |            | BF3-COME                                       |
-|0221-UBUNTU-SAUCE-platform-mellanox-Add-mlxbf-livefish-dr.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0222-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Feature upstream                         |            | BF3-COME                                       |
-|0223-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Feature upstream                         |            | BF3-COME                                       |
-|0224-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Feature upstream                         |            | BF3-COME                                       |
-|0225-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Feature pending                          |            | BF3-COME                                       |
-|0226-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Feature upstream                         |            | BF3-COME                                       |
-|0227-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Feature upstream                         |            | BF3-COME                                       |
-|0228-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Feature upstream                         |            | BF3-COME                                       |
-|0229-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Feature upstream                         |            | BF3-COME                                       |
-|0230-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Feature upstream                         |            | BF3-COME                                       |
-|0231-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Feature upstream                         |            | BF3-COME                                       |
-|0232-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0233-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0236-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0237-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Feature upstream                         |            | BF3-COME                                       |
-|0238-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Feature upstream                         |            | BF3-COME                                       |
-|0239-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0240-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0243-UBUNTU-SAUCE-bluefield_edac-Add-SMC-support.patch           |                    | Feature pending                          |            | BF3-COME                                       |
-|0244-UBUNTU-SAUCE-bluefield_edac-Update-license-and-copyr.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0245-gpio-mlxbf2-Convert-to-device-PM-ops.patch                  | dabe57c3a32d       | Feature upstream                         |            | BF3-COME                                       |
-|0246-gpio-mlxbf2-Drop-wrong-use-of-ACPI_PTR.patch                | 603607e70e36       | Feature upstream                         |            | BF3-COME                                       |
-|0247-gpio-mlxbf2-Use-devm_platform_ioremap_resource.patch        | 4e6864f8563d       | Feature upstream                         |            | BF3-COME                                       |
-|0248-gpio-mlxbf2-Use-DEFINE_RES_MEM_NAMED-helper-macro.patch     | d0ef631d40ba       | Feature upstream                         |            | BF3-COME                                       |
-|0249-gpio-mlxbf2-Introduce-IRQ-support.patch                     |                    | Feature pending                          |            | BF3-COME                                       |
-|0250-UBUNTU-SAUCE-gpio-mlxbf2.c-support-driver-version.patch     |                    | Feature pending                          |            | BF3-COME                                       |
-|0251-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Feature upstream                         |            | BF3-COME                                       |
-|0252-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Feature upstream                         |            | BF3-COME                                       |
-|0253-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Feature upstream                         |            | BF3-COME                                       |
-|0254-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Feature upstream                         |            | BF3-COME                                       |
-|0255-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Feature upstream                         |            | BF3-COME                                       |
-|0256-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Feature pending                          |            | BF3-COME                                       |
-|0257-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0258-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0259-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0260-UBUNTU-SAUCE-mlxbf-pka-Fix-kernel-crash-with-pka-TRN.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0261-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch          | b0b698b80c56       | Feature upstream                         |            | BF3-COME                                       |
-|0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Downstream                               |            | BF3-COME                                       |
+|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Downstream                               |            | BF3-COME                                       |
+|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Downstream                               |            | BF3-COME                                       |
+|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Downstream                               |            | BF3-COME                                       |
+|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Downstream                               |            | BF3-COME                                       |
+|0211-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0212-platform-mellanox-mlxbf-pmc-Add-Mellanox-BlueField-P.patch  | 1a218d312e65       | Downstream                               |            | BF3-COME                                       |
+|0213-platform-mellanox-mlxbf-pmc-fix-kernel-doc-notation.patch   | 0c59e612c0b6       | Downstream                               |            | BF3-COME                                       |
+|0214-platform-mellanox-mlxbf-pmc-Fix-an-IS_ERR-vs-NULL-bu.patch  | 804034c4ffc5       | Downstream                               |            | BF3-COME                                       |
+|0215-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-pmc.patch   |                    | Downstream                               |            | BF3-COME                                       |
+|0216-UBUNTU-SAUCE-mlxbf_pmc-Fix-references-to-sprintf.patch      |                    | Downstream                               |            | BF3-COME                                       |
+|0217-UBUNTU-SAUCE-mlxbf-pmc-Fix-error-when-reading-unprog.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0218-UBUNTU-SAUCE-platform-mellanox-Add-mlx-trio-driver.patch    |                    | Downstream                               |            | BF3-COME                                       |
+|0219-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Downstream                               |            | BF3-COME                                       |
+|0220-UBUNTU-SAUCE-pka-Add-pka-driver.patch                       |                    | Downstream                               |            | BF3-COME                                       |
+|0221-UBUNTU-SAUCE-platform-mellanox-Add-mlxbf-livefish-dr.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0222-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Downstream                               |            | BF3-COME                                       |
+|0223-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Downstream                               |            | BF3-COME                                       |
+|0224-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Downstream                               |            | BF3-COME                                       |
+|0225-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Downstream                               |            | BF3-COME                                       |
+|0226-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Downstream                               |            | BF3-COME                                       |
+|0227-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Downstream                               |            | BF3-COME                                       |
+|0228-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Downstream                               |            | BF3-COME                                       |
+|0229-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Downstream                               |            | BF3-COME                                       |
+|0230-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Downstream                               |            | BF3-COME                                       |
+|0231-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Downstream                               |            | BF3-COME                                       |
+|0232-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0233-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0236-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0237-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Downstream                               |            | BF3-COME                                       |
+|0238-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Downstream                               |            | BF3-COME                                       |
+|0239-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0240-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0243-UBUNTU-SAUCE-bluefield_edac-Add-SMC-support.patch           |                    | Downstream                               |            | BF3-COME                                       |
+|0244-UBUNTU-SAUCE-bluefield_edac-Update-license-and-copyr.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0245-gpio-mlxbf2-Convert-to-device-PM-ops.patch                  | dabe57c3a32d       | Downstream                               |            | BF3-COME                                       |
+|0246-gpio-mlxbf2-Drop-wrong-use-of-ACPI_PTR.patch                | 603607e70e36       | Downstream                               |            | BF3-COME                                       |
+|0247-gpio-mlxbf2-Use-devm_platform_ioremap_resource.patch        | 4e6864f8563d       | Downstream                               |            | BF3-COME                                       |
+|0248-gpio-mlxbf2-Use-DEFINE_RES_MEM_NAMED-helper-macro.patch     | d0ef631d40ba       | Downstream                               |            | BF3-COME                                       |
+|0249-gpio-mlxbf2-Introduce-IRQ-support.patch                     |                    | Downstream                               |            | BF3-COME                                       |
+|0250-UBUNTU-SAUCE-gpio-mlxbf2.c-support-driver-version.patch     |                    | Downstream                               |            | BF3-COME                                       |
+|0251-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Downstream                               |            | BF3-COME                                       |
+|0252-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Downstream                               |            | BF3-COME                                       |
+|0253-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Downstream                               |            | BF3-COME                                       |
+|0254-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Downstream                               |            | BF3-COME                                       |
+|0255-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Downstream                               |            | BF3-COME                                       |
+|0256-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Downstream                               |            | BF3-COME                                       |
+|0257-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0258-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0259-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0260-UBUNTU-SAUCE-mlxbf-pka-Fix-kernel-crash-with-pka-TRN.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0261-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0262-UBUNTU-SAUCE-mlxbf-pmc-Fix-event-string-typo.patch          | b0b698b80c56       | Downstream                               |            | BF3-COME                                       |
+|0263-UBUNTU-SAUCE-mlxbf-pmc-Support-for-BlueField-3-perfo.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0264-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Downstream                               |            | BF3-COME                                       |
 |0265-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix upstream                          | 5.10.173   |                                                |
-|0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0266-UBUNTU-SAUCE-mlxbf-pmc-Bug-fix-for-BlueField-3-count.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0267-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Downstream                               |            | BF3-COME                                       |
 |0268-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch  |                    | Downstream                               |            |                                                |
 |0269-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            | P4262                                          |
 |0270-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
-|0275-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Feature upstream                         |            | SN5600                                         |
-|0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Feature pending                          |            | SN5600                                         |
-|0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            | SN5600                                         |
+|0275-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Downstream                               |            | SN5600                                         |
+|0276-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Downstream                               |            | SN5600                                         |
+|0277-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Downstream                               |            | SN5600                                         |
 |0278-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | SN5600                                         |
 |0279-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | P4262                                          |
 |0280-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            | P4262                                          |
 |0281-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
 |0282-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
 |0284-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
-|0285-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0286-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0287-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             |                    | Feature pending                          |            | BF3-COME                                       |
-|0288-UBUNTU-SAUCE-gpio-mmio-handle-ngpios-properly-in-bgp.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0289-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Feature pending                          |            | BF3-COME                                       |
-|0291-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Bugfix pending                           |            |                                                |
-|0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            | BF3-COME                                       |
-|0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Feature pending                          |            |                                                |
+|0285-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0286-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0287-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             |                    | Downstream                               |            | BF3-COME                                       |
+|0288-UBUNTU-SAUCE-gpio-mmio-handle-ngpios-properly-in-bgp.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0289-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Downstream                               |            | BF3-COME                                       |
+|0291-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Downstream                               |            | SN3750SX                                       |
+|0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Downstream                               |            | BF3-COME                                       |
+|0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Downstream                               |            |                                                |
 |0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending; os[sonic,opt]           |            |                                                |
 |0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
-|0296-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0298-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Feature pending                          |            | BF3-COME                                       |
-|0299-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3-COME                                       |
-|0300-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3-COME                                       |
-|0301-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0302-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0303-UBUNTU-SAUCE-Add-BF3-related-ACPI-config-and-Ring-de.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0296-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0298-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream                               |            | BF3-COME                                       |
+|0299-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream                               |            | BF3-COME                                       |
+|0300-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream                               |            | BF3-COME                                       |
+|0301-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0302-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0303-UBUNTU-SAUCE-Add-BF3-related-ACPI-config-and-Ring-de.patch  |                    | Downstream                               |            | BF3-COME                                       |
 |0304-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
 |0305-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Feature pending                          |            |                                                |
-|0306-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Rejected                                 |            |                                                |
-|0307-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Feature pending                          |            |                                                |
-|0308-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Feature pending                          |            |                                                |
-|0309-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Feature pending                          |            |                                                |
-|0310-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
+|0306-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream                               |            |                                                |
+|0307-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream                               |            |                                                |
+|0308-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream                               |            |                                                |
+|0309-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream                               |            |                                                |
+|0310-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Downstream                               |            |                                                |
 |0311-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            | SN2201                                         |
 |0312-platform-mellanox-mlx-platform-Add-reset-callback.patch     |                    | Feature pending                          |            |                                                |
 |0313-platform-mellanox-mlx-platform-Prepare-driver-to-all.patch  |                    | Feature pending                          |            |                                                |
 |0314-platform-mellanox-mlx-platform-Introduce-ACPI-init-f.patch  |                    | Feature pending                          |            |                                                |
 |0315-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
 |0316-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
-|0317-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Feature pending                          |            |                                                |
-|0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Feature pending                          |            |                                                |
-|0319-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Feature pending                          |            | BF3-COME                                       |
-|0320-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0321-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Feature pending                          |            | BF3-COME                                       |
-|0322-UBUNTU-SAUCE-mlxbf-tmfifo.c-Amend-previous-tmfifo-pa.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0323-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Feature pending                          |            | BF3-COME                                       |
-|0324-mlxbf_gige-fix-white-space-in-mlxbf_gige_eth_ioctl.patch    |                    | Feature pending                          |            | BF3-COME                                       |
-|0325-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Feature pending                          |            | BF3-COME                                       |
+|0317-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream                               |            |                                                |
+|0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream                               |            |                                                |
+|0319-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Downstream                               |            | BF3-COME                                       |
+|0320-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0321-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Downstream                               |            | BF3-COME                                       |
+|0322-UBUNTU-SAUCE-mlxbf-tmfifo.c-Amend-previous-tmfifo-pa.patch  |                    | Downstream                               |            | BF3-COME                                       |
+|0323-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream                               |            | BF3-COME                                       |
+|0324-mlxbf_gige-fix-white-space-in-mlxbf_gige_eth_ioctl.patch    |                    | Downstream                               |            | BF3-COME                                       |
+|0325-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Downstream                               |            | BF3-COME                                       |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
@@ -525,7 +531,7 @@ Kernel-6.1
 |0035-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
 |0036-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Bugfix pending                           |            |                                                |
 |0037-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Bugfix pending                           |            |                                                |
-|0038-mlxsw-core_hwmon-Adjust-module-label-names-based-on-.patch  |                    | Feature pending                          |            |                                                |
+|0038-mlxsw-core_hwmon-Adjust-module-label-names-based-on-.patch  |                    | Bugfix pending                           |            |                                                |
 |0039-mlxsw-reg-Limit-MTBR-register-payload-to-a-single-da.patch  |                    | Feature pending                          |            |                                                |
 |0040-mlxsw-core-Extend-allowed-list-of-external-cooling-d.patch  |                    | Feature pending                          |            |                                                |
 |0041-mlxsw-i2c-Utilize-standard-macros-for-dividing-buffe.patch  |                    | Feature pending                          |            |                                                |

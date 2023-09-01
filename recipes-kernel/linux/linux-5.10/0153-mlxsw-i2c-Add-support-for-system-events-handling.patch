@@ -1,7 +1,7 @@
-From 4cc4f0a420eddc9157f8749a5ec133f998d17974 Mon Sep 17 00:00:00 2001
+From 8d7807e7b8326c537aa7db4fe31b2ca183d32248 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 19 Dec 2021 09:12:58 +0000
-Subject: [PATCH backport 5.10 153/182] mlxsw: i2c: Add support for system
+Subject: [PATCH backport v5.10.164 1/1] mlxsw: i2c: Add support for system
  events handling
 
 Extend i2c bus driver with interrupt handler to support system specific
@@ -18,7 +18,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 110 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/i2c.c b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
-index 0cdb9b9d8353..015f6dbe0f8a 100644
+index cc99ec3f4e96..02f5733cfcc6 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/i2c.c
 @@ -9,6 +9,7 @@
@@ -52,10 +52,10 @@ index 0cdb9b9d8353..015f6dbe0f8a 100644
 + * @sys_event_handler: system events handler callback;
 + * @irq: IRQ line number;
 + * @irq_unhandled_count: number of unhandled interrupts;
+  * @status: status to indicate chip reset or in-service update;
   */
  struct mlxsw_i2c {
- 	struct {
-@@ -76,6 +89,12 @@ struct mlxsw_i2c {
+@@ -77,6 +90,12 @@ struct mlxsw_i2c {
  	struct mlxsw_core *core;
  	struct mlxsw_bus_info bus_info;
  	u16 block_size;
@@ -65,10 +65,10 @@ index 0cdb9b9d8353..015f6dbe0f8a 100644
 +	void (*sys_event_handler)(struct mlxsw_core *mlxsw_core);
 +	int irq;
 +	atomic_t irq_unhandled_count;
+ 	u8 status;
  };
  
- #define MLXSW_I2C_READ_MSG(_client, _addr_buf, _buf, _len) {	\
-@@ -517,6 +536,7 @@ mlxsw_i2c_init(void *bus_priv, struct mlxsw_core *mlxsw_core,
+@@ -537,6 +556,7 @@ mlxsw_i2c_init(void *bus_priv, struct mlxsw_core *mlxsw_core,
  	int err;
  
  	mlxsw_i2c->core = mlxsw_core;
@@ -76,7 +76,7 @@ index 0cdb9b9d8353..015f6dbe0f8a 100644
  
  	mbox = mlxsw_cmd_mbox_alloc();
  	if (!mbox)
-@@ -547,6 +567,87 @@ static void mlxsw_i2c_fini(void *bus_priv)
+@@ -567,6 +587,87 @@ static void mlxsw_i2c_fini(void *bus_priv)
  	mlxsw_i2c->core = NULL;
  }
  
@@ -164,7 +164,7 @@ index 0cdb9b9d8353..015f6dbe0f8a 100644
  static const struct mlxsw_bus mlxsw_i2c_bus = {
  	.kind			= "i2c",
  	.init			= mlxsw_i2c_init,
-@@ -639,6 +740,7 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
+@@ -661,6 +762,7 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
  	mlxsw_i2c->bus_info.dev = &client->dev;
  	mlxsw_i2c->bus_info.low_frequency = true;
  	mlxsw_i2c->dev = &client->dev;
@@ -172,7 +172,7 @@ index 0cdb9b9d8353..015f6dbe0f8a 100644
  
  	err = mlxsw_core_bus_device_register(&mlxsw_i2c->bus_info,
  					     &mlxsw_i2c_bus, mlxsw_i2c, false,
-@@ -648,6 +750,12 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
+@@ -670,6 +772,12 @@ static int mlxsw_i2c_probe(struct i2c_client *client,
  		return err;
  	}
  
@@ -185,7 +185,7 @@ index 0cdb9b9d8353..015f6dbe0f8a 100644
  	return 0;
  
  errout:
-@@ -661,6 +769,8 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
+@@ -683,6 +791,8 @@ static int mlxsw_i2c_remove(struct i2c_client *client)
  {
  	struct mlxsw_i2c *mlxsw_i2c = i2c_get_clientdata(client);
  
