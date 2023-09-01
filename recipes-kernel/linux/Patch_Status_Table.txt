@@ -555,19 +555,20 @@ Kernel-6.1
 |0069-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Feature pending                          |            | BF3                                            |
 |0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Feature pending                          |            | BF3                                            |
 |0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Feature pending                          |            | BF3                                            |
-|0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           |                    | Feature pending                          |            | BF3                                            |
-|0073-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  |                    | Feature pending                          |            | BF3                                            |
+|0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           | 2321d69f92aa       | Feature upstream                         |            | BF3                                            |
+|0073-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  | 20d03d4d9437       | Feature upstream                         |            | BF3                                            |
 |0074-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Feature pending                          |            | BF3                                            |
 |0075-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Bugfix pending                           |            | BF3                                            |
 |0076-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Feature pending                          |            | BF3                                            |
-|0077-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Feature pending                          |            | BF3                                            |
-|0078-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature pending                          |            | BF3                                            |
+|0077-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Feature accepted                         |            | BF3                                            |
+|0078-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Feature accepted                         |            | BF3                                            |
 |0079-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Feature pending                          |            | BF3                                            |
 |0080-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Feature pending                          |            | BF3                                            |
 |0081-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Feature pending                          |            | BF3                                            |
 |0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Feature pending                          |            | BF3                                            |
 |0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Feature pending                          |            | BF3                                            |
 |0084-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Bugfix pending                           |            | BF3                                            |
+|0085-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream                               |            | Disable FW update                              |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |8004-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream                               |            | IB only                                        |
