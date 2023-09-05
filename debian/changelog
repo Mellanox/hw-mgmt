@@ -1,4 +1,4 @@
-hw-management (1.mlnx.7.0030.1008) unstable; urgency=low
+hw-management (1.mlnx.7.0030.1008.Marlin) unstable; urgency=low
   [ MLNX ] 
 
- -- MellanoxBSP <system-sw-low-level@mellanox.com> Tue, 08 Aug 2023 13:50:00 +0300
+ -- MellanoxBSP <system-sw-low-level@mellanox.com> Tue, 05 Sep 2023 13:50:00 +0300

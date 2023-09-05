@@ -1,4 +1,15 @@
 ================================================================================
+- V.7.0030.1008.Marlin
+- Tue , 05 Sep 2023
+--------------------------------------------------------------------------------
+
+- Bug Fixes
+   Fix ASIC I2C address for MQM9510 and MQM95201
+   Added kernel patch for MQM9510 and MQM9520 support
+   Fix ASIC I2C bus configuration for multi-asic systems
+   Fix calculation of SFP module counter for multi-asic systems
+
+================================================================================
 - V.7.0030.1008
 - Tue , 08 Aug 2023 
 --------------------------------------------------------------------------------
