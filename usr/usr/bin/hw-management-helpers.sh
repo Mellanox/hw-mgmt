@@ -242,6 +242,33 @@ change_file_counter()
 	echo $counter > $file_name
 }
 
+# Update counter, match attribute, unlock.
+# $1 - file with counter
+# $2 - value to update counter ( 1 increase, -1 decrease)
+# $3 - file to match with the counter
+# $4 - file to set according to the match ( 0 not matched, 1 matched)
+unlock_service_state_change_update_and_match()
+{
+	update_file_name=$1
+	val=$2
+	match_file_name=$3
+	set_file_name=$4
+	local counter
+	local match
+
+	change_file_counter "$update_file_name" "$val"
+	if [ ! -z "$3" ] && [ ! -z "$4" ]; then
+		counter=$(< $update_file_name)
+		match=$(< $match_file_name)
+		if [ $counter -eq $match ]; then
+			echo 1 > $set_file_name
+		else
+			echo 0 > $set_file_name
+		fi
+	fi
+	/usr/bin/flock -u ${LOCKFD}
+}
+
 connect_device()
 {
 	find_i2c_bus

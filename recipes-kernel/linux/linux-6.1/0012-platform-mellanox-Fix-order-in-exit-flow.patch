@@ -1,8 +1,7 @@
-From e2db46ecf593790bffe28b1bb6adf63a0cd82044 Mon Sep 17 00:00:00 2001
+From 257c3eaf7d68e1855ea9ac93298c5231db24e2e1 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 23 Jul 2023 20:46:32 +0000
-Subject: [PATCH backport 6.1.42 12/85] platform: mellanox: Fix order in exit
- flow
+Date: Sun, 13 Aug 2023 08:37:32 +0000
+Subject: [PATH backport v6.1 12/32] platform: mellanox: Fix order in exit flow
 
 Fix exit flow order: call mlxplat_post_exit() after
 mlxplat_i2c_main_exit() in order to unregister main i2c driver before
@@ -11,6 +10,8 @@ to "mlxplat" driver.
 Fixes: 0170f616f496 ("platform: mellanox: Split initialization procedure")
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
+Link: https://lore.kernel.org/r/20230813083735.39090-2-vadimp@nvidia.com
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
 ---
  drivers/platform/x86/mlx-platform.c | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)

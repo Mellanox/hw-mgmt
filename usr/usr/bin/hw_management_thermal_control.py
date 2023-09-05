@@ -264,6 +264,10 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60,
                          "input_suffix": "_input"
                         },
+    r'ctx_amb\d*':       {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
+                         "input_suffix": "_input"
+                        }
 }
 
 
@@ -1511,16 +1515,15 @@ class psu_fan_sensor(system_device):
         # if PSU is plugged in then PSU fan missing is not an error
         psu_status = self._get_status()
         rpm_file_name = "thermal/{}".format(self.file_input)
-        if psu_status == 0:
-            self.handle_reading_file_err(rpm_file_name)
-        elif self.check_file(rpm_file_name):
+        if psu_status == 1:
             try:
                 value = int(self.read_file(rpm_file_name))
                 self.handle_reading_file_err(rpm_file_name, reset=True)
                 self.update_value(value)
                 self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
-                self.handle_reading_file_err(rpm_file_name)
+                self.update_value(-1)
+                pass
         return
 
     # ----------------------------------------------------------------------
@@ -1992,7 +1995,7 @@ class ambiant_thermal_sensor(system_device):
                     self.value_dict[file_name] = int(temperature)
                     self.log.debug("{} {} value {}".format(self.name, sens_file_name, temperature))
                 except BaseException:
-                    self.log.error("Error value reading from file: {}".format(self.base_file_name))
+                    self.log.error("Error value reading from file: {}".format(sens_file_name))
                     self.handle_reading_file_err(sens_file_name)
             # in case of multiple error - set sesor to ignore
             if sens_file_name in self.check_reading_file_err():
@@ -2076,7 +2079,8 @@ class ThermalManagement(hw_managemet_file_op):
                           r'sodimm\d+':"add_sodimm_sensor",
                           r'sensor_amb':"add_amb_sensor",
                           r'drivetemp':"add_drivetemp_sensor",
-                          r'ibc\d*':"add_ibc_sensor"
+                          r'ibc\d*':"add_ibc_sensor",
+                          r'ctx_amb\d*':"add_connectx_sensor"
                          }
 
     def __init__(self, cmd_arg, tc_logger):
@@ -2244,13 +2248,11 @@ class ThermalManagement(hw_managemet_file_op):
 
         # Collect sodimm sensors
         for sodimm_idx in range(1, 5):
-            if self.check_file("thermal/sodimm{}_input".format(sodimm_idx)):
+            if self.check_file("thermal/sodimm{}_temp_input".format(sodimm_idx)):
                 sensor_list.append("sodimm{}".format(sodimm_idx))
 
         sensor_list.append("sensor_amb")
 
-        if self.check_file("thermal/drivetemp"):
-            sensor_list.append("drivetemp")
         # remove duplications & soort
         sensor_list = list(set(sensor_list))
         sensor_list.sort()
@@ -2393,7 +2395,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
             pwm_real = self.read_pwm()
             if not pwm_real:
-                self.log.error("Read PWM error. Possible hw-management is not running", 1)
+                self.log.warn("Read PWM error. Possible hw-management is not running", 1)
                 return
 
             if pwm_real != self.pwm:
@@ -2406,7 +2408,7 @@ class ThermalManagement(hw_managemet_file_op):
         if self.pwm_target == self.pwm:
             pwm_real = self.read_pwm()
             if not pwm_real:
-                self.log.error("Read PWM error. Possible hw-management is not running", 1)
+                self.log.warn("Read PWM error. Possible hw-management is not running", 1)
                 return
 
             if pwm_real != self.pwm:
@@ -2696,8 +2698,10 @@ class ThermalManagement(hw_managemet_file_op):
             self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
         elif self.check_file("thermal/cpu_core1"):
             self._sensor_add_config("thermal_sensor", "cpu_core1", {"base_file_name": "thermal/cpu_core1"})
+        elif self.check_file("thermal/core_temp"):
+            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/core_temp"})
         else:
-            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_pack"})
+            self._sensor_add_config("thermal_sensor", "cpu_pack", {"base_file_name": "thermal/cpu_core_sensor"})
 
     # ----------------------------------------------------------------------
     def add_voltmon_sensor(self, name):
@@ -2734,6 +2738,10 @@ class ThermalManagement(hw_managemet_file_op):
         in_file = "thermal/pwr_conv{}_temp1".format(idx)
         sensor_name = "{}".format(name)
         self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_connectx_sensor(self, name):
+        self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
 
     # ----------------------------------------------------------------------
     def add_sensors(self):

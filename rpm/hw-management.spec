@@ -114,7 +114,6 @@ install -m 0755 usr/usr/bin/hw-management-helpers.sh $RPM_BUILD_ROOT/usr/bin/hw-
 install -m 0755 usr/usr/bin/hw-management-i2c-gpio-expander.sh $RPM_BUILD_ROOT/usr/bin/hw-management-i2c-gpio-expander.sh
 install -m 0755 usr/usr/bin/hw-management-if-rename.sh $RPM_BUILD_ROOT/usr/bin/hw-management-if-rename.sh
 install -m 0755 usr/usr/bin/hw-management-led-state-conversion.sh $RPM_BUILD_ROOT/usr/bin/hw-management-led-state-conversion.sh
-install -m 0755 usr/usr/bin/hw-management-liquid-cooling.sh $RPM_BUILD_ROOT/usr/bin/hw-management-liquid-cooling.sh
 install -m 0755 usr/usr/bin/hw-management-parse-eeprom.sh $RPM_BUILD_ROOT/usr/bin/hw-management-parse-eeprom.sh
 install -m 0755 usr/usr/bin/hw-management-power-helper.sh $RPM_BUILD_ROOT/usr/bin/hw-management-power-helper.sh
 install -m 0755 usr/usr/bin/hw-management-ps-vpd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ps-vpd.sh
@@ -238,7 +237,6 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-devtree-check.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-devtree.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-if-rename.sh"
-%attr(0755, root, root) "/usr/bin/hw-management-liquid-cooling.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-vpd-parser.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control.py"
 
