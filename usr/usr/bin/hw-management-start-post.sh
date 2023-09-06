@@ -74,7 +74,7 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130)
+	HI130|HI151)
 		# Only for MQM9700
                 if [ -e "$ui_tree_archive" ]; then
                     # Extract the ui_tree archive to /var/run/hw-management
@@ -82,7 +82,7 @@ case $sku in
                     echo 1 > "$config_path"/labels_ready
                     log_info "Labels data base is ready"
                 else
-		    hw-management-label-init-complete.sh &
+					hw-management-label-init-complete.sh &
                 fi
 		;;
 	*)
