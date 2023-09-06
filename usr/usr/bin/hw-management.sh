@@ -983,6 +983,7 @@ msn24xx_specific()
 		HI138)
 			# SGN2410_A1
 			connect_table+=(${msn2700_A2D_base_connect_table[@]})
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			hotplug_fans=0
 			max_tachos=0
 		;;
@@ -997,6 +998,7 @@ msn24xx_specific()
 			echo 2000 > $config_path/psu_fan_min
 			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 			echo 24c02 > $config_path/psu_eeprom_type
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
 			;;
 	esac
 	add_cpu_board_to_connection_table
@@ -1021,6 +1023,23 @@ msn27xx_msb_msx_specific()
 			;;
 		*)
 			connect_table+=(${msn2700_A2D_base_connect_table[@]})
+			;;
+	esac
+	# Connect TC data table 
+	case $product in
+		MSN27*)
+			# Panther
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
+			;;
+		MSN241*)
+			# Spider
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
+			;;
+		MSB78*|MSB77*)
+			# Scorp
+			thermal_control_config="$thermal_control_configs_path/tc_config_msb7xxx.json"
+			;;
+		*)
 			;;
 	esac
 	add_cpu_board_to_connection_table
@@ -1056,7 +1075,6 @@ msn27xx_msb_msx_specific()
 
 	set_spc1_port_cpld
 
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
 	echo 8 > $config_path/reset_attr_num
@@ -1276,7 +1294,7 @@ msn27002_msb78002_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn27002_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
 	get_i2c_bus_frequency_default
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
@@ -1504,6 +1522,7 @@ mqm9510_specific()
 	leakage_count=3
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	named_busses+=(${mqm9510_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1530,6 +1549,7 @@ mqm9520_specific()
 	leakage_count=8
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	named_busses+=(${mqm9520_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1742,6 +1762,7 @@ msn48xx_specific()
 	echo 14 > $config_path/cx_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
@@ -1793,6 +1814,7 @@ p2317_specific()
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
 	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
@@ -1870,6 +1892,7 @@ p4262_specific()
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4262_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
