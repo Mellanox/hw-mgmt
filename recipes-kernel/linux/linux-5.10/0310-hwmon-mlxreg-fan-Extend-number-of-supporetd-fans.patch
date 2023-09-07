@@ -1,8 +1,8 @@
-From e8a25629ee7fe99dd31b25afd33303c86ef3804e Mon Sep 17 00:00:00 2001
+From bfd3600fe51e7f2fe5f5777936b308c18220b85c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 23 Jul 2023 06:49:01 +0000
-Subject: [PATCH backport 5.10.179 5/5] hwmon: (mlxreg-fan) Extend number of
- supporetd fans
+Subject: [PATCH] hwmon: (mlxreg-fan) Extend number of supporetd fans
+X-NVConfidentiality: public
 
 Some new big modular systems can be equipped with up to 24 fans.
 Extend maximum number of fans accordingly.
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 11 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/hwmon/mlxreg-fan.c b/drivers/hwmon/mlxreg-fan.c
-index 516cc4cb7..ff4461067 100644
+index c0b42821f..298af1d9b 100644
 --- a/drivers/hwmon/mlxreg-fan.c
 +++ b/drivers/hwmon/mlxreg-fan.c
 @@ -12,7 +12,7 @@
@@ -25,23 +25,23 @@ index 516cc4cb7..ff4461067 100644
  #define MLXREG_FAN_MAX_PWM		4
  #define MLXREG_FAN_PWM_NOT_CONNECTED	0xff
  #define MLXREG_FAN_MAX_STATE		10
-@@ -285,6 +285,16 @@ static const struct hwmon_channel_info *mlxreg_fan_hwmon_info[] = {
+@@ -276,6 +276,16 @@ static char *mlxreg_fan_name[] = {
+ 
+ static const struct hwmon_channel_info *mlxreg_fan_hwmon_info[] = {
+ 	HWMON_CHANNEL_INFO(fan,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
++			   HWMON_F_INPUT | HWMON_F_FAULT,
  			   HWMON_F_INPUT | HWMON_F_FAULT,
  			   HWMON_F_INPUT | HWMON_F_FAULT,
  			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
-+			   HWMON_F_INPUT | HWMON_F_FAULT,
- 			   HWMON_F_INPUT | HWMON_F_FAULT),
- 	HWMON_CHANNEL_INFO(pwm,
- 			   HWMON_PWM_INPUT,
 -- 
-2.20.1
+2.14.1
 
