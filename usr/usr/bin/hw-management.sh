@@ -160,13 +160,16 @@ cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
-cpu_type3_mps_voltmon_connection_table=(	mp2975 0x6a 15 comex_voltmon1 \
-						mp2975 0x6b 15 comex_voltmon2)
+#
+# BF3 CPU.
+#
+bf3_come_voltmon_connection_table=( \
+			mp2975 0x69 15 comex_voltmon1 \
+			mp2975 0x6a 15 comex_voltmon2)
 
-bf3_come_connection_table=(	tmp421 0x1f 15 \
-				mp2975 0x69 15 \
-				mp2975 0x6a 15 \
-				24c32 0x50 16)
+bf3_come_connection_table=(	\
+			tmp421 0x1f 15 \
+			24c32 0x50 16)
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -834,18 +837,8 @@ add_cpu_board_to_connection_table()
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		$BF3_CPU)
-			case $sku in
-				# MQM9700+BF3
-				HI151)
-					cpu_connection_table=( ${bf3_come_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
-					;;
-				# MSN4700+BF3
-				HI156)
-					cpu_connection_table=( ${bf3_come_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type3_mps_voltmon_connection_table[@]} )
-					;;
-			esac
+			cpu_connection_table=( ${bf3_come_connection_table[@]} )
+			cpu_voltmon_connection_table=( ${bf3_come_voltmon_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
