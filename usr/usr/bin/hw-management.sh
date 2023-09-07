@@ -2531,7 +2531,6 @@ do_chip_up_down()
 			unlock_service_state_change
 			return 0
 		fi
-		echo 0 > $config_path/sfp_counter
 		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		;;
 	1)
@@ -2546,7 +2545,6 @@ do_chip_up_down()
 		chipup_delay=$(< $config_path/chipup_delay)
 		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
 			sleep "$chipup_delay"
-			echo 0 > $config_path/sfp_counter
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
 			restore_i2c_bus_frequency_default
