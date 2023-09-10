@@ -71,6 +71,10 @@ psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 psu3_i2c_addr=0x5b
 psu4_i2c_addr=0x5a
+psu5_i2c_addr=0x5d
+psu6_i2c_addr=0x5c
+psu7_i2c_addr=0x5e
+psu8_i2c_addr=0x5f
 psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
@@ -95,6 +99,7 @@ i2c_freq_reg=0x2004
 spc3_pci_id=cf70
 spc4_pci_id=cf80
 quantum2_pci_id=d2f2
+quantum3_pci_id=d2f4
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
@@ -116,6 +121,7 @@ reset_dflt_attr_num=18
 
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
+xdr_cpu_bus_offset=66
 
 connect_table=()
 named_busses=()
@@ -490,6 +496,36 @@ p4262_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x21 29 voltmon4 \
 	mp2975 0x23 29 voltmon5 )
 
+# Just for possible initial step without SMBios alternative BOM string
+qm3400_base_connect_table=( \
+	mp2891 0x66 5  \
+	mp2891 0x68 5  \
+	mp2891 0x6c 5  \
+	mp2891 0x66 21 \
+	mp2891 0x68 21 \
+	mp2891 0x6c 21 \
+	tmp102 0x49 6  \
+	tmp102 0x4a 7  \
+	24c512 0x51 8 )
+
+# Just for possible initial step without SMBios alternative BOM string
+qm3000_base_connect_table=( \
+	mp2891 0x66 5  \
+	mp2891 0x68 5  \
+	mp2981 0x6c 5  \
+	mp2891 0x66 21 \
+	mp2891 0x68 21 \
+	mp2891 0x6c 21 \
+	mp2891 0x66 37 \
+	mp2891 0x68 37 \
+	mp2891 0x6c 37 \
+	mp2891 0x66 53 \
+	mp2891 0x68 53 \
+	mp2891 0x6c 53 \
+	tmp102 0x49 6  \
+	tmp102 0x4a 7  \
+	24c512 0x51 8 )
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
@@ -497,6 +533,8 @@ mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
+qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
+qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 
 ACTION=$1
 
@@ -827,7 +865,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# MQM9700, P4697 removed A2D from CFL
-				HI130|HI142|HI152)  # TBD MS. Which other systems have CFL comex with A2D
+				HI130|HI142|HI152|HI157|HI158)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
@@ -1877,6 +1915,68 @@ p4262_specific()
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
+qm3xxx_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		if [ "$sku" == "HI157" ]; then
+			connect_table+=(${qm3400_base_connect_table[@]})
+		else
+			connect_table+=(${qm3000_base_connect_table[@]})
+		fi
+		add_cpu_board_to_connection_table $xdr_cpu_bus_offset
+	fi
+	# Set according to front fan max.
+	echo echo 21800 > $config_path/fan_max_speed
+	# Set as 20% of max speed
+	echo 4360 > $config_path/fan_min_speed
+	echo 27500 > $config_path/psu_fan_max
+	# Set as 20% of max speed
+	echo 5500 > $config_path/psu_fan_min
+	i2c_comex_mon_bus_default=$((xdr_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((xdr_cpu_bus_offset+6))
+
+	if [ "$sku" == "HI157" ]; then
+		max_tachos=10
+		hotplug_fans=5
+		hotplug_pwrs=4
+		hotplug_psus=4
+		echo 4 > $config_path/cpld_num
+		lm_sensors_config="$lm_sensors_configs_path/qm3400_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_qm3400.json"
+		named_busses+=(${qm3400_named_busses[@]})
+		asic_i2c_buses=(2 18)
+	else
+		max_tachos=20
+		hotplug_fans=10
+		hotplug_pwrs=8
+		hotplug_psus=8
+		echo 6 > $config_path/cpld_num
+		lm_sensors_config="$lm_sensors_configs_path/qm3000_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_qm3000.json"
+		named_busses+=(${qm3000_named_busses[@]})
+		asic_i2c_buses=(2 18 34 50)
+	fi
+
+	add_come_named_busses $xdr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+}
+
+qm_qm3_common()
+{
+	case $sku in
+		HI157)	# QM3400
+			qm3xxx_specific
+		;;
+		HI158)	# QM3000
+			qm3xxx_specific
+		;;
+		*)
+			qm3xxx_specific
+		;;
+	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+}
+
 check_system()
 {
 	# Check ODM
@@ -1922,6 +2022,9 @@ check_system()
 			;;
 		VMOD0016)
 			bf3_common
+			;;
+		VMOD0018)
+			qm_qm3_common
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2266,13 +2369,19 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
+	HI157)
+		asic_pci_id=${quantum3_pci_id}
+		;;
+	HI158)
+		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
 		;;
 	esac
 
-	asics=`lspci -nn | grep $asic_pci_id | awk '{print $1}'`
+	asics=`lspci -nn | grep -E $asic_pci_id | awk '{print $1}'`
 	case $sku in
 	HI140)
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`   # 2-nd for ASIC1 because it appears first
@@ -2303,6 +2412,24 @@ set_asic_pci_id()
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
+		;;
+	HI157)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asics" | wc -l > "$config_path"/asic_num
+		;;
+	HI158)
+		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
 		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
@@ -2339,6 +2466,9 @@ pre_devtr_init()
 		;;
 	VMOD0017)
 		echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+		;;
+	VMOD0018)
+		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	*)
 		;;
