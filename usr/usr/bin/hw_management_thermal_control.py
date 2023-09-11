@@ -2139,6 +2139,7 @@ class ThermalManagement(hw_managemet_file_op):
             while not self.is_pwm_exists():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
+            self.log.notice("PWM control activated", 1)
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
@@ -2522,7 +2523,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         ret = True
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
-            if not self.read_pwm():
+            if self.read_pwm() == None:
                 ret = False
         return ret
 

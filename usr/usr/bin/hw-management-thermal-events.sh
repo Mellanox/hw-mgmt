@@ -56,6 +56,7 @@ fan_drwr_num=0
 # 46 - F, 52 - R
 fan_direction_exhaust=46
 fan_direction_intake=52
+pwm_min_level=51
 
 FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 
@@ -323,6 +324,11 @@ if [ "$1" == "add" ]; then
 
 				if [ -f "$3""$4"/pwm1 ]; then
 					ln -sf  "$3""$4"/pwm1 "$tpath"/pwm1
+					pwm_level=$(< "$thermal_path/pwm1")
+					# If PWM level less then minimum then set it to default value
+					if [ $pwm_level -lt $pwm_min_level ]; then
+						echo $pwm_min_level > $thermal_path/pwm1
+					fi
 					echo "$name" > "$cpath"/cooling_name
 				fi
 				if [ -f "$cpath"/fan_inversed ]; then
@@ -394,6 +400,11 @@ if [ "$1" == "add" ]; then
 		name=$(< "$3""$4"/name)
 		echo "$name" > $config_path/cooling_name
 		check_n_link "$3""$4"/pwm1 $thermal_path/pwm1
+		pwm_level=$(< "$thermal_path/pwm1")
+		# If PWM level less then minimum then set it to default value
+		if [ $pwm_level -lt $pwm_min_level ]; then
+			echo $pwm_min_level > $thermal_path/pwm1
+		fi
 		for ((i=1; i<=max_pwm; i+=1)); do
 			check_n_link "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
 		done
