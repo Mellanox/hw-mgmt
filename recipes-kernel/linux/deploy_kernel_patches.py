@@ -32,7 +32,6 @@
 # ARISING IN A WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-from _weakref import ref
 
 """
 Created on Jan 20, 2023
@@ -47,7 +46,6 @@ import os
 import sys
 import argparse
 import re
-from collections import OrderedDict
 import pdb
 
 #############################
@@ -174,7 +172,7 @@ def load_patch_table(path, k_version):
 
     # if kernel version not found
     if table_ofset >= len(patch_table_lines)-5:
-        print ("Err: kernel version {} not found in {}".format(k_version, patch_table_filename))
+        print("Err: kernel version {} not found in {}".format(k_version, patch_table_filename))
         return None
 
     table = []
@@ -184,7 +182,7 @@ def load_patch_table(path, k_version):
         if CONST.PATCH_TABLE_DELIMITER in line:
             delimiter_count += 1
             if delimiter_count >= 3:
-                print ("Err: too much leading delimers line #{}: {}".format(table_ofset + idx, line))
+                print("Err: too much leading delimers line #{}: {}".format(table_ofset + idx, line))
                 return None
             elif table:
                 break
@@ -195,26 +193,25 @@ def load_patch_table(path, k_version):
             if not column_names:
                 column_names = get_line_elements(line)
                 if not column_names:
-                    print ("Err: parsing table header line #{}: {}".format(table_ofset + idx, line))
+                    print("Err: parsing table header line #{}: {}".format(table_ofset + idx, line))
                     return None
                 delimiter_count = 0
                 continue
             elif column_names:
                 line_arr = get_line_elements(line)
                 if len(line_arr) != len(column_names):
-                    print ("Err: patch table wrong format linex #{}: {}".format(table_ofset + idx, line))
+                    print("Err: patch table wrong format linex #{}: {}".format(table_ofset + idx, line))
                     return None
-                else:
-                    table_line = dict(zip(column_names, line_arr))
-                    patch_status_line = table_line[CONST.STATUS]
-                    patch_status = parse_status(patch_status_line, table_line[CONST.PATCH_NAME])
-                    if not patch_status:
-                        print ("Err: can't parse patch {} status {}".format(table_line[CONST.PATCH_NAME],
-                                                                            patch_status_line))
-                        return None
-                    table_line[CONST.STATUS] = patch_status
-                    table_line[CONST.PATCH_DST] = None
-                    table.append(table_line)
+                table_line = dict(zip(column_names, line_arr))
+                patch_status_line = table_line[CONST.STATUS]
+                patch_status = parse_status(patch_status_line, table_line[CONST.PATCH_NAME])
+                if not patch_status:
+                    print("Err: can't parse patch {} status {}".format(table_line[CONST.PATCH_NAME],
+                                                                       patch_status_line))
+                    return None
+                table_line[CONST.STATUS] = patch_status
+                table_line[CONST.PATCH_DST] = None
+                table.append(table_line)
 
     return table
 
@@ -240,9 +237,9 @@ def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
         target_kver_lst = kver.split('.')
         if len(patch_kver_lst) != 3:
             print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-            ret =  None
+            ret = None
         elif int(patch_kver_lst[2]) <= int(target_kver_lst[2]):
-            ret =  candidate_folder
+            ret = candidate_folder
     patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return ret
 
@@ -266,7 +263,7 @@ def copy_to_candidate_ver_filter(patch, accepted_folder, candidate_folder, kver)
     if len(patch_kver_lst) != 3:
         print("Err: patch {} subversion \"{}\" not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
     elif patch_kver_lst[2] > target_kver_lst[2]:
-        ret =  candidate_folder
+        ret = candidate_folder
     patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return ret
 
@@ -293,8 +290,8 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         take_strong = nos in take_list or nos in os_list
         skip_strong = nos in skip_list
         if (take_strong and skip_strong) or ("ALL" in take_list and "ALL" in skip_list) or "ALL" in os_list:
-             print ("ERR: Conflict in patch status options\n{} : {}".format(patch[CONST.PATCH_NAME], patch[CONST.STATUS]))
-             sys.exit(1)
+            print("ERR: Conflict in patch status options\n{} : {}".format(patch[CONST.PATCH_NAME], patch[CONST.STATUS]))
+            sys.exit(1)
 
         if skip_strong:
             continue
@@ -320,7 +317,7 @@ def os_cmd(cmd):
 # ----------------------------------------------------------------------
 def print_patch_all(patch_list):
     for patch_ent in patch_list:
-        print ("{} -> {}".format(patch_ent.get(CONST.SRC, "None"), patch_ent.get(CONST.DST, "Skip")))
+        print("{} -> {}".format(patch_ent.get(CONST.SRC, "None"), patch_ent.get(CONST.DST, "Skip")))
 
 # ----------------------------------------------------------------------
 def process_patch_list(patch_list):
@@ -331,14 +328,14 @@ def process_patch_list(patch_list):
             dst_path = patch[CONST.DST]
             if not os_cmd('cp {} {}'.format(src_path, dst_path)):
                 files_copyed += 1
-    print ("Copyed {} files".format(files_copyed))
+    print("Copyed {} files".format(files_copyed))
     return True
 
 # ----------------------------------------------------------------------
-def update_series(patch_list, series_path, delimiter="", dst_type = None):
+def update_series(patch_list, series_path, delimiter="", dst_type=None):
     # Load seried file
     if not os.path.isfile(series_path):
-        print ("Err. Series file {} missing.".format(series_path))
+        print("Err. Series file {} missing.".format(series_path))
         return 1
     siries_file = open(series_path, "r")
     siries_file_lines = siries_file.readlines()
@@ -358,21 +355,19 @@ def update_series(patch_list, series_path, delimiter="", dst_type = None):
             new_patch_list.append(patch_name)
 
     if new_patch_list:
-        print ("Updating series {}".format(series_path))
+        print("Updating series {}".format(series_path))
         siries_file = open(series_path, "a")
         siries_file.write('{}\n'.format(delimiter))
         siries_file.write('\n'.join(new_patch_list))
         siries_file.close()
-        print ("Updated")
+        print("Updated")
     else:
-        print ("No need to update series")
+        print("No need to update series")
 
     return 0
 
 # ----------------------------------------------------------------------
 def parse_config_line(config_option_line):
-    config_option_dict = {}
-
     option = None
     status = None
     if "=" in config_option_line:
@@ -387,23 +382,23 @@ def parse_config_line(config_option_line):
             status = None
     if option:
         return option, status
-    else:
-       return None, None
+
+    return None, None
 
 # ----------------------------------------------------------------------
 def produce_config_line(option, status):
     if status == None:
         config_option_line = "# {} is not set".format(option)
     else:
-        config_option_line = "{}={}".format(option,status)
+        config_option_line = "{}={}".format(option, status)
 
     return config_option_line
 
 # ----------------------------------------------------------------------
-def load_config_to_dict(config_path, arch):
+def load_config_to_dict(config_path, section):
 
     if not os.path.isfile(config_path):
-        print ("Err. File {} missing.".format(config_path))
+        print("Err. File {} missing.".format(config_path))
         return False
     config_file = open(config_path, "r")
     config_file_lines = config_file.readlines()
@@ -411,44 +406,45 @@ def load_config_to_dict(config_path, arch):
     config_file_lines = trim_array_str(config_file_lines)
 
     config_dict = {}
-    curr_arch = None
+    curr_section = None
     for line in config_file_lines:
-        re_arch = re.match(r'.*\[([a-z0-9]+)\]', line)
-        if re_arch:
-            curr_arch = re_arch.group(1)
+        re_section = re.match(r'.*\[([a-z0-9:]+)\]', line)
+        if re_section:
+            curr_section = re_section.group(1)
             continue
-        if curr_arch == arch:
+        if curr_section == section:
             option, status = parse_config_line(line)
             if option:
                 config_dict[option] = status
     return config_dict
 
 # ----------------------------------------------------------------------
-def process_config(src_root, dst_cfg, delimiter="", arch="amd64"):
+def process_config(src_root, dst_cfg, delimiter="", arch="amd64", sub_type=""):
     # Load src config file
     ref_cfg_filename = "{}/{}".format(src_root, CONST.REFERENCE_CONFIG)
-    ref_config = load_config_to_dict(ref_cfg_filename, arch)
+    ref_config = load_config_to_dict(ref_cfg_filename, "{}:{}".format(arch, sub_type))
     if not ref_config:
-        print ("Err. Not found target arch [{}] in ref config file {}.".format(arch, ref_cfg_filename))
+        print("Info. Not found config for [{}:{}] in ref config file {}".format(arch, sub_type, ref_cfg_filename))
     else:
-        print ("Trget arch [{}]".format(arch))
-    if not os.path.isfile(dst_cfg):
-        print ("Err. Config file {} missing.".format(dst_cfg))
-        return False
-    src_config_file = open(dst_cfg, "r")
-    src_config_file_lines = src_config_file.readlines()
-    src_config_file.close()
-    src_config_file_lines = trim_array_str(src_config_file_lines)
+        print("Trget [{}:{}]".format(arch, sub_type))
+    if os.path.isfile(dst_cfg):
+        src_config_file = open(dst_cfg, "r")
+        src_config_file_lines = src_config_file.readlines()
+        src_config_file.close()
+        src_config_file_lines = trim_array_str(src_config_file_lines)
+    else:
+        print("Warn. Missing config file {}. It will be creted.".format(dst_cfg))
+        src_config_file_lines = []
 
     dst_config_lines = []
     ref_config_keys = ref_config.keys()
 
     for conf_line in src_config_file_lines:
-        option, status  = parse_config_line(conf_line)
+        option, _ = parse_config_line(conf_line)
         if option and option in ref_config_keys:
             conf_line_new = produce_config_line(option, ref_config[option])
             if conf_line_new != conf_line:
-                print ("Change config: \"{}\" -> \"{}\"".format(conf_line, conf_line_new))
+                print("Change config: \"{}\" -> \"{}\"".format(conf_line, conf_line_new))
             ref_config.pop(option)
             ref_config_keys = ref_config.keys()
         else:
@@ -461,7 +457,7 @@ def process_config(src_root, dst_cfg, delimiter="", arch="amd64"):
 
     for key, val in ref_config.items():
         conf_line_new = produce_config_line(key, val)
-        print ("Add config:    \"{}\"".format(conf_line_new))
+        print("Add config:    \"{}\"".format(conf_line_new))
         dst_config_lines.append(conf_line_new)
 
     return dst_config_lines
@@ -508,7 +504,8 @@ if __name__ == '__main__':
                             required=False)
     CMD_PARSER.add_argument("--dst_accepted_folder",
                             dest="dst_accepted_folder",
-                            help="Dst folder with accepted patches",
+                            help="Dst folder with accepted patches.\n"
+                            "If not specified - all patches will be copied to candidate folder",
                             default=None,
                             required=False)
     CMD_PARSER.add_argument("--dst_candidate_folder",
@@ -523,19 +520,27 @@ if __name__ == '__main__':
                             required=True)
     CMD_PARSER.add_argument("--config_file",
                             dest="config_file",
-                            help="Will update kernel CONFIG\n"
-                            "In case this argument is missing - skip series update",
+                            help="Will update kernel CONFIG with the all flags.\n"
+                            "In case of using together with --config_file_downstream argument - will be copied\n"
+                            "only CONFIG_(s) marked as upstream",
+                            required=False)
+    CMD_PARSER.add_argument("--config_file_downstream",
+                            dest="config_file_downstream",
+                            help="Will update kernel CONFIG with the flags related only to  downstream configuration.\n"
+                            "In case this argument is missing - all CONFIG_* options will be passed\n"
+                            "to file specified in --config_file argument\n"
+                            "This argument can be used only together with --config_file",
                             required=False)
     CMD_PARSER.add_argument("--os_type",
                             dest="os_type",
                             help="Special integration type.\n"
                             "In case this argument is missing - don't apply special integration rule\n",
                             default="None",
-                            choices=["None", "sonic","opt", "cumulus"],
+                            choices=["None", "sonic", "opt", "cumulus"],
                             required=False)
     CMD_PARSER.add_argument("--arch",
                             dest="arch",
-                            help="Arch type amd64/arm64/...",
+                            help="Arch type...",
                             default="amd64",
                             choices=["amd64", "arm64"],
                             required=False)
@@ -557,21 +562,21 @@ if __name__ == '__main__':
 
     kver_arr = k_version.split(".")
     if len(kver_arr) < 3:
-        print ("Err: wrong kernel version {}. Should be specified in format XX.XX.XX".format(k_version))
+        print("Err: wrong kernel version {}. Should be specified in format XX.XX.XX".format(k_version))
         sys.exit(1)
     k_version_major = ".".join(kver_arr[0:2])
 
     patch_table = None
     config_diff = None
 
-    print ("-> Process patches")
+    print("-> Process patches")
     patch_table = load_patch_table(src_folder, k_version_major)
     if not patch_table:
-        print ("Can't load patch table from folder {}".format(src_folder))
+        print("Can't load patch table from folder {}".format(src_folder))
         sys.exit(1)
 
     if not accepted_folder:
-        print ("Accepted folder not specified.\nAll patches will be copied to: {}".format(candidate_folder))
+        print("Accepted folder not specified.\nAll patches will be copied to: {}".format(candidate_folder))
         filter_patch_list(patch_table,
                           src_folder,
                           candidate_folder,
@@ -579,7 +584,7 @@ if __name__ == '__main__':
                           k_version,
                           args["os_type"])
     else:
-         filter_patch_list(patch_table,
+        filter_patch_list(patch_table,
                           src_folder,
                           accepted_folder,
                           candidate_folder,
@@ -589,34 +594,45 @@ if __name__ == '__main__':
     if args["verbose"]:
         print_patch_all(patch_table)
 
-    print ("-> Copy patches")
+    print("-> Copy patches")
     res = process_patch_list(patch_table)
     if not res:
-        print ("-> Copy patches error")
+        print("-> Copy patches error")
         sys.exit(1)
-    print ("-> Copy patches done")
+    print("-> Copy patches done")
 
     if args["series_file"]:
-        print ("-> Process series")
+        print("-> Process series")
         delimiter_line = CONST.SERIES_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-        res = update_series(patch_table, 
-                            args["series_file"], 
-                            delimiter_line, 
+        res = update_series(patch_table,
+                            args["series_file"],
+                            delimiter_line,
                             dst_type=None)
         if res:
             sys.exit(1)
-        print ("-> Update series done")
+        print("-> Update series done")
 
     config_file_name = args["config_file"]
     if config_file_name:
-        print ("-> Processing config {}".format(args["config_file"]))
+        print("-> Processing upstream config {}".format(args["config_file"]))
         delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-        config_res = process_config(src_folder, args["config_file"], delimiter_line, arch = args["arch"])
+        config_res = process_config(src_folder, config_file_name, delimiter_line, arch=args["arch"], sub_type="upstream")
 
         if config_res:
             config_file = open(config_file_name, "w")
             config_file.write('\n'.join(config_res))
             config_file.close()
-        print ("-> Update config done")
 
+        if args["config_file_downstream"]:
+            config_file_name = args["config_file_downstream"]
+
+        print("-> Processing downstream config {}".format(config_file_name))
+        delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
+        config_res = process_config(src_folder, config_file_name, delimiter_line, arch=args["arch"], sub_type="downstream")
+
+        if config_res:
+            config_file = open(config_file_name, "w")
+            config_file.write('\n'.join(config_res))
+            config_file.close()
+        print("-> Update config done")
     sys.exit(0)
