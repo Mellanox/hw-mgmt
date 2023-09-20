@@ -469,6 +469,7 @@ Kernel-5.10
 |0306-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream                               |            |                                                |
 |0307-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream                               |            |                                                |
 |0308-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream                               |            |                                                |
+|0308-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream                               |            |                                                |
 |0309-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream                               |            |                                                |
 |0310-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Downstream                               |            |                                                |
 |0311-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            | SN2201                                         |
