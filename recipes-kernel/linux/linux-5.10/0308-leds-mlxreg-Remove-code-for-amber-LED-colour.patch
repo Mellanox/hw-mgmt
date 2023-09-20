@@ -15,7 +15,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 2 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/leds/leds-mlxreg.c b/drivers/leds/leds-mlxreg.c
-index 131064817..d37afe072 100644
+index e6b205d31..26039e187 100644
 --- a/drivers/leds/leds-mlxreg.c
 +++ b/drivers/leds/leds-mlxreg.c
 @@ -22,7 +22,6 @@
