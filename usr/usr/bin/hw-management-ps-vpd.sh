@@ -34,6 +34,10 @@
 
 #set -x
 
+sku_file=/sys/devices/virtual/dmi/id/product_sku
+vm_sku=`cat $sku_file`
+vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
+
 VERSION="1.1"
 VPD_POINTER_ADDR=0xe8
 VPD_POINTER_LEN=16
@@ -387,6 +391,15 @@ function read_pmbus_ps_vpd ( )
 	done
 }
 
+is_virtual_machine()
+{
+    if [ -n "$(lspci -vvv | grep SimX)" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 while [ $# -gt 0 ]; do
 	if [[ $1 == *"--"* ]]; then
 		param="${1/--/}"
@@ -446,13 +459,17 @@ Author: Mykola Kostenok <c_mykolak@mellanox.com>'
 		exit 0
 		;;
 	dump)
-		read_pmbus_ps_vpd
-		echo CALC_CRC: "${crc16_arr[*]}" >> "$VPD_OUTPUT_FILE"
-		if [ "${crc16_str}" != "${read_crc16_str}" ];
-		then
-			exit 1
+		if is_virtual_machine; then
+			cat $vm_vpd_path/psu_vpd > "$VPD_OUTPUT_FILE"
+		else
+			read_pmbus_ps_vpd
+			echo CALC_CRC: "${crc16_arr[*]}" >> "$VPD_OUTPUT_FILE"
+			if [ "${crc16_str}" != "${read_crc16_str}" ];
+			then
+				exit 1
+			fi
+			exit 0
 		fi
-		exit 0
 		;;
 	*)
 		echo "No command specified, use hw-management-ps-vpd.sh --help to print usage example."
