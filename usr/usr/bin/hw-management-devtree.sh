@@ -41,7 +41,7 @@ declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pr
 
 declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75")
 
-declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus")
+declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7")
 
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
@@ -193,6 +193,54 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
 			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
+
+declare -A qm3000_alternatives=( \
+				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
+				["mp2891_6"]="mp2891 0x66 37 voltmon7" \
+				["mp2891_7"]="mp2891 0x68 37 voltmon8" \
+				["mp2891_8"]="mp2891 0x6c 37 voltmon9" \
+				["mp2891_9"]="mp2891 0x66 53 voltmon10" \
+				["mp2891_10"]="mp2891 0x68 53 voltmon11" \
+				["mp2891_11"]="mp2891 0x6c 53 voltmon12" \
+				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+				["xdpe1a2g7_6"]="xdpe1a2g7 0x66 37 voltmon7" \
+				["xdpe1a2g7_7"]="xdpe1a2g7 0x68 37 voltmon8" \
+				["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 37 voltmon9" \
+				["xdpe1a2g7_9"]="xdpe1a2g7 0x66 53 voltmon10" \
+				["xdpe1a2g7_10"]="xdpe1a2g7 0x68 53 voltmon11" \
+				["xdpe1a2g7_11"]="xdpe1a2g7 0x6c 53 voltmon12" \
+				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="adt75 0x4a 7 port_amb" \
+				["stts751_0"]="stts751 0x4a 7 port_amb" \
+				["24c512_0"]="24c512 0x51 8 system_eeprom")
+
+declare -A qm3400_alternatives=( \
+				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
+				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="adt75 0x4a 7 port_amb" \
+				["stts751_0"]="stts751 0x4a 7 port_amb" \
+				["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
 				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
@@ -444,6 +492,28 @@ devtr_check_supported_system_init_alternatives()
 			done
 			for key in "${!pwr_type1_alternatives[@]}"; do
 				pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
+			done
+			return 0
+			;;
+		VMOD0018)
+			case $sku in
+				HI157)
+					for key in "${!qm3400_alternatives[@]}"; do
+						swb_alternatives["$key"]="${qm3400_alternatives["$key"]}"
+					done
+				;;
+				HI158)
+					for key in "${!qm3000_alternatives[@]}"; do
+						swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
+					done
+				;;
+				*)
+					log_info "SMBIOS BOM: unsupported board_type: ${board_type}, sku ${sku}"
+					return 1
+				;;
+			esac
+			for key in "${!fan_type1_alternatives[@]}"; do
+				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
 			done
 			return 0
 			;;
