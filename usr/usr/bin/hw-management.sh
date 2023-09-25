@@ -1965,6 +1965,7 @@ qm3xxx_specific()
 		hotplug_psus=4
 		echo 4 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/qm3400_sensors.conf"
+		lm_sensors_labels="$lm_sensors_configs_path/qm3400_sensors_labels.json"
 		thermal_control_config="$thermal_control_configs_path/tc_config_qm3400.json"
 		named_busses+=(${qm3400_named_busses[@]})
 		asic_i2c_buses=(2 18)
@@ -1975,6 +1976,7 @@ qm3xxx_specific()
 		hotplug_psus=8
 		echo 6 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/qm3000_sensors.conf"
+		lm_sensors_labels="$lm_sensors_configs_path/qm3000_sensors_labels.json"
 		thermal_control_config="$thermal_control_configs_path/tc_config_qm3000.json"
 		named_busses+=(${qm3000_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
@@ -1982,6 +1984,7 @@ qm3xxx_specific()
 
 	add_come_named_busses $xdr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo 0 > "$config_path"/labels_ready
 }
 
 qm_qm3_common()
