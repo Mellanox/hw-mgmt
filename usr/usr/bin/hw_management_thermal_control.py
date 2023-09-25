@@ -1317,13 +1317,11 @@ class thermal_module_sensor(system_device):
         if self.check_file(fault_filename):
             try:
                 fault_status = int(self.read_file(fault_filename))
-                self.handle_reading_file_err(fault_filename, reset=True)
                 if fault_status:
                     status = True
             except BaseException:
                 self.log.error("{}- Incorrect value in the file: {} ({})".format(self.name, fault_filename, BaseException))
                 status = True
-                self.handle_reading_file_err(fault_filename)
 
         return status
 
@@ -1468,14 +1466,11 @@ class psu_fan_sensor(system_device):
         psu_status = 0
         if not self.check_file(psu_status_filename):
             self.log.info("Missing file {} dev: {}".format(psu_status_filename, self.name))
-            self.handle_reading_file_err(psu_status_filename)
         else:
             try:
                 psu_status = int(self.read_file(psu_status_filename))
-                self.handle_reading_file_err(psu_status_filename, reset=True)
             except BaseException:
                 self.log.info("Can't read {}".format(psu_status_filename))
-                self.handle_reading_file_err(psu_status_filename)
         return psu_status
 
     # ----------------------------------------------------------------------
@@ -1530,7 +1525,6 @@ class psu_fan_sensor(system_device):
         if psu_status == 1:
             try:
                 value = int(self.read_file(rpm_file_name))
-                self.handle_reading_file_err(rpm_file_name, reset=True)
                 self.update_value(value)
                 self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
@@ -1691,17 +1685,14 @@ class fan_sensor(system_device):
         @return: Return status value from file or None in case of reading error
         """
         status_filename = "thermal/fan{}_status".format(self.fan_drwr_id)
-        status = None
+        status = 0
         if not self.check_file(status_filename):
             self.log.info("Missing file {} dev: {}".format(status_filename, self.name))
-            self.handle_reading_file_err(status_filename)
         else:
             try:
                 status = int(self.read_file(status_filename))
-                self.handle_reading_file_err(status_filename, reset=True)
             except BaseException:
                 self.log.error("Value reading from file: {}".format(status_filename))
-                self.handle_reading_file_err(status_filename)
         return status
 
     # ----------------------------------------------------------------------
@@ -1726,11 +1717,8 @@ class fan_sensor(system_device):
         """
         """
         pwm_curr = self.read_pwm()
-        if pwm_curr:
-            self.handle_reading_file_err("thermal/pwm1", reset=True)
-        else:
+        if not pwm_curr:
             self.log.error("Read PWM error")
-            self.handle_reading_file_err("thermal/pwm1")
             return False
 
         for tacho_idx in range(self.tacho_cnt):
@@ -1881,18 +1869,17 @@ class fan_sensor(system_device):
         """
         self.pwm = self.pwm_min
         for tacho_id in range(0, self.tacho_cnt):
+            value = 0
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
                 self.log.info("Missing file {} dev: {}".format(rpm_file_name, self.name))
-                self.handle_reading_file_err(rpm_file_name)
             else:
                 try:
-                    self.value[tacho_id] = int(self.read_file(rpm_file_name))
-                    self.handle_reading_file_err(rpm_file_name, reset=True)
+                    value = int(self.read_file(rpm_file_name))
                     self.log.debug("{} value {}".format(self.name, self.value))
                 except BaseException:
                     self.log.error("Value reading from file: {}".format(rpm_file_name))
-                    self.handle_reading_file_err(rpm_file_name)
+            self.value[tacho_id] = value
         return
 
     # ----------------------------------------------------------------------
