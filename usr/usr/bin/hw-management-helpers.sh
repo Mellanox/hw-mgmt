@@ -311,6 +311,7 @@ disconnect_device()
 # - $2 - retry timeout delay window.
 # - $3 - retry counter.
 # - $4 - user log to be produced if user function failed (optional).
+# - $5 - user parameter to execute.
 # Output:
 # - return code (0 - success; 1 - failure).
 # Example:
@@ -321,9 +322,10 @@ function retry_helper()
 	local retry_to="$2"
 	local retry_cnt="$3"
 	local user_log="$4"
+	local user_param="$5"
 
 	for ((i=0; i<${retry_cnt}; i+=1)); do
-		$user_func
+		$user_func $user_param
 		if [ $? -eq 0 ]; then
 			return 0
 		fi
