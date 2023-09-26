@@ -2606,6 +2606,15 @@ do_stop()
 	fi
 }
 
+function find_asic_hwmon_path()
+{
+	local path=$1
+	if [ ! -d "$path" ]; then
+		return 1
+	fi
+	return 0
+}
+
 do_chip_up_down()
 {
 	action=$1
@@ -2708,8 +2717,8 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
-
-			if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon ]; then
+			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon
+			if [ $? -ne 0 ]; then
 				# chipup command failed.
 				unlock_service_state_change
 				return 1
