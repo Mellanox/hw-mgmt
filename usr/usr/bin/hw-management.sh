@@ -269,45 +269,35 @@ msn27002_msn24102_msb78002_base_connect_table=( pmbus 0x27 5 \
 			max11603 0x6d 15 \
 			lm75 0x49 17)
 
-msn4700_msn4600_base_connect_table=( xdpe12284 0x62 5 \
-			xdpe12284 0x64 5 \
-			xdpe12284 0x66 5 \
-			xdpe12284 0x68 5 \
-			xdpe12284 0x6a 5 \
-			xdpe12284 0x6c 5 \
-			xdpe12284 0x6e 5 \
-			tmp102 0x49 7 \
+msn4700_msn4600_base_connect_table=( tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4600C_base_connect_table=( xdpe12284 0x62 5 \
-			xdpe12284 0x64 5 \
-			xdpe12284 0x66 5 \
-			xdpe12284 0x68 5 \
-			xdpe12284 0x6a 5 \
-			xdpe12284 0x6c 5 \
-			xdpe12284 0x6e 5 \
-			tmp102 0x49 7 \
+msn4600C_base_connect_table=( tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4700_msn4600_A1_base_connect_table=( mp2975 0x62 5 \
-			mp2975 0x64 5 \
-			mp2975 0x66 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6e 5 \
-			tmp102 0x49 7 \
+msn4700_msn4600_xdpe_voltmon_connect_table=( xdpe12284 0x62 5 voltmon1 \
+			xdpe12284 0x64 5 voltmon2 \
+			xdpe12284 0x66 5 voltmon3 \
+			xdpe12284 0x68 5 voltmon4 \
+			xdpe12284 0x6a 5 voltmon5 \
+			xdpe12284 0x6c 5 voltmon6 \
+			xdpe12284 0x6e 5 voltmon7)
+
+msn4700_msn4600_A1_base_connect_table=( tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
 
-msn4600C_A1_base_connect_table=( mp2975 0x62 5 \
-			mp2975 0x64 5 \
-			mp2975 0x66 5 \
-			mp2975 0x6a 5 \
-			mp2975 0x6e 5 \
-			tmp102 0x49 7 \
+msn4600C_A1_base_connect_table=( tmp102 0x49 7 \
 			tmp102 0x4a 7 \
 			24c32 0x51 8)
+
+msn4700_msn4600_mps_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
+			mp2975 0x64 5 voltmon2 \
+			mp2975 0x66 5 voltmon3 \
+			mp2975 0x6a 5 voltmon5 \
+			mp2975 0x6e 5 voltmon7)
 
 msn3510_base_connect_table=(	max11603 0x6d 5 \
 			tps53679 0x70 5 \
@@ -1346,19 +1336,23 @@ connect_msn4700_msn4600()
         # msn4700/msn4600
 		connect_table+=(${msn4700_msn4600_base_connect_table[@]})
 	fi
+	add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_xdpe_voltmon_connect_table[@]}"
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
 }
 
 connect_msn4700_msn4600_A1()
 {
-	if [ "$sku" == "HI124" ]; then
-		#  msn4600C with removed A2D
-		connect_table+=(${msn4600C_A1_base_connect_table[@]})
-	else
-		# msn4700/msn4600 respin 
-		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
-	fi
+	case $sku in
+		HI124|HI156)
+			#  msn4600C with removed A2D or msn4700 BF3
+			connect_table+=(${msn4600C_A1_base_connect_table[@]})
+			;;
+		*)
+			# msn4700/msn4600 respin 
+			connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
+	esac
+	add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
