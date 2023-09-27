@@ -1332,7 +1332,7 @@ msn27002_msb78002_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn27002_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn27002.json"
 	get_i2c_bus_frequency_default
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
@@ -1885,7 +1885,6 @@ sn56xx_specific()
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn5600.json"
 }
 
 sn_spc4_common()
@@ -1894,9 +1893,11 @@ sn_spc4_common()
 	case $sku in
 		HI144)	# SN5600
 			sn56xx_specific
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn5600.json"
 		;;
 		HI147)	# SN5400
 			sn56xx_specific
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn5400.json"
 		;;
 		HI148)	# SN5700
 			sn56xx_specific
