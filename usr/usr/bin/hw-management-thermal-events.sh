@@ -964,17 +964,17 @@ if [ "$1" == "add" ]; then
 		if [ "$dev_name" == "nvme" ]; then
 			for i in {1..4}; do
 				if [ -f "$3""$4"/temp"$i"_input ]; then
-					label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
-					name=$(echo "$label" | awk '{print tolower($0)}')
-					check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/"$dev_name"_"$name"
 					# Make links only to 1st sensor - Composite temperature.
 					# Normaslized composite temperature values are taken to thermal management.
 					if [ "$i" -eq 1 ]; then
-						check_n_link "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
-						check_n_link "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
-						if [ -e "$3""$4"/temp1_min ]; then
-							check_n_link "$3""$4"/temp1_min "$thermal_path"/"$dev_name"_"$name"_min
-						fi
+						check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/drivetemp
+						check_n_link "$3""$4"/temp"$i"_crit "$thermal_path"/drivetemp_crit
+						check_n_link "$3""$4"/temp"$i"_max "$thermal_path"/drivetemp_max
+						check_n_link "$3""$4"/temp"$i"_min "$thermal_path"/drivetemp_min
+					elif [ -f "$3""$4"/temp"$i"_label ]; then
+						label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
+						name=$(echo "$label" | awk '{print tolower($0)}')
+						check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/drivetemp_"$name"
 					fi
 				fi
 			done
