@@ -725,6 +725,18 @@ class hw_managemet_file_op(object):
         return self.read_file(os.path.join("thermal", filename))
 
     # ----------------------------------------------------------------------
+    def read_file_int(self, filename, scale=1):
+        """
+        @summary:
+            read file from hw-management/ tree.
+        @param filename: file to read from {hw-management-folder}/filename
+        @return: int value from file
+        """
+        val = self.read_file(filename)
+        val = int(val)/scale
+        return int(val)
+    
+    # ----------------------------------------------------------------------
     def thermal_read_file_int(self, filename, scale=1):
         """
         @summary:
@@ -732,9 +744,8 @@ class hw_managemet_file_op(object):
         @param filename: file to read from {hw-management-folder}/thermal/filename
         @return: int value from file
         """
-        val = self.read_file(os.path.join("thermal", filename))
-        val = int(val)/scale
-        return int(val)
+        val = self.read_file_int(os.path.join("thermal", filename), scale)
+        return val
 
     # ----------------------------------------------------------------------
     def get_file_val(self, filename, def_val=None, scale=1):
@@ -850,6 +861,7 @@ class system_device(hw_managemet_file_op):
         self.update_timestump(1000)
         self.val_min = CONST.TEMP_MIN_MAX["val_min"]
         self.val_max = CONST.TEMP_MIN_MAX["val_max"]
+        self.scale = CONST.TEMP_SENSOR_SCALE
         self.pwm_min = CONST.PWM_MIN
         self.pwm_max = CONST.PWM_MAX
         self.value = CONST.TEMP_INIT_VAL_DEF
@@ -1193,10 +1205,13 @@ class thermal_sensor(system_device):
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
-        @summary: this function calling on sensor start after initialization or suspend off
+        @summary: this function calling on sensor start after initialization or resume
         """
-        self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", CONST.TEMP_SENSOR_SCALE)
-        self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", CONST.TEMP_SENSOR_SCALE)
+        scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
+        self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
+
+        self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", self.scale)
+        self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", self.scale)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1210,8 +1225,7 @@ class thermal_sensor(system_device):
             self.handle_reading_file_err(self.file_input)
         else:
             try:
-                temperature = int(self.read_file(self.file_input))
-                value = int(temperature / CONST.TEMP_SENSOR_SCALE)
+                value = self.read_file_int(self.file_input, self.scale)
                 self.handle_reading_file_err(self.file_input, reset=True)
             except BaseException:
                 self.log.info("Wrong value reading from file: {}".format(self.file_input))
@@ -1282,9 +1296,9 @@ class thermal_module_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=CONST.TEMP_SENSOR_SCALE)
+        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         if "asic" in self.base_file_name:
-            self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=CONST.TEMP_SENSOR_SCALE)
+            self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
         else:
             if self.val_max != 0:
                 self.val_min = self.val_max - 20
@@ -1341,11 +1355,8 @@ class thermal_module_sensor(system_device):
             self.handle_reading_file_err(temp_read_file)
         else:
             try:
-                temperature = int(self.read_file(temp_read_file))
-                temperature /= CONST.TEMP_SENSOR_SCALE
-                self.log.debug("{} value:{}".format(self.name, temperature))
-                # for modules that is not equipped with thermal sensor temperature returns zero
-                value = int(temperature)
+                value = self.read_file_int(temp_read_file, self.scale)
+                self.log.debug("{} value:{}".format(self.name, value))
                 self.handle_reading_file_err(temp_read_file, reset=True)
                 # handle case if cable was replsed by the other cable with the sensor
                 if value != 0 and self.val_min == 0 and self.val_max == 0:
@@ -1955,8 +1966,8 @@ class ambiant_thermal_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        self.val_min = self.read_val_min_max("", "val_min", CONST.TEMP_SENSOR_SCALE)
-        self.val_max = self.read_val_min_max("", "val_max", CONST.TEMP_SENSOR_SCALE)
+        self.val_min = self.read_val_min_max("", "val_min", self.scale)
+        self.val_max = self.read_val_min_max("", "val_max", self.scale)
 
     # ----------------------------------------------------------------------
     def set_flow_dir(self, flow_dir):
@@ -1990,10 +2001,9 @@ class ambiant_thermal_sensor(system_device):
                 self.handle_reading_file_err(sens_file_name)
             else:
                 try:
-                    temperature = int(self.read_file(sens_file_name))
+                    temperature = self.read_file_int(sens_file_name, self.scale)
                     self.handle_reading_file_err(sens_file_name, reset=True)
-                    temperature /= CONST.TEMP_SENSOR_SCALE
-                    self.value_dict[file_name] = int(temperature)
+                    self.value_dict[file_name] = temperature
                     self.log.debug("{} {} value {}".format(self.name, sens_file_name, temperature))
                 except BaseException:
                     self.log.error("Error value reading from file: {}".format(sens_file_name))
