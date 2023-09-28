@@ -1,4 +1,84 @@
 ================================================================================
+- V.7.0030.2000
+- Thu , 28 Sept 2023 
+--------------------------------------------------------------------------------
+
+- New features 
+    o  add support for BF3 ARM COMex carrier over MQM9700 and SN4700 .
+    o  add support for up to Kernel v6.1.38
+    o  add support for reload TC service on crash scenario
+    o  add support for TC new sensors (new provided calibrations):
+                [sn5600] drivetemp (SSD)
+                [sn5600] ibc (power convertor)
+    o  add support for SN3700 FW upgrade for Murata PSU 1500W DC
+    o  add support for removal of kernel thermal zones (related to old TC)
+    o  add support for multi-asic init done indication “'asics_init_done” (together with asic counter attribute 'asic_chipup_completed')
+    o  add support for deployment tool: 
+               1.Copy only relevant CPU Architecture related Kconfig flags.
+               2.Distinguish upstream vs. downstream flags
+
+- Bug fixes
+	Issue		Title	
+	#3534779	TC: "hw-management-tc failed to start after cold reboot and no automatic restart
+	#3517930	TC: [nv-xh3000hse] fanless system fails hw-management-tc.service at boot up and also fails to restart after boot up
+	#3541643	[SN3700/SN3700] Missing support for old MSN3700 systems in which SMBIOS SKU field is programmed as "MSN3700", instead of the new format HIXXX
+	#3559366	TC: Moose switch comes with default tc_config.json file instead of special one for MSN5600
+	#3565326	TC: Thermal Algorithm unexpected jumping to 100%
+	#3567299	TC: Thermal Algorithm doesn’t decrease under 60% fan PWM
+	#3567934	TC: json file comes with sensor_amb min value is 60 but it should be 30
+	#3505271	[SN4600]Sensors not as expected on tigon setup
+	#3569409	TC: Thermal Control missing support for predefined sensors
+	#3544619	platform_tests/test_reboot.py::test_watchdog_reboot Failed, reboot cause showing unknown
+	#3586921	[SPC1] TC: ERR hw-management-tc: ERROR - Read PWM error. Possible hw-management is not running
+	#3584693	There are issues in hw-mgmt sensor conf
+	#3575228	[SN3750] TC: tc_config.json file have only single value 100 and not graded as define by spec.
+	#3556737	[Sensor|simx emulation|leopard] | some sensor alarm on psu-1 and psu-2
+	#3537920	[SN2201] Missing thermal sysfs for fans on 2201 platform 
+	#3546759	[SIMX]: unable to parse psu modle serial and hardware rev number
+	#3594368	pmon#syseepromd: Can not read File /var/run/hw-management/config/labels_ready: [Errno 2] No such file or directory: '/var/run/hw-	management/config/labels_ready'
+	#3608425	[SN2201] chipup error on alligator
+	NA	[SN2201] TC: missing PWM initialization causing it to be zero until TC started  
+	NA	[SN2201] hw-mgmt: scripts: supress Unsupported CPU message for Denverton CPU on
+	NA	 Missing attribute index, redundant attributes, incorrect the path for psu temperature
+	NA	[SN3750] TC: missed support for this platform
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0030.2000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU
+    o Patch 0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch should be applied 
+      for kernel >= 5.10.74 only, to avoid thermal control interface issues
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+================================================================================
 - V.7.0030.1000
 - Wed , 12 July 2023 
 --------------------------------------------------------------------------------
