@@ -667,6 +667,17 @@ if [ "$1" == "add" ]; then
 				echo 1 > $events_path/power_button
 			fi
 		fi
+
+		# BF3 debugfs temperature sensors linkage
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
+			echo 1000 > $thermal_path/cpu_pack_scale 
+		fi
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp $thermal_path/sodimm1_temp_input
+			echo 1000 > $thermal_path/sodimm1_temp_scale 
+		fi
+
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
