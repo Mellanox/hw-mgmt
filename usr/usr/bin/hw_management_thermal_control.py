@@ -94,6 +94,7 @@ class CONST(object):
     SYS_CONF_ASIC_PARAM = "asic_config"
     SYS_CONF_SENSOR_LIST_PARAM = "sensor_list"
     SYS_CONF_ERR_MASK = "error_mask"
+    SYS_CONF_PSU_MISSING_MAX_PARAM = "psu_max_missing_err"
 
     # *************************
     # Folders definition
@@ -142,6 +143,7 @@ class CONST(object):
     PWM_MAX = 100
     PWM_HYSTERESIS_DEF = 0
     PWM_PSU_MIN = 35
+    PSU_MISSING_MAX = 0
 
     VALUE_HYSTERESIS_DEF = 0
 
@@ -175,7 +177,7 @@ class CONST(object):
     SENSOR_FREAD_FAIL_TIMES = 3
 
     # If more than 1 error, set fans to 100%
-    TOTAL_MAX_ERR_COUNT = 1
+    TOTAL_MAX_ERR_COUNT = 2
 
     # Main TC loop state
     UNCONFIGURED = "UNCONFIGURED"
@@ -2230,6 +2232,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.amb_tmp = CONST.TEMP_INIT_VAL_DEF
         self.module_counter = 0
         self.gearbox_counter = 0
+        self.psu_missing_max = self.sys_config[CONST.SYS_CONF_PSU_MISSING_MAX_PARAM]
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -2565,14 +2568,27 @@ class ThermalManagement(hw_managemet_file_op):
     def get_total_fault_cnt(self):
         """
         @summary: get error count (total error kinds) for sensor
+        Special case - PSU missing.
+        If psu_missing less or eq than psu_max_missing_err param - not classify it 
+        as "psu_missing" error and any more PSU missing will be the 2nd error.
         @return: total raised error flags count
         """
-
-        fault_cnt = 0
+        psu_missing_fault_cnt = 0
+        total_fault_cnt = 0
         for dev_obj in self.dev_obj_list:
-            if dev_obj.state == CONST.RUNNING:
-                fault_cnt += dev_obj.get_fault_cnt()
-        return fault_cnt
+            if dev_obj.state != CONST.RUNNING:
+                continue
+            total_fault_cnt += dev_obj.get_fault_cnt()
+            # Check for PSU present redundancy error
+            if re.match(r'psu\d+_fan', dev_obj.name):
+                if "present" in dev_obj.get_fault_list():
+                    psu_missing_fault_cnt += 1
+
+        # ignore error in case if present error less or eq psu_max_missing_err
+        if psu_missing_fault_cnt <= self.psu_missing_max:
+            total_fault_cnt -= psu_missing_fault_cnt
+
+        return total_fault_cnt
 
     # ----------------------------------------------------------------------
     def is_pwm_exists(self):
@@ -2737,6 +2753,9 @@ class ThermalManagement(hw_managemet_file_op):
         if CONST.SYS_CONF_ERR_MASK not in sys_config:
             self.log.info("Dmin mask not defined in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ERR_MASK] = []
+
+        if CONST.SYS_CONF_PSU_MISSING_MAX_PARAM not in sys_config:
+            sys_config[CONST.SYS_CONF_PSU_MISSING_MAX_PARAM] = CONST.PSU_MISSING_MAX
 
         self.sys_config = sys_config
 
@@ -2970,9 +2989,9 @@ class ThermalManagement(hw_managemet_file_op):
                     obj_timestump = dev_obj.get_timestump()
                     timestump_next = min(obj_timestump, timestump_next)
             fault_cnt = self.get_total_fault_cnt()
-            if fault_cnt > CONST.TOTAL_MAX_ERR_COUNT:
-                pwm_list["total_err_cnt({})>{}".format(fault_cnt, CONST.TOTAL_MAX_ERR_COUNT)] = CONST.PWM_MAX
-            elif fault_cnt_old > CONST.TOTAL_MAX_ERR_COUNT:
+            if fault_cnt >= CONST.TOTAL_MAX_ERR_COUNT:
+                pwm_list["total_err_cnt({})>={}".format(fault_cnt, CONST.TOTAL_MAX_ERR_COUNT)] = CONST.PWM_MAX
+            elif fault_cnt_old >= CONST.TOTAL_MAX_ERR_COUNT:
                 self.log.info("'total_err_cnt>2' error flag clear")
             fault_cnt_old = fault_cnt
 
@@ -3093,6 +3112,6 @@ if __name__ == '__main__':
         logger.info(traceback.format_exc())
         if thermal_management:
             thermal_management.stop(reason="crash ({})".format(str(e)))
-        sys.exit(1)
+            sys.exit(1)
 
     sys.exit(0)
