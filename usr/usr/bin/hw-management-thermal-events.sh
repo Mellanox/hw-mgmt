@@ -50,7 +50,6 @@ max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
 cx_i2c_bus=0
-fan_full_speed_code=20
 # Static variable to keep track the number of fan drawers
 fan_drwr_num=0
 # 46 - F, 52 - R
@@ -474,31 +473,6 @@ if [ "$1" == "add" ]; then
 					echo "disabled" > /var/run/hw-management/thermal/mlxsw/thermal_zone_mode
 				fi
 			fi
-		fi
-	fi
-	if [ "$2" == "cooling_device" ]; then
-		coolingtype=$(< "$3""$4"/type)
-		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan0" ] ||
-		   [ "$coolingtype" == "emc2305" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling_max_state
-			# Set FAN to full speed until thermal control is started.
-			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
-			log_info "FAN speed is set to full speed"
-		fi
-		if [ "$coolingtype" == "mlxreg_fan1" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling1_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling1_max_state
-		fi
-		if [ "$coolingtype" == "mlxreg_fan2" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling2_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling2_max_state
-		fi
-		if [ "$coolingtype" == "mlxreg_fan3" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling3_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling3_max_state
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
@@ -1166,16 +1140,6 @@ else
 			rm -rf $thermal_path/mlxsw
 		fi
 		check_n_unlink $thermal_path/highest_thermal_zone
-	fi
-	if [ "$2" == "cooling_device" ]; then
-		check_n_unlink $thermal_path/cooling_cur_state
-		check_n_unlink $thermal_path/cooling_max_state
-		check_n_unlink $thermal_path/cooling1_cur_state
-		check_n_unlink $thermal_path/cooling1_max_state
-		check_n_unlink $thermal_path/cooling2_cur_state
-		check_n_unlink $thermal_path/cooling2_max_state
-		check_n_unlink $thermal_path/cooling3_cur_state
-		check_n_unlink $thermal_path/cooling3_max_state
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for ((i=1; i<=max_tachos; i+=1)); do
