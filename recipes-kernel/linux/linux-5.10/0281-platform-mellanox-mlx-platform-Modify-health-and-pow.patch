@@ -1,8 +1,8 @@
-From 718681c7948f3191fe7ab7cc0a5f96b6454c3a0b Mon Sep 17 00:00:00 2001
+From 1d9bf722f219ab5346d44e3d04912bc958d87eee Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
-Date: Sun, 19 Mar 2023 15:36:19 +0000
-Subject: [PATCH backport v.5.10 3/3] platform: mellanox: mlx-platform: Modify
- health and power hotplug action
+Date: Sun, 23 Jul 2023 21:42:37 +0000
+Subject: [PATCH backport 5.10.179 16/26] platform: mellanox: mlx-platform:
+ Modify health and power hotplug action
 
 Set explicitly hotplug event action for health and power signals for
 L1 switch as "MLXREG_HOTPLUG_DEVICE_NO_ACTION" in order to allow
@@ -12,14 +12,14 @@ specified.
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 2 ++
+ drivers/platform/x86/mlx-platform.c | 2 ++
  1 file changed, 2 insertions(+)
 
-diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 2bc3720a4..605d57e95 100644
---- a/drivers/platform/mellanox/mlx-platform.c
-+++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -2527,6 +2527,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_l1_switch_pwr_events_items_data[]
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 8587f201d..976e12224 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -2480,6 +2480,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_l1_switch_pwr_events_items_data[]
  		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_OFFSET,
  		.mask = MLXPLAT_CPLD_PWR_BUTTON_MASK,
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
@@ -27,7 +27,7 @@ index 2bc3720a4..605d57e95 100644
  		.hpdev.notifier = &mlxplat_mlxcpld_l1_switch_pwr_events_notifier,
  	},
  };
-@@ -2587,6 +2588,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_l1_switch_health_events_items_dat
+@@ -2540,6 +2541,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_l1_switch_health_events_items_dat
  		.reg = MLXPLAT_CPLD_LPC_REG_BRD_OFFSET,
  		.mask = MLXPLAT_CPLD_INTRUSION_MASK,
  		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,

@@ -179,7 +179,11 @@ unlock_service_state_change()
 
 check_labels_enabled()
 {
-    if [ "$ui_tree_sku" = "HI130" ] && [ ! -e "$ui_tree_archive" ]; then
+    if ([ "$ui_tree_sku" = "HI130" ] ||
+        [ "$ui_tree_sku" = "HI151" ] ||
+        [ "$ui_tree_sku" = "HI157" ] ||
+        [ "$ui_tree_sku" = "HI158" ]) &&
+        ([ ! -e "$ui_tree_archive" ]); then
         return 0
     else
         return 1
@@ -242,6 +246,33 @@ change_file_counter()
 	echo $counter > $file_name
 }
 
+# Update counter, match attribute, unlock.
+# $1 - file with counter
+# $2 - value to update counter ( 1 increase, -1 decrease)
+# $3 - file to match with the counter
+# $4 - file to set according to the match ( 0 not matched, 1 matched)
+unlock_service_state_change_update_and_match()
+{
+	update_file_name=$1
+	val=$2
+	match_file_name=$3
+	set_file_name=$4
+	local counter
+	local match
+
+	change_file_counter "$update_file_name" "$val"
+	if [ ! -z "$3" ] && [ ! -z "$4" ]; then
+		counter=$(< $update_file_name)
+		match=$(< $match_file_name)
+		if [ $counter -eq $match ]; then
+			echo 1 > $set_file_name
+		else
+			echo 0 > $set_file_name
+		fi
+	fi
+	/usr/bin/flock -u ${LOCKFD}
+}
+
 connect_device()
 {
 	find_i2c_bus
@@ -280,6 +311,7 @@ disconnect_device()
 # - $2 - retry timeout delay window.
 # - $3 - retry counter.
 # - $4 - user log to be produced if user function failed (optional).
+# - $5 - user parameter to execute.
 # Output:
 # - return code (0 - success; 1 - failure).
 # Example:
@@ -290,9 +322,10 @@ function retry_helper()
 	local retry_to="$2"
 	local retry_cnt="$3"
 	local user_log="$4"
+	local user_param="$5"
 
 	for ((i=0; i<${retry_cnt}; i+=1)); do
-		$user_func
+		$user_func $user_param
 		if [ $? -eq 0 ]; then
 			return 0
 		fi

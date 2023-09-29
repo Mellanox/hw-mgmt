@@ -31,18 +31,20 @@
 	"psu_fan_pwm_decode" : {"0:10": 10, "11:21": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
 	"fan_trend" : {
         "C2P": {
-			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
+			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30},
+			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30}},
 		"P2C": {
-			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}}
+			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30},
+			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30}}
 	}, 
 	"dev_parameters" : {
 		"asic":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3}, 
 		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3},
 		"voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
-		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 100, "val_min": "!75000", "val_max": 85000, "poll_time": 30},
-		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 60, "val_min": 35000, "val_max": 55000, "poll_time": 30}
-	}
+		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
+		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 40, "val_min": 30000, "val_max": 50000, "poll_time": 30}
+	},
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "psu1", "psu2",
+	"sensor_amb", "sodimm1", "voltmon1", "voltmon3", "voltmon4", "voltmon5", "voltmon6"]
 }

@@ -730,6 +730,17 @@ handle_cpld_versions()
 	echo "$str" > $system_path/cpld
 }
 
+check_reset_attrs()
+{
+	attrname="$1"
+	if [[ "$attrname" == "reset_"* ]]; then
+		reset_attr_count=$((reset_attr_count+1))
+		if [ $reset_attr_count -eq $reset_attr_num ]; then
+			check_n_init $config_path/reset_attr_ready 1
+		fi
+	fi
+}
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -810,16 +821,17 @@ if [ "$1" == "add" ]; then
 			# For SN2201 indexes are from 0 to 9.
 			for i in {0..9}; do 
 				check_n_link "$3""$4"/in"$i"_input $environment_path/"$2"_in"$i"_input
-
 				check_n_link "$3""$4"/in"$i"_alarm $alarm_path/"$2"_in"$i"_alarm
-
 				check_n_link "$3""$4"/curr"$i"_input $environment_path/"$2"_curr"$i"_input
-
 				check_n_link "$3""$4"/power"$i"_input $environment_path/"$2"_power"$i"_input
-
 				check_n_link "$3""$4"/curr"$i"_alarm $alarm_path/"$2"_curr"$i"_alarm
-
 				check_n_link "$3""$4"/power"$i"_alarm $alarm_path/"$2"_power"$i"_alarm
+				check_n_link "$3""$4"/temp1_input $thermal_path/"$prefix"_temp1_input
+				check_n_link "$3""$4"/temp1_max $thermal_path/"$prefix"_temp1_max
+				check_n_link "$3""$4"/temp1_crit $thermal_path/"$prefix"_temp1_crit
+				check_n_link "$3""$4"/temp1_lcrit $thermal_path/"$prefix"_temp1_lcrit
+				check_n_link "$3""$4"/temp1_max_alarm $alarm_path/"$prefix"_temp1_max_alarm
+				check_n_link "$3""$4"/temp1_crit_alarm $alarm_path/"$prefix"_temp1_crit_alarm
 			done
 			;;
 		*)
@@ -830,27 +842,21 @@ if [ "$1" == "add" ]; then
 				prefix="voltmon6"
 			fi
 
-			if [[ $sku == "HI130" ]]; then
-				for i in {1..2}; do
-					check_n_link "$3""$4"/temp"$i"_input $thermal_path/"$prefix"_temp"$i"_input
-					check_n_link "$3""$4"/temp"$i"_max $thermal_path/"$prefix"_temp"$i"_max
-					check_n_link "$3""$4"/temp"$i"_crit $thermal_path/"$prefix"_temp"$i"_crit
-					check_n_link "$3""$4"/temp"$i"_lcrit $thermal_path/"$prefix"_temp"$i"_lcrit
-				done
-			fi
-			check_n_link "$3""$4"/temp1_input $thermal_path/"$prefix"_temp_input
-			check_n_link "$3""$4"/temp1_max $thermal_path/"$prefix"_temp_max
+			# Creating links for only temp1 attribute. Skipping temp2 and others
+			check_n_link "$3""$4"/temp1_input $thermal_path/"$prefix"_temp1_input
+			check_n_link "$3""$4"/temp1_max $thermal_path/"$prefix"_temp1_max
+			check_n_link "$3""$4"/temp1_crit $thermal_path/"$prefix"_temp1_crit
+			check_n_link "$3""$4"/temp1_lcrit $thermal_path/"$prefix"_temp1_lcrit
+			check_n_link "$3""$4"/temp1_max_alarm $alarm_path/"$prefix"_temp1_max_alarm
+			check_n_link "$3""$4"/temp1_crit_alarm $alarm_path/"$prefix"_temp1_crit_alarm
 
 			for i in {1..3}; do
 				find_sensor_by_label "$3""$4" "in" "${VOLTMON_SENS_LABEL[$i]}"
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-
-                                        if [[ $sku == "HI130" ]]; then
-                                            check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
-                                            check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
-                                        fi
+					check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
+					check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
@@ -898,19 +904,19 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/curr"$i"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
 					fi
 
-					check_n_link "$3""$4"/power"$i"_alarm $environment_path/"$2"_power"$i"_alarm
-					check_n_link "$3""$4"/in"$i"_lcrit $environment_path/"$2"_in"$i"_lcrit
-					check_n_link "$3""$4"/in"$i"_min $environment_path/"$2"_in"$i"_min
-					check_n_link "$3""$4"/in"$i"_max $environment_path/"$2"_in"$i"_max
-					check_n_link "$3""$4"/in"$i"_crit $environment_path/"$2"_in"$i"_crit
-					check_n_link "$3""$4"/curr"$i"_lcrit $environment_path/"$2"_curr"$i"_lcrit
-					check_n_link "$3""$4"/curr"$i"_min $environment_path/"$2"_curr"$i"_min
-					check_n_link "$3""$4"/curr"$i"_max $environment_path/"$2"_curr"$i"_max
-					check_n_link "$3""$4"/curr"$i"_crit $environment_path/"$2"_curr"$i"_crit
-					check_n_link "$3""$4"/power"$i"_lcrit $environment_path/"$2"_power"$i"_lcrit
-					check_n_link "$3""$4"/power"$i"_min $environment_path/"$2"_power"$i"_min
-					check_n_link "$3""$4"/power"$i"_max $environment_path/"$2"_power"$i"_max
-					check_n_link "$3""$4"/power"$i"_crit $environment_path/"$2"_power"$i"_crit
+					check_n_link "$3""$4"/power"$i"_alarm $environment_path/"$prefix"_power"$i"_alarm
+					check_n_link "$3""$4"/in"$i"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					check_n_link "$3""$4"/in"$i"_min $environment_path/"$prefix"_in"$i"_min
+					check_n_link "$3""$4"/in"$i"_max $environment_path/"$prefix"_in"$i"_max
+					check_n_link "$3""$4"/in"$i"_crit $environment_path/"$prefix"_in"$i"_crit
+					check_n_link "$3""$4"/curr"$i"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
+					check_n_link "$3""$4"/curr"$i"_min $environment_path/"$prefix"_curr"$i"_min
+					check_n_link "$3""$4"/curr"$i"_max $environment_path/"$prefix"_curr"$i"_max
+					check_n_link "$3""$4"/curr"$i"_crit $environment_path/"$prefix"_curr"$i"_crit
+					check_n_link "$3""$4"/power"$i"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
+					check_n_link "$3""$4"/power"$i"_min $environment_path/"$prefix"_power"$i"_min
+					check_n_link "$3""$4"/power"$i"_max $environment_path/"$prefix"_power"$i"_max
+					check_n_link "$3""$4"/power"$i"_crit $environment_path/"$prefix"_power"$i"_crit
 				fi
 			done
 			;;
@@ -955,6 +961,8 @@ if [ "$1" == "add" ]; then
 		$led_path/led_"$name"_state
 	fi
 	if [ "$2" == "regio" ]; then
+		reset_attr_num=$(< $config_path/reset_attr_num)
+		reset_attrr_count=0
 		linecard=0
 		# Detect if it belongs to line card or to main board.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
@@ -985,6 +993,7 @@ if [ "$1" == "add" ]; then
 				   [ "$attrname" != "uevent" ] &&
 				   [ "$attrname" != "name" ] && [ "$take" -ne 0 ] ; then
 					ln -sf "$3""$4"/"$attrname" $system_path/"$attrname"
+					check_reset_attrs "$attrname"
 				fi
 			done
 			handle_cpld_versions "$cpld_num"

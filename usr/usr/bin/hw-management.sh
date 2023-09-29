@@ -71,6 +71,10 @@ psu1_i2c_addr=0x59
 psu2_i2c_addr=0x58
 psu3_i2c_addr=0x5b
 psu4_i2c_addr=0x5a
+psu5_i2c_addr=0x5d
+psu6_i2c_addr=0x5c
+psu7_i2c_addr=0x5e
+psu8_i2c_addr=0x5f
 psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
@@ -95,12 +99,14 @@ i2c_freq_reg=0x2004
 spc3_pci_id=cf70
 spc4_pci_id=cf80
 quantum2_pci_id=d2f2
+quantum3_pci_id=d2f4
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 leakage_count=0
 asic_chipup_retry=2
 chipup_log_size=4096
+reset_dflt_attr_num=18
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -115,6 +121,7 @@ chipup_log_size=4096
 
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
+xdr_cpu_bus_offset=66
 
 connect_table=()
 named_busses=()
@@ -159,13 +166,16 @@ cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
-cpu_type3_mps_voltmon_connection_table=(	mp2975 0x6a 15 comex_voltmon1 \
-						mp2975 0x6b 15 comex_voltmon2)
+#
+# BF3 CPU.
+#
+bf3_come_voltmon_connection_table=( \
+			mp2975 0x69 15 comex_voltmon1 \
+			mp2975 0x6a 15 comex_voltmon2)
 
-bf3_come_connection_table=(	tmp421 0x1f 15 \
-				mp2975 0x69 15 \
-				mp2975 0x6a 15 \
-				24c32 0x50 16)
+bf3_come_connection_table=(	\
+			tmp421 0x1f 15 \
+			24c32 0x50 16)
 
 msn2700_base_connect_table=(	pmbus 0x27 5 \
 			pmbus 0x41 5 \
@@ -486,6 +496,36 @@ p4262_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x21 29 voltmon4 \
 	mp2975 0x23 29 voltmon5 )
 
+# Just for possible initial step without SMBios alternative BOM string
+qm3400_base_connect_table=( \
+	mp2891 0x66 5  \
+	mp2891 0x68 5  \
+	mp2891 0x6c 5  \
+	mp2891 0x66 21 \
+	mp2891 0x68 21 \
+	mp2891 0x6c 21 \
+	tmp102 0x49 6  \
+	tmp102 0x4a 7  \
+	24c512 0x51 8 )
+
+# Just for possible initial step without SMBios alternative BOM string
+qm3000_base_connect_table=( \
+	mp2891 0x66 5  \
+	mp2891 0x68 5  \
+	mp2981 0x6c 5  \
+	mp2891 0x66 21 \
+	mp2891 0x68 21 \
+	mp2891 0x6c 21 \
+	mp2891 0x66 37 \
+	mp2891 0x68 37 \
+	mp2891 0x6c 37 \
+	mp2891 0x66 53 \
+	mp2891 0x68 53 \
+	mp2891 0x6c 53 \
+	tmp102 0x49 6  \
+	tmp102 0x4a 7  \
+	24c512 0x51 8 )
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
@@ -493,6 +533,8 @@ mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
+qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
+qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 
 ACTION=$1
 
@@ -803,12 +845,12 @@ add_cpu_board_to_connection_table()
 				;;
 				2|4)
 					cpu_connection_table=( ${cpu_type1_a1_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type1_xpds_voltmon_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type1_xpde_voltmon_connection_table[@]} )
 				;;
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100|HI122|HI123)
+						HI116|HI112|HI124|HI100|HI122|HI123|MSN3700|MSN3700C)
 							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
@@ -823,7 +865,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# MQM9700, P4697 removed A2D from CFL
-				HI130|HI142|HI152)  # TBD MS. Which other systems have CFL comex with A2D
+				HI130|HI142|HI152|HI157|HI158)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
@@ -833,18 +875,8 @@ add_cpu_board_to_connection_table()
 			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		$BF3_CPU)
-			case $sku in
-				# MQM9700+BF3
-				HI151)
-					cpu_connection_table=( ${bf3_come_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
-					;;
-				# MSN4700+BF3
-				HI156)
-					cpu_connection_table=( ${bf3_come_connection_table[@]} )
-					cpu_voltmon_connection_table=( ${cpu_type3_mps_voltmon_connection_table[@]} )
-					;;
-			esac
+			cpu_connection_table=( ${bf3_come_connection_table[@]} )
+			cpu_voltmon_connection_table=( ${bf3_come_voltmon_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
@@ -957,6 +989,7 @@ msn274x_specific()
 	echo 2 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn21xx_specific()
@@ -978,6 +1011,7 @@ msn21xx_specific()
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2100.json"
 	echo 4 > $config_path/fan_drwr_num
 	echo 1 > $config_path/fixed_fans_system
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn24xx_specific()
@@ -987,6 +1021,7 @@ msn24xx_specific()
 		HI138)
 			# SGN2410_A1
 			connect_table+=(${msn2700_A2D_base_connect_table[@]})
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			hotplug_fans=0
 			max_tachos=0
 		;;
@@ -1001,6 +1036,7 @@ msn24xx_specific()
 			echo 2000 > $config_path/psu_fan_min
 			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
 			echo 24c02 > $config_path/psu_eeprom_type
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
 			;;
 	esac
 	add_cpu_board_to_connection_table
@@ -1011,6 +1047,7 @@ msn24xx_specific()
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	set_spc1_port_cpld
 	cpld=$(< $config_path/cpld_port)
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn27xx_msb_msx_specific()
@@ -1024,6 +1061,23 @@ msn27xx_msb_msx_specific()
 			;;
 		*)
 			connect_table+=(${msn2700_A2D_base_connect_table[@]})
+			;;
+	esac
+	# Connect TC data table 
+	case $product in
+		MSN27*)
+			# Panther
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2700.json"
+			;;
+		MSN241*)
+			# Spider
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn2410.json"
+			;;
+		MSB78*|MSB77*)
+			# Scorp
+			thermal_control_config="$thermal_control_configs_path/tc_config_msb7xxx.json"
+			;;
+		*)
 			;;
 	esac
 	add_cpu_board_to_connection_table
@@ -1059,9 +1113,9 @@ msn27xx_msb_msx_specific()
 
 	set_spc1_port_cpld
 
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn2700_sensors.conf"
 	get_i2c_bus_frequency_default
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn201x_specific()
@@ -1083,6 +1137,7 @@ msn201x_specific()
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2010.json"
 	echo 4 > $config_path/fan_drwr_num
 	echo 1 > $config_path/fixed_fans_system
+	echo 8 > $config_path/reset_attr_num
 }
 
 connect_msn3700()
@@ -1123,12 +1178,12 @@ mqmxxx_msn37x_msn34x_specific()
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
-		HI112)
+		HI112|MSN3700)
 			# msn3700
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
 		;;
-		HI116)
+		HI116|MSN3700C)
 			# mmsn3700C
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
@@ -1157,6 +1212,7 @@ mqmxxx_msn37x_msn34x_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	get_i2c_bus_frequency_default
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 sn3750sx_specific()
@@ -1174,6 +1230,7 @@ sn3750sx_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn3750sx_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn3750.json" 
 	get_i2c_bus_frequency_default
 }
 
@@ -1193,6 +1250,7 @@ msn3420_specific()
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn3420.json"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn_xh3000_specific()
@@ -1228,6 +1286,7 @@ msn38xx_specific()
 	echo 4 > $config_path/cpld_num
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn3800.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3800_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn24102_specific()
@@ -1250,6 +1309,7 @@ msn24102_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
 	get_i2c_bus_frequency_default
+	echo 8 > $config_path/reset_attr_num
 }
 
 msn27002_msb78002_specific()
@@ -1272,8 +1332,9 @@ msn27002_msb78002_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn27002_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2700_msb7x00.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn27002.json"
 	get_i2c_bus_frequency_default
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 connect_msn4700_msn4600()
@@ -1350,6 +1411,10 @@ msn46xx_specific()
 				1|3)
 					connect_msn4700_msn4600_A1
 				;;
+				2)
+					connect_msn4700_msn4600
+					lm_sensors_config="$lm_sensors_configs_path/msn4600c_2_sensors.conf"
+				;;
 				*)
 					connect_msn4700_msn4600
 				;;
@@ -1378,6 +1443,7 @@ msn46xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn3510_specific()
@@ -1393,6 +1459,7 @@ msn3510_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 mqm97xx_specific()
@@ -1470,6 +1537,7 @@ mqm97xx_specific()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 mqm9510_specific()
@@ -1492,6 +1560,7 @@ mqm9510_specific()
 	leakage_count=3
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	named_busses+=(${mqm9510_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1518,6 +1587,7 @@ mqm9520_specific()
 	leakage_count=8
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	named_busses+=(${mqm9520_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1602,6 +1672,7 @@ p4697_specific()
 	echo 4 > $config_path/cpld_num
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/p4697_sensors.conf"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn_spc2_common()
@@ -1641,6 +1712,7 @@ msn_spc2_common()
 			mqmxxx_msn37x_msn34x_specific
 			;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn_spc3_common()
@@ -1671,6 +1743,7 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 bf3_common()
@@ -1679,16 +1752,31 @@ bf3_common()
 		HI151)
 			mqm97xx_specific
 			i2c_asic_bus_default=0
+			echo 15 > $config_path/cx_default_i2c_bus
 			;;
 		HI156)
 			msn47xx_specific
 			i2c_asic_bus_default=0
+			echo 15 > $config_path/cx_default_i2c_bus
 			;;
 		*)
 			echo "Unsupported BF3 platform"
 			exit 0
 			;;
 	esac
+
+	jtag_bridge_offset=`cat /proc/iomem | grep mlxplat_jtag_bridge | awk -F '-' '{print $1}'`
+	echo $jtag_bridge_offset > $config_path/jtag_bridge_offset
+	jtag_pci=`lspci | grep Lattice | grep 9c30 | awk '{print $1}'`
+	check_n_link /sys/bus/pci/devices/0000:"$jtag_pci"/resource0 $config_path/jtag_bridge
+
+	if find /sys/devices/platform/MLNXBF49:00/mlxreg-io/hwmon/hwmon*/ | grep -q jtag_enable ; then
+		if [ ! -d $jtag_path ]; then
+			mkdir $jtag_path
+		fi
+		check_n_link /sys/devices/platform/MLNXBF49:00/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
+	fi
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 msn48xx_specific()
@@ -1709,9 +1797,11 @@ msn48xx_specific()
 	echo 3000 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
-	echo 14 > $config_path/pcie_default_i2c_bus
+	echo 14 > $config_path/cx_default_i2c_bus
 	lm_sensors_config="$lm_sensors_configs_path/msn4800_sensors.conf"
 	lm_sensors_config_lc="$lm_sensors_configs_path/msn4800_sensors_lc.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 sn2201_specific()
@@ -1748,6 +1838,7 @@ sn2201_specific()
 	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2201.json"
+	echo 13 > $config_path/reset_attr_num
 }
 
 p2317_specific()
@@ -1761,6 +1852,8 @@ p2317_specific()
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
 	lm_sensors_config="$lm_sensors_configs_path/p2317_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 sn56xx_specific()
@@ -1800,9 +1893,11 @@ sn_spc4_common()
 	case $sku in
 		HI144)	# SN5600
 			sn56xx_specific
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn5600.json"
 		;;
 		HI147)	# SN5400
 			sn56xx_specific
+			thermal_control_config="$thermal_control_configs_path/tc_config_msn5400.json"
 		;;
 		HI148)	# SN5700
 			sn56xx_specific
@@ -1811,6 +1906,7 @@ sn_spc4_common()
 			sn56xx_specific
 		;;
 	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 p4262_specific()
@@ -1835,10 +1931,77 @@ p4262_specific()
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4262_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+}
+
+qm3xxx_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		if [ "$sku" == "HI157" ]; then
+			connect_table+=(${qm3400_base_connect_table[@]})
+		else
+			connect_table+=(${qm3000_base_connect_table[@]})
+		fi
+		add_cpu_board_to_connection_table $xdr_cpu_bus_offset
+	fi
+	# Set according to front fan max.
+	echo echo 21800 > $config_path/fan_max_speed
+	# Set as 20% of max speed
+	echo 4360 > $config_path/fan_min_speed
+	echo 27500 > $config_path/psu_fan_max
+	# Set as 20% of max speed
+	echo 5500 > $config_path/psu_fan_min
+	i2c_comex_mon_bus_default=$((xdr_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((xdr_cpu_bus_offset+6))
+
+	if [ "$sku" == "HI157" ]; then
+		max_tachos=10
+		hotplug_fans=5
+		hotplug_pwrs=4
+		hotplug_psus=4
+		echo 4 > $config_path/cpld_num
+		lm_sensors_config="$lm_sensors_configs_path/qm3400_sensors.conf"
+		lm_sensors_labels="$lm_sensors_configs_path/qm3400_sensors_labels.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_qm3400.json"
+		named_busses+=(${qm3400_named_busses[@]})
+		asic_i2c_buses=(2 18)
+	else
+		max_tachos=20
+		hotplug_fans=10
+		hotplug_pwrs=8
+		hotplug_psus=8
+		echo 6 > $config_path/cpld_num
+		lm_sensors_config="$lm_sensors_configs_path/qm3000_sensors.conf"
+		lm_sensors_labels="$lm_sensors_configs_path/qm3000_sensors_labels.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_qm3000.json"
+		named_busses+=(${qm3000_named_busses[@]})
+		asic_i2c_buses=(2 18 34 50)
+	fi
+
+	add_come_named_busses $xdr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo 0 > "$config_path"/labels_ready
+}
+
+qm_qm3_common()
+{
+	case $sku in
+		HI157)	# QM3400
+			qm3xxx_specific
+		;;
+		HI158)	# QM3000
+			qm3xxx_specific
+		;;
+		*)
+			qm3xxx_specific
+		;;
+	esac
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 check_system()
@@ -1886,6 +2049,9 @@ check_system()
 			;;
 		VMOD0016)
 			bf3_common
+			;;
+		VMOD0018)
+			qm_qm3_common
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2193,6 +2359,9 @@ create_symbolic_links()
 	if [ ! -f "$config_path/sfp_counter" ]; then
 		echo 0 > "$config_path"/sfp_counter
 	fi
+	if [ ! -f "$config_path/asic_chipup_counter" ]; then
+		echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
+	fi
 }
 
 remove_symbolic_links()
@@ -2231,13 +2400,19 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
+	HI157)
+		asic_pci_id=${quantum3_pci_id}
+		;;
+	HI158)
+		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
 		;;
 	esac
 
-	asics=`lspci -nn | grep $asic_pci_id | awk '{print $1}'`
+	asics=`lspci -nn | grep -E $asic_pci_id | awk '{print $1}'`
 	case $sku in
 	HI140)
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`   # 2-nd for ASIC1 because it appears first
@@ -2268,6 +2443,24 @@ set_asic_pci_id()
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
+		;;
+	HI157)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asics" | wc -l > "$config_path"/asic_num
+		;;
+	HI158)
+		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
 		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
@@ -2304,6 +2497,9 @@ pre_devtr_init()
 		;;
 	VMOD0017)
 		echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+		;;
+	VMOD0018)
+		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	*)
 		;;
@@ -2411,6 +2607,15 @@ do_stop()
 	fi
 }
 
+function find_asic_hwmon_path()
+{
+	local path=$1
+	if [ ! -d "$path" ]; then
+		return 1
+	fi
+	return 0
+}
+
 do_chip_up_down()
 {
 	action=$1
@@ -2470,6 +2675,19 @@ do_chip_up_down()
 	case $action in
 	0)
 		lock_service_state_change
+
+		# If FAN PWM is controllded by ASIC - set it to 100%
+		pwm_link=$thermal_path/pwm1
+		if [ -L ${pwm_link} ] && [ -e ${pwm_link} ];
+		then
+			pwm_src=$(readlink -f ${pwm_link})
+			asic_i2c_add=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-"$bus"/"$bus"-"$i2c_asic_addr_name"
+			if [[ "$pwm_src" == *"$asic_i2c_add"* ]]; then
+				echo  255 > $pwm_link
+				log_info "Set PWM to maximum speed prior fan driver removing."
+			fi
+		fi
+
 		chipup_delay=$(< $config_path/chipup_delay)
 		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
@@ -2477,9 +2695,12 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
 			restore_i2c_bus_frequency_default
+		else
+			unlock_service_state_change
+			return 0
 		fi
 		echo 0 > $config_path/sfp_counter
-		unlock_service_state_change
+		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		;;
 	1)
 		lock_service_state_change
@@ -2497,8 +2718,8 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
-
-			if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon ]; then
+			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon
+			if [ $? -ne 0 ]; then
 				# chipup command failed.
 				unlock_service_state_change
 				return 1
@@ -2515,7 +2736,13 @@ do_chip_up_down()
 			unlock_service_state_change
 			return 0
 		fi
-		unlock_service_state_change
+		if [ ! -f "$config_path/asic_chipup_completed" ]; then
+			echo 0 > "$config_path/asic_chipup_completed"
+		fi
+		if [ ! -f "$config_path/asics_init_done" ]; then
+			echo 0 > "$config_path/asics_init_done"
+		fi
+		unlock_service_state_change_update_and_match "$config_path/asic_chipup_completed" 1 "$config_path/asic_num" "$config_path/asics_init_done"
 		return 0
 		;;
 	*)
@@ -2606,9 +2833,11 @@ case $ACTION in
 				if [ "$asic_chipup_rc" -ne 0 ];then
 					do_chip_up_down 0 "$2" "$3"
 				else
+					echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
 					exit 0
 				fi
 
+				asic_retry=$(< $config_path/asic_chipup_counter)
 				if [ "$asic_retry" -eq "$asic_chipup_retry" ]; then
 					# Start I2C tracer.
 					echo 1 >/sys/kernel/debug/tracing/events/i2c/enable
@@ -2618,7 +2847,7 @@ case $ACTION in
 					echo 0>/sys/kernel/debug/tracing/trace
 				fi
 
-				asic_retry=$((asic_retry-1))
+				change_file_counter $config_path/asic_chipup_counter -1
 			done
 			echo 0 >/sys/kernel/debug/tracing/events/i2c/enable
 			log_info "chipup failed for ASIC $asic_index"

@@ -49,13 +49,14 @@ min_module_gbox_ind=2
 max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
-pciesw_i2c_bus=0
+cx_i2c_bus=0
 fan_full_speed_code=20
 # Static variable to keep track the number of fan drawers
 fan_drwr_num=0
 # 46 - F, 52 - R
 fan_direction_exhaust=46
 fan_direction_intake=52
+pwm_min_level=51
 
 FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 
@@ -258,26 +259,30 @@ if [ "$1" == "add" ]; then
 		exit 0
 	fi
 	case "$2" in
-		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
-		if [ -f $config_path/pcie_default_i2c_bus ]; then
-			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
-			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		if [ -f $config_path/cx_default_i2c_bus ]; then
+			cx_i2c_bus=$(< $config_path/cx_default_i2c_bus)
+			cx_i2c_bus=$((cx_i2c_bus+i2c_bus_offset))
 		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
-			check_n_link "$3""$4"/temp1_input $thermal_path/comex_amb
+			if [ $2 == cx_amb ]; then
+				check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
+			else
+				check_n_link "$3""$4"/temp1_input $thermal_path/comex_amb
+			fi
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
-		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
-			check_n_link "$3""$4"/temp2_input $thermal_path/pciesw_amb
+		elif [ $bus -eq $cx_i2c_bus ]; then
+			check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
 		else
 			check_n_link "$3""$4"/temp1_input $thermal_path/"$2"
 		fi
@@ -313,8 +318,17 @@ if [ "$1" == "add" ]; then
 			if [ "$name" == "mlxsw" ]; then
 				ln -sf "$3$4" $cpath/asic_hwmon
 				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				echo 105000 > $tpath/asic_temp_emergency
+				echo 85000 > $tpath/asic_temp_crit
+				echo 75000 > $tpath/asic_temp_norm
+
 				if [ -f "$3""$4"/pwm1 ]; then
 					ln -sf  "$3""$4"/pwm1 "$tpath"/pwm1
+					pwm_level=$(< "$thermal_path/pwm1")
+					# If PWM level less then minimum then set it to default value
+					if [ $pwm_level -lt $pwm_min_level ]; then
+						echo $pwm_min_level > $thermal_path/pwm1
+					fi
 					echo "$name" > "$cpath"/cooling_name
 				fi
 				if [ -f "$cpath"/fan_inversed ]; then
@@ -386,6 +400,11 @@ if [ "$1" == "add" ]; then
 		name=$(< "$3""$4"/name)
 		echo "$name" > $config_path/cooling_name
 		check_n_link "$3""$4"/pwm1 $thermal_path/pwm1
+		pwm_level=$(< "$thermal_path/pwm1")
+		# If PWM level less then minimum then set it to default value
+		if [ $pwm_level -lt $pwm_min_level ]; then
+			echo $pwm_min_level > $thermal_path/pwm1
+		fi
 		for ((i=1; i<=max_pwm; i+=1)); do
 			check_n_link "$3""$4"/pwm"$i" $thermal_path/pwm"$i"
 		done
@@ -445,10 +464,14 @@ if [ "$1" == "add" ]; then
 			if [ -x /usr/bin/hw-management-user-thermal-governor.sh ]; then
 				/usr/bin/hw-management-user-thermal-governor.sh $tpath/"$zonetype"
 			fi
-			# Disable kernel thermal algorthm on liquid cooled systems
-			if [[ $sku == "HI140" ]] || [[ $sku == "HI141" ]]; then
-				if [ -x /usr/bin/hw-management-liquid-cooling.sh ]; then
-					/usr/bin/hw-management-liquid-cooling.sh $tpath/"$zonetype"
+
+			if [ -d $tpath/"$zonetype" ]; then
+				sleep 0.1
+				echo "disabled" > $tpath/"$zonetype"/thermal_zone_mode
+				echo "user_space" > $tpath/"$zonetype"/thermal_zone_policy
+				# Fixup race condition for main thermal zone.
+				if [ -f /var/run/hw-management/thermal/mlxsw/thermal_zone_mode ]; then
+					echo "disabled" > /var/run/hw-management/thermal/mlxsw/thermal_zone_mode
 				fi
 			fi
 		fi
@@ -754,12 +777,12 @@ if [ "$1" == "add" ]; then
 		# Set default fan speed
 		psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		# Add thermal attributes
-		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp
-		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp_max
-		check_n_link "$5""$3"/temp1_max_alarm $thermal_path/"$psu_name"_temp_max_alarm
+		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp1
+		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp1_max
+		check_n_link "$5""$3"/temp1_max_alarm $alarm_path/"$psu_name"_temp1_max_alarm
 		check_n_link "$5""$3"/temp2_input $thermal_path/"$psu_name"_temp2
 		check_n_link "$5""$3"/temp2_max $thermal_path/"$psu_name"_temp2_max
-		check_n_link "$5""$3"/temp2_max_alarm $thermal_path/"$psu_name"_temp2_max_alarm
+		check_n_link "$5""$3"/temp2_max_alarm $alarm_path/"$psu_name"_temp2_max_alarm
 		check_n_link "$5""$3"/fan1_alarm $alarm_path/"$psu_name"_fan1_alarm
 		check_n_link "$5""$3"/power1_alarm $alarm_path/"$psu_name"_power1_alarm
 		check_n_link "$5""$3"/fan1_input $thermal_path/"$psu_name"_fan1_speed_get
@@ -980,28 +1003,32 @@ elif [ "$1" == "change" ]; then
 	fi
 else
 	case "$2" in
-		fan_amb | port_amb | pcisw_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
 		# Verify if this is ASIC sensor
 		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
-		if [ -f $config_path/pcie_default_i2c_bus ]; then
-			pciesw_i2c_bus=$(< $config_path/pcie_default_i2c_bus)
-			pciesw_i2c_bus=$((pciesw_i2c_bus+i2c_bus_offset))
+		if [ -f $config_path/cx_default_i2c_bus ]; then
+			cx_i2c_bus=$(< $config_path/cx_default_i2c_bus)
+			cx_i2c_bus=$((cx_i2c_bus+i2c_bus_offset))
 		fi
 		busdir=$(echo "$3""$4" |xargs dirname |xargs dirname)
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		if [ "$bus" == "$comex_bus" ]; then
-			unlink $thermal_path/comex_amb
+			if [ $2 == cx_amb ]; then
+				unlink $thermal_path/cx_amb
+			else
+				unlink $thermal_path/comex_amb
+			fi
 		elif [ "$bus" == "$asic_bus" ]; then
 			exit 0
-		elif [ "$bus" == "$pciesw_i2c_bus" ]; then
-			unlink $thermal_path/pciesw_amb
+		elif [ "$bus" == "$cx_i2c_bus" ]; then
+			unlink $thermal_path/cx_amb
 		else
-			unlink $thermal_path/$
+			unlink $thermal_path/"$2"
 		fi
 		;;
 	esac

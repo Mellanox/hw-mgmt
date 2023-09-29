@@ -1,4 +1,5 @@
  {
+	"name": "msn2010",
 	"dmin" : {
 		"C2P": {
 			"untrusted": {"-127:15": 20, "16:20": 30, "21:30": 40, "31:35": 40, "36:120": 60},
@@ -44,5 +45,6 @@
 		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
 	},
-	"asic_config" : {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": true, "fan_control": true}}
+	"asic_config" : {"1":  {"bus" : 2, "addr" : "0048", "pwm_control": true, "fan_control": true}},
+	"sensor_list" : ["asic1", "sodimm1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "sensor_amb", "voltmon1", "voltmon2"]
 }

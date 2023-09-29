@@ -1,0 +1,45 @@
+From c93c44e9ffb798072a22557d0be7a9290a5affda Mon Sep 17 00:00:00 2001
+From: Michael Shych <michaelsh@nvidia.com>
+Date: Thu, 23 Mar 2023 17:59:25 +0000
+Subject: [PATCH backport 6.1.42 84/85] e1000e: OPT: skip NVM checksum.
+
+NVM checksum is reported as bad in many cases after full
+BIOS SPI flash including GbE section burn by Dediprog.
+This happened in the early steps of production flow before
+EEPROM / NVM info will be customized and the checksum will
+be recalculated. Just skip this check.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+---
+ drivers/net/ethernet/intel/e1000e/netdev.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/net/ethernet/intel/e1000e/netdev.c b/drivers/net/ethernet/intel/e1000e/netdev.c
+index db8e06157da2..8a922a9c9573 100644
+--- a/drivers/net/ethernet/intel/e1000e/netdev.c
++++ b/drivers/net/ethernet/intel/e1000e/netdev.c
+@@ -7568,6 +7568,12 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+ 	/* systems with ASPM and others may see the checksum fail on the first
+ 	 * attempt. Let's give it a few tries
+ 	 */
++	/* NVIDIA >>>
++	 * NVM checksum is reported as bad in many cases after full
++	 * BIOS SPI flash including GbE section burn by Dediprog.
++	 * This happened in the early steps of production flow before
++	 * EEPROM / NVM info will be customized and the checksum will
++	 * be recalculated. Just skip this check.
+ 	for (i = 0;; i++) {
+ 		if (e1000_validate_nvm_checksum(&adapter->hw) >= 0)
+ 			break;
+@@ -7577,6 +7583,8 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+ 			goto err_eeprom;
+ 		}
+ 	}
++	 * NVIDIA <<<
++	 */
+ 
+ 	e1000_eeprom_checks(adapter);
+ 
+-- 
+2.20.1
+

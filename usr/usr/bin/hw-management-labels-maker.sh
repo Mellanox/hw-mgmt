@@ -33,7 +33,6 @@
 source hw-management-helpers.sh
 set -x
 sku=$(< $sku_file)
-hw_management_path=/var/run/hw-management
 ui_path=$hw_management_path/ui 
 
 # Obtain label file (/var/run/hw-management/config/lm_sensors_labels).
@@ -152,7 +151,7 @@ make_labels()
 		;;
 	esac
 
-	label_name=$(hw_management_parse_labels.py --get_value --label "labels_mqm9700_rev1_array" --key "$key")
+	label_name=$(hw_management_parse_labels.py --get_value --label "labels_${sku}_rev1_array" --key "$key")
 	[ -z "$label_name" ] && return 0
 	label_dir="$ui_path"/"$subfolder"/"$folder"/"$label_name"
 
@@ -161,7 +160,7 @@ make_labels()
 			mkdir -p "$label_dir"
 		fi
 		ln -sf "$attr_full_name" "$label_dir/$attr_file"
-		scale=$(hw_management_parse_labels.py --get_value --label "labels_scale_mqm9700_rev1_array" --key "$key")
+		scale=$(hw_management_parse_labels.py --get_value --label "labels_scale_${sku}_rev1_array" --key "$key")
 		[ -z "$scale" ] && return 0
 		echo "$scale" > "$label_dir"/scale
 	else
@@ -174,3 +173,5 @@ make_labels()
 		[ -f "$label_dir"/scale ] && rm -f "$label_dir"/scale
 	fi
 }
+
+make_labels "$1" "$2"

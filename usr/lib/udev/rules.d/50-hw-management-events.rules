@@ -61,8 +61,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pdb_temp2 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pdb_temp2 %S %p"
 
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pcisw_amb %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pcisw_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cx_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cx_amb %S %p"
 
 # BF3 ambient temperatures (lm75, tmp102).
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add port_amb %S %p"
@@ -86,8 +86,8 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pdb_temp2 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pdb_temp2 %S %p"
 
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pcisw_amb %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pcisw_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cx_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cx_amb %S %p"
 
 # SN2201 ambient temperatures (tmp75, tmp1075).
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-7/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add fan_amb %S %p"
@@ -112,6 +112,7 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/i2c-*/*-001*/hwmon/hwmon*", 
 
 # NVME temp
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon/hwmon*", DRIVERS=="nvme", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add nvme_temp %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon*", DRIVERS=="nvme", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add nvme_temp %S %p"
 
 # SSD temp
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:*/ata*/host*/*/*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add drivetemp %S %p"
@@ -155,6 +156,15 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu3 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu4 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu4 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu5 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu5 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu6 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu6 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu7 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu7 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu8 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu8 %p %k %S %n"
+
 
 # BF3 PS units power cables when power source is connected
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu1 %p %k %S %n"
@@ -165,6 +175,14 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu3 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu4 %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu4 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu5 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu5 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu6 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu6 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu7 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu7 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu8 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu8 %p %k %S %n"
 
 # SN2201 PS units power cables when power source is connected.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-3/3-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu1 %p %k %S %n"
@@ -181,6 +199,12 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p 2"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 2"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p 3"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 3"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 3"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p 4"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 4"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 4"
 
 # BF3 Hotplug devices statuses.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug %S %p"
@@ -191,6 +215,12 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p 2"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 2"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p 3"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 3"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 3"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic up %S %p 4"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 4"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p 4"
 
 # SN2201 hotplug devices statuses.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug %S %p"
@@ -211,6 +241,13 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN6}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN6 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN7}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN7 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN7}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN7 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN8 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN8 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN9}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN9 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN9}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN9 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN10}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN10 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN10}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN10 1"
+
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 1"
@@ -220,6 +257,15 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU3}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU3 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU4 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU4}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU4 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU5}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU5 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU5}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU5 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU6}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU6 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU6}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU6 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU7}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU7 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU7}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU7 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU8 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU8 1"
+
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 1"
@@ -229,6 +275,14 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwm
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR3}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR3 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR4 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR4}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR4 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR5}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR5 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR5}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR5 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR6}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR6 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR6}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR6 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR7}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR7 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR7}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR7 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR8 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR8 1"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC1_ACTIVE}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_ACTIVE 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LC1_ACTIVE}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LC1_ACTIVE 1"
@@ -364,6 +418,12 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN6}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN6 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN7}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN7 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN7}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN7 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN8 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN8 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN9}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN9 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN9}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN9 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN10}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN10 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{FAN10}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event FAN10 1"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 1"
@@ -373,6 +433,14 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU3}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU3 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU4 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU4}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU4 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU5}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU5 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU5}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU5 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU6}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU6 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU6}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU6 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU7}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU7 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU7}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU7 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU8 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PSU8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PSU8 1"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 1"
@@ -382,6 +450,14 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR3}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR3 1"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR4 0"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR4}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR4 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR5}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR5 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR5}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR5 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR6}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR6 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR6}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR6 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR7}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR7 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR7}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR7 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR8 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/mlxreg-hotplug/hwmon/hwmon*", ENV{PWR8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event PWR8 1"
 
 # Leakage events
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 0"
