@@ -1339,6 +1339,7 @@ connect_msn4700_msn4600()
 	add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_xdpe_voltmon_connect_table[@]}"
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700.json"
 }
 
 connect_msn4700_msn4600_A1()
@@ -1355,6 +1356,7 @@ connect_msn4700_msn4600_A1()
 	add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 	add_cpu_board_to_connection_table
 	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700_mps.json"
 	named_busses+=(${msn47xx_mqm97xx_named_busses[@]})
 	add_come_named_busses
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1382,7 +1384,6 @@ msn47xx_specific()
 		fi
 	fi
 
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700.json"
 	thermal_type=$thermal_type_t10
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
