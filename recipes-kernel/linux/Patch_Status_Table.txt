@@ -529,7 +529,7 @@ Kernel-6.1
 |0028-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
 |0029-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            |                                                |
 |0030-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Feature pending                          |            |                                                |
-|0032-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  |                    | Downstream                               |            |                                                |
+|0032-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
 |0033-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
 |0034-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
 |0035-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
