@@ -75,7 +75,6 @@ psu5_i2c_addr=0x5d
 psu6_i2c_addr=0x5c
 psu7_i2c_addr=0x5e
 psu8_i2c_addr=0x5f
-psu_count=2
 fan_psu_default=0x3c
 fan_command=0x3b
 fan_config_command=0x3a
@@ -1786,7 +1785,6 @@ msn48xx_specific()
 	echo 4 > $config_path/cpld_num
 	hotplug_pwrs=4
 	hotplug_psus=4
-	psu_count=4
 	i2c_asic_bus_default=3
 	echo 18000 > $config_path/fan_max_speed
 	echo 3000 > $config_path/fan_min_speed
@@ -2245,7 +2243,7 @@ load_modules()
 
 set_config_data()
 {
-	for ((idx=1; idx<=psu_count; idx+=1)); do
+	for ((idx=1; idx<=hotplug_psus; idx+=1)); do
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
