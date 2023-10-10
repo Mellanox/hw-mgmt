@@ -1959,6 +1959,7 @@ qm3xxx_specific()
 		hotplug_fans=5
 		hotplug_pwrs=4
 		hotplug_psus=4
+		psu_count=4
 		echo 4 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/qm3400_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/qm3400_sensors_labels.json"
@@ -1970,6 +1971,7 @@ qm3xxx_specific()
 		hotplug_fans=10
 		hotplug_pwrs=8
 		hotplug_psus=8
+		psu_count=8
 		echo 6 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/qm3000_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/qm3000_sensors_labels.json"
