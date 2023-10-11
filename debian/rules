@@ -18,6 +18,8 @@ override_dh_auto_install:
 	cp usr/etc/modules-load.d/* debian/$(pname)/etc/modules-load.d
 	dh_installdirs -p$(pname) usr/bin
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
+	dh_installdirs -p$(pname) etc/logrotate.d
+	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
 ifeq ($(DEB_HOST_ARCH),arm64)
 	rm -f debian/$(pname)/usr/bin/iorw
 	dh_installdirs -p$(pname) lib/systemd/system-shutdown
