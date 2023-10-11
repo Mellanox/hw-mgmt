@@ -29,6 +29,8 @@ endif
 	cp usr/etc/hw-management-sensors/* debian/$(pname)/etc/hw-management-sensors
 	dh_installdirs -p$(pname) etc/hw-management-thermal
 	cp usr/etc/hw-management-thermal/* debian/$(pname)/etc/hw-management-thermal
+	dh_installdirs -p$(pname) etc/hw-management-virtual
+	cp -a usr/etc/hw-management-virtual/* debian/$(pname)/etc/hw-management-virtual
 
 override_dh_installinit:
 	dh_installinit --name=hw-management
