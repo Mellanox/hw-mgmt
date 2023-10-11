@@ -56,6 +56,7 @@ i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
 l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
+udev_event_log="/var/log/udev_events.log"
 
 # Thermal type constants
 thermal_type_t1=1
@@ -108,6 +109,12 @@ log_err()
 log_info()
 {
     logger -t hw-management -p daemon.info "$@"
+}
+
+trace_udev_events()
+{
+	echo "[$(date '+%Y-%m-%d %H:%M:%S.%3N')] $@" >> $udev_event_log
+	return 0
 }
 
 check_cpu_type()
