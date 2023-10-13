@@ -985,7 +985,7 @@ msn274x_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 18000 > $config_path/psu_fan_max
 	echo 2000 > $config_path/psu_fan_min
-	echo "4 3 2 1" > $config_path/fan_inversed
+	echo "3 4 1 2" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
 	lm_sensors_config="$lm_sensors_configs_path/msn2740_sensors.conf"
@@ -1005,7 +1005,7 @@ msn21xx_specific()
 	echo 1500 > $config_path/fan_min_speed
 	echo 13000 > $config_path/psu_fan_max
 	echo 1040 > $config_path/psu_fan_min
-	echo "4 3 2 1" > $config_path/fan_inversed
+	echo "3 4 1 2" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2100_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2100.json"
@@ -1131,7 +1131,7 @@ msn201x_specific()
 	echo 4500 > $config_path/fan_min_speed
 	echo 13000 > $config_path/psu_fan_max
 	echo 1040 > $config_path/psu_fan_min
-	echo "4 3 2 1" > $config_path/fan_inversed
+	echo "3 4 1 2" > $config_path/fan_inversed
 	echo 2 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/msn2010_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn2010.json"
