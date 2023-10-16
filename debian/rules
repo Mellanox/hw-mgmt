@@ -15,13 +15,14 @@ override_dh_auto_install:
 	dh_installdirs -p$(pname) etc/modprobe.d
 	cp usr/etc/modprobe.d/* debian/$(pname)/etc/modprobe.d
 	dh_installdirs -p$(pname) etc/modules-load.d
-	cp usr/etc/modules-load.d/* debian/$(pname)/etc/modules-load.d
+	cp usr/etc/modules-load.d/05-hw-management-modules.conf debian/$(pname)/etc/modules-load.d
 	dh_installdirs -p$(pname) usr/bin
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
 	dh_installdirs -p$(pname) etc/logrotate.d
 	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
 ifeq ($(DEB_HOST_ARCH),arm64)
 	mv debian/$(pname)/usr/bin/iorw.sh debian/$(pname)/usr/bin/iorw
+	cp usr/etc/modules-load.d/05-hw-management-modules-arm64.conf debian/$(pname)/etc/modules-load.d/05-hw-management-modules.conf
 	dh_installdirs -p$(pname) lib/systemd/system-shutdown
 	cp usr/usr/bin/hw-management-kexec-notifier.sh debian/$(pname)/lib/systemd/system-shutdown
 endif
