@@ -21,7 +21,7 @@ override_dh_auto_install:
 	dh_installdirs -p$(pname) etc/logrotate.d
 	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
 ifeq ($(DEB_HOST_ARCH),arm64)
-	rm -f debian/$(pname)/usr/bin/iorw
+	mv debian/$(pname)/usr/bin/iorw.sh debian/$(pname)/usr/bin/iorw
 	dh_installdirs -p$(pname) lib/systemd/system-shutdown
 	cp usr/usr/bin/hw-management-kexec-notifier.sh debian/$(pname)/lib/systemd/system-shutdown
 endif

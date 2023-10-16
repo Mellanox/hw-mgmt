@@ -1,6 +1,6 @@
 #!/bin/sh
 ################################################################################
-# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -46,6 +46,7 @@ usage()
 	echo "$(basename $0) [-r] [-w] [-o <offset>] [-l <length>] [-v <value>] [-f <filename>] [-q] [-h]"
 	echo "-r - perform read operation"
 	echo "-w - perform write operation"
+	echo "-b - base, for compatibility with X86 version, should be at least 0x2500, can be omitted"
 	echo "-o - offset, can be omitted, default is 0"
 	echo "-l - number of registers to read/write; can be omitted only for read - full dump in this case"
 	echo "-v - value for write operation"
@@ -53,7 +54,7 @@ usage()
 	echo "-q - quiet, when used with -f option, store output in file without printing to terminal"
 	echo "-h - display this help"
 	echo
-	echo "Note: Hexadecimal values of offset, length and value should be prefixed with 0x"
+	echo "Note: Hexadecimal values of base, offset, length and value should be prefixed with 0x"
 	echo
 	echo "Examples:"
 	echo "Read all registers"
@@ -178,7 +179,7 @@ do_print()
 #   1. Global variable 'data' holds register values
 #   2. Global variable 'file' holds log file name
 #   3. Parameter 'len' matches the number of values in 'data'
-#   4. Number of registers in regmap does not exceed 256
+#   4. Number of registers in regmap does not exceed 1024
 io_print_data()
 {
 	local off=$1
@@ -191,7 +192,7 @@ io_print_data()
 
 	# Handle single register value
 	if [ ${len} -eq 1 ]; then
-		do_print "IO reg 0x%02x = 0x%02x\n" ${off} 0x${data}
+		do_print "IO reg 0x%04x = 0x%02x\n" ${off} 0x${data}
 		return
 	fi
 
@@ -200,9 +201,9 @@ io_print_data()
 	for val in ${data}; do
 		if [ $((i % 16)) -eq 0 ]; then
 			if [ ${i} -eq 0 ]; then
-				do_print "%02x: %02x " ${off} 0x${val}
+				do_print "%04x: %02x " ${off} 0x${val}
 			else
-				do_print "\n%02x: %02x " ${off} 0x${val}
+				do_print "\n%04x: %02x " ${off} 0x${val}
 			fi
 		else
 			do_print "%02x " 0x${val}
@@ -279,10 +280,16 @@ quiet=0
 file=
 value=
 length=
+base=
+default_x86_base=0x2500
+offset_cmdline=0
 
 # Parse command line parameters
-while getopts "f:l:o:v:rwqh" arg; do
+while getopts "b:f:l:o:v:rwqh" arg; do
 	case "${arg}" in
+		b)
+			base=${OPTARG}
+			;;
 		f)
 			file=${OPTARG}
 			;;
@@ -291,6 +298,7 @@ while getopts "f:l:o:v:rwqh" arg; do
 			;;
 		o)
 			offset=${OPTARG}
+			offset_cmdline=1
 			;;
 		v)
 			value=${OPTARG}
@@ -336,6 +344,28 @@ if [ "${io_op}" -eq "${WR_OP}" ] && [ -z "${length}" ]; then
 	echo "Error: write length not specified"
 	usage
 	exit 1
+fi
+
+# Base parameter is supported for compatibility with X86 version.
+# It should be at least 0x2500 (LPC base address on X86 platforms).
+# On ARM plaforms it is converted to offset from X86 LPC base address.
+# Both base and offset can be specified on the command line only if base=0x2500
+if [ -n "${base}" ]; then
+	base=$(printf "%d" ${base} 2>/dev/null)
+	default_x86_base=$(printf "%d" ${default_x86_base} 2>/dev/null)
+
+	if [ ${base} -lt ${default_x86_base} ]; then
+		printf "Invalid base, should be at least 0x%x\n" ${default_x86_base}
+		exit 1
+	fi
+	if [ ${offset_cmdline} -eq 1 ] && [ ${base} -ne ${default_x86_base} ]; then
+		printf "Invalid combination of base and offset, base should be 0x%x\n" ${default_x86_base}
+		exit 1
+	fi
+
+	if [ ${base} -gt ${default_x86_base} ]; then
+		offset=$((base-default_x86_base))
+	fi
 fi
 
 # Check offset parameter validity
