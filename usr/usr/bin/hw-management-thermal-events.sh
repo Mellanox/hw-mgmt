@@ -318,6 +318,7 @@ if [ "$1" == "add" ]; then
 			if [ "$name" == "mlxsw" ]; then
 				ln -sf "$3$4" $cpath/asic_hwmon
 				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				echo 120000 > $tpath/asic_temp_trip_crit
 				echo 105000 > $tpath/asic_temp_emergency
 				echo 85000 > $tpath/asic_temp_crit
 				echo 75000 > $tpath/asic_temp_norm
@@ -370,7 +371,10 @@ if [ "$1" == "add" ]; then
 							check_n_link "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
 							check_n_link "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
 							check_n_link "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
-							lock_service_state_change
+							if [ -f "$tpath"/module"$j"_temp_input ]; then
+								echo 120000 > $tpath/module"$j"_temp_trip_crit
+							fi
+							lock_service_sxtate_change
 							change_file_counter "$cpath"/module_counter 1
 							if [ "$lcmatch" == "linecard" ]; then
 								change_file_counter "$config_path"/module_counter 1
@@ -385,6 +389,12 @@ if [ "$1" == "add" ]; then
 								change_file_counter "$config_path"/gearbox_counter 1
 							fi
 							check_n_link "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							if [ -f "$tpath"/gearbox"$gearbox_counter"_temp_input ]; then
+								echo 120000 > $tpath/gearbox"$gearbox_counter"_temp_trip_crit
+								echo 105000 > $tpath/gearbox"$gearbox_counter"_temp_emergency
+								echo 85000 > $tpath/gearbox"$gearbox_counter"_temp_crit
+								echo 75000 > $tpath/gearbox"$gearbox_counter"_temp_norm
+							fi
 							unlock_service_state_change
 							;;
 						*)
