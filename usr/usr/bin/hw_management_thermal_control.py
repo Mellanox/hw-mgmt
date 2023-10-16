@@ -483,6 +483,7 @@ class Logger(object):
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
         self.logger_fh = None
+        self.logger_emit = True
 
         self.set_param(use_syslog, log_file, verbosity)
 
@@ -536,6 +537,13 @@ class Logger(object):
         for handler in handler_list:
             handler.close()
             self.logger.removeHandler(handler)
+        self.logger_emit = False
+
+    def close_tc_log_handler(self):
+        if self.logger_fh:
+            self.logger_fh.flush()
+            self.logger_fh.close()
+            self.logger.removeHandler(self.logger_fh)
 
     def set_loglevel(self, verbosity):
         """
@@ -552,6 +560,10 @@ class Logger(object):
             Log "debug" message.
         @param msg: message to save to log
         """
+        if not self.logger_emit:
+            return
+        self.logger_emit = False
+        
         msg_prefix = ""
         if syslog:
             msg_prefix = "@syslog "
@@ -560,6 +572,7 @@ class Logger(object):
                 self.logger.debug(msg_prefix + msg)
         except:
             pass
+        self.logger_emit = True
 
     def info(self, msg="", syslog=0):
         """
@@ -567,6 +580,10 @@ class Logger(object):
             Log "info" message.
         @param msg: message to save to log
         """
+        if not self.logger_emit:
+            return
+        self.logger_emit = False
+
         msg_prefix = ""
         if syslog:
             msg_prefix = "@syslog "
@@ -575,6 +592,7 @@ class Logger(object):
                 self.logger.info(msg_prefix + msg)
         except:
             pass
+        self.logger_emit = True
 
     def notice(self, msg="", syslog=0):
         """
@@ -582,6 +600,10 @@ class Logger(object):
             Log "notice" message.
         @param msg: message to save to log
         """
+        if not self.logger_emit:
+            return
+        self.logger_emit = False
+        
         msg_prefix = ""
         if syslog:
             msg_prefix = "@syslog "
@@ -590,6 +612,7 @@ class Logger(object):
                 self.logger.log(logging.INFO + 5, msg_prefix + msg)
         except:
             pass
+        self.logger_emit = True
 
     def warn(self, msg="", syslog=0):
         """
@@ -597,6 +620,10 @@ class Logger(object):
             Log "warn" message.
         @param msg: message to save to log
         """
+        if not self.logger_emit:
+            return
+        self.logger_emit = False
+        
         msg_prefix = ""
         if syslog:
             msg_prefix = "@syslog "
@@ -605,6 +632,7 @@ class Logger(object):
                 self.logger.warning(msg_prefix + msg)
         except:
             pass
+        self.logger_emit = True
 
     def error(self, msg="", syslog=0):
         """
@@ -612,6 +640,10 @@ class Logger(object):
             Log "error" message.
         @param msg: message to save to log
         """
+        if not self.logger_emit:
+            return
+        self.logger_emit = False       
+        
         msg_prefix = ""
         if syslog:
             msg_prefix = "@syslog "
@@ -620,6 +652,7 @@ class Logger(object):
                 self.logger.error(msg_prefix + msg)
         except:
             pass
+        self.logger_emit = True
 
 
 class RepeatedTimer(object):
@@ -2609,12 +2642,13 @@ class ThermalManagement(hw_managemet_file_op):
         """
         if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
             self.exit_flag = True
+            self.log.close_tc_log_handler()
             if self.sys_config.get("platform_support", 1):
                 self.stop(reason="SIG {}".format(sig))
 
             self.log.notice("Thermal control stopped", 1)
+            self.log.logger_emit = False
             self.log.stop()
-            time.sleep(200 / 1000)
             os._exit(0)
 
     # ----------------------------------------------------------------------
@@ -2865,6 +2899,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), 1)
             self.state = CONST.STOPPED
             self._set_pwm(CONST.PWM_MAX, reason="TC stop")
+            self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
 
     # ----------------------------------------------------------------------
     def run(self):
