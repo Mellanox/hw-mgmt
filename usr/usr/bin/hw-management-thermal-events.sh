@@ -863,6 +863,14 @@ if [ "$1" == "add" ]; then
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
+				if is_virtual_machine; then
+					if [ -f $vm_vpd_path/psu_vpd ]; then
+						cat $vm_vpd_path/psu_vpd > $eeprom_path/"$psu_name"_vpd
+					else
+						echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
+					fi
+					exit 0
+				fi
 				echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
 				exit 0
 			else

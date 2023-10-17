@@ -57,6 +57,8 @@ l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
 udev_event_log="/var/log/udev_events.log"
+vm_sku=`cat $sku_file`
+vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 
 # Thermal type constants
 thermal_type_t1=1
@@ -366,4 +368,13 @@ psu_set_fan_speed()
 
 	# Set fan speed
 	i2cset -f -y "$bus" "$addr" "$fan_command" "${speed}" wp
+}
+
+is_virtual_machine()
+{
+    if [ -n "$(lspci -vvv | grep SimX)" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
