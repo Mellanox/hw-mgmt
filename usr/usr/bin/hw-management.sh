@@ -1569,7 +1569,7 @@ mqm9520_specific()
 		add_i2c_dynamic_bus_dev_connection_table "${mqm9520_dynamic_i2c_bus_connect_table[@]}"
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
-	i2c_asic2_bus_default=10
+	asic_i2c_buses=(2 10)
 	i2c_bus_def_off_eeprom_cpu=24
 	i2c_comex_mon_bus_default=23
 	thermal_type=$thermal_type_def
@@ -2200,39 +2200,6 @@ enable_vpd_wp()
 	fi
 }
 
-get_asic_bus()
-{
-	if [ ! -f $config_path/asic_bus ]; then
-		find_i2c_bus
-		asic_bus=$((i2c_asic_bus_default+i2c_bus_offset))
-		echo $asic_bus > $config_path/asic_bus
-		echo $asic_bus > $config_path/asic1_i2c_bus_id
-	else
-		asic_bus=$(cat $config_path/asic_bus)
-	fi
-	return $((asic_bus))
-}
-
-get_asic2_bus()
-{
-	if [ ! -f "$config_path/asic_num" ]; then
-		return 0
-	fi
-	asic_num=$(< $config_path/asic_num)
-	if [ "$asic_num" -eq 1 ]; then
-		return 0
-	fi
-	i2c_asic_bus=$i2c_asic2_bus_default
-	if [ ! -f $config_path/asic2_i2c_bus_id ]; then
-		find_i2c_bus
-		asic_bus=$((i2c_asic_bus+i2c_bus_offset))
-		echo $asic_bus > $config_path/asic2_i2c_bus_id
-	else
-		asic_bus=$(cat $config_path/asic2_i2c_bus_id)
-	fi
-	return $((asic_bus))
-}
-
 load_modules()
 {
 	# Some modules are not present in all the kernel
@@ -2376,6 +2343,35 @@ remove_symbolic_links()
 	fi
 }
 
+set_asic_i2c_bus()
+{
+	local asic_num=1
+	local asic_i2c_bus
+
+	if [ -f "$config_path/asic_num" ]; then
+		asic_num=$(< $config_path/asic_num)
+	fi
+
+	find_i2c_bus
+
+	if [ ${asic_num} -eq 1 ]; then
+		if [ ! -f $config_path/asic_bus ]; then
+			asic_i2c_bus=$((i2c_asic_bus_default+i2c_bus_offset))
+			echo $asic_i2c_bus > $config_path/asic_bus
+			echo $asic_i2c_bus > $config_path/asic1_i2c_bus_id
+		fi
+		return
+	fi
+
+	for ((i=1; i<=${asic_num}; i++)); do
+		if [ ! -f $config_path/asic${i}_i2c_bus_id ]; then
+			asic_i2c_bus=${asic_i2c_buses[$((i-1))]}
+			asic_i2c_bus=$((asic_i2c_bus+i2c_bus_offset))
+			echo $asic_i2c_bus > $config_path/asic${i}_i2c_bus_id
+		fi
+	done
+}
+
 set_asic_pci_id()
 {
 	if [ ! -f "$config_path"/asic_control ]; then
@@ -2511,8 +2507,12 @@ pre_devtr_init()
 
 map_asic_pci_to_i2c_bus()
 {
+	local bus
+	local pci_bus
+	local i2c_bus
+
 	if [ -z "$1" ]; then
-		return 0
+		return 255
 	fi
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
 	if [ "$asic_num" ] && [ "$asic_num" -gt 1 ]; then
@@ -2526,7 +2526,7 @@ map_asic_pci_to_i2c_bus()
 			fi
 		done
 	fi
-	return 0
+	return 255
 }
 
 do_start()
@@ -2541,8 +2541,7 @@ do_start()
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
-		get_asic_bus
-		get_asic2_bus
+		set_asic_i2c_bus
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
@@ -2621,9 +2620,10 @@ function find_asic_hwmon_path()
 
 do_chip_up_down()
 {
-	action=$1
-	asic_index=$2
-	pci_bus=$3
+	local action=$1
+	local asic_index=$2
+	local asic_pci_bus=$3
+	local asic_i2c_bus
 
 	if [ -f "$config_path"/asic_control ]; then
 		asic_control=$(< $config_path/asic_control)
@@ -2668,11 +2668,15 @@ do_chip_up_down()
 			;;
 	esac
 
-	map_asic_pci_to_i2c_bus $pci_bus
-	bus=$?
-	if [ $bus -eq 0 ]; then
-		get_asic_bus
-		bus=$?
+	map_asic_pci_to_i2c_bus $asic_pci_bus
+	asic_i2c_bus=$?
+	if [ $asic_i2c_bus -eq 255 ]; then
+		set_asic_i2c_bus
+		if [ -n "$asic_index" ]; then
+			asic_i2c_bus=$(< $config_path/asic${asic_index}_i2c_bus_id)
+		else
+			asic_i2c_bus=$(< $config_path/asic_bus)
+		fi
 	fi
 
 	case $action in
@@ -2684,7 +2688,7 @@ do_chip_up_down()
 		if [ -L ${pwm_link} ] && [ -e ${pwm_link} ];
 		then
 			pwm_src=$(readlink -f ${pwm_link})
-			asic_i2c_add=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-"$bus"/"$bus"-"$i2c_asic_addr_name"
+			asic_i2c_add=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-"$asic_i2c_bus"/"$asic_i2c_bus"-"$i2c_asic_addr_name"
 			if [[ "$pwm_src" == *"$asic_i2c_add"* ]]; then
 				echo  255 > $pwm_link
 				log_info "Set PWM to maximum speed prior fan driver removing."
@@ -2692,11 +2696,11 @@ do_chip_up_down()
 		fi
 
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
+		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			set_i2c_bus_frequency_400KHz
-			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/delete_device
+			echo $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/delete_device
 			restore_i2c_bus_frequency_default
 		else
 			unlock_service_state_change
@@ -2715,13 +2719,13 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
 			set_i2c_bus_frequency_400KHz
-			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
+			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
 			restore_i2c_bus_frequency_default
-			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon
+			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
 			if [ $? -ne 0 ]; then
 				# chipup command failed.
 				unlock_service_state_change
