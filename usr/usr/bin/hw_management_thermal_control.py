@@ -482,6 +482,7 @@ class Logger(object):
         self.logger = None
         logging.basicConfig(level=logging.DEBUG)
         logging.addLevelName(logging.INFO + 5, "NOTICE")
+        SysLogHandler.priority_map["NOTICE"] = "notice"
         self.logger = logging.getLogger("main")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
