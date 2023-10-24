@@ -1,6 +1,6 @@
 #!/bin/bash
-########################################################################
-# Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##################################################################################
+# Copyright (c) 2021 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -45,6 +45,7 @@ thermal_path=$hw_management_path/thermal
 jtag_path=$hw_management_path/jtag
 power_path=$hw_management_path/power
 fw_path=$hw_management_path/firmware
+bin_path=$hw_management_path/bin
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
 board_type_file=/sys/devices/virtual/dmi/id/board_name
