@@ -2313,6 +2313,11 @@ create_symbolic_links()
 	if [ ! -d $fw_path ]; then
 		mkdir $fw_path
 	fi
+	if [ ! -d $bin_path ]; then
+		mkdir $bin_path
+		# Copy binaries to make them available for the access from containers.
+		cp /usr/bin/hw_management_independent_mode_update.py "$bin_path"
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
