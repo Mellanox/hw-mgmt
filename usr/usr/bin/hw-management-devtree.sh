@@ -37,7 +37,7 @@ devtree_codes_file=
 # Declare common associative arrays for SMBIOS System Version parsing.
 declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board")
 
-declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
+declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom", ["H"]="hot-swap", ["O"]="power-converter")
 
 declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75")
 
@@ -47,7 +47,7 @@ declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
 declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus")
 
-declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
+declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066" ["b"]="xdp710")
 
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
@@ -193,8 +193,21 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
 			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
+			       
+# TBD version: V0-C*A0RaEi-S*RaRaTcTcTcTcTcTcA0Ei-P*Ha
+declare -A p4300_alternatives=(["mp2975_0"]="mp2975 0x21 5 voltmon1" \
+				   ["mp2975_1"]="mp2975 0x23 5 voltmon2" \
+				   ["adt75_0"]="adt75 0x48 7 fiol_amb" \
+			       ["adt75_1"]="adt75 0x49 7 bpl_amb" \
+			       ["adt75_2"]="adt75 0x4a 7 fiom_amb" \
+			       ["adt75_3"]="adt75 0x4b 7 bpm_amb" \
+			       ["adt75_4"]="adt75 0x4c 7 fiob_amb" \
+			       ["adt75_5"]="adt75 0x4d 7 bpb_amb" \
+			       ["adt75_6"]="adt75 0x4e 7 fior_amb" \
+			       ["adt75_7"]="adt75 0x4f 7 bpr_amb" \
+			       ["24c512_0"]="24c512 0x51 8 system_eeprom")
 
-declare -A qm3000_alternatives=( \
+declare -A qm3000_alternatives=(
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -274,7 +287,7 @@ declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["pmbus_0"]="pmbus 0x12 4 pdb_pwr_conv1" \
 				   ["pmbus_1"]="pmbus 0x13 4 pdb_pwr_conv2" \
-				   ["pmbus_2"]="pmbus 0x16 4 pdb_pwr_conv3" \
+				   ["pmbus_2"]="pmbus 0x16 4 pdb_pwr_conv30" \
 				   ["pmbus_3"]="pmbus 0x17 4 pdb_pwr_conv4" \
 				   ["pmbus_4"]="pmbus 0x1b 4 pdb_pwr_conv5" \
 				   ["tmp75_0"]="tmp75 0x4d 4 pdb_temp1" \
@@ -283,6 +296,10 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
+
+# for p4300
+declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
+					["xdp710_1"]="xdp710 0x11 4 pdb_hotswap1")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -487,12 +504,25 @@ devtr_check_supported_system_init_alternatives()
 			return 0
 			;;
 		VMOD0017)
-			for key in "${!p4262_alternatives[@]}"; do
-				swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
-			done
-			for key in "${!pwr_type1_alternatives[@]}"; do
-				pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
-			done
+			case $sku in
+				HI152)
+					for key in "${!p4262_alternatives[@]}"; do
+						swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type1_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
+					done
+					;;
+				HI159)
+				 	# TBD
+					for key in "${!p4300_alternatives[@]}"; do
+						swb_alternatives["$key"]="${p4300_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type1_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type2_alternatives["$key"]}"
+					done
+				;;
+			esac
 			return 0
 			;;
 		VMOD0018)

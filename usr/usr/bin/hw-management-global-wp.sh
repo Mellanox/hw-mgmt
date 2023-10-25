@@ -187,7 +187,7 @@ release|restore)
 	echo "$global_wp_pid" > /var/run/hw-management-global-wp.pid
 	# systems without global WP but with ASIC WP
 	sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-	if [ "$sku" == "HI142" ] || [ "$sku" == "HI152" ]; then
+	if [ "$sku" == "HI142" ] || [ "$sku" == "HI152" ] || [ "$sku" == "HI159" ]; then
 		do_asic_wp_release_restore "$action" "$2" "$3" "$4" "$5" "$6" "$7"
 	else
 		do_global_wp_release_restore "$action" "$2" "$3" "$4" "$5" "$6" "$7"
