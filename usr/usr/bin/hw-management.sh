@@ -2210,12 +2210,6 @@ load_modules()
 			modprobe drivetemp
 		fi
 	fi
-
-	if ! lsmod | grep -q "mlxbf-ptm"; then
-		if [ -f /lib/modules/`uname -r`/kernel/drivers/platform/mellanox/mlxbf-ptm.ko ]; then
-			modprobe mlxbf-ptm
-		fi
-	fi
 }
 
 set_config_data()
