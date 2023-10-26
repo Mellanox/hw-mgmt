@@ -1100,6 +1100,9 @@ if [ "$1" == "add" ]; then
 			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
+			# replace "_info" to "_vpd" in eeprom name
+			eeprom_vpd_filename=${eeprom_name/"_info"/"_vpd"}
+			hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/$eeprom_vpd_filename
 			if [ "$board_type" == "VMOD0014" ]; then
 				fan_dir_offset=0x8
 			else
@@ -1122,8 +1125,11 @@ if [ "$1" == "add" ]; then
 			fi
 			;;
 		vpd_info)
-			hw-management-vpd-parser.py -t SYSTEM_VPD -i "$3""$4"/eeprom -o "$eeprom_path"/vpd_data
+			hw-management-vpd-parser.py -t SYSTEM_VPD -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/vpd_data
 			echo 1 > $config_path/events_ready
+			;;
+		cpu_info)
+			hw-management-vpd-parser.py -t MLNX_CPU_VPD -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/cpu_data
 			;;
 		*)
 			;;
