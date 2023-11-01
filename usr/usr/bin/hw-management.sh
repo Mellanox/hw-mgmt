@@ -465,7 +465,7 @@ p4262_base_connect_table=( \
 	pmbus 0x1b 4 \
 	tmp75 0x4d 4 \
 	tmp75 0x4e 4 \
-	24c502 0x50 4 \
+	24c02 0x50 4 \
 	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
@@ -474,7 +474,7 @@ p4262_base_connect_table=( \
 	adt75 0x4d 7 \
 	adt75 0x4e 7 \
 	adt75 0x4f 7 \
-	24c502 0x50 7 \
+	24c02 0x50 7 \
 	24c512 0x51 8 \
 	24c512 0x52 8 )
 
