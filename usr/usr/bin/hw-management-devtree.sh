@@ -35,7 +35,7 @@ devtr_verb_display=0
 devtree_codes_file=
 
 # Declare common associative arrays for SMBIOS System Version parsing.
-declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board")
+declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board" ["O"]="port_board")
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
 
@@ -219,9 +219,6 @@ declare -A qm3000_alternatives=( \
 				["xdpe1a2g7_9"]="xdpe1a2g7 0x66 53 voltmon10" \
 				["xdpe1a2g7_10"]="xdpe1a2g7 0x68 53 voltmon11" \
 				["xdpe1a2g7_11"]="xdpe1a2g7 0x6c 53 voltmon12" \
-				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-				["adt75_0"]="adt75 0x4a 7 port_amb" \
-				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 declare -A qm3400_alternatives=( \
@@ -237,9 +234,6 @@ declare -A qm3400_alternatives=( \
 				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-				["adt75_0"]="adt75 0x4a 7 port_amb" \
-				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
@@ -288,12 +282,18 @@ declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
 					["tmp75_0"]="tmp75 0x49 7 fan_amb")
 
+# Port ambient sensor located on a separate module board
+declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="adt75 0x4a 7 port_amb" \
+				["stts751_0"]="stts751 0x4a 7 port_amb")
+
 declare -A comex_alternatives
 declare -A swb_alternatives
 declare -A fan_alternatives
 declare -A clk_alternatives
 declare -A pwr_alternatives
 declare -A platform_alternatives
+declare -A port_alternatives
 declare -A board_alternatives
 
 devtr_validate_system_ver_str()
@@ -515,6 +515,10 @@ devtr_check_supported_system_init_alternatives()
 			for key in "${!fan_type1_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
 			done
+			for key in "${!port_type0_alternatives[@]}"; do
+				port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+			done
+
 			return 0
 			;;
 		*)
@@ -579,6 +583,11 @@ devtr_check_board_components()
 			fi
 			for key in "${!clk_alternatives[@]}"; do
 				board_alternatives["$key"]="${clk_alternatives["$key"]}"
+			done
+			;;
+		O)	# Port board
+			for key in "${!port_alternatives[@]}"; do
+				board_alternatives["$key"]="${port_alternatives["$key"]}"
 			done
 			;;
 		*)
