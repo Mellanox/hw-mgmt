@@ -195,9 +195,9 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
 			       
 # TBD version: V0-C*A0RaEi-S*RaRaTcTcTcTcTcTcA0Ei-P*Ha
-declare -A p4300_alternatives=(["mp2975_0"]="mp2975 0x21 5 voltmon1" \
-				   ["mp2975_1"]="mp2975 0x23 5 voltmon2" \
-				   ["adt75_0"]="adt75 0x48 7 fiol_amb" \
+declare -A p4300_alternatives=(["mp2975_0"]="mp2975 0x21 26 voltmon1" \
+			       ["mp2975_1"]="mp2975 0x23 26 voltmon2" \
+			       ["adt75_0"]="adt75 0x48 7 fiol_amb" \
 			       ["adt75_1"]="adt75 0x49 7 bpl_amb" \
 			       ["adt75_2"]="adt75 0x4a 7 fiom_amb" \
 			       ["adt75_3"]="adt75 0x4b 7 bpm_amb" \
@@ -287,7 +287,7 @@ declare -A pwr_type0_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["pmbus_0"]="pmbus 0x12 4 pdb_pwr_conv1" \
 				   ["pmbus_1"]="pmbus 0x13 4 pdb_pwr_conv2" \
-				   ["pmbus_2"]="pmbus 0x16 4 pdb_pwr_conv30" \
+				   ["pmbus_2"]="pmbus 0x16 4 pdb_pwr_conv3" \
 				   ["pmbus_3"]="pmbus 0x17 4 pdb_pwr_conv4" \
 				   ["pmbus_4"]="pmbus 0x1b 4 pdb_pwr_conv5" \
 				   ["tmp75_0"]="tmp75 0x4d 4 pdb_temp1" \
@@ -518,7 +518,7 @@ devtr_check_supported_system_init_alternatives()
 					for key in "${!p4300_alternatives[@]}"; do
 						swb_alternatives["$key"]="${p4300_alternatives["$key"]}"
 					done
-					for key in "${!pwr_type1_alternatives[@]}"; do
+					for key in "${!pwr_type2_alternatives[@]}"; do
 						pwr_alternatives["$key"]="${pwr_type2_alternatives["$key"]}"
 					done
 				;;

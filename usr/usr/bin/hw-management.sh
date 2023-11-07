@@ -518,11 +518,7 @@ qm3000_base_connect_table=( \
 
 # Just for possible initial step without SMBios alternative BOM string
 p4300_base_connect_table=( \
-	pmbus 0x10 4 \
 	lm5066 0x11 4 \
-	tmp75 0x4d 4 \
-	tmp75 0x4e 4 \
-	24c502 0x50 4 \
 	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
@@ -531,9 +527,7 @@ p4300_base_connect_table=( \
 	adt75 0x4d 7 \
 	adt75 0x4e 7 \
 	adt75 0x4f 7 \
-	24c502 0x50 7 \
-	24c512 0x51 8 \
-	24c512 0x52 8 )
+	24c512 0x51 8)
 
 # TBD
 p4300_dynamic_i2c_bus_connect_table=( \
@@ -1968,8 +1962,8 @@ p4300_specific()
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
 	echo 3 > $config_path/cpld_num
-	hotplug_fans=7
-	max_tachos=14
+	hotplug_fans=4
+	max_tachos=4
 	hotplug_pwrs=0
 	hotplug_psus=0
 	erot_count=1
