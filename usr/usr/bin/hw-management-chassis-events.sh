@@ -420,6 +420,9 @@ function set_fan_direction()
 		if [ ! -f $system_path/fan_dir ]; then
 			return
 		fi
+		if [[ "$sku" == "HI117" ]]; then
+			return
+		fi
 		fan_dir=$(< $system_path/fan_dir)
 		fandirhex=$(printf "%x\n" "$fan_dir")
 		fan_bit_index=$(( ${attribute:3} - 1 ))
@@ -1101,7 +1104,7 @@ if [ "$1" == "add" ]; then
 				fan_dir_offset=$fan_dir_offset_in_vpd_eeprom_pn
 			fi
 			# We need to read FAN direction from eeprom if cpld fan direction exists
-			if [ ! -f $system_path/fan_dir ]; then
+			if [[ ! -f $system_path/fan_dir ]] || [[ "$sku" == "HI117" ]]; then
 				fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
 				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
 				case $fan_direction in
