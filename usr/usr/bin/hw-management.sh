@@ -518,7 +518,7 @@ qm3000_base_connect_table=( \
 
 # Just for possible initial step without SMBios alternative BOM string
 p4300_base_connect_table=( \
-	lm5066 0x11 4 \
+	lm5066 0x40 4 \
 	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
@@ -527,7 +527,8 @@ p4300_base_connect_table=( \
 	adt75 0x4d 7 \
 	adt75 0x4e 7 \
 	adt75 0x4f 7 \
-	24c512 0x51 8)
+	24c512 0x51 8 \
+	24c512 0x54 8)
 
 # TBD
 p4300_dynamic_i2c_bus_connect_table=( \
@@ -1970,7 +1971,7 @@ p4300_specific()
 	asic_control=0
 	#TBD
 	#health_events_count=4
-	#pwr_events_count=1
+	pwr_events_count=2
 	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
@@ -2250,7 +2251,7 @@ create_event_files()
 		check_n_init $events_path/leakage_rope 0
 	fi
 	for ((i=0; i<health_events_count; i+=1)); do
-		check_n_init  $events_path/${l1_switch_health_events[$i]} 0
+		check_n_init  $events_path/${l1_switch_health_events[$i]}
 	done
 	if [ $pwr_events_count -ne 0 ]; then
 		check_n_init $events_path/power_button 0

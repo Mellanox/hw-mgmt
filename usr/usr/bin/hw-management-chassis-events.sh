@@ -1,4 +1,4 @@
-#!/bin/bash
+source /labhome/oleksandrs/.basheditor/remote-debugging-v2.sh localhost 33333 #BASHEDITOR-TMP-REMOTE-DEBUGGING-END|Origin line:#!/bin/bash
 
 # Copyright (c) 2018 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #

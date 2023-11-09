@@ -193,11 +193,9 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
 			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
-			       
-# TBD version: V0-C*A0RaEi-S*RaRaTcTcTcTcTcTcA0Ei-P*Ha
-declare -A p4300_alternatives=(["mp2975_0"]="mp2975 0x21 26 voltmon1" \
-			       ["mp2975_1"]="mp2975 0x23 26 voltmon2" \
-			       ["adt75_0"]="adt75 0x48 7 fiol_amb" \
+
+# TBD version: V0-C*A0RaEi-S*TcTcTcTcTcTcA0EiEi-P*HaEaEa
+declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x48 7 fiol_amb" \
 			       ["adt75_1"]="adt75 0x49 7 bpl_amb" \
 			       ["adt75_2"]="adt75 0x4a 7 fiom_amb" \
 			       ["adt75_3"]="adt75 0x4b 7 bpm_amb" \
@@ -205,7 +203,8 @@ declare -A p4300_alternatives=(["mp2975_0"]="mp2975 0x21 26 voltmon1" \
 			       ["adt75_5"]="adt75 0x4d 7 bpb_amb" \
 			       ["adt75_6"]="adt75 0x4e 7 fior_amb" \
 			       ["adt75_7"]="adt75 0x4f 7 bpr_amb" \
-			       ["24c512_0"]="24c512 0x51 8 system_eeprom")
+			       ["24c512_0"]="24c512 0x51 8 system_eeprom"\
+			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom")
 
 declare -A qm3000_alternatives=(
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
@@ -292,8 +291,10 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
 
 # for p4300
-declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
-					["xdp710_1"]="xdp710 0x11 4 pdb_hotswap1")
+declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
+					["xdp710_1"]="xdp710 0x40 4 pdb_hotswap1" \
+					["24c02_1"]="24c02 0x50 3 cable_cartridge_eeprom" \
+					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
