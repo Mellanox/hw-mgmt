@@ -705,17 +705,8 @@ SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-manage
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"
 
 # EEPROM
-SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-4]", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-4]", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
 
 SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
