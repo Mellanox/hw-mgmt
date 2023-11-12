@@ -2,7 +2,7 @@
 # pylint: disable=line-too-long
 # pylint: disable=C0103
 ########################################################################
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -37,10 +37,9 @@
 Created on June 10, 2021
 
 Author: Mykola Kostenok <c_mykolak@nvidia.com>
-Version: 0.1
 
 Description:
-Delta PSU FW update tool.
+Delta and Acbel PSU FW update tool.
 
 '''
 import time
@@ -50,17 +49,26 @@ import os
 
 import hw_management_psu_fw_update_common as psu_upd_cmn
 
-TOOL_VERSION = '1.0'
 MFR_FWUPLOAD_MODE = 0xd6
 MFR_FWUPLOAD = 0xd7
 MFR_FWUPLOAD_STATUS = 0xd2
 MFR_FWUPLOAD_REVISION = 0xd5
 
-# Special FWUPLOAD_STATUS command for the first batch of Delta 3K PSUs
-MFR_MODEL_3000AB_10G = "DPS-3000AB-10 G"
-MFR_FWUPLOAD_STATUS_3000AB_10G = 0xd8
+MFR_FWUPLOAD_STATUS_ACBEL = 0xd8
+MFR_FWUPLOAD_REVISION_ACBEL = 0xd9
 
+# Delta 550 PSU Model
 MFR_MODEL_500AB = "DPS-550AB"
+
+# Acbel 1100 PSU Models
+MFR_MODEL_ACBEL_1100_FWD="FSP007-9G0G"
+MFR_MODEL_ACBEL_1100_REV="FSN022-9G0G"
+
+def mfr_model_is_acbel(mfr_model):
+    if mfr_model.startswith(MFR_MODEL_ACBEL_1100_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_1100_REV):
+        return True
+    else:
+        return False
 
 def read_mfr_fw_revision(i2c_bus, i2c_addr):
     """
@@ -69,6 +77,14 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
     mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
     if mfr_model.startswith(MFR_MODEL_500AB):
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 8)
+    elif mfr_model_is_acbel(mfr_model):
+        ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION_ACBEL, 4)
+        if ret != '' and len(ret) > 3 and ret[:2] == '0x':
+            int_list = ret.split()
+            int_list = int_list[1:3]
+            int_list.reverse()
+            ascii_str = '.'.join(str(int(i, 16)) for i in int_list)
+            return ascii_str
     else:
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FWUPLOAD_REVISION, 6)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
@@ -91,12 +107,11 @@ def read_mfr_fw_upload_status(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_FW_UPLOAD_STATUS.
     """
-    mfr_upload_status_cmd = MFR_FWUPLOAD_STATUS
     mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
-    if mfr_model == MFR_MODEL_3000AB_10G:
-        mfr_upload_status_cmd = MFR_FWUPLOAD_STATUS_3000AB_10G
-
-
+    if mfr_model_is_acbel(mfr_model):
+        mfr_upload_status_cmd = MFR_FWUPLOAD_STATUS_ACBEL
+    else:
+        mfr_upload_status_cmd = MFR_FWUPLOAD_STATUS
     ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, mfr_upload_status_cmd, 1)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
         upload_status = UPLOAD_STATUS_DICT.get(int(ret, 16))
@@ -148,13 +163,25 @@ FW_HEADER = {
     }
 
 
-def parce_header(data_list):
+def parce_header_delta(data_list):
     """
-    @summary: Parse FW file header.
+    @summary: Parse Delta FW file header.
     """
     FW_HEADER["model_name"] = "".join(chr(x) for x in data_list[10:22])
     FW_HEADER["fw_revision"] = data_list[23:26]
     FW_HEADER["hw_revision"] = "".join("{0:c}{1:c}".format(data_list[26], data_list[27]))
+    FW_HEADER["block_size"] = data_list[29] * 256 + data_list[28]
+    FW_HEADER["write_time"] = data_list[31] * 256 + data_list[30]
+    print(FW_HEADER)
+
+
+def parce_header_acbel(data_list):
+    """
+    @summary: Parse Acbel FW file header.
+    """
+    FW_HEADER["model_name"] = "".join(chr(x) for x in data_list[10:20])
+    FW_HEADER["fw_revision"] = data_list[23:26]
+    FW_HEADER["hw_revision"] = ".".join(chr(x) for x in data_list[26:28])
     FW_HEADER["block_size"] = data_list[29] * 256 + data_list[28]
     FW_HEADER["write_time"] = data_list[31] * 256 + data_list[30]
     print(FW_HEADER)
@@ -212,8 +239,12 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
                 print("Fail read FW header.")
                 exit(1)
             data_list = byte_array.tolist()
+            mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
             # Read FW image header for blocksize and delay time.
-            parce_header(data_list)
+            if mfr_model_is_acbel(mfr_model):
+                parce_header_acbel(data_list)
+            else:
+                parce_header_delta(data_list)
 
             # Write FW
             delta_fw_file_burn(i2c_bus, i2c_addr, fw_filename)
@@ -226,7 +257,7 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
             time.sleep(120)
             # Check FW revision changed. if no - fail.
             new_fw_rev = read_mfr_fw_revision(i2c_bus, i2c_addr)
-            print(current_fw_rev)
+            print(new_fw_rev)
             if new_fw_rev != current_fw_rev:
                 print("FW Update successful.")
                 exit(0)
