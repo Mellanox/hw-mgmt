@@ -302,6 +302,8 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
 MLNX_VENDOR_BLK_FIELDS = ["name", "minor_version", "offset", "length", "info_type", "type"]
 MLNX_CPU_VPD = MLNX_VENDOR_BLK
 MLNX_FAN_VPD = MLNX_VENDOR_BLK
+MLNX_PDB_VPD = MLNX_VENDOR_BLK
+MLNX_CARTRIDGE_VPD = MLNX_VENDOR_BLK
 LC_VPD = SYSTEM_VPD
 
 bin_decode = lambda val: val.decode('ascii').rstrip('\x00') if isinstance(val, bytes) else val
@@ -638,7 +640,10 @@ if __name__ == '__main__':
                                                                                                                    "LC_VPD",
                                                                                                                    "SYSTEM_VPD",
                                                                                                                    "MLNX_CPU_VPD",
-                                                                                                                   "MLNX_FAN_VPD"])
+                                                                                                                   "MLNX_FAN_VPD",
+                                                                                                                   "MLNX_PDB_VPD",
+                                                                                                                   "MLNX_CARTRIDGE_VPD"])
+
     parser.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
     args = parser.parse_args()
 
