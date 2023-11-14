@@ -625,7 +625,7 @@ function handle_i2cbus_dev_action()
 
 	# Load i2c devices list which should be connected on demand..
 	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-	
+
 	# wait till i2c driver fully init
 	sleep 20
 	# Go over all devices and check if they should be connected to the current i2c bus.
@@ -663,7 +663,7 @@ function get_i2c_busdev_name()
 		else
 			declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
 		fi
-	
+
 		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
 		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
 		[[ $i2c_busdev_path =~ $i2caddr_regex ]]
@@ -675,7 +675,7 @@ function get_i2c_busdev_name()
 			i2cbus="${BASH_REMATCH[1]}"
 			i2caddr="0x${BASH_REMATCH[2]}"
 		fi
-	
+
 		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
 			# match device by i2c bus/addr
 			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2caddr == "${dynamic_i2c_bus_connect_table[i+1]}" ];
@@ -1122,8 +1122,8 @@ if [ "$1" == "add" ]; then
 			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
-			# Replace "_info" to "_vpd" in eeprom name.
-			eeprom_vpd_filename=${eeprom_name/"_info"/"_vpd"}
+			# Replace "_info" to "_data" in eeprom name.
+			eeprom_vpd_filename=${eeprom_name/"_info"/"_data"}
 			hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/$eeprom_vpd_filename
 			if [ "$board_type" == "VMOD0014" ]; then
 				fan_dir_offset=0x8
@@ -1152,6 +1152,12 @@ if [ "$1" == "add" ]; then
 			;;
 		cpu_info)
 			hw-management-vpd-parser.py -t MLNX_CPU_VPD -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/cpu_data
+			;;
+		pdb_eeprom)
+			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
+			;;
+		cable_cartridge_eeprom)
+			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/cable_cartridge_data
 			;;
 		*)
 			;;
