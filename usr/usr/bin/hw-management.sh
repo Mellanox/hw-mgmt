@@ -1962,16 +1962,15 @@ p4300_specific()
 	fi
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
-	echo 3 > $config_path/cpld_num
+	echo 2 > $config_path/cpld_num
 	hotplug_fans=4
 	max_tachos=4
 	hotplug_pwrs=0
 	hotplug_psus=0
 	erot_count=1
 	asic_control=0
-	#TBD
-	#health_events_count=4
-	pwr_events_count=2
+	health_events_count=4
+	pwr_events_count=1
 	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
