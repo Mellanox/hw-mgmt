@@ -39,6 +39,7 @@ HW_MGMT_FOLDER="/var/run/hw-management/"
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
 REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
+dump_process_pid=$$
 
 MODE=$1
 
@@ -71,9 +72,9 @@ ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
     run_cmd="find -L $HW_MGMT_FOLDER -maxdepth 4 -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null"
-    timeout 120 bash -c "$run_cmd" &> /dev/null
+    timeout 140 bash -c "$run_cmd" &> /dev/null
     run_cmd="find $HW_MGMT_FOLDER/eeprom/  -name *info  -exec ls -la {} \; -exec hexdump -C {} \; > $DUMP_FOLDER/hw-management_fru_dump 2> /dev/null"
-    timeout 60 bash -c "$run_cmd" &> /dev/null
+    timeout 80 bash -c "$run_cmd" &> /dev/null
 fi
 
 if [ -z $MODE ] || [ $MODE != "compact" ]; then
@@ -120,6 +121,8 @@ dump_cmd "sensors" "sensors" "20"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 
+# Kill all the leftout child processes before creating the dump archive
+pkill -P $dump_process_pid
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
