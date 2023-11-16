@@ -305,8 +305,6 @@ if [ "$1" == "add" ]; then
 				tpath="$thermal_path"
 				min_module_ind=$min_module_gbox_ind
 				max_module_ind=$max_module_gbox_ind
-				echo 0 > "$cpath"/gearbox_counter
-				echo 0 > "$cpath"/module_counter
 			fi
 
 			if [ ! -f "$cpath/gearbox_counter" ]; then
@@ -1103,9 +1101,6 @@ else
 			rm -f "$tpath/module*_temp_fault"
 			rm -f "$tpath/module*_temp_crit"
 			rm -f "$tpath/module*_temp_emergency"
-
-			echo 0 > $cpath/module_counter
-			echo 0 > $cpath/gearbox_counter
 
 			check_n_unlink $cpath/asic_hwmon
 
