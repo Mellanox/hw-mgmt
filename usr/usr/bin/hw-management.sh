@@ -2760,7 +2760,7 @@ do_chip_up_down()
 check_simx()
 {
 	case $sku in
-		HI130|HI122)
+		HI130|HI122|HI144|HI147|HI157)
 			# Let the initialization go through
 			;;
 		*)
