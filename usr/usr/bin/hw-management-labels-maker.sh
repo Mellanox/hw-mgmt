@@ -118,23 +118,23 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	psu1_volt*|psu2_volt*|psu3_volt*|psu4_volt*)
+	psu1_volt*|psu2_volt*|psu3_volt*|psu4_volt*|psu5_volt*|psu6_volt*|psu7_volt*|psu8_volt*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	psu1_power*|psu2_power*|psu3_power*|psu4_power*)
+	psu1_power*|psu2_power*|psu3_power*|psu4_power*|psu5_power*|psu6_power*|psu7_power*|psu8_power*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	psu1_curr*|psu2_curr*|psu3_curr*|psu4_curr*)
+	psu1_curr*|psu2_curr*|psu3_curr*|psu4_curr*|psu5_curr*|psu6_curr*|psu7_curr*|psu8_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	psu1_temp*|psu2_temp*|psu3_temp*|psu4_temp*)
+	psu1_temp*|psu2_temp*|psu3_temp*|psu4_temp*|psu5_temp*|psu6_temp*|psu7_temp*|psu8_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	psu1_fan*|psu2_fan*|psu3_fan*|psu4_fan*)
+	psu1_fan*|psu2_fan*|psu3_fan*|psu4_fan*|psu5_fan*|psu6_fan*|psu7_fan*|psu8_fan*)
 		subfolder="fan"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
