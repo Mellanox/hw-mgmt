@@ -42,7 +42,7 @@ f_names_layout0=("SANITY" "SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD" "RSRVD" 
 f_length_layout1=(4 24 1 1 20 4 3 11 5 4)
 f_names_layout1=("SANITY" "SN_VPD_FIELD" "RSRVD" "EFT_REV" "PN_VPD_FIELD" "REV_VPD_FIELD" "MFG_DATE_FIELD" "MFR_NAME" "FEED" "CAPACITY")
 
-f_length_layout2=(24 20 4)
+f_length_layout2=(24 20 4) 
 f_names_layout2=("SN_VPD_FIELD" "PN_VPD_FIELD" "REV_VPD_FIELD")
 
 f_length_layout3=(2 2 1 3)

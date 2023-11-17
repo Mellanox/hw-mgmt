@@ -535,7 +535,7 @@ function handle_hotplug_event()
 	local lc_path
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
-	
+
 	if [ -f "$events_path"/"$attribute" ]; then
 		echo "$event" > "$events_path"/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
@@ -597,108 +597,6 @@ function handle_fantray_led_event()
 	*)
 		;;
 	esac
-}
-
-# Handle i2c bus add/remove.
-# If we have some devices which should be connected to this bus - do it.
-# $1 - i2c bus full address.
-# $2 - i2c bus action type add/remove.
-function handle_i2cbus_dev_action()
-{
-	i2c_busdev_path=$1
-	i2c_busdev_action=$2
-
-	# Check if we have devices list which should be connected to dynamic i2c buses.
-	if [ ! -f $config_path/i2c_bus_connect_devices ];
-	then
-		return
-	fi
-
-	# Extract i2c bus index.
-	i2cbus_regex="i2c-([0-9]+)$"
-	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
-	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
-		return
-	else
-		i2cbus="${BASH_REMATCH[1]}"
-	fi
-
-	# Load i2c devices list which should be connected on demand..
-	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-
-	# wait till i2c driver fully init
-	sleep 20
-	# Go over all devices and check if they should be connected to the current i2c bus.
-	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
-		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
-		then
-			if [ "$i2c_busdev_action" == "add" ]; then
-				connect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
-					"${dynamic_i2c_bus_connect_table[i+2]}"
-			elif [ "$i2c_busdev_action" == "remove" ]; then
-				diconnect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
-					"${dynamic_i2c_bus_connect_table[i+2]}"
-			fi
-		fi
-	done
-}
-
-# Get device sensor name prefix, like voltmon{id}, by its i2c_busdev_path
-# For name {devname}X returning name based on $config_path/i2c_bus_connect_devices file.
-# For other names - just return voltmon{id} string.
-# $1 - device name
-# $2 - path to sensor in sysfs
-# return sensor name if match is found or undefined in other case.
-function get_i2c_busdev_name()
-{
-	dev_name=$1
-	i2c_busdev_path=$2
-
-	# Check if we have devices list which can be connected with name translation.
-	if [  -f $config_path/i2c_bus_connect_devices ] || [ -f "$devtree_file" ];
-	then
-		# Load i2c devices list which should be connected on demand.
-		if [ -f "$devtree_file" ]; then
-			declare -a dynamic_i2c_bus_connect_table=($(<"$devtree_file"))
-		else
-			declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-		fi
-
-		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
-		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
-		[[ $i2c_busdev_path =~ $i2caddr_regex ]]
-		if [ "${#BASH_REMATCH[@]}" != 3 ]; then
-			# not matched
-			echo "$dev_name"
-			return
-		else
-			i2cbus="${BASH_REMATCH[1]}"
-			i2caddr="0x${BASH_REMATCH[2]}"
-		fi
-
-		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
-			# match device by i2c bus/addr
-			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2caddr == "${dynamic_i2c_bus_connect_table[i+1]}" ];
-			then
-				dev_name="${dynamic_i2c_bus_connect_table[i+3]}"
-				if [ $dev_name == "NA" ]; then 
-					echo "undefined"
-				else
-					echo "$dev_name"
-				fi
-				return
-			fi
-		done
-	fi
-
-	# we not matched i2c device with dev_list file or file not exist
-	# returning passed "devname" name or "undefined" in case if passed '{somthing}X"
-	if [ ${dev_name:0-1} == "X" ];
-	then
-		dev_name="undefined"
-	fi
-
-	echo "$dev_name"
 }
 
 function check_cpld_attrs_num()
@@ -816,6 +714,12 @@ if [ "$1" == "add" ]; then
 		then
 			exit
 		fi
+		# Voltmon MUST have at least one input
+		if [ ! -f "$3""$4"/in1_input ]; 
+		then
+			exit
+		fi
+		
 		if [ "$prefix" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
@@ -1075,6 +979,15 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		# During connecting non-existent eeprom dev, for a short time, 24C* driver
+		# creates ./eeprom sysfs entry, To prevent mistaken eeprom connect, 
+		# we should wait a short time to give a chance for the driver to 
+		# remove ./eeprom entry (if the device is not present).
+		sleep 0.1
+		# Event came from none-eeprom device or eeprom not initialized.
+		if [ ! -f "$3""$4"/eeprom ]; then
+			exit
+		fi
 		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
