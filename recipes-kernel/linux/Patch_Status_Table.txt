@@ -270,6 +270,7 @@ Kernel-5.10
 |0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch           |                    | Downstream                               |            |                                                |
 |0098-2-Revert-mlxsw-i2c-Fix-chunk-size-setting.patch             |                    | Downstream                               |            |                                                |
 |0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch   |                    | Downstream                               |            |                                                |
+|0098-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream                               |            | IB Disable FW update                           |
 |0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Downstream                               |            | Modular SN4800                                 |
 |0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Downstream                               |            | Modular SN4800                                 |
 |0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch  | bfb82c9cceac       | Downstream                               |            | Modular SN4800                                 |
