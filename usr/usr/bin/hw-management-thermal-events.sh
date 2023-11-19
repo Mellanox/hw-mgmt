@@ -366,6 +366,26 @@ if [ "$1" == "add" ]; then
 							else
 								j="$i"
 							fi
+							case $sku in
+								# First 19 modules are accessible via ASIC1, all the rest - via ASIC2
+								HI157)
+									asic1_bus=${asic_i2c_buses[0]}
+									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+									if [ ${asic_bus} -ne ${asic1_bus} ]; then
+											j=$((j+19))
+									fi
+									;;
+								# All modules are accessible via ASIC1
+								HI158)
+									asic1_bus=${asic_i2c_buses[0]}
+									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+									if [ ${asic_bus} -ne ${asic1_bus} ]; then
+										continue
+									fi
+									;;
+								*)
+									;;
+							esac
 							check_n_link "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
 							check_n_link "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
 							check_n_link "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
