@@ -553,7 +553,7 @@ Kernel-6.1
 |0052-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
 |0053-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream                               |            |                                                |
 |0054-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream                               |            |                                                |
-|0055-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream                               |            | BF3                                            |
+|0055-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted                      |            | BF3                                            |
 |0056-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature upstream                         |            |                                                |
 |0057-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature pending                          |            |                                                |
 |0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf        | Feature upstream                         |            | BF3                                            |
