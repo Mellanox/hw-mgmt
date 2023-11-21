@@ -37,7 +37,7 @@ devtree_codes_file=
 # Declare common associative arrays for SMBIOS System Version parsing.
 declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board" ["O"]="port_board")
 
-declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
+declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc")
 
 declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75")
 
@@ -745,6 +745,82 @@ devtr_check_board_components()
 				o_cnt=$((o_cnt+1))
 				;;
 			H)	# Hot-swap
+				if [ "$component_key" == "0" ]; then
+					h_cnt=$((h_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${h_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				h_cnt=$((h_cnt+1))
+				;;
+			G)	# GPIO Expander
+				if [ "$component_key" == "0" ]; then
+					h_cnt=$((h_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${h_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				h_cnt=$((h_cnt+1))
+				;;
+			N)	# Network Adapter
+				if [ "$component_key" == "0" ]; then
+					h_cnt=$((h_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${h_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				h_cnt=$((h_cnt+1))
+				;;
+			J)	# Jitter Attenuator
+				if [ "$component_key" == "0" ]; then
+					h_cnt=$((h_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${h_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				h_cnt=$((h_cnt+1))
+				;;
+			X)	# Oscillator
 				if [ "$component_key" == "0" ]; then
 					h_cnt=$((h_cnt+1))
 					continue
