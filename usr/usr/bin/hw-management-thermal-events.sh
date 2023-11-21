@@ -723,9 +723,9 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
-		name=$(<"$3""$4"/name)
+		name=$(< /sys/"$3"/name)
 		if [ "$name" != "jc42" ]; then
-			return
+			exit
 		fi
 		check_cpu_type
 		shopt -s extglob
