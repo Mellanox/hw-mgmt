@@ -367,12 +367,12 @@ if [ "$1" == "add" ]; then
 								j="$i"
 							fi
 							case $sku in
-								# First 19 modules are accessible via ASIC1, all the rest - via ASIC2
+								# First 18 modules are accessible via ASIC1, all the rest - via ASIC2
 								HI157)
 									asic1_bus=${asic_i2c_buses[0]}
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
-											j=$((j+19))
+											j=$((j+18))
 									fi
 									;;
 								# All modules are accessible via ASIC1
