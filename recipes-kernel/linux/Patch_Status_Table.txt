@@ -491,7 +491,7 @@ Kernel-5.10
 |0327-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream                               |            |                                                |
 |0328-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream                               |            |                                                |
 |0329-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream                               |            | BF3-COME                                       |
-|0330-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream                               |            | P4300                                          |
+|8000-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream                               |            | P4300                                          |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
@@ -590,6 +590,7 @@ Kernel-6.1
 |8007-hwmon-mlxreg-fan-Downstream-Allow-fan-speed-setting-.patch  |                    | Downstream accepted                      |            | Fix for mlreg-fan cooling level granularity    |
 |8008-hwmon-emc2305-Downstream-Allow-fan-speed-setting-gra.patch  |                    | Downstream accepted                      |            | Fix for emc2305 cooling level granularity      |
 |8009-hwmon-mlxsw-Downstream-Allow-fan-speed-setting-granu.patch  |                    | Downstream accepted                      |            | Fix for mlxminimal cooling level granularity   |
+|9010-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream                               |            | P4300                                          |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
