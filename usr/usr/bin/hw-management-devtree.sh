@@ -201,25 +201,12 @@ declare -A qm3000_alternatives=( \
 				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
 				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
 				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-				["mp2891_6"]="mp2891 0x66 37 voltmon7" \
-				["mp2891_7"]="mp2891 0x68 37 voltmon8" \
-				["mp2891_8"]="mp2891 0x6c 37 voltmon9" \
-				["mp2891_9"]="mp2891 0x66 53 voltmon10" \
-				["mp2891_10"]="mp2891 0x68 53 voltmon11" \
-				["mp2891_11"]="mp2891 0x6c 53 voltmon12" \
 				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
 				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
 				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
 				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-				["xdpe1a2g7_6"]="xdpe1a2g7 0x66 37 voltmon7" \
-				["xdpe1a2g7_7"]="xdpe1a2g7 0x68 37 voltmon8" \
-				["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 37 voltmon9" \
-				["xdpe1a2g7_9"]="xdpe1a2g7 0x66 53 voltmon10" \
-				["xdpe1a2g7_10"]="xdpe1a2g7 0x68 53 voltmon11" \
-				["xdpe1a2g7_11"]="xdpe1a2g7 0x6c 53 voltmon12" \
-				["24c512_0"]="24c512 0x51 8 system_eeprom")
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6")
 
 declare -A qm3400_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
@@ -281,6 +268,9 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
 					["tmp75_0"]="tmp75 0x49 7 fan_amb")
+
+# System EEPROM located on platform board
+declare -A platform_type1_alternatives=(["24c512_0"]="24c512 0x51 8 system_eeprom")
 
 # Port ambient sensor located on a separate module board
 declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \
@@ -506,6 +496,9 @@ devtr_check_supported_system_init_alternatives()
 					for key in "${!qm3000_alternatives[@]}"; do
 						swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
 					done
+					for key in "${!platform_type1_alternatives[@]}"; do
+						platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
+					done
 				;;
 				*)
 					log_info "SMBIOS BOM: unsupported board_type: ${board_type}, sku ${sku}"
@@ -518,7 +511,6 @@ devtr_check_supported_system_init_alternatives()
 			for key in "${!port_type0_alternatives[@]}"; do
 				port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
 			done
-
 			return 0
 			;;
 		*)
@@ -531,9 +523,11 @@ devtr_check_supported_system_init_alternatives()
 devtr_check_board_components()
 {
 	local board_str=$1
-	local board_num=1
-	local bus_offset=0
-	local addr_offset=0
+	local clk_board_num=1
+	local clk_bus_offset=0
+	local clk_addr_offset=0
+	local swb_board_num=1
+	local swb_bus_offset=0
 
 	local comp_arr=($(echo "$board_str" | fold -w2))
 
@@ -544,6 +538,8 @@ devtr_check_board_components()
 		log_info "DBG SMBIOS BOM: Board: ${board_name}"
 	fi
 
+	board_alternatives=()
+
 	case $board_key in
 		C)	# CPU/Comex board
 			for key in "${!comex_alternatives[@]}"; do
@@ -551,6 +547,13 @@ devtr_check_board_components()
 			done
 			;;
 		S)	# Switch board
+			# There can be several switch boards (e.g on QM3000)
+			if [ -e "$config_path"/swb_brd_num ]; then
+				swb_board_num=$(< $config_path/swb_brd_num)
+			fi
+			if [ -e "$config_path"/swb_brd_bus_offset ]; then
+				swb_bus_offset=$(< $config_path/swb_brd_bus_offset)
+			fi
 			for key in "${!swb_alternatives[@]}"; do
 				board_alternatives["$key"]="${swb_alternatives["$key"]}"
 			done
@@ -571,9 +574,9 @@ devtr_check_board_components()
 			done
 			;;
 		K)	# Clock board
-			# Currently only clock boards number can be bigger than 1.
+			# There can be several clock boards (e.g on SN5600)
 			if [ -e "$config_path"/clk_brd_num ]; then
-				board_num=$(< $config_path/clk_brd_num)
+				clk_board_num=$(< $config_path/clk_brd_num)
 			fi
 			if [ -e "$config_path"/clk_brd_bus_offset ]; then
 				bus_offset=$(< $config_path/clk_brd_bus_offset)
@@ -638,16 +641,29 @@ devtr_check_board_components()
 				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
-				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${r_cnt}"
-				else
-					echo -n "${alternative_comp} " >> "$devtree_file"
-					if [ $devtr_verb_display -eq 1 ]; then
-						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				# QM3000 system has 2 switch boards. Just VRs are accessed on these boards.
+				for ((brd=0, n=1; brd<swb_board_num; brd++, n++)) do
+					curr_component=(${board_alternatives[$alternative_key]})
+					if [ $swb_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+swb_bus_offset*brd))
+						curr_component[3]=sbw${n}_${curr_component[3]}
 					fi
-				fi
+					# Check if component from SMBIOS BOM string is defined in layout
+					if [ -z "${curr_component[0]}" ]; then
+						log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${r_cnt}"
+					else
+						echo -n "${curr_component[@]} " >> "$devtree_file"
+						if [ $devtr_verb_display -eq 1 ]; then
+							if [ $swb_board_num -gt 1 ]; then
+								board_name_str="${board_name}${n}"
+							else
+								board_name_str="$board_name"
+							fi
+							log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
+							echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
+						fi
+					fi
+				done
 				r_cnt=$((r_cnt+1))
 				;;
 			E)	# Eeproms
@@ -657,16 +673,15 @@ devtr_check_board_components()
 				fi
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
-				# Currently it's done just for EEPROM as other components can't be in multiple cards of the same type
-				# Moose system has 2 Clock boards. Just EEPROM is accessed on these boards.
-				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
+				# SN5600 system has 2 Clock boards. Just EEPROM is accessed on these boards.
+				for ((brd=0, n=1; brd<clk_board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					if [ $addr_offset -ne 0 ]; then
-						curr_component[1]=$((curr_component[1]+addr_offset*brd))
+					if [ $clk_addr_offset -ne 0 ]; then
+						curr_component[1]=$((curr_component[1]+clk_addr_offset*brd))
 						curr_component[1]=0x$(echo "obase=16; ${curr_component[1]}"|bc)
 					fi
-					if [ $bus_offset -ne 0 ]; then
-						curr_component[2]=$((curr_component[2]+bus_offset*brd))
+					if [ $clk_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+clk_bus_offset*brd))
 						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
@@ -675,7 +690,7 @@ devtr_check_board_components()
 					else
 						echo -n "${curr_component[@]} " >> "$devtree_file"
 						if [ $devtr_verb_display -eq 1 ]; then
-							if [ $board_num -gt 1 ]; then
+							if [ $clk_board_num -gt 1 ]; then
 								board_name_str="${board_name}${n}"
 							else
 								board_name_str="$board_name"

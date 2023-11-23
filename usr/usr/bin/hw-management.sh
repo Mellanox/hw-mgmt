@@ -2497,6 +2497,14 @@ pre_devtr_init()
 		echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	VMOD0018)
+		case $sku in
+		HI158)
+			echo 2 > "$config_path"/swb_brd_num
+			echo 32 > "$config_path"/swb_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
 		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	*)
