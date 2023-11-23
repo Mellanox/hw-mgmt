@@ -596,7 +596,7 @@ devtr_check_board_components()
 			;;
 	esac
 
-	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; h_cnt=0; brd=0
+	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; h_cnt=0; g_cnt=0; n_cnt=0; j_cnt=0; x_cnt=0; brd=0
 	curr_component=()
 	for comp in "${comp_arr[@]}"; do
 		# Skip 1st tuple in board string. It desctibes board name and number.
@@ -765,14 +765,14 @@ devtr_check_board_components()
 				;;
 			G)	# GPIO Expander
 				if [ "$component_key" == "0" ]; then
-					h_cnt=$((h_cnt+1))
+					g_cnt=$((g_cnt+1))
 					continue
 				fi
 				component_name=${hotswap_arr[$component_key]}
-				alternative_key="${component_name}_${h_cnt}"
+				alternative_key="${component_name}_${g_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${g_cnt}"
 				else
 					echo -n "${alternative_comp} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
@@ -780,18 +780,18 @@ devtr_check_board_components()
 						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				fi
-				h_cnt=$((h_cnt+1))
+				g_cnt=$((g_cnt+1))
 				;;
 			N)	# Network Adapter
 				if [ "$component_key" == "0" ]; then
-					h_cnt=$((h_cnt+1))
+					n_cnt=$((n_cnt+1))
 					continue
 				fi
 				component_name=${hotswap_arr[$component_key]}
-				alternative_key="${component_name}_${h_cnt}"
+				alternative_key="${component_name}_${n_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${n_cnt}"
 				else
 					echo -n "${alternative_comp} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
@@ -799,18 +799,18 @@ devtr_check_board_components()
 						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				fi
-				h_cnt=$((h_cnt+1))
+				n_cnt=$((n_cnt+1))
 				;;
 			J)	# Jitter Attenuator
 				if [ "$component_key" == "0" ]; then
-					h_cnt=$((h_cnt+1))
+					j_cnt=$((j_cnt+1))
 					continue
 				fi
 				component_name=${hotswap_arr[$component_key]}
-				alternative_key="${component_name}_${h_cnt}"
+				alternative_key="${component_name}_${j_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${j_cnt}"
 				else
 					echo -n "${alternative_comp} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
@@ -818,18 +818,18 @@ devtr_check_board_components()
 						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				fi
-				h_cnt=$((h_cnt+1))
+				j_cnt=$((j_cnt+1))
 				;;
 			X)	# Oscillator
 				if [ "$component_key" == "0" ]; then
-					h_cnt=$((h_cnt+1))
+					x_cnt=$((x_cnt+1))
 					continue
 				fi
 				component_name=${hotswap_arr[$component_key]}
-				alternative_key="${component_name}_${h_cnt}"
+				alternative_key="${component_name}_${x_cnt}"
 				alternative_comp=${board_alternatives[$alternative_key]}
 				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${x_cnt}"
 				else
 					echo -n "${alternative_comp} " >> "$devtree_file"
 					if [ $devtr_verb_display -eq 1 ]; then
@@ -837,7 +837,7 @@ devtr_check_board_components()
 						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
 					fi
 				fi
-				h_cnt=$((h_cnt+1))
+				x_cnt=$((x_cnt+1))
 				;;
 			*)
 				log_err "SMBIOS BOM: incorrect encoded category, category key ${category_key}"
