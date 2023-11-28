@@ -2517,12 +2517,17 @@ map_asic_pci_to_i2c_bus()
 	local bus
 	local pci_bus
 	local i2c_bus
+	local asic_num=1
 
 	if [ -z "$1" ]; then
 		return 255
 	fi
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
-	if [ "$asic_num" ] && [ "$asic_num" -gt 1 ]; then
+	if [ $asic_num -eq 1 ]; then
+		return 255
+	fi
+
+	if [ $asic_num -gt 1 ]; then
 		pci_bus=`basename $1`
 		pci_bus="${pci_bus:5}"
 		for ((i=1; i<=asic_num; i+=1)); do
@@ -2679,7 +2684,7 @@ do_chip_up_down()
 	asic_i2c_bus=$?
 	if [ $asic_i2c_bus -eq 255 ]; then
 		set_asic_i2c_bus
-		if [ -n "$asic_index" ]; then
+		if [ -n "$asic_index" ] && [ $asic_index -gt 0 ]; then
 			asic_i2c_bus=$(< $config_path/asic${asic_index}_i2c_bus_id)
 		else
 			asic_i2c_bus=$(< $config_path/asic_bus)
