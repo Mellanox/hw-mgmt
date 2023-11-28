@@ -2235,6 +2235,15 @@ do_stop()
 	fi
 }
 
+function find_asic_hwmon_path()
+{
+    local path=$1
+    if [ ! -d "$path" ]; then
+        return 1
+    fi
+    return 0
+}
+
 do_chip_up_down()
 {
 	action=$1
@@ -2329,7 +2338,8 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
+		retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon
+		if [ $? -ne 0 ]; then
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
 			set_i2c_bus_frequency_400KHz
