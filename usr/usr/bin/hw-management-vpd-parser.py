@@ -152,8 +152,7 @@ class MLNX_ID(object):
     VENDOR_ID = 10
     MFG_INTERNAL = 12
     PSU = 16
-    # TBD
-    DPU = 0x17
+    DPU = 17
     GUIDS_1 = 0x80
     GUIDS_2 = 0x81
     PORT_CFG_EXT = 0x82
