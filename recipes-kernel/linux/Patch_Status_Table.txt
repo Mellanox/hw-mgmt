@@ -587,6 +587,8 @@ Kernel-6.1
 |0086-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream                               |            | BF3                                            |
 |0087-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream                               |            | Disable FW update                              |
+|8001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream                               |            | Add dedicated match for QMB8700                |
+|8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream                               |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |8004-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream                               |            | IB only                                        |
 |8005-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
