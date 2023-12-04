@@ -1,10 +1,18 @@
 ================================================================================
+- V.7.0030.1009.Marlin
+- Tue , 04 Dec 2023
+--------------------------------------------------------------------------------
+
+- Bug Fixes
+   Fix generation of module sensor links for MQM9520
+
+================================================================================
 - V.7.0030.1008.Marlin
 - Tue , 05 Sep 2023
 --------------------------------------------------------------------------------
 
 - Bug Fixes
-   Fix ASIC I2C address for MQM9510 and MQM95201
+   Fix ASIC I2C address for MQM9510 and MQM9520
    Added kernel patch for MQM9510 and MQM9520 support
    Fix ASIC I2C bus configuration for multi-asic systems
    Fix calculation of SFP module counter for multi-asic systems

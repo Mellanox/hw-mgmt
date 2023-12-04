@@ -350,6 +350,17 @@ if [ "$1" == "add" ]; then
 							else
 								j="$i"
 							fi
+							case $sku in
+								HI140)
+									asic1_bus=2
+									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+									if [ ${asic_bus} -ne ${asic1_bus} ]; then
+										j=$((j+32))
+									fi
+									;;
+								*)
+									;;
+							esac
 							check_n_link "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
 							check_n_link "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
 							check_n_link "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
