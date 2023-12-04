@@ -37,6 +37,8 @@ sku=$(< $sku_file)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_def_off_eeprom_cartridge=7
+i2c_bus_def_off_eeprom_cartridge1=3
+i2c_bus_def_off_eeprom_cartridge2=11
 i2c_bus_def_off_eeprom_vpd=8
 i2c_bus_def_off_eeprom_psu=4
 i2c_bus_alt_off_eeprom_psu=10
@@ -328,7 +330,11 @@ find_eeprom_name()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_mgmt" ]; then
 		eeprom_name=mgmt_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cartridge" ]; then
-		eeprom_name=cable_cartridge_eeprom 
+		eeprom_name=cable_cartridge_eeprom
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cartridge1" ]; then
+		eeprom_name=cable_cartridge_eeprom
+	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_cartridge2" ]; then
+		eeprom_name=cable_cartridge_eeprom2
 	elif [ "$bus" -eq 0 ]; then
 		:
 	else
