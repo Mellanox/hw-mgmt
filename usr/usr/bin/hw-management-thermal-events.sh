@@ -260,7 +260,7 @@ if [ "$1" == "add" ]; then
 		exit 0
 	fi
 	case "$2" in
-		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lr1_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2 | tempX )
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
@@ -285,7 +285,12 @@ if [ "$1" == "add" ]; then
 		elif [ $bus -eq $cx_i2c_bus ]; then
 			check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
 		else
-			check_n_link "$3""$4"/temp1_input $thermal_path/"$2"
+			therml_sensor_name=$(get_i2c_busdev_name "$2" "$4")
+			if [[ $therml_sensor_name == "undefined" ]];
+			then
+				exit
+			fi
+			check_n_link "$3""$4"/temp1_input $thermal_path/"$therml_sensor_name"
 		fi
 		;;
 	esac
