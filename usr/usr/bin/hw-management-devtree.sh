@@ -64,13 +64,13 @@ declare -A comex_bdw_alternatives=(["mp2975_0"]="mp2975 0x61 15 comex_voltmon2" 
 				   ["max11603_0"]="max11603 0x6d 15 comex_a2d" \
 				   ["tmp102_0"]="tmp102 0x49 15 cpu_amb" \
 				   ["adt75_0"]="adt75 0x49 15 cpu_amb" \
-				   ["24c32_0"]="24c32 0x50 16 comex_eeprom" \
-				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
+				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A comex_cfl_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
 				   ["max11603_0"]="max11603 0x6d 15 comex_a2d" \
-				   ["24c32_0"]="24c32 0x50 16 comex_eeprom" \
-				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
+				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
@@ -78,7 +78,7 @@ declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_1"]="mp2975 0x66 5 voltmon2" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-				 ["24c32_0"]="24c32 0x51 8 system_eeprom")
+				 ["24c32_0"]="24c32 0x51 8 vpd_info")
 
 declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 				  ["pmbus_1"]="pmbus 0x41 5 voltmon2" \
@@ -86,8 +86,8 @@ declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 				  ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				  ["lm75_0"]="lm75 0x4a 7 port_amb" \
 				  ["tmp75_0"]="tmp75 0x4a 7 port_amb" \
-				  ["24c32_0"]="24c32 0x51 8 system_eeprom" \
-				  ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				  ["24c32_0"]="24c32 0x51 8 vpd_info" \
+				  ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
@@ -103,7 +103,7 @@ declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d
 					 ["mp2975_3"]="mp2975 0x6a 5 voltmon4" \
 					 ["mp2975_4"]="mp2975 0x6e 5 voltmon5" \
 					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-					 ["24c32_0"]="24c32 0x51 8 system_eeprom")
+					 ["24c32_0"]="24c32 0x51 8 vpd_info")
 
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
@@ -119,8 +119,8 @@ declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 				 ["stts751_0"]="stts751 0x4a 7 port_amb" \
-				 ["24c32_0"]="24c32 0x51 8 system_eeprom" \
-				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				 ["24c32_0"]="24c32 0x51 8 vpd_info" \
+				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A mqm9510_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon2" \
@@ -132,7 +132,7 @@ declare -A mqm9510_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_7"]="mp2975 0x6c 6 voltmon8" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
-				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["mp2975_1"]="mp2975 0x68 5 voltmon2" \
@@ -144,7 +144,7 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb1" \
 				 ["tmp102_1"]="tmp102 0x4a 15 port_amb2" \
 				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
-				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
@@ -172,7 +172,7 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
-				["24c512_0"]="24c512 0x51 8 system_eeprom")
+				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
@@ -191,7 +191,7 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["tmp75_7"]="tmp75 0x4f 7 fan_temp4" \
 			       ["adt75_7"]="adt75 0x4f 7 fan_temp4" \
 			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
-			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
+			       ["24c512_0"]="24c512 0x51 8 vpd_info" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
 
 declare -A qm3000_alternatives=( \
@@ -221,10 +221,10 @@ declare -A qm3400_alternatives=( \
 				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-				["24c512_0"]="24c512 0x51 8 system_eeprom")
+				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
-				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -270,7 +270,7 @@ declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier
 					["tmp75_0"]="tmp75 0x49 7 fan_amb")
 
 # System EEPROM located on platform board
-declare -A platform_type1_alternatives=(["24c512_0"]="24c512 0x51 8 system_eeprom")
+declare -A platform_type1_alternatives=(["24c512_0"]="24c512 0x51 8 vpd_info")
 
 # Port ambient sensor located on a separate module board
 declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \

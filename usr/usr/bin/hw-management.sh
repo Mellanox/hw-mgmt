@@ -2185,7 +2185,7 @@ create_event_files()
 		check_n_init $events_path/leakage_rope 0
 	fi
 	for ((i=0; i<health_events_count; i+=1)); do
-		check_n_init  $events_path/${l1_switch_health_events[$i]} 0
+		check_n_init  $events_path/${l1_switch_health_events[$i]}
 	done
 	if [ $pwr_events_count -ne 0 ]; then
 		check_n_init $events_path/power_button 0

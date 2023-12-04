@@ -272,6 +272,13 @@ find_eeprom_name()
 {
 	bus=$1
 	addr=$2
+	i2c_dev_path="i2c-$bus/$bus-00${busfolder: -2}/" 
+	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
+	if [[ $eeprom_name != "undefined" ]];
+	then
+		echo $eeprom_name
+		return
+	fi
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
 		if [ "$board_type" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
@@ -334,12 +341,20 @@ find_eeprom_name()
 		symlink=$(find -L /dev/lc* -samefile /dev/"$lc_dev")
 		eeprom_name=$(basename "$symlink")
 	fi
+	echo $eeprom_name
 }
 
 find_eeprom_name_on_remove()
 {
 	bus=$1
 	addr=$2
+	i2c_dev_path="2c-$bus/$bus-00${busfolder: -2}/"
+	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
+	if [[ $eeprom_name != "undefined" ]];
+	then
+		echo $eeprom_name
+		return
+	fi
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
 		eeprom_name=vpd_info
@@ -380,6 +395,7 @@ find_eeprom_name_on_remove()
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_fan4" ]; then
 		eeprom_name=fan4_info
 	fi
+	echo $eeprom_name
 }
 
 function create_sfp_symbolic_links()
@@ -513,7 +529,7 @@ function handle_hotplug_event()
 	local lc_path
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
-	
+
 	if [ -f "$events_path"/"$attribute" ]; then
 		echo "$event" > "$events_path"/"$attribute"
 		log_info "Event ${event} is received for attribute ${attribute}"
@@ -575,108 +591,6 @@ function handle_fantray_led_event()
 	*)
 		;;
 	esac
-}
-
-# Handle i2c bus add/remove.
-# If we have some devices which should be connected to this bus - do it.
-# $1 - i2c bus full address.
-# $2 - i2c bus action type add/remove.
-function handle_i2cbus_dev_action()
-{
-	i2c_busdev_path=$1
-	i2c_busdev_action=$2
-
-	# Check if we have devices list which should be connected to dynamic i2c buses.
-	if [ ! -f $config_path/i2c_bus_connect_devices ];
-	then
-		return
-	fi
-
-	# Extract i2c bus index.
-	i2cbus_regex="i2c-([0-9]+)$"
-	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
-	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
-		return
-	else
-		i2cbus="${BASH_REMATCH[1]}"
-	fi
-
-	# Load i2c devices list which should be connected on demand..
-	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-
-	# wait till i2c driver fully init
-	sleep 20
-	# Go over all devices and check if they should be connected to the current i2c bus.
-	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
-		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
-		then
-			if [ "$i2c_busdev_action" == "add" ]; then
-				connect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
-					"${dynamic_i2c_bus_connect_table[i+2]}"
-			elif [ "$i2c_busdev_action" == "remove" ]; then
-				diconnect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
-					"${dynamic_i2c_bus_connect_table[i+2]}"
-			fi
-		fi
-	done
-}
-
-# Get voltmon sensor name prefix, like voltmon{id}.
-# For name voltmonX returning name based on $config_path/i2c_bus_connect_devices file.
-# For other names - just return voltmon{id} string.
-# $1 - voltmon name (voltmon1, voltmon2, voltmon10, voltmonX)
-# $2 - path to sensor in sysfs
-# return sensor name if match is found or undefined in other case.
-function get_i2c_voltmon_prefix()
-{
-	voltmon_name=$1
-	i2c_busdev_path=$2
-	
-	# Check if we have devices list which can be connected with name translation.
-	if [  -f $config_path/i2c_bus_connect_devices ] || [ -f "$devtree_file" ];
-	then
-		# Load i2c devices list which should be connected on demand.
-		if [ -f "$devtree_file" ]; then
-			declare -a dynamic_i2c_bus_connect_table=($(<"$devtree_file"))
-		else
-			declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
-		fi
-
-		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
-		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
-		[[ $i2c_busdev_path =~ $i2caddr_regex ]]
-		if [ "${#BASH_REMATCH[@]}" != 3 ]; then
-			# not matched
-			echo "$voltmon_name"
-			return
-		else
-			i2cbus="${BASH_REMATCH[1]}"
-			i2caddr="0x${BASH_REMATCH[2]}"
-		fi
-
-		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
-			# match device by i2c bus/addr
-			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2caddr == "${dynamic_i2c_bus_connect_table[i+1]}" ];
-			then
-				voltmon_name="${dynamic_i2c_bus_connect_table[i+3]}"
-				if [ $voltmon_name == "NA" ]; then 
-					echo "undefined"
-				else
-					echo "$voltmon_name"
-				fi
-				return
-			fi
-		done
-	fi
-
-	# we not matched i2c device with dev_list file or file not exist
-	# returning passed "voltmon{1..100}" name or "undefined" in case if passed 'voltmon_nameX"
-	if [ "$voltmon_name" == "voltmonX" ];
-	then
-		voltmon_name="undefined"
-	fi
-
-	echo "$voltmon_name"
 }
 
 function check_cpld_attrs_num()
@@ -789,13 +703,18 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		# Get i2c voltmon prefix.
-		# For voltmon[0..100] name will not change - just return it.
-		# For voltmonX we will try to get name based on dev id/bus and system connect table.
-		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
+		prefix=$(get_i2c_busdev_name "$2" "$4")
 		if [[ $prefix == "undefined" ]];
 		then
 			exit
 		fi
+		# Voltmon MUST have at least one input.
+		# Filtering device that doesn't have it.
+		if [ ! -f "$3""$4"/in1_input ]; 
+		then
+			exit
+		fi
+
 		if [ "$prefix" == "comex_voltmon1" ]; then
 			find_i2c_bus
 			i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
@@ -1055,6 +974,15 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
+		# During connecting non-existent eeprom dev, for a short time, 24C* driver
+		# creates ./eeprom sysfs entry, To prevent mistaken eeprom connect, 
+		# we should wait a short time to give a chance for the driver to 
+		# remove ./eeprom entry (if the device is not present).
+		sleep 0.1
+		# Event came from none-eeprom device or eeprom not initialized.
+		if [ ! -f "$3""$4"/eeprom ]; then
+			exit
+		fi
 		busdir="$3""$4"
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
@@ -1067,7 +995,7 @@ if [ "$1" == "add" ]; then
 		# Detect if it belongs to line card or to main board.
 		input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 		driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
-		find_eeprom_name "$bus" "$addr" "$parentbus" "$input_bus_num"
+		eeprom_name=$(find_eeprom_name "$bus" "$addr" "$parentbus" "$input_bus_num")
 		if [ -d "$driver_dir" ]; then
 			driver_name=$(< "$driver_dir"/name)
 			if [ "$driver_name" == "mlxreg-lc" ]; then
@@ -1093,6 +1021,8 @@ if [ "$1" == "add" ]; then
 		if [[ $drv_name == *"24c"* ]]; then
 			ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
 			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
+		else
+			return
 		fi
 		case $eeprom_name in
 		fan*_info)
@@ -1253,7 +1183,7 @@ else
 	   [ "$2" == "voltmon13" ] || [ "$2" == "voltmonX" ] ||
 	   [ "$2" == "comex_voltmon1" ] || [ "$2" == "comex_voltmon2" ] ||
 	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
-		prefix=$(get_i2c_voltmon_prefix "$2" "$4")
+		prefix=$(get_i2c_busdev_name "$2" "$4")
 		if [[ $prefix == "undefined" ]];
 		then
 			exit
@@ -1384,7 +1314,7 @@ else
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
 		addr="0x${busfolder: -2}"
-		find_eeprom_name_on_remove "$bus" "$addr"
+		eeprom_name=$(find_eeprom_name_on_remove "$bus" "$addr")
 		drv_name=$(< "$busdir"/name)
 		if [[ $drv_name != *"24c"* ]]; then
 			unlink $eeprom_path/$eeprom_name
