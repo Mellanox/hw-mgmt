@@ -194,6 +194,18 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["24c512_0"]="24c512 0x51 8 vpd_info" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
 
+# TBD version: V0-C*A0RaEi-S*TcTcTcTcTcTcTcTcA0EiEi-P*HaEaEa
+declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x48 7 fiol_amb" \
+			       ["adt75_1"]="adt75 0x49 7 bpl_amb" \
+			       ["adt75_2"]="adt75 0x4a 7 fiom_amb" \
+			       ["adt75_3"]="adt75 0x4b 7 bpm_amb" \
+			       ["adt75_4"]="adt75 0x4c 7 fiob_amb" \
+			       ["adt75_5"]="adt75 0x4d 7 bpb_amb" \
+			       ["adt75_6"]="adt75 0x4e 7 fior_amb" \
+			       ["adt75_7"]="adt75 0x4f 7 bpr_amb" \
+			       ["24c512_0"]="24c512 0x51 8 vpd_info"\
+			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom")
+
 declare -A qm3000_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
@@ -264,6 +276,11 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
+
+# for p4300
+declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
+					["24c02_1"]="24c02 0x50 3 cable_cartridge_eeprom" \
+					["24c02_2"]="24c02 0x50 11 cable_cartridge2_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -477,12 +494,24 @@ devtr_check_supported_system_init_alternatives()
 			return 0
 			;;
 		VMOD0017)
-			for key in "${!p4262_alternatives[@]}"; do
-				swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
-			done
-			for key in "${!pwr_type1_alternatives[@]}"; do
-				pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
-			done
+			case $sku in
+				HI152)
+					for key in "${!p4262_alternatives[@]}"; do
+						swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type1_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
+					done
+					;;
+				HI159)
+					for key in "${!p4300_alternatives[@]}"; do
+						swb_alternatives["$key"]="${p4300_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type2_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type2_alternatives["$key"]}"
+					done
+				;;
+			esac
 			return 0
 			;;
 		VMOD0018)

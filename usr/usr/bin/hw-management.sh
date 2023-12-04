@@ -516,6 +516,24 @@ qm3000_base_connect_table=( \
 	tmp102 0x4a 7  \
 	24c512 0x51 8 )
 
+# Just for possible initial step without SMBios alternative BOM string
+p4300_base_connect_table=( \
+	lm5066 0x40 4 \
+	adt75 0x48 7 \
+	adt75 0x49 7 \
+	adt75 0x4a 7 \
+	adt75 0x4b 7 \
+	adt75 0x4c 7 \
+	adt75 0x4d 7 \
+	adt75 0x4e 7 \
+	adt75 0x4f 7 \
+	24c512 0x51 8 \
+	24c512 0x54 8 )
+
+p4300_dynamic_i2c_bus_connect_table=( \
+	mp2975 0x21 26 voltmon1 \
+	mp2975 0x23 26 voltmon2 )
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
@@ -523,6 +541,7 @@ mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
+p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 
@@ -854,8 +873,8 @@ add_cpu_board_to_connection_table()
 			;;
 		$CFL_CPU)
 			case $sku in
-				# MQM9700, P4697 removed A2D from CFL
-				HI130|HI142|HI152|HI157|HI158)
+				# MQM9700, P4697, P4262, P4300 removed A2D from CFL
+				HI130|HI142|HI152|HI157|HI158|HI159)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
@@ -1934,6 +1953,52 @@ p4262_specific()
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
+p4300_specific()
+{
+	local cpu_bus_offset=18
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${p4300_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
+	echo 2 > $config_path/cpld_num
+	hotplug_fans=4
+	max_tachos=4
+	hotplug_pwrs=0
+	hotplug_psus=0
+	erot_count=1
+	asic_control=0
+	health_events_count=4
+	pwr_events_count=1
+	thermal_type=$thermal_type_def
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+	add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
+	named_busses+=(${p4300_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+}
+
+vmod0017_common()
+{
+	case $sku in
+		HI152)	# p4262
+			p4262_specific
+		;;
+		HI159)	# p4300
+			p4300_specific
+		;;
+		*)
+			p4262_specific
+		;;
+	esac
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+}
+
 qm3xxx_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
@@ -2042,7 +2107,7 @@ check_system()
 			p2317_specific
 			;;
 		VMOD0017)
-			p4262_specific
+			vmod0017_common
 			;;
 		VMOD0016)
 			bf3_common
@@ -2391,7 +2456,7 @@ set_asic_pci_id()
 	HI131)
 		asic_pci_id=$nv3_pci_id
 		;;
-	HI142|HI143|HI152)
+	HI142|HI143|HI152|HI159)
 		asic_pci_id=$nv4_pci_id
 		check_asics=`lspci -nn | grep $asic_pci_id | awk '{print $1}'`
 		if [ -z "$check_asics" ]; then
