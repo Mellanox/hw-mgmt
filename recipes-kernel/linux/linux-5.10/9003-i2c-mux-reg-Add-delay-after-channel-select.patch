@@ -1,0 +1,43 @@
+From d1599237d06d21e69803f1b866d8a56ac1466414 Mon Sep 17 00:00:00 2001
+From: Felix Radensky <fradensky@nvidia.com>
+Date: Tue, 5 Dec 2023 17:13:49 +0000
+Subject: [PATCH] i2c: mux: reg: Add delay after channel select
+X-NVConfidentiality: public
+
+This is a temporary WA for a HW problem.
+
+Signed-off-by: Felix Radensky <fradensky@nvidia.com>
+---
+ drivers/i2c/muxes/i2c-mux-reg.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-reg.c b/drivers/i2c/muxes/i2c-mux-reg.c
+index 30a6de169..5ad7c63ec 100644
+--- a/drivers/i2c/muxes/i2c-mux-reg.c
++++ b/drivers/i2c/muxes/i2c-mux-reg.c
+@@ -15,6 +15,7 @@
+ #include <linux/platform_data/i2c-mux-reg.h>
+ #include <linux/platform_device.h>
+ #include <linux/slab.h>
++#include <linux/delay.h>
+ 
+ struct regmux {
+ 	struct i2c_mux_reg_platform_data data;
+@@ -60,9 +61,13 @@ static int i2c_mux_reg_set(const struct regmux *mux, unsigned int chan_id)
+ 
+ static int i2c_mux_reg_select(struct i2c_mux_core *muxc, u32 chan)
+ {
++	int err;
+ 	struct regmux *mux = i2c_mux_priv(muxc);
+ 
+-	return i2c_mux_reg_set(mux, chan);
++	err = i2c_mux_reg_set(mux, chan);
++	mdelay(2);
++
++	return err;
+ }
+ 
+ static int i2c_mux_reg_deselect(struct i2c_mux_core *muxc, u32 chan)
+-- 
+2.20.1
+
