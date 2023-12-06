@@ -3102,7 +3102,7 @@ if __name__ == '__main__':
                             default=CONST.HW_MGMT_FOLDER_DEF)
     args = vars(CMD_PARSER.parse_args())
     logger = Logger(args[CONST.LOG_USE_SYSLOG], args[CONST.LOG_FILE], args["verbosity"])
-
+    thermal_management = None
     try:
         thermal_management = ThermalManagement(args, logger)
         thermal_management.init()
@@ -3112,6 +3112,6 @@ if __name__ == '__main__':
         logger.info(traceback.format_exc())
         if thermal_management:
             thermal_management.stop(reason="crash ({})".format(str(e)))
-            sys.exit(1)
+        sys.exit(1)
 
     sys.exit(0)
