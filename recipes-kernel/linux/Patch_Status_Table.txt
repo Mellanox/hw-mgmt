@@ -452,6 +452,8 @@ Kernel-5.10
 |0283-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Feature pending                          |            | SN3750SX                                       |
 |0284-platform-mellanox-mlx-platform-fix-CPLD4-PN-report.patch    |                    | Bugfix pending                           |            | SN5600                                         |
 |0285-platform-mellanox-Introduce-support-for-NDR-InfiniBa.patch  |                    | Feature pending                          |            | MQM9520                                        |
+|0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending                          |            |                                                |
+|0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
