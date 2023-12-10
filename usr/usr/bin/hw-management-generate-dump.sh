@@ -68,6 +68,8 @@ else
 	regmap_plat_path=/sys/kernel/debug/regmap/mlxplat
 fi
 
+dump_cmd "sensors" "sensors" "20"
+
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
@@ -117,7 +119,6 @@ dump_cmd "dmidecode -t1 -t2 -t11 -t15" "dmidecode" "3"
 dump_cmd "lsmod" "lsmod" "3"
 dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
-dump_cmd "sensors" "sensors" "20"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 
