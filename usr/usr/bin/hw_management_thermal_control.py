@@ -1701,6 +1701,7 @@ class fan_sensor(system_device):
         @return None
         """
         self.fan_dir = self._read_dir()
+        self.drwr_param = self._get_fan_drwr_param()
 
     # ----------------------------------------------------------------------
     def _get_fan_drwr_param(self):
@@ -1711,12 +1712,13 @@ class fan_sensor(system_device):
         fan_dir = self.fan_dir
         param = None
         if fan_dir not in self.fan_param.keys():
+            fan_dir_def = [*self.fan_param][0]
             if fan_dir == CONST.UNKNOWN:
                 self.log.info("{} dir \"{}\". Using default dir: P2C".format(self.name, fan_dir))
             else:
                 self.log.error("{} dir \"{}\" unsupported in configuration:\n{}".format(self.name, fan_dir, self.fan_param))
-                self.log.error("Using default dir: P2C")
-            fan_dir = CONST.DEF_DIR
+                self.log.error("Using default dir: {}".format(fan_dir_def))
+            fan_dir = fan_dir_def
 
         param = self.fan_param[fan_dir]
         return param
@@ -1978,8 +1980,9 @@ class fan_sensor(system_device):
         if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
            (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.append_fault(CONST.DIRECTION)
-            # 'do not update pwm if error in "masked" list
+            # do not update pwm if error in "masked" list
             if CONST.TACHO not in self.mask_fault_list:
+                self.append_fault(CONST.DIRECTION)
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.FAN_ERR, CONST.DIRECTION])
                 self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
                 self.pwm = max(pwm, self.pwm)
