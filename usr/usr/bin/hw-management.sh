@@ -1945,7 +1945,7 @@ qm3xxx_specific()
 		add_cpu_board_to_connection_table $xdr_cpu_bus_offset
 	fi
 	# Set according to front fan max.
-	echo echo 21800 > $config_path/fan_max_speed
+	echo 21800 > $config_path/fan_max_speed
 	# Set as 20% of max speed
 	echo 4360 > $config_path/fan_min_speed
 	echo 27500 > $config_path/psu_fan_max
