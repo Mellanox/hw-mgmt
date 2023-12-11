@@ -1948,6 +1948,8 @@ qm3xxx_specific()
 	echo 21800 > $config_path/fan_max_speed
 	# Set as 20% of max speed
 	echo 4360 > $config_path/fan_min_speed
+	# Only reverse fans are supported
+	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
 	echo 5500 > $config_path/psu_fan_min
