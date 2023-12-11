@@ -1,8 +1,8 @@
-From 270d86db50e5668572737922dcc72d5e4cf4eee1 Mon Sep 17 00:00:00 2001
+From f93cf6ae01b3a00bc35e85d5d0c305733571b701 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Mon, 30 Oct 2023 14:57:49 +0000
-Subject: [PATCH] platform: mellanox: Introduce support of Nvidia L1 tray DGX
- switch
+Subject: [PATCH backport 5.10 4/6] platform: mellanox: Introduce support of
+ Nvidia L1 tray DGX switch
 
 Add support for new L1 tray DGX switch node providing L1
 connectivity for multi-node networking chassis.
@@ -20,14 +20,14 @@ of the all required platform driver.
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 207 +++++++++++++++++++++++++++++++
- 1 file changed, 207 insertions(+)
+ drivers/platform/mellanox/mlx-platform.c | 206 +++++++++++++++++++++++
+ 1 file changed, 206 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 5a00174..335e576 100644
+index ff16df5da..3c8553f75 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -2970,6 +2970,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {
+@@ -2992,6 +2992,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {
  	},
  };
  
@@ -53,11 +53,10 @@ index 5a00174..335e576 100644
  static struct mlxreg_core_item mlxplat_mlxcpld_rack_switch_items[] = {
  	{
  		.data = mlxplat_mlxcpld_ext_psu_items_data,
-@@ -3185,6 +3204,84 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
+@@ -3391,6 +3410,82 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT,
  };
  
-+
 +static struct mlxreg_core_data mlxplat_mlxcpld_l1_g3_switch_health_events_items_data[] = {
 +	{
 +		.label = "intrusion",
@@ -90,7 +89,7 @@ index 5a00174..335e576 100644
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
 +		.reg = MLXPLAT_CPLD_LPC_REG_EROT_OFFSET,
 +		.mask = MLXPLAT_CPLD_EROT_MASK,
-+		.count = ARRAY_SIZE(mlxplat_mlxcpld_erot_1_ap_items_data),
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_erot_ap_items_data),
 +		.inversed = 1,
 +		.health = false,
 +	},
@@ -99,7 +98,7 @@ index 5a00174..335e576 100644
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
 +		.reg = MLXPLAT_CPLD_LPC_REG_EROTE_OFFSET,
 +		.mask = MLXPLAT_CPLD_EROT_MASK,
-+		.count = ARRAY_SIZE(mlxplat_mlxcpld_erot_1_error_items_data),
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_erot_error_items_data),
 +		.inversed = 1,
 +		.health = false,
 +	},
@@ -134,11 +133,10 @@ index 5a00174..335e576 100644
 +	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT,
 +};
 +
-+
  static struct spi_board_info rack_switch_switch_spi_board_info[] = {
  	{
  		.modalias       = "spidev",
-@@ -3950,6 +4047,86 @@ static struct mlxreg_core_platform_data mlxplat_l1_switch_led_data = {
+@@ -4156,6 +4251,86 @@ static struct mlxreg_core_platform_data mlxplat_l1_switch_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_l1_switch_led_data),
  };
  
@@ -225,7 +223,7 @@ index 5a00174..335e576 100644
  /* Platform led data for XDR systems */
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  	{
-@@ -7438,6 +7615,29 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -8173,6 +8348,30 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -247,6 +245,7 @@ index 5a00174..335e576 100644
 +	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
 +	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
 +	pm_power_off = mlxplat_poweroff;
++	mlxplat_reboot_nb = &mlxplat_reboot_default_nb;
 +	mlxplat_spi = rack_switch_switch_spi_board_info;
 +
 +	return mlxplat_register_platform_device();
@@ -255,20 +254,20 @@ index 5a00174..335e576 100644
  static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -7585,6 +7785,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8347,6 +8546,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
  		},
  	},
- 	{
++	{
 +		.callback = mlxplat_dmi_l1_g3_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
 +		},
 +	},
-+	{
- 		.callback = mlxplat_dmi_l1_switch_matched,
+ 	{
+ 		.callback = mlxplat_dmi_xdr_matched,
  		.matches = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
 -- 
-2.8.4
+2.20.1
 
