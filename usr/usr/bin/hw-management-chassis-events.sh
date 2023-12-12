@@ -52,6 +52,10 @@ psu1_i2c_addr=0x51
 psu2_i2c_addr=0x50
 psu3_i2c_addr=0x53
 psu4_i2c_addr=0x52
+psu5_i2c_addr=0x55
+psu6_i2c_addr=0x54
+psu7_i2c_addr=0x56
+psu8_i2c_addr=0x57
 line_card_bus_off=33
 lc_iio_dev_name_def="iio:device0"
 eeprom_name=''
@@ -317,6 +321,14 @@ find_eeprom_name()
 				else
 					eeprom_name=psu4_info
 				fi
+			elif [ "$addr" = "$psu5_i2c_addr" ]; then
+				eeprom_name=psu5_info
+			elif [ "$addr" = "$psu6_i2c_addr" ]; then
+				eeprom_name=psu6_info
+			elif [ "$addr" = "$psu7_i2c_addr" ]; then
+				eeprom_name=psu7_info
+			elif [ "$addr" = "$psu8_i2c_addr" ]; then
+				eeprom_name=psu8_info
 			fi
 			;;
 		esac
@@ -390,6 +402,14 @@ find_eeprom_name_on_remove()
 				else
 					eeprom_name=psu4_info
 				fi
+			elif [ "$addr" = "$psu5_i2c_addr" ]; then
+				eeprom_name=psu5_info
+			elif [ "$addr" = "$psu6_i2c_addr" ]; then
+				eeprom_name=psu6_info
+			elif [ "$addr" = "$psu7_i2c_addr" ]; then
+				eeprom_name=psu7_info
+			elif [ "$addr" = "$psu8_i2c_addr" ]; then
+				eeprom_name=psu8_info
 			fi
 			;;
 		esac

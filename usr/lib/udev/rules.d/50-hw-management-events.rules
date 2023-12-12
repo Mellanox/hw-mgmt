@@ -708,11 +708,8 @@ SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-manage
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"
 
 # EEPROM
-SUBSYSTEM=="i2c", KERNEL=="*-005[0-4]", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-005[0-4]", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-7]", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-7]", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
 
 # WATCHDOG
 SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add watchdog %S %p"
