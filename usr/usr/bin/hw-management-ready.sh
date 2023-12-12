@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 ##################################################################################
-# Copyright (c) 2020 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@
 #              Waits in loop until hw-management service can be started.
 #              Report start of hw-management service to console and logger.
 
+source hw-management-helpers.sh
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 product_sku=`cat /sys/devices/virtual/dmi/id/product_sku`
 
@@ -53,23 +54,24 @@ if [ -d /var/run/hw-management ]; then
 fi
 
 # If the BSP emulation is not available for the platforms that run in the SimX
-# environment, TC need to be stopped.
-if [ -n "$(lspci -vvv | grep SimX)" ]; then
-	case $product_sku in
-		HI130|HI122)
-			# Let the TC continue to run
-			;;
-		*)
-			if systemctl is-enabled --quiet hw-management-tc; then
-				echo "Stopping and disabling hw-management-tc on SimX"
-				systemctl stop hw-management-tc
-				systemctl disable hw-management-tc
-			fi
-			echo "Start Chassis HW management service."
-			logger -t hw-management -p daemon.notice "Start Chassis HW management service."
-			exit 0
-			;;
-	esac
+# environment, TC need to be stopped. Otherwise enabling TC.
+if check_simx; then
+    if ! check_if_simx_supported_platform; then
+	    if systemctl is-enabled --quiet hw-management-tc; then
+		    echo "Stopping and disabling hw-management-tc on SimX"
+		    systemctl stop hw-management-tc
+		    systemctl disable hw-management-tc
+	    fi
+	    echo "Start Chassis HW management service."
+	    logger -t hw-management -p daemon.notice "Start Chassis HW management service."
+	    exit 0
+    else
+	    if ! systemctl is-enabled --quiet hw-management-tc; then
+		    echo "Enabling and starting hw-management-tc"
+		    systemctl enable hw-management-tc
+		    systemctl start hw-management-tc
+	    fi
+    fi
 fi
 
 case $board_type in
