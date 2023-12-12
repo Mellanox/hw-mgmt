@@ -773,7 +773,9 @@ if [ "$1" == "add" ]; then
 		find "$5""$3" -iname 'temp1_*' -exec sh -c 'ln -sf $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
-	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
+	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
+	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
 		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 			exit 0
 		fi
@@ -1266,7 +1268,9 @@ else
 		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
-	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
+	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
+	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
 		psu_name="$2"
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
 		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
