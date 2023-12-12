@@ -1281,7 +1281,7 @@ class thermal_sensor(system_device):
         pwm = self.pwm_min
         value = self.value
         if not self.check_file(self.file_input):
-            self.log.info("{}: missing file {}".format(self.name, self.file_input))
+            self.log.info("Missing file {}".format(self.name, self.file_input))
             self.handle_reading_file_err(self.file_input)
         else:
             try:
@@ -1543,7 +1543,7 @@ class psu_fan_sensor(system_device):
                     self.log.info("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
 
                 if psu_pwm == -1:
-                    self.log.debug("{} PWM value {}. It means PWM should not be shanged".format(self.name, pwm))
+                    self.log.debug("{} PWM value {}. It means PWM should not be changed".format(self.name, pwm))
                     # no need to change PSU PWM
                     return
 
@@ -1712,12 +1712,14 @@ class fan_sensor(system_device):
         fan_dir = self.fan_dir
         param = None
         if fan_dir not in self.fan_param.keys():
-            fan_dir_def = [*self.fan_param][0]
+            fan_dir_def = [key for key in self.fan_param][0]
             if fan_dir == CONST.UNKNOWN:
-                self.log.info("{} dir \"{}\". Using default dir: P2C".format(self.name, fan_dir))
+                self.log.info("{} dir \"{}\". Using default dir: {}".format(self.name, fan_dir_def))
             else:
-                self.log.error("{} dir \"{}\" unsupported in configuration:\n{}".format(self.name, fan_dir, self.fan_param))
-                self.log.error("Using default dir: {}".format(fan_dir_def))
+                self.log.error("{} dir \"{}\" unsupported in configuration. Using default dir: {}:\n{}".format(self.name, 
+                                                                                                               fan_dir, 
+                                                                                                               fan_dir_def,
+                                                                                                               self.fan_param)) 
             fan_dir = fan_dir_def
 
         param = self.fan_param[fan_dir]
@@ -1982,7 +1984,6 @@ class fan_sensor(system_device):
             self.append_fault(CONST.DIRECTION)
             # do not update pwm if error in "masked" list
             if CONST.TACHO not in self.mask_fault_list:
-                self.append_fault(CONST.DIRECTION)
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.FAN_ERR, CONST.DIRECTION])
                 self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
                 self.pwm = max(pwm, self.pwm)
@@ -2428,7 +2429,7 @@ class ThermalManagement(hw_managemet_file_op):
                 fan_obj.set_pwm(pwm_val, force)
 
     # ----------------------------------------------------------------------
-    def _set_pwm(self, pwm, reason=""):
+    def _set_pwm(self, pwm, reason="", force_reason=False):
         """
         @summary: Set target PWM for the system
         @param pwm: target PWM value
@@ -2444,13 +2445,12 @@ class ThermalManagement(hw_managemet_file_op):
         if pwm > CONST.PWM_MAX:
             pwm = CONST.PWM_MAX
 
+        if force_reason:
+            self.pwm_change_reason = reason
+
         if pwm != self.pwm_target:
-            if reason:
-                reason_notice = reason
-            else:
-                reason_notice = ""
-            self.pwm_change_reason = reason_notice
-            self.log.notice("PWM target changed from {} to PWM {} {}".format(self.pwm_target, pwm, reason_notice))
+            self.pwm_change_reason = reason
+            self.log.notice("PWM target changed from {} to PWM {} {}".format(self.pwm_target, pwm, reason))
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
             if self.pwm_worker_timer:
@@ -3000,7 +3000,11 @@ class ThermalManagement(hw_managemet_file_op):
 
             pwm, name = self._pwm_get_max(pwm_list)
             self.log.debug("Result PWM {}".format(pwm))
-            self._set_pwm(pwm, reason=name)
+            if "total_err_cnt" in name:
+                # Always update total error count value in PWM change reason 
+                self._set_pwm(pwm, reason=name, force_reason=True)
+            else:
+                self._set_pwm(pwm, reason=name, force_reason=False)
             sleep_ms = int(timestump_next - current_milli_time())
 
             # Poll time should not be smaller than 1 sec to reduce system load
