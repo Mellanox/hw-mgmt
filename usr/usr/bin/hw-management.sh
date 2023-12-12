@@ -2837,19 +2837,6 @@ do_chip_up_down()
 	esac
 }
 
-check_simx()
-{
-	case $sku in
-		HI130|HI122|HI144|HI147|HI157)
-			# Let the initialization go through
-			;;
-		*)
-			if [ -n "$(lspci -vvv | grep SimX)" ]; then
-				exit 0
-			fi
-			;;
-	esac
-}
 
 do_chip_down()
 {
@@ -2883,7 +2870,13 @@ Options:
 	reset-cause	Output system reset cause.
 "
 
-check_simx
+# Check if BSP supports platform in SimX. If the platform is supported continue with
+# normal initialization. Otherwise exit from the initialization
+if check_simx; then
+	if ! check_if_simx_supported_platform; then
+		exit 0
+	fi
+fi
 
 case $ACTION in
 	start)
