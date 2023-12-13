@@ -1714,7 +1714,7 @@ class fan_sensor(system_device):
         if fan_dir not in self.fan_param.keys():
             fan_dir_def = [key for key in self.fan_param][0]
             if fan_dir == CONST.UNKNOWN:
-                self.log.info("{} dir \"{}\". Using default dir: {}".format(self.name, fan_dir_def))
+                self.log.info("{} dir \"{}\". Using default dir: {}".format(self.name, fan_dir, fan_dir_def))
             else:
                 self.log.error("{} dir \"{}\" unsupported in configuration. Using default dir: {}:\n{}".format(self.name, 
                                                                                                                fan_dir, 
