@@ -52,9 +52,18 @@ board_type_file=/sys/devices/virtual/dmi/id/board_name
 sku_file=/sys/devices/virtual/dmi/id/product_sku
 system_ver_file=/sys/devices/virtual/dmi/id/product_version
 devtree_file=$config_path/devtree
+dpu2host_events_file=$config_path/dpu2host_events
+dpu_events_file=$config_path/dpu_events
 i2c_bus_def_off_eeprom_cpu_file=$config_path/i2c_bus_def_off_eeprom_cpu
 i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
 l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
+smart_switch_dpu2host_events=("dpu1_ready" "dpu2_ready" "dpu3_ready" "dpu4_ready" \
+			      "dpu1_shtdn_ready" "dpu2_shtdn_ready" \
+			      "dpu3_shtdn_ready" "dpu4_shtdn_ready")
+smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
+			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
+			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
+			 "vdd_cpu_alert" "vddq_alert")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
 udev_event_log="/var/log/udev_events.log"
@@ -97,12 +106,14 @@ cpu_type=
 # CFL - Coffee Lake
 # DNV - Denverton
 # BF3 - BlueField-3
+# AMD_EPYC - AMD EPYC™ Embedded 3451
 IVB_CPU=0x63A
 RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
+AMD_EPYC_CPU=0x123
 
 log_err()
 {
@@ -504,4 +515,133 @@ function get_i2c_busdev_name()
 	fi
 
 	echo "$dev_name"
+}
+
+find_dpu_slot()
+{
+	local path="$1"
+	i2c_bus_offset=$(<$config_path/i2c_bus_offset)
+	dpu_bus_off=$(<$config_path/dpu_bus_off)
+	input_bus_num=$(echo "$path" | xargs dirname | xargs basename | cut -d"-" -f2)
+	slot_num=$((input_bus_num-dpu_bus_off+i2c_bus_offset+1))
+	echo "$slot_num"
+}
+
+find_dpu_hotplug_slot()
+{
+	local path="$1"
+
+	slot_num=$(echo "$path" | xargs dirname | xargs dirname | xargs basename | cut -d"." -f2)
+	echo "$slot_num"
+}
+
+create_hotplug_smart_switch_event_files()
+{
+	local dpu2host_event_file="$1"
+	local dpu_event_file="$2"
+
+	declare -a dpu2host_event_table="($(< $dpu2host_event_file))"
+	declare -a dpu_event_table="($(< $dpu_event_file))"
+
+	dpu_num=($(< $config_path/dpu_num))
+
+	for i in ${!dpu2host_event_table[@]}; do
+		check_n_init "$events_path/${dpu2host_event_table[$i]}" 0
+	done
+
+	dpu_num=$(<"$config_path"/dpu_num)
+	for ((i=1; i<=dpu_num; i+=1)); do
+		if [ ! -d "$hw_management_path/dpu"$i"/events" ]; then
+			mkdir "$hw_management_path/dpu"$i"/events"
+		fi
+		for j in ${!dpu_event_table[@]}; do
+			check_n_init $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} 0
+		done
+	done
+}
+
+init_hotplug_events()
+{
+	local event_file="$1"
+	local path="$2"
+	local slot_num="$3"
+	local e_path
+	local s_path
+
+	declare -a event_table="($(< $event_file))"
+
+	if [ $slot_num -ne 0 ]; then
+		e_path="$hw_management_path/dpu$slot_num/events"
+		s_path="$hw_management_path/dpu$slot_num/system"
+	else
+		e_path="$events_path"
+		s_path="$system_path"
+	fi
+
+	for i in ${!event_table[@]}; do
+		if [ -f "$path"/${event_table[$i]} ]; then
+			check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
+			event=$(< $s_path/${event_table[$i]})
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $e_path/${event_table[$i]}
+			fi
+		fi
+	done
+}
+
+deinit_hotplug_events()
+{
+	local event_file="$1"
+	local slot_num="$2"
+	local s_path
+
+	declare -a event_table="($(< $event_file))"
+
+	if [ $slot_num -ne 0 ]; then
+		s_path=$system_path
+	else
+		s_path="$hw_management_path/dpu$slot_num/system_path"
+	fi
+
+	for i in ${!event_table[@]}; do
+		check_n_unlink "$s_path"/${event_table[$i]}
+	done
+}
+
+connect_underlying_devices()
+{
+	local bus="$1"
+
+	if [ ! -f $config_path/i2c_underlying_devices ]; then
+		return
+	fi
+
+	declare -a card_connect_table="($(< $config_path/i2c_underlying_devices))"
+
+	for ((i=0; i<${#card_connect_table[@]}; i+=$2)); do
+		addr="${card_connect_table[i+1]}"
+		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
+		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "${card_connect_table[i]}" "$addr" > /sys/bus/i2c/devices/i2c-$bus/new_device
+		fi
+	done
+}
+
+disconnect_underlying_devices()
+{
+	local bus="$1"
+
+	if [ ! -f $config_path/i2c_underlying_devices ]; then
+		return
+	fi
+
+	declare -a card_connect_table="($(< $config_path/i2c_underlying_devices))"
+
+	for ((i=0; i<${#card_connect_table[@]}; i+=$2)); do
+		addr="${card_connect_table[i+1]}"
+		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
+		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "$addr" > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		fi
+	done
 }
