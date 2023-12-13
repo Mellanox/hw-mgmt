@@ -203,7 +203,7 @@ check_labels_enabled()
 # This function checks if the platform is having BSP emulation support.
 check_if_simx_supported_platform()
 {
-	case $sku in
+	case $vm_sku in
 		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100)
 			return 0
 			;;
