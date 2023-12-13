@@ -88,6 +88,7 @@ hotplug_linecards=0
 erot_count=0
 health_events_count=0
 pwr_events_count=0
+dpu_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
@@ -103,6 +104,7 @@ quantum3_pci_id=d2f4
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
+dpu_bf3_pci_id=c2d5
 leakage_count=0
 asic_chipup_retry=2
 chipup_log_size=4096
@@ -534,8 +536,15 @@ p4300_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x21 26 voltmon1 \
 	mp2975 0x23 26 voltmon2 )
 
+smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
+	tmp421 0x0 0x1f tmp421 dpu_cx_amb \
+	mp2975 0x0 0x68 dpu_voltmon1 \
+	mp2975 0x0 0x69 dpu_voltmon2 \
+	mp2975 0x0 0x6a dpu_voltmon3)
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
+amd_epyc_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
@@ -544,6 +553,7 @@ p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
 p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
+smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 
 ACTION=$1
 
@@ -887,6 +897,9 @@ add_cpu_board_to_connection_table()
 			cpu_connection_table=( ${bf3_come_connection_table[@]} )
 			cpu_voltmon_connection_table=( ${bf3_come_voltmon_connection_table[@]} )
 			;;
+		$AMD_EPYC_CPU)
+			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+			;;
 		*)
 			log_err "$product is not supported"
 			exit 0
@@ -930,6 +943,9 @@ add_come_named_busses()
 	case $cpu_type in
 	$CFL_CPU|$BF3_CPU)
 		come_named_busses+=( ${cfl_come_named_busses[@]} )
+		;;
+	$AMD_EPYC_CPU)
+		come_named_busses+=( ${amd_epyc_named_busses[@]} )
 		;;
 	*)
 		return
@@ -2066,6 +2082,37 @@ qm_qm3_common()
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
+smart_switch_common()
+{
+	if [ -e "$devtree_file" ]; then
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	else
+		connect_msn4700_msn4600_A1
+
+		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
+		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
+		add_cpu_board_to_connection_table
+		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn4700_mps.json"
+		named_busses+=(${smart_switch_named_busses[@]})
+		add_come_named_busses
+		echo -n "${named_busses[@]}" > $config_path/named_busses
+	fi
+	echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
+
+	thermal_type=$thermal_type_t10
+	max_tachos=12
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	echo 17 > $config_path/dpu_bus_off
+	dpu_count=4
+	echo -n "${smart_switch_dpu2host_events[@]}" > "$dpu2host_events_file"
+	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
+}
+
 check_system()
 {
 	# Check ODM
@@ -2114,6 +2161,9 @@ check_system()
 			;;
 		VMOD0018)
 			qm_qm3_common
+			;;
+		VMOD0019)
+			smart_switch_common
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2254,6 +2304,9 @@ create_event_files()
 	done
 	if [ $pwr_events_count -ne 0 ]; then
 		check_n_init $events_path/power_button 0
+	fi
+	if [ $dpu_count -ne 0 ]; then
+		create_hotplug_smart_switch_event_files "$dpu2host_events_file" "$dpu_events_file"
 	fi
 }
 
@@ -2444,7 +2497,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156)
+	HI122|HI123|HI124|HI126|HI156|HI160)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151)
@@ -2535,6 +2588,39 @@ set_asic_pci_id()
 	return
 }
 
+set_dpu_pci_id()
+{
+	# Get DPU PCI Ids.
+	case $sku in
+	HI160)
+		dpu_pci_id=$dpu_bf3_pci_id
+		;;
+
+	*)
+		;;
+	esac
+
+	dpus=`lspci -nn | grep -E $dpu_pci_id | awk '{print $1}'`
+
+	case $sku in
+	HI160)
+		dpu1_pci_bus_id=`echo $dpus | awk '{print $1}'`
+		dpu2_pci_bus_id=`echo $dpus | awk '{print $2}'`
+		dpu3_pci_bus_id=`echo $dpus | awk '{print $3}'`
+		dpu4_pci_bus_id=`echo $dpus | awk '{print $4}'`
+		echo "$dpu1_pci_bus_id" > "$config_path"/dpu1_pci_bus_id
+		echo "$dpu2_pci_bus_id" > "$config_path"/dpu2_pci_bus_id
+		echo "$dpu3_pci_bus_id" > "$config_path"/dpu3_pci_bus_id
+		echo "$dpu4_pci_bus_id" > "$config_path"/dpu4_pci_bus_id
+		echo 4 > "$config_path"/dpu_num
+		;;
+	*)
+		;;
+	esac
+
+	return
+}
+
 pre_devtr_init()
 {
 	case $board_type in
@@ -2571,6 +2657,8 @@ pre_devtr_init()
 			;;
 		esac
 		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+		;;
+	VMOD0019)
 		;;
 	*)
 		;;
@@ -2615,6 +2703,7 @@ do_start()
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
+	set_dpu_pci_id
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then

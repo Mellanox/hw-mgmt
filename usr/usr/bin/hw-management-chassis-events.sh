@@ -62,6 +62,7 @@ fan_direction_intake=52
 linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "thermal")
 mlxreg_lc_addr=32
 lc_max_num=8
+dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 
 if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_max=14
@@ -466,21 +467,21 @@ function set_fan_direction()
 	esac
 }
 
-function set_lc_fpga_combined_version()
+function set_fpga_combined_version()
 {
-	lc_path="$1"
+	path="$1"
 	# Set linecard FPGA combined version.
-	if [ -L "$lc_path"/system/fpga1_pn ]; then
-		fpga_pn=$(cat "$lc_path"/system/fpga1_pn)
+	if [ -L "$path"/system/fpga1_pn ]; then
+		fpga_pn=$(cat "$path"/system/fpga1_pn)
 	fi
-	if [ -L "$lc_path"/system/fpga1_version ]; then
-		fpga_ver=$(cat "$lc_path"/system/fpga1_version)
+	if [ -L "$path"/system/fpga1_version ]; then
+		fpga_ver=$(cat "$path"/system/fpga1_version)
 	fi
-	if [ -L "$lc_path"/system/fpga1_version_min ]; then
-		fpga_ver_min=$(cat "$lc_path"/system/fpga1_version_min)
+	if [ -L "$path"/system/fpga1_version_min ]; then
+		fpga_ver_min=$(cat "$path"/system/fpga1_version_min)
 	fi
 	str=$(printf "FPGA%06d_REV%02d%02d" "$fpga_pn" "$fpga_ver" "$fpga_ver_min")
-	echo "$str" > "$lc_path"/system/fpga
+	echo "$str" > "$path"/system/fpga
 }
 
 function handle_hotplug_fan_event()
@@ -545,7 +546,7 @@ function handle_hotplug_event()
 	lc*_active)
 		linecard=$(echo ${attribute:0:3})
 		lc_path="$hw_management_path"/"$linecard"
-		set_lc_fpga_combined_version "$lc_path"
+		set_fpga_combined_version "$lc_path"
 		;;
 	fan*)
 		handle_hotplug_fan_event "$attribute" "$event"
@@ -733,7 +734,7 @@ if [ "$1" == "add" ]; then
 				exit 0
 			fi
 		else
-			# Detect if it belongs to line card or to main board.
+			# Detect if it belongs to line card or to main board or to dpu.
 			input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 			driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 			if [ -d "$driver_dir" ]; then
@@ -744,6 +745,18 @@ if [ "$1" == "add" ]; then
 					environment_path="$hw_management_path"/lc"$linecard_num"/environment
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
+			else
+				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+				case $sku in
+				HI160)
+					# DPU event, replace output folder.
+					slot_num=$(find_dpu_slot "$3$4")
+					environment_path="$hw_management_path"/dpu"$slot_num"/environment
+					alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+					;;
+				*)
+					;;
+				esac
 			fi
 		fi
 		case $board_type in
@@ -894,7 +907,7 @@ if [ "$1" == "add" ]; then
 		reset_attr_num=$(< $config_path/reset_attr_num)
 		reset_attrr_count=0
 		linecard=0
-		# Detect if it belongs to line card or to main board.
+		# Detect if it belongs to line card or to main board or to dpu.
 		# For main board dirname mlxreg-io, for linecard - mlxreg-io.{bus_num}.
 		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
 		case "$driver_dir" in
@@ -902,11 +915,18 @@ if [ "$1" == "add" ]; then
 			# Default case, nothing to do.
 			;;
 		mlxreg-io.*)
-			# Line card event, replace output folder.
-			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
-			find_linecard_num "$input_bus_num"
-			system_path="$hw_management_path"/lc"$linecard_num"/system
-			linecard="$linecard_num"
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI126" ]]; then
+				# Line card event, replace output folder.
+				input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+				find_linecard_num "$input_bus_num"
+				system_path="$hw_management_path"/lc"$linecard_num"/system
+				linecard="$linecard_num"
+			else
+				# DPU event, replace output folder.
+				slot_num=$(echo "$driver_dir" | cut -d"." -f2)
+				system_path="$hw_management_path"/dpu"$slot_num"/system
+			fi
 			;;
 		esac
 		# Allow insertion of all the attributes, but skip redundant cpld entries.
@@ -976,7 +996,7 @@ if [ "$1" == "add" ]; then
 			echo "$str" > "$lc_path"/system/cpld
 
 			# Set linecard FPGA combined version.
-			set_lc_fpga_combined_version "$lc_path"
+			set_fpga_combined_version "$lc_path"
 		fi
 	fi
 	if [ "$2" == "eeprom" ]; then
@@ -1102,6 +1122,32 @@ if [ "$1" == "add" ]; then
 				;;
 		esac
 	fi
+	# Creating dpu folders hierarchy upon dpu udev add event.
+	if [ "$2" == "dpu" ]; then
+		slot_num=$(find_dpu_slot "$3$4")
+		if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
+			mkdir "$hw_management_path"/dpu"$slot_num"
+		fi
+		for i in "${!dpu_folders[@]}"
+		do
+			if [ ! -d "$hw_management_path"/dpu"$slot_num"/"${dpu_folders[$i]}" ]; then
+				mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
+			fi
+		done
+	fi
+	if [ "$2" == "dpu1_ready" ] || [ "$2" == "dpu2_ready" ] ||
+	   [ "$2" == "dpu3_read" ] || [ "$2" == "dpu4_ready" ]; then
+		# Connect dynamic devices.
+		bus=$(echo "$3$4" | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+		connect_underlying_devices "$bus"
+
+	fi
+	if [ "$2" == "dpu1_shtdn_ready" ] || [ "$2" == "dpu2_shtdn_ready" ] ||
+	   [ "$2" == "dpu3_shtdn_read" ] || [ "$2" == "dpu4_shtdn_ready" ]; then
+		# Disconnect dynamic devices.
+		bus=$(echo "$3$4" | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+		disconnect_underlying_devices "$bus"
+	fi
 	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then
 		input_bus_num=$(echo "$3""$4" | xargs basename | cut -d"-" -f1)
@@ -1206,7 +1252,7 @@ else
 				exit 0
 			fi
 		else
-			# Detect if it belongs to line card or to main board.
+			# Detect if it belongs to line card or to main board or to dpu.
 			input_bus_num=$(echo "$3""$4"| xargs dirname | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f2)
 			driver_dir=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs dirname | xargs dirname)/"$input_bus_num"-00"$mlxreg_lc_addr"
 			if [ -d "$driver_dir" ]; then
@@ -1217,6 +1263,7 @@ else
 					environment_path="$hw_management_path"/lc"$linecard_num"/environment
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
+			#else
 			fi
 		fi
 		# For SN2201 indexes are from 0 to 9.
@@ -1275,7 +1322,7 @@ else
 		rm -f $led_path/led_"$name"_capability
 	fi
 	if [ "$2" == "regio" ]; then
-		# Detect if it belongs to line card or to main board.
+		# Detect if it belongs to line card or to main board or to dpu.
 		# For main board dirname mlxreg-io, for line card - mlxreg-io.{bus_num}.
 		driver_dir=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs basename)
 		case "$driver_dir" in
@@ -1283,10 +1330,16 @@ else
 			# Default case, nothing to do.
 			;;
 		mlxreg-io.*)
-			# Line card event, replace output folder.
-			input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
-			find_linecard_num "$input_bus_num"
-			system_path="$hw_management_path"/lc"$linecard_num"/system
+			if [[ $sku == "HI126" ]]; then
+				# Line card event, replace output folder.
+				input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
+				find_linecard_num "$input_bus_num"
+				system_path="$hw_management_path"/lc"$linecard_num"/system
+			else
+				# DPU event, replace output folder.
+				slot_num=$(echo "$driver_dir" | cut -d"." -f2)
+				system_path="$hw_management_path"/dpu"$slot_num"/system
+			fi
 			;;
 		esac
 		if [ -d $system_path ]; then
@@ -1352,6 +1405,13 @@ else
 		change_file_counter $config_path/sfp_counter -1
 		unlock_service_state_change
 		rm -rf ${sfp_path}/*_status
+	fi
+	# Clear dpu folders upon line card udev rm event.
+	if [ "$2" == "dpu" ]; then
+		slot_num=$(find_dpu_slot "$3$4")
+		if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
+			rm -rf "$hw_management_path"/dpu"$slot_num"
+		fi
 	fi
 	# Clear lc folders upon line card udev rm event.
 	if [ "$2" == "linecard" ]; then

@@ -634,6 +634,32 @@ if [ "$1" == "add" ]; then
 				echo 1 > $events_path/leakage_rope
 			fi
 		fi
+		for ((i=0; i<=max_health_events; i+=1)); do
+			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
+				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
+				event=$(< $system_path/${l1_switch_health_events[$i]})
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/${l1_switch_health_events[$i]}
+				fi
+			fi
+		done
+		if [ -f "$3""$4"/power_button ]; then
+			check_n_link "$3""$4"/power_button $system_path/power_button
+			event=$(< $system_path/power_button)
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $events_path/power_button
+			fi
+		fi
+		init_hotplug_events "$dpu2host_events_file" "$3$4" 0
+		# BF3 debugfs temperature sensors linkage
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
+			echo 1000 > $thermal_path/cpu_pack_scale
+		fi
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp $thermal_path/sodimm1_temp_input
+			echo 1000 > $thermal_path/sodimm1_temp_scale
+		fi
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
@@ -660,33 +686,10 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
 		done
-		for ((i=0; i<=max_health_events; i+=1)); do
-			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
-				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
-				event=$(< $system_path/${l1_switch_health_events[$i]})
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/${l1_switch_health_events[$i]}
-				fi
-			fi
-		done
-		if [ -f "$3""$4"/power_button ]; then
-			check_n_link "$3""$4"/power_button $system_path/power_button
-			event=$(< $system_path/power_button)
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $events_path/power_button
-			fi
-		fi
-
-		# BF3 debugfs temperature sensors linkage
-		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
-			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
-			echo 1000 > $thermal_path/cpu_pack_scale 
-		fi
-		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp ]; then
-			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp $thermal_path/sodimm1_temp_input
-			echo 1000 > $thermal_path/sodimm1_temp_scale 
-		fi
-
+	fi
+	if [ "$2" == "hotplug-ext" ]; then
+		slot_num=$(find_dpu_hotplug_slot "$3$4")
+		init_hotplug_events "$dpu_events_file" "$3$4" "$slot_num"
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -750,6 +753,8 @@ if [ "$1" == "add" ]; then
 			$DNV_CPU)
 				sodimm1_addr='0018'
 				sodimm2_addr='001a'
+			;;
+			$AMD_EPYC_CPU)
 			;;
 			*)
 				exit 0
@@ -1233,6 +1238,7 @@ else
 			check_n_unlink $system_path/${l1_switch_health_events[$i]}
 		done
 		check_n_unlink  $system_path/power_button
+		deinit_hotplug_events "$dpu2host_events_file" 0
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
@@ -1308,6 +1314,11 @@ else
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
 		fi
+	fi
+	if [ "$2" == "hotplug-ext" ]; then
+		slot_num=$(find_dpu_hotplug_slot "$3$4")
+		deinit_hotplug_events "$dpu_events_file" "$slot_num"
+
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
