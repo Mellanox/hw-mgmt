@@ -23,7 +23,7 @@
 		"voltmon2_curr2" : "PMIC-2+ASIC1_HVDD_PL0+curr+Out+1",
 		"voltmon2_curr3" : "PMIC-2+ASIC1_DVDD_PL0+curr+Out+2",
 		"voltmon3_in1" : "PMIC-3+12V_HVDD_DVDD_ASIC1+Vol+In+1",
-		"voltmon3_in2" : "PMIC-3+ASIC1_HVDD_PL1+Vol+Out+1   ",
+		"voltmon3_in2" : "PMIC-3+ASIC1_HVDD_PL1+Vol+Out+1",
 		"voltmon3_in3" : "PMIC-3+ASIC1_DVDD_PL1+Vol+Out+2",
 		"voltmon3_temp1" : "PMIC-3+Temp+1",
 		"voltmon3_temp2" : "PMIC-3+Temp+2",
