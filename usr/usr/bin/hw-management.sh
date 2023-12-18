@@ -2584,9 +2584,9 @@ do_start()
 		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
 	fi 
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		ln -sf $thermal_control_config $config_path/tc_config.json
+		cp $thermal_control_config $config_path/tc_config.json
 	else
-		ln -sf $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
+		cp $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }
