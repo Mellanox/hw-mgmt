@@ -279,8 +279,8 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 
 # for p4300
 declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
-					["24c02_1"]="24c02 0x50 3 cable_cartridge_eeprom" \
-					["24c02_2"]="24c02 0x50 11 cable_cartridge2_eeprom")
+					["24c02_0"]="24c02 0x50 3 cable_cartridge_eeprom" \
+					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
