@@ -1,8 +1,8 @@
-From 065bc837e5d0db89e5dc2d197fa9d7122446b22d Mon Sep 17 00:00:00 2001
+From 813d2fe3def0310a73f4f3d75c92339bf20f7165 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 13 Jul 2023 06:16:53 +0000
-Subject: [PATCH v5.10 36/60] hwmon: (pmbus) Add support for MPS Multi-phase
- mp2891 controller
+Subject: [PATCH backport 5.10 1/1] hwmon: (pmbus) Add support for MPS
+ Multi-phase mp2891 controller
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -21,11 +21,11 @@ This device supports:
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- Documentation/hwmon/mp2891.rst | 128 +++++++++
+ Documentation/hwmon/mp2891.rst | 128 ++++++++++
  drivers/hwmon/pmbus/Kconfig    |   9 +
  drivers/hwmon/pmbus/Makefile   |   1 +
- drivers/hwmon/pmbus/mp2891.c   | 478 +++++++++++++++++++++++++++++++++
- 4 files changed, 616 insertions(+)
+ drivers/hwmon/pmbus/mp2891.c   | 423 +++++++++++++++++++++++++++++++++
+ 4 files changed, 561 insertions(+)
  create mode 100644 Documentation/hwmon/mp2891.rst
  create mode 100644 drivers/hwmon/pmbus/mp2891.c
 
@@ -197,10 +197,10 @@ index b1b9a3c8b..60151ac03 100644
  obj-$(CONFIG_SENSORS_TPS40422)	+= tps40422.o
 diff --git a/drivers/hwmon/pmbus/mp2891.c b/drivers/hwmon/pmbus/mp2891.c
 new file mode 100644
-index 000000000..1962f9785
+index 000000000..54f019e22
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp2891.c
-@@ -0,0 +1,478 @@
+@@ -0,0 +1,423 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * Hardware monitoring driver for MPS Multi-phase Digital VR Controllers(MP2891)
@@ -216,24 +216,26 @@ index 000000000..1962f9785
 +#include <linux/pmbus.h>
 +#include "pmbus.h"
 +
-+/* Vendor specific registers. */
-+#define MP2891_VOUT_COMMAND_R1_R2	0x40
-+
++/*
++ * Vendor specific registers.
++ * Note: command PMBUS_READ_DUTY_CYCLE (0x94) is re-purposed for reading input power.
++ *	 command PMBUS_READ_FREQUENCY (0x95) is re-purposed for reading input current.
++ */
 +#define MP2891_VOUT_OV_FAULT_LIMIT_R1	0x40
++#define MP2891_VOUT_UV_FAULT_LIMIT_R1	0x44
++#define MP2891_MFR_IIN_RPT_EST		0x53
++#define MP2891_MFR_IIN_TUNE_GAIN_EST	0x54
++#define MP2891_MFR_SVI3_IOUT_PRT	0x65
++#define MP2891_MFR_READ_PIN_EST		0x94
++#define MP2891_MFR_READ_IIN_EST		0x95
++#define MP2891_MFR_VOUT_LOOP_CTRL	0xbd
 +
 +#define MP2891_MFR_OVUV_DIV2_R1		BIT(13)
-+/*  0 – VREF + OVP_DELTA; 1 VMAX + OVP_DELTA */
 +#define MP2891_MFR_OVP_REF_SEL_R1	BIT(12)
-+/* OVP_OFFSET_ENABLE – non zero. Value * 50 mV , default 500 mV. */
 +#define MP2891_MFR_OVP_DELTA_R1		GENAMSK(11, 8)
 +#define MP2891_MFR_OVP_ABS_LIMIT_R1	GENMASK(8, 0)
 +#define MP2891_MFR_OVP_DELTA_DEFAULT	500
-+
-+#define MP2891_VOUT_UV_FAULT_LIMIT_R1	0x44
-+
-+/* 0: VREF + UVP_DELTA; 1: VMAX + UVP_DELTA */
 +#define MP2891_MFR_UVP_REF_SEL_R1	BIT(12)
-+/* UVP_OFFSET_ENABLE – non zero. Value * -50 mV, default 500 mV. */
 +#define MP2891_MFR_UVP_DELTA_R1		GENAMSK(11, 8)
 +#define MP2891_MFR_UVP_ABS_LIMIT_R1	GENMASK(8, 0)
 +#define MP2891_MFR_UVP_OFFSET_DEFAULT	(-5000)
@@ -242,71 +244,17 @@ index 000000000..1962f9785
 +#define MP2891_MFR_OVP_UVP_OFFSET_GET(ret, off) \
 +	(((((ret) & GENMASK(11, 8)) >> 8) + 1) * (off))
 +
-+/*
-+ * MP2891_MFR_SVI3_IOUT_PRT:
-+ *	bits 15:5 - reserved zeros;
-+ *	bits 4:3 - set SVI3 Vout digital filter
-+ *	 b00: 5kHz
-+ *	 b01: 2kHz
-+ *	 b10: 1kHz
-+ *	 b11: no filter
-+ *	bits 2:0 - define output current scaling selection of rail1.
-+ *	 b000: 1 A/LSB
-+ *	 b001: (1/32) A/LSB
-+ *	 b010: (1/16) A/LSB
-+ *	 b011: (1/8) A/LSB
-+ *	 b100: (1/4) A/LSB
-+ *	 b101: (1/2) A/LSB
-+ *	 b110: 1 A/LSB
-+ *	 b111: 2 A/LSB
-+ */
-+#define MP2891_MFR_SVI3_IOUT_PRT	0x65
-+#define MP2891_MFR_READ_PIN_EST		0x94
-+#define MP2891_MFR_READ_IIN_EST		0x95
-+
-+/*
-+ * MP2891_MFR_VOUT_LOOP_CTRL:
-+ * bits 15:14 define the VID step.
-+ *  b00: 6.25mV
-+ *  b01: 5mV
-+ *  b10: 2mV
-+ *  b11: 1mV
-+ * bit 13 enable bit of 2.5mV resolution.
-+ *  b0: disable
-+ *  b1: enable
-+ * bits 12:11 reserved zeros
-+ * bit 10 defines rail  remote sense amplifier gain:
-+ *  b0: 1
-+ *  b1: 0.5
-+ * bit 9 DC reference_select
-+ * b0: Comp EA uses Vfb and Vref
-+ * b1: Comp EA uses Vdiff and Vref
-+ * bit 8 enables DC loop calibration at DCM.
-+ *  b0: disable
-+ *  b1: enable
-+ * bit 7 enables DC loop calibration both at DCM and CCM operation.
-+ * b0: disable
-+ * b1: enable
-+ * bit 6 - holds DC loop when the PWM time interval meets PWM switching period condition
-+ *	   set with PMBus command MFR_VR_CONFIG1 (B7h), bit [3:2].
-+ *  b0: disable hold DC loop when PWM switching period condition meets
-+ *  b1: hold DC loop when PWM switching period condition meets
-+ * bit 5 hold DC loop when phase count is changed.
-+ *  b0: disable hold DC loop when phase number change
-+ *  b1: hold the DC loop when phase number change.
-+ * bit 4 hold DC loop regulation when a load transient event is detected.
-+ *  b0: disable hold DC loop when meets VFB+/- window condition
-+ *  b1: hold DC loop when meets VFB+/- window condition
-+ * bits 3:0 set the DC loop minimal holding time in direct format.
-+ */
-+#define MP2891_MFR_VOUT_LOOP_CTRL	0xbd
-+
 +#define MP2891_VID_STEP_POS		14
 +#define MP2891_VID_STEP_MASK		GENMASK(MP2891_VID_STEP_POS + 1, MP2891_VID_STEP_POS)
 +#define MP2891_DAC_2P5MV_MASK		BIT(13)
 +#define MP2891_IOUT_SCALE_MASK		GENMASK(2, 0)
 +
 +#define MP2975_IIN_OC_WARN_LIMIT_UNIT	2
++#define MP2975_IOUT_OC_LIMIT_UNIT	4
++#define MP2975_PIN_LIMIT_UNIT		2
++#define MP2975_VIN_UNIT			32
++#define MP2975_IOUT_UC_LIMIT_SCALE	124
++#define MP2975_IOUT_UC_LIMIT_UNIT	25600
 +#define MP2975_TEMP_LIMIT_OFFSET	40
 +
 +#define MP2891_PAGE_NUM			2
@@ -329,23 +277,13 @@ index 000000000..1962f9785
 +
 +static int mp2891_read_vout(struct i2c_client *client, int page, int phase, int reg)
 +{
-+	int ret;
-+
 +	const struct pmbus_driver_info *info = pmbus_get_driver_info(client);
 +	struct mp2891_data *data = to_mp2891_data(info);
++	int ret;
 +
 +	ret = pmbus_read_word_data(client, page, phase, reg);
 +
 +	return ret < 0 ? ret : ret * data->vid_step[page] / 100;
-+}
-+
-+static int mp2891_read_iout(struct i2c_client *client, int page, int phase, int reg)
-+{
-+	int ret;
-+
-+	ret = pmbus_read_word_data(client, page, phase, reg);
-+
-+	return ret;
 +}
 +
 +static int mp2891_read_byte_data(struct i2c_client *client, int page, int reg)
@@ -379,8 +317,6 @@ index 000000000..1962f9785
 +	switch (reg) {
 +	case PMBUS_READ_VOUT:
 +		return mp2891_read_vout(client, page, phase, reg);
-+	case PMBUS_READ_IOUT:
-+		return mp2891_read_iout(client, page, phase, reg);
 +	case PMBUS_READ_VIN:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
 +		if (ret <= 0)
@@ -391,9 +327,7 @@ index 000000000..1962f9785
 +		 * is set with 0. Bits 9:0 provides input voltage in linear11 format, scaled as
 +		 * 1/32V/LSB.
 +		 */
-+		return DIV_ROUND_CLOSEST(((ret & GENMASK(9, 0)) * 1000), 32);
-+	case PMBUS_READ_TEMPERATURE_1:
-+		return pmbus_read_word_data(client, page, phase, reg);
++		return DIV_ROUND_CLOSEST(((ret & GENMASK(9, 0)) * 1000), MP2975_VIN_UNIT);
 +	case PMBUS_OT_WARN_LIMIT:
 +	case PMBUS_OT_FAULT_LIMIT:
 +		return (pmbus_read_word_data(client, page, phase, reg) & GENMASK(7, 0)) -
@@ -414,16 +348,18 @@ index 000000000..1962f9785
 +		return DIV_ROUND_CLOSEST(data->vid_ref[page] + off, 100);
 +	case PMBUS_IOUT_UC_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
-+		if (ret <= 0)
++		return ret <= 0 ? ret : DIV_ROUND_CLOSEST((ret & GENMASK(7, 0)) *
++							   MP2975_IOUT_UC_LIMIT_SCALE,
++							  MP2975_IOUT_UC_LIMIT_UNIT);
 +			return ret;
-+		return DIV_ROUND_CLOSEST((ret & GENMASK(7, 0)) * 124, 25600);
-+	case PMBUS_READ_POUT:
 +	case PMBUS_READ_PIN:
 +		/*
 +		 * From some unknown reason the vendor decide to re-purpose command
 +		 * PMBUS_READ_DUTY_CYCLE (0x94) for reading input and output power.
 +		 */
 +		return pmbus_read_word_data(client, page, phase, MP2891_MFR_READ_PIN_EST);
++	case PMBUS_READ_POUT:
++		return pmbus_read_word_data(client, page, phase, reg);
 +	case PMBUS_READ_IIN:
 +		/*
 +		 * From some unknown reason the vendor decide to re-purpose command
@@ -431,16 +367,25 @@ index 000000000..1962f9785
 +		 */
 +		return pmbus_read_word_data(client, page, phase, MP2891_MFR_READ_IIN_EST);
 +	case PMBUS_IIN_OC_WARN_LIMIT:
++		/* Read only from page 0. */
++		ret = pmbus_read_word_data(client, 0, phase, reg);
++		return ret <= 0 ? ret : DIV_ROUND_CLOSEST(ret, MP2975_IIN_OC_WARN_LIMIT_UNIT);
++	case PMBUS_PIN_OP_WARN_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
-+		if (ret <= 0)
-+			return ret;
-+		return DIV_ROUND_CLOSEST(ret, MP2975_IIN_OC_WARN_LIMIT_UNIT);
++		return ret <= 0 ? ret : ret * MP2975_PIN_LIMIT_UNIT;
++	case PMBUS_IOUT_OC_WARN_LIMIT:
++	case PMBUS_IOUT_OC_FAULT_LIMIT:
++		ret = pmbus_read_word_data(client, page, phase, reg);
++		return ret <= 0 ? ret : DIV_ROUND_CLOSEST(ret * data->iout_scale[page],
++							  MP2975_IOUT_OC_LIMIT_UNIT);
 +	case PMBUS_UT_WARN_LIMIT:
 +	case PMBUS_UT_FAULT_LIMIT:
 +	case PMBUS_VIN_OV_WARN_LIMIT:
 +	case PMBUS_VIN_UV_WARN_LIMIT:
 +	case PMBUS_VOUT_OV_WARN_LIMIT:
 +	case PMBUS_VOUT_UV_WARN_LIMIT:
++	case PMBUS_POUT_OP_WARN_LIMIT:
++	case PMBUS_IIN_OC_FAULT_LIMIT:
 +	case PMBUS_POUT_MAX:
 +	case PMBUS_POUT_OP_FAULT_LIMIT:
 +	case PMBUS_MFR_VIN_MIN:
@@ -454,7 +399,7 @@ index 000000000..1962f9785
 +	case PMBUS_MFR_MAX_TEMP_1:
 +		return -ENXIO;
 +	default:
-+		return -EINVAL;
++		return -ENODATA;
 +	}
 +}
 +
