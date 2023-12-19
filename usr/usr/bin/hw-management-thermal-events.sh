@@ -643,19 +643,16 @@ if [ "$1" == "add" ]; then
 		else
 			asic_num=$(< $config_path/asic_num)
 		fi
+		if [ ! -d /sys/module/mlxsw_minimal ]; then
+			modprobe mlxsw_minimal
+		fi
 		for ((i=1; i<=asic_num; i+=1)); do
 			asic_health=0
 			if [ -f "$3""$4"/asic"$i" ]; then
 				asic_health=$(< "$3""$4"/asic"$i")
 			fi
-			if [ "$asic_health" -ne 2 ]; then
-				exit 0
-			fi
-			if [ ! -d /sys/module/mlxsw_minimal ]; then
-				modprobe mlxsw_minimal
-			fi
 			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
-			if [ -f /etc/autochipup ]; then
+			if [ -f /etc/autochipup ] && [ "$asic_health" -eq 2 ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
