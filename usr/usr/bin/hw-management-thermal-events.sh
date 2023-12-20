@@ -38,7 +38,7 @@ sku=$(< $sku_file)
 
 # Local variables
 fan_psu_default=$config_path/fan_psu_default
-max_psus=4
+max_psus=8
 max_pwm=4
 max_lcs=8
 max_erots=2
