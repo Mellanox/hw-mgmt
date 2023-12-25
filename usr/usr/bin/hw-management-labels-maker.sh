@@ -106,17 +106,33 @@ make_labels()
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
+	sbw1_voltmon1_in*|sbw1_voltmon2_in*|sbw1_voltmon3_in*|sbw1_voltmon4_in*|sbw1_voltmon5_in*|sbw1_voltmon6_in*|sbw2_voltmon1_in*|sbw2_voltmon2_in*|sbw2_voltmon3_in*|sbw2_voltmon4_in*|sbw2_voltmon5_in*|sbw2_voltmon6_in*)
+		subfolder="voltage"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
 	voltmon1_power*|voltmon2_power*|voltmon3_power*|voltmon4_power*|voltmon5_power*|voltmon6_power*|voltmon7_power*|voltmon8_power*|voltmon9_power*|voltmon10_power*|voltmon11_power*|voltmon12_power*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files2 $attr_name)
+		;;
+	sbw1_voltmon1_power*|sbw1_voltmon2_power*|sbw1_voltmon3_power*|sbw1_voltmon4_power*|sbw1_voltmon5_power*|sbw1_voltmon6_power*|sbw2_voltmon1_power*|sbw2_voltmon2_power*|sbw2_voltmon3_power*|sbw2_voltmon4_power*|sbw2_voltmon5_power*|sbw2_voltmon6_power*)
+		subfolder="power"
+		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
 	voltmon1_curr*|voltmon2_curr*|voltmon3_curr*|voltmon4_curr*|voltmon5_curr*|voltmon6_curr*|voltmon7_curr*|voltmon8_curr*|voltmon9_curr*|voltmon10_curr*|voltmon11_curr*|voltmon12_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
+	sbw1_voltmon1_curr*|sbw1_voltmon2_curr*|sbw1_voltmon3_curr*|sbw1_voltmon4_curr*|sbw1_voltmon5_curr*|sbw1_voltmon6_curr*|sbw2_voltmon1_curr*|sbw2_voltmon2_curr*|sbw2_voltmon3_curr*|sbw2_voltmon4_curr*|sbw2_voltmon5_curr*|sbw2_voltmon6_curr*)
+		subfolder="current"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
 	voltmon1_temp*|voltmon2_temp*|voltmon3_temp*|voltmon4_temp*|voltmon5_temp*|voltmon6_temp*|voltmon7_temp*|voltmon8_temp*|voltmon9_temp*|voltmon10_temp*|voltmon11_temp*|voltmon12_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files2 $attr_name)
+		;;
+	sbw1_voltmon1_temp*|sbw1_voltmon2_temp*|sbw1_voltmon3_temp*|sbw1_voltmon4_temp*|sbw1_voltmon5_temp*|sbw1_voltmon6_temp*|sbw2_voltmon1_temp*|sbw2_voltmon2_temp*|sbw2_voltmon3_temp*|sbw2_voltmon4_temp*|sbw2_voltmon5_temp*|sbw2_voltmon6_temp*)
+		subfolder="temperature"
+		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
 	psu1_volt*|psu2_volt*|psu3_volt*|psu4_volt*|psu5_volt*|psu6_volt*|psu7_volt*|psu8_volt*)
 		subfolder="voltage"
