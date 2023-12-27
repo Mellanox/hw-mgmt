@@ -974,6 +974,12 @@ if [ "$1" == "add" ]; then
 				fw_ver=$(echo $fw_ver_all | cut -d. -f2)
 				echo $fw_ver > $fw_path/"$psu_name"_fw_ver
 				echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
+			elif [ "$cap" == "460" ]; then
+				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr | tr -dc '[[:print:]]')
+				fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1,2)
+				fw_ver=$(echo $fw_ver_all | cut -d. -f3,4)
+				echo $fw_ver > $fw_path/"$psu_name"_fw_ver
+				echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
 			fi
 		fi
 
