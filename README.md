@@ -39,6 +39,8 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - E3597
 - P4697
 - P2317
+- P4262
+- P4300-A00
 
 ## Supported Kernel versions:
 - 5.10.189
