@@ -35,9 +35,9 @@ devtr_verb_display=0
 devtree_codes_file=
 
 # Declare common associative arrays for SMBIOS System Version parsing.
-declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board")
+declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board" ["O"]="port_board")
 
-declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom")
+declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc")
 
 declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75")
 
@@ -64,13 +64,13 @@ declare -A comex_bdw_alternatives=(["mp2975_0"]="mp2975 0x61 15 comex_voltmon2" 
 				   ["max11603_0"]="max11603 0x6d 15 comex_a2d" \
 				   ["tmp102_0"]="tmp102 0x49 15 cpu_amb" \
 				   ["adt75_0"]="adt75 0x49 15 cpu_amb" \
-				   ["24c32_0"]="24c32 0x50 16 comex_eeprom" \
-				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
+				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A comex_cfl_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
 				   ["max11603_0"]="max11603 0x6d 15 comex_a2d" \
-				   ["24c32_0"]="24c32 0x50 16 comex_eeprom" \
-				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
+				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
@@ -78,7 +78,7 @@ declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_1"]="mp2975 0x66 5 voltmon2" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-				 ["24c32_0"]="24c32 0x51 8 system_eeprom")
+				 ["24c32_0"]="24c32 0x51 8 vpd_info")
 
 declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 				  ["pmbus_1"]="pmbus 0x41 5 voltmon2" \
@@ -86,8 +86,8 @@ declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 				  ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				  ["lm75_0"]="lm75 0x4a 7 port_amb" \
 				  ["tmp75_0"]="tmp75 0x4a 7 port_amb" \
-				  ["24c32_0"]="24c32 0x51 8 system_eeprom" \
-				  ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				  ["24c32_0"]="24c32 0x51 8 vpd_info" \
+				  ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
@@ -103,7 +103,7 @@ declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d
 					 ["mp2975_3"]="mp2975 0x6a 5 voltmon4" \
 					 ["mp2975_4"]="mp2975 0x6e 5 voltmon5" \
 					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-					 ["24c32_0"]="24c32 0x51 8 system_eeprom")
+					 ["24c32_0"]="24c32 0x51 8 vpd_info")
 
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
@@ -119,8 +119,8 @@ declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 				 ["stts751_0"]="stts751 0x4a 7 port_amb" \
-				 ["24c32_0"]="24c32 0x51 8 system_eeprom" \
-				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				 ["24c32_0"]="24c32 0x51 8 vpd_info" \
+				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A mqm9510_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon2" \
@@ -132,7 +132,7 @@ declare -A mqm9510_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2975_7"]="mp2975 0x6c 6 voltmon8" \
 				 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb" \
-				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["mp2975_1"]="mp2975 0x68 5 voltmon2" \
@@ -144,7 +144,7 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["adt75_0"]="adt75 0x4a 7 port_amb1" \
 				 ["tmp102_1"]="tmp102 0x4a 15 port_amb2" \
 				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
-				 ["24c512_0"]="24c512 0x51 8 system_eeprom")
+				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
@@ -172,7 +172,7 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
-				["24c512_0"]="24c512 0x51 8 system_eeprom")
+				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
@@ -191,8 +191,20 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["tmp75_7"]="tmp75 0x4f 7 fan_temp4" \
 			       ["adt75_7"]="adt75 0x4f 7 fan_temp4" \
 			       ["max11603_0"]="max11603 0x6d 7 swb_a2d" \
-			       ["24c512_0"]="24c512 0x51 8 system_eeprom" \
+			       ["24c512_0"]="24c512 0x51 8 vpd_info" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
+
+# TBD version: V0-C*A0RaEi-S*TcTcTcTcTcTcTcTcA0EiEi-P*HaEaEa
+declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x48 7 fiol_amb" \
+			       ["adt75_1"]="adt75 0x49 7 bpl_amb" \
+			       ["adt75_2"]="adt75 0x4a 7 fiom_amb" \
+			       ["adt75_3"]="adt75 0x4b 7 bpm_amb" \
+			       ["adt75_4"]="adt75 0x4c 7 fiob_amb" \
+			       ["adt75_5"]="adt75 0x4d 7 bpb_amb" \
+			       ["adt75_6"]="adt75 0x4e 7 fior_amb" \
+			       ["adt75_7"]="adt75 0x4f 7 bpr_amb" \
+			       ["24c512_0"]="24c512 0x51 8 vpd_info"\
+			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom")
 
 declare -A qm3000_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
@@ -201,28 +213,12 @@ declare -A qm3000_alternatives=( \
 				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
 				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
 				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-				["mp2891_6"]="mp2891 0x66 37 voltmon7" \
-				["mp2891_7"]="mp2891 0x68 37 voltmon8" \
-				["mp2891_8"]="mp2891 0x6c 37 voltmon9" \
-				["mp2891_9"]="mp2891 0x66 53 voltmon10" \
-				["mp2891_10"]="mp2891 0x68 53 voltmon11" \
-				["mp2891_11"]="mp2891 0x6c 53 voltmon12" \
 				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
 				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
 				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
 				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-				["xdpe1a2g7_6"]="xdpe1a2g7 0x66 37 voltmon7" \
-				["xdpe1a2g7_7"]="xdpe1a2g7 0x68 37 voltmon8" \
-				["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 37 voltmon9" \
-				["xdpe1a2g7_9"]="xdpe1a2g7 0x66 53 voltmon10" \
-				["xdpe1a2g7_10"]="xdpe1a2g7 0x68 53 voltmon11" \
-				["xdpe1a2g7_11"]="xdpe1a2g7 0x6c 53 voltmon12" \
-				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-				["adt75_0"]="adt75 0x4a 7 port_amb" \
-				["stts751_0"]="stts751 0x4a 7 port_amb" \
-				["24c512_0"]="24c512 0x51 8 system_eeprom")
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6")
 
 declare -A qm3400_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
@@ -237,13 +233,10 @@ declare -A qm3400_alternatives=( \
 				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-				["adt75_0"]="adt75 0x4a 7 port_amb" \
-				["stts751_0"]="stts751 0x4a 7 port_amb" \
-				["24c512_0"]="24c512 0x51 8 system_eeprom")
+				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
-				   ["24c512_0"]="24c512 0x50 16 comex_eeprom")
+				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -284,9 +277,22 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
 
+# for p4300
+declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
+					["24c02_0"]="24c02 0x50 3 cable_cartridge_eeprom" \
+					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
+
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
 					["tmp75_0"]="tmp75 0x49 7 fan_amb")
+
+# System EEPROM located on platform board
+declare -A platform_type1_alternatives=(["24c512_0"]="24c512 0x51 8 vpd_info")
+
+# Port ambient sensor located on a separate module board
+declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="adt75 0x4a 7 port_amb" \
+				["stts751_0"]="stts751 0x4a 7 port_amb")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
@@ -294,6 +300,7 @@ declare -A fan_alternatives
 declare -A clk_alternatives
 declare -A pwr_alternatives
 declare -A platform_alternatives
+declare -A port_alternatives
 declare -A board_alternatives
 
 devtr_validate_system_ver_str()
@@ -487,12 +494,24 @@ devtr_check_supported_system_init_alternatives()
 			return 0
 			;;
 		VMOD0017)
-			for key in "${!p4262_alternatives[@]}"; do
-				swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
-			done
-			for key in "${!pwr_type1_alternatives[@]}"; do
-				pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
-			done
+			case $sku in
+				HI152)
+					for key in "${!p4262_alternatives[@]}"; do
+						swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type1_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
+					done
+					;;
+				HI159)
+					for key in "${!p4300_alternatives[@]}"; do
+						swb_alternatives["$key"]="${p4300_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type2_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type2_alternatives["$key"]}"
+					done
+				;;
+			esac
 			return 0
 			;;
 		VMOD0018)
@@ -506,6 +525,9 @@ devtr_check_supported_system_init_alternatives()
 					for key in "${!qm3000_alternatives[@]}"; do
 						swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
 					done
+					for key in "${!platform_type1_alternatives[@]}"; do
+						platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
+					done
 				;;
 				*)
 					log_info "SMBIOS BOM: unsupported board_type: ${board_type}, sku ${sku}"
@@ -514,6 +536,9 @@ devtr_check_supported_system_init_alternatives()
 			esac
 			for key in "${!fan_type1_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+			done
+			for key in "${!port_type0_alternatives[@]}"; do
+				port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
 			done
 			return 0
 			;;
@@ -527,9 +552,11 @@ devtr_check_supported_system_init_alternatives()
 devtr_check_board_components()
 {
 	local board_str=$1
-	local board_num=1
-	local bus_offset=0
-	local addr_offset=0
+	local clk_board_num=1
+	local clk_bus_offset=0
+	local clk_addr_offset=0
+	local swb_board_num=1
+	local swb_bus_offset=0
 
 	local comp_arr=($(echo "$board_str" | fold -w2))
 
@@ -540,6 +567,8 @@ devtr_check_board_components()
 		log_info "DBG SMBIOS BOM: Board: ${board_name}"
 	fi
 
+	board_alternatives=()
+
 	case $board_key in
 		C)	# CPU/Comex board
 			for key in "${!comex_alternatives[@]}"; do
@@ -547,6 +576,13 @@ devtr_check_board_components()
 			done
 			;;
 		S)	# Switch board
+			# There can be several switch boards (e.g on QM3000)
+			if [ -e "$config_path"/swb_brd_num ]; then
+				swb_board_num=$(< $config_path/swb_brd_num)
+			fi
+			if [ -e "$config_path"/swb_brd_bus_offset ]; then
+				swb_bus_offset=$(< $config_path/swb_brd_bus_offset)
+			fi
 			for key in "${!swb_alternatives[@]}"; do
 				board_alternatives["$key"]="${swb_alternatives["$key"]}"
 			done
@@ -567,9 +603,9 @@ devtr_check_board_components()
 			done
 			;;
 		K)	# Clock board
-			# Currently only clock boards number can be bigger than 1.
+			# There can be several clock boards (e.g on SN5600)
 			if [ -e "$config_path"/clk_brd_num ]; then
-				board_num=$(< $config_path/clk_brd_num)
+				clk_board_num=$(< $config_path/clk_brd_num)
 			fi
 			if [ -e "$config_path"/clk_brd_bus_offset ]; then
 				bus_offset=$(< $config_path/clk_brd_bus_offset)
@@ -581,13 +617,18 @@ devtr_check_board_components()
 				board_alternatives["$key"]="${clk_alternatives["$key"]}"
 			done
 			;;
+		O)	# Port board
+			for key in "${!port_alternatives[@]}"; do
+				board_alternatives["$key"]="${port_alternatives["$key"]}"
+			done
+			;;
 		*)
 			log_err "SMBIOS BOM: incorrect encoded board, board key ${board_key}"
 			return 1
 			;;
 	esac
 
-	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; h_cnt=0; brd=0
+	local i=0; t_cnt=0; r_cnt=0; e_cnt=0; a_cnt=0; p_cnt=0; o_cnt=0; h_cnt=0; g_cnt=0; n_cnt=0; j_cnt=0; x_cnt=0; brd=0
 	curr_component=()
 	for comp in "${comp_arr[@]}"; do
 		# Skip 1st tuple in board string. It desctibes board name and number.
@@ -629,16 +670,29 @@ devtr_check_board_components()
 				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
-				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${r_cnt}"
-				else
-					echo -n "${alternative_comp} " >> "$devtree_file"
-					if [ $devtr_verb_display -eq 1 ]; then
-						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				# QM3000 system has 2 switch boards. Just VRs are accessed on these boards.
+				for ((brd=0, n=1; brd<swb_board_num; brd++, n++)) do
+					curr_component=(${board_alternatives[$alternative_key]})
+					if [ $swb_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+swb_bus_offset*brd))
+						curr_component[3]=sbw${n}_${curr_component[3]}
 					fi
-				fi
+					# Check if component from SMBIOS BOM string is defined in layout
+					if [ -z "${curr_component[0]}" ]; then
+						log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${r_cnt}"
+					else
+						echo -n "${curr_component[@]} " >> "$devtree_file"
+						if [ $devtr_verb_display -eq 1 ]; then
+							if [ $swb_board_num -gt 1 ]; then
+								board_name_str="${board_name}${n}"
+							else
+								board_name_str="$board_name"
+							fi
+							log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
+							echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
+						fi
+					fi
+				done
 				r_cnt=$((r_cnt+1))
 				;;
 			E)	# Eeproms
@@ -648,16 +702,15 @@ devtr_check_board_components()
 				fi
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
-				# Currently it's done just for EEPROM as other components can't be in multiple cards of the same type
-				# Moose system has 2 Clock boards. Just EEPROM is accessed on these boards.
-				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
+				# SN5600 system has 2 Clock boards. Just EEPROM is accessed on these boards.
+				for ((brd=0, n=1; brd<clk_board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					if [ $addr_offset -ne 0 ]; then
-						curr_component[1]=$((curr_component[1]+addr_offset*brd))
+					if [ $clk_addr_offset -ne 0 ]; then
+						curr_component[1]=$((curr_component[1]+clk_addr_offset*brd))
 						curr_component[1]=0x$(echo "obase=16; ${curr_component[1]}"|bc)
 					fi
-					if [ $bus_offset -ne 0 ]; then
-						curr_component[2]=$((curr_component[2]+bus_offset*brd))
+					if [ $clk_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+clk_bus_offset*brd))
 						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
@@ -666,7 +719,7 @@ devtr_check_board_components()
 					else
 						echo -n "${curr_component[@]} " >> "$devtree_file"
 						if [ $devtr_verb_display -eq 1 ]; then
-							if [ $board_num -gt 1 ]; then
+							if [ $clk_board_num -gt 1 ]; then
 								board_name_str="${board_name}${n}"
 							else
 								board_name_str="$board_name"
@@ -753,6 +806,82 @@ devtr_check_board_components()
 					fi
 				fi
 				h_cnt=$((h_cnt+1))
+				;;
+			G)	# GPIO Expander
+				if [ "$component_key" == "0" ]; then
+					g_cnt=$((g_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${g_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${g_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				g_cnt=$((g_cnt+1))
+				;;
+			N)	# Network Adapter
+				if [ "$component_key" == "0" ]; then
+					n_cnt=$((n_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${n_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${n_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				n_cnt=$((n_cnt+1))
+				;;
+			J)	# Jitter Attenuator
+				if [ "$component_key" == "0" ]; then
+					j_cnt=$((j_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${j_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${j_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				j_cnt=$((j_cnt+1))
+				;;
+			X)	# Oscillator
+				if [ "$component_key" == "0" ]; then
+					x_cnt=$((x_cnt+1))
+					continue
+				fi
+				component_name=${hotswap_arr[$component_key]}
+				alternative_key="${component_name}_${x_cnt}"
+				alternative_comp=${board_alternatives[$alternative_key]}
+				if [ -z "${alternative_comp[0]}" ]; then
+					log_info "SMBIOS BOM: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${x_cnt}"
+				else
+					echo -n "${alternative_comp} " >> "$devtree_file"
+					if [ $devtr_verb_display -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
+						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+					fi
+				fi
+				x_cnt=$((x_cnt+1))
 				;;
 			*)
 				log_err "SMBIOS BOM: incorrect encoded category, category key ${category_key}"

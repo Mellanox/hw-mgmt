@@ -1,4 +1,66 @@
 ================================================================================
+- V.7.0030.3000
+- Mon , 1 Jan 2024 
+--------------------------------------------------------------------------------
+
+- New features 
+    o  Add support for VPD eeprom parser including HW REV parsing and Vendor specific blocks parsing (both legacy & new blocks) under /var/run/hw-management/eeprom/vpd_data
+    o  Add support Independent Module: Support updating module and ASIC temperatures for thermal Algorithm 
+    o  Add support for PSU ACBEL 460 remote-in-system FW upgrade tool – relevant for SN2410, SN2700, SN2700-A1
+    o  TC feature :add minimum number of missing PSUs to be considered as PSU PRESENT error (additional PSU non-present will be considered as 2 errors)
+    o  TC feature: Add TC error mask feature support
+    o  TC feature: Set thermal sensor_read_err only for thermal sensors type (and not for other sensors)
+    o  Debug: Add support to hw-mgmt dump to include udev event logger (under /var/log/udev_events.log)
+
+
+- Bug fixes
+	Issue		Title	
+	#3613781	BF3 - Leopard BF3 missing voltmon sensor links 
+	#3560591	[SN2010/SN2100/SN2410/SN2700/SN2740] (SPC1 -MSN2410} "sensors" - the FAN numbers not align in the right order and in accordance with "nv show platform environment fan
+	#3630148	TC - 7.0030.2000: Logging Error in TC Log writing dmesg: RuntimeError: reentrant call inside
+	#3634579	There are missing sysfs nodes in hw-management 7.0030.2000
+	#3649678	[SN3700C] : [master_bookworm | The fan speed can set correctly.
+	#3647742	[SN3750] : multiple Thermal control error logs: voltmon2_temp: read file thermal/voltmon2_temp1_input errors count 3 
+	#3666524	[Kernel Kconfig] | Arm64 compilation fails by using the hw-management kconfig flags
+	#3706219	use tc_config copy instead of soft link to /etc (pmon cannot access /etc)
+	#3450086	[CL-support] "tar: ./hw-management_val: file changed as we read it" error/warning during cl-support generation. 
+	#3696439	TC: Should dynamically start/enable or stop/disable + Support more SKUs for SimX
+	#3660884	[MSN2700-A1]: Panther Respin | FANs] | SONIC reports invalid FANs airflow direction
+	#3650418	[SN2201]: upload process get "nvsw-sn2201 NVSN2201:00: Failed to get adapter for bus 10 /11 /12/ 13" & switch reboot all time
+	#3632299	BF3 - 'r-hw-bf3-10' : some kernel loadable modules for X86 platforms are not available on ARM platforms (created separate kernel module list for ARM)
+	#3632297	BF3 - 'r-hw-bf3-10' kern :err : [Fri Oct 13 17:34:27 2023] mlxbf3_gpio MLNXBF33:01: IRQ index 0 not found 
+	#3684822	V.7.0030.2931: Minimal driver not loaded after ASIC Loaded by SDK
+	#3720967	Minimal driver initialization results in PMPE Events to SDK Driver, with zeroed-out fields
+	NA 		sensors: Fix PSU labels : In multiple sensor.conf files PSU-1 and PSU-2 labels were swapped.
+	NA		BF3 - Update ARM BF3 kernel configuration (disable: PMC drv,SCMI drv, enable: serial drv, pinctrl drv)
+	NA		BF3 - Fix PSU EEPROM symlinks on BF3 systems (wrong bus number)
+ 	NA		BF3 – udev rules: fix port_amb symlink creation on BF3 systems
+	NA		BF3 – align iorw tool with x86 iorw behavior (tool name , output format, command line parameters
+	NA		Distinct ADD/DELETE events (sx_core- minimal triggered) vs. ADD/DELETE events (PCI reset- minimal not triggered)
+	NA		TC – enabling NVME temperature sensor reading by adding CONFIG_NVME_HWMON=y
+	NA		TC - fix FAN_dir error treatmeant for systems with one possible FAN direction
+	NA		In some cases when TC can’t start error code was returning retcode 0 instead of 1  
+	NA		allow fan speed setting granularity of 1 PWM for mlxminimal driver on kernel 6.1
+	NA		Adding explicit disabling of kernel config:CONFIG_MLXSW_CORE_THERMAL=n (for kernel 6.1)
+	NA 		Modifying kernel config CONFIG_IGB to be built as a module (for kernel 6.1)
+	NA		TC - removal of kernel thermal zones (not needed for new TC) - remove deprecated links coolingX_state 
+	NA		TC - removal of kernel thermal zones (not needed for new TC) - Add replacement for kernel tz attributes
+	NA		Change NVME SSD temperature sensor link to unified name "drivetemp"
+	NA		TC – BF3 – support scaling of temperature sensors
+	NA		TC – BF3 – Add links to BF3 CPU core_temp and ddr_temp to /var/run/hw-managemet/thermal
+	NA		[MQM9700] ignore PSU fan2, fan3 
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0030.3000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0030.2000
 - Thu , 28 Sept 2023 
 --------------------------------------------------------------------------------

@@ -50,7 +50,6 @@ max_module_gbox_ind=160
 min_lc_thermal_ind=1
 max_lc_thermal_ind=20
 cx_i2c_bus=0
-fan_full_speed_code=20
 # Static variable to keep track the number of fan drawers
 fan_drwr_num=0
 # 46 - F, 52 - R
@@ -253,13 +252,15 @@ get_psu_fan_direction()
 	fi
 }
 
+trace_udev_events "$0: ACTION=$1 $2 $3 $4 $5"
+
 if [ "$1" == "add" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
 	fi
 	case "$2" in
-		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
+		fan_amb | port_amb | cx_amb | lr1_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2 | tempX )
 		# Verify if this is COMEX sensor
 		find_i2c_bus
 		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
@@ -284,7 +285,12 @@ if [ "$1" == "add" ]; then
 		elif [ $bus -eq $cx_i2c_bus ]; then
 			check_n_link "$3""$4"/temp2_input $thermal_path/cx_amb
 		else
-			check_n_link "$3""$4"/temp1_input $thermal_path/"$2"
+			therml_sensor_name=$(get_i2c_busdev_name "$2" "$4")
+			if [[ $therml_sensor_name == "undefined" ]];
+			then
+				exit
+			fi
+			check_n_link "$3""$4"/temp1_input $thermal_path/"$therml_sensor_name"
 		fi
 		;;
 	esac
@@ -304,8 +310,6 @@ if [ "$1" == "add" ]; then
 				tpath="$thermal_path"
 				min_module_ind=$min_module_gbox_ind
 				max_module_ind=$max_module_gbox_ind
-				echo 0 > "$cpath"/gearbox_counter
-				echo 0 > "$cpath"/module_counter
 			fi
 
 			if [ ! -f "$cpath/gearbox_counter" ]; then
@@ -318,6 +322,7 @@ if [ "$1" == "add" ]; then
 			if [ "$name" == "mlxsw" ]; then
 				ln -sf "$3$4" $cpath/asic_hwmon
 				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				echo 120000 > $tpath/asic_temp_trip_crit
 				echo 105000 > $tpath/asic_temp_emergency
 				echo 85000 > $tpath/asic_temp_crit
 				echo 75000 > $tpath/asic_temp_norm
@@ -366,10 +371,33 @@ if [ "$1" == "add" ]; then
 							else
 								j="$i"
 							fi
+							case $sku in
+								# First 18 modules are accessible via ASIC1, all the rest - via ASIC2
+								HI157)
+									asic1_bus=${asic_i2c_buses[0]}
+									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+									if [ ${asic_bus} -ne ${asic1_bus} ]; then
+											j=$((j+18))
+									fi
+									;;
+								# All modules are accessible via ASIC1
+								HI158)
+									asic1_bus=${asic_i2c_buses[0]}
+									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+									if [ ${asic_bus} -ne ${asic1_bus} ]; then
+										continue
+									fi
+									;;
+								*)
+									;;
+							esac
 							check_n_link "$3""$4"/temp"$i"_input "$tpath"/module"$j"_temp_input
 							check_n_link "$3""$4"/temp"$i"_fault "$tpath"/module"$j"_temp_fault
 							check_n_link "$3""$4"/temp"$i"_crit "$tpath"/module"$j"_temp_crit
 							check_n_link "$3""$4"/temp"$i"_emergency "$tpath"/module"$j"_temp_emergency
+							if [ -f "$tpath"/module"$j"_temp_input ]; then
+								echo 120000 > $tpath/module"$j"_temp_trip_crit
+							fi
 							lock_service_state_change
 							change_file_counter "$cpath"/module_counter 1
 							if [ "$lcmatch" == "linecard" ]; then
@@ -385,6 +413,12 @@ if [ "$1" == "add" ]; then
 								change_file_counter "$config_path"/gearbox_counter 1
 							fi
 							check_n_link "$3""$4"/temp"$i"_input "$tpath"/gearbox"$gearbox_counter"_temp_input
+							if [ -f "$tpath"/gearbox"$gearbox_counter"_temp_input ]; then
+								echo 120000 > $tpath/gearbox"$gearbox_counter"_temp_trip_crit
+								echo 105000 > $tpath/gearbox"$gearbox_counter"_temp_emergency
+								echo 85000 > $tpath/gearbox"$gearbox_counter"_temp_crit
+								echo 75000 > $tpath/gearbox"$gearbox_counter"_temp_norm
+							fi
 							unlock_service_state_change
 							;;
 						*)
@@ -474,31 +508,6 @@ if [ "$1" == "add" ]; then
 					echo "disabled" > /var/run/hw-management/thermal/mlxsw/thermal_zone_mode
 				fi
 			fi
-		fi
-	fi
-	if [ "$2" == "cooling_device" ]; then
-		coolingtype=$(< "$3""$4"/type)
-		if [ "$coolingtype" == "mlxsw_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan" ] ||
-		   [ "$coolingtype" == "mlxreg_fan0" ] ||
-		   [ "$coolingtype" == "emc2305" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling_max_state
-			# Set FAN to full speed until thermal control is started.
-			echo $fan_full_speed_code > $thermal_path/cooling_cur_state
-			log_info "FAN speed is set to full speed"
-		fi
-		if [ "$coolingtype" == "mlxreg_fan1" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling1_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling1_max_state
-		fi
-		if [ "$coolingtype" == "mlxreg_fan2" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling2_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling2_max_state
-		fi
-		if [ "$coolingtype" == "mlxreg_fan3" ]; then
-			check_n_link "$3""$4"/cur_state $thermal_path/cooling3_cur_state
-			check_n_link "$3""$4"/max_state $thermal_path/cooling3_max_state
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
@@ -634,19 +643,16 @@ if [ "$1" == "add" ]; then
 		else
 			asic_num=$(< $config_path/asic_num)
 		fi
+		if [ ! -d /sys/module/mlxsw_minimal ]; then
+			modprobe mlxsw_minimal
+		fi
 		for ((i=1; i<=asic_num; i+=1)); do
 			asic_health=0
 			if [ -f "$3""$4"/asic"$i" ]; then
 				asic_health=$(< "$3""$4"/asic"$i")
 			fi
-			if [ "$asic_health" -ne 2 ]; then
-				exit 0
-			fi
-			if [ ! -d /sys/module/mlxsw_minimal ]; then
-				modprobe mlxsw_minimal
-			fi
 			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
-			if [ -f /etc/autochipup ]; then
+			if [ -f /etc/autochipup ] && [ "$asic_health" -eq 2 ]; then
 				sleep 3
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
@@ -667,6 +673,17 @@ if [ "$1" == "add" ]; then
 				echo 1 > $events_path/power_button
 			fi
 		fi
+
+		# BF3 debugfs temperature sensors linkage
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
+			echo 1000 > $thermal_path/cpu_pack_scale 
+		fi
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp $thermal_path/sodimm1_temp_input
+			echo 1000 > $thermal_path/sodimm1_temp_scale 
+		fi
+
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -708,9 +725,9 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
-		name=$(<"$3""$4"/name)
+		name=$(< /sys/"$3"/name)
 		if [ "$name" != "jc42" ]; then
-			return
+			exit
 		fi
 		check_cpu_type
 		shopt -s extglob
@@ -828,7 +845,7 @@ if [ "$1" == "add" ]; then
 		else
 			arch=$(uname -m)
 			if [ "$arch" = "aarch64" ]; then
-				eeprom_file=/sys/devices/platform/MLNXBF49:00/i2c_mlxcpld.2/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
+				eeprom_file=/sys/devices/platform/MLNXBF49:00/i2c_mlxcpld.2/i2c-2/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 			else
 				eeprom_file=/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 			fi
@@ -871,6 +888,14 @@ if [ "$1" == "add" ]; then
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
 				# EEPROM failed.
+				if is_virtual_machine; then
+					if [ -f $vm_vpd_path/psu_vpd ]; then
+						cat $vm_vpd_path/psu_vpd > $eeprom_path/"$psu_name"_vpd
+					else
+						echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
+					fi
+					exit 0
+				fi
 				echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
 				exit 0
 			else
@@ -939,6 +964,23 @@ if [ "$1" == "add" ]; then
 			fi
 			echo $fw_ver > $fw_path/"$psu_name"_fw_ver
 			echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
+		elif echo $mfr | grep -iq "Acbel"; then
+			# Support FW update only for specific Acbel PSU capacities
+			fw_ver="N/A"
+			fw_primary_ver="N/A"
+			if [ "$cap" == "1100" ]; then
+				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr | tr -dc '[[:print:]]')
+				fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
+				fw_ver=$(echo $fw_ver_all | cut -d. -f2)
+				echo $fw_ver > $fw_path/"$psu_name"_fw_ver
+				echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
+			elif [ "$cap" == "460" ]; then
+				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr | tr -dc '[[:print:]]')
+				fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1,2)
+				fw_ver=$(echo $fw_ver_all | cut -d. -f3,4)
+				echo $fw_ver > $fw_path/"$psu_name"_fw_ver
+				echo $fw_primary_ver > $fw_path/"$psu_name"_fw_primary_ver
+			fi
 		fi
 
 	fi
@@ -953,17 +995,17 @@ if [ "$1" == "add" ]; then
 		if [ "$dev_name" == "nvme" ]; then
 			for i in {1..4}; do
 				if [ -f "$3""$4"/temp"$i"_input ]; then
-					label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
-					name=$(echo "$label" | awk '{print tolower($0)}')
-					check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/"$dev_name"_"$name"
 					# Make links only to 1st sensor - Composite temperature.
 					# Normaslized composite temperature values are taken to thermal management.
 					if [ "$i" -eq 1 ]; then
-						check_n_link "$3""$4"/temp"$i"_crit "$thermal_path"/"$dev_name"_"$name"_crit
-						check_n_link "$3""$4"/temp"$i"_max "$thermal_path"/"$dev_name"_"$name"_max
-						if [ -e "$3""$4"/temp1_min ]; then
-							check_n_link "$3""$4"/temp1_min "$thermal_path"/"$dev_name"_"$name"_min
-						fi
+						check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/drivetemp
+						check_n_link "$3""$4"/temp"$i"_crit "$thermal_path"/drivetemp_crit
+						check_n_link "$3""$4"/temp"$i"_max "$thermal_path"/drivetemp_max
+						check_n_link "$3""$4"/temp"$i"_min "$thermal_path"/drivetemp_min
+					elif [ -f "$3""$4"/temp"$i"_label ]; then
+						label=$(cat "$3""$4"/temp"$i"_label | awk '{ gsub (" ", "", $0); print}')
+						name=$(echo "$label" | awk '{print tolower($0)}')
+						check_n_link "$3""$4"/temp"$i"_input "$thermal_path"/drivetemp_"$name"
 					fi
 				fi
 			done
@@ -1088,9 +1130,6 @@ else
 			rm -f "$tpath/module*_temp_crit"
 			rm -f "$tpath/module*_temp_emergency"
 
-			echo 0 > $cpath/module_counter
-			echo 0 > $cpath/gearbox_counter
-
 			check_n_unlink $cpath/asic_hwmon
 
 			if [ "$lc_id" -ne 0 ]; then
@@ -1155,16 +1194,6 @@ else
 			rm -rf $thermal_path/mlxsw
 		fi
 		check_n_unlink $thermal_path/highest_thermal_zone
-	fi
-	if [ "$2" == "cooling_device" ]; then
-		check_n_unlink $thermal_path/cooling_cur_state
-		check_n_unlink $thermal_path/cooling_max_state
-		check_n_unlink $thermal_path/cooling1_cur_state
-		check_n_unlink $thermal_path/cooling1_max_state
-		check_n_unlink $thermal_path/cooling2_cur_state
-		check_n_unlink $thermal_path/cooling2_max_state
-		check_n_unlink $thermal_path/cooling3_cur_state
-		check_n_unlink $thermal_path/cooling3_max_state
 	fi
 	if [ "$2" == "hotplug" ]; then
 		for ((i=1; i<=max_tachos; i+=1)); do

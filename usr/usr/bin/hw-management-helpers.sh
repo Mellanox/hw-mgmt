@@ -1,6 +1,6 @@
 #!/bin/bash
-########################################################################
-# Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##################################################################################
+# Copyright (c) 2021 - 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -45,6 +45,7 @@ thermal_path=$hw_management_path/thermal
 jtag_path=$hw_management_path/jtag
 power_path=$hw_management_path/power
 fw_path=$hw_management_path/firmware
+bin_path=$hw_management_path/bin
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
 board_type_file=/sys/devices/virtual/dmi/id/board_name
@@ -56,6 +57,9 @@ i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
 l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
+udev_event_log="/var/log/udev_events.log"
+vm_sku=`cat $sku_file`
+vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 
 # Thermal type constants
 thermal_type_t1=1
@@ -110,6 +114,12 @@ log_info()
     logger -t hw-management -p daemon.info "$@"
 }
 
+trace_udev_events()
+{
+	echo "[$(date '+%Y-%m-%d %H:%M:%S.%3N')] $@" >> $udev_event_log
+	return 0
+}
+
 check_cpu_type()
 {
 	if [ ! -f $config_path/cpu_type ]; then
@@ -147,13 +157,13 @@ find_i2c_bus()
             name=$(cut $folder/name -d' ' -f 1)
             if [ "$name" == "i2c-mlxcpld" ]; then
                 i2c_bus_offset=$((i-1))
-		case $sku in
-		HI151|HI156)
-			i2c_bus_offset=$((i2c_bus_offset-1))
-			;;
-		default)
-			;;
-		esac
+                case $sku in
+                    HI151|HI156)
+                        i2c_bus_offset=$((i2c_bus_offset-1))
+                    ;;
+                    default)
+                    ;;
+                esac
 
                 echo $i2c_bus_offset > $config_path/i2c_bus_offset
                 return
@@ -188,6 +198,30 @@ check_labels_enabled()
     else
         return 1
     fi
+}
+
+# This function checks if the platform is having BSP emulation support.
+check_if_simx_supported_platform()
+{
+	case $vm_sku in
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100)
+			return 0
+			;;
+
+		*)
+			return 1
+			;;
+	esac
+}
+
+# It also checks if the environment is SimX.
+check_simx()
+{
+	if [ -n "$(lspci -vvv | grep SimX)" ]; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 # Check if file exists and create soft link
@@ -359,4 +393,115 @@ psu_set_fan_speed()
 
 	# Set fan speed
 	i2cset -f -y "$bus" "$addr" "$fan_command" "${speed}" wp
+}
+
+is_virtual_machine()
+{
+    if [ -n "$(lspci -vvv | grep SimX)" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Handle i2c bus add/remove.
+# If we have some devices which should be connected to this bus - do it.
+# $1 - i2c bus full address.
+# $2 - i2c bus action type add/remove.
+function handle_i2cbus_dev_action()
+{
+	i2c_busdev_path=$1
+	i2c_busdev_action=$2
+
+	# Check if we have devices list which should be connected to dynamic i2c buses.
+	if [ ! -f $config_path/i2c_bus_connect_devices ];
+	then
+		return
+	fi
+
+	# Extract i2c bus index.
+	i2cbus_regex="i2c-([0-9]+)$"
+	[[ $i2c_busdev_path =~ $i2cbus_regex ]]
+	if [[ "${#BASH_REMATCH[@]}" != 2 ]]; then
+		return
+	else
+		i2cbus="${BASH_REMATCH[1]}"
+	fi
+
+	# Load i2c devices list which should be connected on demand..
+	declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+
+	# wait till i2c driver fully init
+	sleep 20
+	# Go over all devices and check if they should be connected to the current i2c bus.
+	for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
+		if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ];
+		then
+			if [ "$i2c_busdev_action" == "add" ]; then
+				connect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
+					"${dynamic_i2c_bus_connect_table[i+2]}"
+			elif [ "$i2c_busdev_action" == "remove" ]; then
+				diconnect_device "${dynamic_i2c_bus_connect_table[i]}" "${dynamic_i2c_bus_connect_table[i+1]}" \
+					"${dynamic_i2c_bus_connect_table[i+2]}"
+			fi
+		fi
+	done
+}
+
+# Get device sensor name prefix, like voltmon{id}, by its i2c_busdev_path
+# For name {devname}X returning name based on $config_path/i2c_bus_connect_devices file.
+# For other names - just return voltmon{id} string.
+# $1 - device name
+# $2 - path to sensor in sysfs
+# return sensor name if match is found or undefined in other case.
+function get_i2c_busdev_name()
+{
+	dev_name=$1
+	i2c_busdev_path=$2
+
+	# Check if we have devices list which can be connected with name translation.
+	if [  -f $config_path/i2c_bus_connect_devices ] || [ -f "$devtree_file" ];
+	then
+		# Load i2c devices list which should be connected on demand.
+		if [ -f "$devtree_file" ]; then
+			declare -a dynamic_i2c_bus_connect_table=($(<"$devtree_file"))
+		else
+			declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+		fi
+
+		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
+		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
+		[[ $i2c_busdev_path =~ $i2caddr_regex ]]
+		if [ "${#BASH_REMATCH[@]}" != 3 ]; then
+			# not matched
+			echo "$dev_name"
+			return
+		else
+			i2cbus="${BASH_REMATCH[1]}"
+			i2caddr="0x${BASH_REMATCH[2]}"
+		fi
+
+		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
+			# match devi ce by i2c bus/addr
+			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2caddr == "${dynamic_i2c_bus_connect_table[i+1]}" ];
+			then
+				dev_name="${dynamic_i2c_bus_connect_table[i+3]}"
+				if [ $dev_name == "NA" ]; then 
+					echo "undefined"
+				else
+					echo "$dev_name"
+				fi
+				return
+			fi
+		done
+	fi
+
+	# we not matched i2c device with dev_list file or file not exist
+	# returning passed "devname" name or "undefined" in case if passed '{devtype}X"
+	if [ ${dev_name:0-1} == "X" ];
+	then
+		dev_name="undefined"
+	fi
+
+	echo "$dev_name"
 }

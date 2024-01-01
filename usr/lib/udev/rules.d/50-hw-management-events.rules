@@ -61,13 +61,13 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pdb_temp2 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pdb_temp2 %S %p"
 
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add tempX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm tempX %S %p"
+
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cx_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cx_amb %S %p"
 
 # BF3 ambient temperatures (lm75, tmp102).
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add port_amb %S %p"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm port_amb %S %p"
-
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add fan_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm fan_amb %S %p"
 
@@ -708,17 +708,8 @@ SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-manage
 SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm a2d %S %p %k"
 
 # EEPROM
-SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0050", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0051", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0052", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
-
-SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
-SUBSYSTEM=="i2c", KERNEL=="*-0053", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-4]", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-4]", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
 
 SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add eeprom %S %p"
 SUBSYSTEM=="i2c", KERNEL=="*-0056", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm eeprom %S %p"
@@ -876,5 +867,5 @@ SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c
 SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0048", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm cpld %S %p"
 
 # SDK
-SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
-SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
