@@ -18,11 +18,14 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN2100
 - MSN2410
 - MSN2700
+- MSN2700-A1
 - MSN2010
 - MQMB7800
+- MSN3420
 - MSN3700
-- MSN3750
+- MSN3700C
 - MSN3700S
+- MSN3750SX
 - MSN3800
 - MSN4410
 - MSN4700
@@ -30,6 +33,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN4600
 - MQM9700
 - MSN4800
+- MSN5600
 - SGN2410
 - SN2201
 - E3597
@@ -37,9 +41,8 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - P2317
 
 ## Supported Kernel versions:
-- 4.9.xx
-- 4.19.xx
-- 5.10.xx
+- 5.10.189
+- 6.1.38
 
 ## Sysfs attributes:
 The thermal control operates over sysfs attributes.
