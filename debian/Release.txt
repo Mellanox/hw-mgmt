@@ -30,6 +30,7 @@
 	#3632299	BF3 - 'r-hw-bf3-10' : some kernel loadable modules for X86 platforms are not available on ARM platforms (created separate kernel module list for ARM)
 	#3632297	BF3 - 'r-hw-bf3-10' kern :err : [Fri Oct 13 17:34:27 2023] mlxbf3_gpio MLNXBF33:01: IRQ index 0 not found 
 	#3684822	V.7.0030.2931: Minimal driver not loaded after ASIC Loaded by SDK
+	#3720967	Minimal driver initialization results in PMPE Events to SDK Driver, with zeroed-out fields
 	NA 		sensors: Fix PSU labels : In multiple sensor.conf files PSU-1 and PSU-2 labels were swapped.
 	NA		BF3 - Update ARM BF3 kernel configuration (disable: PMC drv,SCMI drv, enable: serial drv, pinctrl drv)
 	NA		BF3 - Fix PSU EEPROM symlinks on BF3 systems (wrong bus number)
@@ -47,6 +48,7 @@
 	NA		Change NVME SSD temperature sensor link to unified name "drivetemp"
 	NA		TC – BF3 – support scaling of temperature sensors
 	NA		TC – BF3 – Add links to BF3 CPU core_temp and ddr_temp to /var/run/hw-managemet/thermal
+	NA		[MQM9700] ignore PSU fan2, fan3 
 
     o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0030.3000_BR/recipes-kernel/linux/Patch_Status_Table.txt
 
