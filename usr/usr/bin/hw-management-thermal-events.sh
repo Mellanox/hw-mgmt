@@ -374,7 +374,7 @@ if [ "$1" == "add" ]; then
 							case $sku in
 								# First 18 modules are accessible via ASIC1, all the rest - via ASIC2
 								HI157)
-									asic1_bus=${asic_i2c_buses[0]}
+									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
 											j=$((j+18))
@@ -382,7 +382,7 @@ if [ "$1" == "add" ]; then
 									;;
 								# All modules are accessible via ASIC1
 								HI158)
-									asic1_bus=${asic_i2c_buses[0]}
+									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
 										continue
@@ -1043,7 +1043,8 @@ elif [ "$1" == "change" ]; then
 			fi
 			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
 			if [ -f /etc/autochipup ]; then
-				sleep 3
+				asic_chipup_completed=$(< $config_path/asic_chipup_completed)
+				[ ${asic_chipup_completed} -eq 0 ] && sleep 3
 				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
