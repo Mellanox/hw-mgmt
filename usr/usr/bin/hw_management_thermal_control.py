@@ -185,7 +185,7 @@ class CONST(object):
     RUNNING = "RUNNING"
 
     # error types
-    SENSOR_READ_ERR = "sensor_read_err"
+    SENSOR_READ_ERR = "sensor_read_error"
     FAN_ERR = "fan_err"
     PSU_ERR = "psu_err"
     TACHO = "tacho"
