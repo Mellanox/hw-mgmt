@@ -2338,13 +2338,19 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon
-		if [ $? -ne 0 ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name" ]; then
 			sleep "$chipup_delay"
 			echo 0 > $config_path/sfp_counter
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$bus"/new_device
 			restore_i2c_bus_frequency_default
+			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$bus"-"$i2c_asic_addr_name"/hwmon
+			if [ $? -ne 0 ]; then
+				# chipup command failed.
+				unlock_service_state_change
+				return 1
+			fi
+
 			if [ -f "$config_path/cpld_port" ] && [ -f $system_path/cpld3_version ]; then
 				# Append port CPLD version.
 				str=$(< $system_path/cpld_base)
@@ -2354,10 +2360,11 @@ do_chip_up_down()
 			fi
 		else
 			unlock_service_state_change
-			return
+			return 0
 		fi
 		echo 0 > $config_path/suspend
 		unlock_service_state_change
+		return 0
 		;;
 	*)
 		exit 1
