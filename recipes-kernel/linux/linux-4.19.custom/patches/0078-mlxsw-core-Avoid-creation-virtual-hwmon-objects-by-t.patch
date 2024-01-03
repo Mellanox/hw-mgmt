@@ -1,0 +1,46 @@
+From 2e7543ae3e0e9b3b8c4cb237ad1521368ccc018a Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 4 Nov 2020 20:07:15 +0200
+Subject: [PATCH backport v4.19 5/9] mlxsw: core: Avoid creation virtual hwmon
+ objects by thermal module
+
+Extend initialization of each thermal zone with 'thermal_zone_params',
+set field 'no_hwmon' in this structure to 'true'.
+The purpose is to avoid creation of virtual 'hwmon' objects by
+'thermal' module.
+All 'hwmon' objects are created by 'hwmon' module.
+'Thermal' module also creates virtual 'hwmon' by default with each
+thermal zone.
+It exposes same readout, as 'hwmon', and thus creates in 'sysfs'
+duplicated entries.
+Such duplicated entries are exposed by 'hwmon' module, like
+cat /sys/class/hwmon/hwmon1/temp1_input
+38000
+and by 'thermal' module like:
+cat /sys/class/hwmon/hwmon2/temp1_input
+38000
+The patch removes this duplication.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 60b685630..45115d4aa 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -408,7 +408,7 @@ static int mlxsw_thermal_trend_get(struct thermal_zone_device *tzdev,
+ 	return 0;
+ }
+ 
+-struct thermal_zone_params mlxsw_thermal_params = {
++static struct thermal_zone_params mlxsw_thermal_params = {
+ 	.no_hwmon = true,
+ };
+ 
+-- 
+2.20.1
+

@@ -1,0 +1,48 @@
+From 1a82b7f94a61cfd8f33379eb8f93c3af427ce07b Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@mellanox.com>
+Date: Tue, 14 Jul 2020 15:01:56 +0300
+Subject: [PATCH backport v4.19 13/15] platform/mellanox: mlxreg-hotplug: Use
+ capability register for attribute creation
+
+Create the 'sysfs' attributes according to configuration provided
+through the capability register, which purpose is to indicate the
+actual number of the components within the particular group.
+Such components could be, for example the FAN or power supply units.
+The motivation is to avoid adding a new code in the future in order to
+distinct between the systems types supporting a different number of the
+components like power supplies, FANs, ASICs, line cards.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+Signed-off-by: Andy Shevchenko <andriy.shevchenko@linux.intel.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c | 14 --------------
+ 1 file changed, 14 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index 7f45c3c63b85..45c7dc96effb 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -538,20 +538,6 @@ static int mlxreg_hotplug_set_irq(struct mlxreg_hotplug_priv_data *priv)
+ 	item = pdata->items;
+ 
+ 	for (i = 0; i < pdata->counter; i++, item++) {
+-		if (item->capability) {
+-			/*
+-			 * Read group capability register to get actual number
+-			 * of interrupt capable components and set group mask
+-			 * accordingly.
+-			 */
+-			ret = regmap_read(priv->regmap, item->capability,
+-					  &regval);
+-			if (ret)
+-				goto out;
+-
+-			item->mask = GENMASK((regval & item->mask) - 1, 0);
+-		}
+-
+ 		/* Clear group presense event. */
+ 		ret = regmap_write(priv->regmap, item->reg +
+ 				   MLXREG_HOTPLUG_EVENT_OFF, 0);
+-- 
+2.20.1
+

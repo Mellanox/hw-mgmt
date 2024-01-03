@@ -1,0 +1,35 @@
+From 6eea1f68a9d80c60bb8d4125afa71c469ce575a0 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 18 Nov 2020 22:55:26 +0200
+Subject: [PATCH backport v4.19 37/48] mlxsw: core_thermal: Remove redundant
+ query in gearbox exit flow
+
+Remove redundant call to mlxsw_core_res_query_enabled() in gearbox exit
+flow. The purpose of this call is to avoid access to "MGPIR" register
+old system, equipped with SwitchX chip, which is relevant only for init
+on old systems.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 2ce05ea2fd86..bd8644679d81 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -1062,9 +1062,6 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal,
+ {
+ 	int i;
+ 
+-	if (!mlxsw_core_res_query_enabled(thermal->core))
+-		return;
+-
+ 	for (i = area->tz_gearbox_num - 1; i >= 0; i--)
+ 		mlxsw_thermal_gearbox_tz_fini(&area->tz_gearbox_arr[i]);
+ }
+-- 
+2.20.1
+

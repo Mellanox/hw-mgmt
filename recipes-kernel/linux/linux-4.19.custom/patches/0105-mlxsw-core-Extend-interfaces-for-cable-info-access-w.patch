@@ -1,0 +1,342 @@
+From 1675ef749efe102255c42ddc2e8c812360a7a774 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 18 Jul 2021 13:41:03 +0000
+Subject: [PATCH backport v4.19 32/36] mlxsw: core: Extend interfaces for cable
+ info access with slot argument
+
+Extend APIs mlxsw_env_get_module_eeprom(), mlxsw_env_get_module_info()
+used for reading cable information with slot index argument.
+Extend API mlxsw_env_init() used for environment initialization with
+slot index argument.
+For main board slot will be always set to zero and these APIs will work
+as before. If reading cable information is required from the cages
+located on line card, slot should be set to the physical slot number, where
+line card is located in modular systems.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Reviewed-by: Jiri Pirko <jiri@nvidia.com>
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ .../net/ethernet/mellanox/mlxsw/core_env.c    | 85 ++++++++++++-------
+ .../net/ethernet/mellanox/mlxsw/core_env.h    | 17 ++--
+ .../net/ethernet/mellanox/mlxsw/core_hwmon.c  | 12 ++-
+ .../ethernet/mellanox/mlxsw/core_thermal.c    |  6 +-
+ drivers/net/ethernet/mellanox/mlxsw/minimal.c |  7 +-
+ 5 files changed, 80 insertions(+), 47 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.c b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+index 958544feedda..070ac686b913 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.c
+@@ -16,16 +16,18 @@
+ 	MLXSW_REG_MCIA_TH_PAGE_NUM) ? (page) : (page) + \
+ 	MLXSW_ENV_CMIS_PAGE_OFF)
+ 
+-static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
+-					  bool *qsfp, bool *cmis)
++static int
++mlxsw_env_validate_cable_ident(struct mlxsw_core *core, u8 slot_index, int id,
++			       bool *qsfp, bool *cmis)
+ {
+ 	char eeprom_tmp[MLXSW_REG_MCIA_EEPROM_SIZE];
+ 	char mcia_pl[MLXSW_REG_MCIA_LEN];
+ 	u8 ident;
+ 	int err;
+ 
+-	mlxsw_reg_mcia_pack(mcia_pl, 0, id, 0, MLXSW_REG_MCIA_PAGE0_LO_OFF, 0,
+-			    1, MLXSW_REG_MCIA_I2C_ADDR_LOW);
++	mlxsw_reg_mcia_pack(mcia_pl, slot_index, id, 0,
++			    MLXSW_REG_MCIA_PAGE0_LO_OFF, 0, 1,
++			    MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mcia), mcia_pl);
+ 	if (err)
+ 		return err;
+@@ -55,8 +57,8 @@ static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
+ }
+ 
+ static int
+-mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+-			      u16 offset, u16 size, bool qsfp, bool cmis,
++mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			      int module, u16 offset, u16 size, bool qsfp, bool cmis,
+ 			      void *data, unsigned int *p_read_size)
+ {
+ 	char eeprom_tmp[MLXSW_REG_MCIA_EEPROM_SIZE];
+@@ -66,6 +68,10 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 	int status;
+ 	int err;
+ 
++	/* MCIA register accepts buffer size <= 48. Page of size 128 should be
++	 * read by chunks of size 48, 48, 32. Align the size of the last chunk
++	 * to avoid reading after the end of the page.
++	 */
+ 	size = min_t(u16, size, MLXSW_REG_MCIA_EEPROM_SIZE);
+ 
+ 	if (offset < MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH &&
+@@ -76,12 +82,22 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 	i2c_addr = MLXSW_REG_MCIA_I2C_ADDR_LOW;
+ 	if (offset >= MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH) {
+ 		if (qsfp) {
++			/* When reading upper pages 1, 2 and 3 the offset
++			 * starts at 128. Please refer to "QSFP+ Memory Map"
++			 * figure in SFF-8436 specification and to "CMIS Module
++			 * Memory Map" figure in CMIS specification for
++			 * graphical depiction.
++			 */
+ 			page = MLXSW_REG_MCIA_PAGE_GET(offset);
+ 			offset -= MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH * page;
+ 			if (offset + size > MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH)
+-				size = MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH -
+-				       offset;
++				size = MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH - offset;
+ 		} else {
++			/* When reading upper pages 1, 2 and 3 the offset
++			 * starts at 0 and I2C high address is used. Please refer
++			 * refer to "Memory Organization" figure in SFF-8472
++			 * specification for graphical depiction.
++			 */
+ 			i2c_addr = MLXSW_REG_MCIA_I2C_ADDR_HIGH;
+ 			offset -= MLXSW_REG_MCIA_EEPROM_PAGE_LENGTH;
+ 		}
+@@ -89,7 +105,7 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 
+ 	if (cmis)
+ 		page = MLXSW_ENV_PAGE_MAP(page);
+-	mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page, offset, size,
++	mlxsw_reg_mcia_pack(mcia_pl, slot_index, module, 0, page, offset, size,
+ 			    i2c_addr);
+ 
+ 	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
+@@ -107,8 +123,9 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
+ 	return 0;
+ }
+ 
+-int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+-					 int off, int *temp)
++int
++mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, u8 slot_index,
++				     int module, int off, int *temp)
+ {
+ 	unsigned int module_temp, module_crit, module_emerg;
+ 	char eeprom_tmp[MLXSW_REG_MCIA_EEPROM_SIZE];
+@@ -122,8 +139,9 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 	int page;
+ 	int err;
+ 
+-	mlxsw_reg_mtmp_pack(mtmp_pl, 0, MLXSW_REG_MTMP_MODULE_INDEX_MIN + module,
+-			    false, false);
++	mlxsw_reg_mtmp_pack(mtmp_pl, slot_index,
++			    MLXSW_REG_MTMP_MODULE_INDEX_MIN + module, false,
++			    false);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mtmp), mtmp_pl);
+ 	if (err)
+ 		return err;
+@@ -152,21 +170,25 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 	 */
+ 
+ 	/* Validate module identifier value. */
+-	err = mlxsw_env_validate_cable_ident(core, module, &qsfp, &cmis);
++	err = mlxsw_env_validate_cable_ident(core, slot_index, module, &qsfp,
++					     &cmis);
+ 	if (err)
+ 		return err;
+ 
+ 	if (qsfp) {
++		/* For QSFP/CMIS module-defined thresholds are located in page
++		 * 02h, otherwise in page 03h.
++		 */
+ 		if (cmis)
+ 			page = MLXSW_REG_MCIA_TH_PAGE_CMIS_NUM;
+ 		else
+ 			page = MLXSW_REG_MCIA_TH_PAGE_NUM;
+-		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0, page,
++		mlxsw_reg_mcia_pack(mcia_pl, slot_index, module, 0, page,
+ 				    MLXSW_REG_MCIA_TH_PAGE_OFF + off,
+ 				    MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_LOW);
+ 	} else {
+-		mlxsw_reg_mcia_pack(mcia_pl, 0, module, 0,
++		mlxsw_reg_mcia_pack(mcia_pl, slot_index, module, 0,
+ 				    MLXSW_REG_MCIA_PAGE0_LO,
+ 				    off, MLXSW_REG_MCIA_TH_ITEM_SIZE,
+ 				    MLXSW_REG_MCIA_I2C_ADDR_HIGH);
+@@ -183,19 +205,17 @@ int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+ 	return 0;
+ }
+ 
+-int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
+-			      struct ethtool_modinfo *modinfo)
++int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			      int module, struct ethtool_modinfo *modinfo)
+ {
+ 	u8 module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE];
+ 	u16 offset = MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE;
+ 	u8 module_rev_id, module_id, diag_mon;
+ 	unsigned int read_size;
+-	bool unused = false;
+ 	int err;
+ 
+-	err = mlxsw_env_query_module_eeprom(mlxsw_core, module, 0, offset,
+-					    unused, unused, module_info,
+-					    &read_size);
++	err = mlxsw_env_query_module_eeprom(mlxsw_core, slot_index, module, 0, offset,
++					    false, false, module_info, &read_size);
+ 	if (err)
+ 		return err;
+ 
+@@ -225,10 +245,9 @@ int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
+ 	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_SFP: /* fall-through */
+ 	case MLXSW_REG_MCIA_EEPROM_MODULE_INFO_ID_SFP_DD:
+ 		/* Verify if transceiver provides diagnostic monitoring page */
+-		err = mlxsw_env_query_module_eeprom(mlxsw_core, module,
+-						    SFP_DIAGMON, 1, unused,
+-						    unused, &diag_mon,
+-						    &read_size);
++		err = mlxsw_env_query_module_eeprom(mlxsw_core, slot_index,
++						    module, SFP_DIAGMON, 1, false,
++						    false, &diag_mon, &read_size);
+ 		if (err)
+ 			return err;
+ 
+@@ -262,8 +281,9 @@ int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
+ EXPORT_SYMBOL(mlxsw_env_get_module_info);
+ 
+ int mlxsw_env_get_module_eeprom(struct net_device *netdev,
+-				struct mlxsw_core *mlxsw_core, int module,
+-				struct ethtool_eeprom *ee, u8 *data)
++				struct mlxsw_core *mlxsw_core, u8 slot_index,
++				int module, struct ethtool_eeprom *ee,
++				u8 *data)
+ {
+ 	int offset = ee->offset;
+ 	unsigned int read_size;
+@@ -275,14 +295,15 @@ int mlxsw_env_get_module_eeprom(struct net_device *netdev,
+ 		return -EINVAL;
+ 
+ 	memset(data, 0, ee->len);
+-
+-	/* Validate module identifier type. */
+-	err = mlxsw_env_validate_cable_ident(mlxsw_core, module, &qsfp, &cmis);
++	/* Validate module identifier value. */
++	err = mlxsw_env_validate_cable_ident(mlxsw_core, slot_index, module,
++					     &qsfp, &cmis);
+ 	if (err)
+ 		return err;
+ 
+ 	while (i < ee->len) {
+-		err = mlxsw_env_query_module_eeprom(mlxsw_core, module, offset,
++		err = mlxsw_env_query_module_eeprom(mlxsw_core, slot_index,
++						    module, offset,
+ 						    ee->len - i, qsfp, cmis,
+ 						    data + i, &read_size);
+ 		if (err) {
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_env.h b/drivers/net/ethernet/mellanox/mlxsw/core_env.h
+index 064d0e770c01..acccf90d2422 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_env.h
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_env.h
+@@ -4,14 +4,19 @@
+ #ifndef _MLXSW_CORE_ENV_H
+ #define _MLXSW_CORE_ENV_H
+ 
+-int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core, int module,
+-					 int off, int *temp);
++struct ethtool_modinfo;
++struct ethtool_eeprom;
+ 
+-int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
+-			      struct ethtool_modinfo *modinfo);
++int mlxsw_env_module_temp_thresholds_get(struct mlxsw_core *core,
++					 u8 slot_index, int module, int off,
++					 int *temp);
++
++int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			      int module, struct ethtool_modinfo *modinfo);
+ 
+ int mlxsw_env_get_module_eeprom(struct net_device *netdev,
+-				struct mlxsw_core *mlxsw_core, int module,
+-				struct ethtool_eeprom *ee, u8 *data);
++				struct mlxsw_core *mlxsw_core, u8 slot_index,
++				int module, struct ethtool_eeprom *ee,
++				u8 *data);
+ 
+ #endif
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+index 9a835061f210..3c0c8678f5bb 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
+@@ -312,8 +312,10 @@ mlxsw_hwmon_module_temp_critical_show(struct device *dev,
+ 	int err;
+ 
+ 	module = mlxsw_hwmon_attr->type_index - mlxsw_hwmon_dev->sensor_count;
+-	err = mlxsw_env_module_temp_thresholds_get(mlxsw_hwmon->core, module,
+-						   SFP_TEMP_HIGH_WARN, &temp);
++	err = mlxsw_env_module_temp_thresholds_get(mlxsw_hwmon->core,
++						   mlxsw_hwmon_dev->slot_index,
++						   module, SFP_TEMP_HIGH_WARN,
++						   &temp);
+ 	if (err) {
+ 		dev_err(dev, "Failed to query module temperature thresholds\n");
+ 		return err;
+@@ -336,8 +338,10 @@ mlxsw_hwmon_module_temp_emergency_show(struct device *dev,
+ 	int err;
+ 
+ 	module = mlxsw_hwmon_attr->type_index - mlxsw_hwmon_dev->sensor_count;
+-	err = mlxsw_env_module_temp_thresholds_get(mlxsw_hwmon->core, module,
+-						   SFP_TEMP_HIGH_ALARM, &temp);
++	err = mlxsw_env_module_temp_thresholds_get(mlxsw_hwmon->core,
++						   mlxsw_hwmon_dev->slot_index,
++						   module, SFP_TEMP_HIGH_ALARM,
++						   &temp);
+ 	if (err) {
+ 		dev_err(dev, "Failed to query module temperature thresholds\n");
+ 		return err;
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index d05f531da3a0..91cf229e33c3 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -170,13 +170,15 @@ mlxsw_thermal_module_trips_update(struct device *dev, struct mlxsw_core *core,
+ 	 * EEPROM if we got valid thresholds from MTMP.
+ 	 */
+ 	if (!emerg_temp || !crit_temp) {
+-		err = mlxsw_env_module_temp_thresholds_get(core, tz->module,
++		err = mlxsw_env_module_temp_thresholds_get(core, tz->slot_index,
++							   tz->module,
+ 							   SFP_TEMP_HIGH_WARN,
+ 							   &crit_temp);
+ 		if (err)
+ 			return err;
+ 
+-		err = mlxsw_env_module_temp_thresholds_get(core, tz->module,
++		err = mlxsw_env_module_temp_thresholds_get(core, tz->slot_index,
++							   tz->module,
+ 							   SFP_TEMP_HIGH_ALARM,
+ 							   &emerg_temp);
+ 		if (err)
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/minimal.c b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+index 627a1dce0bb9..473042a42b8b 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/minimal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/minimal.c
+@@ -71,7 +71,8 @@ static int mlxsw_m_get_module_info(struct net_device *netdev,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_get_module_info(core, mlxsw_m_port->module, modinfo);
++	return mlxsw_env_get_module_info(core, 0, mlxsw_m_port->module,
++					 modinfo);
+ }
+ 
+ static int
+@@ -81,8 +82,8 @@ mlxsw_m_get_module_eeprom(struct net_device *netdev, struct ethtool_eeprom *ee,
+ 	struct mlxsw_m_port *mlxsw_m_port = netdev_priv(netdev);
+ 	struct mlxsw_core *core = mlxsw_m_port->mlxsw_m->core;
+ 
+-	return mlxsw_env_get_module_eeprom(netdev, core, mlxsw_m_port->module,
+-					   ee, data);
++	return mlxsw_env_get_module_eeprom(netdev, core, 0,
++					   mlxsw_m_port->module, ee, data);
+ }
+ 
+ static const struct ethtool_ops mlxsw_m_port_ethtool_ops = {
+-- 
+2.20.1
+

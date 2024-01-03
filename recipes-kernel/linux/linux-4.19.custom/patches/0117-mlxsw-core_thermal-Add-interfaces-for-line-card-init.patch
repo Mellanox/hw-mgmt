@@ -1,0 +1,246 @@
+From 9eaecb2c06f7e747317a02db28c66379c5724cd5 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Wed, 12 May 2021 22:57:39 +0300
+Subject: [PATCH backport v4.19 44/48] mlxsw: core_thermal: Add interfaces for
+ line card initialization and de-initialization
+
+Add callback functions for line card thermal area initialization and
+de-initialization. Each line card is associated with the relevant
+thermal area, which may contain thermal zones for cages and gearboxes
+found on this line card.
+
+The line card thermal initialization / de-initialization APIs are to be
+called when line card is set to active / inactive state by
+got_active() / got_inactive() callbacks from line card state machine.
+
+For example thermal zone for module #9 located at line card #7 will
+have type:
+mlxsw-lc7-module9.
+And thermal zone for gearbox #2 located at line card #5 will have type:
+mlxsw-lc5-gearbox2.
+
+For now the slot index is always 0 and field 'name' of the structure
+'mlxsw_hwmon_dev' is empty. For line card this field is supposed to
+be initialized to 'lc#n', when line card in slot #n is enabled.
+
+Add validation of modules number found on main board in function
+mlxsw_thermal_modules_init(). On modular system this counter might be
+zero.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Jiri Pirko <jiri@nvidia.com>
+---
+ .../ethernet/mellanox/mlxsw/core_thermal.c    | 138 +++++++++++++++++-
+ 1 file changed, 135 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index 8632f623dd7d..a1a5ef04ef37 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -24,7 +24,7 @@
+ #define MLXSW_THERMAL_MODULE_TEMP_HOT	80000	/* 80C */
+ #define MLXSW_THERMAL_HYSTERESIS_TEMP	5000	/* 5C */
+ #define MLXSW_THERMAL_MODULE_TEMP_SHIFT	(MLXSW_THERMAL_HYSTERESIS_TEMP * 2)
+-#define MLXSW_THERMAL_ZONE_MAX_NAME	16
++#define MLXSW_THERMAL_ZONE_MAX_NAME	THERMAL_NAME_LENGTH
+ #define MLXSW_THERMAL_TEMP_SCORE_MAX	GENMASK(31, 0)
+ #define MLXSW_THERMAL_MAX_STATE	10
+ #define MLXSW_THERMAL_MAX_DUTY	255
+@@ -100,6 +100,7 @@ struct mlxsw_thermal_module {
+ };
+ 
+ struct mlxsw_thermal_area {
++	struct mlxsw_thermal *parent;
+ 	struct mlxsw_thermal_module *tz_module_arr;
+ 	u8 tz_module_num;
+ 	struct mlxsw_thermal_module *tz_gearbox_arr;
+@@ -118,6 +119,7 @@ struct mlxsw_thermal {
+ 	struct mlxsw_thermal_trip trips[MLXSW_THERMAL_NUM_TRIPS];
+ 	enum thermal_device_mode mode;
+ 	struct mlxsw_thermal_area *main;
++	struct mlxsw_thermal_area **linecards;
+ 	unsigned int tz_highest_score;
+ 	struct thermal_zone_device *tz_highest_dev;
+ 	bool initializing; /* Driver is in initialization stage */
+@@ -885,20 +887,22 @@ mlxsw_thermal_modules_init(struct device *dev, struct mlxsw_core *core,
+ 			   struct mlxsw_thermal *thermal,
+ 			   struct mlxsw_thermal_area *area)
+ {
+-	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+ 	struct mlxsw_thermal_module *module_tz;
++	char mgpir_pl[MLXSW_REG_MGPIR_LEN];
+ 	int i, err;
+ 
+ 	if (!mlxsw_core_res_query_enabled(core))
+ 		return 0;
+ 
+-	mlxsw_reg_mgpir_pack(mgpir_pl, 0);
++	mlxsw_reg_mgpir_pack(mgpir_pl, area->slot_index);
+ 	err = mlxsw_reg_query(core, MLXSW_REG(mgpir), mgpir_pl);
+ 	if (err)
+ 		return err;
+ 
+ 	mlxsw_reg_mgpir_unpack(mgpir_pl, NULL, NULL, NULL,
+ 			       &area->tz_module_num, NULL);
++
++	/* For modular system module counter could be zero. */
+ 	if (!area->tz_module_num)
+ 		return 0;
+ 
+@@ -1074,6 +1078,127 @@ mlxsw_thermal_gearboxes_fini(struct mlxsw_thermal *thermal,
+ 		mlxsw_thermal_gearbox_tz_fini(&area->tz_gearbox_arr[i]);
+ }
+ 
++static void
++mlxsw_thermal_got_active(struct mlxsw_core *mlxsw_core, u8 slot_index,
++			 const struct mlxsw_linecard *linecard, void *priv)
++{
++	struct mlxsw_env_gearbox_sensors_map map;
++	struct mlxsw_thermal *thermal = priv;
++	struct mlxsw_thermal_area *lc;
++	int err;
++
++	lc = kzalloc(sizeof(*lc), GFP_KERNEL);
++	if (!lc)
++		return;
++
++	lc->slot_index = slot_index;
++	lc->parent = thermal;
++	thermal->linecards[slot_index - 1] = lc;
++	err = mlxsw_thermal_modules_init(thermal->bus_info->dev, thermal->core,
++					 thermal, lc);
++	if (err)
++		goto err_thermal_linecard_modules_init;
++
++	err = mlxsw_env_sensor_map_create(thermal->core, thermal->bus_info,
++					  linecard->slot_index, &map);
++	if (err)
++		goto err_thermal_linecard_env_sensor_map_create;
++
++	lc->gearbox_sensor_map = map.sensor_bit_map;
++	lc->tz_gearbox_num = map.sensor_count;
++	lc->tz_gearbox_arr = kcalloc(lc->tz_gearbox_num, sizeof(*lc->tz_gearbox_arr),
++				     GFP_KERNEL);
++	if (!lc->tz_gearbox_arr) {
++		err = -ENOMEM;
++		goto err_tz_gearbox_arr_alloc;
++	}
++
++	err = mlxsw_thermal_gearboxes_init(thermal->bus_info->dev, thermal->core,
++					   thermal, lc);
++	if (err)
++		goto err_thermal_linecard_gearboxes_init;
++
++	return;
++
++err_thermal_linecard_gearboxes_init:
++	kfree(lc->tz_gearbox_arr);
++err_tz_gearbox_arr_alloc:
++	mlxsw_env_sensor_map_destroy(thermal->bus_info,
++				     lc->gearbox_sensor_map);
++err_thermal_linecard_env_sensor_map_create:
++	mlxsw_thermal_modules_fini(thermal, lc);
++err_thermal_linecard_modules_init:
++	kfree(lc);
++	thermal->linecards[slot_index - 1] = NULL;
++}
++
++static void mlxsw_thermal_got_inactive(struct mlxsw_core *mlxsw_core, u8 slot_index,
++				       const struct mlxsw_linecard *linecard, void *priv)
++{
++	struct mlxsw_thermal *thermal = priv;
++	struct mlxsw_thermal_area *lc = thermal->linecards[slot_index - 1];
++
++	mlxsw_thermal_gearboxes_fini(thermal, lc);
++	if (lc->tz_gearbox_arr)
++		kfree(lc->tz_gearbox_arr);
++	mlxsw_env_sensor_map_destroy(thermal->bus_info,
++				     lc->gearbox_sensor_map);
++	mlxsw_thermal_modules_fini(thermal, lc);
++	kfree(lc);
++	thermal->linecards[slot_index - 1] = NULL;
++}
++
++static struct mlxsw_linecards_event_ops mlxsw_thermal_event_ops = {
++	.got_active = mlxsw_thermal_got_active,
++	.got_inactive = mlxsw_thermal_got_inactive,
++};
++
++static int mlxsw_thermal_linecards_register(struct mlxsw_core *mlxsw_core,
++					    struct mlxsw_thermal *thermal)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(mlxsw_core);
++	int err;
++
++	if (!linecards || !linecards->count)
++		return 0;
++
++	thermal->linecards = kcalloc(linecards->count, sizeof(*thermal->linecards),
++				     GFP_KERNEL);
++	if (!thermal->linecards)
++		return -ENOMEM;
++
++	err = mlxsw_linecards_event_ops_register(mlxsw_core,
++						 &mlxsw_thermal_event_ops,
++						 thermal);
++	if (err)
++		goto err_linecards_event_ops_register;
++
++	return 0;
++
++err_linecards_event_ops_register:
++	kfree(thermal->linecards);
++	return err;
++}
++
++static void mlxsw_thermal_linecards_unregister(struct mlxsw_thermal *thermal)
++{
++	struct mlxsw_linecards *linecards = mlxsw_core_linecards(thermal->core);
++	int i;
++
++	if (!linecards || !linecards->count)
++		return;
++
++	for (i = 1; i <= linecards->count; i++) {
++		if (thermal->linecards[i - 1])
++			mlxsw_thermal_got_inactive(thermal->core, i, NULL,
++						   thermal);
++	}
++
++	mlxsw_linecards_event_ops_unregister(thermal->core,
++					     &mlxsw_thermal_event_ops, thermal);
++	kfree(thermal->linecards);
++}
++
+ int mlxsw_thermal_init(struct mlxsw_core *core,
+ 		       const struct mlxsw_bus_info *bus_info,
+ 		       struct mlxsw_thermal **p_thermal)
+@@ -1179,11 +1304,17 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
+ 	if (err)
+ 		goto err_thermal_gearboxes_init;
+ 
++	err = mlxsw_thermal_linecards_register(core, thermal);
++	if (err)
++		goto err_linecards_register;
++
+ 	thermal->mode = THERMAL_DEVICE_ENABLED;
+ 	thermal->initializing = false;
+ 	*p_thermal = thermal;
+ 	return 0;
+ 
++err_linecards_register:
++	mlxsw_thermal_gearboxes_fini(thermal, thermal->main);
+ err_thermal_gearboxes_init:
+ 	mlxsw_thermal_gearboxes_main_fini(thermal->main);
+ err_thermal_gearboxes_main_init:
+@@ -1210,6 +1341,7 @@ void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+ {
+ 	int i;
+ 
++	mlxsw_thermal_linecards_unregister(thermal);
+ 	mlxsw_thermal_gearboxes_fini(thermal, thermal->main);
+ 	mlxsw_thermal_gearboxes_main_fini(thermal->main);
+ 	mlxsw_thermal_modules_fini(thermal, thermal->main);
+-- 
+2.20.1
+

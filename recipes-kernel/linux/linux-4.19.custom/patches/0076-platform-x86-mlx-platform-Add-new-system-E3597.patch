@@ -1,0 +1,40 @@
+From d0ac2c5c7764355e3bccf7451e302a6f770ff9e0 Mon Sep 17 00:00:00 2001
+From: Mykola Kostenok <c_mykolak@nvidia.com>
+Date: Mon, 22 Mar 2021 16:25:55 +0200
+Subject: [PATCH] platform/x86: mlx-platform: Add new system E3597
+
+Add support for new Nvidia E3597 - LR10 Nvidia LR10 based NVL3 Switch,
+ 64 NVL3 ports, 32 OSFP ports, non-blocking switching capacity of 13.6Tbps,
+ 2 Power Supplies (AC), Standard depth, Managed, P2C airflow, Rail Kit, RoHS6.
+The rack switch is designed to provide high bandwidth, low latency NVLink
+ connection between DGX products supporting external NVLink.
+
+DMI detection is based on DMI_BOARD_NAME, which is VMOD0012 for this
+ system.
+
+Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/x86/mlx-platform.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 9a8a89d..6b3325d 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -3077,6 +3077,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 		},
+ 	},
+ 	{
++		.callback = mlxplat_dmi_ng400_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0012"),
++		},
++	},
++	{
+ 		.callback = mlxplat_dmi_msn274x_matched,
+ 		.matches = {
+ 			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
+-- 
+2.8.4
+

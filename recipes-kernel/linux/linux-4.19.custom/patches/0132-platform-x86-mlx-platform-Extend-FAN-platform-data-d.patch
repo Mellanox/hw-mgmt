@@ -1,0 +1,38 @@
+From dcff816ee60464f4e0dd47a749dfdcce1990e361 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 21 Sep 2021 10:16:46 +0000
+Subject: [PATCH backport for v4.19 1/6] platform/x86: mlx-platform: Extend FAN
+ platform data description
+
+Add register present entry for rotors (tachometers) 13 and 14 in
+fan description tuple.
+The purpose is to allow indication of FAN presence.
+
+Signed-off-by: Vadim Pasternak <vadimp@mellanox.com>
+---
+ drivers/platform/x86/mlx-platform.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 3697b991f..8982251ad 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -3790,6 +3790,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
+ 		.bit = BIT(4),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "tacho14",
+@@ -3797,6 +3798,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+ 		.mask = GENMASK(7, 0),
+ 		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
+ 		.bit = BIT(5),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
+ 	},
+ 	{
+ 		.label = "conf",
+-- 
+2.20.1
+
