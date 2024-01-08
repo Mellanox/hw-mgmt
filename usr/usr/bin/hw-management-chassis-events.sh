@@ -744,11 +744,12 @@ check_reset_attrs()
 	fi
 }
 
+# Don't process udev events until service is started and directories are created
+if [ ! -f ${udev_ready} ]; then
+	exit 0
+fi
+
 if [ "$1" == "add" ]; then
-	# Don't process udev events until service is started and directories are created
-	if [ ! -f ${udev_ready} ]; then
-		exit 0
-	fi
 	if [ "$2" == "a2d" ]; then
 		# Detect if it belongs to line card or to main board.
 		iio_name=$5
