@@ -31,6 +31,7 @@
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
 		"ctx_amb" :{"pwm_min": 30, "pwm_max" : 100, "val_min": "70000", "val_max": 105000, "poll_time": 3}
 	},
+	"error_mask" : {"psu" : ["direction", "present"]},
 	"sensor_list" : ["asic1", "asic2", "ctx_amb", "cpu", 
 	"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5",
 	"psu1", "psu2",  "psu3", "psu4", "sensor_amb", "sodimm1",
