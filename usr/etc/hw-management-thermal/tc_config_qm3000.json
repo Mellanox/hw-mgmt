@@ -31,6 +31,7 @@
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
 		"connectx8" :{"pwm_min": 30, "pwm_max" : 100, "val_min": "70000", "val_max": 105000, "poll_time": 3}
 	},
+	"error_mask" : {"psu" : ["direction", "present"]},
 	"sensor_list" : ["asic1", "asic2", "asic4", "asic4", "ctx_amb", "cpu", 
 					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "drwr8", "drwr9", "drwr10",
 					"psu1", "psu2", "psu3", "psu4", "psu5", "psu6", "psu7", "psu8", "sodimm1",
