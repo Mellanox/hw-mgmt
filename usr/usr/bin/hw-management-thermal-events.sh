@@ -256,11 +256,12 @@ get_psu_fan_direction()
 	return $dir
 }
 
+# Don't process udev events until service is started and directories are created
+if [ ! -f ${udev_ready} ]; then
+	exit 0
+fi
+
 if [ "$1" == "add" ]; then
-	# Don't process udev events until service is started and directories are created
-	if [ ! -f ${udev_ready} ]; then
-		exit 0
-	fi
 	case "$2" in
 		fan_amb | port_amb | cx_amb | lrl_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2)
 		# Verify if this is COMEX sensor
