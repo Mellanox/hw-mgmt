@@ -2601,6 +2601,7 @@ set_dpu_pci_id()
 		;;
 
 	*)
+		return
 		;;
 	esac
 

@@ -321,8 +321,24 @@ if [ "$1" == "add" ]; then
 			fi
 
 			if [ "$name" == "mlxsw" ]; then
-				ln -sf "$3$4" $cpath/asic_hwmon
-				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				case $sku in
+					HI157|HI158)
+						# Mapping of ASIC I2C bus to ASIC index
+						asic_indices=([2]=1 [18]=2 [34]=3 [50]=4)
+						asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+						asic_index=${asic_indices[${asic_bus}]}
+						ln -fs "$3""$4" "$cpath"/asic${asic_index}_hwmon
+						check_n_link "$3""$4"/temp1_input "$tpath"/asic${asic_index}
+						if [ ${asic_index} -eq 1 ]; then
+							ln -fs "$3""$4" "$cpath"/asic_hwmon
+							check_n_link "$3""$4"/temp1_input "$tpath"/asic
+						fi
+						;;
+					*)
+						ln -fs "$3""$4" $cpath/asic_hwmon
+						check_n_link "$3""$4"/temp1_input "$tpath"/asic
+						;;
+				esac
 				echo 120000 > $tpath/asic_temp_trip_crit
 				echo 105000 > $tpath/asic_temp_emergency
 				echo 85000 > $tpath/asic_temp_crit
