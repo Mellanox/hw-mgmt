@@ -124,6 +124,7 @@ reset_dflt_attr_num=18
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
 xdr_cpu_bus_offset=66
+smart_switch_cpu_bus_offset=34
 
 connect_table=()
 named_busses=()
@@ -538,9 +539,8 @@ p4300_dynamic_i2c_bus_connect_table=( \
 
 smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
 	tmp421 0x0 0x1f tmp421 dpu_cx_amb \
-	mp2975 0x0 0x68 dpu_voltmon1 \
-	mp2975 0x0 0x69 dpu_voltmon2 \
-	mp2975 0x0 0x6a dpu_voltmon3)
+	mp2975 0x0 0x69 dpu_voltmon1 \
+	mp2975 0x0 0x6a dpu_voltmon2)
 
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
@@ -884,7 +884,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# MQM9700, P4697, P4262, P4300 removed A2D from CFL
-				HI130|HI142|HI152|HI157|HI158|HI159)
+				HI130|HI142|HI152|HI157|HI158|HI159|HI160)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					;;
 				*)
@@ -898,7 +898,7 @@ add_cpu_board_to_connection_table()
 			cpu_voltmon_connection_table=( ${bf3_come_voltmon_connection_table[@]} )
 			;;
 		$AMD_EPYC_CPU)
-			cpu_connection_table=( ${cpu_type1_connection_table[@]} )
+			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
@@ -2093,11 +2093,11 @@ smart_switch_common()
 
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
-		add_cpu_board_to_connection_table
+		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
 		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
 		named_busses+=(${smart_switch_named_busses[@]})
-		add_come_named_busses
+		add_come_named_busses $smart_switch_cpu_bus_offset
 		echo -n "${named_busses[@]}" > $config_path/named_busses
 	fi
 	echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
@@ -2113,6 +2113,8 @@ smart_switch_common()
 	dpu_count=4
 	echo -n "${smart_switch_dpu2host_events[@]}" > "$dpu2host_events_file"
 	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
+	i2c_comex_mon_bus_default=$((smart_switch_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
 }
 
 check_system()
