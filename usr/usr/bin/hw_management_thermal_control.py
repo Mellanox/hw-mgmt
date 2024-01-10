@@ -270,10 +270,29 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60,
                          "input_suffix": "_input"
                         },
-    r'ctx_amb\d*':       {"type": "thermal_sensor",
+    r'ctx_amb\d*':      {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
                          "input_suffix": "_input"
-                        }
+                        },
+    r'dpu\\d+_module':  {"type": "dpu_module",
+                         "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000", "poll_time": 5, "child_sensors_list" : []
+                        },
+    r'dpu\d+_cx_amb':   {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3},
+    r'dpu\d+_cpu':      {"type": "thermal_sensor",
+                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", "poll_time": 3,
+                          "input_smooth_level": 1
+                        },
+    r'dpu\d+_sodimm\d+': {"type": "thermal_sensor",
+                          "pwm_min": 30, "pwm_max": 70 
+                         },
+    r'dpu\d+_drivetemp': {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000", "poll_time": 60
+                        },
+    r'dpu\d+_voltmon\d+_temp': {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 3,
+                         "input_suffix": "_input"
+                        },
 }
 
 # PSU/FAN redundancy define example:
@@ -1313,6 +1332,14 @@ class system_device(hw_managemet_file_op):
         return 1 if fault_list else 0
 
     # ----------------------------------------------------------------------
+    def get_child_list(self):
+        return []
+
+    # ----------------------------------------------------------------------
+    def get_child_list(self):
+        return []
+   
+    # ----------------------------------------------------------------------
     def process(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: main function to process device/sensor
@@ -2278,6 +2305,68 @@ class ambiant_thermal_sensor(system_device):
                                                                           self.state)
         return info_str
 
+
+class dpu_module(system_device):
+    """
+    @summary: base class for simple thermal sensors
+    can be used for cpu/sodimm/psu/voltmon/etc. thermal sensors
+    """
+
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+
+        self.child_name_list = []
+        self.child_obj_list = []
+        self.ready = False
+        child_list = self.base_file_name = self.sensors_config.get("child_sensors_list", [])
+        for sensor in child_list:
+            res = re.match(r'(dpu\d+)_module', self.name)
+            if res:
+                dpu_name = res.group(1)
+                sensor_name = "{}_{}".format(dpu_name, sensor)
+                self.child_name_list.append(sensor_name)
+
+    # ----------------------------------------------------------------------
+    def add_child_obj(self, child):
+        ""
+        self.child_obj_list.append(child)
+
+    # ----------------------------------------------------------------------
+    def get_child_list(self):
+        return self.child_name_list
+
+    # ----------------------------------------------------------------------
+    def handle_input(self, thermal_table, flow_dir, amb_tmp):
+        ""
+        dps_ready_filename = self.file_input
+        if not self.check_file(dps_ready_filename):
+            self.log.info("{}: missing file {}".format(self.name, dps_ready_filename))
+        else:
+            try:
+                self.ready = bool(self.read_file_int(dps_ready_filename))
+                self.log.debug("{} {} value {}".format(self.name, 
+                                                       dps_ready_filename, 
+                                                       self.ready))
+            except BaseException:
+                self.log.error("Error value reading from file: {}".format(dps_ready_filename))
+
+        for child_obj in self.child_obj_list:
+            if self.ready == True:
+                child_obj.start()
+                child_obj.enable = True
+            else:
+                child_obj.stop()
+                child_obj.enable = False
+
+    # ----------------------------------------------------------------------
+    def info(self):
+        """
+        @summary: returning info about current device state.
+        """
+        info_str = "\"{}\", ready:{}, {}".format(self.name, self.ready, self.state)
+        return info_str
+
+
 """
 Main class for Thermal control. Init and running all devices objects.
 Controlling devices states and calculation PWM based on this information.
@@ -2304,7 +2393,13 @@ class ThermalManagement(hw_managemet_file_op):
                           r'sensor_amb':"add_amb_sensor",
                           r'drivetemp':"add_drivetemp_sensor",
                           r'ibc\d*':"add_ibc_sensor",
-                          r'ctx_amb\d*':"add_connectx_sensor"
+                          r'ctx_amb\d*':"add_connectx_sensor",
+                          r'dpu\d*_cpu':"add_DPU_cpu_sensor",
+                          r'dpu\d*_sodimm\d+':"add_DPU_sodimm_sensor",
+                          r'dpu\d*_drivetemp':"add_DPU_drivetemp_sensor",
+                          r'dpu\d*_voltmon\d+':"add_DPU_voltmon_sensor",
+                          r'dpu\d*_cx_amb':"add_DPU_cx_amb_sensor",
+                          r'dpu\d *_module':"add_DPU_module"
                          }
 
     def __init__(self, cmd_arg, tc_logger):
@@ -2395,6 +2490,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.module_counter = 0
         self.gearbox_counter = 0
         self.dev_err_exclusion_conf = {}
+        self.obj_init_continue = True
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -2519,6 +2615,10 @@ class ThermalManagement(hw_managemet_file_op):
             return None
 
         self.dev_obj_list.append(dev_obj)
+        child_list = dev_obj.get_child_list()
+        if child_list:
+            self.add_sensors(child_list)
+            self.obj_init_continue = True
         return dev_obj
 
     # ----------------------------------------------------------------------
@@ -2530,6 +2630,18 @@ class ThermalManagement(hw_managemet_file_op):
         if dev_obj:
             self.log.info("Rm dev {}".format(name))
             self.dev_obj_list.remove(dev_obj)
+
+    # ----------------------------------------------------------------------
+    def _init_child_obj(self):
+        """
+        @summary: Init child pointer list for combined devices
+        """
+        for dev_obj in self.dev_obj_list:
+            child_list = dev_obj.get_child_list()
+            for child_name in  child_list:
+                child_obj = self._get_dev_obj(child_name)
+                if child_obj:
+                    dev_obj.add_child_obj(child_obj)
 
     # ---------------------------------------------------------------------
     def _get_chassis_fan_dir(self):
@@ -2977,11 +3089,62 @@ class ThermalManagement(hw_managemet_file_op):
         self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
 
     # ----------------------------------------------------------------------
-    def add_sensors(self):
+    def add_DPU_cpu_sensor(self, name):
+        res = re.match(r'(dpu\d+)_cpu', name)
+        if res:
+            dpu_idx = res.group(1)
+            self._sensor_add_config("thermal_sensor", name, 
+                                    {"base_file_name": "{0}/thermal/cpu_pack".format(dpu_idx)})
+
+    # ----------------------------------------------------------------------
+    def add_DPU_sodimm_sensor(self, name):
+        res = re.match(r'(dpu\d+)_(sodimm\d+)', name)
+        if res:
+            dpu_idx = res.group(1)
+            sodmm_idx = res.group(2)
+            self._sensor_add_config("thermal_sensor", name, 
+                                    {"base_file_name": "{0}/thermal/{1}_temp_input".format(dpu_idx, sodmm_idx)})
+
+    # ----------------------------------------------------------------------
+    def add_DPU_drivetemp_sensor(self, name):
+        res = re.match(r'(dpu\d+)_drivetemp', name)
+        if res:
+            dpu_idx = res.group(1)
+            self._sensor_add_config("thermal_sensor", name, 
+                                    {"base_file_name": "{0}/thermal/drivetemp".format(dpu_idx)})
+
+    # ----------------------------------------------------------------------
+    def add_DPU_voltmon_sensor(self, name):
+        res = re.match(r'(dpu\d+)_(voltmon\d+)', name)
+        if res:
+            dpu_idx = res.group(1)
+            voltmon_name = res.group(2)
+            sensor_name = "{}_temp".format(name)
+            in_file = "{}/thermal/dpu_{}_temp1".format(dpu_idx, voltmon_name)
+            self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_DPU_cx_amb_sensor(self, name):
+        res = re.match(r'(dpu\d+)_cx_amb', name)
+        if res:
+            dpu_idx = res.group(1)
+            self._sensor_add_config("thermal_sensor", name, 
+                                    {"base_file_name": "{0}/thermal/cx_amb".format(dpu_idx)})
+
+    # ---------------------------------------------------------------------- 
+    def add_DPU_module(self, name):        
+        res = re.match(r'dpu(\d+)_module', name)
+        if res:
+            dpu_idx = res.group(1)
+            self._sensor_add_config("dpu_module", name, 
+                                    {"base_file_name": "system/dpu{}_ready".format(dpu_idx)})
+
+    # ----------------------------------------------------------------------
+    def add_sensors(self, sensor_list):
         """
         @summary: Add sensor configuration based on sensor list
         """
-        for sensor_name in self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM]:
+        for sensor_name in sensor_list:
             for config_handler_mask in self.ADD_SENSOR_HANDLER:
                 if re.match(config_handler_mask, sensor_name):
                     fn_name = self.ADD_SENSOR_HANDLER[config_handler_mask]
@@ -2997,19 +3160,22 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("Init thermal control ver: v.{}".format(VERSION), 1)
         self.log.notice("********************************", 1)
 
-        self.add_sensors()
+        self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
         # Set initial PWM to maximum
         self._set_pwm(CONST.PWM_MAX, reason="Set initial PWM")
 
         self.log.debug("System config dump\n{}".format(json.dumps(self.sys_config, sort_keys=True, indent=4)))
 
-        for key, _ in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
-            dev_obj = self._add_dev_obj(key)
-            if not dev_obj:
-                self.log.error("{} create failed".format(key))
-                sys.exit(1)
+        while self.obj_init_continue:
+            self.obj_init_continue  = False
+            for key, _ in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
+                dev_obj = self._add_dev_obj(key)
+                if not dev_obj:
+                    self.log.error("{} create failed".format(key))
+                    sys.exit(1)
         self.module_scan()
+        self._init_child_obj()
 
         self.dev_obj_list.sort(key=lambda x: x.name)
         self.write_file(CONST.PERIODIC_REPORT_FILE, self.periodic_report_time)
