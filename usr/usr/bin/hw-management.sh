@@ -2095,7 +2095,7 @@ smart_switch_common()
 		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 		add_cpu_board_to_connection_table
 		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
-		thermal_control_config="$thermal_control_configs_path/tc_config_msn4700_mps.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
 		named_busses+=(${smart_switch_named_busses[@]})
 		add_come_named_busses
 		echo -n "${named_busses[@]}" > $config_path/named_busses
