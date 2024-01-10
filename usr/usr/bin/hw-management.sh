@@ -2489,6 +2489,12 @@ set_asic_i2c_bus()
 			echo $asic_i2c_bus > $config_path/asic${i}_i2c_bus_id
 		fi
 	done
+
+	if [ ! -f $config_path/asic_bus ]; then
+		asic_i2c_bus=${asic_i2c_buses[0]}
+		asic_i2c_bus=$((asic_i2c_bus+i2c_bus_offset))
+		echo $asic_i2c_bus > $config_path/asic_bus
+	fi
 }
 
 set_asic_pci_id()
