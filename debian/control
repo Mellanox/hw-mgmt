@@ -8,7 +8,7 @@ Homepage: http://www.mellanox.com
 
 Package:hw-management
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, lsb-base (>= 3.0-6), python2.7 | python3 
+Depends: ${misc:Depends}, ${shlibs:Depends}, lsb-base (>= 3.0-6), python2.7 | python3, xxd, lm-sensors, libiio-utils, dmidecode, i2c-tools
 Description: Thermal control and chassis management for Mellanox systems
  This package supports Mellanox switches family for chassis
  management and thermal control.
