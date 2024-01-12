@@ -170,6 +170,15 @@ cpu_type2_connection_table=(24c32 0x50 16)
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
 
 #
+# Smart switch
+#
+smart_switch_come_voltmon_connection_table=( mp2975 0x58 15 comex_voltmon1 \
+            mp2975 0x61 15 comex_voltmon2)
+
+smart_switch_come_connection_table=( tmp102 0x49 15 \
+            24c32 0x50 16)
+
+#
 # BF3 CPU.
 #
 bf3_come_voltmon_connection_table=( \
@@ -884,14 +893,19 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# MQM9700, P4697, P4262, P4300 removed A2D from CFL
-				HI130|HI142|HI152|HI157|HI158|HI159|HI160)
+				HI130|HI142|HI152|HI157|HI158|HI159)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+					;;
+				HI160)
+					cpu_connection_table=( ${smart_switch_come_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${smart_switch_come_voltmon_connection_table[@]} )
 					;;
 				*)
 					cpu_connection_table=( ${cpu_type2_A2D_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
 			esac
-			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		$BF3_CPU)
 			cpu_connection_table=( ${bf3_come_connection_table[@]} )
@@ -2102,8 +2116,7 @@ smart_switch_common()
 	fi
 	echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
 
-	thermal_type=$thermal_type_t10
-	max_tachos=12
+	max_tachos=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
