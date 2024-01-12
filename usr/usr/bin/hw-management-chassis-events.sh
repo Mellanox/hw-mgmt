@@ -743,7 +743,7 @@ if [ "$1" == "add" ]; then
 			exit
 		fi
 
-		if [ "$prefix" == "comex_voltmon1" ]; then
+		if [ "$prefix" == "comex_voltmon1" ] || [ "$prefix" == "comex_voltmon2" ] ; then
 			find_i2c_bus
 			i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
@@ -1261,7 +1261,7 @@ else
 		then
 			exit
 		fi
-		if [ "$prefix" == "comex_voltmon1" ]; then
+		if [ "$prefix" == "comex_voltmon1" ] || [ "$prefix" == "comex_voltmon2" ]; then
 			find_i2c_bus
 			i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
 			comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
