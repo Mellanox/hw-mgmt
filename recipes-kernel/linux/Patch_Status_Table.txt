@@ -427,8 +427,14 @@ Kernel-6.1
 |0085-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           |            |                                                |
 |0086-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream                               |            | BF3                                            |
 |0087-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0087-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream                               |            |                                                |
+|0088-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream                               |            |                                                |
+|0089-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream                               |            |                                                |
+|0090-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream                               |            |                                                |
+|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream                               |            |                                                |
+|0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream                               |            |                                                |
+|0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Downstream                               |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream                               |            | Disable FW update                              |
-|8001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream                               |            | Add dedicated match for QMB8700                |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream                               |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |8004-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream                               |            | IB only                                        |
@@ -438,10 +444,13 @@ Kernel-6.1
 |8008-hwmon-emc2305-Downstream-Allow-fan-speed-setting-gra.patch  |                    | Downstream accepted                      |            | Fix for emc2305 cooling level granularity      |
 |8009-hwmon-mlxsw-Downstream-Allow-fan-speed-setting-granu.patch  |                    | Downstream accepted                      |            | Fix for mlxminimal cooling level granularity   |
 |8010-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream                               |            |                                                |
+|8011-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream                               |            |                                                |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream                               |            | P4300                                          |
+|9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream                               |            |                                                |
+|9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream                               |            | Add dedicated match for QMB8700                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
