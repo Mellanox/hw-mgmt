@@ -768,7 +768,7 @@ if [ "$1" == "add" ]; then
 				sodimm1_addr='0018'
 				sodimm2_addr='001a'
 			;;
-			$AMD_EPYC_CPU)
+			$AMD_SNW_CPU)
 			;;
 			*)
 				exit 0

@@ -553,7 +553,7 @@ smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
 
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
-amd_epyc_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
+amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
@@ -911,7 +911,7 @@ add_cpu_board_to_connection_table()
 			cpu_connection_table=( ${bf3_come_connection_table[@]} )
 			cpu_voltmon_connection_table=( ${bf3_come_voltmon_connection_table[@]} )
 			;;
-		$AMD_EPYC_CPU)
+		$AMD_SNW_CPU)
 			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 			;;
 		*)
@@ -958,8 +958,8 @@ add_come_named_busses()
 	$CFL_CPU|$BF3_CPU)
 		come_named_busses+=( ${cfl_come_named_busses[@]} )
 		;;
-	$AMD_EPYC_CPU)
-		come_named_busses+=( ${amd_epyc_named_busses[@]} )
+	$AMD_SNW_CPU)
+		come_named_busses+=( ${amd_snw_named_busses[@]} )
 		;;
 	*)
 		return
@@ -2664,7 +2664,7 @@ pre_devtr_init()
 		HI144|HI147|HI148)	# ToDo Possible change for Ibex
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			echo 2 > "$config_path"/clk_brd_num
-			echo 3 > "$config_path"/clk_brd_addr_offset
+#			echo 3 > "$config_path"/clk_brd_addr_offset
 			;;
 		*)
 			;;
@@ -2685,6 +2685,15 @@ pre_devtr_init()
 		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	VMOD0019)
+		case $sku in
+		HI160)
+			echo 4 > "$config_path"/dpu_brd_num
+			echo 1 > "$config_path"/dpu_brd_bus_offset
+			echo $smart_switch_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
 		;;
 	*)
 		;;

@@ -106,14 +106,14 @@ cpu_type=
 # CFL - Coffee Lake
 # DNV - Denverton
 # BF3 - BlueField-3
-# AMD_EPYC - AMD EPYC™ Embedded 3451
+# AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
 IVB_CPU=0x63A
 RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
-AMD_EPYC_CPU=0x123
+AMD_SNW_CPU=0x171
 
 log_err()
 {
