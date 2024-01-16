@@ -2638,7 +2638,6 @@ set_dpu_pci_id()
 		echo "$dpu2_pci_bus_id" > "$config_path"/dpu2_pci_bus_id
 		echo "$dpu3_pci_bus_id" > "$config_path"/dpu3_pci_bus_id
 		echo "$dpu4_pci_bus_id" > "$config_path"/dpu4_pci_bus_id
-		echo 4 > "$config_path"/dpu_num
 		;;
 	*)
 		;;
@@ -2687,7 +2686,7 @@ pre_devtr_init()
 	VMOD0019)
 		case $sku in
 		HI160)
-			echo 4 > "$config_path"/dpu_brd_num
+			echo 4 > "$config_path"/dpu_num
 			echo 1 > "$config_path"/dpu_brd_bus_offset
 			echo $smart_switch_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
