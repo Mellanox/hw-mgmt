@@ -76,7 +76,7 @@ declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmon1" \
-				   ["mp2855_0"]="mp2855 0x6a 15 comex_voltmon2" \
+				   ["mp2855_1"]="mp2855 0x6a 15 comex_voltmon2" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
@@ -497,7 +497,7 @@ devtr_check_supported_system_init_alternatives()
 #			;;
 		VMOD0009)
 			case $sku in
-				HI117)
+			HI117)
 				for key in "${!msn27002_alternatives[@]}"; do
 					swb_alternatives["$key"]="${msn27002_alternatives["$key"]}"
 				done
@@ -536,43 +536,43 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0017)
 			case $sku in
-				HI152)
-					for key in "${!p4262_alternatives[@]}"; do
-						swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
-					done
-					for key in "${!pwr_type1_alternatives[@]}"; do
-						pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
-					done
-					;;
-				HI159)
-					for key in "${!p4300_alternatives[@]}"; do
-						swb_alternatives["$key"]="${p4300_alternatives["$key"]}"
-					done
-					for key in "${!pwr_type2_alternatives[@]}"; do
-						pwr_alternatives["$key"]="${pwr_type2_alternatives["$key"]}"
-					done
+			HI152)
+				for key in "${!p4262_alternatives[@]}"; do
+					swb_alternatives["$key"]="${p4262_alternatives["$key"]}"
+				done
+				for key in "${!pwr_type1_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${pwr_type1_alternatives["$key"]}"
+				done
+				;;
+			HI159)
+				for key in "${!p4300_alternatives[@]}"; do
+					swb_alternatives["$key"]="${p4300_alternatives["$key"]}"
+				done
+				for key in "${!pwr_type2_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${pwr_type2_alternatives["$key"]}"
+				done
 				;;
 			esac
 			return 0
 			;;
 		VMOD0018)
 			case $sku in
-				HI157)
-					for key in "${!qm3400_alternatives[@]}"; do
-						swb_alternatives["$key"]="${qm3400_alternatives["$key"]}"
-					done
+			HI157)
+				for key in "${!qm3400_alternatives[@]}"; do
+					swb_alternatives["$key"]="${qm3400_alternatives["$key"]}"
+				done
 				;;
-				HI158)
-					for key in "${!qm3000_alternatives[@]}"; do
-						swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
-					done
-					for key in "${!platform_type1_alternatives[@]}"; do
-						platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
-					done
+			HI158)
+				for key in "${!qm3000_alternatives[@]}"; do
+					swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
+				done
+				for key in "${!platform_type1_alternatives[@]}"; do
+					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
+				done
 				;;
-				*)
-					log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
-					return 1
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
 				;;
 			esac
 			for key in "${!fan_type1_alternatives[@]}"; do
@@ -585,10 +585,10 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0019)
 			case $sku in
-				HI160)
-					for key in "${!sn4280_alternatives[@]}"; do
-						swb_alternatives["$key"]="${sn4280_alternatives["$key"]}"
-					done
+			HI160)
+				for key in "${!sn4280_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn4280_alternatives["$key"]}"
+				done
 				;;
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
@@ -686,8 +686,8 @@ devtr_check_board_components()
 			;;
 		D)	# DPU board
 			# There are several DPU boards (SN4280)
-			if [ -e "$config_path"/dpu_brd_num ]; then
-				board_num=$(< $config_path/dpu_brd_num)
+			if [ -e "$config_path"/dpu_num ]; then
+				board_num=$(< $config_path/dpu_num)
 				board_name_pfx=dpu
 			fi
 			if [ -e "$config_path"/dpu_brd_bus_offset ]; then
