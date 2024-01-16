@@ -43,6 +43,7 @@ max_pwm=4
 max_lcs=8
 max_erots=2
 max_leakage=8
+max_leakage_rope=2
 max_health_events=4
 max_power_events=1
 min_module_gbox_ind=2
@@ -629,7 +630,7 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
-			if [ -f "$3""$4"/leakage$i ]; then
+			if [ -f "$3""$4"/leakage"$i" ]; then
 				check_n_link "$3""$4"/leakage$i $system_path/leakage"$i"
 				event=$(< $system_path/leakage"$i")
 				if [ "$event" -eq 1 ]; then
@@ -637,13 +638,15 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		done
-		if [ -f "$3""$4"/leakage_rope ]; then
-			check_n_link "$3""$4"/leakage_rope $system_path/leakage_rope
-			event=$(< $system_path/leakage_rope)
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $events_path/leakage_rope
+		for ((i=1; i<=max_leakage_rope; i+=1)); do
+			if [ -f "$3""$4"/leakage_rope"$i" ]; then
+				check_n_link "$3""$4"/leakage_rope"$i" $system_path/leakage_rope"$i"
+				event=$(< $system_path/leakage_rope"$i")
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/leakage_rope"$i"
+				fi
 			fi
-		fi
+		done
 		for ((i=0; i<=max_health_events; i+=1)); do
 			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
 				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
@@ -1237,7 +1240,9 @@ else
 		for ((i=1; i<=max_leakage; i+=1)); do
 			check_n_unlink $system_path/leakage"$i"
 		done
-		check_n_unlink $system_path/leakage_rope
+		for ((i=1; i<=max_leakage_rope; i+=1)); do
+			check_n_unlink $system_path/leakage_rope"$i"
+		done
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi

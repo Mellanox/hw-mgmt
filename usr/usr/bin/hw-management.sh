@@ -106,6 +106,7 @@ nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 dpu_bf3_pci_id=c2d5
 leakage_count=0
+leakage_rope_count=0
 asic_chipup_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
@@ -1602,6 +1603,7 @@ mqm9510_specific()
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=3
+	leakage_rope_count=1
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
@@ -1629,6 +1631,7 @@ mqm9520_specific()
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=8
+	leakage_rope_count=1
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
@@ -2130,6 +2133,38 @@ smart_switch_common()
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
 }
 
+p4977_ns_specific()
+{
+	local cpu_bus_offset=18
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${p4300_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+	fi
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
+	echo 2 > $config_path/cpld_num
+	hotplug_fans=4
+	leakage_count=4
+	leakage_rope_count=2
+	max_tachos=4
+	hotplug_pwrs=0
+	hotplug_psus=0
+	erot_count=1
+	asic_control=0
+	health_events_count=2
+	pwr_events_count=1
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+	add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
+	named_busses+=(${p4300_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+}
+
 check_system()
 {
 	# Check ODM
@@ -2181,6 +2216,9 @@ check_system()
 			;;
 		VMOD0019)
 			smart_switch_common
+			;;
+		VMOD0020)
+			p4977_ns_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2312,15 +2350,25 @@ create_event_files()
 	fi
 	if [ $leakage_count -ne 0 ]; then
 		for ((i=1; i<=leakage_count; i+=1)); do
-			check_n_init $events_path/leakage$i 0
+			check_n_init $events_path/leakage"$i" 0
 		done
-		check_n_init $events_path/leakage_rope 0
+	fi
+	if [ $leakage_rope_count -ne 0 ]; then
+		for ((i=1; i<=leakage_rope_count; i+=1)); do
+			check_n_init $events_path/leakage_rope"$i" 0
+		done
 	fi
 	for ((i=0; i<health_events_count; i+=1)); do
 		check_n_init  $events_path/${l1_switch_health_events[$i]}
 	done
 	if [ $pwr_events_count -ne 0 ]; then
-		check_n_init $events_path/power_button 0
+		if [ -f "$power_events_file" ]; then
+			for ((i=0; i<=pwr_events_count; i+=1)); do
+				check_n_init $events_path/${power_events[$i]} 0
+			done
+		else
+			check_n_init $events_path/power_button 0
+		fi
 	fi
 	if [ $dpu_count -ne 0 ]; then
 		create_hotplug_smart_switch_event_files "$dpu2host_events_file" "$dpu_events_file"
