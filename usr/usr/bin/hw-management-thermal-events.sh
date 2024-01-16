@@ -223,7 +223,7 @@ get_psu_fan_direction()
 {
 	vpd_file=$1
 	dir_char=""
-	pn="$(grep PN_VPD_FIELD $vpd_file)"
+	pn=$(grep PN_VPD_FIELD $vpd_file | grep -oE "[^ ]+$")
 	if [ -z $pn ]; then
 		if [ -f $config_path/fixed_fans_dir ]; then
 			dir=$(< $config_path/fixed_fans_dir) 
@@ -233,16 +233,9 @@ get_psu_fan_direction()
 		fi
 		return $dir
 	fi
-	MLX_REGEXP="MTEF-PS([R,F])"
-	NV_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
-	[[ $pn =~ $MLX_REGEXP ]]
-	if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
-		dir_char="${BASH_REMATCH[1]}"
-	else
-		[[ $pn =~ $NV_REGEXP ]]
-		if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
-			dir_char="${BASH_REMATCH[1]}"
-		fi
+	
+	if [ ! ${psu_fan_pn[$pn]}_ = _ ]; then
+		dir_char=${psu_fan_pn[$pn]}
 	fi
 	if [ $dir_char == "R" ]; then
 		return 0
