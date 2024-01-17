@@ -1,7 +1,7 @@
-From ea696714121cd8e2f9f1de753c79795c60207f3d Mon Sep 17 00:00:00 2001
+From c01d8ce17758c2db60de3583baa9a2e3ebe8b3e5 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 4 Dec 2023 07:12:52 +0000
-Subject: [PATCH backport 5.10 2/6] platform/mellanox: mlxreg-dpu: Add initial
+Subject: [PATCH backport 5.10 2/9] platform/mellanox: mlxreg-dpu: Add initial
  support for Nvidia DPU
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -28,8 +28,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig      |  14 +
  drivers/platform/mellanox/Makefile     |   1 +
- drivers/platform/mellanox/mlxreg-dpu.c | 588 +++++++++++++++++++++++++
- 3 files changed, 603 insertions(+)
+ drivers/platform/mellanox/mlxreg-dpu.c | 586 +++++++++++++++++++++++++
+ 3 files changed, 601 insertions(+)
  create mode 100644 drivers/platform/mellanox/mlxreg-dpu.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -71,10 +71,10 @@ index d46e5670e..cfcacc6a2 100644
  obj-$(CONFIG_MLXBF_PKA)         += mlxbf_pka/
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
 new file mode 100644
-index 000000000..445ffaad6
+index 000000000..f7c446e27
 --- /dev/null
 +++ b/drivers/platform/mellanox/mlxreg-dpu.c
-@@ -0,0 +1,588 @@
+@@ -0,0 +1,586 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia Data Processor Unit platform driver
@@ -370,16 +370,16 @@ index 000000000..445ffaad6
 +		.mask = MLXREG_DPU_PG_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_power_events_items_data),
 +		.inversed = 0,
-+		.health = true,
++		.health = false,
 +	},
 +	{
 +		.data = mlxreg_dpu_health_events_items_data,
 +		.aggr_mask = MLXREG_DPU_HEALTH_AGGR_MASK,
-+		.reg = MLXREG_DPU_REG_PG_OFFSET,
++		.reg = MLXREG_DPU_REG_HEALTH_OFFSET,
 +		.mask = MLXREG_DPU_HEALTH_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_health_events_items_data),
 +		.inversed = 0,
-+		.health = true,
++		.health = false,
 +	},
 +};
 +
@@ -495,15 +495,13 @@ index 000000000..445ffaad6
 +				  struct mlxreg_core_data *data, int irq)
 +{
 +	struct device *dev = &data->hpdev.client->dev;
-+	int lsb, err;
 +	u32 regval;
++	int err;
 +
 +	/* Validate DPU type. */
-+	err = regmap_read(regmap, MLXREG_DPU_REG_CONFIG3_OFFSET, &lsb);
-+	err = (!err) ? regmap_read(regmap, MLXREG_DPU_REG_CONFIG3_OFFSET, &regval) : err;
++	err = regmap_read(regmap, MLXREG_DPU_REG_CONFIG3_OFFSET, &regval);
 +	if (err)
 +		return err;
-+	regval = (regval & GENMASK(7, 0)) << 8 | (lsb & GENMASK(7, 0));
 +	switch (regval) {
 +	case MLXREG_DPU_BF3:
 +		mlxreg_dpu->io_data = &mlxreg_dpu_default_regs_io_data;
