@@ -106,6 +106,7 @@ lc_i2c_bus_min=34
 lc_i2c_bus_max=43
 i2c_bus_offset=0
 cpu_type=
+device_connect_delay=0.2
 
 # CPU Family + CPU Model should idintify exact CPU architecture
 # IVB - Ivy-Bridge
@@ -303,7 +304,11 @@ connect_device()
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-			return $?
+			sleep ${device_connect_delay}
+			if [ ! -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] &&
+			   [ ! -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
+				return 1
+			fi
 		fi
 	fi
 
