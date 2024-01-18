@@ -2107,15 +2107,12 @@ smart_switch_common()
 	if [ -e "$devtree_file" ]; then
 		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 	else
-		connect_msn4700_msn4600_A1
-
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
 		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
 		named_busses+=(${smart_switch_named_busses[@]})
-		add_come_named_busses $smart_switch_cpu_bus_offset
 		echo -n "${named_busses[@]}" > $config_path/named_busses
 	fi
 	echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
