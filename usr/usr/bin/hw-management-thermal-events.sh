@@ -202,7 +202,7 @@ get_fixed_fans_direction()
 		;;
 	*)
         # Unknown direction
-		dir=255
+		dir=2
 		;;
 	esac
 	return $dir
@@ -222,28 +222,38 @@ get_fixed_fans_direction()
 get_psu_fan_direction()
 {
 	vpd_file=$1
-	dir_char=""
+	# Default dir "unknown" till it will not be detected later
+	dir=2
 	pn=$(grep PN_VPD_FIELD $vpd_file | grep -oE "[^ ]+$")
 	if [ -z $pn ]; then
 		if [ -f $config_path/fixed_fans_dir ]; then
 			dir=$(< $config_path/fixed_fans_dir) 
-		else
-			# Default dir "unknown" till it will not be detected later
-			dir=255
 		fi
-		return $dir
+	else 
+		dir_char=""
+		if [ ! ${psu_fandir_vs_pn[$pn]}_ = _ ]; then
+			dir_char=${psu_fandir_vs_pn[$pn]}
+		else
+			PN_REGEXP="MTEF-PS([R,F])"
+		    
+		    [[ $pn =~ $PN_REGEXP ]]
+		    if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		        dir_char="${BASH_REMATCH[1]}"
+		    else
+		    	PN_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
+		        [[ $pn =~ $PN_REGEXP ]]
+		        if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		            dir_char="${BASH_REMATCH[1]}"
+		        fi
+		    fi
+		fi
+		if [ $dir_char == "R" ]; then
+			dir=0
+		elif [ $dir_char == "F" ]; then
+			dir=1
+		fi
 	fi
-	
-	if [ ! ${psu_fan_pn[$pn]}_ = _ ]; then
-		dir_char=${psu_fan_pn[$pn]}
-	fi
-	if [ $dir_char == "R" ]; then
-		return 0
-	elif [ $dir_char == "F" ]; then
-		return 1
-	else
-		return 2
-	fi
+	return $dir
 }
 
 if [ "$1" == "add" ]; then
