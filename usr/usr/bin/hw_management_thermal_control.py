@@ -1500,17 +1500,15 @@ class psu_fan_sensor(system_device):
         """
         @summary: Reading chassis fan dir from FS
         """
-        if self._get_status() == 0:
-            return CONST.UNKNOWN
+        direction = CONST.UNKNOWN
+        if self._get_status() != 0:
+            if self.check_file("thermal/{}_fan_dir".format(self.base_file_name)):
+                dir_val = self.read_file("thermal/{}_fan_dir".format(self.base_file_name))
+                if dir_val == "0":
+                    direction = CONST.C2P
+                elif dir_val == "1":
+                    direction = CONST.P2C
 
-        if self.check_file("thermal/{}_fan_dir".format(self.base_file_name)):
-            dir_val = self.read_file("thermal/{}_fan_dir".format(self.base_file_name))
-            if dir_val == "0":
-                direction = CONST.C2P
-            else:
-                direction = CONST.P2C
-        else:
-            direction = CONST.UNKNOWN
         return direction
 
     # ----------------------------------------------------------------------
@@ -1730,14 +1728,14 @@ class fan_sensor(system_device):
         """
         @summary: Reading chassis fan dir from FS
         """
-        if self._get_status() == 0:
-            return CONST.UNKNOWN
-
-        if self.check_file("thermal/fan{}_dir".format(self.fan_drwr_id)):
-            dir_val = self.read_file("thermal/fan{}_dir".format(self.fan_drwr_id))
-            direction = CONST.C2P if dir_val == "0" else CONST.P2C
-        else:
-            direction = CONST.UNKNOWN
+        direction = CONST.UNKNOWN
+        if self._get_status() == 1:
+            if self.check_file("thermal/fan{}_dir".format(self.fan_drwr_id)):
+                dir_val = self.read_file("thermal/fan{}_dir".format(self.fan_drwr_id))
+                if dir_val == "0":
+                    direction = CONST.C2P
+                elif dir_val == "1":
+                    direction = CONST.P2C
         return direction
 
     # ----------------------------------------------------------------------
