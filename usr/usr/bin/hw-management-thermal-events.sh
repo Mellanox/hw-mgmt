@@ -970,7 +970,7 @@ if [ "$1" == "add" ]; then
 					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
 				fi
-				if [[ "$cap" == "3000" &&  $sku == "HI144" ]]; then
+				if [[ "$cap" == "3000" && ( $sku == "HI144" || $sku == "HI147" ) ]]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
 					fi
