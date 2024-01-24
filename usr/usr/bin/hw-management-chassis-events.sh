@@ -571,6 +571,22 @@ function handle_hotplug_event()
 	fan*)
 		handle_hotplug_fan_event "$attribute" "$event"
 		;;
+	dpu*)
+		bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
+		bus_offset=$(< $config_path/dpu_bus_off)
+		bus=$((bus+bus_offset-1))
+		if [ "$attribute" == "dpu1_ready" ] || [ "$attribute" == "dpu2_ready" ] ||
+		   [ "$attribute" == "dpu3_ready" ] || [ "$attribute" == "dpu4_ready" ]; then
+			# Connect dynamic devices.
+			connect_underlying_devices "$bus"
+
+		fi
+		if [ "$attribute" == "dpu1_shtdn_ready" ] || [ "$attribute" == "dpu2_shtdn_ready" ] ||
+		   [ "$attribute" == "dpu3_shtdn_ready" ] || [ "$attribute" == "dpu4_shtdn_ready" ]; then
+			# Disconnect dynamic devices.
+			disconnect_underlying_devices "$bus"
+		fi
+		;;
 	*)
 		;;
 	esac
@@ -1155,19 +1171,6 @@ if [ "$1" == "add" ]; then
 				mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
 			fi
 		done
-	fi
-	if [ "$2" == "dpu1_ready" ] || [ "$2" == "dpu2_ready" ] ||
-	   [ "$2" == "dpu3_read" ] || [ "$2" == "dpu4_ready" ]; then
-		# Connect dynamic devices.
-		bus=$(echo "$3$4" | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
-		connect_underlying_devices "$bus"
-
-	fi
-	if [ "$2" == "dpu1_shtdn_ready" ] || [ "$2" == "dpu2_shtdn_ready" ] ||
-	   [ "$2" == "dpu3_shtdn_read" ] || [ "$2" == "dpu4_shtdn_ready" ]; then
-		# Disconnect dynamic devices.
-		bus=$(echo "$3$4" | xargs dirname | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
-		disconnect_underlying_devices "$bus"
 	fi
 	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then

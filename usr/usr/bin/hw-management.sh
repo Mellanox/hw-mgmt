@@ -549,7 +549,7 @@ p4300_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x23 26 voltmon2 )
 
 smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
-	tmp421 0x0 0x1f tmp421 dpu_cx_amb \
+	tmp421 0x0 0x1f dpu_cx_amb \
 	mp2975 0x0 0x69 dpu_voltmon1 \
 	mp2975 0x0 0x6a dpu_voltmon2)
 

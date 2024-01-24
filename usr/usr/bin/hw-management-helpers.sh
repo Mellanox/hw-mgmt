@@ -643,8 +643,8 @@ connect_underlying_devices()
 
 	declare -a card_connect_table="($(< $config_path/i2c_underlying_devices))"
 
-	for ((i=0; i<${#card_connect_table[@]}; i+=$2)); do
-		addr="${card_connect_table[i+1]}"
+	for ((i=0; i<${#card_connect_table[@]}; i+=4)); do
+		addr="${card_connect_table[i+2]}"
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "${card_connect_table[i]}" "$addr" > /sys/bus/i2c/devices/i2c-$bus/new_device
@@ -662,8 +662,8 @@ disconnect_underlying_devices()
 
 	declare -a card_connect_table="($(< $config_path/i2c_underlying_devices))"
 
-	for ((i=0; i<${#card_connect_table[@]}; i+=$2)); do
-		addr="${card_connect_table[i+1]}"
+	for ((i=0; i<${#card_connect_table[@]}; i+=4)); do
+		addr="${card_connect_table[i+2]}"
 		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$addr" > /sys/bus/i2c/devices/i2c-$bus/delete_device
