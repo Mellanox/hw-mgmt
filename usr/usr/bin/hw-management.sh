@@ -2534,6 +2534,11 @@ map_asic_pci_to_i2c_bus()
 
 do_start()
 {
+	# [Temporary debug] enable i2c ftrace
+	echo 0 > /sys/kernel/debug/tracing/trace;
+	echo adapter_nr==4 > /sys/kernel/debug/tracing/events/i2c/filter
+	echo 1 > /sys/kernel/debug/tracing/events/i2c/enable;
+
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
@@ -2589,6 +2594,10 @@ do_start()
 		ln -sf $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
+	
+	# [Temporary debug] disable i2c ftrace
+	echo 0 > /sys/kernel/debug/tracing/events/i2c/enable;
+	cat /sys/kernel/debug/tracing/trace > /tmp/hw-management-init-i2c-trace.log
 }
 
 do_stop()

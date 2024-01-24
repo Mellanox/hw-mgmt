@@ -874,12 +874,21 @@ if [ "$1" == "add" ]; then
 			cat $config_path/psu_fan_max > "$thermal_path"/"$psu_name"_fan_max
 		fi
 		# PSU VPD
+		# [Temporary debug] dump psu_vpd init
+		echo  ">> PSU $ps_ctrl_addr VPD init" > /tmp/hw-management.log
 		ps_ctrl_addr="${busfolder:${#busfolder}-2:${#busfolder}}"
 		hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
 		if [ $? -ne 0 ]; then
+			echo  ">> PSU $ps_ctrl_addr VPD read failed\nDelay 2 sec and try again(2)" > /tmp/hw-management.log
+			sleep 2 
+			hw-management-ps-vpd.sh --BUS_ID "$bus" --I2C_ADDR 0x"$ps_ctrl_addr" --dump --VPD_OUTPUT_FILE $eeprom_path/"$psu_name"_vpd
+		fi
+		if [ $? -ne 0 ]; then
 			# PS EEPROM VPD.
+			echo  ">> PSU $ps_ctrl_addr VPD read failed" > /tmp/hw-management.log
 			hw-management-parse-eeprom.sh --conv --eeprom_path $eeprom_path/"$psu_name"_info > $eeprom_path/"$psu_name"_vpd
 			if [ $? -ne 0 ]; then
+				echo  date ">> hw-management-ps-eeprom decode error" > /tmp/hw-management.log
 				# EEPROM failed.
 				if is_virtual_machine; then
 					if [ -f $vm_vpd_path/psu_vpd ]; then
@@ -892,6 +901,7 @@ if [ "$1" == "add" ]; then
 				echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
 				exit 0
 			else
+				echo  ">> PSU $ps_ctrl_addr VPD read OK" > /tmp/hw-management.log
 				# Add PSU FAN speed info.
 				if [ -f $config_path/psu_fan_max ]; then
 					echo -ne "MAX_RPM: " >> $eeprom_path/"$psu_name"_vpd
@@ -903,6 +913,7 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
+		echo  ">> PSU $ps_ctrl_addr VPD init end" > /tmp/hw-management.log
 		# Get PSU FAN direction
 		get_psu_fan_direction $eeprom_path/"$psu_name"_vpd
 		echo $? > "$thermal_path"/"$psu_name"_fan_dir

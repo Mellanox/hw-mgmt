@@ -34,6 +34,9 @@
 set -e
 source hw-management-helpers.sh
 
+set -x
+exec 3>&1 4>&2 >>/tmp/hw-management-parse-eeprom.log 2>&1
+
 # SANITY 4D4C4E58 = MLNX.
 MLNX_CUSTOM_CHECKER=4D4C4E58
 f_length_layout0=(4 24 20 4 1 3)

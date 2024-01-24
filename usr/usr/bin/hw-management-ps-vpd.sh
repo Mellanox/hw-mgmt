@@ -32,7 +32,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-#set -x
+set -x
+exec 3>&1 4>&2 >>/tmp/hw-management-ps-vpd.log 2>&1
 
 VERSION="1.1"
 VPD_POINTER_ADDR=0xe8

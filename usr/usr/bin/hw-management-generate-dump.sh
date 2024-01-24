@@ -67,7 +67,10 @@ else
 	regmap_plat_path=/sys/kernel/debug/regmap/mlxplat
 fi
 
-ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
+ls -Rla /sys/dev >> $DUMP_FOLDER/sysfs_tree
+ls -Rla /sys/class >> $DUMP_FOLDER/sysfs_tree
+ls -Rla /sys/devices >> $DUMP_FOLDER/sysfs_tree
+
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
     run_cmd="find -L $HW_MGMT_FOLDER -maxdepth 4 -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null"
@@ -118,7 +121,7 @@ dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
 dump_cmd "sensors" "sensors" "20"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
-
+cp /tmp/hw-*.log $DUMP_FOLDER/
 
 tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
 rm -rf $DUMP_FOLDER
