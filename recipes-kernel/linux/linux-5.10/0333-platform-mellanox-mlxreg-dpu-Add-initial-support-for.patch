@@ -1,4 +1,4 @@
-From c01d8ce17758c2db60de3583baa9a2e3ebe8b3e5 Mon Sep 17 00:00:00 2001
+From 0bebfb2b2fc82f06b0b55a577e3b908e5d22be53 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 4 Dec 2023 07:12:52 +0000
 Subject: [PATCH backport 5.10 2/9] platform/mellanox: mlxreg-dpu: Add initial
@@ -26,25 +26,24 @@ indications logic, implemented by FPGA device.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/Kconfig      |  14 +
+ drivers/platform/mellanox/Kconfig      |  13 +
  drivers/platform/mellanox/Makefile     |   1 +
- drivers/platform/mellanox/mlxreg-dpu.c | 586 +++++++++++++++++++++++++
- 3 files changed, 601 insertions(+)
+ drivers/platform/mellanox/mlxreg-dpu.c | 623 +++++++++++++++++++++++++
+ 3 files changed, 637 insertions(+)
  create mode 100644 drivers/platform/mellanox/mlxreg-dpu.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 97eddcec8..b9be6c2b0 100644
+index 97eddcec8..c68a66269 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -26,6 +26,20 @@ config MLX_PLATFORM
+@@ -26,6 +26,19 @@ config MLX_PLATFORM
  
  	  If you have a Mellanox system, say Y or M here.
  
 +config MLXREG_DPU
 +	tristate "Nvidia Data Processor Unit platform driver support"
-+	depends on REGMAP
++	depends on REGMAP_I2C
 +	depends on HWMON
-+	depends on I2C
 +	help
 +	  This driver provides support for the Nvidia BF3 Data Processor Units,
 +	  which are the part of SN4280 Ethernet smart switch systems
@@ -71,10 +70,10 @@ index d46e5670e..cfcacc6a2 100644
  obj-$(CONFIG_MLXBF_PKA)         += mlxbf_pka/
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
 new file mode 100644
-index 000000000..f7c446e27
+index 000000000..6c1492b25
 --- /dev/null
 +++ b/drivers/platform/mellanox/mlxreg-dpu.c
-@@ -0,0 +1,586 @@
+@@ -0,0 +1,623 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia Data Processor Unit platform driver
@@ -113,14 +112,14 @@ index 000000000..f7c446e27
 +#define MLXREG_DPU_REG_MAX				0x3fff
 +
 +/* Power Good event masks. */
-+#define MLXREG_DPU_PG_DVDD_MASK				BIT(7)
-+#define MLXREG_DPU_PG_HVDD_MASK				BIT(6)
-+#define MLXREG_DPU_PG_VDDQ_MASK				BIT(5)
-+#define MLXREG_DPU_PG_COMPARATOR_MASK			BIT(4)
-+#define MLXREG_DPU_PG_1V8_MASK				BIT(3)
-+#define MLXREG_DPU_PG_VDD_MASK				BIT(2)
-+#define MLXREG_DPU_PG_VDD_CPU_MASK			BIT(1)
 +#define MLXREG_DPU_PG_VDDIO_MASK			BIT(0)
++#define MLXREG_DPU_PG_VDD_CPU_MASK			BIT(1)
++#define MLXREG_DPU_PG_VDD_MASK				BIT(2)
++#define MLXREG_DPU_PG_1V8_MASK				BIT(3)
++#define MLXREG_DPU_PG_COMPARATOR_MASK			BIT(4)
++#define MLXREG_DPU_PG_VDDQ_MASK				BIT(5)
++#define MLXREG_DPU_PG_HVDD_MASK				BIT(6)
++#define MLXREG_DPU_PG_DVDD_MASK				BIT(7)
 +#define MLXREG_DPU_PG_MASK				(MLXREG_DPU_PG_DVDD_MASK | \
 +							 MLXREG_DPU_PG_HVDD_MASK | \
 +							 MLXREG_DPU_PG_VDDQ_MASK | \
@@ -369,7 +368,6 @@ index 000000000..f7c446e27
 +		.reg = MLXREG_DPU_REG_PG_OFFSET,
 +		.mask = MLXREG_DPU_PG_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_power_events_items_data),
-+		.inversed = 0,
 +		.health = false,
 +	},
 +	{
@@ -378,7 +376,6 @@ index 000000000..f7c446e27
 +		.reg = MLXREG_DPU_REG_HEALTH_OFFSET,
 +		.mask = MLXREG_DPU_HEALTH_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_health_events_items_data),
-+		.inversed = 0,
 +		.health = false,
 +	},
 +};
@@ -491,6 +488,39 @@ index 000000000..f7c446e27
 +	.volatile_reg = mlxreg_dpu_volatile_reg,
 +};
 +
++static int mlxreg_dpu_copy_hotplug_data(struct device *dev, struct mlxreg_dpu *mlxreg_dpu,
++					struct mlxreg_core_hotplug_platform_data *hotplug_data)
++{
++	struct mlxreg_core_item *item;
++	int i;
++
++	mlxreg_dpu->hotplug_data = devm_kmemdup(dev, hotplug_data,
++						sizeof(*mlxreg_dpu->hotplug_data), GFP_KERNEL);
++	if (!mlxreg_dpu->hotplug_data)
++		return -ENOMEM;
++
++	mlxreg_dpu->hotplug_data->items = devm_kmemdup(dev, hotplug_data->items,
++						       mlxreg_dpu->hotplug_data->counter *
++						       sizeof(*hotplug_data->items),
++						       GFP_KERNEL);
++	if (!mlxreg_dpu->hotplug_data->items)
++		return -ENOMEM;
++
++	item = mlxreg_dpu->hotplug_data->items;
++	for (i = 0; i < mlxreg_dpu->hotplug_data->counter; i++, item++) {
++		item = devm_kmemdup(dev, &hotplug_data->items[i], sizeof(*item), GFP_KERNEL);
++		if (!item)
++			return -ENOMEM;
++		item->data = devm_kmemdup(dev, hotplug_data->items[i].data,
++					  hotplug_data->items[i].count * sizeof(item->data),
++					  GFP_KERNEL);
++		if (!item->data)
++			return -ENOMEM;
++	}
++
++	return 0;
++}
++
 +static int mlxreg_dpu_config_init(struct mlxreg_dpu *mlxreg_dpu, void *regmap,
 +				  struct mlxreg_core_data *data, int irq)
 +{
@@ -504,8 +534,14 @@ index 000000000..f7c446e27
 +		return err;
 +	switch (regval) {
 +	case MLXREG_DPU_BF3:
++		/* Copy platform specific hotplug data. */
++		err = mlxreg_dpu_copy_hotplug_data(dev, mlxreg_dpu,
++						   &mlxreg_dpu_default_hotplug_data);
++		if (err)
++			return err;
++
 +		mlxreg_dpu->io_data = &mlxreg_dpu_default_regs_io_data;
-+		mlxreg_dpu->hotplug_data = &mlxreg_dpu_default_hotplug_data;
++
 +		break;
 +	default:
 +		return -ENODEV;
