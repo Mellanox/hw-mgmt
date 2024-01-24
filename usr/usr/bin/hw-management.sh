@@ -108,7 +108,6 @@ dpu_bf3_pci_id=c2d5
 leakage_count=0
 leakage_rope_count=0
 asic_chipup_retry=2
-device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
 
@@ -2426,14 +2425,8 @@ connect_platform()
 	fi
 
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
-		for ((j=0; j<${device_connect_retry}; j++)); do
-			connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
-					"${connect_table[i+2]}"
-			if [ $? -eq 0 ]; then
-				break;
-			fi
-			disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
-		done
+		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
+				"${connect_table[i+2]}"
 	done
 }
 
