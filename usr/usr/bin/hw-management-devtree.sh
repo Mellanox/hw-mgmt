@@ -616,6 +616,7 @@ devtr_check_board_components()
 	local board_num=1
 	local board_bus_offset=0
 	local board_name_pfx=
+	local board_type=static
 #	local board_addr_offset=0
 
 	local comp_arr=($(echo "$board_str" | fold -w2))
@@ -690,6 +691,11 @@ devtr_check_board_components()
 				board_num=$(< $config_path/dpu_num)
 				board_name_pfx=dpu
 			fi
+			# Check if board and his components are "static", always available
+			# or they are "dynamic". I.e., board can powered-off / powered-on.
+			if [ -e "$config_path"/dpu_board_type ]; then
+				board_type=$(< $config_path/dpu_board_type)
+			fi
 			if [ -e "$config_path"/dpu_brd_bus_offset ]; then
 				board_bus_offset=$(< $config_path/dpu_brd_bus_offset)
 			fi
@@ -737,13 +743,18 @@ devtr_check_board_components()
 					if [ -z "${curr_component[0]}" ]; then
 						log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${t_cnt}"
 					else
-						echo -n "${curr_component[@]} " >> "$devtree_file"
+						if [ $board_num -gt 1 ]; then
+							board_name_str="${board_name}${n}"
+						else
+							board_name_str="$board_name"
+						fi
+						# Components of dynamic boards write to separate per board devtree file
+						if [ "${board_type}" == "dynamic" ]; then
+							echo -n "${curr_component[@]} " >> "$dynamic_boards_path"/"$board_name_str"
+						else
+							echo -n "${curr_component[@]} " >> "$devtree_file"
+						fi
 						if [ $devtr_verb_display -eq 1 ]; then
-							if [ $board_num -gt 1 ]; then
-								board_name_str="${board_name}${n}"
-							else
-								board_name_str="$board_name"
-							fi
 							log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
 							echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
 						fi
@@ -771,13 +782,18 @@ devtr_check_board_components()
 					if [ -z "${curr_component[0]}" ]; then
 						log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${r_cnt}"
 					else
-						echo -n "${curr_component[@]} " >> "$devtree_file"
+						if [ $board_num -gt 1 ]; then
+							board_name_str="${board_name}${n}"
+						else
+							board_name_str="$board_name"
+						fi
+						# Components of dynamic boards write to separate per board devtree file
+						if [ "${board_type}" == "dynamic" ]; then
+							echo -n "${curr_component[@]} " >> "$dynamic_boards_path"/"$board_name_str"
+						else
+							echo -n "${curr_component[@]} " >> "$devtree_file"
+						fi
 						if [ $devtr_verb_display -eq 1 ]; then
-							if [ $board_num -gt 1 ]; then
-								board_name_str="${board_name}${n}"
-							else
-								board_name_str="$board_name"
-							fi
 							log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
 							echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
 						fi

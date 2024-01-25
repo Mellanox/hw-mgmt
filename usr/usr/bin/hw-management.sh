@@ -1963,6 +1963,7 @@ p4262_specific()
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${p4262_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
 	fi
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
@@ -1980,7 +1981,6 @@ p4262_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4262_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1993,6 +1993,7 @@ p4300_specific()
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${p4300_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
 	fi
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
@@ -2010,7 +2011,6 @@ p4300_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4300_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -2104,19 +2104,16 @@ qm_qm3_common()
 
 smart_switch_common()
 {
-	if [ -e "$devtree_file" ]; then
-		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
-	else
+	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
-		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
-		lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
-		thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
-		named_busses+=(${smart_switch_named_busses[@]})
-		echo -n "${named_busses[@]}" > $config_path/named_busses
+		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
+		echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
 	fi
-	echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
-
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
+	named_busses+=(${smart_switch_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
 	max_tachos=4
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -2137,6 +2134,7 @@ p4977_ns_specific()
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${p4300_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
 	fi
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
@@ -2155,7 +2153,6 @@ p4977_ns_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4300_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -2499,6 +2496,9 @@ create_symbolic_links()
 		# Copy binaries to make them available for the access from containers.
 		cp /usr/bin/hw_management_independent_mode_update.py "$bin_path"
 	fi
+	if [ ! -d $dynamic_boards_path ]; then
+		mkdir $dynamic_boards_path
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
@@ -2740,6 +2740,7 @@ pre_devtr_init()
 		HI160)
 			echo 4 > "$config_path"/dpu_num
 			echo 1 > "$config_path"/dpu_brd_bus_offset
+			echo "dynamic" > "$config_path"/dpu_board_type
 			echo $smart_switch_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
 		*)
