@@ -554,6 +554,9 @@ function handle_hotplug_event()
 	local attribute
 	local event
 	local lc_path
+	local board_num
+	local board_name_str
+	local board_type=dynamic
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
 
@@ -571,19 +574,39 @@ function handle_hotplug_event()
 	fan*)
 		handle_hotplug_fan_event "$attribute" "$event"
 		;;
-	dpu*)
-		bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
-		bus_offset=$(< $config_path/dpu_bus_off)
-		bus=$((bus+bus_offset-1))
-		if [ "$attribute" == "dpu1_ready" ] || [ "$attribute" == "dpu2_ready" ] ||
-		   [ "$attribute" == "dpu3_ready" ] || [ "$attribute" == "dpu4_ready" ]; then
-			# Connect dynamic devices.
+	dpu*_ready)
+		# Connect dynamic devices.
+		if [ -e "$devtree_file" ]; then
+			if [ -e "$config_path"/dpu_board_type ]; then
+				board_type=$(< $config_path/dpu_board_type)
+			fi
+			if [ "$board_type" == "dynamic" ]; then
+				board_num=$(echo "$attribute" | grep -o -E '[0-9]+')
+				board_name_str=dpu_board${board_num}
+				connect_dynamic_board_devices "$board_name_str"
+			fi
+		else
+			bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
+			bus_offset=$(< $config_path/dpu_bus_off)
+			bus=$((bus+bus_offset-1))
 			connect_underlying_devices "$bus"
-
 		fi
-		if [ "$attribute" == "dpu1_shtdn_ready" ] || [ "$attribute" == "dpu2_shtdn_ready" ] ||
-		   [ "$attribute" == "dpu3_shtdn_ready" ] || [ "$attribute" == "dpu4_shtdn_ready" ]; then
-			# Disconnect dynamic devices.
+		;;
+	dpu*_shtdn_ready)
+		# Disconnect dynamic devices.
+		if [ -e "$devtree_file" ]; then
+			if [ -e "$config_path"/dpu_board_type ]; then
+				board_type=$(< $config_path/dpu_board_type)
+			fi
+			if [ "$board_type" == "dynamic" ]; then
+				board_num=$(echo "$attribute" | grep -o -E '[0-9]+')
+				board_name_str=dpu_board${board_num}
+				disconnect_dynamic_board_devices "$board_name_str"
+			fi
+		else
+			bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
+			bus_offset=$(< $config_path/dpu_bus_off)
+			bus=$((bus+bus_offset-1))
 			disconnect_underlying_devices "$bus"
 		fi
 		;;

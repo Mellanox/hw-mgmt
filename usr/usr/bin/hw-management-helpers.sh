@@ -46,6 +46,7 @@ jtag_path=$hw_management_path/jtag
 power_path=$hw_management_path/power
 fw_path=$hw_management_path/firmware
 bin_path=$hw_management_path/bin
+dynamic_boards_path=$config_path/dynamic_boards
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
 board_type_file=/sys/devices/virtual/dmi/id/board_name
@@ -677,5 +678,43 @@ disconnect_underlying_devices()
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$addr" > /sys/bus/i2c/devices/i2c-$bus/delete_device
 		fi
+	done
+}
+
+connect_dynamic_board_devices()
+{
+	local board_name="$1"
+	local device_connect_retry=2
+
+	if [ ! -f "$dynamic_boards_path"/"$board_name" ]; then
+		return
+	fi
+
+	declare -a board_connect_table=($(<"$dynamic_boards_path"/"$board_name"))
+
+	for ((i=0; i<${#board_connect_table[@]}; i+=4)); do
+		for ((j=0; j<${device_connect_retry}; j++)); do
+			connect_device "${board_connect_table[i]}" "${board_connect_table[i+1]}" \
+					"${board_connect_table[i+2]}"
+			if [ $? -eq 0 ]; then
+				break;
+			fi
+			disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
+		done
+	done
+}
+
+disconnect_dynamic_board_devices()
+{
+	local board_name="$1"
+
+	if [ ! -f "$dynamic_boards_path"/"$board_name" ]; then
+		return
+	fi
+
+	declare -a board_connect_table=($(<"$dynamic_boards_path"/"$board_name"))
+
+	for ((i=0; i<${#board_connect_table[@]}; i+=4)); do
+		disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
 	done
 }
