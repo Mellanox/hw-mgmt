@@ -2380,6 +2380,7 @@ class ThermalManagement(hw_managemet_file_op):
                           r'module\d*':"add_module_sensor",
                           r'cpu':"add_cpu_sensor",
                           r'voltmon\d+':"add_voltmon_sensor",
+                          r'swb\d+_voltmon\d+': "add_swb_voltmon_sensor",
                           r'asic\d+':"add_asic_sensor",
                           r'sodimm\d+':"add_sodimm_sensor",
                           r'sensor_amb':"add_amb_sensor",
@@ -3045,6 +3046,12 @@ class ThermalManagement(hw_managemet_file_op):
         in_file = "thermal/{}_temp1".format(name)
         sensor_name = "{}_temp".format(name)
         self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_swb_voltmon_sensor(self, name):
+        in_file = "thermal/{}_temp1".format(name)
+        sensor_name = "{}_temp".format(name)
+        self._sensor_add_config("thermal_sensor", sensor_name, {"type": "thermal_sensor", "base_file_name": in_file, "input_suffix": "_input"})
 
     # ----------------------------------------------------------------------
     def add_asic_sensor(self, name):
