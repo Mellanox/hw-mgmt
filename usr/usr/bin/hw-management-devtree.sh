@@ -68,6 +68,7 @@ declare -A comex_bdw_alternatives=(["mp2975_0"]="mp2975 0x61 15 comex_voltmon2" 
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A comex_cfl_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
+				   ["xdpe15284_0"]="xdpe15284 0x6b 15 comex_voltmon1" \
 				   ["max11603_0"]="max11603 0x6d 15 comex_a2d" \
 				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
@@ -243,20 +244,20 @@ declare -A qm3400_alternatives=( \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
-					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
-					 ["xdpe12284_1"]="xdpe12284 0x64 5 voltmon2" \
-					 ["xdpe12284_2"]="xdpe12284 0x66 5 voltmon3" \
-					 ["xdpe12284_3"]="xdpe12284 0x68 5 voltmon4" \
-					 ["xdpe12284_4"]="xdpe12284 0x6a 5 voltmon5" \
-					 ["xdpe12284_5"]="xdpe12284 0x6c 5 voltmon6" \
-					 ["xdpe12284_6"]="xdpe12284 0x6e 5 voltmon7" \
 					 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 					 ["mp2975_1"]="mp2975 0x64 5 voltmon2" \
 					 ["mp2975_2"]="mp2975 0x66 5 voltmon3" \
 					 ["mp2975_3"]="mp2975 0x6a 5 voltmon4" \
 					 ["mp2975_4"]="mp2975 0x6e 5 voltmon5" \
+					 ["xdpe15284_0"]="xdpe15284 0x62 5 voltmon1" \
+					 ["xdpe15284_1"]="xdpe15284 0x64 5 voltmon2" \
+					 ["xdpe15284_2"]="xdpe15284 0x66 5 voltmon3" \
+					 ["xdpe15284_3"]="xdpe15284 0x6a 5 voltmon4" \
+					 ["xdpe15284_4"]="xdpe15284 0x6e 5 voltmon5" \
 					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+					 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 					 ["24c512_0"]="24c512 0x51 8 vpd_info")
+
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
