@@ -406,6 +406,8 @@ Kernel-5.10
 |7071-net-mctp-hold-key-reference-when-looking-up-a-genera.patch  |                    | Downstream                               |            | MCTP                                           |
 |7072-net-mctp-mark-socks-as-dead-on-unhash-prevent-re-add.patch  |                    | Downstream                               |            | MCTP                                           |
 |7073-net-mctp-purge-receive-queues-on-sk-destruction.patch       |                    | Downstream                               |            | MCTP                                           |
+|7074-kernel-resource-Introduce-request_mem_region_muxed.patch    |                    | Downstream                               |            | MCTP                                           |
+|7075-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream                               |            | MCTP                                           |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream accepted                      |            |                                                |
