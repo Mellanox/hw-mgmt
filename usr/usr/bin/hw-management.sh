@@ -2740,7 +2740,7 @@ pre_devtr_init()
 		HI160)
 			echo 4 > "$config_path"/dpu_num
 			echo 1 > "$config_path"/dpu_brd_bus_offset
-			echo "dynamic" > "$config_path"/dpu_board_type
+			echo "static" > "$config_path"/dpu_board_type
 			echo $smart_switch_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
 		*)
