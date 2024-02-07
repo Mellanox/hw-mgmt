@@ -2558,6 +2558,7 @@ do_start()
 	depmod -a 2>/dev/null
 	set_config_data
 	udevadm trigger --action=add
+	udevadm settle
 	set_sodimm_temp_limits
 	set_jtag_gpio "export"
 	create_event_files
