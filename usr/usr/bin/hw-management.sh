@@ -829,16 +829,59 @@ set_jtag_gpio()
 	fi
 
 	if [ "$export_unexport" == "export" ]; then
-		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
-		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
-		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
-		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
+		check_n_link /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
+		check_n_link /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
+		check_n_link /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
+		check_n_link /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
 		if [ "$board_type" == "VMOD0014" ]; then
 			check_n_link /sys/class/gpio/gpio$gpio_mux_rst/value $system_path/mux_reset
 			check_n_link /sys/class/gpio/gpio$gpio_jtag_mux_en/value $jtag_path/jtag_mux_en
 			check_n_link /sys/class/gpio/gpio$gpio_jtag_enable/value $jtag_path/jtag_enable
 		fi
 	fi
+}
+
+set_gpios()
+{
+	local export_unexport=$1
+	gpiobase=
+
+	case $cpu_type in
+		$BDW_CPU|$CFL_CPU|$DNV_CPU)
+			set_jtag_gpio $1
+			return 1
+			;;
+		$AMD_SNW_CPU)
+			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(5 6 4 42)
+			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
+			;;
+		*)
+			return 1
+			;;
+	esac
+
+	for gpiochip in /sys/class/gpio/*; do
+		if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
+			gpiochip_label=$(<"$gpiochip"/label)
+			if [ "$gpiochip_label" == "$gpiolabel" ]; then
+				gpiobase=$(<"$gpiochip"/base)
+				break
+			fi
+		fi
+	done
+	if [ -z "$gpiobase" ]; then
+		return 1
+	fi
+
+	for ((i=0; i<${#gpio_idx[@]}; i+=1)); do
+		gpionum=$((gpiobase+${gpio_idx[$i]}))
+		echo $gpionum > /sys/class/gpio/export
+		if [ "$export_unexport" == "export" ]; then
+			check_n_link /sys/class/gpio/gpio$gpionum/value $system_path/"${gpio_names[$i]}"
+		fi
+	done
 }
 
 
@@ -2832,7 +2875,7 @@ do_start()
 	set_config_data
 	udevadm trigger --action=add
 	set_sodimm_temp_limits
-	set_jtag_gpio "export"
+	set_gpios "export"
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
@@ -2883,7 +2926,7 @@ do_stop()
 		check_system
 	fi
 	disconnect_platform
-	set_jtag_gpio "unexport"
+	set_gpios "unexport"
 	rm -fR /var/run/hw-management
 	# Re-try removing after 1 second in case of failure.
 	# It can happens if some app locked file for reading/writing
