@@ -549,6 +549,26 @@ function handle_hotplug_fan_event()
 	fi
 }
 
+function handle_hotplug_dpu_event()
+{
+    local dpu_i2c_path
+    local slot_num
+    local event
+    local attribute
+    local dpu_event_path
+
+    attribute=$(echo "$1" | awk '{print tolower($0)}')
+    event=$2
+    dpu_i2c_path=$(echo "$3""$4" | rev | cut -d'/' -f4- | rev)
+    slot_num=$(find_dpu_slot "$dpu_i2c_path")
+    dpu_event_path="$hw_management_path"/dpu"$slot_num"/events/"$attribute"
+
+    if [ -f "${dpu_event_path}" ]; then
+        echo "$event" > "${dpu_event_path}"
+        log_info "Event ${event} is received for DPU: ${slot_num} attribute ${attribute}"
+    fi
+}
+
 function handle_hotplug_event()
 {
 	local attribute
@@ -1235,6 +1255,12 @@ elif [ "$1" == "hotplug-event" ]; then
 		exit 0
 	fi
 	handle_hotplug_event "${2}" "${3}"
+elif [ "$1" == "hotplug-dpu-event" ]; then
+	# Don't process udev events until service is started and directories are created
+	if [ ! -f ${udev_ready} ]; then
+		exit 0
+	fi
+	handle_hotplug_dpu_event "${2}" "${3}" "${4}" "${5}"
 elif [ "$1" == "fantray-led-event" ]; then
 	# Don't process udev events until service is started and directories are created.
 	if [ ! -f "${udev_ready}" ]; then
