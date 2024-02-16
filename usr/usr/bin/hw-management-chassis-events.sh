@@ -594,7 +594,7 @@ function handle_hotplug_event()
 	fan*)
 		handle_hotplug_fan_event "$attribute" "$event"
 		;;
-	dpu*_ready)
+	dpu[1-8]_ready)
 		# Connect dynamic devices.
 		if [ -e "$devtree_file" ]; then
 			if [ -e "$config_path"/dpu_board_type ]; then
@@ -612,7 +612,7 @@ function handle_hotplug_event()
 			connect_underlying_devices "$bus"
 		fi
 		;;
-	dpu*_shtdn_ready)
+	dpu[1-8]_shtdn_ready)
 		# Disconnect dynamic devices.
 		if [ -e "$devtree_file" ]; then
 			if [ -e "$config_path"/dpu_board_type ]; then
