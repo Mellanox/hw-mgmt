@@ -818,7 +818,8 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Allow PS controller to stabilize
-		sleep 2
+		retry_helper "ls" 0.2 20 "$2 takes too long to init" "$5""$3"/in1_input
+		sleep 1
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
 		# Set default fan speed
