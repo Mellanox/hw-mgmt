@@ -1,8 +1,7 @@
-From 0bebfb2b2fc82f06b0b55a577e3b908e5d22be53 Mon Sep 17 00:00:00 2001
+From 97d202e03b4706a87eabef370272cbb45c902c1e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 4 Dec 2023 07:12:52 +0000
-Subject: [PATCH backport 5.10 2/9] platform/mellanox: mlxreg-dpu: Add initial
- support for Nvidia DPU
+Subject: platform/mellanox: mlxreg-dpu: Add initial support for Nvidia DPU
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -28,8 +27,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/platform/mellanox/Kconfig      |  13 +
  drivers/platform/mellanox/Makefile     |   1 +
- drivers/platform/mellanox/mlxreg-dpu.c | 623 +++++++++++++++++++++++++
- 3 files changed, 637 insertions(+)
+ drivers/platform/mellanox/mlxreg-dpu.c | 625 +++++++++++++++++++++++++++++++++
+ 3 files changed, 639 insertions(+)
  create mode 100644 drivers/platform/mellanox/mlxreg-dpu.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
@@ -70,10 +69,10 @@ index d46e5670e..cfcacc6a2 100644
  obj-$(CONFIG_MLXBF_PKA)         += mlxbf_pka/
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
 new file mode 100644
-index 000000000..6c1492b25
+index 000000000..a61c13647
 --- /dev/null
 +++ b/drivers/platform/mellanox/mlxreg-dpu.c
-@@ -0,0 +1,623 @@
+@@ -0,0 +1,625 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia Data Processor Unit platform driver
@@ -369,6 +368,7 @@ index 000000000..6c1492b25
 +		.mask = MLXREG_DPU_PG_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_power_events_items_data),
 +		.health = false,
++		.inversed = 1,
 +	},
 +	{
 +		.data = mlxreg_dpu_health_events_items_data,
@@ -377,6 +377,7 @@ index 000000000..6c1492b25
 +		.mask = MLXREG_DPU_HEALTH_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_health_events_items_data),
 +		.health = false,
++		.inversed = 1,
 +	},
 +};
 +
@@ -698,5 +699,5 @@ index 000000000..6c1492b25
 +MODULE_ALIAS("platform:mlxreg-dpu");
 +
 -- 
-2.20.1
+2.14.1
 
