@@ -110,6 +110,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/virtual/thermal/thermal_zone*/hwmon*", AC
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/i2c-*/*-001*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sodimm_temp %p %k %S %n"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/i2c-*/*-001*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sodimm_temp %p %k %S %n"
 
+# QEMU SODIMM temp
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/*-001*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sodimm_temp %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/*-001*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sodimm_temp %p %k %S %n"
+
 # NVME temp
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon/hwmon*", DRIVERS=="nvme", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add nvme_temp %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:*/0000:*:*.*/*:*:*.*/hwmon*", DRIVERS=="nvme", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add nvme_temp %S %p"
