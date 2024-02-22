@@ -533,7 +533,6 @@ qm3000_base_connect_table=( \
 # Just for possible initial step without SMBios alternative BOM string
 p4300_base_connect_table=( \
 	lm5066 0x40 4 \
-	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
 	adt75 0x4b 7 \

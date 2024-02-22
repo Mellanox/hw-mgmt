@@ -202,17 +202,17 @@ declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["24c512_0"]="24c512 0x51 8 vpd_info" \
 			       ["24c512_1"]="24c512 0x52 8 ipmi_eeprom")
 
-# TBD version: V0-C*A0RaEi-S*TcTcTcTcTcTcTcTcA0EiEi-P*HaEaEa
-declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x48 7 fiol_amb" \
-			       ["adt75_1"]="adt75 0x49 7 bpl_amb" \
-			       ["adt75_2"]="adt75 0x4a 7 fiom_amb" \
-			       ["adt75_3"]="adt75 0x4b 7 bpm_amb" \
-			       ["adt75_4"]="adt75 0x4c 7 fiob_amb" \
-			       ["adt75_5"]="adt75 0x4d 7 bpb_amb" \
-			       ["adt75_6"]="adt75 0x4e 7 fior_amb" \
-			       ["adt75_7"]="adt75 0x4f 7 bpr_amb" \
+# TBD version: V0-C*A0RaEi-S*TcTcTcTcTcTcTcA0EiEiEi-P*HaEaEa
+declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x49 7 bpl_amb" \
+			       ["adt75_1"]="adt75 0x4a 7 fiom_amb" \
+			       ["adt75_2"]="adt75 0x4b 7 bpm_amb" \
+			       ["adt75_3"]="adt75 0x4c 7 fiol_amb" \
+			       ["adt75_4"]="adt75 0x4d 7 bpb_amb" \
+			       ["adt75_5"]="adt75 0x4e 7 fior_amb" \
+			       ["adt75_6"]="adt75 0x4f 7 bpr_amb" \
 			       ["24c512_0"]="24c512 0x51 8 vpd_info"\
-			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom")
+			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom" \
+			       ["24c512_2"]="24c512 0x56 6 fio_info")
 
 declare -A qm3000_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
