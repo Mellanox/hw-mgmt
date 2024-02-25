@@ -775,6 +775,10 @@ if [ "$1" == "add" ]; then
 				sodimm2_addr='001a'
 			;;
 			$AMD_SNW_CPU)
+				sodimm1_addr='001a'
+				sodimm2_addr='001b'
+				sodimm3_addr='001e'
+				sodimm4_addr='001f'
 			;;
 			*)
 				exit 0
@@ -788,6 +792,12 @@ if [ "$1" == "add" ]; then
 			;;
 			$sodimm2_addr)
 				sodimm_name=sodimm2_temp
+			;;
+			$sodimm3_addr)
+				sodimm_name=sodimm3_temp
+			;;
+			$sodimm4_addr)
+				sodimm_name=sodimm4_temp
 			;;
 			*)
 				exit 0
