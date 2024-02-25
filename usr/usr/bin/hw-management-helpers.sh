@@ -146,6 +146,7 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 
 log_err()
 {
