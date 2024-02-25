@@ -537,7 +537,6 @@ qm3000_base_connect_table=( \
 # Just for possible initial step without SMBios alternative BOM string
 p4300_base_connect_table=( \
 	lm5066 0x40 4 \
-	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
 	adt75 0x4b 7 \
@@ -2772,6 +2771,39 @@ set_dpu_pci_id()
 	return
 }
 
+# DIMM Temp sensor driver jc42 doesn't probe/find sodimm_ts on AMD platform
+# Check and add availab
+set_sodimms()
+{
+	local i2c_dir
+	local i2c_bus
+	amd_snw_sodimm_ts_addr=(0x1a 0x1b 0x1e 0x1f)
+
+	if [ "$cpu_type" != "$AMD_SNW_CPU" ]; then
+		return 0
+	fi
+
+	if ! lsmod | grep -q i2c_designware_platform; then
+		modprobe i2c_designware_platform
+		sleep 0.5
+	fi
+
+	i2c_dir=$(ls -1d "$amd_snw_i2c_sodimm_dev"/i2c-*)
+	i2c_bus="${i2c_dir##*-}"
+	if [ -z "$i2c_bus" ]; then
+		log_err "Error: I2C bus of SODIMMs TS isn't found."
+		return 1
+	fi
+
+	for ((i=0; i<${#amd_snw_sodimm_ts_addr[@]}; i+=1)); do
+		j=$(echo ${amd_snw_sodimm_ts_addr[$i]} | cut -b 3-)
+		i2cdetect -y -a -r 0 ${amd_snw_sodimm_ts_addr[$i]} ${amd_snw_sodimm_ts_addr[$i]} | grep -qi $j
+		if [ $? -eq 0 ]; then
+			echo "jc42" "${amd_snw_sodimm_ts_addr[$i]}" > /sys/bus/i2c/devices/i2c-$i2c_bus/new_device
+		fi
+	done
+}
+
 pre_devtr_init()
 {
 	case $board_type in
@@ -2865,6 +2897,7 @@ do_start()
 	check_system
 	set_asic_pci_id
 	set_dpu_pci_id
+	set_sodimms
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
