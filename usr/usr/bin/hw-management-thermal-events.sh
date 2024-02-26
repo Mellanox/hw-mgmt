@@ -57,6 +57,9 @@ fan_drwr_num=0
 fan_direction_exhaust=46
 fan_direction_intake=52
 pwm_min_level=51
+# AMD Epyc3000 CPU temperatures (C) in scale 1000
+AMD_SNW_TEMP_CRIT=100000
+AMD_SNW_TEMP_MAX=95000
 
 FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 
@@ -741,6 +744,24 @@ if [ "$1" == "add" ]; then
 				check_n_link "$3""$4"/temp"$i"_crit $thermal_path/cpu_"$name"_crit
 				check_n_link "$3""$4"/temp"$i"_max $thermal_path/cpu_"$name"_max
 				check_n_link "$3""$4"/temp"$i"_crit_alarm $alarm_path/cpu_"$name"_crit_alarm
+			fi
+		done
+	fi
+	# AMD CPU provides Temp control input for every die and real die temperature input
+	# just for main die 0. Find die temp and process it as Intel CPU pack.
+	# Put constants to crit and max as AMD k10temp driver doesn't provide these inputs.
+	if [ "$2" == "cputemp_amd" ]; then
+		for file in "$3""$4"/*; do
+			if ls "$file" | grep -q "label" ; then
+				label_name=$(cat "$file")
+				if [ "$label_name" == "Tccd1" ]; then
+					fname="${file##*/}"
+					idx=${fname:4:1}
+					check_n_link "$3""$4"/temp"$idx"_input $thermal_path/cpu_pack
+					echo "$AMD_SNW_TEMP_MAX" > $thermal_path/cpu_pack_max
+					echo "$AMD_SNW_TEMP_CRIT" > $thermal_path/cpu_pack_crit
+					break
+				fi
 			fi
 		done
 	fi
