@@ -595,39 +595,43 @@ function handle_hotplug_event()
 		handle_hotplug_fan_event "$attribute" "$event"
 		;;
 	dpu[1-8]_ready)
-		# Connect dynamic devices.
-		if [ -e "$devtree_file" ]; then
-			if [ -e "$config_path"/dpu_board_type ]; then
-				board_type=$(< $config_path/dpu_board_type)
+		if [ "$event" -eq 1 ]; then
+			# Connect dynamic devices.
+			if [ -e "$devtree_file" ]; then
+				if [ -e "$config_path"/dpu_board_type ]; then
+					board_type=$(< $config_path/dpu_board_type)
+				fi
+				if [ "$board_type" == "dynamic" ]; then
+					board_num=$(echo "$attribute" | grep -o -E '[0-9]+')
+					board_name_str=dpu_board${board_num}
+					connect_dynamic_board_devices "$board_name_str"
+				fi
+			else
+				bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
+				bus_offset=$(< $config_path/dpu_bus_off)
+				bus=$((bus+bus_offset-1))
+				connect_underlying_devices "$bus"
 			fi
-			if [ "$board_type" == "dynamic" ]; then
-				board_num=$(echo "$attribute" | grep -o -E '[0-9]+')
-				board_name_str=dpu_board${board_num}
-				connect_dynamic_board_devices "$board_name_str"
-			fi
-		else
-			bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
-			bus_offset=$(< $config_path/dpu_bus_off)
-			bus=$((bus+bus_offset-1))
-			connect_underlying_devices "$bus"
 		fi
 		;;
 	dpu[1-8]_shtdn_ready)
-		# Disconnect dynamic devices.
-		if [ -e "$devtree_file" ]; then
-			if [ -e "$config_path"/dpu_board_type ]; then
-				board_type=$(< $config_path/dpu_board_type)
+		if [ "$event" -eq 1 ]; then
+			# Disconnect dynamic devices.
+			if [ -e "$devtree_file" ]; then
+				if [ -e "$config_path"/dpu_board_type ]; then
+					board_type=$(< $config_path/dpu_board_type)
+				fi
+				if [ "$board_type" == "dynamic" ]; then
+					board_num=$(echo "$attribute" | grep -o -E '[0-9]+')
+					board_name_str=dpu_board${board_num}
+					disconnect_dynamic_board_devices "$board_name_str"
+				fi
+			else
+				bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
+				bus_offset=$(< $config_path/dpu_bus_off)
+				bus=$((bus+bus_offset-1))
+				disconnect_underlying_devices "$bus"
 			fi
-			if [ "$board_type" == "dynamic" ]; then
-				board_num=$(echo "$attribute" | grep -o -E '[0-9]+')
-				board_name_str=dpu_board${board_num}
-				disconnect_dynamic_board_devices "$board_name_str"
-			fi
-		else
-			bus=$(echo $attribute | cut  -d"_" -f1 | cut -c 4-)
-			bus_offset=$(< $config_path/dpu_bus_off)
-			bus=$((bus+bus_offset-1))
-			disconnect_underlying_devices "$bus"
 		fi
 		;;
 	*)
@@ -1170,8 +1174,12 @@ if [ "$1" == "add" ]; then
 		pdb_eeprom)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
-		cable_cartridge_eeprom)
-			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/cable_cartridge_data
+		cable_cartridge*_eeprom)
+			eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
+			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
+			;;
+		fio_info)
+			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/fio_data
 			;;
 		*)
 			;;
