@@ -1,4 +1,4 @@
-From 924e8d9c602a4059672747118f77fa28daa8365b Mon Sep 17 00:00:00 2001
+From 1ffb1c6f0a5d71f35e727ff228dc08b065c084c1 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 7 Dec 2023 20:43:29 +0000
 Subject: [PATCH v6.1 02/16] platform: mellanox: Introduce support of Nvidia
@@ -23,11 +23,11 @@ activation of the required platform drivers.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 937 +++++++++++++++++++++--
+ drivers/platform/mellanox/mlx-platform.c | 937 ++++++++++++++++++++++++++++---
  1 file changed, 870 insertions(+), 67 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index cafa4f762672..2c893410bd4d 100644
+index cafa4f762672..4b34af4d1a31 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -39,6 +39,7 @@
@@ -693,16 +693,10 @@ index cafa4f762672..2c893410bd4d 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "bios_auth_fail",
-+		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(6),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "bios_upgrade_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
-+		.mode = 0444,
++		.mode = 0644,
 +	},
 +	{
 +		.label = "vpd_wp",
@@ -794,6 +788,12 @@ index cafa4f762672..2c893410bd4d 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE,
 +		.mask = GENMASK(1, 0),
 +		.bit = 1,
++		.mode = 0644,
++	},
++	{
++		.label = "non_active_bios_select",
++		.reg = MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0644,
 +	},
 +	{
@@ -1254,5 +1254,5 @@ index cafa4f762672..2c893410bd4d 100644
  		platform_device_unregister(priv->pdev_wd[i]);
  	if (priv->pdev_fan)
 -- 
-2.20.1
+2.14.1
 
