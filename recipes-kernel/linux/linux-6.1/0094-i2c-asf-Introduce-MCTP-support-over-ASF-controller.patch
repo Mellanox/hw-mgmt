@@ -1,7 +1,8 @@
-From 6d29454b5c5a4323060d39ce8d3f1152690ffcbc Mon Sep 17 00:00:00 2001
+From 4869f448e1c09fff47290505daa231aa5711b134 Mon Sep 17 00:00:00 2001
 From: amlakshm <AmmuThivya.LakshmiS@amd.com>
 Date: Tue, 30 Jan 2024 14:18:35 +0530
-Subject: [PATCH v6.1 1/1] i2c: asf: Introduce MCTP support over ASF controller
+Subject: [PATCH backport 6.1 1/1] i2c: asf: Introduce MCTP support over ASF
+ controller
 
 Provide driver for AMD ASF controller working as SMBus
 master and slave.
@@ -11,8 +12,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/i2c/busses/Kconfig   |  10 +
  drivers/i2c/busses/Makefile  |   1 +
- drivers/i2c/busses/i2c-asf.c | 937 +++++++++++++++++++++++++++++++++++
- 3 files changed, 948 insertions(+)
+ drivers/i2c/busses/i2c-asf.c | 934 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 945 insertions(+)
  create mode 100644 drivers/i2c/busses/i2c-asf.c
 
 diff --git a/drivers/i2c/busses/Kconfig b/drivers/i2c/busses/Kconfig
@@ -50,10 +51,10 @@ index e73cdb1d2b5a..3f4914c703c2 100644
  obj-$(CONFIG_I2C_CROS_EC_TUNNEL)	+= i2c-cros-ec-tunnel.o
 diff --git a/drivers/i2c/busses/i2c-asf.c b/drivers/i2c/busses/i2c-asf.c
 new file mode 100644
-index 000000000000..a78d7c174f67
+index 000000000000..c3d8ce2b6027
 --- /dev/null
 +++ b/drivers/i2c/busses/i2c-asf.c
-@@ -0,0 +1,937 @@
+@@ -0,0 +1,934 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + *  Copyright (c) 1998 - 2002 Frodo Looijaard <frodol@dds.nl> and
@@ -194,16 +195,18 @@ index 000000000000..a78d7c174f67
 +	u8 data[72], val = 0, cmd, reg_datab_sel, reg_sta, count;
 +	int nextdatabank, databank0status, databank1status;
 +	unsigned short asf_smba = adapdata->smba;
++	unsigned long flags;
 +	int i = 0;
 +
++	spin_lock_irqsave(&asf_spinlock, flags);
 +	reg_sta = inb_p(ASFSTA);
-+	if ((reg_sta & 0x40) == 0)
++	if ((reg_sta & 0x40) == 0) {
++		spin_unlock_irqrestore(&asf_spinlock, flags);
 +		return 0;
-+
++	}
 +	outb_p(reg_sta | 0x40, ASFSTA);
 +
-+	while (inb_p(ASFSTA) & 0x80)
-+		;
++	while (inb_p(ASFSTA) & 0x80);
 +
 +	reg_datab_sel = inb_p(ASFDATABNKSEL);
 +	databank0status = (reg_datab_sel & BIT(2)) >> 2;
@@ -219,8 +222,8 @@ index 000000000000..a78d7c174f67
 +					reg_datab_sel = reg_datab_sel | BIT(4);
 +					reg_datab_sel = reg_datab_sel & ~BIT(3);
 +					outb_p(reg_datab_sel, ASFDATABNKSEL);
-+					while (!(inb_p(ASFDATABNKSEL) & 0x10))
-+						;
++					while(!(inb_p(ASFDATABNKSEL) & 0x10));
++
 +					cmd = inb_p(ASFINDEX);
 +					count = inb_p(0x11 + asf_smba);
 +					for (i = 0; i < count; i++)
@@ -231,14 +234,13 @@ index 000000000000..a78d7c174f67
 +					reg_datab_sel = reg_datab_sel & ~BIT(4);
 +					reg_datab_sel = reg_datab_sel & ~BIT(2);
 +					outb_p(reg_datab_sel, ASFDATABNKSEL);
-+					while (inb_p(ASFDATABNKSEL) & 0x10)
-+						;
++					while((inb_p(ASFDATABNKSEL) & 0x10));
 +
 +					cmd = inb_p(ASFINDEX);
 +					count = inb_p(0x11 + asf_smba);
 +					for (i = 0; i < count; i++)
 +						data[i] = inb_p(ASFINDEX);
-+					reg_datab_sel = reg_datab_sel | (BIT(2));
++					reg_datab_sel = reg_datab_sel | BIT(2);
 +					outb_p(reg_datab_sel, ASFDATABNKSEL);
 +				}
 +			} else if (((databank0status == 1) && (databank1status == 1))) {
@@ -267,8 +269,9 @@ index 000000000000..a78d7c174f67
 +	}
 +	outb_p(0, 0x12 + asf_smba);
 +	outb_p(0xF, ASFSLVSTA);
++	spin_unlock_irqrestore(&asf_spinlock, flags);
 +
-+	if (!(cmd & 1)) {
++	if ((cmd & 1) == 0) {
 +		i2c_slave_event(adapdata->slave, I2C_SLAVE_WRITE_REQUESTED, &val);
 +		for (i = 0; i < count; i++) {
 +			val = data[i];
@@ -282,11 +285,8 @@ index 000000000000..a78d7c174f67
 +static void slave_event_timer(struct timer_list *t)
 +{
 +	struct i2c_asf_adapdata *adapdata = from_timer(adapdata, t, slave_timer);
-+	unsigned long flags;
 +
-+	spin_lock_irqsave(&asf_spinlock, flags);
 +	asf_slave_process(adapdata);
-+	spin_unlock_irqrestore(&asf_spinlock, flags);
 +
 +	mod_timer(&adapdata->slave_timer, jiffies + msecs_to_jiffies(100));
 +}
@@ -495,11 +495,11 @@ index 000000000000..a78d7c174f67
 +	outb_p(inb(SMBHSTCNT) | 0x040, SMBHSTCNT);
 +
 +	/* We will always wait for a fraction of a second! (See ASF docs errata) */
-+	usleep_range(250, 300);
++	udelay(250);
 +
-+	temp = inb_p(SMBHSTSTS);
-+	while ((++timeout < MAX_TIMEOUT) && (temp & 0x01))
-+		usleep_range(250, 300);
++	while ((++timeout < MAX_TIMEOUT) &&
++	       ((temp = inb_p(SMBHSTSTS)) & 0x01))
++		udelay(250);
 +
 +	/* If the SMBus is still busy, we give up */
 +	if (timeout == MAX_TIMEOUT) {
@@ -668,14 +668,11 @@ index 000000000000..a78d7c174f67
 +	int reg, retval;
 +	u8 prev_port;
 +
-+	spin_lock_irqsave(&asf_spinlock, lock_flags);
-+
 +	retval = asf_sb800_region_request(&adap->dev, &adapdata->mmio_cfg);
-+	if (retval) {
-+		spin_unlock_irqrestore(&asf_spinlock, lock_flags);
++	if (retval)
 +		return retval;
-+	}
 +
++	spin_lock_irqsave(&asf_spinlock, lock_flags);
 +	reg = inb_p(ASFSLVEN);
 +	reg = reg | (BIT(4));
 +	outb_p(reg, ASFSLVEN);
@@ -705,9 +702,9 @@ index 000000000000..a78d7c174f67
 +	reg = inb(SMBHSTCNT);
 +	reg = reg | BIT(7) | BIT(5);
 +	outb_p(reg, SMBHSTCNT);
++	spin_unlock_irqrestore(&asf_spinlock, lock_flags);
 +	asf_sb800_region_release(&adap->dev, &adapdata->mmio_cfg);
 +
-+	spin_unlock_irqrestore(&asf_spinlock, lock_flags);
 +	return retval;
 +}
 +
@@ -755,20 +752,19 @@ index 000000000000..a78d7c174f67
 +static int asf_reg_slave(struct i2c_client *slave)
 +{
 +	struct i2c_asf_adapdata *adapdata = i2c_get_adapdata(slave->adapter);
-+	u8 reg;
-+	int retval, config_reg;
 +	unsigned short asf_smba = adapdata->smba;
++	int retval, config_reg;
 +	unsigned long flags;
++	u8 reg;
 +
 +	if (adapdata->slave)
 +		return -EBUSY;
 +
-+	spin_lock_irqsave(&asf_spinlock, flags);
 +	retval = asf_sb800_region_request(&slave->dev, &adapdata->mmio_cfg);
-+	if (retval) {
-+		spin_unlock_irqrestore(&asf_spinlock, flags);
++	if (retval)
 +		return retval;
-+	}
++
++        spin_lock_irqsave(&asf_spinlock, flags);
 +
 +	reg = (slave->addr << 1) | 1;
 +	outb_p(reg, ASFLISADDR);
@@ -792,11 +788,12 @@ index 000000000000..a78d7c174f67
 +	config_reg = config_reg & (~BIT(16));
 +	config_reg = config_reg | (BIT(17));
 +	iowrite32(config_reg, adapdata->mmio_cfg.addr);
++	spin_unlock_irqrestore(&asf_spinlock, flags);
 +	asf_sb800_region_release(&slave->dev, &adapdata->mmio_cfg);
 +
 +	timer_setup(&adapdata->slave_timer, slave_event_timer, 0);
 +	mod_timer(&adapdata->slave_timer, jiffies + HZ);
-+	spin_unlock_irqrestore(&asf_spinlock, flags);
++
 +	return 0;
 +}
 +
@@ -812,6 +809,7 @@ index 000000000000..a78d7c174f67
 +	outb_p(reg, ASFSLVEN);
 +
 +	adapdata->slave = NULL;
++	del_timer_sync(&adapdata->slave_timer);
 +	return 0;
 +}
 +
