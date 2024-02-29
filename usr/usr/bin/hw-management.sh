@@ -105,6 +105,9 @@ nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 dpu_bf3_pci_id=c2d5
+# Need to get the correct PCI bus numbers for DPUs
+dpu_pci_addr_amd=(03:00.0 04:00.0 05:00.0 09:00.0)
+dpu_pci_addr_cfl=(01:00.0 02:00.0 06:00.0 08:00.0)
 leakage_count=0
 leakage_rope_count=0
 asic_chipup_retry=2
@@ -533,7 +536,6 @@ qm3000_base_connect_table=( \
 # Just for possible initial step without SMBios alternative BOM string
 p4300_base_connect_table=( \
 	lm5066 0x40 4 \
-	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
 	adt75 0x4b 7 \
@@ -2710,6 +2712,12 @@ set_asic_pci_id()
 
 set_dpu_pci_id()
 {
+	local dpu_pci_addr=()
+	local cpu_type=$(cat $config_path/cpu_type)
+	local total_dpu_num
+	local idx=0
+	local element
+
 	# Get DPU PCI Ids.
 	case $sku in
 	HI160)
@@ -2725,14 +2733,30 @@ set_dpu_pci_id()
 
 	case $sku in
 	HI160)
-		dpu1_pci_bus_id=`echo $dpus | awk '{print $1}'`
-		dpu2_pci_bus_id=`echo $dpus | awk '{print $2}'`
-		dpu3_pci_bus_id=`echo $dpus | awk '{print $3}'`
-		dpu4_pci_bus_id=`echo $dpus | awk '{print $4}'`
-		echo "$dpu1_pci_bus_id" > "$config_path"/dpu1_pci_bus_id
-		echo "$dpu2_pci_bus_id" > "$config_path"/dpu2_pci_bus_id
-		echo "$dpu3_pci_bus_id" > "$config_path"/dpu3_pci_bus_id
-		echo "$dpu4_pci_bus_id" > "$config_path"/dpu4_pci_bus_id
+		case $cpu_type in
+		$CFL_CPU)
+			dpu_pci_addr+=( ${dpu_pci_addr_cfl[@]} )
+			;;
+		$AMD_SNW_CPU)
+			dpu_pci_addr+=( ${dpu_pci_addr_amd[@]} )
+			;;
+		*)
+			return
+			;;
+		esac
+
+		total_dpu_num=${#dpu_pci_addr[@]}
+		echo "$total_dpu_num" > "$config_path"/dpu_detected_num
+
+		while [ $idx -lt $total_dpu_num ]; do
+			element="${dpu_pci_addr[$idx]}"
+			if echo "$dpus" | grep -q -w "$element"; then
+				echo "$element" > "$config_path"/dpu$((idx+1))_pci_bus_id
+			else
+				echo "" > "$config_path"/dpu$((idx+1))_pci_bus_id
+			fi
+			idx=$((idx + 1))
+		done
 		;;
 	*)
 		;;

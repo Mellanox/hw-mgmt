@@ -1,4 +1,4 @@
-From 045e18774a4862c0547dd097ab79e1c6aca6c7a6 Mon Sep 17 00:00:00 2001
+From 3c2735f1330f3dd30bfdfc462d479c585711f82d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 7 Dec 2023 20:43:29 +0000
 Subject: [PATCH backport 5.10 3/9] platform: mellanox: Introduce support of
@@ -23,11 +23,11 @@ activation of the required platform drivers.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 937 +++++++++++++++++++++--
+ drivers/platform/mellanox/mlx-platform.c | 937 ++++++++++++++++++++++++++++---
  1 file changed, 870 insertions(+), 67 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 7a544ec3c..85f909e2b 100644
+index 7a544ec3c..5f77b71c8 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -40,6 +40,7 @@
@@ -693,16 +693,10 @@ index 7a544ec3c..85f909e2b 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "bios_auth_fail",
-+		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(6),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "bios_upgrade_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
-+		.mode = 0444,
++		.mode = 0644,
 +	},
 +	{
 +		.label = "vpd_wp",
@@ -794,6 +788,12 @@ index 7a544ec3c..85f909e2b 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE,
 +		.mask = GENMASK(1, 0),
 +		.bit = 1,
++		.mode = 0644,
++	},
++	{
++		.label = "non_active_bios_select",
++		.reg = MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0644,
 +	},
 +	{
@@ -1254,5 +1254,5 @@ index 7a544ec3c..85f909e2b 100644
  		platform_device_unregister(priv->pdev_wd[i]);
  	if (priv->pdev_fan)
 -- 
-2.20.1
+2.14.1
 
