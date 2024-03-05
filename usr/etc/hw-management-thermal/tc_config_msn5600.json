@@ -11,7 +11,7 @@
 				"present": {"-127:120": 30},
 				"direction": {"-127:120": 30}
 			},
-			"sensor_read_error" : {"-127:120": 30}
+			"sensor_read_error" : {"-127:120": 80}
 		},
 		"P2C": {
 			"fan_err": {
@@ -23,7 +23,7 @@
 				"present": {"-127:120": 30},
 				"direction": {"-127:120": 30}
 			},
-			"sensor_read_error" : {"-127:120": 30}
+			"sensor_read_error" : {"-127:120": 80}
 		}
 	},
 	"psu_fan_pwm_decode" : {"0:100": -1},
