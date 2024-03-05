@@ -1116,6 +1116,8 @@ if [ "$1" == "add" ]; then
 					echo 0 > $thermal_path/"${fan_prefix}"_dir
 					;;
 				*)
+					# Unknown FAN dir
+					echo 2 > $thermal_path/"${fan_prefix}"_dir
 					;;
 				esac
 			fi
