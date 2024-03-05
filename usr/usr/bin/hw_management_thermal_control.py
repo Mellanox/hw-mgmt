@@ -3168,7 +3168,8 @@ class ThermalManagement(hw_managemet_file_op):
 
         while self.obj_init_continue:
             self.obj_init_continue = False
-            for key, _ in self.sys_config[CONST.SYS_CONF_SENSORS_CONF].items():
+            sys_config = dict(self.sys_config[CONST.SYS_CONF_SENSORS_CONF])
+            for key, _ in sys_config.items():
                 dev_obj = self._add_dev_obj(key)
                 if not dev_obj:
                     self.log.error("{} create failed".format(key))
