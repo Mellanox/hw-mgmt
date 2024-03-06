@@ -2683,8 +2683,8 @@ set_asic_pci_id()
 	HI157)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
-		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		;;
