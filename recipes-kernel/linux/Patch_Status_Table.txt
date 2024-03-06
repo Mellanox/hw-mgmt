@@ -391,8 +391,8 @@ Kernel-6.1
 |0045-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream                               |            |                                                |
 |0046-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream                               |            |                                                |
 |0047-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream                               |            |                                                |
-|0048-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Downstream                               |            |                                                |
-|0049-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Downstream                               |            |                                                |
+|0048-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Downstream accepted                      |            |                                                |
+|0049-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Downstream accepted                      |            |                                                |
 |0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream                               |            |                                                |
 |0051-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
 |0052-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
