@@ -334,7 +334,7 @@ Kernel-5.10
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream                               |            |                                                |
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream                               |            | P4300                                          |
-|9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch|                 | Downstream                               |            |                                                |
+|9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch|                 | Downstream accepted                      |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-6.1
