@@ -151,7 +151,7 @@ Kernel-5.10
 |0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Downstream accepted                      |            | Modular SN4800                                 |
 |0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Downstream accepted                      |            | Modular SN4800                                 |
-|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted; os[sonic,opt]       |            | Modular SN4800 squashed (required rebasing)    |
 |0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
