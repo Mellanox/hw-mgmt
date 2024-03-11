@@ -274,6 +274,13 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
                          "input_suffix": "_input"
                         },
+    r'hotswap\d+_temp': {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 30,
+                         "input_suffix": "_input"
+                        },
+    r'bmc\d+_temp':     {"type": "thermal_sensor",
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 30,
+                        },
     r'dpu\\d+_module':  {"type": "dpu_module",
                          "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000", "poll_time": 5, "child_sensors_list" : []
                         },
@@ -2387,6 +2394,8 @@ class ThermalManagement(hw_managemet_file_op):
                           r'drivetemp':"add_drivetemp_sensor",
                           r'ibc\d*':"add_ibc_sensor",
                           r'ctx_amb\d*':"add_connectx_sensor",
+                          r'hotswap\d+':"add_hotswap_sensor",
+                          r'bmc\d+':"add_bmc_sensor",
                           r'dpu\d*_cpu':"add_DPU_cpu_sensor",
                           r'dpu\d*_sodimm\d+':"add_DPU_sodimm_sensor",
                           r'dpu\d*_drivetemp':"add_DPU_drivetemp_sensor",
@@ -3086,6 +3095,18 @@ class ThermalManagement(hw_managemet_file_op):
     # ----------------------------------------------------------------------
     def add_connectx_sensor(self, name):
         self._sensor_add_config("thermal_sensor", name, {"base_file_name": "thermal/{}".format(name)})
+
+    # ----------------------------------------------------------------------
+    def add_hotswap_sensor(self, name):
+        in_file = "thermal/pdb_{}_temp1".format(name)
+        sensor_name = "{}_temp".format(name)
+        self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_bmc_sensor(self, name):
+        in_file = "thermal/bmc{}_temp".format(name)
+        sensor_name = "{}_temp".format(name)
+        self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
 
     # ----------------------------------------------------------------------
     def add_DPU_cpu_sensor(self, name):

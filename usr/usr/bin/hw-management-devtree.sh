@@ -37,7 +37,7 @@ devtree_codes_file=
 # Declare common associative arrays for SMBIOS System Version parsing.
 declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board" ["O"]="port_board" ["D"]="dpu_board")
 
-declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga")
+declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
 declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421")
 
@@ -259,6 +259,33 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 
+# V0-K*G0EgEgJa-S*RgRgRgRgRgRgGbG0TcTcEiSaSa-L*EiEiEiGbGeTcXbXcFbSaCa-P*OaOaOaOaH0Ei-C*RiRaGeGdSaEg
+# for JSO
+declare -A jso_platform_alternatives=(["24c512_0"]="24c512 0x50 16 fruid_info" \
+	 			["24c512_0"]="24c512 0x51 16 fru_info" \
+	 			["24c512_0"]="24c512 0x51 8 vpd_info" \
+				["adt75_0"]="adt75 0x49 13 port_amb")
+
+declare -A jso_swb_alternatives=(["mp2891_0"]="mp2891 0x66 12 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 12 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 12 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 28 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 28 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 28 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 12 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 12 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 12 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 28 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 28 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 28 voltmon6" \
+						["adt75_1"]="adt75 0x4a 14 swb_asic1" \
+						["adt75_2"]="adt75 0x4b 14 swb_asic2" \
+						["tmp102_1"]="tmp102 0x4a 14 swb_asic1" \
+						["tmp102_2"]="tmp102 0x4b 14 swb_asic2" \
+						["stts751_1"]="stts751 0x4a 14 swb_asic1" \
+						["stts751_2"]="stts751 0x4b 14 swb_asic2" \
+					   	["24c512_0"]="24c512 0x51 16 swb_info")
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -297,11 +324,18 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
-
 # for p4300
 declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
 					["24c02_0"]="24c02 0x50 3 cable_cartridge_eeprom" \
 					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
+# for JSO
+# P*OaOaOaOaH0Ei
+declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 11 pdb_pwr_conv1" \
+				   	["pmbus_1"]="pmbus 0x11 11 pdb_pwr_conv2" \
+				   	["pmbus_2"]="pmbus 0x12 11 pdb_pwr_conv3" \
+				   	["pmbus_3"]="pmbus 0x13 11 pdb_pwr_conv4" \
+				   	["lm5066_0"]="lm5066 0x16 11 pdb_hotwap1" \
+				   	["24c512_0"]="24c512 0x50 11 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -329,6 +363,7 @@ declare -A pwr_alternatives
 declare -A platform_alternatives
 declare -A port_alternatives
 declare -A dpu_alternatives
+declare -A mgmt_alternatives
 declare -A board_alternatives
 
 devtr_validate_system_ver_str()
@@ -400,7 +435,7 @@ devtr_check_supported_system_init_alternatives()
 		$CFL_CPU)
 			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
 				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
-				for key in "${!comex_cfl_alternatives[@]}"; do
+				for key in "${!0[@]}"; do
 					curr_component=(${comex_cfl_alternatives["$key"]})
 					curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
 					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
@@ -604,6 +639,26 @@ devtr_check_supported_system_init_alternatives()
 			done
 			return 0
 			;;
+		VMOD0021)
+			case $sku in
+			HI162)
+				for key in "${!jso_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${jso_swb_alternatives["$key"]}"
+				done
+				
+				for key in "${!pwr_type3_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
+				done
+				
+				for key in "${!jso_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${jso_platform_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1
@@ -928,6 +983,12 @@ devtr_check_board_components()
 				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
 				;;
 			F)	# FPGA
+				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
+				;;
+			S)	# EROT
+				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
+				;;
+			C)	# RTC
 				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
 				;;
 			*)

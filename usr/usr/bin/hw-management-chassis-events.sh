@@ -1248,6 +1248,13 @@ if [ "$1" == "add" ]; then
 		log_info "I2C bus $4 connected."
 		handle_i2cbus_dev_action $4 "add"
 	fi
+	# Create i2c bus AMD.
+	if [ "$2" == "i2c_bus_amd" ]; then
+		log_info "I2C bus $4 connected."
+		if [ "$board_type" == "VMOD0021" ]; then
+			ln -sf "$4" "/sys/bus/i2c/devices/i2c-8"
+		fi
+	fi
 	# Create i2c links.
 	if [ "$2" == "i2c_link" ]; then
 		create_main_i2c_links "$4"

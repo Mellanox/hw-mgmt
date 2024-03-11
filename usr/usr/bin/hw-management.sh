@@ -115,6 +115,8 @@ device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
 
+override_bom=
+
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
 # tables.
@@ -555,6 +557,41 @@ smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x0 0x69 dpu_voltmon1 \
 	mp2975 0x0 0x6a dpu_voltmon2)
 
+# Just for possible initial step without SMBios alternative BOM string
+jso_base_connect_table=( lm5066 0x16 11 \
+	pmbus 0x10 11 \
+	pmbus 0x11 11 \
+	pmbus 0x12 11 \
+	pmbus 0x13 11 \
+	24c512 0x51 11 \
+	adt75 0x49 13 \
+	adt75 0x4a 14 \
+	adt75 0x4b 14 \
+	24c02 0x50 56 \
+	24c02 0x51 56 \
+	24c02 0x50 57 \
+	24c02 0x51 57 \
+	24c02 0x50 58 \
+	24c02 0x51 58 \
+	24c02 0x50 59 \
+	24c02 0x51 59 )
+
+jso_dynamic_i2c_bus_connect_table=( mp2891 0x66 12 voltmon1 \
+	mp2891 0x68 12 voltmon2 \
+	mp2891 0x6c 12 voltmon3 \
+	mp2891 0x66 28 voltmon4 \
+	mp2891 0x68 28 voltmon5 \
+	mp2891 0x6c 28 voltmon6)
+	
+jso_cartridge_eeprom_connect_table=( 24c02 0x50 56 cable_cartridge_eeprom \
+   	24c02 0x51 56 cable_cartridge_eeprom2 \
+	24c02 0x50 57 cable_cartridge2_eeprom \
+	24c02 0x51 57 cable_cartridge2_eeprom2 \
+	24c02 0x50 58 cable_cartridge3_eeprom \
+	24c02 0x51 58 cable_cartridge3_eeprom2 \
+	24c02 0x50 59 cable_cartridge4_eeprom \
+	24c02 0x51 59 cable_cartridge4_eeprom2)
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
@@ -567,6 +604,7 @@ p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
+jso_named_busses=( asic1 9 vr 11 pwr1 12 pwr2 28 amb 13 pcb_amb 14 vpd 8 cart1 56 cart2 57 cart3 58 cart4 59)
 
 ACTION=$1
 
@@ -2173,36 +2211,43 @@ smart_switch_common()
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
 }
 
-p4977_ns_specific()
+jso_specific()
 {
-	local cpu_bus_offset=18
+	local cpu_bus_offset=52
 	if [ ! -e "$devtree_file" ]; then
-		connect_table+=(${p4300_base_connect_table[@]})
+		connect_table+=(${jso_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
-		add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${jso_dynamic_i2c_bus_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${jso_cartridge_eeprom_connect_table[@]}"
+	else
+		# adding Cable Cartridge support which is not included to BOM string
+		echo -n "${jso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 	fi
+	asic_i2c_buses=(9 19)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
-	echo 2 > $config_path/cpld_num
-	hotplug_fans=4
-	leakage_count=4
+	echo 3 > $config_path/cpld_num
+	echo 2 > $config_path/clk_brd_num
+	hotplug_fans=6
+	max_tachos=12
+	leakage_count=2
 	leakage_rope_count=2
-	max_tachos=4
 	hotplug_pwrs=0
 	hotplug_psus=0
-	erot_count=1
+	erot_count=2
 	asic_control=0
-	health_events_count=2
-	pwr_events_count=1
-	i2c_comex_mon_bus_default=23
-	i2c_bus_def_off_eeprom_cpu=24
-	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	named_busses+=(${p4300_named_busses[@]})
-	add_come_named_busses $ndr_cpu_bus_offset
+	health_events_count=0
+	pwr_events_count=0
+	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
+	lm_sensors_config="$lm_sensors_configs_path/jso_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_jso.json"
+	named_busses+=(${jso_named_busses[@]})
+	add_come_named_busses 8
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	override_bom="V0-K*G0EgEgJa-S*RgRgRgRgRgRgGbG0TcTcEiSaSa-L*EiEiEiGbGeTcXbXcFbSaCa-P*OaOaOaOaH0Ei-C*RiRaGeGdSaEg"
 }
 
 check_system()
@@ -2257,8 +2302,8 @@ check_system()
 		VMOD0019)
 			smart_switch_common
 			;;
-		VMOD0020)
-			p4977_ns_specific
+		VMOD0021)
+			jso_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2636,7 +2681,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157)
+	HI157|HI162)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -2680,7 +2725,7 @@ set_asic_pci_id()
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
 		;;
-	HI157)
+	HI157|HI162)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
@@ -2814,6 +2859,15 @@ pre_devtr_init()
 			;;
 		esac
 		;;
+	VMOD0021)
+		case $sku in
+		HI162)
+			echo 60 > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
+		;;
 	*)
 		;;
 	esac
@@ -2854,7 +2908,12 @@ do_start()
 	check_cpu_type
 	pre_devtr_init
 	load_modules
-	devtr_check_smbios_device_description
+	if [ ! -z $override_bom ]; then
+		devtr_check_smbios_device_description "$override_bom" 0 "/dev/null"
+	else
+		devtr_check_smbios_device_description
+	fi
+
 	check_system
 	set_asic_pci_id
 	set_dpu_pci_id
