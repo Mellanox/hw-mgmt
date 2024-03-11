@@ -259,6 +259,31 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
 
+declare -A jso_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 15 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 15 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 15 voltmon6" \
+						["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+						["adt75_0"]="adt75 0x4a 7 port_amb" \
+						["24c512_0"]="24c512 0x51 8 vpd_info"\ 
+						["24c512_0"]="24c512 0x51 1 swb_info"\
+						["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
+						["pmbus_0"]="pmbus 0x10 4 pdb_pwr_conv1" \
+					   	["pmbus_1"]="pmbus 0x11 4 pdb_pwr_conv2" \
+					   	["pmbus_2"]="pmbus 0x12 4 pdb_pwr_conv3" \
+					   	["pmbus_3"]="pmbus 0x13 4 pdb_pwr_conv4" \
+					   	["24c02_0"]="24c02 0x50 30 cable_cartridge_eeprom" \
+					   	["24c02_1"]="24c02 0x51 30 cable_cartridge_eeprom2" \
+						["24c02_2"]="24c02 0x50 31 cable_cartridge2_eeprom" \
+						["24c02_3"]="24c02 0x51 31 cable_cartridge2_eeprom2" \
+						["24c02_4"]="24c02 0x50 32 cable_cartridge3_eeprom" \
+						["24c02_5"]="24c02 0x51 32 cable_cartridge3_eeprom2" \
+						["24c02_6"]="24c02 0x50 33 cable_cartridge4_eeprom" \
+						["24c02_7"]="24c02 0x51 33 cable_cartridge4_eeprom2")
+
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -604,6 +629,18 @@ devtr_check_supported_system_init_alternatives()
 			done
 			return 0
 			;;
+		VMOD0021)
+			case $sku in
+			HI162)
+				for key in "${!jso_alternatives[@]}"; do
+					swb_alternatives["$key"]="${jso_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1

@@ -555,6 +555,31 @@ smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x0 0x69 dpu_voltmon1 \
 	mp2975 0x0 0x6a dpu_voltmon2)
 
+# Just for possible initial step without SMBios alternative BOM string
+jso_base_connect_table=( lm5066 0x16 4 \
+	pmbus 0x10 4 \
+	pmbus 0x11 4 \
+	pmbus 0x12 4 \
+	pmbus 0x13 4 \
+	adt75 0x49 6 \
+	adt75 0x4a 7 \
+	adt75 0x4b 7 \
+	24c02 0x50 30 \
+	24c02 0x51 30 \
+	24c02 0x50 31 \
+	24c02 0x51 31 \
+	24c02 0x50 32 \
+	24c02 0x51 32 \
+	24c02 0x50 33 \
+	24c02 0x51 33 )
+
+jso_dynamic_i2c_bus_connect_table=( mp2891 0x66 5 \
+	mp2891 0x68 5 \
+	mp2891 0x6c 5 \
+	mp2891 0x66 15 \
+	mp2891 0x68 15 \
+	mp2891 0x6c 15)
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
@@ -2173,32 +2198,33 @@ smart_switch_common()
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
 }
 
-p4977_ns_specific()
+jso_specific()
 {
-	local cpu_bus_offset=18
+	local cpu_bus_offset=42
 	if [ ! -e "$devtree_file" ]; then
-		connect_table+=(${p4300_base_connect_table[@]})
+		connect_table+=(${jso_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
-		add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${jso_dynamic_i2c_bus_connect_table[@]}"
 	fi
+	asic_i2c_buses=(1 11)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
-	echo 2 > $config_path/cpld_num
-	hotplug_fans=4
-	leakage_count=4
+	echo 3 > $config_path/cpld_num
+	hotplug_fans=6
+	max_tachos=12
+	leakage_count=2
 	leakage_rope_count=2
-	max_tachos=4
 	hotplug_pwrs=0
 	hotplug_psus=0
-	erot_count=1
+	erot_count=2
 	asic_control=0
-	health_events_count=2
-	pwr_events_count=1
-	i2c_comex_mon_bus_default=23
-	i2c_bus_def_off_eeprom_cpu=24
-	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	named_busses+=(${p4300_named_busses[@]})
+	health_events_count=0
+	pwr_events_count=0
+	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
+	lm_sensors_config="$lm_sensors_configs_path/p4977_so_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_p4977_so.json"
+	named_busses+=(${p4977_so_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
@@ -2257,8 +2283,8 @@ check_system()
 		VMOD0019)
 			smart_switch_common
 			;;
-		VMOD0020)
-			p4977_ns_specific
+		VMOD0021)
+			jso_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2636,7 +2662,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157)
+	HI157|HI162)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -2680,7 +2706,7 @@ set_asic_pci_id()
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
 		;;
-	HI157)
+	HI157|HI162)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
