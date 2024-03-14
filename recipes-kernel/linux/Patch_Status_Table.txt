@@ -346,12 +346,12 @@ Kernel-6.1
 |0003-platform-mellanox-Cosmetic-changes-rename-to-more-co.patch  | acc6ea304590       | Feature upstream                         |            |                                                |
 |0004-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         |
 |0005-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
-|0006-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3-COME                                        |
-|0007-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3-COME                                        |
+|0006-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3-COME                                       |
+|0007-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3-COME                                       |
 |0008-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
-|0009-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc781566       | Feature upstream                         |            | BF3-COME                                        |
-|0010-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357       | Feature upstream                         |            | BF3-COME                                        |
-|0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3-COME                                        |
+|0009-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc781566       | Feature upstream                         |            | BF3-COME                                       |
+|0010-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357       | Feature upstream                         |            | BF3-COME                                       |
+|0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3-COME                                       |
 |0012-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            | Accepted for 6.4                               |
 |0013-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | Accepted for 6.4                               |
 |0014-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | Accepted for 6.4                               |
