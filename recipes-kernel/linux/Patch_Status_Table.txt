@@ -99,12 +99,12 @@ Kernel-5.10
 |0095-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                |
 |0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                |
 |0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                |
-|0097-1-mlxsw-Use-u16-for-local_port-field.patch                  |                    | Downstream                               |            |                                                |
-|0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch                    |                    | Downstream                               |            |                                                |
-|0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch          |                    | Downstream                               |            |                                                |
-|0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch           |                    | Downstream                               |            |                                                |
-|0098-2-Revert-mlxsw-i2c-Fix-chunk-size-setting.patch             |                    | Downstream                               |            |                                                |
-|0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch   |                    | Downstream                               |            |                                                |
+|0097-1-mlxsw-Use-u16-for-local_port-field.patch                  |                    | Downstream;skip[sonic]                   |            |                                                |
+|0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch                    |                    | Downstream;skip[sonic]                   |            |                                                |
+|0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch          |                    | Downstream;skip[sonic]                   |            |                                                |
+|0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch           |                    | Downstream;skip[sonic]                   |            |                                                |
+|0098-2-Revert-mlxsw-i2c-Fix-chunk-size-setting.patch             |                    | Downstream;skip[sonic]                   |            |                                                |
+|0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch   |                    | Downstream;skip[sonic]                   |            |                                                |
 |0098-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | IB Disable FW update                           |
 |0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Downstream accepted                      |            | Modular SN4800                                 |
 |0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Downstream accepted                      |            | Modular SN4800                                 |
