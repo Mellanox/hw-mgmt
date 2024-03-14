@@ -269,7 +269,7 @@ def copy_to_candidate_ver_filter(patch, accepted_folder, candidate_folder, kver)
 
 # ----------------------------------------------------------------------
 def skip_patch_filter(patch, accepted_folder, candidate_folder, kver):
-    patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
+    patch[CONST.PATCH_DST] = CONST.PATCH_ACCEPTED
     return None
 
 # ----------------------------------------------------------------------
