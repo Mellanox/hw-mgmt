@@ -434,7 +434,6 @@ Kernel-6.1
 |0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream                               |            |                                                |
 |0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream                               |            |                                                |
 |0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Downstream                               |            |                                                |
-|0094-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream                               |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream                               |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream                               |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
