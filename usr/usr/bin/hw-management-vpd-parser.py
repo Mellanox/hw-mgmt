@@ -377,8 +377,7 @@ def mlnx_blk_unpack(data, blk_hdr, size):
                 rec_name = rec_name_fmt.format(idx=idx)
             elif rec_type == "FT_MAC":
                 _data_str = struct.unpack("{}B".format(rec_size), _data)
-                val = int_unpack_be(_data_str)
-                val = ":".join(re.findall("..", "%012x"%val))
+                val = ':'.join(['{:02X}'.format(byte) for byte in _data_str])
                 rec_name = rec_name_fmt.format(idx=idx)
             else:
                 continue
