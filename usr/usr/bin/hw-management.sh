@@ -114,6 +114,7 @@ asic_chipup_retry=2
 device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
+chipup_retry_count=3
 
 override_bom=
 
@@ -655,11 +656,15 @@ function restore_i2c_bus_frequency_default()
 		if [ -f $config_path/default_i2c_freq ]; then
 			i2c_freq=$(< $config_path/default_i2c_freq)
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
+			chipup_test_time=5
 		fi
 		;;
 	*)
+		chipup_test_time=2
 		;;
 	esac
+
+	return $chipup_test_time
 }
 
 function find_regio_sysfs_path_helper()
@@ -3107,7 +3112,9 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
 			restore_i2c_bus_frequency_default
-			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
+			chipup_test_time=$?
+			chipup_test_time=`awk -v var1=$chipup_test_time -v var2=10 'BEGIN { print  ( var1 / var2 ) }'`
+			retry_helper find_asic_hwmon_path "$chipup_test_time" "$chipup_retry_count" "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
 			if [ $? -ne 0 ]; then
 				# chipup command failed.
 				unlock_service_state_change
