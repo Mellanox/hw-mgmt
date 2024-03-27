@@ -1,8 +1,10 @@
-From 1ffb1c6f0a5d71f35e727ff228dc08b065c084c1 Mon Sep 17 00:00:00 2001
+From 5a43867d87f9eec59a6ef060ba05af5951202976 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 7 Dec 2023 20:43:29 +0000
-Subject: [PATCH v6.1 02/16] platform: mellanox: Introduce support of Nvidia
- smart switch
+Subject: [PATCH] From 1ffb1c6f0a5d71f35e727ff228dc08b065c084c1 Mon Sep 17
+ 00:00:00 2001 Subject: [PATCH v6.1 02/16] platform: mellanox: Introduce
+ support of Nvidia  smart switch MIME-Version: 1.0 Content-Type: text/plain;
+ charset=UTF-8 Content-Transfer-Encoding: 8bit
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -23,11 +25,11 @@ activation of the required platform drivers.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 937 ++++++++++++++++++++++++++++---
- 1 file changed, 870 insertions(+), 67 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 939 ++++++++++++++++++++++++++++---
+ 1 file changed, 872 insertions(+), 67 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index cafa4f762672..4b34af4d1a31 100644
+index cafa4f762..0fd8e15db 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -39,6 +39,7 @@
@@ -1168,7 +1170,7 @@ index cafa4f762672..4b34af4d1a31 100644
  static const struct regmap_config *mlxplat_regmap_config;
  static struct pci_dev *lpc_bridge;
  static struct pci_dev *i2c_bridge;
-@@ -7140,6 +7897,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -7140,6 +7897,29 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -1180,6 +1182,8 @@ index cafa4f762672..4b34af4d1a31 100644
 +	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ng800_mux_data);
 +	mlxplat_mux_data = mlxplat_ng800_mux_data;
 +	mlxplat_hotplug = &mlxplat_mlxcpld_smart_switch_data;
++	mlxplat_hotplug->deferred_nr =
++		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
 +	mlxplat_led = &mlxplat_xdr_led_data;
 +	mlxplat_regs_io = &mlxplat_smart_switch_regs_io_data;
 +	mlxplat_fan = &mlxplat_xdr_fan_data;
@@ -1196,7 +1200,7 @@ index cafa4f762672..4b34af4d1a31 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -7246,6 +8024,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -7246,6 +8026,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
  		},
  	},
@@ -1209,7 +1213,7 @@ index cafa4f762672..4b34af4d1a31 100644
  	{
  		.callback = mlxplat_dmi_msn274x_matched,
  		.matches = {
-@@ -7547,7 +8331,7 @@ static void mlxplat_post_exit(void)
+@@ -7547,7 +8333,7 @@ static void mlxplat_post_exit(void)
  
  static int mlxplat_post_init(struct mlxplat_priv *priv)
  {
@@ -1218,7 +1222,7 @@ index cafa4f762672..4b34af4d1a31 100644
  
  	/* Add hotplug driver */
  	if (mlxplat_hotplug) {
-@@ -7624,8 +8408,25 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+@@ -7624,8 +8410,25 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
  		}
  	}
  
@@ -1244,7 +1248,7 @@ index cafa4f762672..4b34af4d1a31 100644
  fail_platform_wd_register:
  	while (--i >= 0)
  		platform_device_unregister(priv->pdev_wd[i]);
-@@ -7646,6 +8447,8 @@ static void mlxplat_pre_exit(struct mlxplat_priv *priv)
+@@ -7646,6 +8449,8 @@ static void mlxplat_pre_exit(struct mlxplat_priv *priv)
  {
  	int i;
  

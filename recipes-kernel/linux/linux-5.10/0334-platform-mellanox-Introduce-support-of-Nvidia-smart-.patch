@@ -1,8 +1,7 @@
-From 3c2735f1330f3dd30bfdfc462d479c585711f82d Mon Sep 17 00:00:00 2001
+From 6643cf4dc9b8219f6fbb39c9fde325c1c3bf5a0f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 7 Dec 2023 20:43:29 +0000
-Subject: [PATCH backport 5.10 3/9] platform: mellanox: Introduce support of
- Nvidia smart switch
+Subject: [PATCH] platform: mellanox: Introduce support of Nvidia smart switch
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -23,11 +22,11 @@ activation of the required platform drivers.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 937 ++++++++++++++++++++++++++++---
- 1 file changed, 870 insertions(+), 67 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 939 ++++++++++++++++++++++++++++---
+ 1 file changed, 872 insertions(+), 67 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 7a544ec3c..5f77b71c8 100644
+index 7a544ec3c..49ee428ba 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -40,6 +40,7 @@
@@ -693,10 +692,16 @@ index 7a544ec3c..5f77b71c8 100644
 +		.mode = 0444,
 +	},
 +	{
++		.label = "bios_auth_fail",
++		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
 +		.label = "bios_upgrade_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
-+		.mode = 0644,
++		.mode = 0444,
 +	},
 +	{
 +		.label = "vpd_wp",
@@ -788,12 +793,6 @@ index 7a544ec3c..5f77b71c8 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_FIELD_UPGRADE,
 +		.mask = GENMASK(1, 0),
 +		.bit = 1,
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "non_active_bios_select",
-+		.reg = MLXPLAT_CPLD_LPC_SAFE_BIOS_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0644,
 +	},
 +	{
@@ -1168,7 +1167,7 @@ index 7a544ec3c..5f77b71c8 100644
  static const struct regmap_config *mlxplat_regmap_config;
  static struct spi_board_info *mlxplat_spi;
  static struct pci_dev *lpc_bridge;
-@@ -7494,6 +8251,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -7494,6 +8251,29 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -1180,6 +1179,8 @@ index 7a544ec3c..5f77b71c8 100644
 +	mlxplat_mux_num = ARRAY_SIZE(mlxplat_ng800_mux_data);
 +	mlxplat_mux_data = mlxplat_ng800_mux_data;
 +	mlxplat_hotplug = &mlxplat_mlxcpld_smart_switch_data;
++	mlxplat_hotplug->deferred_nr =
++		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
 +	mlxplat_led = &mlxplat_xdr_led_data;
 +	mlxplat_regs_io = &mlxplat_smart_switch_regs_io_data;
 +	mlxplat_fan = &mlxplat_xdr_fan_data;
@@ -1196,7 +1197,7 @@ index 7a544ec3c..5f77b71c8 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -7607,6 +8385,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -7607,6 +8387,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
  		},
  	},
@@ -1209,7 +1210,7 @@ index 7a544ec3c..5f77b71c8 100644
  	{
  		.callback = mlxplat_dmi_msn274x_matched,
  		.matches = {
-@@ -7908,7 +8692,7 @@ static void mlxplat_post_exit(void)
+@@ -7908,7 +8694,7 @@ static void mlxplat_post_exit(void)
  
  static int mlxplat_post_init(struct mlxplat_priv *priv)
  {
@@ -1218,7 +1219,7 @@ index 7a544ec3c..5f77b71c8 100644
  
  	/* Add hotplug driver */
  	if (mlxplat_hotplug) {
-@@ -7988,8 +8772,25 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+@@ -7988,8 +8774,25 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
  		}
  	}
  
@@ -1244,7 +1245,7 @@ index 7a544ec3c..5f77b71c8 100644
  fail_platform_wd_register:
  	while (--i >= 0)
  		platform_device_unregister(priv->pdev_wd[i]);
-@@ -8010,6 +8811,8 @@ static void mlxplat_pre_exit(struct mlxplat_priv *priv)
+@@ -8010,6 +8813,8 @@ static void mlxplat_pre_exit(struct mlxplat_priv *priv)
  {
  	int i;
  
