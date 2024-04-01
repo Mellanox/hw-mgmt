@@ -1377,7 +1377,7 @@ msn3420_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/msn3420_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn3420.json"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
