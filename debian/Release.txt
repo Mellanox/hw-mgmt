@@ -24,7 +24,8 @@
 	#3726901	[MSN27002] voltmon6 mistakenly appearing in sensor_list at tc_config.json file causing ERROR of reading file voltmon6_temp
 	#3835080	[MSN4280] wrong fan_max_speed/fan_min_speed RPM values defined in hw-management.sh
 	#3748535	[SP1|SPC2] chipup timeout is too short over legacy system causing sometimes failure
-	#3747683	[SN5400] : sysfs attributes related for power management are missing 
+	#3747683	[SN5400] : sysfs attributes related for power management are missing
+	#3847931	[QM3400] TC erros over ctx_amb ConnectX thermal sensor which is not existing in hardware
 	NA		When I2C device’s 1st probe fails there is no retry performed
 	NA		Hw mgmt started handling udev events before basic hw mgmt initialization is done
 	NA		udev events were handled randomly by hw mgmt since udev settle command was missed in hw mgmt init
