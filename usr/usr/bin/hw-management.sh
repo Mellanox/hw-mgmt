@@ -749,6 +749,10 @@ set_jtag_gpio()
 			jtag_tms=88
 			jtag_tdo=89
 			;;
+		$AMD_SNW_CPU)
+			echo 0x2094 > $config_path/jtag_rw_reg
+			echo 0x2095 > $config_path/jtag_ro_reg
+			;;
 		*)
 			return 0
 			;;
@@ -846,6 +850,7 @@ set_gpios()
 			return 1
 			;;
 		$AMD_SNW_CPU)
+			set_jtag_gpio $1
 			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
