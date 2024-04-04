@@ -1206,6 +1206,10 @@ msn27xx_msb_msx_specific()
 			# Scorp
 			thermal_control_config="$thermal_control_configs_path/tc_config_msb7xxx.json"
 			;;
+		SGN2410)
+			# SGN2410_A1
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			;;
 		*)
 			;;
 	esac
@@ -1213,6 +1217,8 @@ msn27xx_msb_msx_specific()
 
 	case $sku in
 		HI138)
+			# SGN2410_A1
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			hotplug_fans=0
 			max_tachos=0
 		;;
