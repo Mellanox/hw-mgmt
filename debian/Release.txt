@@ -25,13 +25,14 @@
 	#3835080	[MSN4280] wrong fan_max_speed/fan_min_speed RPM values defined in hw-management.sh
 	#3748535	[SP1|SPC2] chipup timeout is too short over legacy system causing sometimes failure
 	#3747683	[SN5400] : sysfs attributes related for power management are missing
-	#3847931	[QM3400] TC erros over ctx_amb ConnectX thermal sensor which is not existing in hardware
+	#3847931	[QM3400] TC erross over ctx_amb ConnectX thermal sensor which is not existing in hardware
+	#3847741        [SGN2410] TC errors due to system not properly defined as "not supported" for TC
 	NA		When I2C device’s 1st probe fails there is no retry performed
 	NA		Hw mgmt started handling udev events before basic hw mgmt initialization is done
 	NA		udev events were handled randomly by hw mgmt since udev settle command was missed in hw mgmt init
 	NA		[MSN5400|MSN5600|QM3400] TC – systems with a single Fan direction always considered in TC to be P2C
-	NA		[MSN5600|MSN5400 ] sensors: mistakes in labels of sensor conf.
-	NA		[MSN5600|MSN5400 ] sensors: missed sensorss config rule for 2nd PSU 
+	NA		[MSN5600|MSN5400] sensors: mistakes in labels of sensor conf.
+	NA		[MSN5600|MSN5400] sensors: missed sensorss config rule for 2nd PSU 
 	NA		vpd parser supportted only 2 GUID blocks instead of 4
 	NA		[MSN3420] symlink mitakenly pointing to MSN3700 sensors config file
 
