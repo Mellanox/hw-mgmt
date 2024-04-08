@@ -38,11 +38,12 @@ sku=$(< $sku_file)
 
 # Local variables
 fan_psu_default=$config_path/fan_psu_default
-max_psus=4
+max_psus=8
 max_pwm=4
 max_lcs=8
 max_erots=2
 max_leakage=8
+max_leakage_rope=2
 max_health_events=4
 max_power_events=1
 min_module_gbox_ind=2
@@ -201,7 +202,7 @@ get_fixed_fans_direction()
 		;;
 	*)
         # Unknown direction
-		dir=255
+		dir=2
 		;;
 	esac
 	return $dir
@@ -221,44 +222,48 @@ get_fixed_fans_direction()
 get_psu_fan_direction()
 {
 	vpd_file=$1
-	dir_char=""
-	pn="$(grep PN_VPD_FIELD $vpd_file)"
+	# Default dir "unknown" till it will not be detected later
+	dir=2
+	pn=$(grep PN_VPD_FIELD $vpd_file | grep -oE "[^ ]+$")
 	if [ -z $pn ]; then
 		if [ -f $config_path/fixed_fans_dir ]; then
 			dir=$(< $config_path/fixed_fans_dir) 
+		fi
+	else 
+		dir_char=""
+		if [ ! ${psu_fandir_vs_pn[$pn]}_ = _ ]; then
+			dir_char=${psu_fandir_vs_pn[$pn]}
 		else
-			# Default dir "unknown" till it will not be detected later
-			dir=255
+			PN_REGEXP="MTEF-PS([R,F])"
+		    
+		    [[ $pn =~ $PN_REGEXP ]]
+		    if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		        dir_char="${BASH_REMATCH[1]}"
+		    else
+		    	PN_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
+		        [[ $pn =~ $PN_REGEXP ]]
+		        if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		            dir_char="${BASH_REMATCH[1]}"
+		        fi
+		    fi
 		fi
-		return $dir
-	fi
-	MLX_REGEXP="MTEF-PS([R,F])"
-	NV_REGEXP="930-9SPSU-\S{2}([R,F])\S-\S{3}"
-	[[ $pn =~ $MLX_REGEXP ]]
-	if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
-		dir_char="${BASH_REMATCH[1]}"
-	else
-		[[ $pn =~ $NV_REGEXP ]]
-		if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
-			dir_char="${BASH_REMATCH[1]}"
+		if [ $dir_char == "R" ]; then
+			dir=0
+		elif [ $dir_char == "F" ]; then
+			dir=1
 		fi
 	fi
-	if [ $dir_char == "R" ]; then
-		return 0
-	elif [ $dir_char == "F" ]; then
-		return 1
-	else
-		return 2
-	fi
+	return $dir
 }
+
+# Don't process udev events until service is started and directories are created
+if [ ! -f ${udev_ready} ]; then
+	exit 0
+fi
 
 trace_udev_events "$0: ACTION=$1 $2 $3 $4 $5"
 
 if [ "$1" == "add" ]; then
-	# Don't process udev events until service is started and directories are created
-	if [ ! -f ${udev_ready} ]; then
-		exit 0
-	fi
 	case "$2" in
 		fan_amb | port_amb | cx_amb | lr1_amb | swb_amb | cpu_amb | pdb_temp1 | pdb_temp2 | tempX )
 		# Verify if this is COMEX sensor
@@ -320,8 +325,24 @@ if [ "$1" == "add" ]; then
 			fi
 
 			if [ "$name" == "mlxsw" ]; then
-				ln -sf "$3$4" $cpath/asic_hwmon
-				ln -sf "$3""$4"/temp1_input "$tpath"/asic
+				case $sku in
+					HI157|HI158)
+						# Mapping of ASIC I2C bus to ASIC index
+						asic_indices=([2]=1 [18]=2 [34]=3 [50]=4)
+						asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
+						asic_index=${asic_indices[${asic_bus}]}
+						ln -fs "$3""$4" "$cpath"/asic${asic_index}_hwmon
+						check_n_link "$3""$4"/temp1_input "$tpath"/asic${asic_index}
+						if [ ${asic_index} -eq 1 ]; then
+							ln -fs "$3""$4" "$cpath"/asic_hwmon
+							check_n_link "$3""$4"/temp1_input "$tpath"/asic
+						fi
+						;;
+					*)
+						ln -fs "$3""$4" $cpath/asic_hwmon
+						check_n_link "$3""$4"/temp1_input "$tpath"/asic
+						;;
+				esac
 				echo 120000 > $tpath/asic_temp_trip_crit
 				echo 105000 > $tpath/asic_temp_emergency
 				echo 85000 > $tpath/asic_temp_crit
@@ -374,7 +395,7 @@ if [ "$1" == "add" ]; then
 							case $sku in
 								# First 18 modules are accessible via ASIC1, all the rest - via ASIC2
 								HI157)
-									asic1_bus=${asic_i2c_buses[0]}
+									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
 											j=$((j+18))
@@ -382,7 +403,7 @@ if [ "$1" == "add" ]; then
 									;;
 								# All modules are accessible via ASIC1
 								HI158)
-									asic1_bus=${asic_i2c_buses[0]}
+									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
 										continue
@@ -619,7 +640,7 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
-			if [ -f "$3""$4"/leakage$i ]; then
+			if [ -f "$3""$4"/leakage"$i" ]; then
 				check_n_link "$3""$4"/leakage$i $system_path/leakage"$i"
 				event=$(< $system_path/leakage"$i")
 				if [ "$event" -eq 1 ]; then
@@ -627,12 +648,40 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		done
-		if [ -f "$3""$4"/leakage_rope ]; then
-			check_n_link "$3""$4"/leakage_rope $system_path/leakage_rope
-			event=$(< $system_path/leakage_rope)
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $events_path/leakage_rope
+		for ((i=1; i<=max_leakage_rope; i+=1)); do
+			if [ -f "$3""$4"/leakage_rope"$i" ]; then
+				check_n_link "$3""$4"/leakage_rope"$i" $system_path/leakage_rope"$i"
+				event=$(< $system_path/leakage_rope"$i")
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/leakage_rope"$i"
+				fi
 			fi
+		done
+		for ((i=0; i<=max_health_events; i+=1)); do
+			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
+				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
+				event=$(< $system_path/${l1_switch_health_events[$i]})
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/${l1_switch_health_events[$i]}
+				fi
+			fi
+		done
+		if [ -f "$3""$4"/power_button ]; then
+			check_n_link "$3""$4"/power_button $system_path/power_button
+			event=$(< $system_path/power_button)
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $events_path/power_button
+			fi
+		fi
+		init_hotplug_events "$dpu2host_events_file" "$3$4" 0
+		# BF3 debugfs temperature sensors linkage
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
+			echo 1000 > $thermal_path/cpu_pack_scale
+		fi
+		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp ]; then
+			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp $thermal_path/sodimm1_temp_input
+			echo 1000 > $thermal_path/sodimm1_temp_scale
 		fi
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
@@ -657,33 +706,10 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
 		done
-		for ((i=0; i<=max_health_events; i+=1)); do
-			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
-				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
-				event=$(< $system_path/${l1_switch_health_events[$i]})
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/${l1_switch_health_events[$i]}
-				fi
-			fi
-		done
-		if [ -f "$3""$4"/power_button ]; then
-			check_n_link "$3""$4"/power_button $system_path/power_button
-			event=$(< $system_path/power_button)
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $events_path/power_button
-			fi
-		fi
-
-		# BF3 debugfs temperature sensors linkage
-		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
-			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
-			echo 1000 > $thermal_path/cpu_pack_scale 
-		fi
-		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp ]; then
-			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/ddr_temp $thermal_path/sodimm1_temp_input
-			echo 1000 > $thermal_path/sodimm1_temp_scale 
-		fi
-
+	fi
+	if [ "$2" == "hotplug-ext" ]; then
+		slot_num=$(find_dpu_hotplug_slot "$3$4")
+		init_hotplug_events "$dpu_events_file" "$3$4" "$slot_num"
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -748,6 +774,8 @@ if [ "$1" == "add" ]; then
 				sodimm1_addr='0018'
 				sodimm2_addr='001a'
 			;;
+			$AMD_SNW_CPU)
+			;;
 			*)
 				exit 0
 			;;
@@ -768,7 +796,9 @@ if [ "$1" == "add" ]; then
 		find "$5""$3" -iname 'temp1_*' -exec sh -c 'ln -sf $1 $2/$3$(basename $1| cut -d1 -f2)' _ {} "$thermal_path" "$sodimm_name" \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
-	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
+	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
+	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
 		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 			exit 0
 		fi
@@ -788,7 +818,8 @@ if [ "$1" == "add" ]; then
 			exit 0
 		fi
 		# Allow PS controller to stabilize
-		sleep 2
+		retry_helper "ls" 0.2 20 "$2 takes too long to init" "$5""$3"/in1_input
+		sleep 1
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
 		# Set default fan speed
@@ -950,7 +981,7 @@ if [ "$1" == "add" ]; then
 					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
 				fi
-				if [[ "$cap" == "3000" &&  $sku == "HI144" ]]; then
+				if [[ "$cap" == "3000" && ( $sku == "HI144" || $sku == "HI147" ) ]]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
 					fi
@@ -1036,7 +1067,8 @@ elif [ "$1" == "change" ]; then
 			fi
 			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
 			if [ -f /etc/autochipup ]; then
-				sleep 3
+				asic_chipup_completed=$(< $config_path/asic_chipup_completed)
+				[ ${asic_chipup_completed} -eq 0 ] && sleep 3
 				/usr/bin/hw-management.sh chipup "$asic_index"
 			fi
 		elif [ "$3" == "down" ]; then
@@ -1219,7 +1251,9 @@ else
 		for ((i=1; i<=max_leakage; i+=1)); do
 			check_n_unlink $system_path/leakage"$i"
 		done
-		check_n_unlink $system_path/leakage_rope
+		for ((i=1; i<=max_leakage_rope; i+=1)); do
+			check_n_unlink $system_path/leakage_rope"$i"
+		done
 		if [ -d /sys/module/mlxsw_pci ]; then
 			exit 0
 		fi
@@ -1236,6 +1270,7 @@ else
 			check_n_unlink $system_path/${l1_switch_health_events[$i]}
 		done
 		check_n_unlink  $system_path/power_button
+		deinit_hotplug_events "$dpu2host_events_file" 0
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack
@@ -1260,7 +1295,9 @@ else
 		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||
-	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ]; then
+	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
+	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
+	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
 		psu_name="$2"
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
 		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
@@ -1311,6 +1348,11 @@ else
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
 		fi
+	fi
+	if [ "$2" == "hotplug-ext" ]; then
+		slot_num=$(find_dpu_hotplug_slot "$3$4")
+		deinit_hotplug_events "$dpu_events_file" "$slot_num"
+
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"

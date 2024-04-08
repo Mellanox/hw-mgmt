@@ -273,7 +273,11 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["BASE_MAC_1",  16, 16, 6, "FIT_NORMAL", "FT_MAC"],
                             ["MAC_RANGE_1", 16, 22, 2, "FIT_NORMAL", "FT_NUM_INV"],
                             ["BASE_MAC_2",  16, 24, 6, "FIT_NORMAL", "FT_MAC"],
-                            ["MAC_RANGE_2", 16, 30, 2, "FIT_NORMAL", "FT_NUM_INV"]
+                            ["MAC_RANGE_2", 16, 30, 2, "FIT_NORMAL", "FT_NUM_INV"],
+                            ["BASE_MAC_3",  16, 32, 6, "FIT_NORMAL", "FT_MAC"],
+                            ["MAC_RANGE_3", 16, 38, 2, "FIT_NORMAL", "FT_NUM_INV"],
+                            ["BASE_MAC_4",  16, 40, 6, "FIT_NORMAL", "FT_MAC"],
+                            ["MAC_RANGE_4", 16, 42, 2, "FIT_NORMAL", "FT_NUM_INV"]
                         ]},
                     MLNX_ID.GUIDS_2 : {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",    1, 8,  1, "FIT_NORMAL", "FT_HEX"],
@@ -283,7 +287,13 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["BASE_GUID_1", 17, 24, 8, "FIT_NORMAL", "FT_MAC"],
                             ["BASE_MAC_2",  16, 32, 6, "FIT_NORMAL", "FT_MAC"],
                             ["MAC_RANGE_2", 16, 38, 2, "FIT_NORMAL", "FT_HEX_INV"],
-                            ["BASE_GUID_2", 17, 40, 8, "FIT_NORMAL", "FT_MAC"]
+                            ["BASE_GUID_2", 17, 40, 8, "FIT_NORMAL", "FT_MAC"],
+                            ["BASE_MAC_3",  16, 48, 6, "FIT_NORMAL", "FT_MAC"],
+                            ["MAC_RANGE_3", 16, 54, 2, "FIT_NORMAL", "FT_HEX_INV"],
+                            ["BASE_GUID_3", 17, 56, 8, "FIT_NORMAL", "FT_MAC"],
+                            ["BASE_MAC_4",  16, 64, 6, "FIT_NORMAL", "FT_MAC"],
+                            ["MAC_RANGE_4", 16, 70, 2, "FIT_NORMAL", "FT_HEX_INV"],
+                            ["BASE_GUID_4", 17, 72, 8, "FIT_NORMAL", "FT_MAC"]
                         ]},
                     MLNX_ID.PORT_CFG_EXT :  {'blk_type': "PORT_CFG", "fn": "mlnx_blk_unpack", "format": [
                             ["PORT_CFG_", 2, 8, 2,  "FIT_COMP",   "FT_NUM"]
@@ -310,7 +320,7 @@ int_unpack_be = lambda val: sum([b * 2**(8*n) for (b, n) in zip(val, range(len(v
 int_unpack_le = lambda val: sum([b * 2**(8*n) for (b, n) in zip(val, range(len(val)))])
 
 
-def format_unpack(_data, item, blk_header):
+def format_unpack(_data, item, blk_header, verbose=False):
     """
     @summary: unpack binary data by format
     """
@@ -377,8 +387,7 @@ def mlnx_blk_unpack(data, blk_hdr, size):
                 rec_name = rec_name_fmt.format(idx=idx)
             elif rec_type == "FT_MAC":
                 _data_str = struct.unpack("{}B".format(rec_size), _data)
-                val = int_unpack_be(_data_str)
-                val = ":".join(re.findall("..", "%012x"%val))
+                val = ':'.join(['{:02X}'.format(byte) for byte in _data_str])
                 rec_name = rec_name_fmt.format(idx=idx)
             else:
                 continue
@@ -417,14 +426,14 @@ def fru_get_tlv_header(data_bin):
     return res_dict, size
 
 
-def onie_parse_vendor_blk(data, _data_format, _fields):
+def onie_parse_vendor_blk(data, _data_format, _fields, verbose=False):
     blk_IANA = struct.unpack(">I", data[:4])[0]
 
     if blk_IANA == MLNX_IANA:
         _data = data[4:]
         blk_header, hdr_size = parse_packed_data(_data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
         _data = _data[hdr_size : hdr_size+blk_header['block_size']]
-        return parse_mlnx_blk(_data, blk_header, MLNX_VENDOR_BLK)
+        return parse_mlnx_blk(_data, blk_header, MLNX_VENDOR_BLK, verbose)
 
     return None
 
@@ -457,7 +466,7 @@ def parse_mlnx_blk(data, blk_header, FRU_ITEMS, print_blk_type=False):
     return  out_str
 
 
-def parse_fru_mlnx_bin(data, FRU_ITEMS):
+def parse_fru_mlnx_bin(data, FRU_ITEMS, print_blk_type=False):
     fru_dict = {}
     fru_dict['items'] = []
     blk_header, hdr_size = parse_packed_data(data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
@@ -482,13 +491,13 @@ def parse_fru_mlnx_bin(data, FRU_ITEMS):
 
         blk_data_off = rec_header["block_start"] * 16
         blk_header, hdr_size = parse_packed_data(data[blk_data_off:], MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
-        out_str += parse_mlnx_blk(data[blk_data_off+hdr_size: ], blk_header, FRU_ITEMS)
+        out_str += parse_mlnx_blk(data[blk_data_off+hdr_size: ], blk_header, FRU_ITEMS, print_blk_type)
 
     fru_dict['items'].append(["", out_str])
     return fru_dict
 
 
-def parse_fru_onie_bin(data, FRU_ITEMS):
+def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
     '''
     @summary: main function. Takes binary FRU data and return dictionary with all parsed data
     @param data: binary data array
@@ -529,7 +538,7 @@ def parse_fru_onie_bin(data, FRU_ITEMS):
         fn_name = item.get("fn", None)
         if fn_name:
             _data = data[pos : pos+blk_header['size']]
-            val = globals()[fn_name](_data, item, blk_header)
+            val = globals()[fn_name](_data, item, blk_header, verbose)
             if val:
                 fru_dict['items'].append([item['type_name'], val])
                 fru_dict['items_dict'][item['type_name']] = val
@@ -544,7 +553,7 @@ def parse_fru_onie_bin(data, FRU_ITEMS):
     return fru_dict
 
 
-def parse_fru_bin(data, VPD_TYPE):
+def parse_fru_bin(data, VPD_TYPE, verbose):
     res = None
     if VPD_TYPE in globals().keys():
         FRU_ITEMS = globals()[args.vpd_type]
@@ -552,13 +561,13 @@ def parse_fru_bin(data, VPD_TYPE):
         FRU_ITEMS = {"type": None}
 
     if FRU_ITEMS["type"] == "ONIE":
-        res = parse_fru_onie_bin(data, FRU_ITEMS)
+        res = parse_fru_onie_bin(data, FRU_ITEMS, verbose)
     elif FRU_ITEMS["type"] == "MLNX":
-        res = parse_fru_mlnx_bin(data, FRU_ITEMS)
+        res = parse_fru_mlnx_bin(data, FRU_ITEMS, verbose)
     else:
-        res = parse_fru_onie_bin(data, SYSTEM_VPD)
+        res = parse_fru_onie_bin(data, SYSTEM_VPD, verbose)
         if not res:
-            res = parse_fru_mlnx_bin(data, MLNX_VENDOR_BLK)
+            res = parse_fru_mlnx_bin(data, MLNX_VENDOR_BLK, verbose)
     return res
 
 
@@ -642,7 +651,7 @@ if __name__ == '__main__':
                                                                                                                    "MLNX_FAN_VPD",
                                                                                                                    "MLNX_PDB_VPD",
                                                                                                                    "MLNX_CARTRIDGE_VPD"])
-
+    parser.add_argument('--verbose',  dest='verbose', required=False, default=0, help=argparse.SUPPRESS)
     parser.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
     args = parser.parse_args()
 
@@ -655,7 +664,7 @@ if __name__ == '__main__':
         print("Can't pasrse inpuf binary.")
         sys.exit(1)
 
-    fru_data_dict = parse_fru_bin(fru_data_bin, args.vpd_type)
+    fru_data_dict = parse_fru_bin(fru_data_bin, args.vpd_type, args.verbose)
     if not fru_data_dict:
         print("FRU parse error or wrong FRU file contents.")
         sys.exit(1)

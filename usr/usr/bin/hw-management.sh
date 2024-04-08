@@ -88,6 +88,7 @@ hotplug_linecards=0
 erot_count=0
 health_events_count=0
 pwr_events_count=0
+dpu_count=0
 i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
@@ -103,10 +104,17 @@ quantum3_pci_id=d2f4
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
+dpu_bf3_pci_id=c2d5
+# Need to get the correct PCI bus numbers for DPUs
+dpu_pci_addr_amd=(03:00.0 04:00.0 05:00.0 09:00.0)
+dpu_pci_addr_cfl=(01:00.0 02:00.0 06:00.0 08:00.0)
 leakage_count=0
+leakage_rope_count=0
 asic_chipup_retry=2
+device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
+chipup_retry_count=3
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -122,6 +130,7 @@ reset_dflt_attr_num=18
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
 xdr_cpu_bus_offset=66
+smart_switch_cpu_bus_offset=34
 
 connect_table=()
 named_busses=()
@@ -165,6 +174,15 @@ cpu_type2_A2D_connection_table=(    max11603 0x6d 15 \
 cpu_type2_connection_table=(24c32 0x50 16)
 
 cpu_type2_mps_voltmon_connection_table=(mp2975 0x6b 15 comex_voltmon1)
+
+#
+# Smart switch
+#
+smart_switch_come_voltmon_connection_table=( mp2975 0x58 15 comex_voltmon1 \
+            mp2975 0x61 15 comex_voltmon2)
+
+smart_switch_come_connection_table=( tmp102 0x49 15 \
+            24c32 0x50 16)
 
 #
 # BF3 CPU.
@@ -519,7 +537,6 @@ qm3000_base_connect_table=( \
 # Just for possible initial step without SMBios alternative BOM string
 p4300_base_connect_table=( \
 	lm5066 0x40 4 \
-	adt75 0x48 7 \
 	adt75 0x49 7 \
 	adt75 0x4a 7 \
 	adt75 0x4b 7 \
@@ -534,8 +551,14 @@ p4300_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x21 26 voltmon1 \
 	mp2975 0x23 26 voltmon2 )
 
+smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
+	tmp421 0x0 0x1f dpu_cx_amb \
+	mp2975 0x0 0x69 dpu_voltmon1 \
+	mp2975 0x0 0x6a dpu_voltmon2)
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
+amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
@@ -544,6 +567,7 @@ p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
 p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
+smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 
 ACTION=$1
 
@@ -594,11 +618,15 @@ function restore_i2c_bus_frequency_default()
 		if [ -f $config_path/default_i2c_freq ]; then
 			i2c_freq=$(< $config_path/default_i2c_freq)
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
+			chipup_test_time=5
 		fi
 		;;
 	*)
+		chipup_test_time=2
 		;;
 	esac
+
+	return $chipup_test_time
 }
 
 function find_regio_sysfs_path_helper()
@@ -800,16 +828,59 @@ set_jtag_gpio()
 	fi
 
 	if [ "$export_unexport" == "export" ]; then
-		ln -sf /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
-		ln -sf /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
-		ln -sf /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
-		ln -sf /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
+		check_n_link /sys/class/gpio/gpio$gpio_tck/value $jtag_path/jtag_tck
+		check_n_link /sys/class/gpio/gpio$gpio_tms/value $jtag_path/jtag_tms
+		check_n_link /sys/class/gpio/gpio$gpio_tdo/value $jtag_path/jtag_tdo
+		check_n_link /sys/class/gpio/gpio$gpio_tdi/value $jtag_path/jtag_tdi
 		if [ "$board_type" == "VMOD0014" ]; then
 			check_n_link /sys/class/gpio/gpio$gpio_mux_rst/value $system_path/mux_reset
 			check_n_link /sys/class/gpio/gpio$gpio_jtag_mux_en/value $jtag_path/jtag_mux_en
 			check_n_link /sys/class/gpio/gpio$gpio_jtag_enable/value $jtag_path/jtag_enable
 		fi
 	fi
+}
+
+set_gpios()
+{
+	local export_unexport=$1
+	gpiobase=
+
+	case $cpu_type in
+		$BDW_CPU|$CFL_CPU|$DNV_CPU)
+			set_jtag_gpio $1
+			return 1
+			;;
+		$AMD_SNW_CPU)
+			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(5 6 4 42)
+			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
+			;;
+		*)
+			return 1
+			;;
+	esac
+
+	for gpiochip in /sys/class/gpio/*; do
+		if [ -d "$gpiochip" ] && [ -e "$gpiochip"/label ]; then
+			gpiochip_label=$(<"$gpiochip"/label)
+			if [ "$gpiochip_label" == "$gpiolabel" ]; then
+				gpiobase=$(<"$gpiochip"/base)
+				break
+			fi
+		fi
+	done
+	if [ -z "$gpiobase" ]; then
+		return 1
+	fi
+
+	for ((i=0; i<${#gpio_idx[@]}; i+=1)); do
+		gpionum=$((gpiobase+${gpio_idx[$i]}))
+		echo $gpionum > /sys/class/gpio/export
+		if [ "$export_unexport" == "export" ]; then
+			check_n_link /sys/class/gpio/gpio$gpionum/value $system_path/"${gpio_names[$i]}"
+		fi
+	done
 }
 
 
@@ -876,16 +947,24 @@ add_cpu_board_to_connection_table()
 				# MQM9700, P4697, P4262, P4300 removed A2D from CFL
 				HI130|HI142|HI152|HI157|HI158|HI159)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
+					;;
+				HI160)
+					cpu_connection_table=( ${smart_switch_come_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${smart_switch_come_voltmon_connection_table[@]} )
 					;;
 				*)
 					cpu_connection_table=( ${cpu_type2_A2D_connection_table[@]} )
+					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
 			esac
-			cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 			;;
 		$BF3_CPU)
 			cpu_connection_table=( ${bf3_come_connection_table[@]} )
 			cpu_voltmon_connection_table=( ${bf3_come_voltmon_connection_table[@]} )
+			;;
+		$AMD_SNW_CPU)
+			cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 			;;
 		*)
 			log_err "$product is not supported"
@@ -930,6 +1009,9 @@ add_come_named_busses()
 	case $cpu_type in
 	$CFL_CPU|$BF3_CPU)
 		come_named_busses+=( ${cfl_come_named_busses[@]} )
+		;;
+	$AMD_SNW_CPU)
+		come_named_busses+=( ${amd_snw_named_busses[@]} )
 		;;
 	*)
 		return
@@ -1086,6 +1168,10 @@ msn27xx_msb_msx_specific()
 			# Scorp
 			thermal_control_config="$thermal_control_configs_path/tc_config_msb7xxx.json"
 			;;
+		SGN2410)
+			# SGN2410_A1
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			;;
 		*)
 			;;
 	esac
@@ -1093,6 +1179,8 @@ msn27xx_msb_msx_specific()
 
 	case $sku in
 		HI138)
+			# SGN2410_A1
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			hotplug_fans=0
 			max_tachos=0
 		;;
@@ -1257,7 +1345,7 @@ msn3420_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/msn3420_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn3420.json"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
@@ -1572,6 +1660,7 @@ mqm9510_specific()
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=3
+	leakage_rope_count=1
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9510_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
@@ -1599,6 +1688,7 @@ mqm9520_specific()
 	max_tachos=2
 	hotplug_fans=2
 	leakage_count=8
+	leakage_rope_count=1
 	echo 5 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/mqm9520_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
@@ -1929,6 +2019,7 @@ p4262_specific()
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${p4262_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
 	fi
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
@@ -1946,7 +2037,6 @@ p4262_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	add_i2c_dynamic_bus_dev_connection_table "${p4262_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4262_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -1959,6 +2049,7 @@ p4300_specific()
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${p4300_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
 	fi
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
@@ -1976,7 +2067,6 @@ p4300_specific()
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-	add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
 	named_busses+=(${p4300_named_busses[@]})
 	add_come_named_busses $ndr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -2010,9 +2100,11 @@ qm3xxx_specific()
 		add_cpu_board_to_connection_table $xdr_cpu_bus_offset
 	fi
 	# Set according to front fan max.
-	echo echo 21800 > $config_path/fan_max_speed
+	echo 21800 > $config_path/fan_max_speed
 	# Set as 20% of max speed
 	echo 4360 > $config_path/fan_min_speed
+	# Only reverse fans are supported
+	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
 	echo 5500 > $config_path/psu_fan_min
@@ -2066,6 +2158,64 @@ qm_qm3_common()
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
+smart_switch_common()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
+		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
+		echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
+	fi
+	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
+	named_busses+=(${smart_switch_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	max_tachos=4
+	echo 11000 > $config_path/fan_max_speed
+	echo 3100 > $config_path/fan_min_speed
+	echo 23000 > $config_path/psu_fan_max
+	echo 4600 > $config_path/psu_fan_min
+	echo 3 > $config_path/cpld_num
+	echo 17 > $config_path/dpu_bus_off
+	dpu_count=4
+	echo -n "${smart_switch_dpu2host_events[@]}" > "$dpu2host_events_file"
+	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
+	i2c_comex_mon_bus_default=$((smart_switch_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
+}
+
+p4977_ns_specific()
+{
+	local cpu_bus_offset=18
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${p4300_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${p43002_dynamic_i2c_bus_connect_table[@]}"
+	fi
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
+	echo 2 > $config_path/cpld_num
+	hotplug_fans=4
+	leakage_count=4
+	leakage_rope_count=2
+	max_tachos=4
+	hotplug_pwrs=0
+	hotplug_psus=0
+	erot_count=1
+	asic_control=0
+	health_events_count=2
+	pwr_events_count=1
+	i2c_comex_mon_bus_default=23
+	i2c_bus_def_off_eeprom_cpu=24
+	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+	named_busses+=(${p4300_named_busses[@]})
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+}
+
 check_system()
 {
 	# Check ODM
@@ -2114,6 +2264,12 @@ check_system()
 			;;
 		VMOD0018)
 			qm_qm3_common
+			;;
+		VMOD0019)
+			smart_switch_common
+			;;
+		VMOD0020)
+			p4977_ns_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2245,15 +2401,28 @@ create_event_files()
 	fi
 	if [ $leakage_count -ne 0 ]; then
 		for ((i=1; i<=leakage_count; i+=1)); do
-			check_n_init $events_path/leakage$i 0
+			check_n_init $events_path/leakage"$i" 0
 		done
-		check_n_init $events_path/leakage_rope 0
+	fi
+	if [ $leakage_rope_count -ne 0 ]; then
+		for ((i=1; i<=leakage_rope_count; i+=1)); do
+			check_n_init $events_path/leakage_rope"$i" 0
+		done
 	fi
 	for ((i=0; i<health_events_count; i+=1)); do
 		check_n_init  $events_path/${l1_switch_health_events[$i]}
 	done
 	if [ $pwr_events_count -ne 0 ]; then
-		check_n_init $events_path/power_button 0
+		if [ -f "$power_events_file" ]; then
+			for ((i=0; i<=pwr_events_count; i+=1)); do
+				check_n_init $events_path/${power_events[$i]} 0
+			done
+		else
+			check_n_init $events_path/power_button 0
+		fi
+	fi
+	if [ $dpu_count -ne 0 ]; then
+		create_hotplug_smart_switch_event_files "$dpu2host_events_file" "$dpu_events_file"
 	fi
 }
 
@@ -2310,8 +2479,14 @@ connect_platform()
 	fi
 
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
-		connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
-				"${connect_table[i+2]}"
+		for ((j=0; j<${device_connect_retry}; j++)); do
+			connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
+					"${connect_table[i+2]}"
+			if [ $? -eq 0 ]; then
+				break;
+			fi
+			disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
+		done
 	done
 }
 
@@ -2377,6 +2552,9 @@ create_symbolic_links()
 		# Copy binaries to make them available for the access from containers.
 		cp /usr/bin/hw_management_independent_mode_update.py "$bin_path"
 	fi
+	if [ ! -d $dynamic_boards_path ]; then
+		mkdir $dynamic_boards_path
+	fi
 	if [ ! -h $power_path/pwr_consum ]; then
 		ln -sf /usr/bin/hw-management-power-helper.sh $power_path/pwr_consum
 	fi
@@ -2434,6 +2612,12 @@ set_asic_i2c_bus()
 			echo $asic_i2c_bus > $config_path/asic${i}_i2c_bus_id
 		fi
 	done
+
+	if [ ! -f $config_path/asic_bus ]; then
+		asic_i2c_bus=${asic_i2c_buses[0]}
+		asic_i2c_bus=$((asic_i2c_bus+i2c_bus_offset))
+		echo $asic_i2c_bus > $config_path/asic_bus
+	fi
 }
 
 set_asic_pci_id()
@@ -2444,7 +2628,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156)
+	HI122|HI123|HI124|HI126|HI156|HI160)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151)
@@ -2508,27 +2692,84 @@ set_asic_pci_id()
 		echo 1 > "$config_path"/asic_num
 		;;
 	HI157)
-		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
-		echo "$asics" | wc -l > "$config_path"/asic_num
 		;;
 	HI158)
-		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $3}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $4}'`
 		asic4_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
-		echo 4 > "$config_path"/asic_num
 		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
+		;;
+	esac
+
+	return
+}
+
+set_dpu_pci_id()
+{
+	local dpu_pci_addr=()
+	local cpu_type=$(cat $config_path/cpu_type)
+	local total_dpu_num
+	local idx=0
+	local element
+
+	# Get DPU PCI Ids.
+	case $sku in
+	HI160)
+		dpu_pci_id=$dpu_bf3_pci_id
+		;;
+
+	*)
+		return
+		;;
+	esac
+
+	dpus=`lspci -nn | grep -E $dpu_pci_id | awk '{print $1}'`
+
+	case $sku in
+	HI160)
+		case $cpu_type in
+		$CFL_CPU)
+			dpu_pci_addr+=( ${dpu_pci_addr_cfl[@]} )
+			;;
+		$AMD_SNW_CPU)
+			dpu_pci_addr+=( ${dpu_pci_addr_amd[@]} )
+			;;
+		*)
+			return
+			;;
+		esac
+
+		total_dpu_num=${#dpu_pci_addr[@]}
+		echo "$total_dpu_num" > "$config_path"/dpu_detected_num
+
+		while [ $idx -lt $total_dpu_num ]; do
+			element="${dpu_pci_addr[$idx]}"
+			if echo "$dpus" | grep -q -w "$element"; then
+				echo "$element" > "$config_path"/dpu$((idx+1))_pci_bus_id
+			else
+				echo "" > "$config_path"/dpu$((idx+1))_pci_bus_id
+			fi
+			idx=$((idx + 1))
+		done
+		;;
+	*)
 		;;
 	esac
 
@@ -2552,7 +2793,7 @@ pre_devtr_init()
 		HI144|HI147|HI148)	# ToDo Possible change for Ibex
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			echo 2 > "$config_path"/clk_brd_num
-			echo 3 > "$config_path"/clk_brd_addr_offset
+#			echo 3 > "$config_path"/clk_brd_addr_offset
 			;;
 		*)
 			;;
@@ -2571,6 +2812,18 @@ pre_devtr_init()
 			;;
 		esac
 		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+		;;
+	VMOD0019)
+		case $sku in
+		HI160)
+			echo 4 > "$config_path"/dpu_num
+			echo 1 > "$config_path"/dpu_brd_bus_offset
+			echo "dynamic" > "$config_path"/dpu_board_type
+			echo $smart_switch_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
 		;;
 	*)
 		;;
@@ -2615,6 +2868,7 @@ do_start()
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
+	set_dpu_pci_id
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
@@ -2624,8 +2878,9 @@ do_start()
 	depmod -a 2>/dev/null
 	set_config_data
 	udevadm trigger --action=add
+	udevadm settle
 	set_sodimm_temp_limits
-	set_jtag_gpio "export"
+	set_gpios "export"
 	create_event_files
 	hw-management-i2c-gpio-expander.sh
 	connect_platform
@@ -2676,7 +2931,7 @@ do_stop()
 		check_system
 	fi
 	disconnect_platform
-	set_jtag_gpio "unexport"
+	set_gpios "unexport"
 	rm -fR /var/run/hw-management
 	# Re-try removing after 1 second in case of failure.
 	# It can happens if some app locked file for reading/writing
@@ -2804,7 +3059,9 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
 			restore_i2c_bus_frequency_default
-			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
+			chipup_test_time=$?
+			chipup_test_time=`awk -v var1=$chipup_test_time -v var2=10 'BEGIN { print  ( var1 / var2 ) }'`
+			retry_helper find_asic_hwmon_path "$chipup_test_time" "$chipup_retry_count" "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
 			if [ $? -ne 0 ]; then
 				# chipup command failed.
 				unlock_service_state_change

@@ -46,20 +46,60 @@ jtag_path=$hw_management_path/jtag
 power_path=$hw_management_path/power
 fw_path=$hw_management_path/firmware
 bin_path=$hw_management_path/bin
+dynamic_boards_path=$config_path/dynamic_boards
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
 board_type_file=/sys/devices/virtual/dmi/id/board_name
 sku_file=/sys/devices/virtual/dmi/id/product_sku
 system_ver_file=/sys/devices/virtual/dmi/id/product_version
 devtree_file=$config_path/devtree
+dpu2host_events_file=$config_path/dpu_to_host_events
+dpu_events_file=$config_path/dpu_events
+power_events_file=$config_path/power_events
 i2c_bus_def_off_eeprom_cpu_file=$config_path/i2c_bus_def_off_eeprom_cpu
 i2c_comex_mon_bus_default_file=$config_path/i2c_comex_mon_bus_default
 l1_switch_health_events=("intrusion" "pwm_pg" "thermal1_pdb" "thermal2_pdb")
+smart_switch_dpu2host_events=("dpu1_ready" "dpu2_ready" "dpu3_ready" "dpu4_ready" \
+			      "dpu1_shtdn_ready" "dpu2_shtdn_ready" \
+			      "dpu3_shtdn_ready" "dpu4_shtdn_ready")
+smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
+			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
+			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
+			 "vdd_cpu_alert" "vddq_alert")
+l1_power_events=("power_button")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
 udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
+
+declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
+["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
+["01PG798"]=F ["01PG800"]=R ["02YF120"]=R ["02YF121"]=F ["03GX980"]=F \
+["03GX981"]=R ["03KH192"]=F ["03KH193"]=R ["03KH194"]=F ["03KH195"]=R \
+["03LE223"]=F ["03LE224"]=R ["071-000-203-01"]=F ["071-000-588"]=F ["07XY0Y"]=F \
+["08WP7W"]=F ["0YX5GR"]=R ["105-575-071-00"]=F ["105-575-072-00"]=F \
+["105-575-074-00"]=F ["304643"]=R ["322285"]=R ["326013"]=R ["326146"]=R \
+["326329"]=R ["675170-001"]=F ["675171-001"]=R ["841985-001"]=F \
+["841986-001"]=R ["90Y3770"]=F ["90Y3780"]=R ["90Y3800"]=F ["90Y3802"]=R \
+["930-9SPSU-00RA-00A"]=R ["930-9SPSU-00RA-00B"]=R ["9802A00E"]=R \
+["98Y6356"]=F ["98Y6357"]=F ["MGA100-PS"]=F ["MSX60-PF"]=F ["MSX60-PR"]=R \
+["MTDF-PS-A"]=F ["MTDF-PS-B"]=F ["MUA90-PF"]=F ["MUA96-PF"]=R ["P10613-001"]=F \
+["PSU-AC-150-B"]=F ["PSU-AC-150-F"]=R ["PSU-AC-150W-B"]=F ["PSU-AC-150W-F"]=R \
+["PSU-AC-400-B"]=F ["PSU-AC-400-F"]=R ["PSU-AC-650A-B"]=F ["PSU-AC-650A-F"]=R \
+["PSU-AC-850A-B"]=F ["PSU-AC-850A-F"]=R ["PSU-AC-920-F"]=R ["PSU-AC-920W-F"]=R \
+["YM-1151D-A02R"]=F ["YM-1151D-A03R"]=R ["YM-1921A-A01R"]=R ["SP57B0808724"]=R \
+["675172-001"]=F ["675173-001"]=R ["687089-001"]=F ["687090-001"]=F \
+["687091-001"]=F ["688790-001"]=F ["688791-001"]=F ["841987-001"]=F \
+["841988-001"]=R ["P10612-001"]=F ["P10613-001"]=F \
+["00MP581"]=F ["00MP583"]=F ["00MP591"]=R ["00MP593"]=R ["SP57A44110"]=F \
+["SF17A44112"]=F ["SP57A44111"]=R ["SF17A44113"]=R ["SP57A80805"]=R \
+["SP57A80806"]=F ["SF17B06515"]=F ["SF17B06516"]=R ["SP57B06517"]=F \
+["SP57B06518"]=R ["SF17B08721"]=R ["SF17B08722"]=F ["SP57B08723"]=F \
+["SP57B08724"]=R ["SP57B08725"]=F ["SP57B08726"]=R ["SF17B27987"]=F \
+["SF17B27988"]=R ["SP57B42423"]=F ["SP57B42424"]=R ["90Y3769"]=F ["90Y3771"]=F \
+["90Y3779"]=R ["90Y3781"]=R ["90Y3779"]=R ["SA001871"]=F ["00WT021"]=F \
+["105-575-014-00"]=F )
 
 # Thermal type constants
 thermal_type_t1=1
@@ -81,7 +121,7 @@ thermal_type_def=0
 thermal_type_full=100
 
 base_cpu_bus_offset=10
-max_tachos=14
+max_tachos=20
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
 i2c_bus_max=26
@@ -89,6 +129,7 @@ lc_i2c_bus_min=34
 lc_i2c_bus_max=43
 i2c_bus_offset=0
 cpu_type=
+device_connect_delay=0.2
 
 # CPU Family + CPU Model should idintify exact CPU architecture
 # IVB - Ivy-Bridge
@@ -97,12 +138,14 @@ cpu_type=
 # CFL - Coffee Lake
 # DNV - Denverton
 # BF3 - BlueField-3
+# AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
 IVB_CPU=0x63A
 RNG_CPU=0x64D
 BDW_CPU=0x656
 CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
+AMD_SNW_CPU=0x171
 
 log_err()
 {
@@ -204,7 +247,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158)
 			return 0
 			;;
 
@@ -316,7 +359,11 @@ connect_device()
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-			return $?
+			sleep ${device_connect_delay}
+			if [ ! -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] &&
+			   [ ! -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
+				return 1
+			fi
 		fi
 	fi
 
@@ -504,4 +551,171 @@ function get_i2c_busdev_name()
 	fi
 
 	echo "$dev_name"
+}
+
+find_dpu_slot()
+{
+	local path="$1"
+	i2c_bus_offset=$(<$config_path/i2c_bus_offset)
+	dpu_bus_off=$(<$config_path/dpu_bus_off)
+	input_bus_num=$(echo "$path" | xargs dirname | xargs basename | cut -d"-" -f2)
+	slot_num=$((input_bus_num-dpu_bus_off+i2c_bus_offset+1))
+	echo "$slot_num"
+}
+
+find_dpu_hotplug_slot()
+{
+	local path="$1"
+
+	slot_num=$(echo "$path" | xargs dirname | xargs dirname | xargs basename | cut -d"." -f2)
+	echo "$slot_num"
+}
+
+create_hotplug_smart_switch_event_files()
+{
+	local dpu2host_event_file="$1"
+	local dpu_event_file="$2"
+
+	declare -a dpu2host_event_table="($(< $dpu2host_event_file))"
+	declare -a dpu_event_table="($(< $dpu_event_file))"
+
+	dpu_num=($(< $config_path/dpu_num))
+
+	for i in ${!dpu2host_event_table[@]}; do
+		check_n_init "$events_path/${dpu2host_event_table[$i]}" 0
+	done
+
+	dpu_num=$(<"$config_path"/dpu_num)
+	for ((i=1; i<=dpu_num; i+=1)); do
+		if [ ! -d "$hw_management_path/dpu"$i"/events" ]; then
+			mkdir "$hw_management_path/dpu"$i"/events"
+		fi
+		for j in ${!dpu_event_table[@]}; do
+			check_n_init $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} 0
+		done
+	done
+}
+
+init_hotplug_events()
+{
+	local event_file="$1"
+	local path="$2"
+	local slot_num="$3"
+	local e_path
+	local s_path
+
+	declare -a event_table="($(< $event_file))"
+
+	if [ $slot_num -ne 0 ]; then
+		e_path="$hw_management_path/dpu$slot_num/events"
+		s_path="$hw_management_path/dpu$slot_num/system"
+	else
+		e_path="$events_path"
+		s_path="$system_path"
+	fi
+
+	for i in ${!event_table[@]}; do
+		if [ -f "$path"/${event_table[$i]} ]; then
+			check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
+			event=$(< $s_path/${event_table[$i]})
+			if [ "$event" -eq 1 ]; then
+				echo 1 > $e_path/${event_table[$i]}
+			fi
+		fi
+	done
+}
+
+deinit_hotplug_events()
+{
+	local event_file="$1"
+	local slot_num="$2"
+	local s_path
+
+	declare -a event_table="($(< $event_file))"
+
+	if [ $slot_num -ne 0 ]; then
+		s_path=$system_path
+	else
+		s_path="$hw_management_path/dpu$slot_num/system_path"
+	fi
+
+	for i in ${!event_table[@]}; do
+		check_n_unlink "$s_path"/${event_table[$i]}
+	done
+}
+
+connect_underlying_devices()
+{
+	local bus="$1"
+
+	if [ ! -f $config_path/i2c_underlying_devices ]; then
+		return
+	fi
+
+	declare -a card_connect_table="($(< $config_path/i2c_underlying_devices))"
+
+	for ((i=0; i<${#card_connect_table[@]}; i+=4)); do
+		addr="${card_connect_table[i+2]}"
+		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
+		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "${card_connect_table[i]}" "$addr" > /sys/bus/i2c/devices/i2c-$bus/new_device
+		fi
+	done
+}
+
+disconnect_underlying_devices()
+{
+	local bus="$1"
+
+	if [ ! -f $config_path/i2c_underlying_devices ]; then
+		return
+	fi
+
+	declare -a card_connect_table="($(< $config_path/i2c_underlying_devices))"
+
+	for ((i=0; i<${#card_connect_table[@]}; i+=4)); do
+		addr="${card_connect_table[i+2]}"
+		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
+		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+			echo "$addr" > /sys/bus/i2c/devices/i2c-$bus/delete_device
+		fi
+	done
+}
+
+connect_dynamic_board_devices()
+{
+	local board_name="$1"
+	local device_connect_retry=2
+
+	if [ ! -f "$dynamic_boards_path"/"$board_name" ]; then
+		return
+	fi
+
+	declare -a board_connect_table=($(<"$dynamic_boards_path"/"$board_name"))
+
+	for ((i=0; i<${#board_connect_table[@]}; i+=4)); do
+		for ((j=0; j<${device_connect_retry}; j++)); do
+			connect_device "${board_connect_table[i]}" "${board_connect_table[i+1]}" \
+					"${board_connect_table[i+2]}"
+			if [ $? -eq 0 ]; then
+				break;
+			fi
+			disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
+		done
+	done
+}
+
+disconnect_dynamic_board_devices()
+{
+	local board_name="$1"
+
+	if [ ! -f "$dynamic_boards_path"/"$board_name" ]; then
+		return
+	fi
+
+	declare -a board_connect_table=($(<"$dynamic_boards_path"/"$board_name"))
+
+	for ((i=0; i<${#board_connect_table[@]}; i+=4)); do
+		disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
+	done
 }
