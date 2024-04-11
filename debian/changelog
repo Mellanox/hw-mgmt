@@ -1,4 +1,4 @@
-hw-management (1.mlnx.7.0030.3932) unstable; urgency=low
+hw-management (1.mlnx.7.0030.4000) unstable; urgency=low
   [ MLNX ] 
 
- -- MellanoxBSP <system-sw-low-level@mellanox.com> Tue, 30 Jan 2024 11:10:00 +0300
+ -- Yehuda Yehudai <yyehudai@nvidia.com> Fri, 05 Apr 2024 11:10:00 +0300

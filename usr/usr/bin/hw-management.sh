@@ -114,6 +114,7 @@ asic_chipup_retry=2
 device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
+chipup_retry_count=3
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -617,11 +618,15 @@ function restore_i2c_bus_frequency_default()
 		if [ -f $config_path/default_i2c_freq ]; then
 			i2c_freq=$(< $config_path/default_i2c_freq)
 			/usr/bin/iorw -b "$i2c_freq_reg" -w -l1 -v"$i2c_freq"
+			chipup_test_time=5
 		fi
 		;;
 	*)
+		chipup_test_time=2
 		;;
 	esac
+
+	return $chipup_test_time
 }
 
 function find_regio_sysfs_path_helper()
@@ -1168,6 +1173,10 @@ msn27xx_msb_msx_specific()
 			# Scorp
 			thermal_control_config="$thermal_control_configs_path/tc_config_msb7xxx.json"
 			;;
+		SGN2410)
+			# SGN2410_A1
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			;;
 		*)
 			;;
 	esac
@@ -1175,6 +1184,8 @@ msn27xx_msb_msx_specific()
 
 	case $sku in
 		HI138)
+			# SGN2410_A1
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			hotplug_fans=0
 			max_tachos=0
 		;;
@@ -1339,7 +1350,7 @@ msn3420_specific()
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
 	echo 24c02 > $config_path/psu_eeprom_type
-	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/msn3420_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn3420.json"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
@@ -2165,8 +2176,8 @@ smart_switch_common()
 	named_busses+=(${smart_switch_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	max_tachos=4
-	echo 25000 > $config_path/fan_max_speed
-	echo 4500 > $config_path/fan_min_speed
+	echo 11000 > $config_path/fan_max_speed
+	echo 3100 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
@@ -2688,8 +2699,8 @@ set_asic_pci_id()
 	HI157)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
-		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		;;
@@ -3087,7 +3098,9 @@ do_chip_up_down()
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
 			restore_i2c_bus_frequency_default
-			retry_helper find_asic_hwmon_path 0.2 3 "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
+			chipup_test_time=$?
+			chipup_test_time=`awk -v var1=$chipup_test_time -v var2=10 'BEGIN { print  ( var1 / var2 ) }'`
+			retry_helper find_asic_hwmon_path "$chipup_test_time" "$chipup_retry_count" "chip hwmon object" /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name"/hwmon
 			if [ $? -ne 0 ]; then
 				# chipup command failed.
 				unlock_service_state_change
