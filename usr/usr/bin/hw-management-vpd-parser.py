@@ -66,6 +66,9 @@ import struct
 import binascii
 import zlib
 import re
+import os
+import tempfile
+import subprocess
 
 #############################
 # Global const
@@ -521,7 +524,7 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
         tlv_header = bin_decode(fru_dict['tlv_header'])
     except:
         tlv_header = ""
-    if 'TlvInfo' not in tlv_header and fru_dict['ver'] not in SUPPORTED_FRU_VER:
+    if 'TlvInfo' not in tlv_header or fru_dict['ver'] not in SUPPORTED_FRU_VER:
         return None
 
     fru_dict['items'] = []
@@ -553,6 +556,39 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
     return fru_dict
 
 
+def parse_fru_ipmi_bin(data, FRU_ITEMS):
+    # 1. check if ipmi-fru installed
+    pdb.set_trace()
+    fru_dict = {}
+    fru_dict['items'] = []
+    fd, path = tempfile.mkstemp()
+    try:
+        unpack_res = struct.unpack(">H", data[:2])
+        if unpack_res[0] != 256:
+           pass 
+
+        with os.fdopen(fd, 'wb') as tmp:
+            # do stuff with temp file
+            tmp.write(data)
+        cmd = "ipmi-fru --fru-file={}".format(path)
+        
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+        (output, err) = p.communicate()
+        status = p.wait()
+        output = output.decode('ascii')
+        if "FRU Error:" in output or status != 0:
+            pass
+        else:
+            lines = output.splitlines()
+            for line in lines:
+                if len(line) > 10:
+                    item = line.split(":",1)
+                    fru_dict['items'].append(item)
+    finally: 
+        os.remove(path)
+   
+    return fru_dict
+
 def parse_fru_bin(data, VPD_TYPE, verbose):
     res = None
     if VPD_TYPE in globals().keys():
@@ -565,9 +601,20 @@ def parse_fru_bin(data, VPD_TYPE, verbose):
     elif FRU_ITEMS["type"] == "MLNX":
         res = parse_fru_mlnx_bin(data, FRU_ITEMS, verbose)
     else:
-        res = parse_fru_onie_bin(data, SYSTEM_VPD, verbose)
+        try:
+            res = parse_fru_onie_bin(data, SYSTEM_VPD, verbose)
+        except:
+            pass
+        if not res: 
+            try:
+                res = parse_fru_mlnx_bin(data, MLNX_VENDOR_BLK, verbose)
+            except:
+                pass
         if not res:
-            res = parse_fru_mlnx_bin(data, MLNX_VENDOR_BLK, verbose)
+            try:
+                res = parse_fru_ipmi_bin(data, None)
+            except:
+                pass
     return res
 
 
@@ -650,7 +697,8 @@ if __name__ == '__main__':
                                                                                                                    "MLNX_CPU_VPD",
                                                                                                                    "MLNX_FAN_VPD",
                                                                                                                    "MLNX_PDB_VPD",
-                                                                                                                   "MLNX_CARTRIDGE_VPD"])
+                                                                                                                   "MLNX_CARTRIDGE_VPD",
+                                                                                                                   "IPMI"])
     parser.add_argument('--verbose',  dest='verbose', required=False, default=0, help=argparse.SUPPRESS)
     parser.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
     args = parser.parse_args()
