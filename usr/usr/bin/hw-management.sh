@@ -2976,6 +2976,17 @@ do_start()
 		cp $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
+# TEMPORARY CODE. SHOULD NOT BE TAKEN TO RELEASE BRANCH.
+# IT'S DONE HERE JUST FOR AMD COMEX TESTING ON OLD SYSTEMS.
+	if [ "$cpu_type" == "$AMD_SNW_CPU" ]; then
+		i2c_comex_mon_bus=$(< $i2c_comex_mon_bus_default_file)
+		if [ ! -d /sys/bus/i2c/devices/i2c-$i2c_comex_mon_bus/$i2c_comex_mon_bus-0029 ]; then
+			echo "mp2855" "0x29" > /sys/bus/i2c/devices/i2c-$i2c_comex_mon_bus/new_device
+		fi
+		if [ ! -d /sys/bus/i2c/devices/i2c-$i2c_comex_mon_bus/$i2c_comex_mon_bus-006a ]; then
+			echo "mp2975" "0x6a" > /sys/bus/i2c/devices/i2c-$i2c_comex_mon_bus/new_device
+		fi
+	fi
 }
 
 do_stop()
