@@ -339,6 +339,7 @@ Kernel-5.10
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream accepted                      |            | P4300                                          |
 |9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch|                 | Downstream accepted                      |            |                                                |
 |9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
+|9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-6.1
@@ -451,6 +452,7 @@ Kernel-6.1
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic]                   |            | P4300                                          |
 |9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
 |9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream;skip[sonic]                   |            | Add dedicated match for QMB8700                |
+|9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
