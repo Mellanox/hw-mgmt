@@ -258,12 +258,9 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 					 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
-
-# V0-K*G0EgEgJa-S*RgRgRgRgRgRgGbG0TcTcEiSaSa-L*EiEiEiGbGeTcXbXcFbSaCa-P*OaOaOaOaH0Ei-C*RiRaGeGdSaEg
+# V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
-declare -A jso_platform_alternatives=(["24c512_0"]="24c512 0x50 16 fruid_info" \
-	 			["24c512_0"]="24c512 0x51 16 fru_info" \
-	 			["24c512_0"]="24c512 0x51 8 vpd_info" \
+declare -A jso_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
 				["adt75_0"]="adt75 0x49 13 port_amb")
 
 declare -A jso_swb_alternatives=(["mp2891_0"]="mp2891 0x66 12 voltmon1" \
@@ -278,12 +275,12 @@ declare -A jso_swb_alternatives=(["mp2891_0"]="mp2891 0x66 12 voltmon1" \
 						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 28 voltmon4" \
 						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 28 voltmon5" \
 						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 28 voltmon6" \
-						["adt75_1"]="adt75 0x4a 14 swb_asic1" \
-						["adt75_2"]="adt75 0x4b 14 swb_asic2" \
-						["tmp102_1"]="tmp102 0x4a 14 swb_asic1" \
-						["tmp102_2"]="tmp102 0x4b 14 swb_asic2" \
-						["stts751_1"]="stts751 0x4a 14 swb_asic1" \
-						["stts751_2"]="stts751 0x4b 14 swb_asic2" \
+						["adt75_0"]="adt75 0x4a 14 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 14 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 14 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 14 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 14 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 14 swb_asic2" \
 					   	["24c512_0"]="24c512 0x51 16 swb_info")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
@@ -659,6 +656,7 @@ devtr_check_supported_system_init_alternatives()
 				return 1
 				;;
 			esac
+			;;
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1

@@ -2224,7 +2224,7 @@ smart_switch_common()
 
 jso_specific()
 {
-	local cpu_bus_offset=52
+	local cpu_bus_offset=60
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${jso_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
@@ -2259,6 +2259,8 @@ jso_specific()
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 	override_bom="V0-K*G0EgEgJa-S*RgRgRgRgRgRgGbG0TcTcEiSaSa-L*EiEiEiGbGeTcXbXcFbSaCa-P*OaOaOaOaH0Ei-C*RiRaGeGdSaEg"
+	echo mctp-i2c-interface 0x100a > /sys/bus/i2c/devices/i2c-0/new_device
+	#ln -sf /sys/bus/i2c/devices/i2c-2 /sys/bus/i2c/devices/i2c-8
 }
 
 check_system()
@@ -2489,6 +2491,13 @@ load_modules()
 			modprobe drivetemp
 		fi
 	fi
+	case $sku in
+		HI162)	# JSO
+			modprobe i2c_designware_platform
+		;;
+		*)
+		;;
+	esac
 }
 
 set_config_data()

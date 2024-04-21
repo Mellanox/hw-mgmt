@@ -1176,7 +1176,7 @@ if [ "$1" == "add" ]; then
 		pdb_eeprom)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
-		cable_cartridge*_eeprom)
+		cable_cartridge*_eeprom*)
 			eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
 			;;
