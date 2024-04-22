@@ -754,10 +754,6 @@ set_jtag_gpio()
 			jtag_tms=88
 			jtag_tdo=89
 			;;
-		$AMD_SNW_CPU)
-			echo 0x2094 > $config_path/jtag_rw_reg
-			echo 0x2095 > $config_path/jtag_ro_reg
-			;;
 		*)
 			return 0
 			;;
@@ -2165,7 +2161,7 @@ smart_switch_common()
 		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 		echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
 	fi
-	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/sn4280_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
 	named_busses+=(${smart_switch_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
