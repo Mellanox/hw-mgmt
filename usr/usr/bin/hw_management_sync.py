@@ -260,7 +260,10 @@ def run_cmd(cmd_list, arg):
 # ----------------------------------------------------------------------
 def asic_temp_populate(arg_list, arg):
     ''
-    val = arg * 125
+    if arg >= 0:
+        val = arg * 125
+    else:
+        val = 0xffff + arg + 1
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(arg)
@@ -285,7 +288,10 @@ def asic_temp_populate(arg_list, arg):
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, arg):
     ''
-    val = arg * 125
+    if arg >= 0:
+        val = arg * 125
+    else:
+        val = 0xffff + arg + 1
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(arg)
