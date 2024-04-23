@@ -1,0 +1,6 @@
+[Match]
+Name=usb0
+
+[Network]
+Address=172.31.13.241/24
+Gateway=172.31.13.241
