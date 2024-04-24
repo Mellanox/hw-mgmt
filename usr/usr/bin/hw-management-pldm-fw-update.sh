@@ -41,17 +41,34 @@ show_usage()
 	echo "	<protocol> is optional and can be 'https' or 'http'. Default is 'https'."
 	echo "Options:"
 	echo "  -b [<protocol>] <ip> <file_name>: Flash firmware file and check status"
-	echo "  -v [<protocol>] <ip> <FPGA_0 | BMC | CPLD>: Print firmware version for the selected component"	
+	echo "  -v [<protocol>] <ip> <FPGA_0 | BMC | CPLD>: Print firmware version for the selected component"
+	echo "  -s [<protocol>] <ip>: Show firmware inventory list"
 	exit 1
+}
+
+validate_proto()
+{
+	case "$1" in
+		"http")
+			proto="http"
+			;;
+		"https")
+			proto="https"
+			;;
+		*)
+			echo "Invalid argument for protocol. Use <https> or <http>"
+			exit 0
+			;;
+	esac
 }
 
 validate_ip()
 {
 	if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 		return 0
-	else 
+	else
 		return 1
-	fi    
+	fi
 }
 
 validate_file_extension()
@@ -73,9 +90,10 @@ file_error_handling()
 	fi
 
 	if [ -e "$file" ]; then
-		echo "$file exists."
+		return 0
 	else
-		echo "$file does not exist."
+		echo "Error: $file does not exist."
+		exit 1
 	fi
 }
 
@@ -91,24 +109,36 @@ ip_error_handling()
 	if ! ping -c 1 "$ip" > /dev/null; then
 		echo "Error: Cannot ping the IP address $ip"
 		exit 1
-    	fi
+	fi
 }
 
 extract_task_state()
 {
-    local task_state=$(echo "$1" | grep -o '"TaskState": *"[^"]*"')
-    if [[ -z "$task_state" ]]; then
-        echo "Error: Task state not found in JSON response"
-        return 1
-    else
-        echo "$task_state" | sed 's/.*: *"\([^"]*\)".*/\1/'
-    fi
+	local task_state=$(echo "$1" | grep -o '"TaskState": *"[^"]*"')
+	if [[ -z "$task_state" ]]; then
+		echo "Error: Task state not found in JSON response"
+		return 1
+	else
+		echo "$task_state" | sed 's/.*: *"\([^"]*\)".*/\1/'
+	fi
 }
 
 get_version()
 {
+	if [[ "${num_args}" -lt 3 ]]; then
+		echo "Error: Wrong number of arguments"
+		show_usage
+		exit 1
+	fi
+
 	local ip="$1"
 	local comp="$2"
+
+	if [[ "${num_args}" -eq 4 ]]; then
+		validate_proto $optional_proto
+	else
+		proto=$DEFAULT_PROTO
+	fi
 
 	ip_error_handling $1
 
@@ -121,12 +151,28 @@ get_version()
 		echo "	Verify that you are using the right protocol http/https."
 		exit 1
 	fi
+
+	#Error handling
+	echo $res | grep -q '"error"' && echo "$res"| sed -n 's/.*"message": "\(.*\)".*/\1/p'
+
 }
 
 flash_fw_error_handling()
 {
+	if [[ "${num_args}" -lt 3 ]]; then
+		echo "Error: Wrong number of arguments"
+		show_usage
+		exit 1
+	fi
+
 	ip_error_handling $1
 	file_error_handling $2
+
+	if [[ "${num_args}" -eq 4 ]]; then
+		validate_proto $optional_proto
+	else
+		proto=$DEFAULT_PROTO
+	fi
 }
 
 flash_fw()
@@ -144,19 +190,19 @@ flash_fw()
 	local timeout_seconds=300  # 5 minutes
 	local start_time=$(date +%s)
 
- 	# Pull for task completion until timeout
+	# Pull for task completion until timeout
 	while true; do
-		curl_result=resp=$(curl -s -k -u $USER:$PASS -X GET ${proto}://${ip}/redfish/v1/TaskService/Tasks/"${task_id}")
-        task_state=$(extract_task_state "$curl_result")
-        ret_val=$?
-        if [[ $ret_val -eq 0 && "$task_state" = "Completed" ]]; then
-            echo "Success: File sent successfully"
-            exit 0
-        else
-            echo "Failure: Task did not complete or state not found"
-            echo "TBD Add support for Exception handling"
-            exit 1
-        fi
+		curl_result=$(curl -s -k -u $USER:$PASS -X GET ${proto}://${ip}/redfish/v1/TaskService/Tasks/"${task_id}")
+		task_state=$(extract_task_state "$curl_result")
+		ret_val=$?
+		if [[ $ret_val -eq 0 && "$task_state" = "Completed" ]]; then
+			echo "Success: File sent successfully"
+			exit 0
+		else
+			echo "Failure: Task did not complete or state not found"
+			echo "TBD Add support for Exception handling"
+			exit 1
+		fi
 
 		local current_time=$(date +%s)
 		local elapsed_time=$((current_time - start_time))
@@ -172,7 +218,7 @@ flash_fw()
 get_fw_ver()
 {
 	case "$2" in
-    	"FPGA_0") 
+	"FPGA_0")
 		get_version $1 "MGX_FW_FPGA_0"
 		exit 0
 		;;
@@ -184,58 +230,65 @@ get_fw_ver()
 		get_version $1 "MGX_FW_CPLD_0"
 		exit 0
 		;;
-	*)  
+	*)
 		echo "Invalid argument for -v option. Argument must be <FPGA_0 | BMC | CPLD>"
 		exit 0
 		;;
 	esac
 }
 
-if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
-	echo "Error: Wrong number of arguments"
-    	show_usage
-fi
+show_fw_inventory()
+{
+	local ip="$1"
 
-if [ "$#" -eq 4 ]; then
-	num_args=4
-	case "$2" in
-    	"http") 
-		proto="http"
-		;;
-	"https")
-		proto="https"
-		;;
-	*)  
-		echo "Invalid argument for protocol. Use <https> or <http>"
+	if [[ "${num_args}" -eq 3 ]]; then
+		validate_proto $optional_proto
+	else
+		proto=$DEFAULT_PROTO
+	fi
+
+	ip_error_handling $ip
+
+	# All is good we can query for the inventory list
+	resp=$(curl -s -k -u $USER:$PASS -X GET ${proto}://${ip}/redfish/v1/UpdateService/FirmwareInventory/)
+
+	if [ -z "$resp" ]; then
+		echo "Error : No response or error occurred."
+		echo "	Verify that you are using the right protocol http/https."
+		exit 1
+	else
+		echo "${resp}"
 		exit 0
-		;;
-	esac
+	fi
+}
 
-else 
-	proto=$DEFAULT_PROTO
-	num_args=3
-fi
+num_args=$#
+optional_proto=$2
 
-while getopts ":b:v:h" opt; do
+while getopts ":b:v:s:h" opt; do
 	case $opt in
-        	b)
+		b)
 			second_to_last_index=$((num_args-1))
 			last_index=$((num_args))
 			flash_fw ${!second_to_last_index} ${!last_index}
 			;;
-        	v)
+		v)
 			second_to_last_index=$((num_args-1))
 			last_index=$((num_args))
 			get_fw_ver ${!second_to_last_index} ${!last_index}
 			;;
+		s)
+			last_index=$((num_args))
+			show_fw_inventory ${!last_index}
+			;;
 		h)
 			show_usage
 			;;
-        	\?)
+		\?)
 			echo "Invalid option: -$OPTARG" >&2
 			show_usage
 			;;
-        	:)
+		:)
 			echo "Option -$OPTARG requires an argument." >&2
 			show_usage
 			;;
