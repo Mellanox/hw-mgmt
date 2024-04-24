@@ -559,7 +559,7 @@ smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x0 0x6a dpu_voltmon2)
 
 # Just for possible initial step without SMBios alternative BOM string
-jso_base_connect_table=( lm5066 0x16 11 \
+n5110ld_base_connect_table=( lm5066 0x16 11 \
 	pmbus 0x10 11 \
 	pmbus 0x11 11 \
 	pmbus 0x12 11 \
@@ -577,14 +577,14 @@ jso_base_connect_table=( lm5066 0x16 11 \
 	24c02 0x50 59 \
 	24c02 0x51 59 )
 
-jso_dynamic_i2c_bus_connect_table=( mp2891 0x66 12 voltmon1 \
+n5110ld_dynamic_i2c_bus_connect_table=( mp2891 0x66 12 voltmon1 \
 	mp2891 0x68 12 voltmon2 \
 	mp2891 0x6c 12 voltmon3 \
 	mp2891 0x66 28 voltmon4 \
 	mp2891 0x68 28 voltmon5 \
 	mp2891 0x6c 28 voltmon6)
 	
-jso_cartridge_eeprom_connect_table=( 24c02 0x50 56 cable_cartridge_eeprom \
+n5110ld_cartridge_eeprom_connect_table=( 24c02 0x50 56 cable_cartridge_eeprom \
    	24c02 0x51 56 cable_cartridge_eeprom2 \
 	24c02 0x50 57 cable_cartridge2_eeprom \
 	24c02 0x51 57 cable_cartridge2_eeprom2 \
@@ -605,7 +605,7 @@ p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
-jso_named_busses=( asic1 9 vr 11 pwr1 12 pwr2 28 amb 13 pcb_amb 14 vpd 8 cart1 56 cart2 57 cart3 58 cart4 59)
+n5110ld_named_busses=( asic1 9 vr 11 pwr1 12 pwr2 28 amb 13 pcb_amb 14 vpd 8 cart1 56 cart2 57 cart3 58 cart4 59)
 
 ACTION=$1
 
@@ -2222,17 +2222,17 @@ smart_switch_common()
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
 }
 
-jso_specific()
+n5110ld_specific()
 {
 	local cpu_bus_offset=60
 	if [ ! -e "$devtree_file" ]; then
-		connect_table+=(${jso_base_connect_table[@]})
+		connect_table+=(${n5110ld_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
-		add_i2c_dynamic_bus_dev_connection_table "${jso_dynamic_i2c_bus_connect_table[@]}"
-		add_i2c_dynamic_bus_dev_connection_table "${jso_cartridge_eeprom_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_dynamic_i2c_bus_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_cartridge_eeprom_connect_table[@]}"
 	else
 		# adding Cable Cartridge support which is not included to BOM string
-		echo -n "${jso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		echo -n "${n5110ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 	fi
 	asic_i2c_buses=(9 19)
 	echo 1 > $config_path/global_wp_wait_step
@@ -2251,14 +2251,14 @@ jso_specific()
 	pwr_events_count=0
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
-	lm_sensors_config="$lm_sensors_configs_path/jso_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/n5110ld_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_jso.json"
-	named_busses+=(${jso_named_busses[@]})
+	lm_sensors_labels="$lm_sensors_configs_path/n5110ld_sensors_labels.json"
+	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses 8
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
-	override_bom="V0-K*G0EgEgJa-S*RgRgRgRgRgRgGbG0TcTcEiSaSa-L*EiEiEiGbGeTcXbXcFbSaCa-P*OaOaOaOaH0Ei-C*RiRaGeGdSaEg"
 	echo mctp-i2c-interface 0x100a > /sys/bus/i2c/devices/i2c-0/new_device
 	#ln -sf /sys/bus/i2c/devices/i2c-2 /sys/bus/i2c/devices/i2c-8
 }
@@ -2316,7 +2316,7 @@ check_system()
 			smart_switch_common
 			;;
 		VMOD0021)
-			jso_specific
+			n5110ld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)

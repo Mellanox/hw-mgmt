@@ -261,10 +261,10 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
-declare -A jso_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
+declare -A n5110ld_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
 				["adt75_0"]="adt75 0x49 13 port_amb")
 
-declare -A jso_swb_alternatives=(["mp2891_0"]="mp2891 0x66 12 voltmon1" \
+declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 12 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 12 voltmon2" \
 						["mp2891_2"]="mp2891 0x6c 12 voltmon3" \
 						["mp2891_3"]="mp2891 0x66 28 voltmon4" \
@@ -640,16 +640,16 @@ devtr_check_supported_system_init_alternatives()
 		VMOD0021)
 			case $sku in
 			HI162)
-				for key in "${!jso_swb_alternatives[@]}"; do
-					swb_alternatives["$key"]="${jso_swb_alternatives["$key"]}"
+				for key in "${!n5110ld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${n5110ld_swb_alternatives["$key"]}"
 				done
 				
 				for key in "${!pwr_type3_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
 				done
 				
-				for key in "${!jso_platform_alternatives[@]}"; do
-					platform_alternatives["$key"]="${jso_platform_alternatives["$key"]}"
+				for key in "${!n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
 				done
 				;;
 			*)

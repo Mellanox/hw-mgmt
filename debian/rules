@@ -36,7 +36,7 @@ endif
 	cp -a usr/etc/hw-management-virtual/* debian/$(pname)/etc/hw-management-virtual
 	dh_installdirs -p$(pname) etc/systemd/network/
 	cp usr/etc/systemd/network/* debian/$(pname)/etc/systemd/network/
-	
+
 override_dh_installinit:
 	dh_installinit --name=hw-management
 	dh_installinit --name=hw-management-tc
