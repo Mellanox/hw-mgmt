@@ -2,5 +2,6 @@
 Name=usb0
 
 [Network]
+DHCP=no
+ConfigureWithoutCarrier=true
 Address=172.31.13.241/24
-Gateway=172.31.13.241

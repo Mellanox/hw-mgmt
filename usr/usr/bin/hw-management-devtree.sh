@@ -78,7 +78,8 @@ declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 
 declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x29 15 comex_voltmon1" \
 				   ["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
-				   ["24c128_0"]="24c128 0x50 16 cpu_info"
+				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
+				   ["24c128_0"]="24c128 0x50 16 cpu_info" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
@@ -262,27 +263,27 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
 declare -A n5110ld_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
-				["adt75_0"]="adt75 0x49 13 port_amb")
+				["adt75_0"]="adt75 0x49 15 port_amb")
 
-declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 12 voltmon1" \
-						["mp2891_1"]="mp2891 0x68 12 voltmon2" \
-						["mp2891_2"]="mp2891 0x6c 12 voltmon3" \
-						["mp2891_3"]="mp2891 0x66 28 voltmon4" \
-						["mp2891_4"]="mp2891 0x68 28 voltmon5" \
-						["mp2891_5"]="mp2891 0x6c 28 voltmon6" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 12 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 12 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 12 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 28 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 28 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 28 voltmon6" \
-						["adt75_0"]="adt75 0x4a 14 swb_asic1" \
-						["adt75_1"]="adt75 0x4b 14 swb_asic2" \
-						["tmp102_0"]="tmp102 0x4a 14 swb_asic1" \
-						["tmp102_1"]="tmp102 0x4b 14 swb_asic2" \
-						["stts751_0"]="stts751 0x4a 14 swb_asic1" \
-						["stts751_1"]="stts751 0x4b 14 swb_asic2" \
-					   	["24c512_0"]="24c512 0x51 16 swb_info")
+declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 14 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 14 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 14 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 30 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 30 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 30 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 14 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 14 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 14 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 30 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 30 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 30 voltmon6" \
+						["adt75_0"]="adt75 0x4a 16 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 16 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 16 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 16 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 16 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 16 swb_asic2" \
+					   	["24c512_0"]="24c512 0x51 18 swb_info")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -433,7 +434,7 @@ devtr_check_supported_system_init_alternatives()
 		$CFL_CPU)
 			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
 				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
-				for key in "${!0[@]}"; do
+				for key in "${!comex_cfl_alternatives[@]}"; do
 					curr_component=(${comex_cfl_alternatives["$key"]})
 					curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
 					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"

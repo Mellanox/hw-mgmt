@@ -42,52 +42,61 @@ import time
 import pdb
 
 atttrib_list = {
-    "NVLink_Switch_Scaleout": [
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/fan1",
+    "N5110_LD": [
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 {arg1}"],
          "poll": 5, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/fan2",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan2",
          "fn": "run_cmd",
          "arg":["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN2 {arg1}"],
          "poll": 5, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/fan3",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan3",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN3 {arg1}"],
          "poll": 5, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/fan4",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan4",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN4 {arg1}"],
          "poll": 5, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/fan5",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan5",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN5 {arg1}"],
          "poll": 5, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/fan6",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan6",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN6 {arg1}"],
          "poll": 5, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/leakage1",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"],
          "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/leakage1",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"],
          "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/leakage_rope1",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3",
          "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE_ROPE1 {arg1}"],
+         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}"],
          "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/leakage_rope2",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4",
          "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE_ROPE2 {arg1}"],
+         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"],
          "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{}/power_button",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage5",
+         "fn": "run_cmd",
+         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE5 {arg1}"],
+         "poll": 2, "ts": 0},
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage6",
+         "fn": "run_cmd",
+         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE6 {arg1}"],
+         "poll": 2, "ts": 0},
+
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/power_button",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {arg1}"],
          "poll": 1, "ts": 0},
-        
+
         {"fin": "/sys/module/sx_core/asic0/temperature/input",
          "fn": "asic_temp_populate",
          "arg" : ["asic"],
@@ -96,7 +105,7 @@ atttrib_list = {
          "fn": "asic_temp_populate",
          "arg" : ["asic2"],
          "poll": 3, "ts": 0},
-        
+
         {"fin": "/sys/module/sx_core/asic0/module0/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module1"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module1/temperature/input",
@@ -169,18 +178,13 @@ atttrib_list = {
          "fn": "module_temp_populate", "arg" : ["module35"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0}        
-    ],
-    "test": [
-        {"fin": "/tmp/hwmon/{}/fan1",
-         "cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 {arg1}",
-         "poll": 5, "ts": 0}
     ]
 }
 
 # ----------------------------------------------------------------------
 def run_cmd(cmd_list, arg):
     for cmd in cmd_list:
-        cmd = attr_prop["cmd"] + " 2> /dev/null 1> /dev/null"
+        cmd = cmd + " 2> /dev/null 1> /dev/null"
         os.system(cmd.format(arg1=arg))
 
 # ----------------------------------------------------------------------
@@ -239,7 +243,6 @@ def module_temp_populate(arg_list, arg):
         with open(f_name, 'w', encoding="utf-8") as f:
             f.write("120000")
 
-
 # ----------------------------------------------------------------------
 def update_attr(attr_prop):
     """
@@ -250,7 +253,7 @@ def update_attr(attr_prop):
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
         # update file
-        fin = attr_prop["fin"].format(attr_prop["hwmon"])
+        fin = attr_prop["fin"].format(hwmon = attr_prop.get("hwmon", ""))
         if  os.path.isfile(fin):
             with open(fin, 'r', encoding="utf-8") as f:
                 val = f.read().rstrip('\n')
@@ -290,7 +293,7 @@ def main():
             system_type = ""
     else:
         system_type = sys.argv[1]
-
+    system_type = system_type.strip()
     if system_type not in atttrib_list.keys():
         print("Not supported system type: {}".format(system_type))
         sys.exit(1)
