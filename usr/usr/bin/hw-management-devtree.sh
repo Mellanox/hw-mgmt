@@ -78,7 +78,8 @@ declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 
 declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x29 15 comex_voltmon1" \
 				   ["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
-				   ["24c512_0"]="24c512 0x50 16 cpu_info")
+				   ["24c512_0"]="24c512 0x50 16 cpu_info" \
+				   ["24c128_0"]="24c128 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
