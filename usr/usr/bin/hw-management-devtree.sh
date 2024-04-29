@@ -76,7 +76,7 @@ declare -A comex_cfl_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
-declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x29 15 comex_voltmon1" \
+declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmon1" \
 				   ["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
 				   ["24c32_0"]="24c32 0x50 16 cpu_info" \
 				   ["24c128_0"]="24c128 0x50 16 cpu_info" \
@@ -263,27 +263,27 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
 declare -A n5110ld_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
-				["adt75_0"]="adt75 0x49 15 port_amb")
+				["adt75_0"]="adt75 0x49 6 port_amb")
 
-declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 14 voltmon1" \
-						["mp2891_1"]="mp2891 0x68 14 voltmon2" \
-						["mp2891_2"]="mp2891 0x6c 14 voltmon3" \
-						["mp2891_3"]="mp2891 0x66 30 voltmon4" \
-						["mp2891_4"]="mp2891 0x68 30 voltmon5" \
-						["mp2891_5"]="mp2891 0x6c 30 voltmon6" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 14 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 14 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 14 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 30 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 30 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 30 voltmon6" \
-						["adt75_0"]="adt75 0x4a 16 swb_asic1" \
-						["adt75_1"]="adt75 0x4b 16 swb_asic2" \
-						["tmp102_0"]="tmp102 0x4a 16 swb_asic1" \
-						["tmp102_1"]="tmp102 0x4b 16 swb_asic2" \
-						["stts751_0"]="stts751 0x4a 16 swb_asic1" \
-						["stts751_1"]="stts751 0x4b 16 swb_asic2" \
-					   	["24c512_0"]="24c512 0x51 18 swb_info")
+declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 4 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 4 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 4 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 20 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 20 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 20 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 4 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 4 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 4 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 20 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 20 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 20 voltmon6" \
+						["adt75_0"]="adt75 0x48 7 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
+						["tmp102_0"]="tmp102 0x48 7 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 7 swb_asic2" \
+						["stts751_0"]="stts751 0x48 7 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
+					   	["24c512_0"]="24c512 0x51 11 swb_info")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -323,18 +323,19 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
+
 # for p4300
 declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
 					["24c02_0"]="24c02 0x50 3 cable_cartridge_eeprom" \
 					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
 # for JSO
 # P*OaOaOaOaH0Ei
-declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 11 pdb_pwr_conv1" \
-				   	["pmbus_1"]="pmbus 0x11 11 pdb_pwr_conv2" \
-				   	["pmbus_2"]="pmbus 0x12 11 pdb_pwr_conv3" \
-				   	["pmbus_3"]="pmbus 0x13 11 pdb_pwr_conv4" \
-				   	["lm5066_0"]="lm5066 0x16 11 pdb_hotwap1" \
-				   	["24c512_0"]="24c512 0x50 11 pdb_eeprom")
+declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pdb_pwr_conv1" \
+				   	["pmbus_1"]="pmbus 0x11 4 pdb_pwr_conv2" \
+				   	["pmbus_2"]="pmbus 0x13 4 pdb_pwr_conv3" \
+				   	["pmbus_3"]="pmbus 0x15 4 pdb_pwr_conv4" \
+				   	["lm5066_0"]="lm5066 0x16 4 pdb_hotwap1" \
+				   	["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -362,7 +363,6 @@ declare -A pwr_alternatives
 declare -A platform_alternatives
 declare -A port_alternatives
 declare -A dpu_alternatives
-declare -A mgmt_alternatives
 declare -A board_alternatives
 
 devtr_validate_system_ver_str()

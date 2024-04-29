@@ -413,7 +413,7 @@ Kernel-5.10
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream accepted                      |            |                                                |
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream accepted                      |            | P4300                                          |
 |9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch|                 | Downstream accepted                      |            |                                                |
-|9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
+|9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream accepted                      |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-6.1
