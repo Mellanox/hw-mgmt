@@ -279,7 +279,8 @@ find_eeprom_name()
 {
 	bus=$1
 	addr=$2
-	i2c_dev_path="i2c-$bus/$bus-00${busfolder: -2}/" 
+	bus_abs=$((bus+i2c_bus_offset))
+	i2c_dev_path="i2c-$bus_abs/$bus_abs-00${busfolder: -2}/" 
 	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
 	if [[ $eeprom_name != "undefined" ]];
 	then
@@ -367,7 +368,8 @@ find_eeprom_name_on_remove()
 {
 	bus=$1
 	addr=$2
-	i2c_dev_path="2c-$bus/$bus-00${busfolder: -2}/"
+	bus_abs=$((bus+i2c_bus_offset))
+	i2c_dev_path="2c-$bus_abs/$bus_abs-00${busfolder: -2}/"
 	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
 	if [[ $eeprom_name != "undefined" ]];
 	then
@@ -1247,13 +1249,6 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "i2c_bus" ]; then
 		log_info "I2C bus $4 connected."
 		handle_i2cbus_dev_action $4 "add"
-	fi
-	# Create i2c bus AMD.
-	if [ "$2" == "i2c_bus_amd" ]; then
-		log_info "I2C bus $4 connected."
-		if [ "$board_type" == "VMOD0021" ]; then
-			ln -sf "$4" "/sys/bus/i2c/devices/i2c-8"
-		fi
 	fi
 	# Create i2c links.
 	if [ "$2" == "i2c_link" ]; then

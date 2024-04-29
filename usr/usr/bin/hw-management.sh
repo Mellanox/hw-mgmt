@@ -116,7 +116,8 @@ chipup_log_size=4096
 reset_dflt_attr_num=18
 chipup_retry_count=3
 
-override_bom=
+mctp_bus=""
+mctp_addr=""
 
 # Topology description and driver specification for ambient sensors and for
 # ASIC I2C driver per system class. Specific system class is obtained from DMI
@@ -559,31 +560,31 @@ smart_switch_dpu_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x0 0x6a dpu_voltmon2)
 
 # Just for possible initial step without SMBios alternative BOM string
-n5110ld_base_connect_table=( lm5066 0x16 13 \
-	pmbus 0x10 13 \
-	pmbus 0x11 13 \
-	pmbus 0x12 13 \
-	pmbus 0x13 13 \
-	24c512 0x51 13 \
-	adt75 0x49 15 \
-	adt75 0x4a 16 \
-	adt75 0x4b 16)
+n5110ld_base_connect_table=( lm5066 0x16 5 \
+	pmbus 0x10 5 \
+	pmbus 0x11 5 \
+	pmbus 0x12 5 \
+	pmbus 0x13 5 \
+	24c512 0x51 5 \
+	adt75 0x49 7 \
+	adt75 0x4a 8 \
+	adt75 0x4b 8)
 
-n5110ld_dynamic_i2c_bus_connect_table=( mp2891 0x66 14 voltmon1 \
-	mp2891 0x68 14 voltmon2 \
-	mp2891 0x6c 14 voltmon3 \
-	mp2891 0x66 30 voltmon4 \
-	mp2891 0x68 30 voltmon5 \
-	mp2891 0x6c 30 voltmon6)
+n5110ld_dynamic_i2c_bus_connect_table=( mp2891 0x66 6 voltmon1 \
+	mp2891 0x68 6 voltmon2 \
+	mp2891 0x6c 6 voltmon3 \
+	mp2891 0x66 22 voltmon4 \
+	mp2891 0x68 22 voltmon5 \
+	mp2891 0x6c 22 voltmon6)
 	
-n5110ld_cartridge_eeprom_connect_table=( 24c02 0x50 58 cable_cartridge_eeprom \
-   	24c02 0x51 58 cable_cartridge_eeprom2 \
-	24c02 0x50 59 cable_cartridge2_eeprom \
-	24c02 0x51 59 cable_cartridge2_eeprom2 \
-	24c02 0x50 60 cable_cartridge3_eeprom \
-	24c02 0x51 60 cable_cartridge3_eeprom2 \
-	24c02 0x50 61 cable_cartridge4_eeprom \
-	24c02 0x51 61 cable_cartridge4_eeprom2)
+n5110ld_cartridge_eeprom_connect_table=( 24c02 0x50 48 cable_cartridge_eeprom \
+   	24c02 0x51 48 cable_cartridge_eeprom2 \
+	24c02 0x50 49 cable_cartridge2_eeprom \
+	24c02 0x51 49 cable_cartridge2_eeprom2 \
+	24c02 0x50 50 cable_cartridge3_eeprom \
+	24c02 0x51 50 cable_cartridge3_eeprom2 \
+	24c02 0x50 51 cable_cartridge4_eeprom \
+	24c02 0x51 51 cable_cartridge4_eeprom2)
 
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
@@ -784,6 +785,10 @@ set_jtag_gpio()
 			jtag_tms=88
 			jtag_tdo=89
 			;;
+		$AMD_SNW_CPU)
+			echo 0x2094 > $config_path/jtag_rw_reg
+			echo 0x2095 > $config_path/jtag_ro_reg
+			;;
 		*)
 			return 0
 			;;
@@ -881,6 +886,7 @@ set_gpios()
 			return 1
 			;;
 		$AMD_SNW_CPU)
+			set_jtag_gpio $1
 			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
@@ -2216,7 +2222,7 @@ smart_switch_common()
 
 n5110ld_specific()
 {
-	local cpu_bus_offset=54
+	local cpu_bus_offset=55
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${n5110ld_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
@@ -2244,14 +2250,16 @@ n5110ld_specific()
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n5110ld_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_jso.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 	lm_sensors_labels="$lm_sensors_configs_path/n5110ld_sensors_labels.json"
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
-	echo mctp-i2c-interface 0x100a > /sys/bus/i2c/devices/i2c-0/new_device
+
+	mctp_bus="$n5110_mctp_bus"
+	mctp_addr="$n5110_mctp_addr"
 	#ln -sf /sys/bus/i2c/devices/i2c-2 /sys/bus/i2c/devices/i2c-8
 }
 
@@ -2534,6 +2542,9 @@ connect_platform()
 			disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 		done
 	done
+	if [ ! -z $mctp_addr ]; then
+		echo mctp-i2c-interface "0x${mctp_addr}" > /sys/bus/i2c/devices/i2c-"$mctp_bus"/new_device
+	fi
 }
 
 disconnect_platform()
@@ -2549,6 +2560,14 @@ disconnect_platform()
 	fi
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
 		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
+
+	# Remove  MCTP interface
+	if [ -f /sys/bus/i2c/devices/i2c-"$mctp_bus"/"$mctp_bus"-"$mctp_addr"/name ]; then
+	 	name = $(</sys/bus/i2c/devices/"$mctp_bus"/"$mctp_bus"-"$mctp_addr"/name )
+	 	if [ "$name" = "mctp-i2c-interface" ]; then
+			echo  0x"$mctp_addr" > /sys/bus/i2c/devices/i2c-"$mctp_bus"/delete_device
+		fi
+	fi
 	done
 }
 
@@ -2822,6 +2841,39 @@ set_dpu_pci_id()
 	return
 }
 
+# DIMM Temp sensor driver jc42 doesn't probe/find sodimm_ts on AMD platform
+# Check and add availab
+set_sodimms()
+{
+	local i2c_dir
+	local i2c_bus
+	amd_snw_sodimm_ts_addr=(0x1a 0x1b 0x1e 0x1f)
+
+	if [ "$cpu_type" != "$AMD_SNW_CPU" ]; then
+		return 0
+	fi
+
+	if ! lsmod | grep -q i2c_designware_platform; then
+		modprobe i2c_designware_platform
+		sleep 0.5
+	fi
+
+	i2c_dir=$(ls -d "$amd_snw_i2c_sodimm_dev"/i2c-*)
+	i2c_bus="${i2c_dir##*-}"
+	if [ -z "$i2c_bus" ]; then
+		log_err "Error: I2C bus of SODIMMs TS isn't found."
+		return 1
+	fi
+
+	for ((i=0; i<${#amd_snw_sodimm_ts_addr[@]}; i+=1)); do
+		j=$(echo ${amd_snw_sodimm_ts_addr[$i]} | cut -b 3-)
+		i2cdetect -y -a -r "$i2c_bus" ${amd_snw_sodimm_ts_addr[$i]} ${amd_snw_sodimm_ts_addr[$i]} | grep -qi $j
+		if [ $? -eq 0 ]; then
+			echo "jc42" "${amd_snw_sodimm_ts_addr[$i]}" > /sys/bus/i2c/devices/i2c-$i2c_bus/new_device
+		fi
+	done
+}
+
 pre_devtr_init()
 {
 	case $board_type in
@@ -2874,7 +2926,7 @@ pre_devtr_init()
 	VMOD0021)
 		case $sku in
 		HI162)
-			echo 60 > $config_path/cpu_brd_bus_offset
+			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)
 			;;
@@ -2920,15 +2972,11 @@ do_start()
 	check_cpu_type
 	pre_devtr_init
 	load_modules
-	if [ ! -z $override_bom ]; then
-		devtr_check_smbios_device_description "$override_bom" 0 "/dev/null"
-	else
-		devtr_check_smbios_device_description
-	fi
-
+	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
 	set_dpu_pci_id
+	set_sodimms
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then

@@ -146,6 +146,9 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
+n5110_mctp_bus="0"
+n5110_mctp_addr="100a"
 
 log_err()
 {
@@ -247,7 +250,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158)
 			return 0
 			;;
 
@@ -353,9 +356,9 @@ unlock_service_state_change_update_and_match()
 connect_device()
 {
 	find_i2c_bus
-	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
-		addr=$(echo "$2" | tail -c +3)
-		bus=$(($3+i2c_bus_offset))
+	addr=$(echo "$2" | tail -c +3)
+	bus=$(($3+i2c_bus_offset))
+	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
@@ -373,9 +376,10 @@ connect_device()
 disconnect_device()
 {
 	find_i2c_bus
-	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
-		addr=$(echo "$1" | tail -c +3)
-		bus=$(($2+i2c_bus_offset))
+	addr=$(echo "$1" | tail -c +3)
+	bus=$(($2+i2c_bus_offset))
+	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/delete_device ]; then
+		
 		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
@@ -526,6 +530,8 @@ function get_i2c_busdev_name()
 		else
 			i2cbus="${BASH_REMATCH[1]}"
 			i2caddr="0x${BASH_REMATCH[2]}"
+			find_i2c_bus
+			i2cbus=$(($i2cbus-$i2c_bus_offset))
 		fi
 
 		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
