@@ -63,7 +63,8 @@ class CONST(object):
                            "sonic" : "./linux-{kver}/sonic",
                            "opt" : "./linux-{kver}/sonic",
                            "cumulus" : "./linux-{kver}/cumulus",
-                           "nvos" : "./linux-{kver}/sonic"}
+                           "nvos" : "./linux-{kver}/sonic",
+                           "dvs" : "./linux-{kver}/sonic"}
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
@@ -536,7 +537,7 @@ if __name__ == '__main__':
                             help="Special integration type.\n"
                             "In case this argument is missing - don't apply special integration rule\n",
                             default="None",
-                            choices=["None", "sonic", "opt", "cumulus", "nvos"],
+                            choices=["None", "sonic", "opt", "cumulus", "nvos", "dvs"],
                             required=False)
     CMD_PARSER.add_argument("--arch",
                             dest="arch",
