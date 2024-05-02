@@ -14,7 +14,7 @@ Kernel-5.10
 |0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch           | 699c0506543e       | Feature upstream                         |            |                                                |
 |0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch  | a39bd92e92b9       | Feature upstream                         |            |                                                |
 |0012-hwmon-mlxreg-fan-Add-support-for-fan-drawers-capabil.patch  | f7bf7eb2d734       | Feature upstream                         |            |                                                |
-|0013-hwmon-pmbus-shrink-code-and-remove-pmbus_do_remove.patch    | 3bce071a301f       | Feature upstream; os[sonic,opt,nvos]     |            |                                                |
+|0013-hwmon-pmbus-shrink-code-and-remove-pmbus_do_remove.patch    | 3bce071a301f       | Feature upstream;os[sonic,opt,nvos,dvs]  |            |                                                |
 |0014-thermal-drivers-core-Use-a-char-pointer-for-the-cool.patch  | 584837618100       | Bugfix upstream                          |  5.10.121  |                                                |
 |0015-mlxsw-core-Remove-critical-trip-points-from-thermal-.patch  | d567fd6e82fa       | Feature upstream                         |            |                                                |
 |0016-net-don-t-include-ethtool.h-from-netdevice.h.patch          | cc69837fcaf4       | Feature upstream                         |            |                                                |
@@ -37,7 +37,7 @@ Kernel-5.10
 |0033-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch  | 2fd8d84ce309       | Bugfix upstream                          |  5.10.46   |                                                |
 |0034-mlxsw-Verify-the-accessed-index-doesn-t-exceed-the-a.patch  | 0c1acde1d3d0       | Bugfix upstream                          |  5.10.83   |                                                |
 |0035-hwmon-pmbus-Increase-maximum-number-of-phases-per-pa.patch  | e4db7719d037       | Feature upstream                         |            |                                                |
-|0036-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch  | 0c1acde1d3d0       | Feature upstream; os[sonic,opt,nvos]     |            |                                                |
+|0036-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch  | 0c1acde1d3d0       | Feature upstream;os[sonic,opt,nvos,dvs]  |            |                                                |
 |0037-dt-bindings-Add-MP2888-voltage-regulator-device.patch       | 9abfb52b5028       | Feature upstream                         |            |                                                |
 |0038-ethtool-wire-in-generic-SFP-module-access.patch             | c97a31f66ebc       | Feature upstream                         |            |                                                |
 |0039-ethtool-Fix-NULL-pointer-dereference-during-module-E.patch  | 51c96a561f24       | Feature upstream                         |            |                                                |
@@ -151,7 +151,7 @@ Kernel-5.10
 |0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Downstream accepted                      |            | Modular SN4800                                 |
 |0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Downstream accepted                      |            | Modular SN4800                                 |
-|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted; os[sonic,opt,nvos]  |            | Modular SN4800 squashed (required rebasing)    |
+|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted;os[sonic,opt,nvos,dvs]|            | Modular SN4800 squashed (required rebasing)    |
 |0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
@@ -291,7 +291,7 @@ Kernel-5.10
 |0291-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Downstream accepted                      |            | SN3750SX                                       |
 |0292-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Downstream accepted                      |            | BF3-COME                                       |
 |0293-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Downstream accepted                      |            |                                                |
-|0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending; os[sonic,opt,nvos]      |            |                                                |
+|0294-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending;os[sonic,opt,nvos,dvs]   |            |                                                |
 |0295-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
 |0296-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
 |0298-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
@@ -315,7 +315,7 @@ Kernel-5.10
 |0315-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
 |0316-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
 |0317-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
-|0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted; os[sonic,nvos]      |            |                                                |
+|0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted;os[sonic,nvos,dvs]   |            |                                                |
 |0319-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
 |0320-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
 |0321-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
