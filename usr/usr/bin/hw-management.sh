@@ -788,6 +788,7 @@ set_jtag_gpio()
 		$AMD_SNW_CPU)
 			echo 0x2094 > $config_path/jtag_rw_reg
 			echo 0x2095 > $config_path/jtag_ro_reg
+			return 0
 			;;
 		*)
 			return 0
@@ -845,6 +846,7 @@ set_jtag_gpio()
 	echo $gpio_tdo > /sys/class/gpio/"$export_unexport"
 	gpio_tdi=$((gpiobase+jtag_tdi))
 	echo $gpio_tdi > /sys/class/gpio/"$export_unexport"
+
 
 	# In SN2201 system. 
 	# GPIO0 for CPU request to reset the Main Board I2C Mux.
@@ -912,7 +914,7 @@ set_gpios()
 
 	for ((i=0; i<${#gpio_idx[@]}; i+=1)); do
 		gpionum=$((gpiobase+${gpio_idx[$i]}))
-		echo $gpionum > /sys/class/gpio/export
+		echo $gpionum > /sys/class/gpio/$export_unexport
 		if [ "$export_unexport" == "export" ]; then
 			check_n_link /sys/class/gpio/gpio$gpionum/value $system_path/"${gpio_names[$i]}"
 		fi
@@ -2543,6 +2545,8 @@ connect_platform()
 		done
 	done
 	if [ ! -z $mctp_addr ]; then
+		echo $mctp_addr > $config_path/mctp_addr
+		echo $mctp_bus > $config_path/mctp_bus
 		echo mctp-i2c-interface "0x${mctp_addr}" > /sys/bus/i2c/devices/i2c-"$mctp_bus"/new_device
 	fi
 }
@@ -2562,10 +2566,14 @@ disconnect_platform()
 		disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 
 	# Remove  MCTP interface
-	if [ -f /sys/bus/i2c/devices/i2c-"$mctp_bus"/"$mctp_bus"-"$mctp_addr"/name ]; then
-	 	name = $(</sys/bus/i2c/devices/"$mctp_bus"/"$mctp_bus"-"$mctp_addr"/name )
-	 	if [ "$name" = "mctp-i2c-interface" ]; then
-			echo  0x"$mctp_addr" > /sys/bus/i2c/devices/i2c-"$mctp_bus"/delete_device
+	if [ -f $config_path/mctp_addr ]; then
+		mctp_addr=$(<$config_path/mctp_addr)
+		mctp_bus=$(<$config_path/mctp_bus)
+		if [ -f /sys/bus/i2c/devices/i2c-"$mctp_bus"/"$mctp_bus"-"$mctp_addr"/name ]; then
+	 		name=$(</sys/bus/i2c/devices/i2c-"$mctp_bus"/"$mctp_bus"-"$mctp_addr"/name )
+		 	if [ "$name" = "mctp-i2c-interface" ]; then
+				echo  0x"$mctp_addr" > /sys/bus/i2c/devices/i2c-"$mctp_bus"/delete_device
+			fi
 		fi
 	fi
 	done

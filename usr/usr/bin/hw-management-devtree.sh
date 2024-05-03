@@ -277,11 +277,11 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 4 voltmon1" \
 						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 20 voltmon4" \
 						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 20 voltmon5" \
 						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 20 voltmon6" \
-						["adt75_0"]="adt75 0x48 7 swb_asic1" \
+						["adt75_0"]="adt75 0x4a 7 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
-						["tmp102_0"]="tmp102 0x48 7 swb_asic1" \
+						["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
 						["tmp102_1"]="tmp102 0x4b 7 swb_asic2" \
-						["stts751_0"]="stts751 0x48 7 swb_asic1" \
+						["stts751_0"]="stts751 0x4a 7 swb_asic1" \
 						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
 					   	["24c512_0"]="24c512 0x51 11 swb_info")
 
