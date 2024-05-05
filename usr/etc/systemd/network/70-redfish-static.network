@@ -4,4 +4,4 @@ Name=usb0
 [Network]
 DHCP=no
 ConfigureWithoutCarrier=true
-Address=172.31.13.241/24
+Address=10.0.1.2/24

@@ -2262,7 +2262,7 @@ n5110ld_specific()
 
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
-	#ln -sf /sys/bus/i2c/devices/i2c-2 /sys/bus/i2c/devices/i2c-8
+	ln -sf /dev/i2c-2 /dev/i2c-8
 }
 
 check_system()
