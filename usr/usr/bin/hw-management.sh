@@ -2120,7 +2120,7 @@ qm3xxx_specific()
 		echo 4 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/qm3400_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/qm3400_sensors_labels.json"
-		thermal_control_config="$thermal_control_configs_path/tc_config_qm3400.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_q3200_ra.json"
 		named_busses+=(${qm3400_named_busses[@]})
 		asic_i2c_buses=(2 18)
 	else
@@ -2132,7 +2132,7 @@ qm3xxx_specific()
 		echo 6 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/qm3000_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/qm3000_sensors_labels.json"
-		thermal_control_config="$thermal_control_configs_path/tc_config_qm3000.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_q3400_ra.json"
 		named_busses+=(${qm3000_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
 	fi
