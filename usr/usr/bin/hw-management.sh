@@ -788,7 +788,6 @@ set_jtag_gpio()
 		$AMD_SNW_CPU)
 			echo 0x2094 > $config_path/jtag_rw_reg
 			echo 0x2095 > $config_path/jtag_ro_reg
-			return 0
 			;;
 		*)
 			return 0
