@@ -2237,7 +2237,7 @@ n5110ld_specific()
 	asic_i2c_buses=(11 21)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
-	echo 3 > $config_path/cpld_num
+	echo 4 > $config_path/cpld_num
 	echo 2 > $config_path/clk_brd_num
 	hotplug_fans=6
 	max_tachos=12
@@ -2734,7 +2734,7 @@ set_asic_pci_id()
 
 	asics=`lspci -nn | grep -E $asic_pci_id | awk '{print $1}'`
 	case $sku in
-	HI140)
+	HI140|HI162)
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`   # 2-nd for ASIC1 because it appears first
 		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -2764,13 +2764,14 @@ set_asic_pci_id()
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num
 		;;
-	HI157|HI162)
+	HI157)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo 2 > "$config_path"/asic_num
 		;;
 	HI158)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
@@ -2783,6 +2784,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
 		;;
 	*)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
