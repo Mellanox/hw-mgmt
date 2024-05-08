@@ -155,7 +155,7 @@ index 000000000000..a61c13647bdc
 + * @MLXREG_DPU_BF3: DPU equipped with BF3 SoC;
 + */
 +enum mlxreg_dpu_type {
-+	MLXREG_DPU_BF3 = 0x0000,
++	MLXREG_DPU_BF3 = 0x0050,
 +};
 +
 +/* Default register access data. */

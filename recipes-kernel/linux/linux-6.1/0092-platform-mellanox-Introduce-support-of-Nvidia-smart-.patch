@@ -343,7 +343,7 @@ index cafa4f762..20bc8f3af 100644
 +		.slot = 2,
 +	},
 +	{
-+		.label = "dpu2",
++		.label = "dpu3",
 +		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[2],
 +		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE + 2,
 +		.slot = 3,

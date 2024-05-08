@@ -2175,7 +2175,7 @@ smart_switch_common()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	echo 17 > $config_path/dpu_bus_off
+	echo 18 > $config_path/dpu_bus_off
 	dpu_count=4
 	echo -n "${smart_switch_dpu2host_events[@]}" > "$dpu2host_events_file"
 	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
