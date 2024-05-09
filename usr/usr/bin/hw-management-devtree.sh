@@ -265,18 +265,18 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 declare -A n5110ld_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
 				["adt75_0"]="adt75 0x49 6 port_amb")
 
-declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 4 voltmon1" \
-						["mp2891_1"]="mp2891 0x68 4 voltmon2" \
-						["mp2891_2"]="mp2891 0x6c 4 voltmon3" \
-						["mp2891_3"]="mp2891 0x66 20 voltmon4" \
-						["mp2891_4"]="mp2891 0x68 20 voltmon5" \
-						["mp2891_5"]="mp2891 0x6c 20 voltmon6" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 4 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 4 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 4 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 20 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 20 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 20 voltmon6" \
+declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
 						["adt75_0"]="adt75 0x4a 7 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
 						["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
