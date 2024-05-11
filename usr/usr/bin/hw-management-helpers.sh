@@ -124,10 +124,10 @@ base_cpu_bus_offset=10
 max_tachos=20
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
+i2c_bus_min=1
 i2c_bus_max=26
-lc_i2c_bus_min=34
-lc_i2c_bus_max=43
-i2c_bus_offset=0
+bmc_i2c_bus_max=9
+bmc_i2c_bus_offset=70
 cpu_type=
 device_connect_delay=0.2
 
@@ -197,7 +197,19 @@ find_i2c_bus()
         i2c_bus_offset=$(< $config_path/i2c_bus_offset)
         return
     fi
-    for ((i=1; i<i2c_bus_max; i++)); do
+
+	case "$ui_tree_sku" in
+	VMOD0021)
+		bus_min=$bmc_i2c_bus_min
+		bus_max=$bmc_i2c_bus_max
+		;;
+	*)
+		bus_min=$i2c_bus_min
+		bus_max=$i2c_bus_max
+		;;
+	esac
+
+    for ((i="$bus_min"; i<"$bus_max"; i++)); do
         folder=/sys/bus/i2c/devices/i2c-$i
         if [ -d $folder ]; then
             name=$(cut $folder/name -d' ' -f 1)

@@ -262,8 +262,7 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
-declare -A n5110ld_platform_alternatives=(["24c512_0"]="24c512 0x51 2 vpd_info" \
-				["adt75_0"]="adt75 0x49 6 port_amb")
+declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 port_amb")
 
 declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \

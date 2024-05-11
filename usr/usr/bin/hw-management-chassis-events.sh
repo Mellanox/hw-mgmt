@@ -68,7 +68,8 @@ mlxreg_lc_addr=32
 lc_max_num=8
 dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 
-if [ "$board_type" == "VMOD0014" ]; then
+case "$board_type" in
+VMOD0014)
 	i2c_bus_max=14
 	psu1_i2c_addr=0x50
 	psu2_i2c_addr=0x50
@@ -79,9 +80,16 @@ if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_def_off_eeprom_fan2=11
 	i2c_bus_def_off_eeprom_fan3=12
 	i2c_bus_def_off_eeprom_fan4=13
-elif [ "$board_type" == "VMOD0013" ]; then
+	;;
+VMOD0013)
 	psu2_i2c_addr=0x5a
-fi
+	;;
+VMOD0021)
+	i2c_bus_def_off_eeprom_vpd=2
+	;;
+default)
+	;;
+esac
 
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
@@ -1099,7 +1107,10 @@ if [ "$1" == "add" ]; then
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
-		bus=$((bus-i2c_bus_offset))
+		# Do not consider offset for native CPU bus.
+		if [ "$bus" -gt "$i2c_bus_offset" ]; then
+			bus=$((bus-i2c_bus_offset))
+		fi
 		addr="0x${busfolder: -2}"
 		# Get parent bus for line card EEPROM - skip two folders.
 		parentdir=$(dirname "$busdir")
@@ -1457,6 +1468,10 @@ else
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
+		# Do not consider offset for native CPU bus.
+		if [ "$bus" -gt "$i2c_bus_offset" ]; then
+			bus=$((bus-i2c_bus_offset))
+		fi
 		addr="0x${busfolder: -2}"
 		eeprom_name=$(find_eeprom_name_on_remove "$bus" "$addr")
 		drv_name=$(< "$busdir"/name)

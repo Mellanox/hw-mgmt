@@ -586,6 +586,8 @@ n5110ld_cartridge_eeprom_connect_table=( 24c02 0x50 48 cable_cartridge_eeprom \
 	24c02 0x50 51 cable_cartridge4_eeprom \
 	24c02 0x51 51 cable_cartridge4_eeprom2)
 
+n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
@@ -816,6 +818,10 @@ set_jtag_gpio()
 				ln -sf ${plat_path}/mlxreg-io/hwmon/hwmon*/jtag_enable $jtag_path/jtag_enable
 			fi
 		fi
+	fi
+
+	if [ "$board_type" == "VMOD0021" ]; then
+		return 0
 	fi
 
 	# SN2201 has 2 gpiochips: CPU/PCH GPIO and PCA9555 Extender.
@@ -2230,21 +2236,24 @@ n5110ld_specific()
 		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_dynamic_i2c_bus_connect_table[@]}"
 		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_cartridge_eeprom_connect_table[@]}"
 	else
-		# adding Cable Cartridge support which is not included to BOM string
+		# adding Cable Cartridge support which is not included to BOM string.
 		echo -n "${n5110ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		# Add VPD explicitly.
+		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
 	fi
 	asic_i2c_buses=(11 21)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
 	echo 4 > $config_path/cpld_num
 	echo 2 > $config_path/clk_brd_num
+	psu_count=0
 	hotplug_fans=6
 	max_tachos=12
 	leakage_count=2
 	leakage_rope_count=2
 	hotplug_pwrs=0
 	hotplug_psus=0
-	erot_count=2
+	erot_count=3
 	asic_control=0
 	health_events_count=0
 	pwr_events_count=0
@@ -2262,6 +2271,25 @@ n5110ld_specific()
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
+}
+
+n5110ld_specific_cleanup()
+{
+	unlink /dev/i2c-8
+	# Remove VPD explicitly.
+	echo ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/delete_device
+
+}
+
+system_cleanup_specific()
+{
+	case $board_type in
+	VMOD0021)
+		n5110ld_specific_cleanup
+		;;
+	*)
+		;;
+	esac
 }
 
 check_system()
@@ -2507,9 +2535,11 @@ set_config_data()
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
-	echo $fan_psu_default > $config_path/fan_psu_default
-	echo $fan_command > $config_path/fan_command
-	echo $fan_config_command > $config_path/fan_config_command
+	if [ "$psu_count" -gt 0 ]; then
+		echo $fan_psu_default > $config_path/fan_psu_default
+		echo $fan_command > $config_path/fan_command
+		echo $fan_config_command > $config_path/fan_config_command
+	fi
 	echo $fan_speed_units > $config_path/fan_speed_units
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
@@ -3059,6 +3089,7 @@ do_stop()
 		check_system
 	fi
 	disconnect_platform
+	system_cleanup_specific
 	set_gpios "unexport"
 	rm -fR /var/run/hw-management
 	# Re-try removing after 1 second in case of failure.
