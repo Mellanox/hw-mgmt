@@ -795,7 +795,7 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		# Get i2c voltmon prefix.
 		prefix=$(get_i2c_busdev_name "$2" "$4")
-		if [[ $prefix == "undefined" ]];
+		if [[ $prefix == "undefined" ]] && [[ $5 != "dpu" ]];
 		then
 			exit
 		fi
@@ -834,9 +834,13 @@ if [ "$1" == "add" ]; then
 				case $sku in
 				HI160)
 					# DPU event, replace output folder.
-					slot_num=$(find_dpu_slot "$3$4")
-					environment_path="$hw_management_path"/dpu"$slot_num"/environment
-					alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+					if [ ! -z "$slot_num" ]; then
+						environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+					fi
 					;;
 				*)
 					;;
@@ -1342,7 +1346,22 @@ else
 					environment_path="$hw_management_path"/lc"$linecard_num"/environment
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
-			#else
+			else
+				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+				case $sku in
+				HI160)
+					# DPU event, replace output folder.
+					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+					if [ ! -z "$slot_num" ]; then
+						environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+					fi
+					;;
+				*)
+					;;
+				esac
 			fi
 		fi
 		# For SN2201 indexes are from 0 to 9.
