@@ -1,4 +1,4 @@
-From 874fe303e3fcb4dc7d82e2b128ebe1f180d21ff7 Mon Sep 17 00:00:00 2001
+From 15812d748c28c7911fcc24e679759994c69c0bc0 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jan 2024 07:40:04 +0000
 Subject: [PATCH 32/60] platform: mellanox: Downstream: Introduce support of
@@ -20,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 919 insertions(+), 115 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 8426a386f..07d43c854 100644
+index 8426a386f..da72b0169 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -53,6 +53,7 @@
@@ -520,13 +520,13 @@ index 8426a386f..07d43c854 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "leakage5",
++		.label = "leakage1_rope",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "leakage6",
++		.label = "leakage2_rope",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
