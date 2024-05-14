@@ -2267,6 +2267,9 @@ n5110ld_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo 6 > $config_path/fan_drwr_num
+	echo 33000 > $config_path/fan_max_speed
+	echo 6000 > $config_path/fan_min_speed
 
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"

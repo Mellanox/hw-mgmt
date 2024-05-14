@@ -44,28 +44,22 @@ import pdb
 atttrib_list = {
     "N5110_LD": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 {arg1}"],
+         "fn": "sync_fan", "arg": "1",
          "poll": 5, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan2",
-         "fn": "run_cmd",
-         "arg":["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN2 {arg1}"],
+         "fn": "sync_fan", "arg": "2",
          "poll": 5, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan3",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN3 {arg1}"],
+         "fn": "sync_fan", "arg": "3",
          "poll": 5, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan4",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN4 {arg1}"],
+         "fn": "sync_fan", "arg": "4",
          "poll": 5, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan5",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN5 {arg1}"],
+         "fn": "sync_fan", "arg": "5",
          "poll": 5, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan6",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN6 {arg1}"],
+         "fn": "sync_fan", "arg": "6",
          "poll": 5, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1",
          "fn": "run_cmd",
@@ -75,11 +69,11 @@ atttrib_list = {
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"],
          "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1_rope",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE_ROPE1 {arg1}"],
          "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4",
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1_rope",
          "fn": "run_cmd",
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE_ROPE2 {arg1}"],
          "poll": 2, "ts": 0},
@@ -178,6 +172,19 @@ def run_cmd(cmd_list, arg):
     for cmd in cmd_list:
         cmd = cmd + " 2> /dev/null 1> /dev/null"
         os.system(cmd.format(arg1=arg))
+
+# ----------------------------------------------------------------------
+def sync_fan(fan_id, val):
+    if int(val) == 0:
+        status = 1
+    else:
+        status = 0
+
+    cmd = "echo {} > /var/run/hw-management/thermal/fan{}_status".format(status, fan_id)
+    os.system(cmd)
+
+    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event FAN{} {} 2> /dev/null 1> /dev/null".format(fan_id, status)
+    os.system(cmd)
 
 # ----------------------------------------------------------------------
 def asic_temp_populate(arg_list, arg):
