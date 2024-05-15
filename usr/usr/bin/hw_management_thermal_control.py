@@ -2185,7 +2185,9 @@ class ambiant_thermal_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
-        self.value_dict = {CONST.FAN_SENS: 0, CONST.PORT_SENS: 0}
+        self.value_dict = {}
+        for sens in self.base_file_name.values():
+            self.value_dict[sens] = CONST.AMB_TEMP_ERR_VAL
         self.flow_dir = CONST.C2P
 
  # ----------------------------------------------------------------------
@@ -2239,8 +2241,7 @@ class ambiant_thermal_sensor(system_device):
             if sens_file_name in self.check_reading_file_err():
                 self.value_dict[file_name] = CONST.AMB_TEMP_ERR_VAL
 
-        sensor_name_min = min(self.value_dict, key=self.value_dict.get)
-        value = self.value_dict[sensor_name_min]
+        value = min(self.value_dict.values())
         if value != CONST.AMB_TEMP_ERR_VAL:
             self.update_value(value)
 
