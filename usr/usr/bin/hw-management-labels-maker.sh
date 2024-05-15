@@ -158,7 +158,7 @@ make_labels()
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pwr_conv1_curr*|pwr_conv4_curr*|pwr_conv4_curr*|pwr_conv4_curr*)
+	pwr_conv1_curr*|pwr_conv2_curr*|pwr_conv3_curr*|pwr_conv4_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;

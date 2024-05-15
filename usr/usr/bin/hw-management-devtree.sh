@@ -262,7 +262,7 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
-declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 port_amb")
+declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 fan_amb")
 
 declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
@@ -329,10 +329,10 @@ declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
 					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
 # for JSO
 # P*OaOaOaOaH0Ei
-declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pdb_pwr_conv1" \
-				   	["pmbus_1"]="pmbus 0x11 4 pdb_pwr_conv2" \
-				   	["pmbus_2"]="pmbus 0x13 4 pdb_pwr_conv3" \
-				   	["pmbus_3"]="pmbus 0x15 4 pdb_pwr_conv4" \
+declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
+				   	["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
+				   	["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
+				   	["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
 				   	["lm5066_0"]="lm5066 0x16 4 pdb_hotwap1" \
 				   	["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
