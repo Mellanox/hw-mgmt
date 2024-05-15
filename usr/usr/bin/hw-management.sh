@@ -2262,6 +2262,7 @@ n5110ld_specific()
 	lm_sensors_config="$lm_sensors_configs_path/n5110ld_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 	lm_sensors_labels="$lm_sensors_configs_path/n5110ld_sensors_labels.json"
+	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
