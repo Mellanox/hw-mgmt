@@ -3318,6 +3318,8 @@ class ThermalManagement(hw_managemet_file_op):
 
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
+                    if dev_obj.state != CONST.RUNNING:
+                        continue
                     fault_list = dev_obj.get_fault_list_static_filtered()
                     if not fault_list:
                         continue
