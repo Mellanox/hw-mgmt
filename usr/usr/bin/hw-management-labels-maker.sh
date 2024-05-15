@@ -72,20 +72,6 @@ get_label_files2()
 	echo "$folder" "$key" "$attr_file"
 }
 
-# Three prefixes index, f.e. "pdb_pwr_conv4".
-get_label_files3()
-{
-	local attr_name="$1"
-	local folder
-	local key
-	local attr_file
-
-	folder=`echo $attr_name | cut -d '_' -f 1,2,3`
-	key=`echo $attr_name | cut -d '_' -f 1,2,3,4`
-	attr_file=`echo "$attr_name" | cut -d '_' -f 5,6,7`
-	echo "$folder" "$key" "$attr_file"
-}
-
 # Create labels
 # $1 - file path
 make_labels()
@@ -168,17 +154,17 @@ make_labels()
 		subfolder="fan"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	pdb_pwr_conv1_in*|pdb_pwr_conv2_in*|pdb_pwr_conv3_in*|pdb_pwr_conv4_in*)
+	pwr_conv1_in*|pwr_conv2_in*|pwr_conv3_in*|pwr_conv4_in*)
 		subfolder="voltage"
-		read folder key attr_file < <(get_label_files3 $attr_name)
+		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_pwr_conv1_curr*|pdb_pwr_conv4_curr*|pdb_pwr_conv4_curr*|pdb_pwr_conv4_curr*)
+	pwr_conv1_curr*|pwr_conv4_curr*|pwr_conv4_curr*|pwr_conv4_curr*)
 		subfolder="current"
-		read folder key attr_file < <(get_label_files3 $attr_name)
+		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_pwr_conv1_temp*|pdb_pwr_conv2_temp*|pdb_pwr_conv3_temp*|pdb_pwr_conv4_temp*)
+	pwr_conv1_temp*|pwr_conv2_temp*|pwr_conv3_temp*|pwr_conv4_temp*)
 		subfolder="temperature"
-		read folder key attr_file < <(get_label_files3 $attr_name)
+		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
 	pdb_hotwap1_in*|pdb_hotwap2_in*|pdb_hotwap3_in*|pdb_hotwap4_in*)
 		subfolder="voltage"
