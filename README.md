@@ -329,6 +329,8 @@ sudo apt-get install devscripts build-essential lintian
 - Go into the thermal-control base folder and build the Debian package.
 - Run: `debuild -us -uc -b`
 - To build for ARM64 architecture, run `debuild -us -uc -b -aarm64`
+- To build without lm_sensor dependecy (for Sonic-based OS) run 'debuild --set-envvar=LM_DEPENDS=0 -us -uc -b'
+or 'export LM_DEPENDS=0 && dpkg-buildpackage -us -uc -b'
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
 **For converting .deb package to .rpm package:**
