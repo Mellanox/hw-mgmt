@@ -4,8 +4,19 @@ pname:=hw-management
 
 pwd=$(shell pwd)
 
+#debuild -sa -us -uc -eLM_DEPENDS=1
+
+ifeq ($(LM_DEPENDS),0)
+	DEPENDS = -Vdist:Depends=""
+else
+	DEPENDS = -Vdist:Depends="lm-sensors"
+endif
+
 %:
 	dh $@
+
+override_dh_gencontrol:
+	dh_gencontrol -- $(DEPENDS)
 
 override_dh_auto_configure:
 
