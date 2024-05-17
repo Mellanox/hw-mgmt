@@ -104,9 +104,9 @@ quantum3_pci_id=d2f4
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
-dpu_bf3_pci_id=c2d5
+dpu_bf3_pci_id=a2dc
 # Need to get the correct PCI bus numbers for DPUs
-dpu_pci_addr_amd=(03:00.0 04:00.0 05:00.0 09:00.0)
+dpu_pci_addr_amd=(05:00.0 04:00.0 01:00.0 02:00.0)
 dpu_pci_addr_cfl=(01:00.0 02:00.0 06:00.0 08:00.0)
 leakage_count=0
 leakage_rope_count=0
@@ -2728,6 +2728,7 @@ set_dpu_pci_id()
 	local total_dpu_num
 	local idx=0
 	local element
+	local dpu_detected_num=0
 
 	# Get DPU PCI Ids.
 	case $sku in
@@ -2757,17 +2758,18 @@ set_dpu_pci_id()
 		esac
 
 		total_dpu_num=${#dpu_pci_addr[@]}
-		echo "$total_dpu_num" > "$config_path"/dpu_detected_num
 
 		while [ $idx -lt $total_dpu_num ]; do
 			element="${dpu_pci_addr[$idx]}"
 			if echo "$dpus" | grep -q -w "$element"; then
 				echo "$element" > "$config_path"/dpu$((idx+1))_pci_bus_id
+				dpu_detected_num=$((dpu_detected_num + 1))
 			else
 				echo "" > "$config_path"/dpu$((idx+1))_pci_bus_id
 			fi
 			idx=$((idx + 1))
 		done
+		echo "$dpu_detected_num" > "$config_path"/dpu_detected_num
 		;;
 	*)
 		;;
