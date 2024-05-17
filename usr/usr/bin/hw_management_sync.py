@@ -189,13 +189,14 @@ def sync_fan(fan_id, val):
 # ----------------------------------------------------------------------
 def asic_temp_populate(arg_list, arg):
     ''
+    arg = int(arg)
     if arg >= 0:
         val = arg * 125
     else:
         val = 0xffff + arg + 1
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
-        f.write(arg)
+        f.write(str(val))
 
     f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
     if not os.path.isfile(f_name):
@@ -217,13 +218,14 @@ def asic_temp_populate(arg_list, arg):
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, arg):
     ''
+    arg = int(arg)
     if arg >= 0:
         val = arg * 125
     else:
         val = 0xffff + arg + 1
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
-        f.write(arg)
+        f.write(str(val))
 
     f_name = "/var/run/hw-management/thermal/{}_temp_crit".format(arg_list[0])
     if not os.path.isfile(f_name):
@@ -254,16 +256,16 @@ def update_attr(attr_prop):
         # update file
         fin = attr_prop["fin"].format(hwmon = attr_prop.get("hwmon", ""))
         if  os.path.isfile(fin):
-            with open(fin, 'r', encoding="utf-8") as f:
-                val = f.read().rstrip('\n')
-            if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
-                attr_prop["oldval"] = val
-                fn_name = attr_prop["fn"]
-                argv = attr_prop["arg"]
-                try:
+            try:
+                with open(fin, 'r', encoding="utf-8") as f:
+                    val = f.read().rstrip('\n')
+                if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
+                    attr_prop["oldval"] = val
+                    fn_name = attr_prop["fn"]
+                    argv = attr_prop["arg"]
                     globals()[fn_name](argv, val)
-                except:
-                    pass
+            except:
+                pass
 
 
 def init_attr(attr_prop):
