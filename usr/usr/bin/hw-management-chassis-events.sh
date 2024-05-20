@@ -898,62 +898,41 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
+					elif [ -f "$3""$4"/in"$sensor_id"_max_alarm ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_max_alarm $alarm_path/"$prefix"_in"$i"_alarm
+					elif [ -f "$3""$4"/in"$sensor_id"_min_alarm ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_min_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					fi
+					check_n_link "$3""$4"/in"$sensor_id"_min $environment_path/"$prefix"_in"$i"_min
+					check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_max
 				fi
-				sensor_type=$(< "$3""$4"/name)
-				if [ $sensor_type == "mp2975" ]; then
-					find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
-					sensor_id=$?
-					if [ ! $sensor_id -eq 0 ]; then
-						check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
-						if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
-							check_n_link "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-						elif [ -f "$3""$4"/curr"$sensor_id"_crit_alarm ]; then
-							check_n_link "$3""$4"/curr"$sensor_id"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-						elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
-							check_n_link "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-						fi
-						check_n_link "$3""$4"/curr"$sensor_id"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
-						check_n_link "$3""$4"/curr"$sensor_id"_min $environment_path/"$prefix"_curr"$i"_min
-						check_n_link "$3""$4"/curr"$sensor_id"_max $environment_path/"$prefix"_curr"$i"_max
-						check_n_link "$3""$4"/curr"$sensor_id"_crit $environment_path/"$prefix"_curr"$i"_crit
-					fi
 
-					find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
-					sensor_id=$?
-					if [ ! $sensor_id -eq 0 ]; then
-						check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
-						check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path/"$prefix"_power"$i"_alarm
-						check_n_link "$3""$4"/power"$sensor_id"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
-						check_n_link "$3""$4"/power"$sensor_id"_min $environment_path/"$prefix"_power"$i"_min
-						check_n_link "$3""$4"/power"$sensor_id"_max $environment_path/"$prefix"_power"$i"_max
-						check_n_link "$3""$4"/power"$sensor_id"_crit $environment_path/"$prefix"_power"$i"_crit
+				find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
+				sensor_id=$?
+				if [ ! $sensor_id -eq 0 ]; then
+					check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
+					if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$sensor_id"_crit_alarm ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
 					fi
-				else
-					check_n_link "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
-					check_n_link "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
-					check_n_link "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
-					if [ -f "$3""$4"/curr"$i"_alarm ]; then
-						check_n_link "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					elif [ -f "$3""$4"/curr"$i"_crit_alarm ]; then
-						check_n_link "$3""$4"/curr"$i"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					elif [ -f "$3""$4"/curr"$i"_max_alarm ]; then
-						check_n_link "$3""$4"/curr"$i"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					fi
+					check_n_link "$3""$4"/curr"$sensor_id"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
+					check_n_link "$3""$4"/curr"$sensor_id"_min $environment_path/"$prefix"_curr"$i"_min
+					check_n_link "$3""$4"/curr"$sensor_id"_max $environment_path/"$prefix"_curr"$i"_max
+					check_n_link "$3""$4"/curr"$sensor_id"_crit $environment_path/"$prefix"_curr"$i"_crit
+				fi
 
-					check_n_link "$3""$4"/power"$i"_alarm $environment_path/"$prefix"_power"$i"_alarm
-					check_n_link "$3""$4"/in"$i"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
-					check_n_link "$3""$4"/in"$i"_min $environment_path/"$prefix"_in"$i"_min
-					check_n_link "$3""$4"/in"$i"_max $environment_path/"$prefix"_in"$i"_max
-					check_n_link "$3""$4"/in"$i"_crit $environment_path/"$prefix"_in"$i"_crit
-					check_n_link "$3""$4"/curr"$i"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
-					check_n_link "$3""$4"/curr"$i"_min $environment_path/"$prefix"_curr"$i"_min
-					check_n_link "$3""$4"/curr"$i"_max $environment_path/"$prefix"_curr"$i"_max
-					check_n_link "$3""$4"/curr"$i"_crit $environment_path/"$prefix"_curr"$i"_crit
-					check_n_link "$3""$4"/power"$i"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
-					check_n_link "$3""$4"/power"$i"_min $environment_path/"$prefix"_power"$i"_min
-					check_n_link "$3""$4"/power"$i"_max $environment_path/"$prefix"_power"$i"_max
-					check_n_link "$3""$4"/power"$i"_crit $environment_path/"$prefix"_power"$i"_crit
+				find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
+				sensor_id=$?
+				if [ ! $sensor_id -eq 0 ]; then
+					check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
+					check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path/"$prefix"_power"$i"_alarm
+					check_n_link "$3""$4"/power"$sensor_id"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
+					check_n_link "$3""$4"/power"$sensor_id"_min $environment_path/"$prefix"_power"$i"_min
+					check_n_link "$3""$4"/power"$sensor_id"_max $environment_path/"$prefix"_power"$i"_max
+					check_n_link "$3""$4"/power"$sensor_id"_crit $environment_path/"$prefix"_power"$i"_crit
 				fi
 			done
 			;;
