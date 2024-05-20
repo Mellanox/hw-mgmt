@@ -892,8 +892,16 @@ if [ "$1" == "add" ]; then
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-					check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
-					check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					if [ -f "$3""$4"/in"$sensor_id"_crit ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
+					else
+						check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_crit
+					fi
+					if [ -f "$3""$4"/in"$sensor_id"_lcrit ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					else
+						check_n_link "$3""$4"/in"$sensor_id"_min $environment_path/"$prefix"_in"$i"_lcrit
+					fi
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
