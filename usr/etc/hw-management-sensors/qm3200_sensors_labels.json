@@ -1,5 +1,5 @@
 {
-	"name": "qm3400",
+	"name": "qm3200",
 	"labels_HI157_rev1_array" : {
 		"asic_amb" : "Ambient+ASIC+Temp",
 		"fan_amb" : "Ambient+Fan+Side+Temp",

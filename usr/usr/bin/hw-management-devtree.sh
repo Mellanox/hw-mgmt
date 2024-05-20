@@ -228,7 +228,7 @@ declare -A qm3000_alternatives=( \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6")
 
-declare -A qm3400_alternatives=( \
+declare -A qm3200_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -559,8 +559,8 @@ devtr_check_supported_system_init_alternatives()
 		VMOD0018)
 			case $sku in
 			HI157)
-				for key in "${!qm3400_alternatives[@]}"; do
-					swb_alternatives["$key"]="${qm3400_alternatives["$key"]}"
+				for key in "${!qm3200_alternatives[@]}"; do
+					swb_alternatives["$key"]="${qm3200_alternatives["$key"]}"
 				done
 				;;
 			HI158)
