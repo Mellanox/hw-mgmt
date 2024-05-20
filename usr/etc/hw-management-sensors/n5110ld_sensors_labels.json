@@ -6,7 +6,7 @@
 		"fan_amb" : "Ambient+Fan+Side+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
-		"voltmon1_temp1" : "PMIC-1++Temp+1",
+		"voltmon1_temp1" : "PMIC-1+Temp+1",
 		"voltmon1_power1" : "PMIC-1+12V_VDD_ASIC1+Pwr+In+1",
 		"voltmon1_power2" : "PMIC-1+ASIC1_VDD+Pwr+Out+1",
 		"voltmon1_curr1" : "PMIC-1+12V_VDD_ASIC1+curr+In+1",

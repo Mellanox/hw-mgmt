@@ -320,7 +320,7 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["adt75_0"]="tmp75 0x4d 4 pdb_temp1" \
 				   ["tmp75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
-				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
+				   ["24c02_0"]="24c02 0x50 4 pdb_info" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
 
 # for p4300

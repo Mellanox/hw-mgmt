@@ -260,10 +260,10 @@ def update_attr(attr_prop):
                 with open(fin, 'r', encoding="utf-8") as f:
                     val = f.read().rstrip('\n')
                 if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
-                    attr_prop["oldval"] = val
                     fn_name = attr_prop["fn"]
                     argv = attr_prop["arg"]
                     globals()[fn_name](argv, val)
+                    attr_prop["oldval"] = val
             except:
                 pass
 
