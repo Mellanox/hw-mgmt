@@ -315,7 +315,7 @@ Kernel-5.10
 |0315-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
 |0316-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
 |0317-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
-|0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted;os[sonic,nvos,dvs]   |            |                                                |
+|0318-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted;os[sonic]            |            |                                                |
 |0319-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
 |0320-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
 |0321-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
