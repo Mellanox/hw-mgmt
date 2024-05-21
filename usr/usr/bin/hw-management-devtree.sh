@@ -214,7 +214,7 @@ declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x49 7 bpl_amb" \
 			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom" \
 			       ["24c512_2"]="24c512 0x56 6 fio_info")
 
-declare -A qm3000_alternatives=( \
+declare -A q3400_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -228,7 +228,7 @@ declare -A qm3000_alternatives=( \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6")
 
-declare -A qm3400_alternatives=( \
+declare -A q3200_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -559,13 +559,13 @@ devtr_check_supported_system_init_alternatives()
 		VMOD0018)
 			case $sku in
 			HI157)
-				for key in "${!qm3400_alternatives[@]}"; do
-					swb_alternatives["$key"]="${qm3400_alternatives["$key"]}"
+				for key in "${!q3200_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3200_alternatives["$key"]}"
 				done
 				;;
 			HI158)
-				for key in "${!qm3000_alternatives[@]}"; do
-					swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
+				for key in "${!q3400_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3400_alternatives["$key"]}"
 				done
 				for key in "${!platform_type1_alternatives[@]}"; do
 					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
@@ -638,7 +638,7 @@ devtr_check_board_components()
 			done
 			;;
 		S)	# Switch board
-			# There can be several switch boards (e.g on QM3000)
+			# There can be several switch boards (e.g on q3400)
 			if [ -e "$config_path"/swb_brd_num ]; then
 				board_num=$(< $config_path/swb_brd_num)
 				board_name_pfx=swb
@@ -770,7 +770,7 @@ devtr_check_board_components()
 				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
-				# QM3000 system has 2 switch boards. Just VRs are accessed on these boards.
+				# q3400 system has 2 switch boards. Just VRs are accessed on these boards.
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					if [ $board_bus_offset -ne 0 ]; then
