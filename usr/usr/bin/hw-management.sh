@@ -505,7 +505,7 @@ p4262_dynamic_i2c_bus_connect_table=( \
 	mp2975 0x23 29 voltmon5 )
 
 # Just for possible initial step without SMBios alternative BOM string
-qm3400_base_connect_table=( \
+q3200_base_connect_table=( \
 	mp2891 0x66 5  \
 	mp2891 0x68 5  \
 	mp2891 0x6c 5  \
@@ -517,7 +517,7 @@ qm3400_base_connect_table=( \
 	24c512 0x51 8 )
 
 # Just for possible initial step without SMBios alternative BOM string
-qm3000_base_connect_table=( \
+q3400_base_connect_table=( \
 	mp2891 0x66 5  \
 	mp2891 0x68 5  \
 	mp2981 0x6c 5  \
@@ -565,8 +565,8 @@ mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
 p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
-qm3400_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
-qm3000_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
+q3200_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
+q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 
 ACTION=$1
@@ -2093,9 +2093,9 @@ qm3xxx_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
 		if [ "$sku" == "HI157" ]; then
-			connect_table+=(${qm3400_base_connect_table[@]})
+			connect_table+=(${q3200_base_connect_table[@]})
 		else
-			connect_table+=(${qm3000_base_connect_table[@]})
+			connect_table+=(${q3400_base_connect_table[@]})
 		fi
 		add_cpu_board_to_connection_table $xdr_cpu_bus_offset
 	fi
@@ -2118,10 +2118,10 @@ qm3xxx_specific()
 		hotplug_psus=4
 		psu_count=4
 		echo 4 > $config_path/cpld_num
-		lm_sensors_config="$lm_sensors_configs_path/qm3400_sensors.conf"
-		lm_sensors_labels="$lm_sensors_configs_path/qm3400_sensors_labels.json"
-		thermal_control_config="$thermal_control_configs_path/tc_config_qm3400.json"
-		named_busses+=(${qm3400_named_busses[@]})
+		lm_sensors_config="$lm_sensors_configs_path/q3200_sensors.conf"
+		lm_sensors_labels="$lm_sensors_configs_path/q3200_sensors_labels.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_q3200.json"
+		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
 	else
 		max_tachos=20
@@ -2130,10 +2130,10 @@ qm3xxx_specific()
 		hotplug_psus=8
 		psu_count=8
 		echo 6 > $config_path/cpld_num
-		lm_sensors_config="$lm_sensors_configs_path/qm3000_sensors.conf"
-		lm_sensors_labels="$lm_sensors_configs_path/qm3000_sensors_labels.json"
-		thermal_control_config="$thermal_control_configs_path/tc_config_qm3000.json"
-		named_busses+=(${qm3000_named_busses[@]})
+		lm_sensors_config="$lm_sensors_configs_path/q3400_sensors.conf"
+		lm_sensors_labels="$lm_sensors_configs_path/q3400_sensors_labels.json"
+		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
+		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
 	fi
 
@@ -2145,10 +2145,10 @@ qm3xxx_specific()
 qm_qm3_common()
 {
 	case $sku in
-		HI157)	# QM3400
+		HI157)	# Q3200
 			qm3xxx_specific
 		;;
-		HI158)	# QM3000
+		HI158)	# q3400
 			qm3xxx_specific
 		;;
 		*)
