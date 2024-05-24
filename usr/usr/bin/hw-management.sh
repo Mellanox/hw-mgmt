@@ -106,7 +106,7 @@ nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
 dpu_bf3_pci_id=a2dc
 # Need to get the correct PCI bus numbers for DPUs
-dpu_pci_addr_amd=(05:00.0 04:00.0 01:00.0 02:00.0)
+dpu_pci_addr_amd=(05:00.0 02:00.0 01:00.0 06:00.0)
 dpu_pci_addr_cfl=(01:00.0 02:00.0 06:00.0 08:00.0)
 leakage_count=0
 leakage_rope_count=0
