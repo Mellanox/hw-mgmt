@@ -124,10 +124,10 @@ base_cpu_bus_offset=10
 max_tachos=20
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
+i2c_bus_min=1
 i2c_bus_max=26
-lc_i2c_bus_min=34
-lc_i2c_bus_max=43
-i2c_bus_offset=0
+bmc_i2c_bus_max=9
+bmc_i2c_bus_offset=70
 cpu_type=
 device_connect_delay=0.2
 
@@ -146,6 +146,8 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+n5110_mctp_bus="0"
+n5110_mctp_addr="100a"
 
 log_err()
 {
@@ -194,7 +196,19 @@ find_i2c_bus()
         i2c_bus_offset=$(< $config_path/i2c_bus_offset)
         return
     fi
-    for ((i=1; i<i2c_bus_max; i++)); do
+
+	case "$ui_tree_sku" in
+	VMOD0021)
+		bus_min=$bmc_i2c_bus_min
+		bus_max=$bmc_i2c_bus_max
+		;;
+	*)
+		bus_min=$i2c_bus_min
+		bus_max=$i2c_bus_max
+		;;
+	esac
+
+    for ((i="$bus_min"; i<"$bus_max"; i++)); do
         folder=/sys/bus/i2c/devices/i2c-$i
         if [ -d $folder ]; then
             name=$(cut $folder/name -d' ' -f 1)
@@ -353,9 +367,9 @@ unlock_service_state_change_update_and_match()
 connect_device()
 {
 	find_i2c_bus
-	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
-		addr=$(echo "$2" | tail -c +3)
-		bus=$(($3+i2c_bus_offset))
+	addr=$(echo "$2" | tail -c +3)
+	bus=$(($3+i2c_bus_offset))
+	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
@@ -373,9 +387,10 @@ connect_device()
 disconnect_device()
 {
 	find_i2c_bus
-	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
-		addr=$(echo "$1" | tail -c +3)
-		bus=$(($2+i2c_bus_offset))
+	addr=$(echo "$1" | tail -c +3)
+	bus=$(($2+i2c_bus_offset))
+	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/delete_device ]; then
+		
 		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
@@ -526,6 +541,8 @@ function get_i2c_busdev_name()
 		else
 			i2cbus="${BASH_REMATCH[1]}"
 			i2caddr="0x${BASH_REMATCH[2]}"
+			find_i2c_bus
+			i2cbus=$(($i2cbus-$i2c_bus_offset))
 		fi
 
 		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do

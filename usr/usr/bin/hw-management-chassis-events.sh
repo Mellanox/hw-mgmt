@@ -68,7 +68,8 @@ mlxreg_lc_addr=32
 lc_max_num=8
 dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 
-if [ "$board_type" == "VMOD0014" ]; then
+case "$board_type" in
+VMOD0014)
 	i2c_bus_max=14
 	psu1_i2c_addr=0x50
 	psu2_i2c_addr=0x50
@@ -79,9 +80,16 @@ if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_def_off_eeprom_fan2=11
 	i2c_bus_def_off_eeprom_fan3=12
 	i2c_bus_def_off_eeprom_fan4=13
-elif [ "$board_type" == "VMOD0013" ]; then
+	;;
+VMOD0013)
 	psu2_i2c_addr=0x5a
-fi
+	;;
+VMOD0021)
+	i2c_bus_def_off_eeprom_vpd=2
+	;;
+default)
+	;;
+esac
 
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
@@ -279,7 +287,8 @@ find_eeprom_name()
 {
 	bus=$1
 	addr=$2
-	i2c_dev_path="i2c-$bus/$bus-00${busfolder: -2}/" 
+	bus_abs=$((bus+i2c_bus_offset))
+	i2c_dev_path="i2c-$bus_abs/$bus_abs-00${busfolder: -2}/" 
 	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
 	if [[ $eeprom_name != "undefined" ]];
 	then
@@ -367,7 +376,8 @@ find_eeprom_name_on_remove()
 {
 	bus=$1
 	addr=$2
-	i2c_dev_path="2c-$bus/$bus-00${busfolder: -2}/"
+	bus_abs=$((bus+i2c_bus_offset))
+	i2c_dev_path="2c-$bus_abs/$bus_abs-00${busfolder: -2}/"
 	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
 	if [[ $eeprom_name != "undefined" ]];
 	then
@@ -882,8 +892,16 @@ if [ "$1" == "add" ]; then
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-					check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
-					check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					if [ -f "$3""$4"/in"$sensor_id"_crit ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
+					else
+						check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_crit
+					fi
+					if [ -f "$3""$4"/in"$sensor_id"_lcrit ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					else
+						check_n_link "$3""$4"/in"$sensor_id"_min $environment_path/"$prefix"_in"$i"_lcrit
+					fi
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
@@ -1076,7 +1094,10 @@ if [ "$1" == "add" ]; then
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
-		bus=$((bus-i2c_bus_offset))
+		# Do not consider offset for native CPU bus.
+		if [ "$bus" -gt "$i2c_bus_offset" ]; then
+			bus=$((bus-i2c_bus_offset))
+		fi
 		addr="0x${busfolder: -2}"
 		# Get parent bus for line card EEPROM - skip two folders.
 		parentdir=$(dirname "$busdir")
@@ -1155,7 +1176,7 @@ if [ "$1" == "add" ]; then
 		pdb_eeprom)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
-		cable_cartridge*_eeprom)
+		cable_cartridge*_eeprom*)
 			eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
 			;;
@@ -1434,6 +1455,10 @@ else
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
+		# Do not consider offset for native CPU bus.
+		if [ "$bus" -gt "$i2c_bus_offset" ]; then
+			bus=$((bus-i2c_bus_offset))
+		fi
 		addr="0x${busfolder: -2}"
 		eeprom_name=$(find_eeprom_name_on_remove "$bus" "$addr")
 		drv_name=$(< "$busdir"/name)
