@@ -154,7 +154,35 @@ make_labels()
 		subfolder="fan"
 		read folder key attr_file < <(get_label_files2 $attr_name)
 		;;
-	port_amb|fan_amb)
+	pwr_conv1_in*|pwr_conv2_in*|pwr_conv3_in*|pwr_conv4_in*)
+		subfolder="voltage"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	pwr_conv1_curr*|pwr_conv2_curr*|pwr_conv3_curr*|pwr_conv4_curr*)
+		subfolder="current"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	pwr_conv1_temp*|pwr_conv2_temp*|pwr_conv3_temp*|pwr_conv4_temp*)
+		subfolder="temperature"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	pdb_hotwap1_in*|pdb_hotwap2_in*|pdb_hotwap3_in*|pdb_hotwap4_in*)
+		subfolder="voltage"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	pdb_hotwap1_curr*|pdb_hotwap2_curr*|pdb_hotwap3_curr*|pdb_hotwap4_curr*)
+		subfolder="current"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	pdb_hotwap1_pwr*|pdb_hotwap2_pwr*|pdb_hotwap3_pwr*|pdb_hotwap4_pwr*)
+		subfolder="power"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	pdb_hotwap1_temp*|pdb_hotwap2_temp*|pdb_hotwap3_temp*|pdb_hotwap4_temp*)
+		subfolder="temperature"
+		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	port_amb|fan_amb|swb_asic*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
