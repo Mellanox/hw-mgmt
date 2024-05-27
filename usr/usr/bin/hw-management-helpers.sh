@@ -31,6 +31,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# WATCHDOG STUFF
+WATCHDOG_TIMEOUT=5
+WATCHDOG_DELAY=1
+WATCHDOG_RESET_FILE="/tmp/watchdog_reset_time"
+WATCHDOG_TEMP_FILE="/tmp/watchdog_reset_time.tmp"
+WATCHDOG_PID_FILE="/tmp/watchdog.pid"
+WATCHDOG_STATUS_FILE="/tmp/watchdog_status"
+WATCHDOG_SCRIPT="hw-management-done.sh"
+MONITOR_INTERVAL=2
+
 hw_management_path=/var/run/hw-management
 environment_path=$hw_management_path/environment
 alarm_path=$hw_management_path/alarm
@@ -267,12 +277,40 @@ check_simx()
 	fi
 }
 
+# Function to monitor the watchdog status
+monitor_link_wd() {
+	trace_udev_events "monitor_link_wd was called"
+    while true; do
+        if [[ -f "$WATCHDOG_STATUS_FILE" ]]; then
+            status=$(cat "$WATCHDOG_STATUS_FILE")
+            if [[ "$status" == "1" ]]; then
+                trace_udev_events "Watchdog status is 1: Condition met."
+				return 0
+            else
+                echo "Watchdog status is not 1: Current status is $status."
+            fi
+        else
+            echo "Watchdog Status: Not available"
+        fi
+
+        # Sleep for the specified interval to avoid stressing the CPU
+        sleep "$MONITOR_INTERVAL"
+    done
+}
+
 # Check if file exists and create soft link
 # $1 - file path
 # $2 - link path
 # return none
 check_n_link()
 {
+	# Write the current time with milliseconds to a temporary file
+	local current_time=$(date +%s%3N)
+	echo "$current_time" > "$WATCHDOG_TEMP_FILE"
+
+	# Atomically move the temporary file to the reset file
+	mv "$WATCHDOG_TEMP_FILE" "$WATCHDOG_RESET_FILE"
+
     if [ -f "$1" ];
     then
         ln -sf "$1" "$2"
