@@ -1,4 +1,63 @@
 ================================================================================
+- V.7.0030.2300
+- Tue , 28 May 2023 
+--------------------------------------------------------------------------------
+
+- Bug fixes
+	Issue		Title	
+        #3706151        [MSN4600-VS2RC] : Fans running at high speed when PN of switch is SSG7B27990
+        #3649551        [SPC2|SPC3|QM1|QM2|QM3] TC - dynamic minimum table RPM values for "sensor_read_error" were too low causing system hitting up
+        #3651819        [SN2410] in systems with customer-adjusted PN, the fan direction is not recognized , it appears wrong and causing faulty TC behaviour                
+        #3723906         systems occasionally report errors for FAN2 & FAN3 although only PSU FAN1 exists                
+        #3733632        [MSN2410|MSN2100|MSN2010] sensors.conf "Chassis Fan Drawer x fan y" labels were mistakly defined as "fan z" 
+        #3726901        [MSN27002] voltmon6 mistakenly appearing in sensor_list at tc_config.json file causing ERROR of reading file voltmon6_temp                
+        #3748535        [SP1|SPC2] chipup timeout is too short over legacy system causing sometimes failure
+        NA              When I2C device’s 1st probe fails there is no retry performed.
+        NA              Hw mgmt started handling udev events before basic hw mgmt initialization is done
+        NA              udev events were handled randomly by hw mgmt since udev settle command was missed in hw mgmt init
+        NA              [MSN5400|MSN5600|QM3400] TC – systems with a single Fan direction always considered in TC to be P2C
+        NA              [MSN5600|MSN5400] sensors: mistakes in labels of sensor conf.
+        NA              [MSN5600|MSN5400] sensors: missed sensors config rule for 2nd PSU                 
+        NA              [MSN3420] symlink mistakenly pointing to MSN3700 sensors config file
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0030.2300_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU
+    o Patch 0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch should be applied 
+      for kernel >= 5.10.74 only, to avoid thermal control interface issues
+    o This version disables system reset in thermal algorithm
+    o   Kernel patch 4.9  #60 is available upstream from kernel 4.9.207 and
+        Kernel patch 4.19 #28 is available upstream from kernel 4.19.89.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o  ethtool for QSFP-DD is working only in raw mode.
+    o  SN4700 PSU (Murata) sensors PSU2 and PSU3 might be not available after insertion/removal.
+    o  PSUs inventory read via PMBus require the following packages:
+        - i2c-tools_4.1-1_amd64.deb
+        - libi2c0_4.1-1_amd64.deb
+    o  I2C Asic driver take up to 5 second to complete initialization. When
+	sending ADD even need to make sure to wait at list 5 second before
+	reset of ASIC.
+    o   Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their
+        "-B" variants) require the following flag in kernel cmdline:
+        "acpi_enforce_resources=lax acpi=noirq".
+    o   Few bug fixes introduced in upstream kernel 4.19, whoever use older
+        v4.19 kernel then v4.19.58, should cherry pick the following commits:
+        - Fix wrong order in probing routine initialization:
+            d2d8f64012543898a0158b1fc5c07af3d41c89d8 (available in v4.19.49)
+        - Fix parent device in i2c-mux-reg device registration
+            c241f3fbfa1af86f572a92f2e4d708358e163806 (available in v4.19.58)
+    o   Kernel patch 4.9  #37 is available upstream from kernel 4.9.197 and
+        Kernel patch 4.19 #09 is available upstream from kernel 4.19.79.
+        - No need to apply these patches when working with these kernel versions
+          or above
+    o   This version requires FW version 29.2000.1886 or higher for spectrum-2
+	and  13.2000.1886 or higher for spectrum-1.
+
+================================================================================
 - V.7.0030.2000
 - Thu , 28 Sept 2023 
 --------------------------------------------------------------------------------
