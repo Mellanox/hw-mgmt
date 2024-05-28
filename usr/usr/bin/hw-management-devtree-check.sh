@@ -171,6 +171,9 @@ devtr_sim_environment_vars()
 			BF3_CPU)
 				cpu_type="${BF3_CPU}"
 				;;
+			AMD_SNW_CPU)
+				cpu_type="${AMD_SNW_CPU}"
+				;;
 			*)
 				cpu_type=$(<"$config_path"/cpu_type)
 				;;
