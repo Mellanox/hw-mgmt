@@ -333,7 +333,7 @@ declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   	["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
 				   	["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
 				   	["lm5066_0"]="lm5066 0x16 4 pdb_hotwap1" \
-				   	["24c512_0"]="24c512 0x51 4 pdb_info")
+				   	["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
