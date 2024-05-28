@@ -918,7 +918,7 @@ set_gpios()
 
 	for ((i=0; i<${#gpio_idx[@]}; i+=1)); do
 		gpionum=$((gpiobase+${gpio_idx[$i]}))
-		echo $gpionum > /sys/class/gpio/export
+		echo $gpionum > /sys/class/gpio/$export_unexport
 		if [ "$export_unexport" == "export" ]; then
 			check_n_link /sys/class/gpio/gpio$gpionum/value $system_path/"${gpio_names[$i]}"
 		fi
