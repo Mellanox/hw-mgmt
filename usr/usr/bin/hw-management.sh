@@ -2807,7 +2807,7 @@ set_sodimms()
 
 	for ((i=0; i<${#amd_snw_sodimm_ts_addr[@]}; i+=1)); do
 		j=$(echo ${amd_snw_sodimm_ts_addr[$i]} | cut -b 3-)
-		i2cdetect -y -a -r 0 ${amd_snw_sodimm_ts_addr[$i]} ${amd_snw_sodimm_ts_addr[$i]} | grep -qi $j
+		i2cdetect -y -a -r $i2c_bus ${amd_snw_sodimm_ts_addr[$i]} ${amd_snw_sodimm_ts_addr[$i]} | grep -qi $j
 		if [ $? -eq 0 ]; then
 			echo "jc42" "${amd_snw_sodimm_ts_addr[$i]}" > /sys/bus/i2c/devices/i2c-$i2c_bus/new_device
 		fi
