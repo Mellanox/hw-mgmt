@@ -1096,8 +1096,7 @@ if [ "$1" == "add" ]; then
 		*)
 			;;
 		esac
-		check_n_link "$3""$4"/temp1_input $thermal_path/temp1_input
-		check_n_link "$3""$4"/temp2_input $thermal_path/temp2_input
+		check_n_link "$3""$4"/temp1_input $thermal_path/"dpu""$slot_num""_cx_amb"
 	fi
 
 elif [ "$1" == "change" ]; then

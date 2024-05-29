@@ -836,10 +836,13 @@ if [ "$1" == "add" ]; then
 					# DPU event, replace output folder.
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
 					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
-					if [ ! -z "$slot_num" ]; then
-						environment_path="$hw_management_path"/dpu"$slot_num"/environment
-						alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
-						thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
+                        if [ ! -z "$slot_num" ]; then
+						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+                            prefix="dpu""$slot_num""_""$prefix"
+                        fi
 					fi
 					;;
 				*)
@@ -1353,11 +1356,14 @@ else
 					# DPU event, replace output folder.
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
 					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
-					if [ ! -z "$slot_num" ]; then
-						environment_path="$hw_management_path"/dpu"$slot_num"/environment
-						alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
-						thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
-					fi
+					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
+					    if [ ! -z "$slot_num" ]; then
+						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+                            prefix="dpu""$slot_num""_""$prefix"
+					    fi
+                    fi
 					;;
 				*)
 					;;
