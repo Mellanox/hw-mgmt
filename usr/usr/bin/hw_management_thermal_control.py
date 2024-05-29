@@ -1404,7 +1404,7 @@ class thermal_sensor(system_device):
         pwm = self.pwm_min
         value = self.value
         if not self.check_file(self.file_input):
-            self.log.info("Missing file {}".format(self.name, self.file_input))
+            self.log.info("Missing file: {}".format(self.file_input))
             self.handle_reading_file_err(self.file_input)
         else:
             try:
@@ -1445,6 +1445,9 @@ class thermal_sensor(system_device):
         fault_list = self.get_fault_list_filtered()
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
 
@@ -1540,7 +1543,7 @@ class thermal_module_sensor(system_device):
 
         temp_read_file = "thermal/{}".format(self.file_input)
         if not self.check_file(temp_read_file):
-            self.log.info("Missing file {} :{}.".format(self.name, temp_read_file))
+            self.log.info("Missing file: {}.".format(temp_read_file))
             self.handle_reading_file_err(temp_read_file)
         else:
             try:
@@ -1592,6 +1595,9 @@ class thermal_module_sensor(system_device):
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
             self.append_fault(CONST.SENSOR_READ_ERR)
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR], interpolated=False)
             self.pwm = max(pwm, self.pwm)
 
@@ -1656,7 +1662,7 @@ class psu_fan_sensor(system_device):
         psu_status_filename = "thermal/{}_status".format(self.base_file_name)
         psu_status = 0
         if not self.check_file(psu_status_filename):
-            self.log.info("Missing file {} dev: {}".format(psu_status_filename, self.name))
+            self.log.info("Missing file: {}".format(psu_status_filename))
         else:
             try:
                 psu_status = int(self.read_file(psu_status_filename))
@@ -1784,6 +1790,9 @@ class psu_fan_sensor(system_device):
 
         # sensor error reading file
         if CONST.SENSOR_READ_ERR in fault_list:
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             pwm_new = max(pwm, pwm_new)
 
@@ -1906,7 +1915,7 @@ class fan_sensor(system_device):
         status_filename = "thermal/fan{}_status".format(self.fan_drwr_id)
         status = 0
         if not self.check_file(status_filename):
-            self.log.info("Missing file {} dev: {}".format(status_filename, self.name))
+            self.log.info("Missing file: {}".format(status_filename))
         else:
             try:
                 status = int(self.read_file(status_filename))
@@ -1922,7 +1931,7 @@ class fan_sensor(system_device):
         for tacho_idx in range(self.tacho_idx, self.tacho_idx + self.tacho_cnt):
             fan_fault_filename = "thermal/fan{}_fault".format(tacho_idx)
             if not self.check_file(fan_fault_filename):
-                self.log.info("Missing file {} dev: {}".format(fan_fault_filename, self.name))
+                self.log.info("Missing file: {}".format(fan_fault_filename))
             else:
                 try:
                     val = int(self.read_file(fan_fault_filename))
@@ -2091,7 +2100,7 @@ class fan_sensor(system_device):
             value = 0
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
-                self.log.info("Missing file {} dev: {}".format(rpm_file_name, self.name))
+                self.log.info("Missing file {}".format(rpm_file_name))
             else:
                 try:
                     value = int(self.read_file(rpm_file_name))
@@ -2163,6 +2172,9 @@ class fan_sensor(system_device):
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
             if CONST.SENSOR_READ_ERR not in self.mask_fault_list:
+                # get special error case for sensor missing
+                sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+                self.pwm = max(int(sensor_err), self.pwm)
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
                 pwm_new = max(pwm, pwm_new)
 
@@ -2233,7 +2245,7 @@ class ambiant_thermal_sensor(system_device):
         for _, file_name in self.base_file_name.items():
             sens_file_name = "thermal/{}".format(file_name)
             if not self.check_file(sens_file_name):
-                self.log.info("{}: missing file {}".format(self.name, sens_file_name))
+                self.log.info("Missing file: {}".format(sens_file_name))
                 self.handle_reading_file_err(sens_file_name)
             else:
                 try:
@@ -2280,6 +2292,9 @@ class ambiant_thermal_sensor(system_device):
         fault_list = self.get_fault_list_filtered()
 
         if CONST.SENSOR_READ_ERR in fault_list:
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
         self._update_pwm()
@@ -2340,7 +2355,7 @@ class dpu_module(system_device):
         ""
         dps_ready_filename = self.file_input
         if not self.check_file(dps_ready_filename):
-            self.log.info("{}: missing file {}".format(self.name, dps_ready_filename))
+            self.log.info("Missing file: {}".format(dps_ready_filename))
         else:
             try:
                 self.ready = bool(self.read_file_int(dps_ready_filename))
