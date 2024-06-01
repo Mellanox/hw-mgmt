@@ -1,7 +1,7 @@
-From 482a8a812c6fe5c860d10e44f4a5eab45bab387b Mon Sep 17 00:00:00 2001
+From 7b395dbfd4ba4dfde99d0902af7412bf272363e3 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jan 2024 07:40:04 +0000
-Subject: [PATCH 32/60] platform: mellanox: Downstream: Introduce support of
+Subject: [PATCH 08/86] platform: mellanox: Downstream: Introduce support of
  Nvidia next genration L1 tray switch
 
 Add support for new L1 tray switch node providing L1 connectivity for
@@ -20,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 907 insertions(+), 115 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 8426a386f..2ddeb2291 100644
+index ece3eaf72..03fafdd7e 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -53,6 +53,7 @@
@@ -412,6 +412,7 @@ index 8426a386f..2ddeb2291 100644
 -		.mask = GENMASK(7, 0),
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(4),
+-		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +		.label = "bios_upgrade_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
@@ -423,6 +424,7 @@ index 8426a386f..2ddeb2291 100644
 -		.mask = GENMASK(7, 0),
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(5),
+-		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +		.label = "pwr_converter_prog_en",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -444,8 +446,6 @@ index 8426a386f..2ddeb2291 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
 -};
 -
--/* Platform FAN default */
--static struct mlxreg_core_data mlxplat_mlxcpld_qmb8700_fan_data[] = {
 +	{
 +		.label = "pcie_asic_reset_dis",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
@@ -987,6 +987,7 @@ index 8426a386f..2ddeb2291 100644
 +		.mask = GENMASK(7, 0),
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 +		.bit = BIT(4),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +	},
 +	{
 +		.label = "tacho14",
@@ -994,6 +995,7 @@ index 8426a386f..2ddeb2291 100644
 +		.mask = GENMASK(7, 0),
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 +		.bit = BIT(5),
++		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +	},
 +	{
 +		.label = "conf",
@@ -1007,12 +1009,10 @@ index 8426a386f..2ddeb2291 100644
 +		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
 +};
 +
-+/* Platform FAN default */
-+static struct mlxreg_core_data mlxplat_mlxcpld_qmb8700_fan_data[] = {
+ /* Platform FAN default */
+ static struct mlxreg_core_data mlxplat_mlxcpld_qmb8700_fan_data[] = {
  	{
- 		.label = "pwm1",
- 		.reg = MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET,
-@@ -6959,6 +7595,123 @@ static struct mlxreg_core_platform_data mlxplat_xdr_fan_data = {
+@@ -6961,6 +7597,123 @@ static struct mlxreg_core_platform_data mlxplat_xdr_fan_data = {
  		.version = 1,
  };
  
@@ -1136,7 +1136,7 @@ index 8426a386f..2ddeb2291 100644
  /* Watchdog type1: hardware implementation version1
   * (MSN2700, MSN2410, MSN2740, MSN2100 and MSN2140 systems).
   */
-@@ -7194,6 +7947,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -7196,6 +7949,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -1144,7 +1144,7 @@ index 8426a386f..2ddeb2291 100644
  	case MLXPLAT_CPLD_LPC_REG_GP0_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP_RST_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
-@@ -7279,6 +8033,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -7281,6 +8035,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET:
@@ -1153,7 +1153,7 @@ index 8426a386f..2ddeb2291 100644
  	case MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET ... MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET:
  		return true;
  	}
-@@ -7321,6 +8077,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -7323,6 +8079,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -1161,7 +1161,7 @@ index 8426a386f..2ddeb2291 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
-@@ -7472,6 +8229,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -7474,6 +8231,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -1171,7 +1171,7 @@ index 8426a386f..2ddeb2291 100644
  	case MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET ... MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET:
  		return true;
  	}
-@@ -7514,6 +8274,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -7516,6 +8276,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -1179,7 +1179,7 @@ index 8426a386f..2ddeb2291 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
-@@ -7657,6 +8418,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -7659,6 +8420,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -1189,7 +1189,7 @@ index 8426a386f..2ddeb2291 100644
  	case MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET ... MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET:
  		return true;
  	}
-@@ -7972,6 +8736,8 @@ static struct spi_board_info *mlxplat_spi;
+@@ -7974,6 +8738,8 @@ static struct spi_board_info *mlxplat_spi;
  static struct pci_dev *lpc_bridge;
  static struct pci_dev *i2c_bridge;
  static struct pci_dev *jtag_bridge;
@@ -1198,7 +1198,7 @@ index 8426a386f..2ddeb2291 100644
  
  /* Platform default reset function */
  static int mlxplat_reboot_notifier(struct notifier_block *nb, unsigned long action, void *unused)
-@@ -8467,6 +9233,26 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
+@@ -8469,6 +9235,26 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
  	return mlxplat_register_platform_device();
  }
  
@@ -1225,7 +1225,7 @@ index 8426a386f..2ddeb2291 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -8593,6 +9379,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8595,6 +9381,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0019"),
  		},
  	},
@@ -1238,7 +1238,7 @@ index 8426a386f..2ddeb2291 100644
  	{
  		.callback = mlxplat_dmi_msn274x_matched,
  		.matches = {
-@@ -8681,8 +9473,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8683,8 +9475,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	int shift, i;
  
  	/* Scan adapters from expected id to verify it is free. */
@@ -1249,7 +1249,7 @@ index 8426a386f..2ddeb2291 100644
  	     mlxplat_max_adap_num; i++) {
  		search_adap = i2c_get_adapter(i);
  		if (search_adap) {
-@@ -8691,7 +9483,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8693,7 +9485,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  		}
  
  		/* Return if expected parent adapter is free. */
@@ -1258,7 +1258,7 @@ index 8426a386f..2ddeb2291 100644
  			return 0;
  		break;
  	}
-@@ -8713,7 +9505,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8715,7 +9507,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	}
  
  	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */

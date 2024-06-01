@@ -331,8 +331,9 @@ Kernel-5.10
 |0331-mlxsw-i2c-DBG-Add-debug-output-for-failed-transactio.patch  |                    | Downstream accepted                      |            |                                                |
 |0332-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
 |0333-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream;skip[sonic]                   |            | SN4280                                         |
-|0334-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream;skip[sonic]                   |            | SN4280                                         |
-|0335-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending; os[sonic,opt]           |            |                                                |
+|0334-platform-mellanox-mlx-platform-Fix-FAN-tacho-reading.patch  |                    | Bugfix upstream                          |            | MQM9700                                        |
+|0335-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream;skip[sonic]                   |            | SN4280                                         |
+|0336-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending; os[sonic,opt]           |            |                                                |
 |9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream accepted                      |            |                                                |
