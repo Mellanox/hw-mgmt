@@ -364,7 +364,7 @@ index 000000000000..a61c13647bdc
 +		.mask = MLXREG_DPU_PG_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_power_events_items_data),
 +		.health = false,
-+		.inversed = 1,
++		.inversed = 0,
 +	},
 +	{
 +		.data = mlxreg_dpu_health_events_items_data,
@@ -373,7 +373,7 @@ index 000000000000..a61c13647bdc
 +		.mask = MLXREG_DPU_HEALTH_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_health_events_items_data),
 +		.health = false,
-+		.inversed = 1,
++		.inversed = 0,
 +	},
 +};
 +
