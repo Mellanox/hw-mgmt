@@ -841,7 +841,6 @@ if [ "$1" == "add" ]; then
 						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
 						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
 						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
-                            prefix="dpu""$slot_num""_""$prefix"
                         fi
 					fi
 					;;
@@ -1361,7 +1360,6 @@ else
 						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
 						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
 						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
-                            prefix="dpu""$slot_num""_""$prefix"
 					    fi
                     fi
 					;;
