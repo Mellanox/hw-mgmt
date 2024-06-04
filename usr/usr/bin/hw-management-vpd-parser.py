@@ -472,7 +472,6 @@ def parse_fru_mlnx_bin(data, FRU_ITEMS, print_blk_type=False):
     blk_header, hdr_size = parse_packed_data(data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
 
     _data = data[hdr_size:]
-    sanity_str = bin_decode(struct.unpack("4s", _data[:4])[0])
     try:
         sanity_str = bin_decode(struct.unpack("4s", _data[:4])[0])
     except:
