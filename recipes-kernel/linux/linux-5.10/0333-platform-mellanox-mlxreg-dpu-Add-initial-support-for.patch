@@ -237,7 +237,7 @@ index 000000000..a61c13647
 +	{
 +		.label = "dpu_id",
 +		.reg = MLXREG_DPU_REG_GP0_RO_OFFSET,
-+		.mask = GENMASK(3, 0),
++		.bit = GENMASK(3, 0),
 +		.mode = 0444,
 +	},
 +	{
@@ -250,7 +250,7 @@ index 000000000..a61c13647
 +	{
 +		.label = "boot_progress",
 +		.reg = MLXREG_DPU_REG_GP1_OFFSET,
-+		.mask = GENMASK(3, 0),
++		.bit = GENMASK(3, 0),
 +		.mode = 0444,
 +	},
 +	{
