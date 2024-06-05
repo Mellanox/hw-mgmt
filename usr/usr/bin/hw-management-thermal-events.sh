@@ -1083,6 +1083,23 @@ if [ "$1" == "add" ]; then
 			check_n_link "$3""$4"/temp1_min $thermal_path/drivetemp_min
 		fi
 	fi
+	if [ "$2" == "dpu" ]; then
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+		HI160)
+			# DPU event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+			slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+			if [ ! -z "$slot_num" ]; then
+				thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+			fi
+			;;
+		*)
+			;;
+		esac
+		check_n_link "$3""$4"/temp2_input $thermal_path/"cx_amb"
+	fi
+
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then

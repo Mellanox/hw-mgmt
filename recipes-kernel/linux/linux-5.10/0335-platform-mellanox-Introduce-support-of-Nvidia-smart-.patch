@@ -112,7 +112,7 @@ index 785f5870d..896e687b0 100644
  #define MLXPLAT_CPLD_FAN4_DEFAULT_NR		14
  #define MLXPLAT_CPLD_NR_ASIC			3
  #define MLXPLAT_CPLD_NR_LC_BASE			34
-+#define MLXPLAT_CPLD_NR_DPU_BASE		17
++#define MLXPLAT_CPLD_NR_DPU_BASE		18
  
  #define MLXPLAT_CPLD_NR_LC_SET(nr)	(MLXPLAT_CPLD_NR_LC_BASE + (nr))
  #define MLXPLAT_CPLD_LC_ADDR		0x32
@@ -341,7 +341,7 @@ index 785f5870d..896e687b0 100644
 +		.slot = 2,
 +	},
 +	{
-+		.label = "dpu2",
++		.label = "dpu3",
 +		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[2],
 +		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE + 2,
 +		.slot = 3,

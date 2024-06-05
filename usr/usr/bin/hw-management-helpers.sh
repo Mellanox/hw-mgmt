@@ -572,6 +572,24 @@ function get_i2c_busdev_name()
 	echo "$dev_name"
 }
 
+find_dpu_slot_from_i2c_bus()
+{
+    local input_bus_num=$1
+    local slot_num=""
+    local dpu_bus_off=$(<$config_path/dpu_bus_off)
+    local dpu_num=$(<$config_path/dpu_num)
+    local i2c_bus_offset=$(<$config_path/i2c_bus_offset)
+
+    if [ $input_bus_num -lt $dpu_bus_off ] ||
+       [ $input_bus_num -gt $((dpu_bus_off+dpu_num+1)) ]; then
+        slot_num=""
+    else
+        slot_num=$((input_bus_num-dpu_bus_off+i2c_bus_offset+1))
+    fi
+
+    echo "$slot_num"
+}
+
 find_dpu_slot()
 {
 	local path="$1"
