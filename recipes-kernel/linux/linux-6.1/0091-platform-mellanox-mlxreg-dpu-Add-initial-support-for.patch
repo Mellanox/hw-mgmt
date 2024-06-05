@@ -158,7 +158,7 @@ index 000000000000..a61c13647bdc
 + * @MLXREG_DPU_BF3: DPU equipped with BF3 SoC;
 + */
 +enum mlxreg_dpu_type {
-+	MLXREG_DPU_BF3 = 0x0000,
++	MLXREG_DPU_BF3 = 0x0050,
 +};
 +
 +/* Default register access data. */
@@ -239,7 +239,7 @@ index 000000000000..a61c13647bdc
 +	{
 +		.label = "dpu_id",
 +		.reg = MLXREG_DPU_REG_GP0_RO_OFFSET,
-+		.mask = GENMASK(3, 0),
++		.bit = GENMASK(3, 0),
 +		.mode = 0444,
 +	},
 +	{
@@ -251,8 +251,8 @@ index 000000000000..a61c13647bdc
 +	},
 +	{
 +		.label = "boot_progress",
-+		.reg = MLXREG_DPU_REG_GP0_OFFSET,
-+		.mask = GENMASK(3, 0),
++		.reg = MLXREG_DPU_REG_GP1_OFFSET,
++		.bit = GENMASK(3, 0),
 +		.mode = 0444,
 +	},
 +	{
@@ -367,7 +367,7 @@ index 000000000000..a61c13647bdc
 +		.mask = MLXREG_DPU_PG_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_power_events_items_data),
 +		.health = false,
-+		.inversed = 1,
++		.inversed = 0,
 +	},
 +	{
 +		.data = mlxreg_dpu_health_events_items_data,
@@ -376,7 +376,7 @@ index 000000000000..a61c13647bdc
 +		.mask = MLXREG_DPU_HEALTH_MASK,
 +		.count = ARRAY_SIZE(mlxreg_dpu_health_events_items_data),
 +		.health = false,
-+		.inversed = 1,
++		.inversed = 0,
 +	},
 +};
 +

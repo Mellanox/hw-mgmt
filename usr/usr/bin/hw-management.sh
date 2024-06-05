@@ -104,9 +104,9 @@ quantum3_pci_id=d2f4
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
-dpu_bf3_pci_id=c2d5
+dpu_bf3_pci_id=a2dc
 # Need to get the correct PCI bus numbers for DPUs
-dpu_pci_addr_amd=(03:00.0 04:00.0 05:00.0 09:00.0)
+dpu_pci_addr_amd=(05:00.0 02:00.0 01:00.0 06:00.0)
 dpu_pci_addr_cfl=(01:00.0 02:00.0 06:00.0 08:00.0)
 leakage_count=0
 leakage_rope_count=0
@@ -2208,7 +2208,7 @@ smart_switch_common()
 		add_i2c_dynamic_bus_dev_connection_table "${msn4700_msn4600_mps_voltmon_connect_table[@]}"
 		echo -n "${smart_switch_dpu_dynamic_i2c_bus_connect_table[@]} " > $config_path/i2c_underlying_devices
 	fi
-	lm_sensors_config="$lm_sensors_configs_path/msn4700_respin_sensors.conf"
+	lm_sensors_config="$lm_sensors_configs_path/sn4280_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_sn4280.json"
 	named_busses+=(${smart_switch_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -2218,12 +2218,13 @@ smart_switch_common()
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-	echo 17 > $config_path/dpu_bus_off
+	echo 18 > $config_path/dpu_bus_off
 	dpu_count=4
 	echo -n "${smart_switch_dpu2host_events[@]}" > "$dpu2host_events_file"
 	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
 	i2c_comex_mon_bus_default=$((smart_switch_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 n5110ld_specific()
@@ -2835,6 +2836,7 @@ set_dpu_pci_id()
 	local total_dpu_num
 	local idx=0
 	local element
+	local dpu_detected_num=0
 
 	# Get DPU PCI Ids.
 	case $sku in
@@ -2864,17 +2866,18 @@ set_dpu_pci_id()
 		esac
 
 		total_dpu_num=${#dpu_pci_addr[@]}
-		echo "$total_dpu_num" > "$config_path"/dpu_detected_num
 
 		while [ $idx -lt $total_dpu_num ]; do
 			element="${dpu_pci_addr[$idx]}"
 			if echo "$dpus" | grep -q -w "$element"; then
 				echo "$element" > "$config_path"/dpu$((idx+1))_pci_bus_id
+				dpu_detected_num=$((dpu_detected_num + 1))
 			else
 				echo "" > "$config_path"/dpu$((idx+1))_pci_bus_id
 			fi
 			idx=$((idx + 1))
 		done
+		echo "$dpu_detected_num" > "$config_path"/dpu_detected_num
 		;;
 	*)
 		;;

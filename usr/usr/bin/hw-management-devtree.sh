@@ -347,11 +347,11 @@ declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb")
 
-declare -A dpu_type0_alternatives=(["tmp421_0"]="tmp421 0x1f 17 cx_amb" \
-				["mp2975_0"]="mp2975 0x69 17 voltmon1" \
-				["mp2975_1"]="mp2975 0x6a 17 voltmon2" \
-				["xdpe15284_0"]="xdpe15284 0x69 17 voltmon1" \
-				["xdpe15284_1"]="xdpe15284 0x6a 17 voltmon2")
+declare -A dpu_type0_alternatives=(["tmp421_0"]="tmp421 0x1f 18 cx_amb" \
+				["mp2975_0"]="mp2975 0x69 18 voltmon1" \
+				["mp2975_1"]="mp2975 0x6a 18 voltmon2" \
+				["xdpe15284_0"]="xdpe15284 0x69 18 voltmon1" \
+				["xdpe15284_1"]="xdpe15284 0x6a 18 voltmon2")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
