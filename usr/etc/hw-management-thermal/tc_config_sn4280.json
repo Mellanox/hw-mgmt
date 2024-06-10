@@ -37,15 +37,15 @@
 		}
 	},
 	"dev_parameters" : {
-		"asic\\d*":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3}, 
-		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!105000", "poll_time": 3},
+		"asic\\d*":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!105000", "poll_time": 3, "sensor_read_error":100},
 		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
 		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30},
 		"voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!65000", "val_max": "!85000", "poll_time": 60},
-		"dpu\\d+_module" :{"child_sensors_list" : ["cx_amb", "sodimm1", "drivetemp"], "poll_time": 3},
-		"dpu\\d+_cx_amb": {"pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 30},
-    	"dpu\\d+_cpu":    { "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", "poll_time": 3},
+		"drivetemp":      {"pwm_min": 30, "pwm_max": 70, "val_min": "!65000", "val_max": "!85000", "poll_time": 60},
+		"dpu\\d+_module" :{"child_sensors_list" : ["cx_amb", "voltmon1", "voltmon2"], "poll_time": 3},
+		"dpu\\d+_cx_amb": {"pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 30, "sensor_read_error":100},
     	"dpu\\d+_sodimm\\d+": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_crit": 95000, "poll_time": 60},
    		"dpu\\d+_drivetemp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000", "poll_time": 60},
     	"dpu\\d+_voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60}
