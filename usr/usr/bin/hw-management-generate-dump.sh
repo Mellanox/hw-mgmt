@@ -73,10 +73,8 @@ dump_cmd "sensors" "sensors" "20"
 ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
-    run_cmd="find -L $HW_MGMT_FOLDER -maxdepth 4 -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null"
-    timeout 140 bash -c "$run_cmd" &> /dev/null
-    run_cmd="find $HW_MGMT_FOLDER/eeprom/  -name *info  -exec ls -la {} \; -exec hexdump -C {} \; > $DUMP_FOLDER/hw-management_fru_dump 2> /dev/null"
-    timeout 80 bash -c "$run_cmd" &> /dev/null
+    timeout 140 find -L $HW_MGMT_FOLDER -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null
+    timeout 80 find $HW_MGMT_FOLDER/eeprom/ -type l -exec ls -la {} \; -exec hexdump -C {} \; > $DUMP_FOLDER/hw-management_fru_dump 2> /dev/null
 fi
 
 if [ -z $MODE ] || [ $MODE != "compact" ]; then
