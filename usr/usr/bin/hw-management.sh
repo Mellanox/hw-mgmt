@@ -2275,6 +2275,7 @@ n5110ld_specific()
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 n5110ld_specific_cleanup()
