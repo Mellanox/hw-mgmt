@@ -456,9 +456,9 @@ Kernel-6.1
 |0033-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
 |0034-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
 |0035-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Downstream accepted                      |            |                                                |
-|0036-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  | d7248f1cc835       | Bugfix pending                           |            | v6.1.53                                        |
-|0037-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        | 6406a95c4a5e       | Bugfix pending                           |            | v6.1.53                                        |
-|0038-mlxsw-core_hwmon-Adjust-module-label-names-based-on-.patch  | 8b2fb4b671b3       | Bugfix pending                           |            | v6.1.53                                        |
+|0036-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  | d7248f1cc835       | Bugfix pending                           | v6.1.53    | Added in v6.1.53                               |
+|0037-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        | 6406a95c4a5e       | Bugfix pending                           | v6.1.53    | Added in v6.1.53                               |
+|0038-mlxsw-core_hwmon-Adjust-module-label-names-based-on-.patch  | 8b2fb4b671b3       | Bugfix pending                           | v6.1.53    | Added in v6.1.53                               |
 |0039-mlxsw-reg-Limit-MTBR-register-payload-to-a-single-da.patch  |                    | Feature pending                          |            |                                                |
 |0040-mlxsw-core-Extend-allowed-list-of-external-cooling-d.patch  |                    | Feature pending                          |            |                                                |
 |0041-mlxsw-i2c-Utilize-standard-macros-for-dividing-buffe.patch  |                    | Feature pending                          |            |                                                |
@@ -487,7 +487,7 @@ Kernel-6.1
 |0068-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
 |0069-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
 |0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
-|0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  | 7ad5e7a35c3f       | Downstream;skip[sonic]                   |            | BF3 v6.1.75                                    |
+|0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  | 7ad5e7a35c3f       | Downstream;skip[sonic,cumulus]           | v6.1.75    | BF3 v6.1.75                                    |
 |0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           | 2321d69f92aa       | Downstream;skip[sonic]                   |            | BF3                                            |
 |0073-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  | 20d03d4d9437       | Downstream;skip[sonic]                   |            | BF3                                            |
 |0074-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream;skip[sonic]                   |            | BF3                                            |
@@ -508,7 +508,7 @@ Kernel-6.1
 |0088-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
 |0089-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
 |0090-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
-|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted                      |            |                                                |
+|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted;os[cumulus]          |            |                                                |
 |0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted                      |            |                                                |
 |0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
 |0094-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
@@ -526,9 +526,9 @@ Kernel-6.1
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
-|9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic]                   |            | P4300                                          |
-|9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
-|9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream;skip[sonic]                   |            | Add dedicated match for QMB8700                |
+|9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
+|9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add dedicated match for QMB8700                |
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
