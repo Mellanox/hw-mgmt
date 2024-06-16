@@ -2247,7 +2247,7 @@ n5110ld_specific()
 	echo 4 > $config_path/cpld_num
 	echo 2 > $config_path/clk_brd_num
 	psu_count=0
-	hotplug_fans=6
+	hotplug_fans=0
 	max_tachos=12
 	leakage_count=2
 	leakage_rope_count=2
