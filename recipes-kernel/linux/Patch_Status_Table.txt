@@ -486,21 +486,21 @@ Kernel-6.1
 |0067-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  | cfd4ea4815d1       | Downstream;skip[sonic]                   |            | BF3                                            |
 |0068-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
 |0069-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
+|0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  | 7ad5e7a35c3f       | Downstream;skip[sonic]                   |            | BF3 v6.1.75                                    |
 |0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           | 2321d69f92aa       | Downstream;skip[sonic]                   |            | BF3                                            |
 |0073-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  | 20d03d4d9437       | Downstream;skip[sonic]                   |            | BF3                                            |
 |0074-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0075-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0076-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0077-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0078-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0079-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0080-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0081-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0084-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
+|0075-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0076-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0077-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0078-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0079-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0080-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0081-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0084-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0085-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           |            |                                                |
 |0086-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic]                   |            | BF3                                            |
 |0087-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
@@ -513,7 +513,7 @@ Kernel-6.1
 |0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
 |0094-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
-|8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic]                   |            | Add SPI                                        |
+|8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |8004-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream accepted                      |            | IB only                                        |
 |8005-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
