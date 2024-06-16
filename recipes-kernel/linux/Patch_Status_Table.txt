@@ -398,7 +398,7 @@ Kernel-6.1
 |0052-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
 |0053-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream accepted                      |            |                                                |
 |0054-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
-|0055-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted                      |            |                                            |
+|0055-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted                      |            |                                                |
 |0056-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature upstream                         |            |                                                |
 |0057-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature pending                          |            |                                                |
 |0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf4       | Feature upstream;skip[sonic,cumulus]     | v6.1.92    | BF3                                            |
@@ -430,11 +430,11 @@ Kernel-6.1
 |0088-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
 |0089-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
 |0090-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
-|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
+|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream;skip[sonic];os[cumulus]       |            |                                                |
 |0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
 |0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
-|8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic]                   |            | Add SPI                                        |
+|8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
 |8004-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream accepted                      |            | IB only                                        |
 |8005-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
@@ -447,9 +447,9 @@ Kernel-6.1
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
-|9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic]                   |            | P4300                                          |
-|9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
-|9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream;skip[sonic]                   |            | Add dedicated match for QMB8700                |
+|9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
+|9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add dedicated match for QMB8700                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
