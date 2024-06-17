@@ -2527,8 +2527,8 @@ load_modules()
 	fi
 	case $sku in
 		HI162)	# JSO
-			modprobe i2c_designware_platform
 			modprobe i2c_asf
+			modprobe i2c_designware_platform
 		;;
 		*)
 		;;

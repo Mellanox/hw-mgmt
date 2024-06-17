@@ -166,19 +166,19 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotwap1_in*|pdb_hotwap2_in*|pdb_hotwap3_in*|pdb_hotwap4_in*)
+	pdb_hotswap1_in*|pdb_hotwap2_in*|pdb_hotwap3_in*|pdb_hotwap4_in*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotwap1_curr*|pdb_hotwap2_curr*|pdb_hotwap3_curr*|pdb_hotwap4_curr*)
+	pdb_hotswap1_curr*|pdb_hotwap2_curr*|pdb_hotwap3_curr*|pdb_hotwap4_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotwap1_pwr*|pdb_hotwap2_pwr*|pdb_hotwap3_pwr*|pdb_hotwap4_pwr*)
+	pdb_hotswap1_pwr*|pdb_hotwap2_pwr*|pdb_hotwap3_pwr*|pdb_hotwap4_pwr*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotwap1_temp*|pdb_hotwap2_temp*|pdb_hotwap3_temp*|pdb_hotwap4_temp*)
+	pdb_hotswap1_temp*|pdb_hotwap2_temp*|pdb_hotwap3_temp*|pdb_hotwap4_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
