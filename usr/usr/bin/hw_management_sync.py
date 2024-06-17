@@ -266,7 +266,8 @@ def update_attr(attr_prop):
                     attr_prop["oldval"] = val
             except:
                 pass
-
+        else:
+            attr_prop["oldval"] = None
 
 def init_attr(attr_prop):
     if "hwmon" in attr_prop["fin"]:
