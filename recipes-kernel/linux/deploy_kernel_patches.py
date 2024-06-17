@@ -61,10 +61,10 @@ class CONST(object):
     PATCH_TABLE_DELIMITER = "----------------------"
     PATCH_OS_SUBFOLDERS = {"default" : "./linux-{kver}",
                            "sonic" : "./linux-{kver}/sonic",
-                           "opt" : "./linux-{kver}/sonic",
+                           "opt" : "./linux-{kver}/opt",
                            "cumulus" : "./linux-{kver}/cumulus",
-                           "nvos" : "./linux-{kver}/sonic",
-                           "dvs" : "./linux-{kver}/sonic"}
+                           "nvos" : "./linux-{kver}/nvos",
+                           "dvs" : "./linux-{kver}/dvs"}
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
