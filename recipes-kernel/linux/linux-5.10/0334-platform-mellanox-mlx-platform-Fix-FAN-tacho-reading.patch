@@ -1,14 +1,14 @@
-From 13d162274db06fbdd0d16cc68aa6f9ea1afc274e Mon Sep 17 00:00:00 2001
+From fda3e52362937e1317e97d1d02f5f52a618cd355 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
-Date: Mon, 3 Jun 2024 09:56:53 +0000
-Subject: [PATCH 02/86] platform/mellanox: mlx-platform: Fix FAN tacho reading
+Date: Fri, 31 May 2024 13:20:12 +0000
+Subject: [PATCH 11/90] platform/mellanox: mlx-platform: Fix FAN tacho reading
  issue
 
 Fix FAN presence for tacho13..tacho14:
 For systems equipped  with 7 FAN modules, attribute tacho[13..14] can read none-zero value in case FAN module is not present.
 This happens because .reg_prsnt bit was not initialized for tacho[13..14].
 
-Fixes: 9045512ca6cd ("platform/x86: mlx-platform: Extend FAN and LED config to support new MQM97xx systems")
+Fixes: 752a490bc2f1 ("platform/x86: mlx-platform: Extend FAN and LED config to support new MQM97xx systems")
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
@@ -17,10 +17,10 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 7a544ec3c..785f5870d 100644
+index 8426a386f..ece3eaf72 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -5776,6 +5776,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+@@ -6659,6 +6659,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
  		.mask = GENMASK(7, 0),
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
  		.bit = BIT(4),
@@ -28,7 +28,7 @@ index 7a544ec3c..785f5870d 100644
  	},
  	{
  		.label = "tacho14",
-@@ -5783,6 +5784,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
+@@ -6666,6 +6667,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
  		.mask = GENMASK(7, 0),
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
  		.bit = BIT(5),
@@ -37,5 +37,5 @@ index 7a544ec3c..785f5870d 100644
  	{
  		.label = "conf",
 -- 
-2.14.1
+2.20.1
 
