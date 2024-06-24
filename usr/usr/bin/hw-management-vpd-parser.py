@@ -153,6 +153,7 @@ class MLNX_ID(object):
     MFG_INTERNAL = 12
     PSU = 16
     DPU = 17
+    PSID = 18
     GUIDS_1 = 0x80
     GUIDS_2 = 0x81
     PORT_CFG_EXT = 0x82
@@ -266,6 +267,9 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["DPU4_PN",       1, 195, 20,  "FIT_NORMAL", "FT_ASCII"],
                             ["DPU4_REV",      1, 215, 4,   "FIT_NORMAL", "FT_ASCII"],
                             ["DPU4_BASE_MAC", 1, 219, 6,   "FIT_NORMAL", "FT_MAC"]
+                        ]},
+                    MLNX_ID.PSID : {'blk_type': "PSID", "fn": "mlnx_blk_unpack", "format": [
+                            ["PSID",  1,  8, 34,  "FIT_NORMAL", "FT_ASCII"]
                         ]},
                     MLNX_ID.GUIDS_1 : {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",    1, 8,  1,   "FIT_NORMAL", "FT_HEX"],
