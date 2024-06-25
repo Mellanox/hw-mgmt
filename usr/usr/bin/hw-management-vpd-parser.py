@@ -327,7 +327,10 @@ def format_unpack(_data, item, blk_header, verbose=False):
     item_format = item['format'].format(blk_header['size'])
     val = struct.unpack(item_format, _data)[0]
     if isinstance(val, str):
-        val = val.split('\x00', 1)[0]
+        if blk_header["type"] == ONIE_ID.BASE_MAC:
+            pass
+        else:
+            val = val.split('\x00', 1)[0]
     elif 'I' in item_format:
         val = "{0:#0{1}x}".format(val, 10).upper()
 
