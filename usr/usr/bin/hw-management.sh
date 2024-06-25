@@ -2278,6 +2278,57 @@ n5110ld_specific()
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
+n5110ld_ttm_specific()
+{
+	local cpu_bus_offset=55
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${n5110ld_base_connect_table[@]})
+		add_cpu_board_to_connection_table $cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_dynamic_i2c_bus_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_cartridge_eeprom_connect_table[@]}"
+	else
+		# adding Cable Cartridge support which is not included to BOM string.
+		echo -n "${n5110ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		# Add VPD explicitly.
+		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
+	fi
+	asic_i2c_buses=(11 21)
+	echo 1 > $config_path/global_wp_wait_step
+	echo 20 > $config_path/global_wp_timeout
+	echo 4 > $config_path/cpld_num
+	echo 2 > $config_path/clk_brd_num
+	psu_count=0
+	hotplug_fans=0
+	max_tachos=8
+	leakage_count=2
+	leakage_rope_count=2
+	hotplug_pwrs=0
+	hotplug_psus=0
+	erot_count=3
+	asic_control=0
+	health_events_count=0
+	pwr_events_count=0
+	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
+	lm_sensors_config="$lm_sensors_configs_path/n5110ld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
+	lm_sensors_labels="$lm_sensors_configs_path/n5110ld_sensors_labels.json"
+	echo C2P > $config_path/system_flow_capability
+	named_busses+=(${n5110ld_named_busses[@]})
+	add_come_named_busses $cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo 4 > $config_path/fan_drwr_num
+	echo 33000 > $config_path/fan_max_speed
+	echo 6000 > $config_path/fan_min_speed
+
+	mctp_bus="$n5110_mctp_bus"
+	mctp_addr="$n5110_mctp_addr"
+	ln -sf /dev/i2c-2 /dev/i2c-8
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
 n5110ld_specific_cleanup()
 {
 	unlink /dev/i2c-8
@@ -2350,7 +2401,17 @@ check_system()
 			smart_switch_common
 			;;
 		VMOD0021)
-			n5110ld_specific
+			case $sku in
+				HI162)
+					n5110ld_specific
+				;;
+				HI166)	# TTM
+					n5110ld_ttm_specific
+				;;
+				*)
+					n5110ld_specific
+				;;
+			esac
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)

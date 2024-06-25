@@ -36,7 +36,7 @@
 	"sensor_list" : ["cpu",
 					"swb_voltmon1", "swb_voltmon2", "swb_voltmon3", "swb_voltmon4", "swb_voltmon5", "swb_voltmon6",
 					"sodimm1",
-					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6",
+					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4",
 					"ibc1", "ibc2", "ibc3", "ibc4",
 					"hotswap1"
 					]
