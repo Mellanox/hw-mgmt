@@ -1230,6 +1230,9 @@ if [ "$1" == "add" ]; then
 				mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
 			fi
 		done
+		if [ -e "$devtree_file" ]; then
+			connect_dynamic_board_devices "dpu_board""$slot_num"
+		fi
 	fi
 	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then
@@ -1519,6 +1522,9 @@ else
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
 		slot_num=$(find_dpu_slot "$3$4")
+		if [ -e "$devtree_file" ]; then
+			disconnect_dynamic_board_devices "dpu_board""$slot_num"
+		fi
 		if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
 			rm -rf "$hw_management_path"/dpu"$slot_num"
 		fi

@@ -654,8 +654,10 @@ init_hotplug_events()
 
 	for i in ${!event_table[@]}; do
 		if [ -f "$path"/${event_table[$i]} ]; then
-			check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
-			event=$(< $s_path/${event_table[$i]})
+			if [ $slot_num -eq 0 ]; then
+				check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
+			fi
+			event=$(< $path/${event_table[$i]})
 			if [ "$event" -eq 1 ]; then
 				echo 1 > $e_path/${event_table[$i]}
 			fi
