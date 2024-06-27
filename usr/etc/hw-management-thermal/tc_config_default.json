@@ -48,7 +48,8 @@
 		"gearbox\\d+":    {"pwm_min": 20, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 6},
 		"pch":            {"pwm_min": 20, "pwm_max" : 100, "val_min": 50000, "val_max": 85000, "poll_time": 10, "enable" : 0},
 		"comex_amb":      {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max": 85000, "poll_time": 10, "enable" : 0}
-	}
+	},
+	"sensor_list" : ["asic1", "cpu", "sensor_amb"]
 }
 
  
