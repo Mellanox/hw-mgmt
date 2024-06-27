@@ -467,7 +467,7 @@ index 19a98f4..cd429e5 100644
 +		.label = "bmc_to_cpu_ctrl",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
-+		.mode = 0200,
++		.mode = 0644,
 +	},
 +	{
 +		.label = "uart_sel",
