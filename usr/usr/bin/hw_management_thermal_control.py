@@ -2531,8 +2531,6 @@ class ThermalManagement(hw_managemet_file_op):
         # Collect asic sensors
         try:
             self.asic_counter = int(self.read_file("config/asic_num"))
-            for asic_idx in range(1, self.asic_counter + 1):
-                sensor_list.append("asic{}".format(asic_idx))
         except BaseException:
             self.log.error("Missing ASIC num config.", 1)
             sys.exit(1)
