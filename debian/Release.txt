@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0040.1000
+- Sun , 30 June 2024 
+--------------------------------------------------------------------------------
+
+- New features 
+    o  Add support for QM3400 Blackmamba - ES level quality
+    o  Add support for QM3400 SmartSwitch Bobcat - ES level quality
+    o  Add support for N5110 Juliet SO PO + TTM - ES level quality
+    o  Add support in VPD parser for System VPD vendor specific SSD SED PSID block
+
+- Bug fixes
+	#3649551	SN4700 : [Independent Module] | on r-leopard-41 with IM enabled, there was a thermal overload. 
+	#3878328	SN4700 : Switch rebooted with "Thermal Overload" because ASIC thermal is not available 
+	#3885405	TC: [Thermal Algorithm] | Blacklist is malfunctions
+	#3883147	TC: [Thermal Algorithm] | Counts errors even it was paused by black list
+	#3879220	SN3420 :  Thermal control: increase PWM minimum speed (20%->25%) to work around fan state issue reported by smond
+	#3895891	SPC1: [systemctl is-system-running] | SPC1 stuck in starting state after config reload - System was not started – lmsensor dependency issue
+	#3900159	QM3400: Kernel 6.1] thermal/module#_temp_crit: Input/output error 
+	#3900138	QM3400: [Kernel 6.1] Can't get value of subfeature temp input for front panel 
+	#3882472	QM3000 | QM3400:  Mismatch system names in TC config (qm3400 instead q3200)
+	#3948113	Switch is freezing after generating hw-mgmt dump few times in row 
+	#3852236	ARM: Kernel oops symptoms after boot: Unable to handle kernel paging address xxx when BSP Drivers are used
+	NA		msn5400 | msn5600 | sn4280 :TC: fix asic sensor mask in sensor_parameters
+	NA		Fix vpd parser sanity check is done only for 'MLNX' fru types
+	NA		Multi ASIC system: kernel config CONFIG_HOTPLUG_PCI_PCIE (kernel 6.1) is required to be disabled for the sw_reset on multi asic systems 
+	NA		TC: missing support of correct PWM calculation for systems with amb_{X} sensor count  != 2 
+	NA		MSN4700 | MQM9520:Some PSU1 labels are incorrectly marked as PSU2.
+	NA		QM3000 | QM3400: voltmon1 and voltmon4 symlinks pointing to curr2 sensors Instead of curr3 sensors.
+	NA		QM3000 ASIC PCIE mapping was wrong
+	NA		Missing support for Kconfig per Kernel major version
+	NA		vpd-parser :In case onie "Base MAC Address" filed ends with zero byte - vpd-parser cut last byte in output.
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.1000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0030.4000
 - Mon , 1 Apr 2024 
 --------------------------------------------------------------------------------
