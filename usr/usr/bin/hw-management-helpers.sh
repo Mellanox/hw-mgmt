@@ -629,7 +629,9 @@ create_hotplug_smart_switch_event_files()
 			mkdir "$hw_management_path/dpu"$i"/events"
 		fi
 		for j in ${!dpu_event_table[@]}; do
-			check_n_init $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} 0
+			if [ ! -f $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} ]; then
+				check_n_init $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} 0
+			fi
 		done
 	done
 }
@@ -641,26 +643,31 @@ init_hotplug_events()
 	local slot_num="$3"
 	local e_path
 	local s_path
+	local i2c_bus
+	local plat_drv_path="/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1"
+	local hwmon_path="mlxreg-hotplug.$slot_num/hwmon/hwmon*"
 
 	declare -a event_table="($(< $event_file))"
 
 	if [ $slot_num -ne 0 ]; then
+		# The events are for dpu hotplug attributes
 		e_path="$hw_management_path/dpu$slot_num/events"
 		s_path="$hw_management_path/dpu$slot_num/system"
+		i2c_bus=$(($(< $config_path/dpu_bus_off)+$slot_num-1))
+		path="$plat_drv_path/i2c-$i2c_bus/$i2c_bus-0068/$hwmon_path"
 	else
+		# The events are for dpu ready/shutdown attributes
 		e_path="$events_path"
 		s_path="$system_path"
 	fi
 
 	for i in ${!event_table[@]}; do
-		if [ -f "$path"/${event_table[$i]} ]; then
+		if [ -f $path/${event_table[$i]} ]; then
 			if [ $slot_num -eq 0 ]; then
 				check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
 			fi
 			event=$(< $path/${event_table[$i]})
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $e_path/${event_table[$i]}
-			fi
+			echo $event > $e_path/${event_table[$i]}
 		fi
 	done
 }

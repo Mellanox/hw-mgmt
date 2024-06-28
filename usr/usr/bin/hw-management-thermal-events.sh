@@ -676,7 +676,13 @@ if [ "$1" == "add" ]; then
 				echo 1 > $events_path/power_button
 			fi
 		fi
+		# Add DPU ready/shutdown_ready attributes
 		init_hotplug_events "$dpu2host_events_file" "$3$4" 0
+		# Add hotplug attributes from DPU
+		init_hotplug_events "$dpu_events_file" "$3$4" 1
+		init_hotplug_events "$dpu_events_file" "$3$4" 2
+		init_hotplug_events "$dpu_events_file" "$3$4" 3
+		init_hotplug_events "$dpu_events_file" "$3$4" 4
 		# BF3 debugfs temperature sensors linkage
 		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
 			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
@@ -709,10 +715,6 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
 		done
-	fi
-	if [ "$2" == "hotplug-ext" ]; then
-		slot_num=$(find_dpu_hotplug_slot "$3$4")
-		init_hotplug_events "$dpu_events_file" "$3$4" "$slot_num"
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -1397,11 +1399,6 @@ else
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
 		fi
-	fi
-	if [ "$2" == "hotplug-ext" ]; then
-		slot_num=$(find_dpu_hotplug_slot "$3$4")
-		deinit_hotplug_events "$dpu_events_file" "$slot_num"
-
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
