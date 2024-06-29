@@ -5,8 +5,8 @@
 
 - New features 
     o  Add support for QM3400 Blackmamba - ES level quality
-    o  Add support for QM3400 SmartSwitch Bobcat - ES level quality
-    o  Add support for N5110 Juliet SO PO + TTM - ES level quality
+    o  Add support for SN4280 SmartSwitch Bobcat - ES level quality
+    o  Add support for N5110_LD Juliet Scaleout PO + TTM - ES level quality
     o  Add support in VPD parser for System VPD vendor specific SSD SED PSID block
 
 - Bug fixes
