@@ -65,7 +65,7 @@ import os.path
 import struct
 import binascii
 import zlib
-import re
+
 
 #############################
 # Global const
@@ -153,6 +153,7 @@ class MLNX_ID(object):
     MFG_INTERNAL = 12
     PSU = 16
     DPU = 17
+    PSID = 18
     GUIDS_1 = 0x80
     GUIDS_2 = 0x81
     PORT_CFG_EXT = 0x82
@@ -267,6 +268,9 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                             ["DPU4_REV",      1, 215, 4,   "FIT_NORMAL", "FT_ASCII"],
                             ["DPU4_BASE_MAC", 1, 219, 6,   "FIT_NORMAL", "FT_MAC"]
                         ]},
+                    MLNX_ID.PSID : {'blk_type': "PSID", "fn": "mlnx_blk_unpack", "format": [
+                            ["PSID",  1,  8, 34,  "FIT_NORMAL", "FT_ASCII"]
+                        ]},
                     MLNX_ID.GUIDS_1 : {'blk_type': "GUIDS", "fn": "mlnx_blk_unpack", "format": [
                             ["GUID_TYPE",    1, 8,  1,   "FIT_NORMAL", "FT_HEX"],
                             ["RESERVED",     2, 9,  7, "FIT_NORMAL", "FT_RESERVED"],
@@ -319,6 +323,10 @@ bin_decode = lambda val: val.decode('ascii').rstrip('\x00') if isinstance(val, b
 int_unpack_be = lambda val: sum([b * 2**(8*n) for (b, n) in zip(val, range(len(val))[::-1])])
 int_unpack_le = lambda val: sum([b * 2**(8*n) for (b, n) in zip(val, range(len(val)))])
 
+def printv(message, verbosity):
+    if verbosity:
+        print(str(message))
+
 
 def format_unpack(_data, item, blk_header, verbose=False):
     """
@@ -327,7 +335,10 @@ def format_unpack(_data, item, blk_header, verbose=False):
     item_format = item['format'].format(blk_header['size'])
     val = struct.unpack(item_format, _data)[0]
     if isinstance(val, str):
-        val = val.split('\x00', 1)[0]
+        if blk_header["type"] == ONIE_ID.BASE_MAC:
+            pass
+        else:
+            val = val.split('\x00', 1)[0]
     elif 'I' in item_format:
         val = "{0:#0{1}x}".format(val, 10).upper()
 
@@ -339,10 +350,11 @@ def format_unpack(_data, item, blk_header, verbose=False):
     return val
 
 
-def mlnx_blk_unpack(data, blk_hdr, size):
+def mlnx_blk_unpack(data, blk_hdr, size, verbose=False):
     if "format" not in blk_hdr.keys():
         return "-"
     block_format = blk_hdr["format"]
+    printv("Block_type {}\n".format(blk_hdr['blk_type']), verbose)
     rec_list = []
     for rec in block_format:
         rec_dict = dict(list(zip(MLNX_VENDOR_BLK_FIELDS, rec)))
@@ -361,6 +373,7 @@ def mlnx_blk_unpack(data, blk_hdr, size):
         else:
             num_of_repeat = 1
             rec_name_fmt = rec_dict["name"]
+        printv("rec: {}".format(rec), verbose)
 
         for idx in range(num_of_repeat):
             offset = rec_offset + idx * rec_size
@@ -391,6 +404,9 @@ def mlnx_blk_unpack(data, blk_hdr, size):
                 rec_name = rec_name_fmt.format(idx=idx)
             else:
                 continue
+            printv("BIN: {}".format(binascii.hexlify(_data)), verbose)
+            printv("{} : {}\n".format(rec_name, bin_decode(val)), verbose)
+
             rec_list.append([rec_name, bin_decode(val)])
     return rec_list
 
@@ -438,7 +454,7 @@ def onie_parse_vendor_blk(data, _data_format, _fields, verbose=False):
     return None
 
 
-def parse_mlnx_blk(data, blk_header, FRU_ITEMS, print_blk_type=False):
+def parse_mlnx_blk(data, blk_header, FRU_ITEMS, verbose=False):
     if blk_header["block_type"] == MLNX_ID.GUIDS:
         if blk_header["minor_ver"] == MLNX_ID.MINOR_NEW_VER:
             blk_header["block_type"] = MLNX_ID.GUIDS_1
@@ -457,41 +473,46 @@ def parse_mlnx_blk(data, blk_header, FRU_ITEMS, print_blk_type=False):
         blk_item = FRU_ITEMS[blk_id]
         fn_name = blk_item.get("fn", None)
         if fn_name:
-            rec_list = globals()[fn_name](data, blk_item, blk_header['block_size'])
-            out_str += "=== MLNX_block: {}({}) ===\n".format(blk_item["blk_type"], blk_id) if print_blk_type else  ""
+            rec_list = globals()[fn_name](data, blk_item, blk_header['block_size'], verbose)
+            out_str += "=== MLNX_block: {}({}) ===\n".format(blk_item["blk_type"], blk_id, verbose) if verbose else  ""
             print_format = '{:<25}{}\n'
             for key, val in rec_list:
                 out_str += print_format.format(key+":", val)
-
+    else:
+        printv("Not supported block_type {}".format(blk_id), verbose)
     return  out_str
 
 
-def parse_fru_mlnx_bin(data, FRU_ITEMS, print_blk_type=False):
+def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
     fru_dict = {}
     fru_dict['items'] = []
     blk_header, hdr_size = parse_packed_data(data, MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
 
     _data = data[hdr_size:]
-    sanity_str = bin_decode(struct.unpack("4s", _data[:4])[0])
     try:
         sanity_str = bin_decode(struct.unpack("4s", _data[:4])[0])
     except:
         sanity_str = ""
     if sanity_str != "MLNX":
+        printv("MLNX Sanitiy check fail", verbose)
         return fru_dict
-
+    printv("Sanitiy check is OK", verbose)
     out_str = ""
     base_pos = hdr_size + 4
     while base_pos <= (blk_header["block_size"]):
+        printv("BLK offset: {}".format(base_pos), verbose)
         base_data = data[base_pos:]
         rec_header, rec_size = parse_packed_data(base_data, MLNX_BASE_BLK_FIELD, MLNX_BASE_BLK_FIELD_FORMAT)
+        printv("BLK header: {}".format(rec_header), verbose)
         base_pos += rec_size
         if rec_header["block_type"] == 0:
             continue
 
         blk_data_off = rec_header["block_start"] * 16
+        printv("BLK data offset: {}".format(blk_data_off), verbose)
         blk_header, hdr_size = parse_packed_data(data[blk_data_off:], MLNX_HDR_FORMAT, MLNX_HDR_FORMAT_FIELDS)
-        out_str += parse_mlnx_blk(data[blk_data_off+hdr_size: ], blk_header, FRU_ITEMS, print_blk_type)
+        printv("BLK header: {}".format(blk_header), verbose)
+        out_str += parse_mlnx_blk(data[blk_data_off+hdr_size: ], blk_header, FRU_ITEMS, verbose)
 
     fru_dict['items'].append(["", out_str])
     return fru_dict
@@ -651,7 +672,7 @@ if __name__ == '__main__':
                                                                                                                    "MLNX_FAN_VPD",
                                                                                                                    "MLNX_PDB_VPD",
                                                                                                                    "MLNX_CARTRIDGE_VPD"])
-    parser.add_argument('--verbose',  dest='verbose', required=False, default=0, help=argparse.SUPPRESS)
+    parser.add_argument('--verbose', dest='verbose', required=False, default=0, help=argparse.SUPPRESS)
     parser.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
     args = parser.parse_args()
 

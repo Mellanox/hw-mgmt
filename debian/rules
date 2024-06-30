@@ -4,8 +4,19 @@ pname:=hw-management
 
 pwd=$(shell pwd)
 
+#debuild -sa -us -uc -eLM_DEPENDS=1
+
+ifeq ($(LM_DEPENDS),0)
+	DEPENDS = -Vdist:Depends=""
+else
+	DEPENDS = -Vdist:Depends="lm-sensors"
+endif
+
 %:
 	dh $@
+
+override_dh_gencontrol:
+	dh_gencontrol -- $(DEPENDS)
 
 override_dh_auto_configure:
 
@@ -23,6 +34,7 @@ override_dh_auto_install:
 ifeq ($(DEB_HOST_ARCH),arm64)
 	mv debian/$(pname)/usr/bin/iorw.sh debian/$(pname)/usr/bin/iorw
 	cp usr/etc/modules-load.d/05-hw-management-modules-arm64.conf debian/$(pname)/etc/modules-load.d/05-hw-management-modules.conf
+	cp usr/etc/modprobe.d/hw-management-arm64.conf debian/$(pname)/etc/modprobe.d/hw-management.conf
 	dh_installdirs -p$(pname) lib/systemd/system-shutdown
 	cp usr/usr/bin/hw-management-kexec-notifier.sh debian/$(pname)/lib/systemd/system-shutdown
 endif
@@ -38,14 +50,17 @@ endif
 override_dh_installinit:
 	dh_installinit --name=hw-management
 	dh_installinit --name=hw-management-tc
+	dh_installinit --name=hw-management-sync
 
 override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management
 	dh_systemd_enable --name=hw-management-tc
+	dh_systemd_enable --name=hw-management-sync
 
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management
 	dh_systemd_start --name=hw-management-tc
+	dh_systemd_start --name=hw-management-sync
 
 override_dh_strip_nondeterminism:
 

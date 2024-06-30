@@ -124,10 +124,10 @@ base_cpu_bus_offset=10
 max_tachos=20
 i2c_asic_bus_default=2
 i2c_asic2_bus_default=3
+i2c_bus_min=1
 i2c_bus_max=26
-lc_i2c_bus_min=34
-lc_i2c_bus_max=43
-i2c_bus_offset=0
+bmc_i2c_bus_max=9
+bmc_i2c_bus_offset=70
 cpu_type=
 device_connect_delay=0.2
 
@@ -146,6 +146,9 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
+n5110_mctp_bus="0"
+n5110_mctp_addr="1040"
 
 log_err()
 {
@@ -194,7 +197,19 @@ find_i2c_bus()
         i2c_bus_offset=$(< $config_path/i2c_bus_offset)
         return
     fi
-    for ((i=1; i<i2c_bus_max; i++)); do
+
+	case "$ui_tree_sku" in
+	VMOD0021)
+		bus_min=$bmc_i2c_bus_min
+		bus_max=$bmc_i2c_bus_max
+		;;
+	*)
+		bus_min=$i2c_bus_min
+		bus_max=$i2c_bus_max
+		;;
+	esac
+
+    for ((i="$bus_min"; i<"$bus_max"; i++)); do
         folder=/sys/bus/i2c/devices/i2c-$i
         if [ -d $folder ]; then
             name=$(cut $folder/name -d' ' -f 1)
@@ -235,7 +250,9 @@ check_labels_enabled()
     if ([ "$ui_tree_sku" = "HI130" ] ||
         [ "$ui_tree_sku" = "HI151" ] ||
         [ "$ui_tree_sku" = "HI157" ] ||
-        [ "$ui_tree_sku" = "HI158" ]) &&
+        [ "$ui_tree_sku" = "HI158" ] ||
+        [ "$ui_tree_sku" = "HI162" ] ||
+        [ "$ui_tree_sku" = "HI166" ]) &&
         ([ ! -e "$ui_tree_archive" ]); then
         return 0
     else
@@ -353,9 +370,9 @@ unlock_service_state_change_update_and_match()
 connect_device()
 {
 	find_i2c_bus
-	if [ -f /sys/bus/i2c/devices/i2c-"$3"/new_device ]; then
-		addr=$(echo "$2" | tail -c +3)
-		bus=$(($3+i2c_bus_offset))
+	addr=$(echo "$2" | tail -c +3)
+	bus=$(($3+i2c_bus_offset))
+	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
@@ -373,9 +390,10 @@ connect_device()
 disconnect_device()
 {
 	find_i2c_bus
-	if [ -f /sys/bus/i2c/devices/i2c-"$2"/delete_device ]; then
-		addr=$(echo "$1" | tail -c +3)
-		bus=$(($2+i2c_bus_offset))
+	addr=$(echo "$1" | tail -c +3)
+	bus=$(($2+i2c_bus_offset))
+	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/delete_device ]; then
+		
 		if [ -d /sys/bus/i2c/devices/$bus-00"$addr" ] ||
 		   [ -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
 			echo "$1" > /sys/bus/i2c/devices/i2c-$bus/delete_device
@@ -526,6 +544,8 @@ function get_i2c_busdev_name()
 		else
 			i2cbus="${BASH_REMATCH[1]}"
 			i2caddr="0x${BASH_REMATCH[2]}"
+			find_i2c_bus
+			i2cbus=$(($i2cbus-$i2c_bus_offset))
 		fi
 
 		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
@@ -551,6 +571,24 @@ function get_i2c_busdev_name()
 	fi
 
 	echo "$dev_name"
+}
+
+find_dpu_slot_from_i2c_bus()
+{
+    local input_bus_num=$1
+    local slot_num=""
+    local dpu_bus_off=$(<$config_path/dpu_bus_off)
+    local dpu_num=$(<$config_path/dpu_num)
+    local i2c_bus_offset=$(<$config_path/i2c_bus_offset)
+
+    if [ $input_bus_num -lt $dpu_bus_off ] ||
+       [ $input_bus_num -gt $((dpu_bus_off+dpu_num+1)) ]; then
+        slot_num=""
+    else
+        slot_num=$((input_bus_num-dpu_bus_off+i2c_bus_offset+1))
+    fi
+
+    echo "$slot_num"
 }
 
 find_dpu_slot()
@@ -591,7 +629,9 @@ create_hotplug_smart_switch_event_files()
 			mkdir "$hw_management_path/dpu"$i"/events"
 		fi
 		for j in ${!dpu_event_table[@]}; do
-			check_n_init $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} 0
+			if [ ! -f $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} ]; then
+				check_n_init $hw_management_path/dpu"$i"/events/${dpu_event_table[$j]} 0
+			fi
 		done
 	done
 }
@@ -603,24 +643,31 @@ init_hotplug_events()
 	local slot_num="$3"
 	local e_path
 	local s_path
+	local i2c_bus
+	local plat_drv_path="/sys/devices/platform/mlxplat/i2c_mlxcpld.1/i2c-1"
+	local hwmon_path="mlxreg-hotplug.$slot_num/hwmon/hwmon*"
 
 	declare -a event_table="($(< $event_file))"
 
 	if [ $slot_num -ne 0 ]; then
+		# The events are for dpu hotplug attributes
 		e_path="$hw_management_path/dpu$slot_num/events"
 		s_path="$hw_management_path/dpu$slot_num/system"
+		i2c_bus=$(($(< $config_path/dpu_bus_off)+$slot_num-1))
+		path="$plat_drv_path/i2c-$i2c_bus/$i2c_bus-0068/$hwmon_path"
 	else
+		# The events are for dpu ready/shutdown attributes
 		e_path="$events_path"
 		s_path="$system_path"
 	fi
 
 	for i in ${!event_table[@]}; do
-		if [ -f "$path"/${event_table[$i]} ]; then
-			check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
-			event=$(< $s_path/${event_table[$i]})
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $e_path/${event_table[$i]}
+		if [ -f $path/${event_table[$i]} ]; then
+			if [ $slot_num -eq 0 ]; then
+				check_n_link "$path"/${event_table[$i]} "$s_path"/${event_table[$i]}
 			fi
+			event=$(< $path/${event_table[$i]})
+			echo $event > $e_path/${event_table[$i]}
 		fi
 	done
 }

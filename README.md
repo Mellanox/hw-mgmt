@@ -194,13 +194,13 @@ CONFIG_EDAC_AMD64=m
 CONFIG_HW_RANDOM_AMD=m
 CONFIG_AMD_XGBE=m
 CONFIG_AMD_XGBE_DCB=y
-CONFIG_AMD_XGBE_HAVE_ECC=y
 CONFIG_X86_AMD_PLATFORM_DEVICE=y
 CONFIG_CPU_SUP_AMD=y
 CONFIG_X86_MCE_AMD=y
 CONFIG_USB_NET_DRIVERS=m
 CONFIG_USB_USBNET=m
 CONFIG_USB_NET_CDCETHER=m
+CONFIG_HOTPLUG_PCI_PCIE=n
 
 For arm64 architecture:
 CONFIG_NET_VENDOR_MELLANOX=y
@@ -289,6 +289,7 @@ CONFIG_SENSORS_UCD9000=m
 CONFIG_SENSORS_UCD9200=m
 CONFIG_FUSE_FS=m
 CONFIG_SENSORS_ARM_SCMI=m
+CONFIG_HOTPLUG_PCI_PCIE=n
 
 ```
 **Note:**
@@ -325,6 +326,8 @@ sudo apt-get install devscripts build-essential lintian
 - Go into the thermal-control base folder and build the Debian package.
 - Run: `debuild -us -uc -b`
 - To build for ARM64 architecture, run `debuild -us -uc -b -aarm64`
+- To build without lm_sensor dependecy (for Sonic-based OS) run 'debuild --set-envvar=LM_DEPENDS=0 -us -uc -b'
+or 'export LM_DEPENDS=0 && dpkg-buildpackage -us -uc -b'
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
 **For converting .deb package to .rpm package:**

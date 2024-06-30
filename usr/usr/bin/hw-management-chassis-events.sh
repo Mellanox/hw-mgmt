@@ -68,7 +68,8 @@ mlxreg_lc_addr=32
 lc_max_num=8
 dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 
-if [ "$board_type" == "VMOD0014" ]; then
+case "$board_type" in
+VMOD0014)
 	i2c_bus_max=14
 	psu1_i2c_addr=0x50
 	psu2_i2c_addr=0x50
@@ -79,9 +80,16 @@ if [ "$board_type" == "VMOD0014" ]; then
 	i2c_bus_def_off_eeprom_fan2=11
 	i2c_bus_def_off_eeprom_fan3=12
 	i2c_bus_def_off_eeprom_fan4=13
-elif [ "$board_type" == "VMOD0013" ]; then
+	;;
+VMOD0013)
 	psu2_i2c_addr=0x5a
-fi
+	;;
+VMOD0021)
+	i2c_bus_def_off_eeprom_vpd=2
+	;;
+default)
+	;;
+esac
 
 # Voltmon sensors by label mapping:
 #                   dummy   sensor1       sensor2        sensor3
@@ -279,7 +287,8 @@ find_eeprom_name()
 {
 	bus=$1
 	addr=$2
-	i2c_dev_path="i2c-$bus/$bus-00${busfolder: -2}/" 
+	bus_abs=$((bus+i2c_bus_offset))
+	i2c_dev_path="i2c-$bus_abs/$bus_abs-00${busfolder: -2}/" 
 	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
 	if [[ $eeprom_name != "undefined" ]];
 	then
@@ -367,7 +376,8 @@ find_eeprom_name_on_remove()
 {
 	bus=$1
 	addr=$2
-	i2c_dev_path="2c-$bus/$bus-00${busfolder: -2}/"
+	bus_abs=$((bus+i2c_bus_offset))
+	i2c_dev_path="2c-$bus_abs/$bus_abs-00${busfolder: -2}/"
 	eeprom_name=$(get_i2c_busdev_name "undefined" "$i2c_dev_path")
 	if [[ $eeprom_name != "undefined" ]];
 	then
@@ -795,7 +805,7 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "hotswap" ] || [ "$2" == "pmbus" ]; then
 		# Get i2c voltmon prefix.
 		prefix=$(get_i2c_busdev_name "$2" "$4")
-		if [[ $prefix == "undefined" ]];
+		if [[ $prefix == "undefined" ]] && [[ $5 != "dpu" ]];
 		then
 			exit
 		fi
@@ -834,9 +844,15 @@ if [ "$1" == "add" ]; then
 				case $sku in
 				HI160)
 					# DPU event, replace output folder.
-					slot_num=$(find_dpu_slot "$3$4")
-					environment_path="$hw_management_path"/dpu"$slot_num"/environment
-					alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
+                        			if [ ! -z "$slot_num" ]; then
+						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+                        			fi
+					fi
 					;;
 				*)
 					;;
@@ -882,68 +898,55 @@ if [ "$1" == "add" ]; then
 				sensor_id=$?
 				if [ ! $sensor_id -eq 0 ]; then
 					check_n_link "$3""$4"/in"$sensor_id"_input $environment_path/"$prefix"_in"$i"_input
-					check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
-					check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					if [ -f "$3""$4"/in"$sensor_id"_crit ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_crit $environment_path/"$prefix"_in"$i"_crit
+					else
+						check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_crit
+					fi
+					if [ -f "$3""$4"/in"$sensor_id"_lcrit ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
+					else
+						check_n_link "$3""$4"/in"$sensor_id"_min $environment_path/"$prefix"_in"$i"_lcrit
+					fi
 					if [ -f "$3""$4"/in"$sensor_id"_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					elif [ -f "$3""$4"/in"$sensor_id"_crit_alarm ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_crit_alarm $alarm_path/"$prefix"_in"$i"_alarm
+					elif [ -f "$3""$4"/in"$sensor_id"_max_alarm ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_max_alarm $alarm_path/"$prefix"_in"$i"_alarm
+					elif [ -f "$3""$4"/in"$sensor_id"_min_alarm ]; then
+						check_n_link "$3""$4"/in"$sensor_id"_min_alarm $alarm_path/"$prefix"_in"$i"_alarm
 					fi
+					check_n_link "$3""$4"/in"$sensor_id"_min $environment_path/"$prefix"_in"$i"_min
+					check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_max
 				fi
-				sensor_type=$(< "$3""$4"/name)
-				if [ $sensor_type == "mp2975" ]; then
-					find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
-					sensor_id=$?
-					if [ ! $sensor_id -eq 0 ]; then
-						check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
-						if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
-							check_n_link "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-						elif [ -f "$3""$4"/curr"$sensor_id"_crit_alarm ]; then
-							check_n_link "$3""$4"/curr"$sensor_id"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-						elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
-							check_n_link "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-						fi
-						check_n_link "$3""$4"/curr"$sensor_id"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
-						check_n_link "$3""$4"/curr"$sensor_id"_min $environment_path/"$prefix"_curr"$i"_min
-						check_n_link "$3""$4"/curr"$sensor_id"_max $environment_path/"$prefix"_curr"$i"_max
-						check_n_link "$3""$4"/curr"$sensor_id"_crit $environment_path/"$prefix"_curr"$i"_crit
-					fi
 
-					find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
-					sensor_id=$?
-					if [ ! $sensor_id -eq 0 ]; then
-						check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
-						check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path/"$prefix"_power"$i"_alarm
-						check_n_link "$3""$4"/power"$sensor_id"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
-						check_n_link "$3""$4"/power"$sensor_id"_min $environment_path/"$prefix"_power"$i"_min
-						check_n_link "$3""$4"/power"$sensor_id"_max $environment_path/"$prefix"_power"$i"_max
-						check_n_link "$3""$4"/power"$sensor_id"_crit $environment_path/"$prefix"_power"$i"_crit
+				find_sensor_by_label "$3""$4" "curr" "${CURR_SENS_LABEL[$i]}"
+				sensor_id=$?
+				if [ ! $sensor_id -eq 0 ]; then
+					check_n_link "$3""$4"/curr"$sensor_id"_input $environment_path/"$prefix"_curr"$i"_input
+					if [ -f "$3""$4"/curr"$sensor_id"_alarm ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$sensor_id"_crit_alarm ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
+					elif [ -f "$3""$4"/curr"$sensor_id"_max_alarm ]; then
+						check_n_link "$3""$4"/curr"$sensor_id"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
 					fi
-				else
-					check_n_link "$3""$4"/curr"$i"_input $environment_path/"$prefix"_curr"$i"_input
-					check_n_link "$3""$4"/power"$i"_input $environment_path/"$prefix"_power"$i"_input
-					check_n_link "$3""$4"/power"$i"_alarm $alarm_path/"$prefix"_power"$i"_alarm
-					if [ -f "$3""$4"/curr"$i"_alarm ]; then
-						check_n_link "$3""$4"/curr"$i"_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					elif [ -f "$3""$4"/curr"$i"_crit_alarm ]; then
-						check_n_link "$3""$4"/curr"$i"_crit_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					elif [ -f "$3""$4"/curr"$i"_max_alarm ]; then
-						check_n_link "$3""$4"/curr"$i"_max_alarm $alarm_path/"$prefix"_curr"$i"_alarm
-					fi
+					check_n_link "$3""$4"/curr"$sensor_id"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
+					check_n_link "$3""$4"/curr"$sensor_id"_min $environment_path/"$prefix"_curr"$i"_min
+					check_n_link "$3""$4"/curr"$sensor_id"_max $environment_path/"$prefix"_curr"$i"_max
+					check_n_link "$3""$4"/curr"$sensor_id"_crit $environment_path/"$prefix"_curr"$i"_crit
+				fi
 
-					check_n_link "$3""$4"/power"$i"_alarm $environment_path/"$prefix"_power"$i"_alarm
-					check_n_link "$3""$4"/in"$i"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
-					check_n_link "$3""$4"/in"$i"_min $environment_path/"$prefix"_in"$i"_min
-					check_n_link "$3""$4"/in"$i"_max $environment_path/"$prefix"_in"$i"_max
-					check_n_link "$3""$4"/in"$i"_crit $environment_path/"$prefix"_in"$i"_crit
-					check_n_link "$3""$4"/curr"$i"_lcrit $environment_path/"$prefix"_curr"$i"_lcrit
-					check_n_link "$3""$4"/curr"$i"_min $environment_path/"$prefix"_curr"$i"_min
-					check_n_link "$3""$4"/curr"$i"_max $environment_path/"$prefix"_curr"$i"_max
-					check_n_link "$3""$4"/curr"$i"_crit $environment_path/"$prefix"_curr"$i"_crit
-					check_n_link "$3""$4"/power"$i"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
-					check_n_link "$3""$4"/power"$i"_min $environment_path/"$prefix"_power"$i"_min
-					check_n_link "$3""$4"/power"$i"_max $environment_path/"$prefix"_power"$i"_max
-					check_n_link "$3""$4"/power"$i"_crit $environment_path/"$prefix"_power"$i"_crit
+				find_sensor_by_label "$3""$4" "power" "${POWER_SENS_LABEL[$i]}"
+				sensor_id=$?
+				if [ ! $sensor_id -eq 0 ]; then
+					check_n_link "$3""$4"/power"$sensor_id"_input $environment_path/"$prefix"_power"$i"_input
+					check_n_link "$3""$4"/power"$sensor_id"_alarm $alarm_path/"$prefix"_power"$i"_alarm
+					check_n_link "$3""$4"/power"$sensor_id"_lcrit $environment_path/"$prefix"_power"$i"_lcrit
+					check_n_link "$3""$4"/power"$sensor_id"_min $environment_path/"$prefix"_power"$i"_min
+					check_n_link "$3""$4"/power"$sensor_id"_max $environment_path/"$prefix"_power"$i"_max
+					check_n_link "$3""$4"/power"$sensor_id"_crit $environment_path/"$prefix"_power"$i"_crit
 				fi
 			done
 			;;
@@ -1097,7 +1100,10 @@ if [ "$1" == "add" ]; then
 		busfolder=$(basename "$busdir")
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
-		bus=$((bus-i2c_bus_offset))
+		# Do not consider offset for native CPU bus.
+		if [ "$bus" -gt "$i2c_bus_offset" ]; then
+			bus=$((bus-i2c_bus_offset))
+		fi
 		addr="0x${busfolder: -2}"
 		# Get parent bus for line card EEPROM - skip two folders.
 		parentdir=$(dirname "$busdir")
@@ -1176,7 +1182,7 @@ if [ "$1" == "add" ]; then
 		pdb_eeprom)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
-		cable_cartridge*_eeprom)
+		cable_cartridge*_eeprom*)
 			eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
 			;;
@@ -1224,6 +1230,9 @@ if [ "$1" == "add" ]; then
 				mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
 			fi
 		done
+		if [ -e "$devtree_file" ]; then
+			connect_dynamic_board_devices "dpu_board""$slot_num"
+		fi
 	fi
 	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then
@@ -1346,7 +1355,24 @@ else
 					environment_path="$hw_management_path"/lc"$linecard_num"/environment
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
-			#else
+			else
+				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+				case $sku in
+				HI160)
+					# DPU event, replace output folder.
+					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
+					    if [ ! -z "$slot_num" ]; then
+						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+					    fi
+                    	fi
+					;;
+				*)
+					;;
+				esac
 			fi
 		fi
 		# For SN2201 indexes are from 0 to 9.
@@ -1455,6 +1481,10 @@ else
 		bus="${busfolder:0:${#busfolder}-5}"
 		find_i2c_bus
 		bus=$((bus-i2c_bus_offset))
+		# Do not consider offset for native CPU bus.
+		if [ "$bus" -gt "$i2c_bus_offset" ]; then
+			bus=$((bus-i2c_bus_offset))
+		fi
 		addr="0x${busfolder: -2}"
 		eeprom_name=$(find_eeprom_name_on_remove "$bus" "$addr")
 		drv_name=$(< "$busdir"/name)
@@ -1492,6 +1522,9 @@ else
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
 		slot_num=$(find_dpu_slot "$3$4")
+		if [ -e "$devtree_file" ]; then
+			disconnect_dynamic_board_devices "dpu_board""$slot_num"
+		fi
 		if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
 			rm -rf "$hw_management_path"/dpu"$slot_num"
 		fi

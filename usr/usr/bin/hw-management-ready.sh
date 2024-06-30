@@ -87,9 +87,14 @@ VMOD0014)
 	else
 		plat_path=/sys/devices/platform/mlxplat
 	fi
-	if [ ! -d ${plat_path}/mlxreg-hotplug/hwmon ]; then
+	if [ -d ${plat_path}/mlxreg-hotplug ]; then
+		if [ ! -d ${plat_path}/mlxreg-hotplug/hwmon ]; then
+			export plat_path
+			timeout 180 bash -c 'until [ -d ${plat_path}/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
+		fi
+	elif [ ! -d ${plat_path}/mlxreg-io/hwmon ]; then
 		export plat_path
-		timeout 180 bash -c 'until [ -d ${plat_path}/mlxreg-hotplug/hwmon ]; do sleep 0.2; done'
+		timeout 180 bash -c 'until [ -d ${plat_path}/mlxreg-io/hwmon ]; do sleep 0.2; done'
 	fi
 	;;
 esac

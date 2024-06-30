@@ -37,7 +37,7 @@ devtree_codes_file=
 # Declare common associative arrays for SMBIOS System Version parsing.
 declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" ["P"]="power_board" ["L"]="platform_board" ["K"]="clock_board" ["O"]="port_board" ["D"]="dpu_board")
 
-declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga")
+declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
 declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421")
 
@@ -77,7 +77,8 @@ declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmon1" \
-				   ["mp2855_1"]="mp2855 0x6a 15 comex_voltmon2" \
+				   ["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
+				   ["24c128_0"]="24c128 0x50 16 cpu_info"
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
@@ -214,7 +215,7 @@ declare -A p4300_alternatives=( ["adt75_0"]="adt75 0x49 7 bpl_amb" \
 			       ["24c512_1"]="24c512 0x54 8 ipmi_eeprom" \
 			       ["24c512_2"]="24c512 0x56 6 fio_info")
 
-declare -A qm3000_alternatives=( \
+declare -A q3400_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -228,7 +229,7 @@ declare -A qm3000_alternatives=( \
 				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6")
 
-declare -A qm3400_alternatives=( \
+declare -A q3200_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -258,6 +259,29 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["adt75_0"]="adt75 0x4a 7 port_amb" \
 					 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
+# V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
+# for JSO
+declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 fan_amb")
+
+declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+						["adt75_0"]="adt75 0x4a 7 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 7 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 7 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
+					   	["24c512_0"]="24c512 0x51 11 swb_info")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -295,13 +319,21 @@ declare -A pwr_type1_alternatives=(["lm5066_0"]="lm5066 0x11 4 pdb_hotswap1" \
 				   ["adt75_0"]="tmp75 0x4d 4 pdb_temp1" \
 				   ["tmp75_1"]="tmp75 0x4e 4 pdb_temp2" \
 				   ["adt75_1"]="tmp75 0x4e 4 pdb_temp2" \
-				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom" \
+				   ["24c02_0"]="24c02 0x50 4 pdb_info" \
 				   ["24c02_1"]="24c02 0x50 7 cable_cartridge_eeprom")
 
 # for p4300
 declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
 					["24c02_0"]="24c02 0x50 3 cable_cartridge_eeprom" \
 					["24c02_1"]="24c02 0x50 11 cable_cartridge2_eeprom")
+# for JSO
+# P*OaOaOaOaH0Ei
+declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
+				   	["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
+				   	["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
+				   	["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
+				   	["lm5066_0"]="lm5066 0x16 4 pdb_hotswap1" \
+				   	["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -315,11 +347,11 @@ declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb")
 
-declare -A dpu_type0_alternatives=(["tmp421_0"]="tmp421 0x1f 17 cx_amb" \
-				["mp2975_0"]="mp2975 0x69 17 voltmon1" \
-				["mp2975_1"]="mp2975 0x6a 17 voltmon2" \
-				["xdpe15284_0"]="xdpe15284 0x69 17 voltmon1" \
-				["xdpe15284_1"]="xdpe15284 0x6a 17 voltmon2")
+declare -A dpu_type0_alternatives=(["tmp421_0"]="tmp421 0x1f 18 cx_amb" \
+				["mp2975_0"]="mp2975 0x69 18 voltmon1" \
+				["mp2975_1"]="mp2975 0x6a 18 voltmon2" \
+				["xdpe15284_0"]="xdpe15284 0x69 18 voltmon1" \
+				["xdpe15284_1"]="xdpe15284 0x6a 18 voltmon2")
 
 declare -A comex_alternatives
 declare -A swb_alternatives
@@ -559,13 +591,13 @@ devtr_check_supported_system_init_alternatives()
 		VMOD0018)
 			case $sku in
 			HI157)
-				for key in "${!qm3400_alternatives[@]}"; do
-					swb_alternatives["$key"]="${qm3400_alternatives["$key"]}"
+				for key in "${!q3200_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3200_alternatives["$key"]}"
 				done
 				;;
 			HI158)
-				for key in "${!qm3000_alternatives[@]}"; do
-					swb_alternatives["$key"]="${qm3000_alternatives["$key"]}"
+				for key in "${!q3400_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3400_alternatives["$key"]}"
 				done
 				for key in "${!platform_type1_alternatives[@]}"; do
 					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
@@ -604,6 +636,27 @@ devtr_check_supported_system_init_alternatives()
 			done
 			return 0
 			;;
+		VMOD0021)
+			case $sku in
+			HI162|HI166)
+				for key in "${!n5110ld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${n5110ld_swb_alternatives["$key"]}"
+				done
+				
+				for key in "${!pwr_type3_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
+				done
+				
+				for key in "${!n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1
@@ -638,7 +691,7 @@ devtr_check_board_components()
 			done
 			;;
 		S)	# Switch board
-			# There can be several switch boards (e.g on QM3000)
+			# There can be several switch boards (e.g on q3400)
 			if [ -e "$config_path"/swb_brd_num ]; then
 				board_num=$(< $config_path/swb_brd_num)
 				board_name_pfx=swb
@@ -770,7 +823,7 @@ devtr_check_board_components()
 				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
-				# QM3000 system has 2 switch boards. Just VRs are accessed on these boards.
+				# q3400 system has 2 switch boards. Just VRs are accessed on these boards.
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					if [ $board_bus_offset -ne 0 ]; then
@@ -928,6 +981,12 @@ devtr_check_board_components()
 				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
 				;;
 			F)	# FPGA
+				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
+				;;
+			S)	# EROT
+				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
+				;;
+			C)	# RTC
 				log_info "SMBIOS BOM info: ${board_name} ${category} component is ignored"
 				;;
 			*)

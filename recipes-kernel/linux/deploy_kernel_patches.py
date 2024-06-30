@@ -61,8 +61,10 @@ class CONST(object):
     PATCH_TABLE_DELIMITER = "----------------------"
     PATCH_OS_SUBFOLDERS = {"default" : "./linux-{kver}",
                            "sonic" : "./linux-{kver}/sonic",
-                           "opt" : "./linux-{kver}/sonic",
-                           "cumulus" : "./linux-{kver}/cumulus"}
+                           "opt" : "./linux-{kver}/opt",
+                           "cumulus" : "./linux-{kver}/cumulus",
+                           "nvos" : "./linux-{kver}/nvos",
+                           "dvs" : "./linux-{kver}/dvs"}
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
@@ -419,9 +421,8 @@ def load_config_to_dict(config_path, section):
     return config_dict
 
 # ----------------------------------------------------------------------
-def process_config(src_root, dst_cfg, delimiter="", arch="amd64", sub_type=""):
+def process_config(ref_cfg_filename, dst_cfg, delimiter="", arch="amd64", sub_type=""):
     # Load src config file
-    ref_cfg_filename = "{}/{}".format(src_root, CONST.REFERENCE_CONFIG)
     ref_config = load_config_to_dict(ref_cfg_filename, "{}:{}".format(arch, sub_type))
     if not ref_config:
         print("Info. Not found config for [{}:{}] in ref config file {}".format(arch, sub_type, ref_cfg_filename))
@@ -536,7 +537,7 @@ if __name__ == '__main__':
                             help="Special integration type.\n"
                             "In case this argument is missing - don't apply special integration rule\n",
                             default="None",
-                            choices=["None", "sonic", "opt", "cumulus"],
+                            choices=["None", "sonic", "opt", "cumulus", "nvos", "dvs"],
                             required=False)
     CMD_PARSER.add_argument("--arch",
                             dest="arch",
@@ -616,7 +617,8 @@ if __name__ == '__main__':
     if config_file_name:
         print("-> Processing upstream config {}".format(args["config_file"]))
         delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-        config_res = process_config(src_folder, config_file_name, delimiter_line, arch=args["arch"], sub_type="upstream")
+        src_cfg_filename = "{}/kconfig_{}.txt".format(src_folder, "_".join(kver_arr[0:2]))
+        config_res = process_config(src_cfg_filename, config_file_name, delimiter_line, arch=args["arch"], sub_type="upstream")
 
         if config_res:
             config_file = open(config_file_name, "w")
@@ -628,7 +630,7 @@ if __name__ == '__main__':
 
         print("-> Processing downstream config {}".format(config_file_name))
         delimiter_line = CONST.CONFIG_DELIMITER.format(hw_mgmt_ver=hw_mgmt_ver)
-        config_res = process_config(src_folder, config_file_name, delimiter_line, arch=args["arch"], sub_type="downstream")
+        config_res = process_config(src_cfg_filename, config_file_name, delimiter_line, arch=args["arch"], sub_type="downstream")
 
         if config_res:
             config_file = open(config_file_name, "w")

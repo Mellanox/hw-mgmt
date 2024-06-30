@@ -57,6 +57,9 @@ fan_drwr_num=0
 fan_direction_exhaust=46
 fan_direction_intake=52
 pwm_min_level=51
+# AMD Epyc3000 CPU temperatures (C) in scale 1000
+AMD_SNW_TEMP_CRIT=100000
+AMD_SNW_TEMP_MAX=95000
 
 FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 
@@ -673,7 +676,13 @@ if [ "$1" == "add" ]; then
 				echo 1 > $events_path/power_button
 			fi
 		fi
+		# Add DPU ready/shutdown_ready attributes
 		init_hotplug_events "$dpu2host_events_file" "$3$4" 0
+		# Add hotplug attributes from DPU
+		init_hotplug_events "$dpu_events_file" "$3$4" 1
+		init_hotplug_events "$dpu_events_file" "$3$4" 2
+		init_hotplug_events "$dpu_events_file" "$3$4" 3
+		init_hotplug_events "$dpu_events_file" "$3$4" 4
 		# BF3 debugfs temperature sensors linkage
 		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
 			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
@@ -706,10 +715,6 @@ if [ "$1" == "add" ]; then
 				/usr/bin/hw-management.sh chipup "$i"
 			fi
 		done
-	fi
-	if [ "$2" == "hotplug-ext" ]; then
-		slot_num=$(find_dpu_hotplug_slot "$3$4")
-		init_hotplug_events "$dpu_events_file" "$3$4" "$slot_num"
 	fi
 	# Max index of SN2201 cputemp is 14.
 	if [ "$2" == "cputemp" ]; then
@@ -744,6 +749,25 @@ if [ "$1" == "add" ]; then
 			fi
 		done
 	fi
+	# AMD CPU provides Temp control input for every die and real die temperature input
+	# just for main die 0. Real die temp isn't reported on low-end AMD Epyc3151.
+	# Thus, use 1st Tctl which exist for all AMD Epyc 3000 CPUs. Find and process it as Intel CPU pack.
+	# Put constants to crit and max as AMD k10temp driver doesn't provide these inputs.
+	if [ "$2" == "cputemp_amd" ]; then
+		for file in "$3""$4"/*; do
+			if ls "$file" | grep -q "label" ; then
+				label_name=$(cat "$file")
+				if [ "$label_name" == "Tctl" ]; then
+					fname="${file##*/}"
+					idx=${fname:4:1}
+					check_n_link "$3""$4"/temp"$idx"_input $thermal_path/cpu_pack
+					echo "$AMD_SNW_TEMP_MAX" > $thermal_path/cpu_pack_max
+					echo "$AMD_SNW_TEMP_CRIT" > $thermal_path/cpu_pack_crit
+					break
+				fi
+			fi
+		done
+	fi
 	if [ "$2" == "pch_temp" ]; then
 		name=$(<"$3""$4"/name)
 		if [ "$name" == "pch_cannonlake" ]; then
@@ -775,6 +799,10 @@ if [ "$1" == "add" ]; then
 				sodimm2_addr='001a'
 			;;
 			$AMD_SNW_CPU)
+				sodimm1_addr='001a'
+				sodimm2_addr='001b'
+				sodimm3_addr='001e'
+				sodimm4_addr='001f'
 			;;
 			*)
 				exit 0
@@ -788,6 +816,12 @@ if [ "$1" == "add" ]; then
 			;;
 			$sodimm2_addr)
 				sodimm_name=sodimm2_temp
+			;;
+			$sodimm3_addr)
+				sodimm_name=sodimm3_temp
+			;;
+			$sodimm4_addr)
+				sodimm_name=sodimm4_temp
 			;;
 			*)
 				exit 0
@@ -1051,6 +1085,23 @@ if [ "$1" == "add" ]; then
 			check_n_link "$3""$4"/temp1_min $thermal_path/drivetemp_min
 		fi
 	fi
+	if [ "$2" == "dpu" ]; then
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+		HI160)
+			# DPU event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+			slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+			if [ ! -z "$slot_num" ]; then
+				thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+			fi
+			;;
+		*)
+			;;
+		esac
+		check_n_link "$3""$4"/temp2_input $thermal_path/"cx_amb"
+	fi
+
 elif [ "$1" == "change" ]; then
 	if [ "$2" == "hotplug_asic" ]; then
 		if [ -d /sys/module/mlxsw_pci ]; then
@@ -1348,11 +1399,6 @@ else
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
 		fi
-	fi
-	if [ "$2" == "hotplug-ext" ]; then
-		slot_num=$(find_dpu_hotplug_slot "$3$4")
-		deinit_hotplug_events "$dpu_events_file" "$slot_num"
-
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
