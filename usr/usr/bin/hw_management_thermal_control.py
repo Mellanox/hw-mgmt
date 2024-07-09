@@ -3156,7 +3156,7 @@ class ThermalManagement(hw_managemet_file_op):
             dpu_idx = res.group(1)
             voltmon_name = res.group(2)
             sensor_name = "{}_temp".format(name)
-            in_file = "{}/thermal/dpu_{}_temp1".format(dpu_idx, voltmon_name)
+            in_file = "{}/thermal/{}_temp1".format(dpu_idx, voltmon_name)
             self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
 
     # ----------------------------------------------------------------------
