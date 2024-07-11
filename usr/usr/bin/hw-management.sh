@@ -114,6 +114,7 @@ asic_chipup_retry=2
 device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
+smart_switch_reset_attr_num=17
 chipup_retry_count=3
 
 mctp_bus=""
@@ -2224,7 +2225,7 @@ smart_switch_common()
 	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
 	i2c_comex_mon_bus_default=$((smart_switch_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo "$smart_switch_reset_attr_num" > $config_path/reset_attr_num
 }
 
 n51xxld_specific()
