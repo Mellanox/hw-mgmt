@@ -3076,6 +3076,22 @@ map_asic_pci_to_i2c_bus()
 
 do_start()
 {
+	# Create WD files.
+	touch "$WATCHDOG_RESET_FILE"
+	touch "$WATCHDOG_TEMP_FILE"
+	touch "$WATCHDOG_PID_FILE"
+	touch "$WATCHDOG_STATUS_FILE"
+	echo "0" > "$WATCHDOG_STATUS_FILE"
+
+	# Start the watchdog process if it's not running.
+	if [[ ! -f "$WATCHDOG_PID_FILE" ]] || ! kill -0 $(cat "$WATCHDOG_PID_FILE") 2>/dev/null; then
+		log_info "do_start: wd script created"
+		# Start the watchdog script in the background.
+		bash "$WATCHDOG_SCRIPT" &
+		# Save the PID of the watchdog process.
+		echo $! > "$WATCHDOG_PID_FILE"
+	fi
+
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
@@ -3133,6 +3149,9 @@ do_start()
 		cp $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
+
+	# Wait for hw-mgmt done WD to finish.
+	monitor_link_wd
 }
 
 do_stop()
