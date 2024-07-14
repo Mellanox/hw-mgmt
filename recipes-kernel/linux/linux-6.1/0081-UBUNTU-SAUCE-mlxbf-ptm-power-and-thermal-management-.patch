@@ -22,12 +22,12 @@ Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.co
  create mode 100644 drivers/platform/mellanox/mlxbf-ptm.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 70b628834b4f..75efd345b22e 100644
+index f7dfa0e785fd..f8c6feaf402c 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -90,6 +90,16 @@ config MLXBF_PMC
- 	  to performance monitoring counters within various blocks in the
- 	  Mellanox BlueField SoC via a sysfs interface.
+@@ -56,6 +56,16 @@ config MLXBF_TMFIFO
+ 	  platform driver support for the TmFifo which supports console
+ 	  and networking based on the virtio framework.
  
 +config MLXBF_PTM
 +	tristate "BlueField Power and Thermal Management debugfs interface"
@@ -39,9 +39,9 @@ index 70b628834b4f..75efd345b22e 100644
 +		to userspace with information related to power and thermal
 +		management of the Bluefield device.
 +
- config NVSW_SN2201
- 	tristate "Nvidia SN2201 platform driver support"
- 	depends on HWMON
+ config MLXBF_BOOTCTL
+ 	tristate "Mellanox BlueField Firmware Boot Control driver"
+ 	depends on ARM64
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
 index ba56485cbe8c..d7f4d940c505 100644
 --- a/drivers/platform/mellanox/Makefile

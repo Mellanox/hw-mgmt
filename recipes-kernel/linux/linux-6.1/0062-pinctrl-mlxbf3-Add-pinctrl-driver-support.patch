@@ -1,10 +1,7 @@
-From 1f79825ac209a5aac6e13c87903a6506a5b78565 Mon Sep 17 00:00:00 2001
+From d11f932808dc689717e409bbc81b5093e7902fc9 Mon Sep 17 00:00:00 2001
 From: Asmaa Mnebhi <asmaa@nvidia.com>
 Date: Wed, 15 Mar 2023 17:50:27 -0400
-Subject: [PATCH backport 6.1.42 62/85] pinctrl: mlxbf3: Add pinctrl driver
- support
-
-BugLink: https://bugs.launchpad.net/bugs/2012743
+Subject: [PATCH] pinctrl: mlxbf3: Add pinctrl driver support
 
 NVIDIA BlueField-3 SoC has a few pins that can be used as GPIOs
 or take the default hardware functionality. Add a driver for
@@ -14,11 +11,6 @@ Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
 Reviewed-by: Andy Shevchenko <andy.shevchenko@gmail.com>
 Link: https://lore.kernel.org/r/20230315215027.30685-3-asmaa@nvidia.com
 Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
-(cherry picked from commit d11f932808dc689717e409bbc81b5093e7902fc9 linux-next)
-Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
-Acked-by: Tim Gardner <tim.gardner@canonical.com>
-Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
-Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
 ---
  drivers/pinctrl/Kconfig          |  13 ++
  drivers/pinctrl/Makefile         |   1 +
@@ -27,10 +19,10 @@ Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.co
  create mode 100644 drivers/pinctrl/pinctrl-mlxbf3.c
 
 diff --git a/drivers/pinctrl/Kconfig b/drivers/pinctrl/Kconfig
-index f71fefff400f..92e97d5bf91f 100644
+index e2a24d668e41..fc6e2858c90c 100644
 --- a/drivers/pinctrl/Kconfig
 +++ b/drivers/pinctrl/Kconfig
-@@ -512,6 +512,19 @@ config PINCTRL_ZYNQMP
+@@ -523,6 +523,19 @@ config PINCTRL_ZYNQMP
  	  This driver can also be built as a module. If so, the module
  	  will be called pinctrl-zynqmp.
  
@@ -51,17 +43,17 @@ index f71fefff400f..92e97d5bf91f 100644
  source "drivers/pinctrl/aspeed/Kconfig"
  source "drivers/pinctrl/bcm/Kconfig"
 diff --git a/drivers/pinctrl/Makefile b/drivers/pinctrl/Makefile
-index 89bfa01b5231..89fda1b780b7 100644
+index 413b1e6b6933..930307e248c5 100644
 --- a/drivers/pinctrl/Makefile
 +++ b/drivers/pinctrl/Makefile
-@@ -36,6 +36,7 @@ obj-$(CONFIG_PINCTRL_MCP23S08_SPI)	+= pinctrl-mcp23s08_spi.o
+@@ -36,6 +36,7 @@ obj-$(CONFIG_PINCTRL_MCP23S08_I2C)	+= pinctrl-mcp23s08_i2c.o
+ obj-$(CONFIG_PINCTRL_MCP23S08_SPI)	+= pinctrl-mcp23s08_spi.o
  obj-$(CONFIG_PINCTRL_MCP23S08)	+= pinctrl-mcp23s08.o
  obj-$(CONFIG_PINCTRL_MICROCHIP_SGPIO)	+= pinctrl-microchip-sgpio.o
- obj-$(CONFIG_PINCTRL_OCELOT)	+= pinctrl-ocelot.o
 +obj-$(CONFIG_PINCTRL_MLXBF3)	+= pinctrl-mlxbf3.o
+ obj-$(CONFIG_PINCTRL_OCELOT)	+= pinctrl-ocelot.o
  obj-$(CONFIG_PINCTRL_OXNAS)	+= pinctrl-oxnas.o
  obj-$(CONFIG_PINCTRL_PALMAS)	+= pinctrl-palmas.o
- obj-$(CONFIG_PINCTRL_PIC32)	+= pinctrl-pic32.o
 diff --git a/drivers/pinctrl/pinctrl-mlxbf3.c b/drivers/pinctrl/pinctrl-mlxbf3.c
 new file mode 100644
 index 000000000000..3698f7bbd88d
@@ -389,5 +381,5 @@ index 000000000000..3698f7bbd88d
 +MODULE_AUTHOR("Asmaa Mnebhi <asmaa@nvidia.com>");
 +MODULE_LICENSE("Dual BSD/GPL");
 -- 
-2.20.1
+2.44.0
 

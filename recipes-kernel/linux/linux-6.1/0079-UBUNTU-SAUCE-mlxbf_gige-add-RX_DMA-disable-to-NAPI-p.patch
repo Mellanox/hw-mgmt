@@ -1,0 +1,58 @@
+From d4df7f305e5378032a7ec528dc21e24539be8118 Mon Sep 17 00:00:00 2001
+From: David Thompson <davthompson@nvidia.com>
+Date: Fri, 19 Jan 2024 12:19:05 -0500
+Subject: [PATCH] UBUNTU: SAUCE: mlxbf_gige: add RX_DMA disable to NAPI poll
+ routine
+
+BugLink: https://bugs.launchpad.net/bugs/2049930
+
+After configuring many IP interfaces, including oob_net0 managed by
+mlxbf_gige driver, there are periodic connectivity problems to the
+oob_net0 IP address.  This issue is a regression that started after
+including these two commits into the kernel:
+   revert "UBUNTU: SAUCE: Fix OOB handling RX packets in heavy traffic"
+   addition of upstream "mlxbf_gige: fix receive packet race condition"
+The fix is to modify the mlxbf_gige driver to include the RX_DMA disable
+logic in its NAPI poll routine.  This logic was part of
+   "UBUNTU: SAUCE: Fix OOB handling RX packets in heavy traffic"
+but not part of
+   upstream "mlxbf_gige: fix receive packet race condition"
+
+Reviewed-by: Asmaa Mnebhi <asmaa@nvidia.com>
+Signed-off-by: David Thompson <davthompson@nvidia.com>
+Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Acked-by: Tim Gardner <tim.gardner@canonical.com>
+Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+---
+ drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
+index 1a1eca08bfb9..a18fa860e5cc 100644
+--- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
++++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
+@@ -308,6 +308,10 @@ int mlxbf_gige_poll(struct napi_struct *napi, int budget)
+ 
+ 	mlxbf_gige_handle_tx_complete(priv);
+ 
++	data = readq(priv->base + MLXBF_GIGE_RX_DMA);
++	data &= ~MLXBF_GIGE_RX_DMA_EN;
++	writeq(data, priv->base + MLXBF_GIGE_RX_DMA);
++
+ 	do {
+ 		remaining_pkts = mlxbf_gige_rx_packet(priv, &work_done);
+ 	} while (remaining_pkts && work_done < budget);
+@@ -323,6 +327,10 @@ int mlxbf_gige_poll(struct napi_struct *napi, int budget)
+ 		data = readq(priv->base + MLXBF_GIGE_INT_MASK);
+ 		data &= ~MLXBF_GIGE_INT_MASK_RX_RECEIVE_PACKET;
+ 		writeq(data, priv->base + MLXBF_GIGE_INT_MASK);
++
++		data = readq(priv->base + MLXBF_GIGE_RX_DMA);
++		data |= MLXBF_GIGE_RX_DMA_EN;
++		writeq(data, priv->base + MLXBF_GIGE_RX_DMA);
+ 	}
+ 
+ 	return work_done;
+-- 
+2.44.0
+
