@@ -2,7 +2,6 @@ From d0a9112753248b67e8ad8c09e554866f1a74119c Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 16 Oct 2023 17:21:03 +0000
 Subject: [PATCH] gpio: mlxbf3: Fix error message
-X-NVConfidentiality: public
 
 Fix the following error message produced by gpio-mlxbf3 driver:
 
@@ -20,12 +19,12 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/gpio/gpio-mlxbf3.c b/drivers/gpio/gpio-mlxbf3.c
-index e30cee1..f40bab9 100644
+index 0a5f241a8..5fe57ae02 100644
 --- a/drivers/gpio/gpio-mlxbf3.c
 +++ b/drivers/gpio/gpio-mlxbf3.c
-@@ -198,7 +198,7 @@ static int mlxbf3_gpio_probe(struct platform_device *pdev)
- 	gc->free = gpiochip_generic_free;
+@@ -221,7 +221,7 @@ static int mlxbf3_gpio_probe(struct platform_device *pdev)
  	gc->owner = THIS_MODULE;
+ 	gc->add_pin_ranges = mlxbf3_gpio_add_pin_ranges;
  
 -	irq = platform_get_irq(pdev, 0);
 +	irq = platform_get_irq_optional(pdev, 0);

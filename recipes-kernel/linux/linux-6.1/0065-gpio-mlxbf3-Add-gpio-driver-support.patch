@@ -1,7 +1,7 @@
-From 8623b9727f7dc08fef553dbdc2be96641929b7cc Mon Sep 17 00:00:00 2001
+From cd33f216d241520385a5166ae73a0771197a9f0b Mon Sep 17 00:00:00 2001
 From: Asmaa Mnebhi <asmaa@nvidia.com>
 Date: Wed, 15 Mar 2023 17:50:26 -0400
-Subject: [PATCH backport 6.1.42 1/1] gpio: mlxbf3: Add gpio driver support
+Subject: [PATCH] gpio: mlxbf3: Add gpio driver support
 
 Add support for the BlueField-3 SoC GPIO driver.
 This driver configures and handles GPIO interrupts. It also enables a user
@@ -20,10 +20,10 @@ Signed-off-by: Bartosz Golaszewski <bartosz.golaszewski@linaro.org>
  create mode 100644 drivers/gpio/gpio-mlxbf3.c
 
 diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
-index 3e8e5f4ffa59..aef128b3a1c2 100644
+index 3cb34896c26a..5e3a01f40c9b 100644
 --- a/drivers/gpio/Kconfig
 +++ b/drivers/gpio/Kconfig
-@@ -1532,6 +1532,19 @@ config GPIO_MLXBF2
+@@ -1599,6 +1599,19 @@ config GPIO_MLXBF2
  	help
  	  Say Y here if you want GPIO support on Mellanox BlueField 2 SoC.
  
@@ -44,10 +44,10 @@ index 3e8e5f4ffa59..aef128b3a1c2 100644
  	tristate "OKI SEMICONDUCTOR ML7213 IOH GPIO support"
  	depends on X86 || COMPILE_TEST
 diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
-index 29e3beb6548c..c5e86fd24d2c 100644
+index 7843b16f5d59..c3ac51d47aa9 100644
 --- a/drivers/gpio/Makefile
 +++ b/drivers/gpio/Makefile
-@@ -98,6 +98,7 @@ obj-$(CONFIG_GPIO_MERRIFIELD)		+= gpio-merrifield.o
+@@ -104,6 +104,7 @@ obj-$(CONFIG_GPIO_MERRIFIELD)		+= gpio-merrifield.o
  obj-$(CONFIG_GPIO_ML_IOH)		+= gpio-ml-ioh.o
  obj-$(CONFIG_GPIO_MLXBF)		+= gpio-mlxbf.o
  obj-$(CONFIG_GPIO_MLXBF2)		+= gpio-mlxbf2.o
@@ -310,5 +310,5 @@ index 000000000000..e30cee108986
 +MODULE_AUTHOR("Asmaa Mnebhi <asmaa@nvidia.com>");
 +MODULE_LICENSE("Dual BSD/GPL");
 -- 
-2.25.1
+2.44.0
 

@@ -1,10 +1,7 @@
-From 4c1187581e9c7dc8cf354278c3257d8542209269 Mon Sep 17 00:00:00 2001
+From 20d03d4d9437771a9b6d38d4a6027a70d78d9865 Mon Sep 17 00:00:00 2001
 From: David Thompson <davthompson@nvidia.com>
 Date: Thu, 12 Jan 2023 15:26:07 -0500
-Subject: [PATCH backport 6.1.42 73/85] mlxbf_gige: support 10M/100M/1G speeds
- on BlueField-3
-
-BugLink: https://bugs.launchpad.net/bugs/2012649
+Subject: [PATCH] mlxbf_gige: support 10M/100M/1G speeds on BlueField-3
 
 The BlueField-3 OOB interface supports 10Mbps, 100Mbps, and 1Gbps speeds.
 The external PHY is responsible for autonegotiating the speed with the
@@ -20,11 +17,6 @@ Signed-off-by: David Thompson <davthompson@nvidia.com>
 Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
 Reviewed-by: Andrew Lunn <andrew@lunn.ch>
 Signed-off-by: Jakub Kicinski <kuba@kernel.org>
-(cherry picked from commit 20d03d4d9437771a9b6d38d4a6027a70d78d9865)
-Signed-off-by: David Thompson <davthompson@nvidia.com>
-Acked-by: Tim Gardner <tim.gardner@canonical.com>
-Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
-Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
 ---
  .../ethernet/mellanox/mlxbf_gige/mlxbf_gige.h |   8 ++
  .../mellanox/mlxbf_gige/mlxbf_gige_main.c     | 105 +++++++++++++++---
@@ -65,7 +57,7 @@ index 421a0b1b766c..a453b9cd9033 100644
  
  /* Rx Work Queue Element definitions */
 diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
-index a3bd14d5dbff..0af086703bcd 100644
+index e08c07e914c1..32d7030eb2cf 100644
 --- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
 +++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c
 @@ -263,13 +263,99 @@ static const struct net_device_ops mlxbf_gige_netdev_ops = {
@@ -236,5 +228,5 @@ index 8d52dbef4adf..cd0973229c9b 100644
 +
  #endif /* !defined(__MLXBF_GIGE_REGS_H__) */
 -- 
-2.20.1
+2.44.0
 
