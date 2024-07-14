@@ -1,21 +1,26 @@
-From 7a9c30f4e3f19eb533acce3d3c63de87d18bac1d Mon Sep 17 00:00:00 2001
+From 7ad5e7a35c3f55738fec0dd2b64bbefdfb992045 Mon Sep 17 00:00:00 2001
 From: Asmaa Mnebhi <asmaa@nvidia.com>
-Date: Tue, 28 Feb 2023 18:03:12 -0500
-Subject: [PATCH backport 6.1.42 71/85] UBUNTU: SAUCE: mlxbf-gige: Fix
- intermittent no ip issue
+Date: Fri, 5 Jan 2024 10:59:46 -0500
+Subject: [PATCH] mlxbf_gige: Fix intermittent no ip issue
 
-BugLink: https://bugs.launchpad.net/bugs/2008833
+[ Upstream commit ef210ef85d5cb543ce34a57803ed856d0c8c08c2 ]
 
-During the reboot test, the OOB might not get an ip assigned.
-This is due to a race condition between phy_startcall and the
-RX DMA being enabled and depends on the amount of background
-traffic received by the OOB. Enable the RX DMA after teh phy
-is started.
+Although the link is up, there is no ip assigned on setups with high background
+traffic. Nothing is transmitted nor received. The RX error count keeps on
+increasing. After several minutes, the RX error count stagnates and the
+GigE interface finally gets an ip.
 
+The issue is that mlxbf_gige_rx_init() is called before phy_start().
+As soon as the RX DMA is enabled in mlxbf_gige_rx_init(), the RX CI reaches the max
+of 128, and becomes equal to RX PI. RX CI doesn't decrease since the code hasn't
+ran phy_start yet.
+Bring the PHY up before starting the RX.
+
+Fixes: f92e1869d74e ("Add Mellanox BlueField Gigabit Ethernet driver")
+Reviewed-by: David Thompson <davthompson@nvidia.com>
 Signed-off-by: Asmaa Mnebhi <asmaa@nvidia.com>
-Acked-by: Tim Gardner <tim.gardner@canonical.com>
-Acked-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
-Signed-off-by: Bartlomiej Zolnierkiewicz <bartlomiej.zolnierkiewicz@canonical.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
 ---
  .../ethernet/mellanox/mlxbf_gige/mlxbf_gige_main.c | 14 +++++++-------
  .../ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c   |  6 +++---
@@ -57,7 +62,7 @@ index 2292d63a279c..eafc0d3313fd 100644
  free_irqs:
  	mlxbf_gige_free_irqs(priv);
 diff --git a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
-index dc05ab5b042a..b9cf0a3c8b0f 100644
+index 227d01cace3f..699984358493 100644
 --- a/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
 +++ b/drivers/net/ethernet/mellanox/mlxbf_gige/mlxbf_gige_rx.c
 @@ -142,6 +142,9 @@ int mlxbf_gige_rx_init(struct mlxbf_gige *priv)
@@ -81,5 +86,5 @@ index dc05ab5b042a..b9cf0a3c8b0f 100644
  
  free_wqe_and_skb:
 -- 
-2.20.1
+2.44.0
 

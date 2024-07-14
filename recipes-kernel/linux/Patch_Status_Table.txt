@@ -401,29 +401,29 @@ Kernel-6.1
 |0055-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted                      |            |                                            |
 |0056-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature upstream                         |            |                                                |
 |0057-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature pending                          |            |                                                |
-|0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf        | Feature upstream;skip[sonic]             |            | BF3                                            |
-|0062-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             | d11f932808dc       | Feature upstream;skip[sonic]             |            | BF3                                            |
-|0063-gpio-mlxbf3-Add-gpio-driver-support.patch                   | cd33f216d241       | Feature upstream;skip[sonic]             |            | BF3                                            |
-|0064-pinctrl-mlxbf3-set-varaiable-mlxbf3_pmx_funcs-storag.patch  | 743d3336029f       | Feature upstream;skip[sonic]             |            | BF3                                            |
-|0066-UBUNTU-SAUCE-sdhci-of-dwcmshc-Enable-host-V4-support.patch  | 95921151e043       | Downstream;skip[sonic]                   |            | BF3                                            |
-|0067-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  | cfd4ea4815d1       | Downstream;skip[sonic]                   |            | BF3                                            |
-|0068-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0069-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0070-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0071-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0072-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           | 2321d69f92aa       | Downstream;skip[sonic]                   |            | BF3                                            |
-|0073-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  | 20d03d4d9437       | Downstream;skip[sonic]                   |            | BF3                                            |
-|0074-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0075-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0076-UBUNTU-SAUCE-platform-mellanox-Updates-to-mlxbf-boot.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0077-UBUNTU-SAUCE-mlx-bootctl-support-icm-carveout-eeprom.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0078-UBUNTU-SAUCE-mlxbf-bootctl-support-SMC-call-for-sett.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0079-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0080-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0081-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0082-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0083-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic]                   |            | BF3                                            |
-|0084-UBUNTU-SAUCE-mlxbf-bootctl-Fix-kernel-panic-due-to-b.patch  |                    | Downstream;skip[sonic]                   |            | BF3                                            |
+|0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf4       | Feature upstream;skip[sonic,cumulus]     | v6.1.92    | BF3                                            |
+|0062-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             | d11f932808dc       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0063-pinctrl-mlxbf3-set-varaiable-mlxbf3_pmx_funcs-storag.patch  | 743d3336029f       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0064-pinctrl-mlxbf3-Remove-gpio_disable_free.patch               | 69657e60b8a7       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0065-gpio-mlxbf3-Add-gpio-driver-support.patch                   | cd33f216d241       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0066-gpio-mlxbf3-Support-add_pin_ranges.patch                    | 38a700efc510       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0067-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0068-mmc-sdhci-of-dwcmshc-enable-host-V4-support-for-Blue.patch  | 95921151e043       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0069-mmc-sdhci-of-dwcmshc-add-the-missing-device-table-ID.patch  | cfd4ea4815d1       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0070-mlxbf_gige-fix-receive-packet-race-condition.patch          | ac5cbe931c43       | Feature upstream;skip[sonic,cumulus]     | v6.1.75    | BF3                                            |
+|0071-mlxbf_gige-Fix-intermittent-no-ip-issue.patch               | 7ad5e7a35c3f       | Feature upstream;skip[sonic,cumulus]     | v6.1.75    | BF3                                            |
+|0072-mlxbf_gige-Enable-the-GigE-port-in-mlxbf_gige_open.patch    | 1b481cb53601       | Feature upstream;skip[sonic,cumulus]     | v6.1.75    | BF3                                            |
+|0073-mlxbf_gige-stop-PHY-during-open-error-paths.patch           | 57beec623ac5       | Feature upstream;skip[sonic,cumulus]     | v6.1.85    | BF3                                            |
+|0074-mlxbf_gige-call-request_irq-after-NAPI-initialized.patch    | 24444af5ddf7       | Feature upstream;skip[sonic,cumulus]     | v6.1.85    | BF3                                            |
+|0075-mlxbf_gige-stop-interface-during-shutdown.patch             | 80247e0eca14       | Feature upstream;skip[sonic,cumulus]     | v6.1.85    | BF3                                            |
+|0076-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           | 2321d69f92aa       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0077-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  | 20d03d4d9437       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0078-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    | cedd97737a1f       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0079-UBUNTU-SAUCE-mlxbf_gige-add-RX_DMA-disable-to-NAPI-p.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0080-mlxbf-bootctl-correctly-identify-secure-boot-with-de.patch  | 646f1e9c1978       | Feature upstream;skip[sonic,cumulus]     | v6.1.68    | BF3                                            |
+|0081-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0082-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0083-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0085-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           |            |                                                |
 |0086-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic]                   |            | BF3                                            |
 |0087-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
