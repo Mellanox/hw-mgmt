@@ -1,8 +1,8 @@
-From 00cba650c86f494b4a5905d89d304fef2380b0b7 Mon Sep 17 00:00:00 2001
+From 743d3336029ffe2bb38e982a3b572ced243c6d43 Mon Sep 17 00:00:00 2001
 From: Tom Rix <trix@redhat.com>
 Date: Mon, 3 Apr 2023 20:45:01 -0400
-Subject: [PATCH backport 6.1.42 2/2] pinctrl: mlxbf3: set varaiable
- mlxbf3_pmx_funcs storage-class-specifier to static
+Subject: [PATCH] pinctrl: mlxbf3: set varaiable mlxbf3_pmx_funcs
+ storage-class-specifier to static
 
 smatch reports
 drivers/pinctrl/pinctrl-mlxbf3.c:162:20: warning: symbol
@@ -31,5 +31,5 @@ index 3698f7bbd88d..d9944e6a0af9 100644
  	PINCTRL_PINFUNCTION("gpiofunc", mlxbf3_gpiofunc_group_names, 1),
  };
 -- 
-2.25.1
+2.44.0
 
