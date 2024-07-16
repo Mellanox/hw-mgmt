@@ -962,6 +962,8 @@ if [ "$1" == "add" ]; then
 					exit 0
 				fi
 				echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
+				# Set "Unknown fan dir in case failed to read PSU VPD.
+				echo 2 > "$thermal_path"/"$psu_name"_fan_dir
 				exit 0
 			else
 				# Add PSU FAN speed info.
