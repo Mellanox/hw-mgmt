@@ -41,6 +41,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - P2317
 - P4262
 - P4300-A00
+- N5110
 
 ## Supported Kernel versions:
 - 5.10.189
