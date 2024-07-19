@@ -1822,15 +1822,23 @@ class fan_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
+        self.fan_drwr_id = int(self.sensors_config["drwr_id"])
         self.fan_param = sys_config.get(CONST.SYS_CONF_FAN_PARAM, SYS_FAN_PARAM_DEF)
         if CONST.FAN_ERR in sys_config[CONST.SYS_CONF_ERR_MASK]:
             self.set_static_mask_fault_list(sys_config[CONST.SYS_CONF_ERR_MASK][CONST.FAN_ERR])
-        self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
-        self.fan_drwr_id = int(self.sensors_config["drwr_id"])
-        self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.fan_dir = self._read_dir()
         self.fan_dir_fail = False
         self.drwr_param = self._get_fan_drwr_param()
+        self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
+        if self.tacho_cnt > len(self.drwr_param):
+            self.log.warn("{} tacho per FAN modlue mismatch: get {}, defined in config {}".format(self.name,
+                                                                                           self.tacho_cnt,
+                                                                                           len(self.drwr_param)))
+            self.log.info("{} init tacho_cnt from config: {}".format(self.name,
+                                                                     len(self.drwr_param)))
+            self.tacho_cnt = len(self.drwr_param)
+
+        self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.val_min_def = self.get_file_val("thermal/fan{}_min".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_min"])
         self.val_max_def = self.get_file_val("thermal/fan{}_max".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_max"])
         self.is_calibrated = False
