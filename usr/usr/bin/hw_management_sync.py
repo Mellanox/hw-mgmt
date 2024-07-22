@@ -36,10 +36,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-import os
-import sys
-import time
-import pdb
+try:
+    import os
+    import sys
+    import time
+    import json
+    import pdb
+
+    from hw_management_redfish_client import RedfishClient, BMCAccessor
+except ImportError as e:
+    raise ImportError(str(e) + "- required module not found")
 
 atttrib_list = {
     "N5110_LD": [
@@ -87,10 +93,6 @@ atttrib_list = {
          "fn": "asic_temp_populate",
          "arg" : ["asic"],
          "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic1"],
-         "poll": 3, "ts": 0},
         {"fin": "/sys/module/sx_core/asic1/temperature/input",
          "fn": "asic_temp_populate",
          "arg" : ["asic2"],
@@ -167,7 +169,9 @@ atttrib_list = {
         {"fin": "/sys/module/sx_core/asic0/module34/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module35"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
-         "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0}        
+         "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0},
+        {"fin": "redfish",
+         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
     "N5100_LD": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
@@ -208,10 +212,6 @@ atttrib_list = {
          "fn": "asic_temp_populate",
          "arg" : ["asic"],
          "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic1"],
-         "poll": 3, "ts": 0},
         {"fin": "/sys/module/sx_core/asic1/temperature/input",
          "fn": "asic_temp_populate",
          "arg" : ["asic2"],
@@ -288,9 +288,101 @@ atttrib_list = {
         {"fin": "/sys/module/sx_core/asic0/module34/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module35"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
-         "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0}        
+         "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0},
+        {"fin": "redfish",
+         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
+    ],
+    "test": [
+        {"fin": "redfish",
+         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 10, "ts": 0}
     ]
 }
+
+REDFISH_OBJ = None
+
+"""
+Key:
+ 'ReadingType': 'Temperature'
+Value:
+in 'Thresholds' reasponnse:
+{
+    'LowerCaution': {'Reading': 5.0},
+    'UpperCaution': {'Reading': 105.0},
+    'UpperCritical': {'Reading': 108.0}
+}
+"""
+redfish_attr = {"Temperature" : {"folder" : "/var/run/hw-management/thermal",
+                                 "LowerCaution" : "min",
+                                 "UpperCaution" : "max",
+                                 "LowerCritical" :"lcrit",
+                                 "UpperCritical" :"crit"
+                                },
+                "Voltage" : {"folder" : "/var/run/hw-management/environment",
+                             "LowerCaution" : "min",
+                             "UpperCaution" : "max",
+                             "LowerCritical" :"lcrit",
+                             "UpperCritical" :"crit"
+                            }
+               }
+
+
+def redfish_init():
+    bmc_accessor = BMCAccessor()
+    ret = bmc_accessor.login()
+    if ret != RedfishClient.ERR_CODE_OK:
+        return None
+
+    return bmc_accessor
+
+def redfish_req(path):
+    global REDFISH_OBJ
+    response = None
+    if not REDFISH_OBJ:
+        REDFISH_OBJ = redfish_init()
+
+    if REDFISH_OBJ:
+        cmd = REDFISH_OBJ.rf_client.build_get_cmd(path)
+        ret, response, _ = REDFISH_OBJ.rf_client.exec_curl_cmd(cmd)
+
+        if ret != RedfishClient.ERR_CODE_OK:
+            REDFISH_OBJ.login()
+            response = None
+
+        response = json.loads(response)
+    return response
+
+def redfish_get_sensor(argv, _dummy):
+    sensor_path = argv[0]
+    response = redfish_req(sensor_path)
+    if not response:
+        return
+    if response["Status"]["State"] != "Enabled":
+        return
+    if response["Status"]["Health"] != "OK":
+        return
+
+    ReadingType = response.get("ReadingType", None)
+    if not ReadingType:
+        return
+
+    sensor_redfish_attr = redfish_attr.get(ReadingType, None)
+    if not sensor_redfish_attr:
+        return
+
+    sensor_path = sensor_redfish_attr["folder"]
+    sensor_name = argv[1]
+    sensor_scale = argv[2]
+    sensor_attr = {sensor_name : int(response["Reading"] * sensor_scale)}
+    for responce_trh_name in response["Thresholds"].keys():
+        if responce_trh_name in sensor_redfish_attr.keys():
+            trh_name = "{}_{}".format(sensor_name, sensor_redfish_attr[responce_trh_name])
+            trh_val = response["Thresholds"][responce_trh_name]["Reading"]
+            sensor_attr[trh_name] = int(trh_val * sensor_scale)
+
+    for attr_name, attr_val in sensor_attr.items():
+        attr_path = os.path.join(sensor_path, attr_name)
+        with open(attr_path, "w") as attr_file:
+            attr_file.write(str(attr_val)+"\n")
 
 # ----------------------------------------------------------------------
 def run_cmd(cmd_list, arg):
@@ -378,9 +470,14 @@ def update_attr(attr_prop):
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
-        # update file
-        fin = attr_prop["fin"].format(hwmon = attr_prop.get("hwmon", ""))
-        if  os.path.isfile(fin):
+        fin = attr_prop.get("fin", None)
+        if fin:
+            fin = fin.format(hwmon=attr_prop.get("hwmon", ""))
+        if "redfish" in fin:
+            fn_name = attr_prop["fn"]
+            argv = attr_prop["arg"]
+            globals()[fn_name](argv, None)
+        elif os.path.isfile(fin):
             try:
                 with open(fin, 'r', encoding="utf-8") as f:
                     val = f.read().rstrip('\n')
@@ -422,7 +519,7 @@ def main():
         system_type = sys.argv[1]
     system_type = system_type.strip()
     if system_type not in atttrib_list.keys():
-        print("Not supported system type: {}".format(system_type))
+        print ("Not supported system type: {}".format(system_type))
         while True:
             time.sleep(10)
 
