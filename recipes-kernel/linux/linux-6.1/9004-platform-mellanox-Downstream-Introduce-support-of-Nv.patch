@@ -1,7 +1,7 @@
-From 39295cbf93c98d2da43b45ffbc0afefd60e6f0ed Mon Sep 17 00:00:00 2001
+From fd1160cef9e33acee7d52bf4e8731f080b553f15 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jan 2024 07:40:04 +0000
-Subject: [PATCH 03/15] platform: mellanox: Downstream: Introduce support of
+Subject: [PATCH 08/20] platform: mellanox: Downstream: Introduce support of
  Nvidia next genration L1 tray switch
 
 Add support for new L1 tray switch node providing L1 connectivity for
@@ -20,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 1046 insertions(+), 113 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 02470474846e..3197f2f9b010 100644
+index 02470474846e..07c9151d75fe 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -53,6 +53,7 @@
@@ -1157,7 +1157,7 @@ index 02470474846e..3197f2f9b010 100644
 +		.label = "tacho9",
 +		.reg = MLXPLAT_CPLD_LPC_REG_TACHO9_OFFSET,
 +		.mask = GENMASK(7, 0),
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 +		.slot = 9,
 +		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +	},
@@ -1165,7 +1165,7 @@ index 02470474846e..3197f2f9b010 100644
 +		.label = "tacho10",
 +		.reg = MLXPLAT_CPLD_LPC_REG_TACHO10_OFFSET,
 +		.mask = GENMASK(7, 0),
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 +		.slot = 10,
 +		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +	},
@@ -1173,7 +1173,7 @@ index 02470474846e..3197f2f9b010 100644
 +		.label = "tacho11",
 +		.reg = MLXPLAT_CPLD_LPC_REG_TACHO11_OFFSET,
 +		.mask = GENMASK(7, 0),
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 +		.slot = 11,
 +		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +	},
@@ -1181,7 +1181,7 @@ index 02470474846e..3197f2f9b010 100644
 +		.label = "tacho12",
 +		.reg = MLXPLAT_CPLD_LPC_REG_TACHO12_OFFSET,
 +		.mask = GENMASK(7, 0),
-+		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 +		.slot = 12,
 +		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 +	},
