@@ -2993,7 +2993,7 @@ pre_devtr_init()
 		;;
 	VMOD0021)
 		case $sku in
-		HI162|HI166H|I167)
+		HI162|HI166|HI167)
 			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)
