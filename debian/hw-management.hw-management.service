@@ -1,6 +1,7 @@
 [Unit]
 Description=Chassis HW management service of Mellanox systems
 Documentation=man:hw-management.service(8)
+Wants=hw-management-sync.service
 
 [Service]
 Type=oneshot
