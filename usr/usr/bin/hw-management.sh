@@ -2279,7 +2279,7 @@ n51xxld_specific()
 	erot_count=3
 	asic_control=0
 	health_events_count=0
-	pwr_events_count=0
+	pwr_events_count=1
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
@@ -2516,6 +2516,7 @@ create_event_files()
 	done
 	if [ $pwr_events_count -ne 0 ]; then
 		if [ -f "$power_events_file" ]; then
+			declare -a power_events="($(< power_events_file))"
 			for ((i=0; i<=pwr_events_count; i+=1)); do
 				check_n_init $events_path/${power_events[$i]} 0
 			done
