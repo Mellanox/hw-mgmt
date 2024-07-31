@@ -39,10 +39,11 @@
 import os
 import sys
 import time
+import re
 import pdb
 
 atttrib_list = {
-    "N5110_LD": [
+    "HI162": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
          "fn": "sync_fan", "arg": "1",
          "poll": 5, "ts": 0},
@@ -169,7 +170,7 @@ atttrib_list = {
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0}        
     ],
-    "N5100_LD": [
+    "HI166|HI167": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
          "fn": "sync_fan", "arg": "1",
          "poll": 5, "ts": 0},
@@ -414,19 +415,25 @@ def main():
 
     if args < 1:
         try:
-            f = open("/sys/devices/virtual/dmi/id/product_name", "r")
-            system_type = f.read()
+            f = open("/sys/devices/virtual/dmi/id/product_sku", "r")
+            product_sku = f.read()
         except Exception as e:
-            system_type = ""
+            product_sku = ""
     else:
-        system_type = sys.argv[1]
-    system_type = system_type.strip()
-    if system_type not in atttrib_list.keys():
-        print("Not supported system type: {}".format(system_type))
+        product_sku = sys.argv[1]
+    product_sku = product_sku.strip()
+    
+    sys_attr = None
+    for key, val in atttrib_list.items():
+        if re.match(key, product_sku):
+            sys_attr = val
+            break
+
+    if not sys_attr:
+        print("Not supported product SKU: {}".format(product_sku))
         while True:
             time.sleep(10)
 
-    sys_attr = atttrib_list[system_type]
     for attr in sys_attr:
         init_attr(attr)
 
