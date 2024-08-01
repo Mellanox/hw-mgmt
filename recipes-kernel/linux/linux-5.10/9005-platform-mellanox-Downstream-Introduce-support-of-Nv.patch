@@ -895,25 +895,25 @@ index ad1e421fe..c4de60f20 100644
 +	{
 +		.label = "power_button",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_OFFSET,
-+		.mask = MLXPLAT_CPLD_PWR_BUTTON_MASK,
++		.mask = GENMASK(7, 0) & ~MLXPLAT_CPLD_PWR_BUTTON_MASK,
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "power_button_clr",
++		.label = "power_button_evt",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_EVENT_OFFSET,
-+		.mask = MLXPLAT_CPLD_PWR_BUTTON_MASK,
++		.mask = GENMASK(7, 0) & ~MLXPLAT_CPLD_PWR_BUTTON_MASK,
 +		.mode = 0644,
 +	},
 +	{
 +		.label = "power_button_mask",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_MASK_OFFSET,
-+		.mask = MLXPLAT_CPLD_PWR_BUTTON_MASK,
++		.mask = GENMASK(7, 0) & ~MLXPLAT_CPLD_PWR_BUTTON_MASK,
 +		.mode = 0644,
 +	},
 +	{
 +		.label = "amb_sens",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_OFFSET,
-+		.mask = BIT(1),
++		.mask = GENMASK(7, 0) & ~BIT(1),
 +		.mode = 0444,
 +	},
 +};

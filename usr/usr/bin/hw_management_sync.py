@@ -85,9 +85,9 @@ atttrib_list = {
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"],
          "poll": 2, "ts": 0},
 
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/power_button",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {arg1}"],
+        {"fin": "/var/run/hw-management/system/power_button_evt",
+         "fn": "run_power_button_event",
+         "arg": [],
          "poll": 1, "ts": 0},
 
         {"fin": "/sys/module/sx_core/asic0/temperature/input",
@@ -175,7 +175,7 @@ atttrib_list = {
          "fn": "module_temp_populate", "arg" : ["module35"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0},
-        {"fin": "redfish",
+        {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
     "HI166|HI167": [
@@ -208,9 +208,9 @@ atttrib_list = {
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"],
          "poll": 2, "ts": 0},
 
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/power_button",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {arg1}"],
+        {"fin": "/var/run/hw-management/system/power_button_evt",
+         "fn": "run_power_button_event",
+         "arg": [],         
          "poll": 1, "ts": 0},
 
         {"fin": "/sys/module/sx_core/asic0/temperature/input",
@@ -298,12 +298,14 @@ atttrib_list = {
          "fn": "module_temp_populate", "arg" : ["module35"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0},
-        {"fin": "redfish",
+        {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
     "test": [
-        {"fin": "redfish",
-         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 10, "ts": 0}
+         {"fin": "/tmp/power_button_clr",
+         "fn": "run_power_button_event",
+         "arg": [],
+         "poll": 1, "ts": 0},
     ]
 }
 
@@ -334,7 +336,7 @@ redfish_attr = {"Temperature" : {"folder" : "/var/run/hw-management/thermal",
                             }
                }
 
-
+# ----------------------------------------------------------------------
 def redfish_init():
     bmc_accessor = BMCAccessor()
     ret = bmc_accessor.login()
@@ -343,7 +345,8 @@ def redfish_init():
 
     return bmc_accessor
 
-def redfish_req(path):
+# ----------------------------------------------------------------------
+def redfish_get_req(path):
     global REDFISH_OBJ
     response = None
     if not REDFISH_OBJ:
@@ -360,9 +363,25 @@ def redfish_req(path):
         response = json.loads(response)
     return response
 
+# ----------------------------------------------------------------------
+def redfish_post_req(path, data_dict):
+    global REDFISH_OBJ
+    response = None
+    if not REDFISH_OBJ:
+        REDFISH_OBJ = redfish_init()
+
+    if REDFISH_OBJ:
+        cmd = REDFISH_OBJ.rf_client.build_post_cmd(path, data_dict)
+        ret, response, _ = REDFISH_OBJ.rf_client.exec_curl_cmd(cmd)
+
+        if ret != RedfishClient.ERR_CODE_OK:
+            REDFISH_OBJ.login()
+    return ret
+
+# ----------------------------------------------------------------------
 def redfish_get_sensor(argv, _dummy):
     sensor_path = argv[0]
-    response = redfish_req(sensor_path)
+    response = redfish_get_req(sensor_path)
     if not response:
         return
     if response["Status"]["State"] != "Enabled":
@@ -392,6 +411,15 @@ def redfish_get_sensor(argv, _dummy):
         attr_path = os.path.join(sensor_path, attr_name)
         with open(attr_path, "w") as attr_file:
             attr_file.write(str(attr_val)+"\n")
+
+# ----------------------------------------------------------------------
+def run_power_button_event(argv, val):
+    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
+    os.system(cmd)
+    if str(val) == "1":
+        req_path = "redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
+        req_data = {"ResetType": "GracefulShutdown"}
+        redfish_post_req(req_path, req_data)
 
 # ----------------------------------------------------------------------
 def run_cmd(cmd_list, arg):
@@ -482,26 +510,26 @@ def update_attr(attr_prop):
         fin = attr_prop.get("fin", None)
         if fin:
             fin = fin.format(hwmon=attr_prop.get("hwmon", ""))
-        if "redfish" in fin:
+            if os.path.isfile(fin):
+                try:
+                    with open(fin, 'r', encoding="utf-8") as f:
+                        val = f.read().rstrip('\n')
+                    if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
+                        fn_name = attr_prop["fn"]
+                        argv = attr_prop["arg"]
+                        globals()[fn_name](argv, val)
+                        attr_prop["oldval"] = val
+                except:
+                    pass
+            else:
+                attr_prop["oldval"] = None
+        else:
             fn_name = attr_prop["fn"]
             argv = attr_prop["arg"]
             globals()[fn_name](argv, None)
-        elif os.path.isfile(fin):
-            try:
-                with open(fin, 'r', encoding="utf-8") as f:
-                    val = f.read().rstrip('\n')
-                if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
-                    fn_name = attr_prop["fn"]
-                    argv = attr_prop["arg"]
-                    globals()[fn_name](argv, val)
-                    attr_prop["oldval"] = val
-            except:
-                pass
-        else:
-            attr_prop["oldval"] = None
 
 def init_attr(attr_prop):
-    if "hwmon" in attr_prop["fin"]:
+    if "hwmon" in str(attr_prop["fin"]):
         path = attr_prop["fin"].split("hwmon")[0]
         try:
             flist = os.listdir(os.path.join(path, "hwmon"))
