@@ -121,6 +121,17 @@ class RedfishClient:
         return cmd
 
     '''
+    Build generic POST command
+    '''
+    def __build_post_cmd(self, uri, data_dict, timeout = DEFAULT_GET_TIMEOUT):
+        data_str = json.dumps(data_dict)
+        cmd = f'{self.__curl_path} -m {timeout} -k -H "X-Auth-Token: {self.__token}" ' \
+              f'-H "Content-Type: application/json" ' \
+              f'-X POST https://{self.__svr_ip}/{uri} ' \
+              f'-d \'{data_str} \' '
+        return cmd
+
+    '''
     Obfuscate username and password while asking for bearer token
     '''
     def __obfuscate_user_password(self, cmd):
@@ -309,6 +320,9 @@ class RedfishClient:
 
     def build_get_cmd(self, uri):
         return self.__build_get_cmd(uri)
+    
+    def build_post_cmd(self, uri, data_dict):
+        return self.__build_post_cmd(uri, data_dict)
 
 '''
 BMCAccessor encapsulates BMC details such as IP address, credential management.
