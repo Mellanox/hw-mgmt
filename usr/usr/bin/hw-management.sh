@@ -116,6 +116,7 @@ chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 chipup_retry_count=3
+fan_speed_tolerance=15
 
 mctp_bus=""
 mctp_addr=""
@@ -2576,6 +2577,7 @@ set_config_data()
 	echo $hotplug_pwrs > $config_path/hotplug_pwrs
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
+	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
 }
 
 connect_platform()

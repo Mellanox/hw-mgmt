@@ -373,6 +373,7 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
 						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
 						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
+						check_n_link "$cpath"/fan_speed_tolerance "$tpath"/fan"$j"_speed_tolerance
 						# Save max_tachos to config
 						echo $i > "$cpath"/max_tachos
 					fi
@@ -479,6 +480,7 @@ if [ "$1" == "add" ]; then
 				check_n_link "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
 				check_n_link $config_path/fan_min_speed $thermal_path/fan"$j"_min
 				check_n_link $config_path/fan_max_speed $thermal_path/fan"$j"_max
+				check_n_link $config_path/fan_speed_tolerance $thermal_path/fan"$j"_speed_tolerance
 				# Save max_tachos to config.
 				echo $i > $config_path/max_tachos
 			fi
