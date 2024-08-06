@@ -206,7 +206,7 @@ atttrib_list = {
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"],
          "poll": 2, "ts": 0},
 
-        {"fin": "/var/run/hw-management/system/power_button_evt",
+        {"fin": "/var/run/hw-management/system/graseful_pwr_off",
          "fn": "run_power_button_event",
          "arg": [],         
          "poll": 1, "ts": 0},
@@ -365,7 +365,7 @@ def redfish_get_req(path):
 # ----------------------------------------------------------------------
 def redfish_post_req(path, data_dict):
     global REDFISH_OBJ
-    response = None
+    ret = None
     if not REDFISH_OBJ:
         REDFISH_OBJ = redfish_init()
 
@@ -415,10 +415,14 @@ def redfish_get_sensor(argv, _dummy):
 def run_power_button_event(argv, val):
     cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
     os.system(cmd)
+    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event GRACEFUL_PWR_OFF {}".format(val)
+    os.system(cmd)
     if str(val) == "1":
-        req_path = "redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
+        cmd = """logger -t hw-management-sync -p daemon.info "Graceful CPU power off request " """
+        os.system(cmd)
+        """req_path = "redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
         req_data = {"ResetType": "GracefulShutdown"}
-        redfish_post_req(req_path, req_data)
+        redfish_post_req(req_path, req_data)"""
 
 # ----------------------------------------------------------------------
 def run_cmd(cmd_list, arg):
