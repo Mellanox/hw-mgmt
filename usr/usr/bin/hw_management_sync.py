@@ -3,6 +3,7 @@
 # pylint: disable=C0103
 # pylint: disable=W0718
 # pylint: disable=R0913:
+
 ########################################################################
 # Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
 #
@@ -40,6 +41,7 @@ try:
     import sys
     import time
     import json
+    import re
     import pdb
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
@@ -47,7 +49,7 @@ except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
 atttrib_list = {
-    "N5110_LD": [
+    "HI162": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
          "fn": "sync_fan", "arg": "1",
          "poll": 5, "ts": 0},
@@ -176,7 +178,7 @@ atttrib_list = {
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
-    "N5100_LD": [
+    "HI166|HI167|HI169": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
          "fn": "sync_fan", "arg": "1",
          "poll": 5, "ts": 0},
@@ -206,7 +208,7 @@ atttrib_list = {
          "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"],
          "poll": 2, "ts": 0},
 
-        {"fin": "/var/run/hw-management/system/graseful_pwr_off",
+        {"fin": "/var/run/hw-management/system/power_button_evt",
          "fn": "run_power_button_event",
          "arg": [],         
          "poll": 1, "ts": 0},
@@ -358,14 +360,13 @@ def redfish_get_req(path):
             REDFISH_OBJ.login()
             response = None
 
-        if response:
-            response = json.loads(response)
+        response = json.loads(response)
     return response
 
 # ----------------------------------------------------------------------
 def redfish_post_req(path, data_dict):
     global REDFISH_OBJ
-    ret = None
+    response = None
     if not REDFISH_OBJ:
         REDFISH_OBJ = redfish_init()
 
@@ -415,14 +416,10 @@ def redfish_get_sensor(argv, _dummy):
 def run_power_button_event(argv, val):
     cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
     os.system(cmd)
-    cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event GRACEFUL_PWR_OFF {}".format(val)
-    os.system(cmd)
     if str(val) == "1":
-        cmd = """logger -t hw-management-sync -p daemon.info "Graceful CPU power off request " """
-        os.system(cmd)
-        """req_path = "redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
+        req_path = "redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
         req_data = {"ResetType": "GracefulShutdown"}
-        redfish_post_req(req_path, req_data)"""
+        redfish_post_req(req_path, req_data)
 
 # ----------------------------------------------------------------------
 def run_cmd(cmd_list, arg):
@@ -551,19 +548,25 @@ def main():
 
     if args < 1:
         try:
-            f = open("/sys/devices/virtual/dmi/id/product_name", "r")
-            system_type = f.read()
+            f = open("/sys/devices/virtual/dmi/id/product_sku", "r")
+            product_sku = f.read()
         except Exception as e:
-            system_type = ""
+            product_sku = ""
     else:
-        system_type = sys.argv[1]
-    system_type = system_type.strip()
-    if system_type not in atttrib_list.keys():
-        print ("Not supported system type: {}".format(system_type))
+        product_sku = sys.argv[1]
+    product_sku = product_sku.strip()
+    
+    sys_attr = None
+    for key, val in atttrib_list.items():
+        if re.match(key, product_sku):
+            sys_attr = val
+            break
+
+    if not sys_attr:
+        print("Not supported product SKU: {}".format(product_sku))
         while True:
             time.sleep(10)
 
-    sys_attr = atttrib_list[system_type]
     for attr in sys_attr:
         init_attr(attr)
 
