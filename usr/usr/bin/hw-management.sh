@@ -1931,8 +1931,6 @@ sn2201_specific()
 	echo 2 > $config_path/cpld_num
 	i2c_asic_bus_default=6
 	hotplug_fans=4
-	hotplug_pwrs=2
-	hotplug_psus=2
 	echo 1 > $config_path/fan_dir_eeprom
 	echo 22000 > $config_path/fan_max_speed
 	echo 2200 > $config_path/fan_min_speed
@@ -1957,8 +1955,19 @@ sn2201_specific()
 	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2201.json"
 	echo 13 > $config_path/reset_attr_num
+	# WA for mux idle state issue.
+	echo -2 > /sys/devices/pci0000\:00/0000\:00\:1f.0/NVSN2201\:00/i2c_mlxcpld.1/i2c-1/1-0070/idle_state
+	if [ "$sku" == "HI168" ]; then
+		hotplug_pwrs=0
+		hotplug_psus=0
+		psu_count=0
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn2201_busbar.json"
+	else
+		hotplug_pwrs=2
+		hotplug_psus=2
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn2201.json"
+	fi
 }
 
 p2317_specific()
