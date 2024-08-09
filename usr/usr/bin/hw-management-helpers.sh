@@ -101,25 +101,6 @@ declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"
 ["90Y3779"]=R ["90Y3781"]=R ["90Y3779"]=R ["SA001871"]=F ["00WT021"]=F \
 ["105-575-014-00"]=F )
 
-# Thermal type constants
-thermal_type_t1=1
-thermal_type_t2=2
-thermal_type_t3=3
-thermal_type_t4=4
-thermal_type_t4=4
-thermal_type_t5=5
-thermal_type_t6=6
-thermal_type_t7=7
-thermal_type_t8=8
-thermal_type_t9=9
-thermal_type_t10=10
-thermal_type_t11=11
-thermal_type_t12=12
-thermal_type_t13=13
-thermal_type_t14=14
-thermal_type_def=0
-thermal_type_full=100
-
 base_cpu_bus_offset=10
 max_tachos=20
 i2c_asic_bus_default=2

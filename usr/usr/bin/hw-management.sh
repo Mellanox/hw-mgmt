@@ -63,7 +63,6 @@ sku=$(< $sku_file)
 source hw-management-devtree.sh
 # Local constants and variables
 
-thermal_type=$thermal_type_def
 asic_control=1
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
@@ -93,7 +92,6 @@ i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
 thermal_control_configs_path="/etc/hw-management-thermal"
-tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
 # ASIC PCIe Ids.
@@ -1113,7 +1111,6 @@ msn274x_specific()
 	connect_table+=(${msn2740_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t3
 	max_tachos=4
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
@@ -1132,7 +1129,6 @@ msn21xx_specific()
 	connect_table+=(${msn2100_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t2
 	max_tachos=4
 	hotplug_psus=0
 	hotplug_fans=0
@@ -1162,7 +1158,6 @@ msn24xx_specific()
 		;;
 		*)
 			connect_table+=(${msn2700_base_connect_table[@]})
-			thermal_type=$thermal_type_t1
 			max_tachos=8
 			hotplug_fans=4
 			echo 21000 > $config_path/fan_max_speed
@@ -1229,7 +1224,6 @@ msn27xx_msb_msx_specific()
 			max_tachos=0
 		;;
 		*)
-			thermal_type=$thermal_type_t1
 			max_tachos=8
 			hotplug_fans=4
 			echo 25000 > $config_path/fan_max_speed
@@ -1264,7 +1258,6 @@ msn201x_specific()
 	connect_table+=(${msn2010_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t4
 	max_tachos=4
 	hotplug_psus=0
 	hotplug_fans=0
@@ -1344,8 +1337,6 @@ mqmxxx_msn37x_msn34x_specific()
 	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
 	add_cpu_board_to_connection_table
 
-	tune_thermal_type=1
-	thermal_type=$thermal_type_t5
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1362,8 +1353,6 @@ sn3750sx_specific()
 
 	add_cpu_board_to_connection_table
 
-	tune_thermal_type=1
-	thermal_type=$thermal_type_t5
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1380,7 +1369,6 @@ msn3420_specific()
 	connect_table+=(${msn3420_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t9
 	max_tachos=10
 	hotplug_fans=5
 	echo 25000 > $config_path/fan_max_speed
@@ -1404,8 +1392,6 @@ msn_xh3000_specific()
 	hotplug_psus=0
 	hotplug_pwrs=0
 	max_tachos=0
-	tune_thermal_type=1
-	thermal_type=$thermal_type_t5
 	echo 3 > $config_path/cpld_num
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
@@ -1417,7 +1403,6 @@ msn38xx_specific()
 	connect_table+=(${msn3800_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t7
 	max_tachos=3
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
@@ -1437,7 +1422,6 @@ msn24102_specific()
 	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
-	thermal_type=$thermal_type_t1
 	max_tachos=8
 	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
@@ -1461,7 +1445,6 @@ msn27002_msb78002_specific()
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
 
-	thermal_type=$thermal_type_t1
 	max_tachos=8
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
@@ -1535,7 +1518,6 @@ msn47xx_specific()
 		fi
 	fi
 
-	thermal_type=$thermal_type_t10
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1572,13 +1554,11 @@ msn46xx_specific()
 
 	# this is MSN4600C
 	if [ "$sku" == "HI124" ]; then
-		thermal_type=$thermal_type_t8
 		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600C.json"
 		echo 11000 > $config_path/fan_max_speed
 		echo 2235 > $config_path/fan_min_speed
 	# this is MSN4600
 	else
-		thermal_type=$thermal_type_t12
 		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600.json"
 		echo 19500 > $config_path/fan_max_speed
 		echo 2800 > $config_path/fan_min_speed
@@ -1597,7 +1577,6 @@ msn3510_specific()
 	connect_table+=(${msn3510_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_def
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1675,7 +1654,6 @@ mqm97xx_specific()
 
 	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
 	echo 0 > "$config_path"/labels_ready
-	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	echo 29500 > $config_path/fan_max_speed
@@ -1694,7 +1672,6 @@ mqm9510_specific()
 		add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
-	thermal_type=$thermal_type_def
 	i2c_bus_def_off_eeprom_cpu=24
 	i2c_comex_mon_bus_default=23
 	echo 11000 > $config_path/fan_max_speed
@@ -1724,7 +1701,6 @@ mqm9520_specific()
 	asic_i2c_buses=(2 10)
 	i2c_bus_def_off_eeprom_cpu=24
 	i2c_comex_mon_bus_default=23
-	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
 	echo 32000 > $config_path/psu_fan_max
@@ -1749,7 +1725,6 @@ mqm87xx_rev1_specific()
 		add_cpu_board_to_connection_table
 	fi
 
-	thermal_type=$thermal_type_t5
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1767,7 +1742,6 @@ e3597_specific()
 	add_i2c_dynamic_bus_dev_connection_table "${e3597_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	asic_control=0
@@ -1806,7 +1780,6 @@ p4697_specific()
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	add_i2c_dynamic_bus_dev_connection_table "${p4697_dynamic_i2c_bus_connect_table[@]}"
 
-	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	erot_count=2
@@ -1932,7 +1905,7 @@ msn48xx_specific()
 	local cpu_bus_offset=51
 	connect_table+=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
-	thermal_type=$thermal_type_t13
+
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
@@ -1956,7 +1929,6 @@ sn2201_specific()
 {
 	local cpu_bus_offset=51
 	echo 2 > $config_path/cpld_num
-	thermal_type=$thermal_type_t11
 	i2c_asic_bus_default=6
 	hotplug_fans=4
 	hotplug_pwrs=2
@@ -2010,8 +1982,6 @@ sn56xx_specific()
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	# ToDo Uncomment when will be defined	thermal_type=$thermal_type_t14
-	thermal_type=$thermal_type_def	# ToDo Temporary default 60%
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2800 > $config_path/fan_min_speed
@@ -2076,7 +2046,6 @@ p4262_specific()
 	asic_control=0
 	health_events_count=4
 	pwr_events_count=1
-	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
@@ -2106,7 +2075,6 @@ p4300_specific()
 	asic_control=0
 	health_events_count=4
 	pwr_events_count=1
-	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
@@ -3071,13 +3039,6 @@ do_start()
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
 	fi
-
-	# check for MSN3700C exeption
-	if [ "$max_tachos" == 8 ] && [ "$tune_thermal_type" == 1 ]; then
-		thermal_type=$thermal_type_t6
-	fi
-	# Information for thermal control service
-	echo $thermal_type > $config_path/thermal_type
 
 	if [ -v "lm_sensors_config_lc" ] && [ -f $lm_sensors_config_lc ]; then
 		ln -sf $lm_sensors_config_lc $config_path/lm_sensors_config_lc
