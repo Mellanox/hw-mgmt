@@ -1,8 +1,8 @@
-From 5a2e1d345c468922570cca154a072fde6fc7a1af Mon Sep 17 00:00:00 2001
+From c3d16a3d7cb76800066e3588b79dbd47e9a99112 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 7 Aug 2024 00:09:11 +0000
-Subject: [PATCH platfrom-next 1/1] platform: mellanox: nvsw-sn2200: Add
- support for new system flavour
+Subject: [PATCH backport 6.1 1/1] platform: mellanox: nvsw-sn2199: Add support
+ for new system flavour
 
 Add support for SN2201 system flavour, which is fitting OCP rack
 form-factor and feeded from external power source through the rack
@@ -15,11 +15,11 @@ For new system flavour:
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/nvsw-sn2201.c | 110 +++++++++++++++++++++++-
- 1 file changed, 107 insertions(+), 3 deletions(-)
+ drivers/platform/mellanox/nvsw-sn2201.c | 111 +++++++++++++++++++++++-
+ 1 file changed, 108 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
-index 2612bb5f82a3..5f023efffdc1 100644
+index 2612bb5f82a3..57fabcadb2e4 100644
 --- a/drivers/platform/mellanox/nvsw-sn2201.c
 +++ b/drivers/platform/mellanox/nvsw-sn2201.c
 @@ -6,6 +6,7 @@
@@ -56,7 +56,7 @@ index 2612bb5f82a3..5f023efffdc1 100644
  };
  
  static bool nvsw_sn2201_writeable_reg(struct device *dev, unsigned int reg)
-@@ -523,6 +529,35 @@ struct mlxreg_core_hotplug_platform_data nvsw_sn2201_hotplug = {
+@@ -523,6 +529,36 @@ struct mlxreg_core_hotplug_platform_data nvsw_sn2201_hotplug = {
  	.deferred_nr = NVSW_SN2201_2ND_MUX_CH3_NR,
  };
  
@@ -87,12 +87,13 @@ index 2612bb5f82a3..5f023efffdc1 100644
 +	.counter = ARRAY_SIZE(nvsw_sn2201_busbar_items),
 +	.cell = NVSW_SN2201_SYS_INT_STATUS_OFFSET,
 +	.mask = NVSW_SN2201_CPLD_AGGR_BUSBAR_MASK_DEF,
++	.deferred_nr = NVSW_SN2201_2ND_MUX_CH3_NR,
 +};
 +
  /* SN2201 static devices. */
  static struct i2c_board_info nvsw_sn2201_static_devices[] = {
  	{
-@@ -558,6 +593,9 @@ static struct i2c_board_info nvsw_sn2201_static_devices[] = {
+@@ -558,6 +594,9 @@ static struct i2c_board_info nvsw_sn2201_static_devices[] = {
  	{
  		I2C_BOARD_INFO("pmbus", 0x40),
  	},
@@ -102,7 +103,7 @@ index 2612bb5f82a3..5f023efffdc1 100644
  };
  
  /* SN2201 default static board info. */
-@@ -608,6 +646,58 @@ static struct mlxreg_hotplug_device nvsw_sn2201_static_brdinfo[] = {
+@@ -608,6 +647,58 @@ static struct mlxreg_hotplug_device nvsw_sn2201_static_brdinfo[] = {
  	},
  };
  
@@ -161,7 +162,7 @@ index 2612bb5f82a3..5f023efffdc1 100644
  /* LED default data. */
  static struct mlxreg_core_data nvsw_sn2201_led_data[] = {
  	{
-@@ -982,7 +1072,10 @@ static int nvsw_sn2201_config_init(struct nvsw_sn2201 *nvsw_sn2201, void *regmap
+@@ -982,7 +1073,10 @@ static int nvsw_sn2201_config_init(struct nvsw_sn2201 *nvsw_sn2201, void *regmap
  	nvsw_sn2201->io_data = &nvsw_sn2201_regs_io;
  	nvsw_sn2201->led_data = &nvsw_sn2201_led;
  	nvsw_sn2201->wd_data = &nvsw_sn2201_wd;
@@ -173,7 +174,7 @@ index 2612bb5f82a3..5f023efffdc1 100644
  
  	/* Register IO access driver. */
  	if (nvsw_sn2201->io_data) {
-@@ -1199,11 +1292,17 @@ static int nvsw_sn2201_config_pre_init(struct nvsw_sn2201 *nvsw_sn2201)
+@@ -1199,11 +1293,17 @@ static int nvsw_sn2201_config_pre_init(struct nvsw_sn2201 *nvsw_sn2201)
  static int nvsw_sn2201_probe(struct platform_device *pdev)
  {
  	struct nvsw_sn2201 *nvsw_sn2201;
@@ -191,7 +192,7 @@ index 2612bb5f82a3..5f023efffdc1 100644
  	nvsw_sn2201->dev = &pdev->dev;
  	platform_set_drvdata(pdev, nvsw_sn2201);
  	platform_device_add_resources(pdev, nvsw_sn2201_lpc_io_resources,
-@@ -1212,8 +1311,13 @@ static int nvsw_sn2201_probe(struct platform_device *pdev)
+@@ -1212,8 +1312,13 @@ static int nvsw_sn2201_probe(struct platform_device *pdev)
  	nvsw_sn2201->main_mux_deferred_nr = NVSW_SN2201_MAIN_MUX_DEFER_NR;
  	nvsw_sn2201->main_mux_devs = nvsw_sn2201_main_mux_brdinfo;
  	nvsw_sn2201->cpld_devs = nvsw_sn2201_cpld_brdinfo;
