@@ -14,6 +14,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - [Activation, de-activation and reading status](#activation-de-activation-and-reading-status)
 
 ## Supported systems:
+
 - MSN2740
 - MSN2100
 - MSN2410
