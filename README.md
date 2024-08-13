@@ -3,7 +3,7 @@ This package supports thermal control and hardware management for Mellanox switc
 
 The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.
 For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
-
+ 
 ##### Table of Contents  
 - [Supported systems](#supported_systems)
 - [Supported Kernel versions](#supported-kernel-versions)
