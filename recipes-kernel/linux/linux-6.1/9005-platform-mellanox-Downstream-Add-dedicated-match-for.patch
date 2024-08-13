@@ -1,7 +1,7 @@
-From 4a2d4a62684db357c64b9b43bee34942d62c6518 Mon Sep 17 00:00:00 2001
+From ea2bafa897e79de5ef51e8de083fa5b45018f764 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 2 Aug 2023 07:43:46 +0000
-Subject: [PATCH 09/20] platform/mellanox: Downstream: Add dedicated match for
+Subject: [PATCH 03/16] platform/mellanox: Downstream: Add dedicated match for
  system type QMB8700
 
 Use dedicated match function for QMB8700 system in order to work-around
@@ -17,7 +17,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 352 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index ea7e67d082b1..5a8ac4af518f 100644
+index e8ed5dc660bc..d1b186ec5b46 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -1384,6 +1384,57 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_fan_items_data[] = {
@@ -266,7 +266,7 @@ index ea7e67d082b1..5a8ac4af518f 100644
  /* Platform led data for chassis system */
  static struct mlxreg_core_data mlxplat_mlxcpld_l1_switch_led_data[] = {
  	{
-@@ -7177,6 +7395,107 @@ static struct mlxreg_core_platform_data mlxplat_default_fan_data = {
+@@ -7182,6 +7400,107 @@ static struct mlxreg_core_platform_data mlxplat_default_fan_data = {
  		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
  };
  
@@ -374,7 +374,7 @@ index ea7e67d082b1..5a8ac4af518f 100644
  /* XDR platform fan data */
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_fan_data[] = {
  	{
-@@ -8845,6 +9164,32 @@ static int __init mlxplat_dmi_chassis_blade_matched(const struct dmi_system_id *
+@@ -8850,6 +9169,32 @@ static int __init mlxplat_dmi_chassis_blade_matched(const struct dmi_system_id *
  	return mlxplat_register_platform_device();
  }
  
@@ -407,7 +407,7 @@ index ea7e67d082b1..5a8ac4af518f 100644
  static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9065,6 +9410,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9070,6 +9415,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0004"),
  		},
  	},

@@ -1,7 +1,7 @@
-From 0e8764c6ddf2fa66d8a6a275433a775b99fea70f Mon Sep 17 00:00:00 2001
+From aa04baded1194bc2e0225591736334db0a3c9a1e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jan 2024 07:40:04 +0000
-Subject: [PATCH 08/20] platform: mellanox: Downstream: Introduce support of
+Subject: [PATCH 02/16] platform: mellanox: Downstream: Introduce support of
  Nvidia next genration L1 tray switch
 
 Add support for new L1 tray switch node providing L1 connectivity for
@@ -16,11 +16,11 @@ of the all required platform driver.
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 1172 +++++++++++++++++++---
- 1 file changed, 1059 insertions(+), 113 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 1173 ++++++++++++++++++++--
+ 1 file changed, 1062 insertions(+), 111 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index bfa2588782bd..ea7e67d082b1 100644
+index bfa2588782bd..e8ed5dc660bc 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -53,6 +53,7 @@
@@ -161,14 +161,19 @@ index bfa2588782bd..ea7e67d082b1 100644
  static struct spi_board_info rack_switch_switch_spi_board_info[] = {
  	{
  		.modalias       = "spidev",
-@@ -4321,6 +4397,45 @@ static struct mlxreg_core_platform_data mlxplat_xdr_led_data = {
+@@ -4321,6 +4397,50 @@ static struct mlxreg_core_platform_data mlxplat_xdr_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_xdr_led_data),
  };
  
 +/* Platform led data for L1 scale out switch systems */
 +static struct mlxreg_core_data mlxplat_mlxcpld_l1_scale_out_led_data[] = {
 +	{
-+		.label = "fault:amber",
++                .label = "status:green.",
++                .reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
++                .mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK
++        },
++	{
++		.label = "status:amber",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
 +		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK
 +	},
@@ -207,7 +212,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  /* Platform register access default */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_regs_io_data[] = {
  	{
-@@ -4738,6 +4853,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4738,6 +4858,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0644,
  		.secured = 1,
  	},
@@ -220,39 +225,43 @@ index bfa2588782bd..ea7e67d082b1 100644
  	{
  		.label = "erot1_recovery",
  		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
-@@ -6319,152 +6440,748 @@ static struct mlxreg_core_platform_data mlxplat_smart_switch_regs_io_data = {
+@@ -6319,152 +6445,748 @@ static struct mlxreg_core_platform_data mlxplat_smart_switch_regs_io_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_smart_switch_regs_io_data),
  };
  
 -/* Platform FAN default */
 -static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_data[] = {
--	{
--		.label = "pwm1",
--		.reg = MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET,
--	},
 +/* Platform register access for l1_scale_out systems families data */
 +static struct mlxreg_core_data mlxplat_mlxcpld_l1_scale_out_regs_io_data[] = {
  	{
--		.label = "pwm2",
--		.reg = MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET,
+-		.label = "pwm1",
+-		.reg = MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET,
 +		.label = "cpld1_version",
 +		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_VER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
  	},
  	{
--		.label = "pwm3",
--		.reg = MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET,
+-		.label = "pwm2",
+-		.reg = MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET,
 +		.label = "cpld2_version",
 +		.reg = MLXPLAT_CPLD_LPC_REG_CPLD2_VER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
  	},
  	{
--		.label = "pwm4",
--		.reg = MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET,
+-		.label = "pwm3",
+-		.reg = MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET,
 +		.label = "cpld3_version",
 +		.reg = MLXPLAT_CPLD_LPC_REG_CPLD3_VER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
+ 	},
+ 	{
+-		.label = "pwm4",
+-		.reg = MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET,
++		.label = "cpld4_version",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
  	},
@@ -264,10 +273,11 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.bit = BIT(0),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
 -
-+		.label = "cpld4_version",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET,
-+		.bit = GENMASK(7, 0),
++		.label = "cpld1_pn",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET,
++		.bit = GENMASK(15, 0),
 +		.mode = 0444,
++		.regnum = 2,
  	},
  	{
 -		.label = "tacho2",
@@ -276,8 +286,8 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(1),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld1_pn",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET,
++		.label = "cpld2_pn",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET,
 +		.bit = GENMASK(15, 0),
 +		.mode = 0444,
 +		.regnum = 2,
@@ -289,8 +299,8 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(2),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld2_pn",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET,
++		.label = "cpld3_pn",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD3_PN_OFFSET,
 +		.bit = GENMASK(15, 0),
 +		.mode = 0444,
 +		.regnum = 2,
@@ -302,8 +312,8 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(3),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld3_pn",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD3_PN_OFFSET,
++		.label = "cpld4_pn",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET,
 +		.bit = GENMASK(15, 0),
 +		.mode = 0444,
 +		.regnum = 2,
@@ -315,11 +325,10 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(4),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld4_pn",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET,
-+		.bit = GENMASK(15, 0),
++		.label = "cpld1_version_min",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_MVER_OFFSET,
++		.bit = GENMASK(7, 0),
 +		.mode = 0444,
-+		.regnum = 2,
  	},
  	{
 -		.label = "tacho6",
@@ -328,8 +337,8 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(5),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld1_version_min",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_MVER_OFFSET,
++		.label = "cpld2_version_min",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD2_MVER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
  	},
@@ -340,8 +349,8 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(6),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld2_version_min",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD2_MVER_OFFSET,
++		.label = "cpld3_version_min",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
  	},
@@ -352,8 +361,8 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP1_OFFSET,
 -		.bit = BIT(7),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld3_version_min",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET,
++		.label = "cpld4_version_min",
++		.reg = MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
  	},
@@ -364,9 +373,10 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(0),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "cpld4_version_min",
-+		.reg = MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET,
-+		.bit = GENMASK(7, 0),
++		.label = "bios_status",
++		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(3, 1),
++		.bit = 3,
 +		.mode = 0444,
  	},
  	{
@@ -376,10 +386,9 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(1),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "bios_status",
++		.label = "bios_start_retry",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
-+		.mask = GENMASK(3, 1),
-+		.bit = 3,
++		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
  	},
  	{
@@ -389,9 +398,9 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(2),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "bios_start_retry",
++		.label = "bios_active_image",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
  	},
  	{
@@ -401,10 +410,10 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(3),
 -		.reg_prsnt = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
-+		.label = "bios_active_image",
-+		.reg = MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(5),
-+		.mode = 0444,
++		.label = "pwr_converter_prog_en",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0644,
  	},
  	{
 -		.label = "tacho13",
@@ -412,9 +421,9 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.mask = GENMASK(7, 0),
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(4),
-+		.label = "pwr_converter_prog_en",
++		.label = "cpu_mctp_ready",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mask = GENMASK(7, 0) & ~BIT(1),
 +		.mode = 0644,
  	},
  	{
@@ -423,18 +432,19 @@ index bfa2588782bd..ea7e67d082b1 100644
 -		.mask = GENMASK(7, 0),
 -		.capability = MLXPLAT_CPLD_LPC_REG_FAN_CAP2_OFFSET,
 -		.bit = BIT(5),
-+		.label = "cpu_mctp_ready",
-+		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(1),
-+		.mode = 0644,
- 	},
- 	{
--		.label = "conf",
--		.capability = MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET,
 +		 .label = "cpu_shutdown_req",
 +		 .reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
 +		 .mask = GENMASK(7, 0) & ~BIT(2),
 +		 .mode = 0444,
+ 	},
+ 	{
+-		.label = "conf",
+-		.capability = MLXPLAT_CPLD_LPC_REG_TACHO_SPEED_OFFSET,
++		.label = "vpd_wp",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
++		.secured = 1,
  	},
 -};
 -
@@ -449,13 +459,6 @@ index bfa2588782bd..ea7e67d082b1 100644
  	{
 -		.label = "pwm1",
 -		.reg = MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET,
-+		.label = "vpd_wp",
-+		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0644,
-+		.secured = 1,
-+	},
-+	{
 +		.label = "pcie_asic_reset_dis",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
@@ -905,7 +908,7 @@ index bfa2588782bd..ea7e67d082b1 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "power_button_clr",
++		.label = "power_button_evt",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_EVENT_OFFSET,
 +		.mask = MLXPLAT_CPLD_PWR_BUTTON_MASK,
 +		.mode = 0644,
@@ -1078,7 +1081,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	},
  	{
  		.label = "tacho1",
-@@ -6639,6 +7356,123 @@ static struct mlxreg_core_platform_data mlxplat_xdr_fan_data = {
+@@ -6639,6 +7361,123 @@ static struct mlxreg_core_platform_data mlxplat_xdr_fan_data = {
  		.version = 1,
  };
  
@@ -1202,7 +1205,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  /* Watchdog type1: hardware implementation version1
   * (MSN2700, MSN2410, MSN2740, MSN2100 and MSN2140 systems).
   */
-@@ -6874,6 +7708,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -6874,6 +7713,7 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -1210,7 +1213,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_GP0_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP_RST_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
-@@ -6938,6 +7773,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -6938,6 +7778,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SN_MASK_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -1219,7 +1222,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_SPI_CHNL_SELECT:
  	case MLXPLAT_CPLD_LPC_REG_WD_CLEAR_OFFSET:
-@@ -6959,6 +7796,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -6959,6 +7801,8 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM4_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET:
@@ -1228,7 +1231,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET ... MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET:
  		return true;
  	}
-@@ -7001,6 +7840,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -7001,6 +7845,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -1236,7 +1239,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
-@@ -7093,6 +7933,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -7093,6 +7938,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -1246,7 +1249,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_SPI_CHNL_SELECT:
-@@ -7152,6 +7995,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -7152,6 +8000,9 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -1256,7 +1259,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET ... MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET:
  		return true;
  	}
-@@ -7194,6 +8040,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -7194,6 +8045,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -1264,7 +1267,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
-@@ -7284,6 +8131,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -7284,6 +8136,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_EVENT_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LC_SD_MASK_OFFSET:
@@ -1274,7 +1277,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_LC_PWR_ON:
  	case MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_SPI_CHNL_SELECT:
-@@ -7337,6 +8187,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -7337,6 +8192,9 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CONFIG2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CONFIG3_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_UFM_VERSION_OFFSET:
@@ -1284,7 +1287,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	case MLXPLAT_CPLD_LPC_REG_EXT_MIN_OFFSET ... MLXPLAT_CPLD_LPC_REG_EXT_MAX_OFFSET:
  		return true;
  	}
-@@ -7405,6 +8258,17 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
+@@ -7405,6 +8263,17 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
  	  MLXPLAT_CPLD_LPC_SM_SW_MASK },
  };
  
@@ -1302,7 +1305,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  struct mlxplat_mlxcpld_regmap_context {
  	void __iomem *base;
  };
-@@ -7527,6 +8391,20 @@ static const struct regmap_config mlxplat_mlxcpld_regmap_config_smart_switch = {
+@@ -7527,6 +8396,20 @@ static const struct regmap_config mlxplat_mlxcpld_regmap_config_smart_switch = {
  	.reg_write = mlxplat_mlxcpld_reg_write,
  };
  
@@ -1323,7 +1326,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  /* Wait completion routine for indirect access for register map */
  static int mlxplat_fpga_completion_wait(struct mlxplat_mlxcpld_regmap_context *ctx)
  {
-@@ -7652,6 +8530,8 @@ static struct spi_board_info *mlxplat_spi;
+@@ -7652,6 +8535,8 @@ static struct spi_board_info *mlxplat_spi;
  static struct pci_dev *lpc_bridge;
  static struct pci_dev *i2c_bridge;
  static struct pci_dev *jtag_bridge;
@@ -1332,7 +1335,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  
  /* Platform default reset function */
  static int mlxplat_reboot_notifier(struct notifier_block *nb, unsigned long action, void *unused)
-@@ -7684,6 +8564,17 @@ static void mlxplat_poweroff(void)
+@@ -7684,6 +8569,17 @@ static void mlxplat_poweroff(void)
  	kernel_halt();
  }
  
@@ -1350,7 +1353,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  static int __init mlxplat_register_platform_device(void)
  {
  	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, -1,
-@@ -8121,6 +9012,27 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
+@@ -8121,6 +9017,27 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
  	return mlxplat_register_platform_device();
  }
  
@@ -1378,7 +1381,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -8240,6 +9152,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8240,6 +9157,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0019"),
  		},
  	},
@@ -1419,7 +1422,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	{
  		.callback = mlxplat_dmi_msn274x_matched,
  		.matches = {
-@@ -8328,8 +9274,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8328,8 +9279,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	int i, shift = 0;
  
  	/* Scan adapters from expected id to verify it is free. */
@@ -1430,7 +1433,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  	     mlxplat_max_adap_num; i++) {
  		search_adap = i2c_get_adapter(i);
  		if (search_adap) {
-@@ -8338,7 +9284,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8338,7 +9289,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  		}
  
  		/* Return if expected parent adapter is free. */
@@ -1439,7 +1442,7 @@ index bfa2588782bd..ea7e67d082b1 100644
  			return 0;
  		break;
  	}
-@@ -8360,7 +9306,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8360,7 +9311,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	}
  
  	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */

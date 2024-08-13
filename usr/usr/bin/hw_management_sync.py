@@ -366,7 +366,7 @@ def redfish_get_req(path):
 # ----------------------------------------------------------------------
 def redfish_post_req(path, data_dict):
     global REDFISH_OBJ
-    response = None
+    ret = None
     if not REDFISH_OBJ:
         REDFISH_OBJ = redfish_init()
 
@@ -417,6 +417,8 @@ def run_power_button_event(argv, val):
     cmd = "/usr/bin/hw-management-chassis-events.sh hotplug-event POWER_BUTTON {}".format(val)
     os.system(cmd)
     if str(val) == "1":
+        cmd = """logger -t hw-management-sync -p daemon.info "CPU power off request is sent to BMC" """
+        os.system(cmd)
         req_path = "redfish/v1/Systems/System_0/Actions/ComputerSystem.Reset"
         req_data = {"ResetType": "GracefulShutdown"}
         redfish_post_req(req_path, req_data)
