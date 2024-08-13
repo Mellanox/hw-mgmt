@@ -2249,7 +2249,7 @@ n51xxld_specific()
 
 	case $sku in
 		HI162)	# power-on
-			max_tachos=12
+			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
@@ -2264,7 +2264,7 @@ n51xxld_specific()
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
 		;;
 		*)
-			max_tachos=12
+			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
