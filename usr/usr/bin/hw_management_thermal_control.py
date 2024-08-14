@@ -377,7 +377,9 @@ def str2bool(val):
     """
     if isinstance(val, bool):
         return val
-    if val.lower() in ("yes", "true", "t", "y", "1"):
+    elif isinstance(val, int):
+        return bool(val)
+    elif val.lower() in ("yes", "true", "t", "y", "1"):
         return True
     elif val.lower() in ("no", "false", "f", "n", "0"):
         return False
@@ -2464,8 +2466,8 @@ class ThermalManagement(hw_managemet_file_op):
         self.exit_flag = False
 
         self.load_configuration()
-        if not self.sys_config.get("platform_support", 1):
-            self.log.notice("Platform Board:{}, SKU:{} is not supported.".format(self.board_type, self.sku), 1)
+        if not str2bool(self.sys_config.get("platform_support", 1)):
+            self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), 1)
             self.log.notice("Set TC to idle.")
             while True:
                 self.exit.wait(60)
@@ -2975,9 +2977,14 @@ class ThermalManagement(hw_managemet_file_op):
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
                 except Exception:
-                    self.log.error("System config file {} broken. Applying default config.".format(config_file_name), 1)
+                    self.log.error("System config file {} broken.".format(config_file_name), 1)
+                    sys_config["platform_support"] = 0
         else:
-            self.log.warn("System config file {} missing. Applying default config.".format(config_file_name), 1)
+            self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
+                                                                                          self.board_type,
+                                                                                          self.sku,
+                                                                                          self.system_ver), 1)
+            sys_config["platform_support"] = 0
 
         # 1. Init dmin table
         if CONST.SYS_CONF_DMIN not in sys_config:
