@@ -3054,7 +3054,7 @@ do_start()
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
-		cp $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
+		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }
