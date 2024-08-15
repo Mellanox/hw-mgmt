@@ -40,8 +40,8 @@
 #              Report start of hw-management service to console and logger.
 
 source hw-management-helpers.sh
-board_type=`cat /sys/devices/virtual/dmi/id/board_name`
-product_sku=`cat /sys/devices/virtual/dmi/id/product_sku`
+[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
+[ -f "$sku_file" ] && product_sku=$(< $sku_file) || product_sku="Unknown"
 
 if systemctl is-active --quiet hw-management; then
         echo "Error: HW management service is already active."

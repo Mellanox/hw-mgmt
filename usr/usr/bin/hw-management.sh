@@ -58,8 +58,8 @@
 #
 
 source hw-management-helpers.sh
-board_type=$(< $board_type_file)
-sku=$(< $sku_file)
+[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
+[ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
 source hw-management-devtree.sh
 # Local constants and variables
 
@@ -2486,7 +2486,7 @@ create_event_files()
 	if [ $pwr_events_count -ne 0 ]; then
 		if [ -f "$power_events_file" ]; then
 			declare -a power_events="($(< power_events_file))"
-			for ((i=0; i<=pwr_events_count; i+=1)); do
+			for ((i=0; i<pwr_events_count; i+=1)); do
 				check_n_init $events_path/${power_events[$i]} 0
 			done
 		else
