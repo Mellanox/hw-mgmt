@@ -58,8 +58,8 @@
 #
 
 source hw-management-helpers.sh
-board_type=$(< $board_type_file)
-sku=$(< $sku_file)
+[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
+[ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
 source hw-management-devtree.sh
 # Local constants and variables
 
