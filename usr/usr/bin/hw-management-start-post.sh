@@ -74,7 +74,7 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169)
+	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170)
 		# Only for MQM9700
                 if [ -e "$ui_tree_archive" ]; then
                     # Extract the ui_tree archive to /var/run/hw-management
