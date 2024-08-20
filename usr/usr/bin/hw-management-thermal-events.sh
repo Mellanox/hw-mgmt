@@ -1406,4 +1406,20 @@ else
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
 	fi
+	if [ "$2" == "dpu" ]; then
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+		HI160)
+			# DPU event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+			slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+			if [ ! -z "$slot_num" ]; then
+				thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+			fi
+			;;
+		*)
+			;;
+		esac
+		check_n_unlink $thermal_path/"cx_amb"
+	fi
 fi
