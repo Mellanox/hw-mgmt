@@ -956,6 +956,9 @@ if [ "$1" == "add" ]; then
 				if is_virtual_machine; then
 					if [ -f $vm_vpd_path/psu_vpd ]; then
 						cat $vm_vpd_path/psu_vpd > $eeprom_path/"$psu_name"_vpd
+						# Get PSU FAN direction
+						get_psu_fan_direction $eeprom_path/"$psu_name"_vpd
+						echo $? > "$thermal_path"/"$psu_name"_fan_dir
 					else
 						echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
 					fi
