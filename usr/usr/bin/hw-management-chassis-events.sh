@@ -1386,11 +1386,26 @@ else
 			if [ -L $environment_path/"$prefix"_in"$i"_input ]; then
 				unlink $environment_path/"$prefix"_in"$i"_input
 			fi
+			if [ -L $environment_path/"$prefix"_in"$i"_crit ]; then
+				unlink $environment_path/"$prefix"_in"$i"_crit
+			fi
+			if [ -L $environment_path/"$prefix"_in"$i"_lcrit ]; then
+				unlink $environment_path/"$prefix"_in"$i"_lcrit
+			fi
 			if [ -L $environment_path/"$prefix"_curr"$i"_input ]; then
 				unlink $environment_path/"$prefix"_curr"$i"_input
 			fi
 			if [ -L $environment_path/"$prefix"_power"$i"_input ]; then
 				unlink $environment_path/"$prefix"_power"$i"_input
+			fi
+			if [ -L $thermal_path/"$prefix"_temp"$i"_input ]; then
+				unlink $thermal_path/"$prefix"_temp"$i"_input
+			fi
+			if [ -L $thermal_path/"$prefix"_temp"$i"_max ]; then
+				unlink $thermal_path/"$prefix"_temp"$i"_max
+			fi
+			if [ -L $thermal_path/"$prefix"_temp"$i"_crit ]; then
+				unlink $thermal_path/"$prefix"_temp"$i"_crit
 			fi
 			if [ -L $alarm_path/"$prefix"_in"$i"_alarm ]; then
 				unlink $alarm_path/"$prefix"_in"$i"_alarm
@@ -1400,6 +1415,12 @@ else
 			fi
 			if [ -L $alarm_path/"$prefix"_power"$i"_alarm ]; then
 				unlink $alarm_path/"$prefix"_power"$i"_alarm
+			fi
+			if [ -L $alarm_path/"$prefix"_temp"$i"_max_alarm ]; then
+				unlink $alarm_path/"$prefix"_temp"$i"_max_alarm
+			fi
+			if [ -L $alarm_path/"$prefix"_temp"$i"_crit_alarm ]; then
+				unlink $alarm_path/"$prefix"_temp"$i"_crit_alarm
 			fi
 		done
 	fi
