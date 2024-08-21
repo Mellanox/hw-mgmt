@@ -1232,9 +1232,6 @@ if [ "$1" == "add" ]; then
 					mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
 				fi
 			done
-			if [ -e "$devtree_file" ]; then
-				connect_dynamic_board_devices "dpu_board""$slot_num"
-			fi
 			;;
 		*)
 			;;

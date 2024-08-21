@@ -3014,7 +3014,6 @@ do_start()
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
-	set_dpu_pci_id
 	set_sodimms
 
 	asic_control=$(< $config_path/asic_control) 
