@@ -683,6 +683,11 @@ if [ "$1" == "add" ]; then
 		init_hotplug_events "$dpu_events_file" "$3$4" 2
 		init_hotplug_events "$dpu_events_file" "$3$4" 3
 		init_hotplug_events "$dpu_events_file" "$3$4" 4
+		# Based on the DPU ready signal, connect the DPU sensors
+		load_dpu_sensors 1
+		load_dpu_sensors 2
+		load_dpu_sensors 3
+		load_dpu_sensors 4
 		# BF3 debugfs temperature sensors linkage
 		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
 			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
