@@ -393,7 +393,7 @@ def current_milli_time():
         get current time in milliseconds
     @return: int value time in milliseconds
     """
-    return round(time.time() * 1000)
+    return round(time.clock_gettime(1) * 1000)
 
 
 # ----------------------------------------------------------------------
@@ -2494,6 +2494,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
+            self.log.notice("Additional delay defined in ./config/thermal_delay ({} sec).".format(thermal_delay), 1)
             timeout = current_milli_time() + 1000 * thermal_delay
             while timeout > current_milli_time():
                 if not self.write_pwm(self.pwm_target):
