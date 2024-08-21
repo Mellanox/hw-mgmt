@@ -748,3 +748,18 @@ disconnect_dynamic_board_devices()
 		disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
 	done
 }
+
+load_dpu_sensors()
+{
+	local dpu_num=$1
+	local dpu_ready
+
+	if [ -f $hw_management_path/system/dpu${dpu_num}_ready ]; then
+		dpu_ready=$(< $hw_management_path/system/dpu${dpu_num}_ready)
+		if [ ${dpu_ready} -eq 1 ]; then
+			if [ -e "$devtree_file" ]; then
+				connect_dynamic_board_devices "dpu_board""$dpu_num"
+			fi
+		fi
+	fi
+}
