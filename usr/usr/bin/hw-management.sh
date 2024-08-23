@@ -2546,6 +2546,15 @@ load_modules()
 			modprobe drivetemp
 		fi
 	fi
+	case $cpu_type in
+		$AMD_SNW_CPU)
+			# coretemp driver supported only on Intel chips
+			;;
+		*)
+			modprobe coretemp
+			;;
+	esac
+
 	case $sku in
 		HI162|HI166|HI167|HI169)	# Juliet
 			modprobe i2c_asf
