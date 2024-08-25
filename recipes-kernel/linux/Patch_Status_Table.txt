@@ -334,6 +334,8 @@ Kernel-5.10
 |0334-platform-mellanox-mlx-platform-Fix-FAN-tacho-reading.patch  |                    | Bugfix upstream                          |            | MQM9700                                        |
 |0335-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted                      |            | SN4280                                         |
 |0336-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            |                                                |
+|0337-crypto-ccp-Reject-SEV-commands-with-mismatching-comm.patch  | d5760dee127b       | Bugfix upstream                          | 5.1.191    |                                                |
+|0338-crypto-ccp-Play-nice-with-vmalloc-d-memory-for-SEV-c.patch  | 8347b99473a3       | Bugfix upstream                          | 5.1.191    |                                                |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
 |7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
 |7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
