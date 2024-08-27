@@ -1,8 +1,7 @@
-From 1193879b92e665c100056085385ffdb4ab2715cb Mon Sep 17 00:00:00 2001
+From cab70d10e4fb8e89a5600882dcaa951e2c32fcbe Mon Sep 17 00:00:00 2001
 From: Jitendra Lanka <jlanka@nvidia.com>
 Date: Fri, 13 Jan 2023 15:21:02 -0500
-Subject: [PATCH backport 5.10 2/6] mlxbf-ptm: power and thermal management
- debugfs driver
+Subject: [PATCH] mlxbf-ptm: power and thermal management debugfs driver
 
 mlxbf-ptm driver implements debugfs interface for Bluefield
 devices power and thermal management. It provides some parameters
@@ -18,38 +17,38 @@ Signed-off-by: Jitendra Lanka <jlanka@nvidia.com>
  create mode 100644 drivers/platform/mellanox/mlxbf-ptm.c
 
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index a5231c23a..48bd61f61 100644
+index 2f3227774..d871eb8f9 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -106,6 +106,16 @@ config MLXBF_TRIO
- 	 This driver supports the TRIO PCIe root complex interface on
- 	 Mellanox BlueField SoCs.
+@@ -69,6 +69,16 @@ config MLXBF_BOOTCTL
+ 	  to the userspace tools, to be used in conjunction with the eMMC
+ 	  device driver to do necessary initial swap of the boot partition.
  
 +config MLXBF_PTM
-+	tristate "BlueField Power and Thermal Management debugfs interface"
-+	depends on ARM64
-+	depends on DEBUG_FS
-+	help
-+		If you say yes to this option, support will be added for the
-+		mlxbf-ptm driver.  This driver provides debugfs interface
-+		to userspace with information related to power and thermal
-+		management of the Bluefield device.
++       tristate "BlueField Power and Thermal Management debugfs interface"
++       depends on ARM64
++       depends on DEBUG_FS
++       help
++               If you say yes to this option, support will be added for the
++               mlxbf-ptm driver.  This driver provides debugfs interface
++               to userspace with information related to power and thermal
++               management of the Bluefield device.
 +
- source "drivers/platform/mellanox/mlxbf_pka/Kconfig"
- 
  config NVSW_SN2201
+ 	tristate "Nvidia SN2201 platform driver support"
+ 	depends on REGMAP
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 7a4b90ed5..d30483021 100644
+index 6af37ee88..1aef0f3ea 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -8,6 +8,7 @@ obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
+@@ -5,6 +5,7 @@
+ #
+ obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
  obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
- obj-$(CONFIG_MLXBF_TRIO)	+= mlx-trio.o
- obj-$(CONFIG_MLXBF_LIVEFISH)	+= mlxbf-livefish.o
-+obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
++obj-$(CONFIG_MLXBF_PTM)        += mlxbf-ptm.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
- obj-$(CONFIG_MLXBF_PKA)         += mlxbf_pka/
+ obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 diff --git a/drivers/platform/mellanox/mlxbf-ptm.c b/drivers/platform/mellanox/mlxbf-ptm.c
 new file mode 100644
 index 000000000..307ba1f33
@@ -253,4 +252,3 @@ index 000000000..307ba1f33
 +MODULE_VERSION("1.0");
 -- 
 2.20.1
-

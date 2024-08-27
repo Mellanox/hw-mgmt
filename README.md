@@ -43,7 +43,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - P4300-A00
 
 ## Supported Kernel versions:
-- 5.10.189
+- 5.10.218
 - 6.1.38
 
 ## Sysfs attributes:
