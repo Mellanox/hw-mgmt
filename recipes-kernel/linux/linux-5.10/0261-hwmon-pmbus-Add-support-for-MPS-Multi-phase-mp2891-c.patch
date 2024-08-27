@@ -187,8 +187,8 @@ diff --git a/drivers/hwmon/pmbus/Makefile b/drivers/hwmon/pmbus/Makefile
 index baab12bbf..cc4e09cc4 100644
 --- a/drivers/hwmon/pmbus/Makefile
 +++ b/drivers/hwmon/pmbus/Makefile
-@@ -26,6 +26,7 @@ obj-$(CONFIG_SENSORS_MAX34440)	+= max34440.o
- obj-$(CONFIG_SENSORS_DNI_DPS460) += dni_dps460.o
+@@ -25,6 +25,7 @@ obj-$(CONFIG_SENSORS_MAX31785)	+= max31785.o
+ obj-$(CONFIG_SENSORS_MAX34440)	+= max34440.o
  obj-$(CONFIG_SENSORS_MAX8688)	+= max8688.o
  obj-$(CONFIG_SENSORS_MP2888)	+= mp2888.o
 +obj-$(CONFIG_SENSORS_MP2891)    += mp2891.o

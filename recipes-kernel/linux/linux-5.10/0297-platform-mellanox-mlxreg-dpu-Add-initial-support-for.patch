@@ -56,17 +56,17 @@ index 97eddcec8..c68a66269 100644
  	tristate "Mellanox platform hotplug driver support"
  	depends on REGMAP
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index d46e5670e..cfcacc6a2 100644
+index 3235a6c6b..ff8351e8a 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -10,6 +10,7 @@ obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
- obj-$(CONFIG_MLXBF_TRIO)	+= mlx-trio.o
- obj-$(CONFIG_MLXBF_LIVEFISH)	+= mlxbf-livefish.o
- obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
-+obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
+@@ -7,6 +7,7 @@ obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
+ obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
+ obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
+ obj-$(CONFIG_MLXBF_PTM)        += mlxbf-ptm.o
++obj-$(CONFIG_MLXREG_DPU)       += mlxreg-dpu.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
- obj-$(CONFIG_MLXBF_PKA)         += mlxbf_pka/
+ obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
 new file mode 100644
 index 000000000..a61c13647
@@ -700,4 +700,3 @@ index 000000000..a61c13647
 +
 -- 
 2.14.1
-
