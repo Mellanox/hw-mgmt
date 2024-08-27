@@ -55,16 +55,16 @@ index 3eba14fac..72dae6ace 100644
  	tristate "MPS MP2888"
  	help
 diff --git a/drivers/hwmon/pmbus/Makefile b/drivers/hwmon/pmbus/Makefile
-index 60151ac03..62585eeeb 100644
+index f92d10f5e..8cfae7a6b 100644
 --- a/drivers/hwmon/pmbus/Makefile
 +++ b/drivers/hwmon/pmbus/Makefile
 @@ -24,6 +24,7 @@ obj-$(CONFIG_SENSORS_MAX20751)	+= max20751.o
  obj-$(CONFIG_SENSORS_MAX31785)	+= max31785.o
  obj-$(CONFIG_SENSORS_MAX34440)	+= max34440.o
  obj-$(CONFIG_SENSORS_MAX8688)	+= max8688.o
-+obj-$(CONFIG_SENSORS_MP2855)	+= mp2855.o
++obj-$(CONFIG_SENSORS_MP2855)    += mp2855.o
  obj-$(CONFIG_SENSORS_MP2888)	+= mp2888.o
- obj-$(CONFIG_SENSORS_MP2891)	+= mp2891.o
+ obj-$(CONFIG_SENSORS_MP2891)    += mp2891.o
  obj-$(CONFIG_SENSORS_MP2975)	+= mp2975.o
 diff --git a/drivers/hwmon/pmbus/mp2855.c b/drivers/hwmon/pmbus/mp2855.c
 new file mode 100644
