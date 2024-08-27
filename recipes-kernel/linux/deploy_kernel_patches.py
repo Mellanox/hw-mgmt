@@ -241,7 +241,7 @@ def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
             print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
             ret = None
         elif int(patch_kver_lst[2]) <= int(target_kver_lst[2]):
-            ret = candidate_folder
+            ret = None
     patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return ret
 
