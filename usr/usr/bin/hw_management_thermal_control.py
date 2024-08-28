@@ -1413,13 +1413,13 @@ class thermal_sensor(system_device):
                 value = self.read_file_int(self.file_input, self.scale)
                 self.handle_reading_file_err(self.file_input, reset=True)
             except BaseException:
-                self.log.info("Wrong value reading from file: {}".format(self.file_input))
+                self.log.warn("Wrong value reading from file: {}".format(self.file_input))
                 self.handle_reading_file_err(self.file_input)
         self.update_value(value)
 
         if self.value > self.val_max:
             pwm = self.pwm_max
-            self.log.info("{} value({}) more then max({}). Set pwm {}".format(self.name,
+            self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
                                                                               self.value,
                                                                               self.val_max,
                                                                               pwm))
@@ -1564,7 +1564,7 @@ class thermal_module_sensor(system_device):
                 if self.value != 0:
                     if self.value > self.val_max:
                         pwm = self.pwm_max
-                        self.log.info("{} value({}) more then max({}). Set pwm {}".format(self.name,
+                        self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
                                                                                           self.value,
                                                                                           self.val_max,
                                                                                           pwm))
@@ -2110,7 +2110,7 @@ class fan_sensor(system_device):
             value = 0
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
-                self.log.info("Missing file {}".format(rpm_file_name))
+                self.log.warn("Missing file {}".format(rpm_file_name))
             else:
                 try:
                     value = int(self.read_file(rpm_file_name))
@@ -2276,7 +2276,7 @@ class ambiant_thermal_sensor(system_device):
 
         if self.value > self.val_max:
             self.update_value(self.val_max)
-            self.log.info("{} value({}) more then max({}). Set value {}".format(self.name,
+            self.log.warn("{} value({}) more then max({}). Set value {}".format(self.name,
                                                                                 self.value,
                                                                                 self.val_max,
                                                                                 self.val_max))
