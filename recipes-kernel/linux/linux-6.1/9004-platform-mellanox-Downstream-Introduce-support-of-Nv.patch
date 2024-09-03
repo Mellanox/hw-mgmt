@@ -180,10 +180,10 @@ index bfa2588782bd..09390c38723a 100644
 +/* Platform led data for L1 scale out switch systems */
 +static struct mlxreg_core_data mlxplat_mlxcpld_l1_scale_out_led_data[] = {
 +	{
-+                .label = "status:green.",
-+                .reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
-+                .mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK
-+        },
++		.label = "status:green",
++ 		.reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
++ 		.mask = MLXPLAT_CPLD_LED_LO_NIBBLE_MASK
++	},
 +	{
 +		.label = "status:amber",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LED1_OFFSET,
