@@ -2273,14 +2273,9 @@ class ambiant_thermal_sensor(system_device):
             self.update_value(value)
 
         if self.value > self.val_max:
-            self.update_value(self.val_max)
-            self.log.warn("{} value({}) more then max({}). Set value {}".format(self.name,
-                                                                                self.value,
-                                                                                self.val_max,
-                                                                                self.val_max))
+            self.log.debug("{} value({}) above max({})".format(self.name, self.value, self.val_max))
         elif self.value < self.val_min:
-            self.update_value(self.val_min)
-            self.log.warn("{} value {} less then min({})".format(self.name, self.value, self.val_min))
+            self.log.debug("{} value {} less min({})".format(self.name, self.value, self.val_min))
 
         self.pwm = self.calculate_pwm_formula()
 
