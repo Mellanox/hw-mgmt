@@ -112,7 +112,8 @@
 		"^fan9_(\\w+)$" : "Chassis_Fan_Drawer-5+RPM+1",
 		"^fan10_(\\w+)$" : "Chassis_Fan_Drawer-5+RPM+2",
 		"^fan11_(\\w+)$" : "Chassis_Fan_Drawer-6+RPM+1",
-		"^fan12_(\\w+)$" : "Chassis_Fan_Drawer-6+RPM+2"
+		"^fan12_(\\w+)$" : "Chassis_Fan_Drawer-6+RPM+2",
+		"drivetemp" : "SSD+Temp"
 		},
 	"labels_scale_HI162_rev1_array" : {
 	},
@@ -225,7 +226,8 @@
 		"^fan5_(\\w+)$" : "Chassis_Fan_Drawer-3+RPM+1",
 		"^fan6_(\\w+)$" : "Chassis_Fan_Drawer-3+RPM+2",
 		"^fan7_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+1",
-		"^fan8_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+2"
+		"^fan8_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+2",
+		"drivetemp" : "SSD+Temp"
 		},
 	"labels_scale_HI166_rev1_array" : {
 	},
@@ -338,7 +340,8 @@
 		"^fan5_(\\w+)$" : "Chassis_Fan_Drawer-3+RPM+1",
 		"^fan6_(\\w+)$" : "Chassis_Fan_Drawer-3+RPM+2",
 		"^fan7_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+1",
-		"^fan8_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+2"
+		"^fan8_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+2",
+		"drivetemp" : "SSD+Temp"
 	},
 	"labels_scale_HI167_rev1_array" : {
 	},
@@ -451,7 +454,8 @@
 		"^fan5_(\\w+)$" : "Chassis_Fan_Drawer-3+RPM+1",
 		"^fan6_(\\w+)$" : "Chassis_Fan_Drawer-3+RPM+2",
 		"^fan7_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+1",
-		"^fan8_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+2"
+		"^fan8_(\\w+)$" : "Chassis_Fan_Drawer-4+RPM+2",
+		"drivetemp" : "SSD+Temp"
 	},
 	"labels_scale_HI169_rev1_array" : {
 	}
