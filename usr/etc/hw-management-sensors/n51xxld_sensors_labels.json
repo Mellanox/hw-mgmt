@@ -3,7 +3,7 @@
 	"labels_HI162_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
-		"fan_amb" : "Ambient+Fan+Side+Temp",
+		"mng_amb" : "Ambient+MNG+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
 		"voltmon1_temp1" : "PMIC-1+Temp+1",
@@ -120,7 +120,7 @@
 	"labels_HI166_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
-		"fan_amb" : "Ambient+Fan+Side+Temp",
+		"mng_amb" : "Ambient+MNG+Temp",
 		"fpga" : "FPGA+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
@@ -234,7 +234,7 @@
 	"labels_HI167_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
-		"fan_amb" : "Ambient+Fan+Side+Temp",
+		"mng_amb" : "Ambient+MNG+Temp",
 		"fpga" : "FPGA+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
@@ -348,7 +348,7 @@
 	"labels_HI169_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
-		"fan_amb" : "Ambient+Fan+Side+Temp",
+		"mng_amb" : "Ambient+MNG+Temp",
 		"fpga" : "FPGA+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
