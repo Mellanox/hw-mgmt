@@ -151,7 +151,7 @@ Kernel-5.10
 |0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Downstream accepted                      |            | Modular SN4800                                 |
 |0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Downstream accepted                      |            | Modular SN4800                                 |
-|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted;os[sonic,opt,nvos,dvs]|            | Modular SN4800 squashed (required rebasing)    |
+|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted;os[sonic,opt,nvos,dvs]|           | Modular SN4800 squashed (required rebasing)    |
 |0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
 |0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
@@ -190,8 +190,8 @@ Kernel-5.10
 |0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                |
 |0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream accepted                      |            | disable upstream patch, must exist from 5.10.74|
 |0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
-|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3-COME                                       |
-|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3-COME                                       |
+|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3                                            |
+|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3                                            |
 |0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
 |0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
 |0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
@@ -199,55 +199,55 @@ Kernel-5.10
 |0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
 |0190-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
 |0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
-|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            | BF3-COME                                       |
-|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            | BF3-COME                                       |
-|0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            | BF3-COME                                       |
-|0195-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch  |                    | Bugfix upstream                          | 5.10.175   | BF3-COME accepted in 6.1                       |
+|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            | BF3                                            |
+|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            | BF3                                            |
+|0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            | BF3                                            |
+|0195-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch  |                    | Bugfix upstream                          |  5.10.175  | BF3                                            |
 |0196-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
 |0197-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
 |0198-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
 |0199-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            | P4262                                          |
-|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  | BF3-COME                                       |
-|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0211-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0212-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0213-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0214-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0215-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0216-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0217-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0218-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Downstream;skip[sonic]                   |            | BF3-COME                                      |
-|0219-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0220-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0221-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0222-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0223-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0224-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0225-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0226-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0227-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0228-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0229-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0230-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0231-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0232-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0233-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0234-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0235-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0236-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0237-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0238-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
+|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0211-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0212-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0213-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0214-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0215-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0216-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0217-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0218-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0219-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0220-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0221-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0222-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0223-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0224-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0225-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0226-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0227-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0228-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0229-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0230-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0231-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0232-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0233-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0234-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0235-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0236-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0237-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0238-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0239-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix upstream                          |  5.10.173  |                                                |
-|0240-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
+|0240-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0241-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch  |                    | Downstream accepted                      |            |                                                |
 |0242-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            | P4262                                          |
 |0243-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
@@ -260,22 +260,22 @@ Kernel-5.10
 |0250-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
 |0251-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
 |0252-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
-|0253-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0254-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0255-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0255-UBUNTU-SAUCE-gpio-mmio-handle-ngpios-properly-in-bgp.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0256-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
+|0253-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0254-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0255-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0255-UBUNTU-SAUCE-gpio-mmio-handle-ngpios-properly-in-bgp.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0256-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0257-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Downstream accepted                      |            | SN3750SX                                       |
-|0258-mlxsw-i2c-Limit-single-transaction.patch                    |                    | Downstream accepted                      | 5.10.195   |                                                |
-|0259-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Downstream accepted                      |            | BF3-COME                                       |
+|0258-mlxsw-i2c-Limit-single-transaction.patch                    |                    | Downstream accepted                      |  5.10.195  |                                                |
+|0259-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Downstream accepted                      |            | BF3                                            |
 |0260-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Downstream accepted                      |            |                                                |
 |0261-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending;os[sonic,opt,nvos,dvs]   |            |                                                |
 |0262-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
-|0262-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0263-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0264-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0265-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0266-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
+|0262-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0263-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0264-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0265-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0266-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0267-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
 |0268-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Feature pending                          |            |                                                |
 |0269-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream accepted                      |            |                                                |
@@ -292,16 +292,16 @@ Kernel-5.10
 |0280-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
 |0281-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
 |0282-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted;os[sonic]            |            |                                                |
-|0283-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0284-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Downstream;skip[sonic]                   | 5.10.195   | BF3-COME                                       |
-|0285-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Downstream;skip[sonic]                   | 5.10.195   | BF3-COME                                       |
-|0286-UBUNTU-SAUCE-mlxbf-tmfifo.c-Amend-previous-tmfifo-pa.patch  |                    | Downstream;skip[sonic]                   | 5.10.195   | BF3-COME                                       |
-|0287-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
-|0288-mlxbf_gige-fix-white-space-in-mlxbf_gige_eth_ioctl.patch    |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
+|0283-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0284-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Downstream;skip[sonic,cumulus]           | 5.10.195   | BF3                                            |
+|0285-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Downstream;skip[sonic,cumulus]           | 5.10.195   | BF3                                            |
+|0286-UBUNTU-SAUCE-mlxbf-tmfifo.c-Amend-previous-tmfifo-pa.patch  |                    | Downstream;skip[sonic,cumulus]           | 5.10.195   | BF3                                            |
+|0287-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0288-mlxbf_gige-fix-white-space-in-mlxbf_gige_eth_ioctl.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0290-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
 |0291-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
 |0292-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
-|0293-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic]                   |            | BF3-COME                                       |
+|0293-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0294-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
 |0295-mlxsw-i2c-DBG-Add-debug-output-for-failed-transactio.patch  |                    | Downstream accepted                      |            |                                                |
 |0296-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
@@ -404,12 +404,12 @@ Kernel-6.1
 |0003-platform-mellanox-Cosmetic-changes-rename-to-more-co.patch  | acc6ea304590       | Feature upstream                         |            |                                                |
 |0004-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         |
 |0005-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
-|0006-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3-COME                                       |
-|0007-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3-COME                                       |
+|0006-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3                                            |
+|0007-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3                                            |
 |0008-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
-|0009-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc781566       | Feature upstream                         |            | BF3-COME                                       |
-|0010-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357       | Feature upstream                         |            | BF3-COME                                       |
-|0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3-COME                                       |
+|0009-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc781566       | Feature upstream                         |            | BF3                                            |
+|0010-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357       | Feature upstream                         |            | BF3                                            |
+|0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3                                            |
 |0012-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            | Accepted for 6.4                               |
 |0013-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | Accepted for 6.4                               |
 |0014-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | Accepted for 6.4                               |
