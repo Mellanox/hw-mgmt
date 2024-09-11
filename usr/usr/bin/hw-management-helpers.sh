@@ -66,7 +66,7 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
 			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
 			 "vdd_cpu_alert" "vddq_alert")
-l1_power_events=("power_button")
+l1_power_events=("power_button graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
 udev_event_log="/var/log/udev_events.log"
