@@ -912,10 +912,10 @@ index bfa2588782bd..09390c38723a 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "power_button",
-+		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_OFFSET,
-+		.mask = GENMASK(7, 0) & ~MLXPLAT_CPLD_PWR_BUTTON_MASK,
-+		.mode = 0444,
++		.label = "graseful_pwr_off",
++		.reg = MLXPLAT_CPLD_LPC_REG_GP_RST_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
 +	},
 +	{
 +		.label = "power_button_evt",
