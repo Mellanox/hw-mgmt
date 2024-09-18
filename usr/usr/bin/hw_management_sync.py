@@ -444,7 +444,9 @@ def sync_fan(fan_id, val):
 
 # ----------------------------------------------------------------------
 def asic_temp_populate(arg_list, arg):
-    ''
+    """
+    @summary: Update asic attributes
+    """
     arg = int(arg)
     if arg >= 0:
         val = arg * 125
@@ -473,32 +475,45 @@ def asic_temp_populate(arg_list, arg):
 
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, arg):
-    ''
-    arg = int(arg)
-    if arg >= 0:
-        val = arg * 125
-    else:
-        val = 0xffff + arg + 1
+    """
+    @summary: Update module attributes
+    """
+    try:
+        arg = int(arg)
+        if arg >= 0:
+            val = arg * 125
+        else:
+            val = 0xffff + arg + 1
+        temp_crit = "70000"
+        temp_emergency = "75000"
+        temp_fault = "0"
+        temp_trip_crit = "120000"
+    except:
+        val = ""
+        temp_crit = ""
+        temp_emergency = ""
+        temp_fault = ""
+        temp_trip_crit = ""
+        
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val))
 
     f_name = "/var/run/hw-management/thermal/{}_temp_crit".format(arg_list[0])
-    if not os.path.isfile(f_name):
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("70000")
+    with open(f_name, 'w', encoding="utf-8") as f:
+        f.write(temp_crit)
 
-        f_name = "/var/run/hw-management/thermal/{}_temp_emergency".format(arg_list[0])
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("75000")
+    f_name = "/var/run/hw-management/thermal/{}_temp_emergency".format(arg_list[0])
+    with open(f_name, 'w', encoding="utf-8") as f:
+        f.write(temp_emergency)
 
-        f_name = "/var/run/hw-management/thermal/{}_temp_fault".format(arg_list[0])
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("0")
+    f_name = "/var/run/hw-management/thermal/{}_temp_fault".format(arg_list[0])
+    with open(f_name, 'w', encoding="utf-8") as f:
+        f.write(temp_fault)
 
-        f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("120000")
+    f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
+    with open(f_name, 'w', encoding="utf-8") as f:
+        f.write(temp_trip_crit)
 
 # ----------------------------------------------------------------------
 def update_attr(attr_prop):
@@ -509,25 +524,27 @@ def update_attr(attr_prop):
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
+        fn_name = attr_prop["fn"]
+        argv = attr_prop["arg"]
         fin = attr_prop.get("fin", None)
+        # File content based trigger
         if fin:
-            fin = fin.format(hwmon=attr_prop.get("hwmon", ""))
-            if os.path.isfile(fin):
+            fin_name = fin.format(hwmon=attr_prop.get("hwmon", ""))
+            if os.path.isfile(fin_name):
                 try:
-                    with open(fin, 'r', encoding="utf-8") as f:
+                    with open(fin_name, 'r', encoding="utf-8") as f:
                         val = f.read().rstrip('\n')
                     if "oldval" not in attr_prop.keys() or attr_prop["oldval"] != val:
-                        fn_name = attr_prop["fn"]
-                        argv = attr_prop["arg"]
                         globals()[fn_name](argv, val)
                         attr_prop["oldval"] = val
                 except:
+                    # File exists but read error
+                    globals()[fn_name](argv, "")
+                    attr_prop["oldval"] = ""
                     pass
             else:
                 attr_prop["oldval"] = None
         else:
-            fn_name = attr_prop["fn"]
-            argv = attr_prop["arg"]
             globals()[fn_name](argv, None)
 
 def init_attr(attr_prop):
