@@ -221,6 +221,7 @@ index 000000000..8e551b9c5
 + * Note: command PMBUS_READ_DUTY_CYCLE (0x94) is re-purposed for reading input power.
 + *	 command PMBUS_READ_FREQUENCY (0x95) is re-purposed for reading input current.
 + */
++#define MP2891_PMBUS_VOUT_MIN		0x2b
 +#define MP2891_VOUT_OV_FAULT_LIMIT_R1	0x40
 +#define MP2891_VOUT_UV_FAULT_LIMIT_R1	0x44
 +#define MP2891_MFR_IIN_RPT_EST		0x53
@@ -312,7 +313,7 @@ index 000000000..8e551b9c5
 +{
 +	const struct pmbus_driver_info *info = pmbus_get_driver_info(client);
 +	struct mp2891_data *data = to_mp2891_data(info);
-+	int off, ret;
++	int ret;
 +
 +	switch (reg) {
 +	case PMBUS_READ_VOUT:
@@ -338,14 +339,17 @@ index 000000000..8e551b9c5
 +			return ret;
 +		return DIV_ROUND_CLOSEST(ret & GENMASK(7, 0), 8) * 1000;
 +	case PMBUS_VOUT_UV_FAULT_LIMIT:
-+	case PMBUS_VOUT_OV_FAULT_LIMIT:
-+		ret = pmbus_read_word_data(client, page, phase, reg);
++		ret = pmbus_read_word_data(client, page, phase, MP2891_PMBUS_VOUT_MIN);
 +		if (ret <= 0)
 +			return ret;
-+		off = (reg == PMBUS_VOUT_UV_FAULT_LIMIT) ? MP2891_MFR_UVP_OFFSET_DEFAULT :
-+							   MP2891_MFR_OVP_OFFSET_DEFAULT;
-+		off = MP2891_MFR_OVP_UVP_OFFSET_GET(ret, off);
-+		return DIV_ROUND_CLOSEST(data->vid_ref[page] + off, 100);
++		ret = (ret & GENMASK(10, 0)) * data->vid_step[page] * 105;
++		return DIV_ROUND_CLOSEST(ret, 10000);
++	case PMBUS_VOUT_OV_FAULT_LIMIT:
++		ret = pmbus_read_word_data(client, page, phase, PMBUS_VOUT_MAX);
++		if (ret <= 0)
++			return ret;
++		ret = (ret & GENMASK(10, 0)) * data->vid_step[page] * 95;
++		return DIV_ROUND_CLOSEST(ret, 10000);
 +	case PMBUS_IOUT_UC_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
 +		return ret <= 0 ? ret : DIV_ROUND_CLOSEST((ret & GENMASK(7, 0)) *
