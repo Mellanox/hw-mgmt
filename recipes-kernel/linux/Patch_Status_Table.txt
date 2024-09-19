@@ -100,10 +100,9 @@ Kernel-5.10
 |0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                |
 |0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                |
 |0097-1-mlxsw-Use-u16-for-local_port-field.patch                  |                    | Downstream;skip[sonic]                   |            |                                                |
-|0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch                    |                    | Downstream;skip[sonic]                   | 5.10.195   |                                                |
+|0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch                    |                    | Downstream                               | 5.10.195   |                                                |
 |0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch          |                    | Downstream;skip[sonic]                   |            |                                                |
 |0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch           |                    | Downstream;skip[sonic]                   |            |                                                |
-|0098-2-Revert-mlxsw-i2c-Fix-chunk-size-setting.patch             |                    | Downstream;skip[sonic]                   |            |                                                |
 |0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch   |                    | Downstream;skip[sonic]                   |            |                                                |
 |0098-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | IB Disable FW update                           |
 |0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Downstream accepted                      |            | Modular SN4800                                 |
@@ -305,9 +304,9 @@ Kernel-5.10
 |0294-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
 |0295-mlxsw-i2c-DBG-Add-debug-output-for-failed-transactio.patch  |                    | Downstream accepted                      |            |                                                |
 |0296-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
-|0297-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted                      |            | SN4280                                         |
-|0298-platform-mellanox-mlx-platform-Fix-FAN-tacho-reading.patch  |                    | Bugfix upstream                          |            | MQM9700                                        |
-|0299-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted                      |            | SN4280                                         |
+|0297-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted;skip[sonic]          |            | SN4280                                         |
+|0298-platform-mellanox-mlx-platform-Fix-FAN-tacho-reading.patch  |                    | Downstream accepted                      |            | MQM9700                                        |
+|0299-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted;skip[sonic]          |            | SN4280                                         |
 |0300-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            |                                                |
 |0301-crypto-ccp-Reject-SEV-commands-with-mismatching-comm.patch  | d5760dee127b       | Bugfix upstream                          | 5.1.184    |                                                |
 |0302-crypto-ccp-Play-nice-with-vmalloc-d-memory-for-SEV-c.patch  | 8347b99473a3       | Bugfix upstream                          | 5.1.184    |                                                |
