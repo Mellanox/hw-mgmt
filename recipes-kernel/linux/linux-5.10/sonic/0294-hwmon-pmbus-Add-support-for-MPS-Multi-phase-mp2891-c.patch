@@ -21,7 +21,7 @@ This device supports:
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- Documentation/hwmon/mp2891.rst | 128 ++++++++++
+ Documentation/hwmon/mp2891.rst | 128 +++++++++
  drivers/hwmon/pmbus/Kconfig    |   9 +
  drivers/hwmon/pmbus/Makefile   |   1 +
  drivers/hwmon/pmbus/mp2891.c   | 423 +++++++++++++++++++++++++++++++++
@@ -197,7 +197,7 @@ index b1b9a3c8b..60151ac03 100644
  obj-$(CONFIG_SENSORS_TPS40422)	+= tps40422.o
 diff --git a/drivers/hwmon/pmbus/mp2891.c b/drivers/hwmon/pmbus/mp2891.c
 new file mode 100644
-index 000000000..3b9db80cd
+index 000000000..38b5365f9
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp2891.c
 @@ -0,0 +1,423 @@
@@ -238,6 +238,8 @@ index 000000000..3b9db80cd
 +#define MP2891_MFR_UVP_REF_SEL_R1	BIT(12)
 +#define MP2891_MFR_UVP_DELTA_R1		GENAMSK(11, 8)
 +#define MP2891_MFR_UVP_ABS_LIMIT_R1	GENMASK(8, 0)
++#define MP2891_MFR_UVP_OFFSET_DEFAULT	(-5000)
++#define MP2891_MFR_OVP_OFFSET_DEFAULT	5000
 +
 +#define MP2891_MFR_OVP_UVP_OFFSET_GET(ret, off) \
 +	(((((ret) & GENMASK(11, 8)) >> 8) + 1) * (off))
@@ -251,6 +253,8 @@ index 000000000..3b9db80cd
 +#define MP2975_IOUT_OC_LIMIT_UNIT	4
 +#define MP2975_PIN_LIMIT_UNIT		2
 +#define MP2975_VIN_UNIT			32
++#define MP2975_IOUT_UC_LIMIT_SCALE	124
++#define MP2975_IOUT_UC_LIMIT_UNIT	25600
 +#define MP2975_TEMP_LIMIT_OFFSET	40
 +
 +#define MP2891_PAGE_NUM			2
@@ -313,9 +317,6 @@ index 000000000..3b9db80cd
 +	switch (reg) {
 +	case PMBUS_READ_VOUT:
 +		return mp2891_read_vout(client, page, phase, reg);
-+	case PMBUS_READ_IOUT:
-+		ret = pmbus_read_word_data(client, page, phase, reg);
-+		return ret <= 0 ? ret : DIV_ROUND_CLOSEST((ret & GENMASK(10, 0)) * data->iout_scale[page] * 100, 32);
 +	case PMBUS_READ_VIN:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
 +		if (ret <= 0)
@@ -331,26 +332,26 @@ index 000000000..3b9db80cd
 +	case PMBUS_OT_FAULT_LIMIT:
 +		return (pmbus_read_word_data(client, page, phase, reg) & GENMASK(7, 0)) -
 +			MP2975_TEMP_LIMIT_OFFSET;
-+	case PMBUS_VIN_UV_FAULT_LIMIT:
-+		ret = pmbus_read_word_data(client, page, phase, reg);
-+		if (ret <= 0)
-+			return ret;
-+		return DIV_ROUND_CLOSEST(ret & GENMASK(9, 0), 32) * 1000;
 +	case PMBUS_VIN_OV_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
 +		if (ret <= 0)
 +			return ret;
 +		return DIV_ROUND_CLOSEST(ret & GENMASK(7, 0), 8) * 1000;
 +	case PMBUS_VOUT_UV_FAULT_LIMIT:
-+		ret = pmbus_read_word_data(client, page, phase, reg);
-+		off = (ret & GENMASK(11, 8)) >> 8;
-+		ret = (ret & GENMASK(7, 0)) * 5;
-+		if (off > 0 && ret < 0)
-+			return 0;
-+		return ret;
 +	case PMBUS_VOUT_OV_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
-+		return (ret & 0xFF) * 20;
++		if (ret <= 0)
++			return ret;
++		off = (reg == PMBUS_VOUT_UV_FAULT_LIMIT) ? MP2891_MFR_UVP_OFFSET_DEFAULT :
++							   MP2891_MFR_OVP_OFFSET_DEFAULT;
++		off = MP2891_MFR_OVP_UVP_OFFSET_GET(ret, off);
++		return DIV_ROUND_CLOSEST(data->vid_ref[page] + off, 100);
++	case PMBUS_IOUT_UC_FAULT_LIMIT:
++		ret = pmbus_read_word_data(client, page, phase, reg);
++		return ret <= 0 ? ret : DIV_ROUND_CLOSEST((ret & GENMASK(7, 0)) *
++							   MP2975_IOUT_UC_LIMIT_SCALE,
++							  MP2975_IOUT_UC_LIMIT_UNIT);
++			return ret;
 +	case PMBUS_READ_PIN:
 +		/*
 +		 * From some unknown reason the vendor decide to re-purpose command
@@ -368,14 +369,14 @@ index 000000000..3b9db80cd
 +	case PMBUS_IIN_OC_WARN_LIMIT:
 +		/* Read only from page 0. */
 +		ret = pmbus_read_word_data(client, 0, phase, reg);
-+		return ret <= 0 ? ret : DIV_ROUND_CLOSEST(ret & GENMASK(9, 0), MP2975_IIN_OC_WARN_LIMIT_UNIT);
++		return ret <= 0 ? ret : DIV_ROUND_CLOSEST(ret, MP2975_IIN_OC_WARN_LIMIT_UNIT);
 +	case PMBUS_PIN_OP_WARN_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
-+		return ret <= 0 ? ret : (ret & GENMASK(9, 0)) * MP2975_PIN_LIMIT_UNIT;
++		return ret <= 0 ? ret : ret * MP2975_PIN_LIMIT_UNIT;
 +	case PMBUS_IOUT_OC_WARN_LIMIT:
 +	case PMBUS_IOUT_OC_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
-+		return ret <= 0 ? ret : DIV_ROUND_CLOSEST(ret * data->iout_scale[page] * 10,
++		return ret <= 0 ? ret : DIV_ROUND_CLOSEST(ret * data->iout_scale[page],
 +							  MP2975_IOUT_OC_LIMIT_UNIT);
 +	case PMBUS_UT_WARN_LIMIT:
 +	case PMBUS_UT_FAULT_LIMIT:
@@ -385,7 +386,6 @@ index 000000000..3b9db80cd
 +	case PMBUS_VOUT_UV_WARN_LIMIT:
 +	case PMBUS_POUT_OP_WARN_LIMIT:
 +	case PMBUS_IIN_OC_FAULT_LIMIT:
-+	case PMBUS_IOUT_UC_FAULT_LIMIT:
 +	case PMBUS_POUT_MAX:
 +	case PMBUS_POUT_OP_FAULT_LIMIT:
 +	case PMBUS_MFR_VIN_MIN:
@@ -456,7 +456,7 @@ index 000000000..3b9db80cd
 +	 * bit 13 = 0, the vid_step is defined by bits 15:14:
 +	 * 00b - 6.25mV/LSB, 01b - 5mV/LSB, 10b - 2mV/LSB, 11b - 1mV
 +	 */
-+	if (ret & MP2891_DAC_2P5MV_MASK) {
++	if ((ret & MP2891_DAC_2P5MV_MASK) >> MP2891_VID_STEP_POS) {
 +		data->vid_step[page] = 250;
 +		return mp2891_git_vid_volt_ref(client, data, page);
 +	}
@@ -549,7 +549,7 @@ index 000000000..3b9db80cd
 +	.pages = MP2891_PAGE_NUM,
 +	.format[PSC_VOLTAGE_IN] = direct,
 +	.format[PSC_VOLTAGE_OUT] = direct,
-+	.format[PSC_CURRENT_OUT] = direct,
++	.format[PSC_CURRENT_OUT] = linear,
 +	.format[PSC_TEMPERATURE] = direct,
 +	.format[PSC_POWER] = linear,
 +	.m[PSC_VOLTAGE_IN] = 1,
@@ -558,7 +558,7 @@ index 000000000..3b9db80cd
 +	.m[PSC_TEMPERATURE] = 1,
 +	.R[PSC_VOLTAGE_IN] = 3,
 +	.R[PSC_VOLTAGE_OUT] = 3,
-+	.R[PSC_CURRENT_OUT] = 2,
++	.R[PSC_CURRENT_OUT] = 1,
 +	.R[PSC_TEMPERATURE] = 0,
 +	.func[0] = MP2891_RAIL1_FUNC,
 +	.func[1] = MP2891_RAIL2_FUNC,
@@ -625,5 +625,4 @@ index 000000000..3b9db80cd
 +MODULE_DESCRIPTION("PMBus driver for MPS MP2891 device");
 +MODULE_LICENSE("GPL");
 -- 
-2.20.1
-
+2.14.1
