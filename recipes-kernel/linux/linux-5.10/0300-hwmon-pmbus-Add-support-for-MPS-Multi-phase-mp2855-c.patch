@@ -64,7 +64,7 @@ index f92d10f5e..8cfae7a6b 100644
  obj-$(CONFIG_SENSORS_MAX8688)	+= max8688.o
 +obj-$(CONFIG_SENSORS_MP2855)    += mp2855.o
  obj-$(CONFIG_SENSORS_MP2888)	+= mp2888.o
- obj-$(CONFIG_SENSORS_MP2891)    += mp2891.o
+ obj-$(CONFIG_SENSORS_MP2891)	+= mp2891.o
  obj-$(CONFIG_SENSORS_MP2975)	+= mp2975.o
 diff --git a/drivers/hwmon/pmbus/mp2855.c b/drivers/hwmon/pmbus/mp2855.c
 new file mode 100644
