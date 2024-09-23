@@ -884,6 +884,7 @@ SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c
 # SDK
 SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
 SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="offline", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
 
 # DPU
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add dpu %S %p"
