@@ -3,6 +3,7 @@
 # pylint: disable=C0103
 # pylint: disable=W0718
 # pylint: disable=R0913:
+from _ast import If
 
 ########################################################################
 # Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
@@ -360,7 +361,8 @@ def redfish_get_req(path):
             REDFISH_OBJ.login()
             response = None
 
-        response = json.loads(response)
+        if response:
+            response = json.loads(response)
     return response
 
 # ----------------------------------------------------------------------
