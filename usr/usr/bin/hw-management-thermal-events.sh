@@ -336,20 +336,28 @@ if [ "$1" == "add" ]; then
 						asic_index=${asic_indices[${asic_bus}]}
 						ln -fs "$3""$4" "$cpath"/asic${asic_index}_hwmon
 						check_n_link "$3""$4"/temp1_input "$tpath"/asic${asic_index}
+						check_n_init $tpath/asic${asic_index}_temp_trip_crit 120000
+						check_n_init $tpath/asic${asic_index}_temp_emergency 105000
+						check_n_init $tpath/asic${asic_index}_temp_crit 85000
+						check_n_init $tpath/asic${asic_index}_temp_norm 75000
 						if [ ${asic_index} -eq 1 ]; then
 							ln -fs "$3""$4" "$cpath"/asic_hwmon
 							check_n_link "$3""$4"/temp1_input "$tpath"/asic
+							check_n_init $tpath/asic_temp_trip_crit 120000
+							check_n_init $tpath/asic_temp_emergency 105000
+							check_n_init $tpath/asic_temp_crit 85000
+							check_n_init $tpath/asic_temp_norm 75000
 						fi
 						;;
 					*)
 						ln -fs "$3""$4" $cpath/asic_hwmon
 						check_n_link "$3""$4"/temp1_input "$tpath"/asic
+						check_n_init $tpath/asic_temp_trip_crit 120000
+						check_n_init $tpath/asic_temp_emergency 105000
+						check_n_init $tpath/asic_temp_crit 85000
+						check_n_init $tpath/asic_temp_norm 75000
 						;;
 				esac
-				echo 120000 > $tpath/asic_temp_trip_crit
-				echo 105000 > $tpath/asic_temp_emergency
-				echo 85000 > $tpath/asic_temp_crit
-				echo 75000 > $tpath/asic_temp_norm
 
 				if [ -f "$3""$4"/pwm1 ]; then
 					ln -sf  "$3""$4"/pwm1 "$tpath"/pwm1
