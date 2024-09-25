@@ -2494,8 +2494,8 @@ create_event_files()
 	done
 	if [ $pwr_events_count -ne 0 ]; then
 		if [ -f "$power_events_file" ]; then
-			declare -a power_events="($(< power_events_file))"
-			for ((i=0; i<pwr_events_count; i+=1)); do
+			declare -a power_events="($(< $power_events_file))"
+			for ((i=0; i<=pwr_events_count; i+=1)); do
 				check_n_init $events_path/${power_events[$i]} 0
 			done
 		else
