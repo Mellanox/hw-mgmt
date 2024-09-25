@@ -67,6 +67,7 @@ linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "therma
 mlxreg_lc_addr=32
 lc_max_num=8
 dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
+fan_debounce_timeout_ms=2000
 
 case "$board_type" in
 VMOD0014)
@@ -476,7 +477,22 @@ function set_fan_direction()
 		if [[ "$sku" == "HI117" ]]; then
 			return
 		fi
-		fan_dir=$(< $system_path/fan_dir)
+		fan_debounce_counter=0
+		fan_debounce_timer=$fan_debounce_timeout_ms
+		# debounce timeout for FAN dir. 2 times in a row read same value or delay > fan_debounce_timer.
+		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
+		do
+			fan_dir=$(< $system_path/fan_dir)
+			if [ $fan_dir -eq $fan_dir_old ];
+			then
+				fan_debounce_counter=$((fan_debounce_counter + 1))
+			else
+				fan_dir_old=$fan_dir
+				fan_debounce_counter=0
+			fi
+			fan_debounce_timer=$((fan_debounce_timer - 200))
+			sleep 0.2
+		done
 		fandirhex=$(printf "%x\n" "$fan_dir")
 		fan_bit_index=$(( ${attribute:3} - 1 ))
 		fan_direction_bit=$(( 0x$fandirhex & (1 << fan_bit_index) ))
