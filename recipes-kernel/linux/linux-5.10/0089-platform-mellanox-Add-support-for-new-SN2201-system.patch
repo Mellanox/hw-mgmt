@@ -848,7 +848,7 @@ index 000000000000..51da240ce4f9
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_aux_pwr_or_ref",
++		.label = "reset_aux_pwr_or_fu",
 +		.reg = NVSW_SN2201_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
