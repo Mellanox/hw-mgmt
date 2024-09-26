@@ -24,8 +24,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  Documentation/hwmon/mp2891.rst | 128 +++++++++
  drivers/hwmon/pmbus/Kconfig    |   9 +
  drivers/hwmon/pmbus/Makefile   |   1 +
- drivers/hwmon/pmbus/mp2891.c   | 426 +++++++++++++++++++++++++++++++++
- 4 files changed, 564 insertions(+)
+ drivers/hwmon/pmbus/mp2891.c   | 430 +++++++++++++++++++++++++++++++++
+ 4 files changed, 568 insertions(+)
  create mode 100644 Documentation/hwmon/mp2891.rst
  create mode 100644 drivers/hwmon/pmbus/mp2891.c
 
@@ -200,7 +200,7 @@ new file mode 100644
 index 000000000..8e551b9c5
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp2891.c
-@@ -0,0 +1,426 @@
+@@ -0,0 +1,430 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * Hardware monitoring driver for MPS Multi-phase Digital VR Controllers(MP2891)
