@@ -3076,6 +3076,8 @@ map_asic_pci_to_i2c_bus()
 
 do_start()
 {
+	init_hw_management_done_wd_files
+	init_hw_management_done_wd
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
@@ -3133,6 +3135,9 @@ do_start()
 		cp $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
+
+	# Wait for hw-mgmt done WD to finish.
+	monitor_link_wd
 }
 
 do_stop()
