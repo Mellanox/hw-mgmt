@@ -2530,7 +2530,9 @@ load_modules()
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
-			modprobe coretemp
+			if ! check_simx; then
+				modprobe coretemp
+			fi
 			;;
 	esac
 
