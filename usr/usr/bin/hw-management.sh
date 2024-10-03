@@ -97,6 +97,7 @@ i2c_freq_reg=0x2004
 # ASIC PCIe Ids.
 spc3_pci_id=cf70
 spc4_pci_id=cf80
+spc5_pci_id=cf82
 quantum2_pci_id=d2f2
 quantum3_pci_id=d2f4
 nv3_pci_id=1af1
@@ -473,6 +474,22 @@ sn5600_base_connect_table=( \
 	tmp102 0x4a 7 \
 	24c512 0x51 8 )
 
+sn5640_base_connect_table=( \
+	mp2891 0x62 5 \
+	mp2891 0x63 5 \
+	mp2891 0x64 5 \
+	mp2891 0x65 5 \
+	mp2891 0x66 5 \
+	mp2891 0x67 5 \
+	mp2891 0x68 5 \
+	mp2891 0x69 5 \
+	mp2891 0x6a 5 \
+	mp2891 0x6c 5 \
+	mp2891 0x6e 5 \
+	tmp102 0x49 6 \
+	tmp102 0x4a 7 \
+	24c512 0x51 8 )
+
 p2317_connect_table=(	24c512 0x51 8)
 
 # 6 TS are temporary for BU and will be removed later.
@@ -602,6 +619,7 @@ q3200_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vp
 q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 58 cart2 59 cart3 60 cart4 61)
+sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 
 ACTION=$1
 
@@ -821,7 +839,7 @@ set_jtag_gpio()
 		fi
 	fi
 
-	if [ "$board_type" == "VMOD0021" ]; then
+	if [ "$board_type" == "VMOD0021" -o "$board_type" == "VMOD0022" ]; then
 		return 0
 	fi
 
@@ -1986,7 +2004,7 @@ p2317_specific()
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
-sn56xx_specific()
+sn5x00_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${sn5600_base_connect_table[@]})
@@ -2020,18 +2038,18 @@ sn_spc4_common()
 	# ToDo Meantime same for all SPC4 systems.
 	case $sku in
 		HI144)	# SN5600
-			sn56xx_specific
+			sn5x00_specific
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn5600.json"
 		;;
 		HI147)	# SN5400
-			sn56xx_specific
+			sn5x00_specific
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn5400.json"
 		;;
 		HI148)	# SN5700
-			sn56xx_specific
+			sn5x00_specific
 		;;
 		*)
-			sn56xx_specific
+			sn5x00_specific
 		;;
 	esac
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
@@ -2293,6 +2311,39 @@ n51xxld_specific_cleanup()
 
 }
 
+sn5640_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${sn5640_base_connect_table[@]})
+		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
+	fi
+	# Set according to front fan max.
+	echo 21800 > $config_path/fan_max_speed
+	# Set at 20% PWM
+	echo 4464 > $config_path/fan_min_speed
+	echo C2P > $config_path/system_flow_capability
+	echo 27500 > $config_path/psu_fan_max
+	# Set as 20% of max speed
+	echo 5500 > $config_path/psu_fan_min
+	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
+	max_tachos=10
+	hotplug_fans=5
+	hotplug_pwrs=4
+	hotplug_psus=4
+	psu_count=4
+	minimal_unsupported=1
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
+	named_busses+=(${sn5640_named_busses[@]})
+	add_come_named_busses $ng800_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo 0 > "$config_path"/labels_ready
+}
+
 system_cleanup_specific()
 {
 	case $board_type in
@@ -2358,6 +2409,9 @@ check_system()
 			;;
 		VMOD0021)
 			n51xxld_specific
+			;;
+		VMOD0022)
+			sn5640_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2786,6 +2840,12 @@ set_asic_pci_id()
 	HI158)
 		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
 		;;
+	HI171)
+		asic_pci_id=$spc5_pci_id
+		;;
+	HI172)
+		asic_pci_id=$spc4_pci_id
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
@@ -2999,6 +3059,15 @@ pre_devtr_init()
 		case $sku in
 		HI162|HI166|HI167|HI169|HI170)
 			echo 55 > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
+		;;
+	VMOD0022)
+		case $sku in
+		HI171|HI172)
+			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
 		*)
 			;;
