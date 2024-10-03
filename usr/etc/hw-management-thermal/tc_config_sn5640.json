@@ -1,0 +1,51 @@
+ {
+	"name": "msn5640",
+	"dmin" : {
+		"C2P": {
+			"fan_err": {
+				"tacho": {"-127:120": 30},
+				"present": {"-127:120": 30},
+				"direction": {"-127:120": 30}
+			},
+			"psu_err":  {
+				"present": {"-127:120": 30},
+				"direction": {"-127:120": 30}
+			},
+			"sensor_read_error" : {"-127:120": 80}
+		},
+		"P2C": {
+			"fan_err": {
+				"tacho": {"-127:120": 30},
+				"present": {"-127:120": 30},
+				"direction": {"-127:120": 30}
+			},
+			"psu_err":  {
+				"present": {"-127:120": 30},
+				"direction": {"-127:120": 30}
+			},
+			"sensor_read_error" : {"-127:120": 70}
+		}
+	},
+	"psu_fan_pwm_decode" : {"0:100": -1},
+	"fan_trend" : {
+		"C2P": {
+			"0" : {"rpm_min":6879, "rpm_max":21800, "slope": 213, "pwm_min" : 30, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":6468, "rpm_max":20500, "slope": 200, "pwm_min" : 30, "pwm_max_reduction" : 10}}
+	},
+	"dev_parameters" : {
+		"asic\\d*":        {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
+		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30},
+		"voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
+		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
+		"drivetemp":      {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!100000", "poll_time": 60}
+	},
+	"sensor_list" : ["asic1", "cpu", "drivetemp", "sodimm1",
+					 "drwr1", "drwr2", "drwr3", "drwr4", "drwr5",
+					 "psu1", "psu2", "psu3", "psu4",
+					 "sensor_amb", "sodimm1", "voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5",
+					 "voltmon6", "voltmon7", "voltmon8", "voltmon9", "voltmon10", "voltmon11"],
+	"redundancy" : {"psu_err" : {"min_err_cnt" : "3", "err_mask" : ["present","direction"]},
+					"fan_err" : {"min_err_cnt" : "2" }}
+}

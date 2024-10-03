@@ -183,6 +183,23 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
+declare -A sn5640_alternatives=(["mp2891_0"]="mp2975 0x62 5 voltmon1" \
+				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
+				["mp2975_2"]="mp2975 0x64 5 voltmon3" \
+				["mp2975_3"]="mp2975 0x65 5 voltmon4" \
+				["mp2975_4"]="mp2975 0x66 5 voltmon5" \
+				["mp2975_5"]="mp2975 0x67 5 voltmon6" \
+				["mp2975_6"]="mp2975 0x68 5 voltmon7" \
+				["mp2975_7"]="mp2975 0x69 5 voltmon8" \
+				["mp2975_8"]="mp2975 0x6a 5 voltmon9" \
+				["mp2975_9"]="mp2975 0x6c 5 voltmon10" \
+				["mp2975_10"]="mp2975 0x6e 5 voltmon11" \
+				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="adt75 0x4a 7 port_amb" \
+				["stts751_0"]="stts751 0x4a 7 port_amb" \
+				["tmp412_0"]="tmp102 0x4c 7 ext_amb" \
+				["24c512_0"]="24c512 0x51 8 vpd_info")
+
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
 			       ["tmp75_1"]="tmp75 0x49 7 port_temp2" \
@@ -650,6 +667,27 @@ devtr_check_supported_system_init_alternatives()
 				
 				for key in "${!n5110ld_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
+		VMOD0022)
+			case $sku in
+			HI171|HI172)
+				for key in "${!sn5640_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn5640_alternatives["$key"]}"
+				done
+
+				for key in "${!fan_type1_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+				done
+
+				for key in "${!clk_type0_alternatives[@]}"; do
+					clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
 				done
 				;;
 			*)

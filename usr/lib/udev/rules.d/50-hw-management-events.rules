@@ -54,6 +54,9 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add lr1_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm lr1_amb %S %p"
+# Ext amb thermal sensor
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add tempX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm tempX %S %p"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004d/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add pdb_temp1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-004d/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm pdb_temp1 %S %p"
@@ -67,7 +70,7 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add cx_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm cx_amb %S %p"
 
-# BF3 ambient temperatures (lm75, tmp102).
+# BF3 ambient temperatures (lm75, tmp102)1
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add fan_amb %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm fan_amb %S %p"
 
