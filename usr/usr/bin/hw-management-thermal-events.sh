@@ -336,20 +336,28 @@ if [ "$1" == "add" ]; then
 						asic_index=${asic_indices[${asic_bus}]}
 						ln -fs "$3""$4" "$cpath"/asic${asic_index}_hwmon
 						check_n_link "$3""$4"/temp1_input "$tpath"/asic${asic_index}
+						check_n_init $tpath/asic${asic_index}_temp_trip_crit 120000
+						check_n_init $tpath/asic${asic_index}_temp_emergency 105000
+						check_n_init $tpath/asic${asic_index}_temp_crit 85000
+						check_n_init $tpath/asic${asic_index}_temp_norm 75000
 						if [ ${asic_index} -eq 1 ]; then
 							ln -fs "$3""$4" "$cpath"/asic_hwmon
 							check_n_link "$3""$4"/temp1_input "$tpath"/asic
+							check_n_init $tpath/asic_temp_trip_crit 120000
+							check_n_init $tpath/asic_temp_emergency 105000
+							check_n_init $tpath/asic_temp_crit 85000
+							check_n_init $tpath/asic_temp_norm 75000
 						fi
 						;;
 					*)
 						ln -fs "$3""$4" $cpath/asic_hwmon
 						check_n_link "$3""$4"/temp1_input "$tpath"/asic
+						check_n_init $tpath/asic_temp_trip_crit 120000
+						check_n_init $tpath/asic_temp_emergency 105000
+						check_n_init $tpath/asic_temp_crit 85000
+						check_n_init $tpath/asic_temp_norm 75000
 						;;
 				esac
-				echo 120000 > $tpath/asic_temp_trip_crit
-				echo 105000 > $tpath/asic_temp_emergency
-				echo 85000 > $tpath/asic_temp_crit
-				echo 75000 > $tpath/asic_temp_norm
 
 				if [ -f "$3""$4"/pwm1 ]; then
 					ln -sf  "$3""$4"/pwm1 "$tpath"/pwm1
@@ -373,6 +381,7 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
 						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
 						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
+						check_n_link "$cpath"/fan_speed_tolerance "$tpath"/fan"$j"_speed_tolerance
 						# Save max_tachos to config
 						echo $i > "$cpath"/max_tachos
 					fi
@@ -479,6 +488,7 @@ if [ "$1" == "add" ]; then
 				check_n_link "$3""$4"/fan"$i"_fault $thermal_path/fan"$j"_fault
 				check_n_link $config_path/fan_min_speed $thermal_path/fan"$j"_min
 				check_n_link $config_path/fan_max_speed $thermal_path/fan"$j"_max
+				check_n_link $config_path/fan_speed_tolerance $thermal_path/fan"$j"_speed_tolerance
 				# Save max_tachos to config.
 				echo $i > $config_path/max_tachos
 			fi
@@ -683,6 +693,11 @@ if [ "$1" == "add" ]; then
 		init_hotplug_events "$dpu_events_file" "$3$4" 2
 		init_hotplug_events "$dpu_events_file" "$3$4" 3
 		init_hotplug_events "$dpu_events_file" "$3$4" 4
+		# Based on the DPU ready signal, connect the DPU sensors
+		load_dpu_sensors 1
+		load_dpu_sensors 2
+		load_dpu_sensors 3
+		load_dpu_sensors 4
 		# BF3 debugfs temperature sensors linkage
 		if [ -f /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp ]; then
 			ln -sf /sys/kernel/debug/mlxbf-ptm/monitors/status/core_temp $thermal_path/cpu_pack
@@ -956,12 +971,17 @@ if [ "$1" == "add" ]; then
 				if is_virtual_machine; then
 					if [ -f $vm_vpd_path/psu_vpd ]; then
 						cat $vm_vpd_path/psu_vpd > $eeprom_path/"$psu_name"_vpd
+						# Get PSU FAN direction
+						get_psu_fan_direction $eeprom_path/"$psu_name"_vpd
+						echo $? > "$thermal_path"/"$psu_name"_fan_dir
 					else
 						echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
 					fi
 					exit 0
 				fi
 				echo "Failed to read PSU VPD" > $eeprom_path/"$psu_name"_vpd
+				# Set "Unknown fan dir in case failed to read PSU VPD.
+				echo 2 > "$thermal_path"/"$psu_name"_fan_dir
 				exit 0
 			else
 				# Add PSU FAN speed info.
@@ -1402,5 +1422,21 @@ else
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
+	fi
+	if [ "$2" == "dpu" ]; then
+		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		case $sku in
+		HI160)
+			# DPU event, replace output folder.
+			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
+			slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
+			if [ ! -z "$slot_num" ]; then
+				thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+			fi
+			;;
+		*)
+			;;
+		esac
+		check_n_unlink $thermal_path/"cx_amb"
 	fi
 fi

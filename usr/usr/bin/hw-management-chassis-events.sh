@@ -67,6 +67,7 @@ linecard_folders=("alarm" "config" "eeprom" "environment" "led" "system" "therma
 mlxreg_lc_addr=32
 lc_max_num=8
 dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
+fan_debounce_timeout_ms=2000
 
 case "$board_type" in
 VMOD0014)
@@ -476,7 +477,22 @@ function set_fan_direction()
 		if [[ "$sku" == "HI117" ]]; then
 			return
 		fi
-		fan_dir=$(< $system_path/fan_dir)
+		fan_debounce_counter=0
+		fan_debounce_timer=$fan_debounce_timeout_ms
+		# debounce timeout for FAN dir. 2 times in a row read same value or delay > fan_debounce_timer.
+		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
+		do
+			fan_dir=$(< $system_path/fan_dir)
+			if [ $fan_dir -eq $fan_dir_old ];
+			then
+				fan_debounce_counter=$((fan_debounce_counter + 1))
+			else
+				fan_dir_old=$fan_dir
+				fan_debounce_counter=0
+			fi
+			fan_debounce_timer=$((fan_debounce_timer - 200))
+			sleep 0.2
+		done
 		fandirhex=$(printf "%x\n" "$fan_dir")
 		fan_bit_index=$(( ${attribute:3} - 1 ))
 		fan_direction_bit=$(( 0x$fandirhex & (1 << fan_bit_index) ))
@@ -1220,19 +1236,22 @@ if [ "$1" == "add" ]; then
 	fi
 	# Creating dpu folders hierarchy upon dpu udev add event.
 	if [ "$2" == "dpu" ]; then
-		slot_num=$(find_dpu_slot "$3$4")
-		if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
-			mkdir "$hw_management_path"/dpu"$slot_num"
-		fi
-		for i in "${!dpu_folders[@]}"
-		do
-			if [ ! -d "$hw_management_path"/dpu"$slot_num"/"${dpu_folders[$i]}" ]; then
-				mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
+		case $sku in
+		HI160)
+			slot_num=$(find_dpu_slot "$3$4")
+			if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
+				mkdir "$hw_management_path"/dpu"$slot_num"
 			fi
-		done
-		if [ -e "$devtree_file" ]; then
-			connect_dynamic_board_devices "dpu_board""$slot_num"
-		fi
+			for i in "${!dpu_folders[@]}"
+			do
+				if [ ! -d "$hw_management_path"/dpu"$slot_num"/"${dpu_folders[$i]}" ]; then
+					mkdir "$hw_management_path/"dpu"$slot_num"/"${dpu_folders[$i]}"
+				fi
+			done
+			;;
+		*)
+			;;
+		esac
 	fi
 	# Creating lc folders hierarchy upon line card udev add event.
 	if [ "$2" == "linecard" ]; then
@@ -1380,11 +1399,26 @@ else
 			if [ -L $environment_path/"$prefix"_in"$i"_input ]; then
 				unlink $environment_path/"$prefix"_in"$i"_input
 			fi
+			if [ -L $environment_path/"$prefix"_in"$i"_crit ]; then
+				unlink $environment_path/"$prefix"_in"$i"_crit
+			fi
+			if [ -L $environment_path/"$prefix"_in"$i"_lcrit ]; then
+				unlink $environment_path/"$prefix"_in"$i"_lcrit
+			fi
 			if [ -L $environment_path/"$prefix"_curr"$i"_input ]; then
 				unlink $environment_path/"$prefix"_curr"$i"_input
 			fi
 			if [ -L $environment_path/"$prefix"_power"$i"_input ]; then
 				unlink $environment_path/"$prefix"_power"$i"_input
+			fi
+			if [ -L $thermal_path/"$prefix"_temp"$i"_input ]; then
+				unlink $thermal_path/"$prefix"_temp"$i"_input
+			fi
+			if [ -L $thermal_path/"$prefix"_temp"$i"_max ]; then
+				unlink $thermal_path/"$prefix"_temp"$i"_max
+			fi
+			if [ -L $thermal_path/"$prefix"_temp"$i"_crit ]; then
+				unlink $thermal_path/"$prefix"_temp"$i"_crit
 			fi
 			if [ -L $alarm_path/"$prefix"_in"$i"_alarm ]; then
 				unlink $alarm_path/"$prefix"_in"$i"_alarm
@@ -1394,6 +1428,12 @@ else
 			fi
 			if [ -L $alarm_path/"$prefix"_power"$i"_alarm ]; then
 				unlink $alarm_path/"$prefix"_power"$i"_alarm
+			fi
+			if [ -L $alarm_path/"$prefix"_temp"$i"_max_alarm ]; then
+				unlink $alarm_path/"$prefix"_temp"$i"_max_alarm
+			fi
+			if [ -L $alarm_path/"$prefix"_temp"$i"_crit_alarm ]; then
+				unlink $alarm_path/"$prefix"_temp"$i"_crit_alarm
 			fi
 		done
 	fi
@@ -1521,13 +1561,19 @@ else
 	fi
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
-		slot_num=$(find_dpu_slot "$3$4")
-		if [ -e "$devtree_file" ]; then
-			disconnect_dynamic_board_devices "dpu_board""$slot_num"
-		fi
-		if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
-			rm -rf "$hw_management_path"/dpu"$slot_num"
-		fi
+		case $sku in
+		HI160)
+			slot_num=$(find_dpu_slot "$3$4")
+			if [ -e "$devtree_file" ]; then
+				disconnect_dynamic_board_devices "dpu_board""$slot_num"
+			fi
+			if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
+				rm -rf "$hw_management_path"/dpu"$slot_num"
+			fi
+			;;
+		*)
+			;;
+		esac
 	fi
 	# Clear lc folders upon line card udev rm event.
 	if [ "$2" == "linecard" ]; then

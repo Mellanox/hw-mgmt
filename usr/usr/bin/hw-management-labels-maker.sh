@@ -44,6 +44,20 @@ if [ ! -f "/tmp/sensor_labels_dictionary.pkl" ]; then
     hw_management_parse_labels.py --json_file "$json_file"
 fi
 
+# No prefix index, f.e. "drivetemp"
+get_label_files0()
+{
+	local attr_name="$1"
+	local folder
+	local key
+	local attr_file
+
+	folder=`echo $attr_name | cut -d '_' -f 2`
+	key=`echo $attr_name | cut -d '_' -f 1`
+	attr_file=`echo "$attr_name" | cut -d '_' -f 2,3`
+	echo "$folder" "$key" "$attr_file"
+}
+
 # One prefix index, f.e. "voltmon1"
 get_label_files1()
 {
@@ -182,9 +196,13 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	port_amb|fan_amb|swb_asic*)
+	port_amb|fan_amb|swb_asic*|fpga|mng_amb)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;
+	drivetemp*)
+		subfolder="temperature"
+		read folder key attr_file < <(get_label_files0 $attr_name)
 		;;
 	fan*)
 		subfolder="fan"

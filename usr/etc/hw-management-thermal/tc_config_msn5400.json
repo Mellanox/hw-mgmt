@@ -32,8 +32,8 @@
 			"0" : {"rpm_min":4143, "rpm_max":13500, "slope": 133, "pwm_min" : 30, "pwm_max_reduction" : 10},
 			"1" : {"rpm_min":3891, "rpm_max":12603, "slope": 123, "pwm_min" : 30, "pwm_max_reduction" : 10}},
 		"P2C": {
-			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10},
-			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10}
+			"0" : {"rpm_min":4143, "rpm_max":13500, "slope": 133, "pwm_min" : 30, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":3891, "rpm_max":12603, "slope": 123, "pwm_min" : 30, "pwm_max_reduction" : 10}
 		}
 	},
 	"dev_parameters" : {

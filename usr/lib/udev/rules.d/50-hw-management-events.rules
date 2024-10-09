@@ -667,12 +667,15 @@ SUBSYSTEM=="i2c", DEVPATH=="/devices/pci0000:00/0000:00:*.*/0000:0[1-4]:00.0/i2c
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:*.*/0000:0[1-4]:00.0/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/0000:00:*.*/0000:0[1-4]:00.0/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
 
-# SN2201 voltage controllers 1. powr1014, 2. ir35223
+# SN2201 voltage controllers 1. powr1014, 2. ir35223 3. lm5066i
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0037/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
 
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0040/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0040/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld*/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm pmbus %S %p"
 
 # Power-converters and hotswap devices. They are supported by generic pmbus driver. Exact name is found from devtree file.
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0010/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add pmbus %S %p"
@@ -881,6 +884,8 @@ SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c
 # SDK
 SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
 SUBSYSTEM=="pci", DRIVERS=="sx_core", ENV{SX_CORE_EVENT}=="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="online", RUN+="/usr/bin/hw-management-thermal-events.sh add sxcore add %S %p"
+SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="offline", RUN+="/usr/bin/hw-management-thermal-events.sh rm sxcore remove %S %p"
 
 # DPU
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add dpu %S %p"

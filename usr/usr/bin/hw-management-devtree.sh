@@ -39,7 +39,7 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="emc1412")
 
 declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7" ["i"]="mp2855")
 
@@ -78,7 +78,7 @@ declare -A comex_bf3_alternatives=(["mp2975_0"]="mp2975 0x6b 15 comex_voltmon1" 
 
 declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmon1" \
 				   ["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
-				   ["24c128_0"]="24c128 0x50 16 cpu_info"
+				   ["24c128_0"]="24c128 0x50 16 cpu_info" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
@@ -261,7 +261,8 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
-declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 fan_amb")
+declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 mng_amb" \
+								["emc1412_0"]="emc1403 0x4C 6 fpga")
 
 declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
@@ -638,7 +639,7 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0021)
 			case $sku in
-			HI162|HI166)
+			HI162|HI166|HI167|HI169|HI170)
 				for key in "${!n5110ld_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${n5110ld_swb_alternatives["$key"]}"
 				done

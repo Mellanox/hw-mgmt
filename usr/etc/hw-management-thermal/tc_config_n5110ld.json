@@ -16,15 +16,15 @@
 	},
 	"psu_fan_pwm_decode" : {"0:100": -1},
 	"fan_trend" : {
-        "C2P": {
+		"C2P": {
 			"0" : {"rpm_min":6700, "rpm_max":33000, "slope": 328.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
 			"1" : {"rpm_min":6000, "rpm_max":30000, "slope": 300, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
 			}
-	}, 
+	},
 	"dev_parameters" : {
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
 		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
-		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30, "base_file_name": {"C2P": "fan_amb"}},
+		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30, "base_file_name": {"C2P": "mng_amb"}},
 		"swb\\d+_voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": "!85000", "poll_time":  60},
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60},
@@ -36,7 +36,7 @@
 	"sensor_list" : ["cpu",
 					"swb_voltmon1", "swb_voltmon2", "swb_voltmon3", "swb_voltmon4", "swb_voltmon5", "swb_voltmon6",
 					"sodimm1",
-					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6",
+					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4",
 					"ibc1", "ibc2", "ibc3", "ibc4",
 					"hotswap1"
 					]

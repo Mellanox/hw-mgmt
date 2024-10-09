@@ -66,7 +66,7 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "ufm_upgrade_done" "vdd_cpu_hot_alert" "vddq_hot_alert" \
 			 "pg_comparator" "pg_hvdd pg_vdd_cpu" "pg_vddq" \
 			 "vdd_cpu_alert" "vddq_alert")
-l1_power_events=("power_button")
+l1_power_events=("power_button graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
 udev_event_log="/var/log/udev_events.log"
@@ -100,25 +100,6 @@ declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"
 ["SF17B27988"]=R ["SP57B42423"]=F ["SP57B42424"]=R ["90Y3769"]=F ["90Y3771"]=F \
 ["90Y3779"]=R ["90Y3781"]=R ["90Y3779"]=R ["SA001871"]=F ["00WT021"]=F \
 ["105-575-014-00"]=F )
-
-# Thermal type constants
-thermal_type_t1=1
-thermal_type_t2=2
-thermal_type_t3=3
-thermal_type_t4=4
-thermal_type_t4=4
-thermal_type_t5=5
-thermal_type_t6=6
-thermal_type_t7=7
-thermal_type_t8=8
-thermal_type_t9=9
-thermal_type_t10=10
-thermal_type_t11=11
-thermal_type_t12=12
-thermal_type_t13=13
-thermal_type_t14=14
-thermal_type_def=0
-thermal_type_full=100
 
 base_cpu_bus_offset=10
 max_tachos=20
@@ -252,7 +233,10 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI157" ] ||
         [ "$ui_tree_sku" = "HI158" ] ||
         [ "$ui_tree_sku" = "HI162" ] ||
-        [ "$ui_tree_sku" = "HI166" ]) &&
+        [ "$ui_tree_sku" = "HI166" ] ||
+        [ "$ui_tree_sku" = "HI167" ] ||
+        [ "$ui_tree_sku" = "HI169" ] ||
+        [ "$ui_tree_sku" = "HI170" ]) &&
         ([ ! -e "$ui_tree_archive" ]); then
         return 0
     else
@@ -765,4 +749,19 @@ disconnect_dynamic_board_devices()
 	for ((i=0; i<${#board_connect_table[@]}; i+=4)); do
 		disconnect_device "${board_connect_table[i+1]}" "${board_connect_table[i+2]}"
 	done
+}
+
+load_dpu_sensors()
+{
+	local dpu_num=$1
+	local dpu_ready
+
+	if [ -f $hw_management_path/system/dpu${dpu_num}_ready ]; then
+		dpu_ready=$(< $hw_management_path/system/dpu${dpu_num}_ready)
+		if [ ${dpu_ready} -eq 1 ]; then
+			if [ -e "$devtree_file" ]; then
+				connect_dynamic_board_devices "dpu_board""$dpu_num"
+			fi
+		fi
+	fi
 }

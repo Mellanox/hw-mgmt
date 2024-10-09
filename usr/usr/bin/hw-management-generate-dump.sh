@@ -119,6 +119,7 @@ dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
 dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
+dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
 
 # Kill all the leftout child processes before creating the dump archive
 pkill -P $dump_process_pid

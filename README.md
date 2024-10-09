@@ -43,7 +43,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - P4300-A00
 
 ## Supported Kernel versions:
-- 5.10.189
+- 5.10.218
 - 6.1.38
 
 ## Sysfs attributes:
@@ -129,6 +129,7 @@ CONFIG_SENSORS_LM75=m
 CONFIG_SENSORS_TMP102=m
 CONFIG_SENSORS_TMP421=m
 CONFIG_SENSORS_STTS751=m
+CONFIG_SENSORS_EMC1403=m
 CONFIG_LEDS_MLXREG=m
 CONFIG_LEDS_TRIGGERS=y
 CONFIG_LEDS_TRIGGER_TIMER=m

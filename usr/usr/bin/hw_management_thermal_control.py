@@ -377,7 +377,9 @@ def str2bool(val):
     """
     if isinstance(val, bool):
         return val
-    if val.lower() in ("yes", "true", "t", "y", "1"):
+    elif isinstance(val, int):
+        return bool(val)
+    elif val.lower() in ("yes", "true", "t", "y", "1"):
         return True
     elif val.lower() in ("no", "false", "f", "n", "0"):
         return False
@@ -391,7 +393,7 @@ def current_milli_time():
         get current time in milliseconds
     @return: int value time in milliseconds
     """
-    return round(time.time() * 1000)
+    return round(time.clock_gettime(1) * 1000)
 
 
 # ----------------------------------------------------------------------
@@ -1411,13 +1413,13 @@ class thermal_sensor(system_device):
                 value = self.read_file_int(self.file_input, self.scale)
                 self.handle_reading_file_err(self.file_input, reset=True)
             except BaseException:
-                self.log.info("Wrong value reading from file: {}".format(self.file_input))
+                self.log.warn("Wrong value reading from file: {}".format(self.file_input))
                 self.handle_reading_file_err(self.file_input)
         self.update_value(value)
 
         if self.value > self.val_max:
             pwm = self.pwm_max
-            self.log.info("{} value({}) more then max({}). Set pwm {}".format(self.name,
+            self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
                                                                               self.value,
                                                                               self.val_max,
                                                                               pwm))
@@ -1562,7 +1564,7 @@ class thermal_module_sensor(system_device):
                 if self.value != 0:
                     if self.value > self.val_max:
                         pwm = self.pwm_max
-                        self.log.info("{} value({}) more then max({}). Set pwm {}".format(self.name,
+                        self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
                                                                                           self.value,
                                                                                           self.val_max,
                                                                                           pwm))
@@ -1822,15 +1824,23 @@ class fan_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
+        self.fan_drwr_id = int(self.sensors_config["drwr_id"])
         self.fan_param = sys_config.get(CONST.SYS_CONF_FAN_PARAM, SYS_FAN_PARAM_DEF)
         if CONST.FAN_ERR in sys_config[CONST.SYS_CONF_ERR_MASK]:
             self.set_static_mask_fault_list(sys_config[CONST.SYS_CONF_ERR_MASK][CONST.FAN_ERR])
-        self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
-        self.fan_drwr_id = int(self.sensors_config["drwr_id"])
-        self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.fan_dir = self._read_dir()
         self.fan_dir_fail = False
         self.drwr_param = self._get_fan_drwr_param()
+        self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
+        if self.tacho_cnt > len(self.drwr_param):
+            self.log.warn("{} tacho per FAN modlue mismatch: get {}, defined in config {}".format(self.name,
+                                                                                           self.tacho_cnt,
+                                                                                           len(self.drwr_param)))
+            self.log.info("{} init tacho_cnt from config: {}".format(self.name,
+                                                                     len(self.drwr_param)))
+            self.tacho_cnt = len(self.drwr_param)
+
+        self.tacho_idx = ((self.fan_drwr_id - 1) * self.tacho_cnt) + 1
         self.val_min_def = self.get_file_val("thermal/fan{}_min".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_min"])
         self.val_max_def = self.get_file_val("thermal/fan{}_max".format(self.tacho_idx), CONST.RPM_MIN_MAX["val_max"])
         self.is_calibrated = False
@@ -2100,7 +2110,7 @@ class fan_sensor(system_device):
             value = 0
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
-                self.log.info("Missing file {}".format(rpm_file_name))
+                self.log.warn("Missing file {}".format(rpm_file_name))
             else:
                 try:
                     value = int(self.read_file(rpm_file_name))
@@ -2265,14 +2275,9 @@ class ambiant_thermal_sensor(system_device):
             self.update_value(value)
 
         if self.value > self.val_max:
-            self.update_value(self.val_max)
-            self.log.info("{} value({}) more then max({}). Set value {}".format(self.name,
-                                                                                self.value,
-                                                                                self.val_max,
-                                                                                self.val_max))
+            self.log.debug("{} value({}) above max({})".format(self.name, self.value, self.val_max))
         elif self.value < self.val_min:
-            self.update_value(self.val_min)
-            self.log.debug("{} value {} less then min({})".format(self.name, self.value, self.val_min))
+            self.log.debug("{} value {} less min({})".format(self.name, self.value, self.val_min))
 
         self.pwm = self.calculate_pwm_formula()
 
@@ -2464,8 +2469,8 @@ class ThermalManagement(hw_managemet_file_op):
         self.exit_flag = False
 
         self.load_configuration()
-        if not self.sys_config.get("platform_support", 1):
-            self.log.notice("Platform Board:{}, SKU:{} is not supported.".format(self.board_type, self.sku), 1)
+        if not str2bool(self.sys_config.get("platform_support", 1)):
+            self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), 1)
             self.log.notice("Set TC to idle.")
             while True:
                 self.exit.wait(60)
@@ -2484,6 +2489,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
+            self.log.notice("Additional delay defined in ./config/thermal_delay ({} sec).".format(thermal_delay), 1)
             timeout = current_milli_time() + 1000 * thermal_delay
             while timeout > current_milli_time():
                 if not self.write_pwm(self.pwm_target):
@@ -2531,8 +2537,6 @@ class ThermalManagement(hw_managemet_file_op):
         # Collect asic sensors
         try:
             self.asic_counter = int(self.read_file("config/asic_num"))
-            for asic_idx in range(1, self.asic_counter + 1):
-                sensor_list.append("asic{}".format(asic_idx))
         except BaseException:
             self.log.error("Missing ASIC num config.", 1)
             sys.exit(1)
@@ -2977,9 +2981,14 @@ class ThermalManagement(hw_managemet_file_op):
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
                 except Exception:
-                    self.log.error("System config file {} broken. Applying default config.".format(config_file_name), 1)
+                    self.log.error("System config file {} broken.".format(config_file_name), 1)
+                    sys_config["platform_support"] = 0
         else:
-            self.log.warn("System config file {} missing. Applying default config.".format(config_file_name), 1)
+            self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
+                                                                                          self.board_type,
+                                                                                          self.sku,
+                                                                                          self.system_ver), 1)
+            sys_config["platform_support"] = 0
 
         # 1. Init dmin table
         if CONST.SYS_CONF_DMIN not in sys_config:
@@ -3156,7 +3165,7 @@ class ThermalManagement(hw_managemet_file_op):
             dpu_idx = res.group(1)
             voltmon_name = res.group(2)
             sensor_name = "{}_temp".format(name)
-            in_file = "{}/thermal/dpu_{}_temp1".format(dpu_idx, voltmon_name)
+            in_file = "{}/thermal/{}_temp1".format(dpu_idx, voltmon_name)
             self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
 
     # ----------------------------------------------------------------------

@@ -1,4 +1,37 @@
 ================================================================================
+- V.7.0040.2000
+- Tue , 1 Oct 2024 
+--------------------------------------------------------------------------------
+
+- New features 
+    o Add support for SN2201_M – ES level quality
+    o Add support for Q3400 – GA level quality
+    o Add support for SN4280 – GA level quality
+    o Add support for N5110_LD - GA level Quality + TTM/ NSO/ Ariel-JSO - ES level quality
+    o Add support for fan_speed_tolerance sysfs attribute (in addition to mix/max)
+    o Add support for SPC-4 SN5400 P2C Forward airflow
+    o Add support for hw-mgmt package version to debug dump
+    o Add support for thermal thersholds attributes per asic (trip_crit /emergency /crit /norm)
+
+- Bug fixes
+	#4020749: 	LK 6.1.94: HW Semaphore is not released errors in ISSU Tests
+	#3726402:	(3700V-DC) pull out / in FAN's randomly you get multiple air directions F2B /B2F then all the FAN's start to to run on full / MAX speed 
+	#4047305:	SN2201 The reboot-cause is incorrect for Power off 
+	#4048801: 	QM3400 SLT::920-9B31-RX-9M0-NS:wrong limit of MPS voltage 
+	#4082431: 	Error on 10.7.147.44 (Q3400_RA) during running test: test_thermal_sweep Thermal sweep: asic failed: Expected: 122 Actual: 255
+	#4093394: 	7.0040.1037: Module 'coretemp' loading moved to user-space, and not skipped over SimX 
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.2000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0040.1000
 - Sun , 30 June 2024 
 --------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2018-2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -58,12 +58,11 @@
 #
 
 source hw-management-helpers.sh
-board_type=$(< $board_type_file)
-sku=$(< $sku_file)
+[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
+[ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
 source hw-management-devtree.sh
 # Local constants and variables
 
-thermal_type=$thermal_type_def
 asic_control=1
 i2c_asic_addr=0x48
 i2c_asic_addr_name=0048
@@ -93,7 +92,6 @@ i2c_bus_def_off_eeprom_cpu=16
 i2c_comex_mon_bus_default=15
 lm_sensors_configs_path="/etc/hw-management-sensors"
 thermal_control_configs_path="/etc/hw-management-thermal"
-tune_thermal_type=0
 i2c_freq_400=0xf
 i2c_freq_reg=0x2004
 # ASIC PCIe Ids.
@@ -114,7 +112,9 @@ asic_chipup_retry=2
 device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
+smart_switch_reset_attr_num=17
 chipup_retry_count=3
+fan_speed_tolerance=15
 
 mctp_bus=""
 mctp_addr=""
@@ -1111,7 +1111,6 @@ msn274x_specific()
 	connect_table+=(${msn2740_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t3
 	max_tachos=4
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
@@ -1130,7 +1129,6 @@ msn21xx_specific()
 	connect_table+=(${msn2100_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t2
 	max_tachos=4
 	hotplug_psus=0
 	hotplug_fans=0
@@ -1160,7 +1158,6 @@ msn24xx_specific()
 		;;
 		*)
 			connect_table+=(${msn2700_base_connect_table[@]})
-			thermal_type=$thermal_type_t1
 			max_tachos=8
 			hotplug_fans=4
 			echo 21000 > $config_path/fan_max_speed
@@ -1227,7 +1224,6 @@ msn27xx_msb_msx_specific()
 			max_tachos=0
 		;;
 		*)
-			thermal_type=$thermal_type_t1
 			max_tachos=8
 			hotplug_fans=4
 			echo 25000 > $config_path/fan_max_speed
@@ -1262,7 +1258,6 @@ msn201x_specific()
 	connect_table+=(${msn2010_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t4
 	max_tachos=4
 	hotplug_psus=0
 	hotplug_fans=0
@@ -1342,8 +1337,6 @@ mqmxxx_msn37x_msn34x_specific()
 	add_i2c_dynamic_bus_dev_connection_table "${voltmon_connection_table[@]}"
 	add_cpu_board_to_connection_table
 
-	tune_thermal_type=1
-	thermal_type=$thermal_type_t5
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1360,8 +1353,6 @@ sn3750sx_specific()
 
 	add_cpu_board_to_connection_table
 
-	tune_thermal_type=1
-	thermal_type=$thermal_type_t5
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1378,7 +1369,6 @@ msn3420_specific()
 	connect_table+=(${msn3420_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t9
 	max_tachos=10
 	hotplug_fans=5
 	echo 25000 > $config_path/fan_max_speed
@@ -1402,8 +1392,6 @@ msn_xh3000_specific()
 	hotplug_psus=0
 	hotplug_pwrs=0
 	max_tachos=0
-	tune_thermal_type=1
-	thermal_type=$thermal_type_t5
 	echo 3 > $config_path/cpld_num
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 	lm_sensors_config="$lm_sensors_configs_path/msn3700_sensors.conf"
@@ -1415,7 +1403,6 @@ msn38xx_specific()
 	connect_table+=(${msn3800_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_t7
 	max_tachos=3
 	hotplug_fans=3
 	echo 11000 > $config_path/fan_max_speed
@@ -1435,7 +1422,6 @@ msn24102_specific()
 	connect_table+=(${msn27002_msn24102_msb78002_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
 
-	thermal_type=$thermal_type_t1
 	max_tachos=8
 	hotplug_fans=4
 	echo 21000 > $config_path/fan_max_speed
@@ -1459,7 +1445,6 @@ msn27002_msb78002_specific()
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
 
-	thermal_type=$thermal_type_t1
 	max_tachos=8
 	hotplug_fans=4
 	echo 25000 > $config_path/fan_max_speed
@@ -1533,7 +1518,6 @@ msn47xx_specific()
 		fi
 	fi
 
-	thermal_type=$thermal_type_t10
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1570,13 +1554,11 @@ msn46xx_specific()
 
 	# this is MSN4600C
 	if [ "$sku" == "HI124" ]; then
-		thermal_type=$thermal_type_t8
 		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600C.json"
 		echo 11000 > $config_path/fan_max_speed
 		echo 2235 > $config_path/fan_min_speed
 	# this is MSN4600
 	else
-		thermal_type=$thermal_type_t12
 		thermal_control_config="$thermal_control_configs_path/tc_config_msn4600.json"
 		echo 19500 > $config_path/fan_max_speed
 		echo 2800 > $config_path/fan_min_speed
@@ -1595,7 +1577,6 @@ msn3510_specific()
 	connect_table+=(${msn3510_base_connect_table[@]})
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_def
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1673,7 +1654,6 @@ mqm97xx_specific()
 
 	thermal_control_config="$thermal_control_configs_path/tc_config_mqm9700.json"
 	echo 0 > "$config_path"/labels_ready
-	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	echo 29500 > $config_path/fan_max_speed
@@ -1692,7 +1672,6 @@ mqm9510_specific()
 		add_i2c_dynamic_bus_dev_connection_table "${mqm9510_dynamic_i2c_bus_connect_table[@]}"
 		add_cpu_board_to_connection_table $cpu_bus_offset
 	fi
-	thermal_type=$thermal_type_def
 	i2c_bus_def_off_eeprom_cpu=24
 	i2c_comex_mon_bus_default=23
 	echo 11000 > $config_path/fan_max_speed
@@ -1722,7 +1701,6 @@ mqm9520_specific()
 	asic_i2c_buses=(2 10)
 	i2c_bus_def_off_eeprom_cpu=24
 	i2c_comex_mon_bus_default=23
-	thermal_type=$thermal_type_def
 	echo 11000 > $config_path/fan_max_speed
 	echo 2235 > $config_path/fan_min_speed
 	echo 32000 > $config_path/psu_fan_max
@@ -1747,7 +1725,6 @@ mqm87xx_rev1_specific()
 		add_cpu_board_to_connection_table
 	fi
 
-	thermal_type=$thermal_type_t5
 	max_tachos=12
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
@@ -1765,7 +1742,6 @@ e3597_specific()
 	add_i2c_dynamic_bus_dev_connection_table "${e3597_dynamic_i2c_bus_connect_table[@]}"
 	add_cpu_board_to_connection_table
 
-	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	asic_control=0
@@ -1804,7 +1780,6 @@ p4697_specific()
 	add_cpu_board_to_connection_table $cpu_bus_offset
 	add_i2c_dynamic_bus_dev_connection_table "${p4697_dynamic_i2c_bus_connect_table[@]}"
 
-	thermal_type=$thermal_type_def
 	max_tachos=14
 	hotplug_fans=7
 	erot_count=2
@@ -1930,7 +1905,7 @@ msn48xx_specific()
 	local cpu_bus_offset=51
 	connect_table+=(${msn4800_base_connect_table[@]})
 	add_cpu_board_to_connection_table $cpu_bus_offset
-	thermal_type=$thermal_type_t13
+
 	hotplug_linecards=8
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
@@ -1954,11 +1929,8 @@ sn2201_specific()
 {
 	local cpu_bus_offset=51
 	echo 2 > $config_path/cpld_num
-	thermal_type=$thermal_type_t11
 	i2c_asic_bus_default=6
 	hotplug_fans=4
-	hotplug_pwrs=2
-	hotplug_psus=2
 	echo 1 > $config_path/fan_dir_eeprom
 	echo 22000 > $config_path/fan_max_speed
 	echo 2200 > $config_path/fan_min_speed
@@ -1983,8 +1955,19 @@ sn2201_specific()
 	sed -i "s/label temp8/label temp$id0/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	sed -i "s/label temp14/label temp$id1/g" $lm_sensors_configs_path/sn2201_sensors.conf
 	lm_sensors_config="$lm_sensors_configs_path/sn2201_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn2201.json"
 	echo 13 > $config_path/reset_attr_num
+	# WA for mux idle state issue.
+	echo -2 > /sys/devices/pci0000\:00/0000\:00\:1f.0/NVSN2201\:00/i2c_mlxcpld.1/i2c-1/1-0070/idle_state
+	if [ "$sku" == "HI168" ]; then
+		hotplug_pwrs=0
+		hotplug_psus=0
+		psu_count=0
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn2201_busbar.json"
+	else
+		hotplug_pwrs=2
+		hotplug_psus=2
+		thermal_control_config="$thermal_control_configs_path/tc_config_msn2201.json"
+	fi
 }
 
 p2317_specific()
@@ -2008,8 +1991,6 @@ sn56xx_specific()
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	# ToDo Uncomment when will be defined	thermal_type=$thermal_type_t14
-	thermal_type=$thermal_type_def	# ToDo Temporary default 60%
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2800 > $config_path/fan_min_speed
@@ -2074,7 +2055,6 @@ p4262_specific()
 	asic_control=0
 	health_events_count=4
 	pwr_events_count=1
-	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4262_sensors.conf"
@@ -2104,7 +2084,6 @@ p4300_specific()
 	asic_control=0
 	health_events_count=4
 	pwr_events_count=1
-	thermal_type=$thermal_type_def
 	i2c_comex_mon_bus_default=23
 	i2c_bus_def_off_eeprom_cpu=24
 	lm_sensors_config="$lm_sensors_configs_path/p4300_sensors.conf"
@@ -2224,10 +2203,10 @@ smart_switch_common()
 	echo -n "${smart_switch_dpu_events[@]}" > "$dpu_events_file"
 	i2c_comex_mon_bus_default=$((smart_switch_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo "$smart_switch_reset_attr_num" > $config_path/reset_attr_num
 }
 
-n5110ld_specific()
+n51xxld_specific()
 {
 	local cpu_bus_offset=55
 	if [ ! -e "$devtree_file" ]; then
@@ -2246,90 +2225,59 @@ n5110ld_specific()
 	echo 20 > $config_path/global_wp_timeout
 	echo 4 > $config_path/cpld_num
 	echo 2 > $config_path/clk_brd_num
+
+	case $sku in
+		HI162)	# power-on
+			max_tachos=8
+			echo 6 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
+		;;
+		HI166|HI169|HI170)	# TTM, ARIEL, MSFT
+			max_tachos=8
+			echo 4 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
+		;;
+		HI167)	# NSO
+			max_tachos=8
+			echo 4 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
+		;;
+		*)
+			max_tachos=8
+			echo 6 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
+		;;
+	esac
+
 	psu_count=0
 	hotplug_fans=0
-	max_tachos=12
-	leakage_count=2
-	leakage_rope_count=2
+	leakage_count=4
 	hotplug_pwrs=0
 	hotplug_psus=0
 	erot_count=3
 	asic_control=0
 	health_events_count=0
-	pwr_events_count=0
+	pwr_events_count=1
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
-	lm_sensors_config="$lm_sensors_configs_path/n5110ld_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
-	lm_sensors_labels="$lm_sensors_configs_path/n5110ld_sensors_labels.json"
+	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
+	lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
 	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
-	echo 6 > $config_path/fan_drwr_num
 	echo 33000 > $config_path/fan_max_speed
 	echo 6000 > $config_path/fan_min_speed
-
+	
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
-n5110ld_ttm_specific()
-{
-	local cpu_bus_offset=55
-	if [ ! -e "$devtree_file" ]; then
-		connect_table+=(${n5110ld_base_connect_table[@]})
-		add_cpu_board_to_connection_table $cpu_bus_offset
-		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_dynamic_i2c_bus_connect_table[@]}"
-		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_cartridge_eeprom_connect_table[@]}"
-	else
-		# adding Cable Cartridge support which is not included to BOM string.
-		echo -n "${n5110ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
-		# Add VPD explicitly.
-		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
-	fi
-	asic_i2c_buses=(11 21)
-	echo 1 > $config_path/global_wp_wait_step
-	echo 20 > $config_path/global_wp_timeout
-	echo 4 > $config_path/cpld_num
-	echo 2 > $config_path/clk_brd_num
-	psu_count=0
-	hotplug_fans=0
-	max_tachos=8
-	leakage_count=2
-	leakage_rope_count=2
-	hotplug_pwrs=0
-	hotplug_psus=0
-	erot_count=3
-	asic_control=0
-	health_events_count=0
-	pwr_events_count=0
-	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
-	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
-	lm_sensors_config="$lm_sensors_configs_path/n5110ld_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
-	lm_sensors_labels="$lm_sensors_configs_path/n5110ld_sensors_labels.json"
-	echo C2P > $config_path/system_flow_capability
-	named_busses+=(${n5110ld_named_busses[@]})
-	add_come_named_busses $cpu_bus_offset
-	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo -n "${l1_power_events[@]}" > "$power_events_file"
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
-	echo 4 > $config_path/fan_drwr_num
-	echo 33000 > $config_path/fan_max_speed
-	echo 6000 > $config_path/fan_min_speed
-
-	mctp_bus="$n5110_mctp_bus"
-	mctp_addr="$n5110_mctp_addr"
-	ln -sf /dev/i2c-2 /dev/i2c-8
-	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
-}
-
-n5110ld_specific_cleanup()
+n51xxld_specific_cleanup()
 {
 	unlink /dev/i2c-8
 	# Remove VPD explicitly.
@@ -2341,7 +2289,7 @@ system_cleanup_specific()
 {
 	case $board_type in
 	VMOD0021)
-		n5110ld_specific_cleanup
+		n51xxld_specific_cleanup
 		;;
 	*)
 		;;
@@ -2401,17 +2349,7 @@ check_system()
 			smart_switch_common
 			;;
 		VMOD0021)
-			case $sku in
-				HI162)
-					n5110ld_specific
-				;;
-				HI166)	# TTM
-					n5110ld_ttm_specific
-				;;
-				*)
-					n5110ld_specific
-				;;
-			esac
+			n51xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2556,6 +2494,7 @@ create_event_files()
 	done
 	if [ $pwr_events_count -ne 0 ]; then
 		if [ -f "$power_events_file" ]; then
+			declare -a power_events="($(< $power_events_file))"
 			for ((i=0; i<=pwr_events_count; i+=1)); do
 				check_n_init $events_path/${power_events[$i]} 0
 			done
@@ -2586,8 +2525,19 @@ load_modules()
 			modprobe drivetemp
 		fi
 	fi
+	case $cpu_type in
+		$AMD_SNW_CPU)
+			# coretemp driver supported only on Intel chips
+			;;
+		*)
+			if ! check_simx; then
+				modprobe coretemp
+			fi
+			;;
+	esac
+
 	case $sku in
-		HI162|HI166)	# JSO
+		HI162|HI166|HI167|HI169|HI170)	# Juliet
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
@@ -2615,6 +2565,7 @@ set_config_data()
 	echo $hotplug_pwrs > $config_path/hotplug_pwrs
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
+	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
 }
 
 connect_platform()
@@ -2816,7 +2767,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166)
+	HI157|HI162|HI166|HI167|HI169|HI170)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -2837,7 +2788,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|HI142|HI152|HI162|HI166)
+	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -3033,7 +2984,7 @@ pre_devtr_init()
 		;;
 	VMOD0021)
 		case $sku in
-		HI162|HI166)
+		HI162|HI166|HI167|HI169|HI170)
 			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)
@@ -3083,7 +3034,6 @@ do_start()
 	devtr_check_smbios_device_description
 	check_system
 	set_asic_pci_id
-	set_dpu_pci_id
 	set_sodimms
 
 	asic_control=$(< $config_path/asic_control) 
@@ -3109,13 +3059,6 @@ do_start()
 		max_tachos=$(<$config_path/max_tachos)
 	fi
 
-	# check for MSN3700C exeption
-	if [ "$max_tachos" == 8 ] && [ "$tune_thermal_type" == 1 ]; then
-		thermal_type=$thermal_type_t6
-	fi
-	# Information for thermal control service
-	echo $thermal_type > $config_path/thermal_type
-
 	if [ -v "lm_sensors_config_lc" ] && [ -f $lm_sensors_config_lc ]; then
 		ln -sf $lm_sensors_config_lc $config_path/lm_sensors_config_lc
 	fi
@@ -3130,7 +3073,7 @@ do_start()
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
-		cp $thermal_control_configs_path/tc_config_default.json $config_path/tc_config.json
+		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }
