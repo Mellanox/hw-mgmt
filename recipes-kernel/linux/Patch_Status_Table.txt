@@ -488,6 +488,8 @@ Kernel-6.1
 |0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
 |0094-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
 |0095-platform-mellanox-nvsw-sn2201-Add-support-for-new-sy.patch  |                    | Downstream accepted                      |            |                                                |
+|0096-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream accepted;skip[sonic,cumulus]  |            | Add dedicated match for QMB8700                |
+|0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted					  |            | SN5640                                         |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
@@ -504,7 +506,6 @@ Kernel-6.1
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
 |9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
-|9005-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add dedicated match for QMB8700                |
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
