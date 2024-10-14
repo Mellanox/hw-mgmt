@@ -2746,6 +2746,10 @@ set_asic_pci_id()
 		echo $asic_control > "$config_path"/asic_control
 	fi
 
+	if [ ! -f "$config_path"/minimal_usupported ]; then
+		echo $minimal_usupported > "$config_path"/minimal_usupported
+	fi
+
 	# Get ASIC PCI Ids.
 	case $sku in
 	HI122|HI123|HI124|HI126|HI156|HI160)
@@ -3125,6 +3129,11 @@ do_chip_up_down()
 		log_info "Current ASIC type does not support this operation type"
 		return 0
 	fi
+
+	if [ -f "$config_path"/minimal_usupported ]; then
+		minimal_usupported=$(< $config_path/minimal_usupported)
+	fi
+
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 		VMOD0005)
@@ -3188,7 +3197,7 @@ do_chip_up_down()
 		fi
 
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
+		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [ "$minimal_usupported" -ne 1 ]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			set_i2c_bus_frequency_400KHz
@@ -3214,7 +3223,7 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [ "$minimal_usupported" -ne 1 ]; then
 			sleep "$chipup_delay"
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
