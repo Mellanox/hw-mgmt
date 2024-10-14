@@ -3,8 +3,6 @@
 # pylint: disable=C0103
 # pylint: disable=W0718
 # pylint: disable=R0913:
-from _ast import If
-
 ########################################################################
 # Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
 #
@@ -211,7 +209,7 @@ atttrib_list = {
 
         {"fin": "/var/run/hw-management/system/graseful_pwr_off",
          "fn": "run_power_button_event",
-         "arg": [],         
+         "arg": [],
          "poll": 1, "ts": 0},
 
         {"fin": "/sys/module/sx_core/asic0/temperature/input",
@@ -300,7 +298,11 @@ atttrib_list = {
         {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0},
         {"fin": None,
-         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
+         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0},
+        {"fin": None,
+         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", 0], "poll": 10, "ts": 0},
+        {"fin": None,
+         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic1/", 0], "poll": 10, "ts": 0}
     ],
     "test": [
          {"fin": "/tmp/power_button_clr",
@@ -434,6 +436,55 @@ def run_cmd(cmd_list, arg):
         os.system(cmd.format(arg1=arg))
 
 # ----------------------------------------------------------------------
+def asic_state_poll(arg_list, arg):
+    """
+        Check if all expected ASICs are inited
+    """
+    asic_path = arg_list[0]
+    asic_state_old = arg_list[1]
+
+    if os.path.exists(asic_path):
+        asic_state = 1
+    else:
+        asic_state = 0
+
+    if asic_state != asic_state_old:            
+        arg_list[1] = asic_state
+        asic_chipup_completed_fname = os.path.join("/var/run/hw-management/config", "asic_chipup_completed")
+        with open(asic_chipup_completed_fname, 'a+', encoding="utf-8") as f:
+            f.seek(0)
+            try:
+                asic_chipup_completed = f.read().rstrip('\n')
+                asic_chipup_completed = int(asic_chipup_completed)
+            except: 
+                asic_chipup_completed = 0
+
+            if asic_state == 1:
+                asic_chipup_completed += 1
+            else:
+                asic_chipup_completed -= 1
+        with open(asic_chipup_completed_fname, 'w', encoding="utf-8") as f:
+            f.write(str(asic_chipup_completed)+"\n")
+
+        asic_num_fname = os.path.join("/var/run/hw-management/config", "asic_num")
+        try:
+            with open(asic_num_fname, 'r', encoding="utf-8") as f:
+                asic_num = f.read().rstrip('\n')
+                asic_num = int(asic_num)
+        except:
+            asic_num = 255
+
+        if asic_chipup_completed >= asic_num:
+            asics_init_done = 1
+        else:
+            asics_init_done = 0
+
+        asics_init_done_fname = os.path.join("/var/run/hw-management/config", "asics_init_done")
+        with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
+            f.write(str(asics_init_done)+"\n")
+
+
+# ----------------------------------------------------------------------
 def sync_fan(fan_id, val):
     if int(val) == 0:
         status = 1
@@ -518,6 +569,7 @@ def module_temp_populate(arg_list, arg):
     f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(temp_trip_crit)
+
 
 # ----------------------------------------------------------------------
 def update_attr(attr_prop):
