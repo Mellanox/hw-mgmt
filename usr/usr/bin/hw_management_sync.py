@@ -177,7 +177,7 @@ atttrib_list = {
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
-    "HI166|HI167|HI169|HI170": [
+    "HI166|HI167|HI169|HI170|HI173": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1",
          "fn": "sync_fan", "arg": "1",
          "poll": 5, "ts": 0},
