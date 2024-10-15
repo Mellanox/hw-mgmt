@@ -2242,6 +2242,11 @@ n51xxld_specific()
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
 		;;
+		HI173)	# NSO no NCI
+			max_tachos=8
+			echo 4 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_n5200ld.json"
+		;;
 		*)
 			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
@@ -2537,7 +2542,7 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170)	# Juliet
+		HI162|HI166|HI167|HI169|HI170|HI173)	# Juliet
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
@@ -2767,7 +2772,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI173)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -2788,7 +2793,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170)
+	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170|HI173)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -2984,7 +2989,7 @@ pre_devtr_init()
 		;;
 	VMOD0021)
 		case $sku in
-		HI162|HI166|HI167|HI169|HI170)
+		HI162|HI166|HI167|HI169|HI170|HI173)
 			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)
