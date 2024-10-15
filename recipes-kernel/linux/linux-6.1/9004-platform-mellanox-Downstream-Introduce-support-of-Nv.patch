@@ -668,7 +668,7 @@ index bfa2588782bd..09390c38723a 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_swb_dc_dc_pwr_fail",
++		.label = "reset_pwr_button_or_leak_con",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
