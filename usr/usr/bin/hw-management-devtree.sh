@@ -183,17 +183,17 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
-declare -A sn5640_alternatives=(["mp2891_0"]="mp2975 0x62 5 voltmon1" \
-				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
-				["mp2975_2"]="mp2975 0x64 5 voltmon3" \
-				["mp2975_3"]="mp2975 0x65 5 voltmon4" \
-				["mp2975_4"]="mp2975 0x66 5 voltmon5" \
-				["mp2975_5"]="mp2975 0x67 5 voltmon6" \
-				["mp2975_6"]="mp2975 0x68 5 voltmon7" \
-				["mp2975_7"]="mp2975 0x69 5 voltmon8" \
-				["mp2975_8"]="mp2975 0x6a 5 voltmon9" \
-				["mp2975_9"]="mp2975 0x6c 5 voltmon10" \
-				["mp2975_10"]="mp2975 0x6e 5 voltmon11" \
+declare -A sn5640_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
+				["mp2891_1"]="mp2891 0x63 5 voltmon2" \
+				["mp2891_2"]="mp2891 0x64 5 voltmon3" \
+				["mp2891_3"]="mp2891 0x65 5 voltmon4" \
+				["mp2891_4"]="mp2891 0x66 5 voltmon5" \
+				["mp2891_5"]="mp2891 0x67 5 voltmon6" \
+				["mp2891_6"]="mp2891 0x68 5 voltmon7" \
+				["mp2891_7"]="mp2891 0x69 5 voltmon8" \
+				["mp2891_8"]="mp2891 0x6a 5 voltmon9" \
+				["mp2891_9"]="mp2891 0x6c 5 voltmon10" \
+				["mp2891_10"]="mp2891 0x6e 5 voltmon11" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
