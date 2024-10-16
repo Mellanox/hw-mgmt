@@ -2407,6 +2407,7 @@ check_system()
 			;;
 		VMOD0022)
 			sn5640_specific
+			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
 			case $product in
@@ -2835,8 +2836,10 @@ set_asic_pci_id()
 		;;
 	HI171)
 		asic_pci_id=$spc5_pci_id
+		;;
 	HI172)
 		asic_pci_id=$spc4_pci_id
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
