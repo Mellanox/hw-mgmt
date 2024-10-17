@@ -1,0 +1,47 @@
+From 99f72f26e307bf5439ad4967e8029310bbf35f86 Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Sun, 20 Oct 2024 11:22:52 +0300
+Subject: [PATCH backport 5.10 145/197] platform: x86: MLX_PLATFORM: select
+ REGMAP instead of depending on it
+
+REGMAP is a hidden (not user visible) symbol. Users cannot set it
+directly thru "make *config", so drivers should select it instead of
+depending on it if they need it.
+
+Consistently using "select" or "depends on" can also help reduce
+Kconfig circular dependency issues.
+
+Therefore, change the use of "depends on REGMAP" to "select REGMAP".
+
+Fixes: ef0f62264b2a ("platform/x86: mlx-platform: Add physical bus number auto detection")
+Signed-off-by: Randy Dunlap <rdunlap@infradead.org>
+Cc: Vadim Pasternak <vadimp@mellanox.com>
+Cc: Darren Hart <dvhart@infradead.org>
+Cc: Hans de Goede <hdegoede@redhat.com>
+Cc: Mark Gross <markgross@kernel.org>
+Cc: platform-driver-x86@vger.kernel.org
+Link: https://lore.kernel.org/r/20230226053953.4681-7-rdunlap@infradead.org
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+
+Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
+---
+ drivers/platform/x86/Kconfig | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/x86/Kconfig b/drivers/platform/x86/Kconfig
+index d12db6c316ea..b50a027f9b19 100644
+--- a/drivers/platform/x86/Kconfig
++++ b/drivers/platform/x86/Kconfig
+@@ -1047,7 +1047,8 @@ config I2C_MULTI_INSTANTIATE
+ 
+ config MLX_PLATFORM
+ 	tristate "Mellanox Technologies platform support"
+-	depends on I2C && REGMAP
++	depends on I2C
++	select REGMAP
+ 	help
+ 	  This option enables system support for the Mellanox Technologies
+ 	  platform. The Mellanox systems provide data center networking
+-- 
+2.20.1
+

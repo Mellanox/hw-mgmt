@@ -1,0 +1,30 @@
+From 4f7263cee33410abdd0dea43929f31d6e4bb9627 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 13 Jul 2023 06:20:05 +0000
+Subject: [PATCH backport 5.10 171/197] dt-bindings: trivial-devices: Add
+ mps,mp2891
+
+Add new dual-loop, digital, multi-phase controller MP2891 fro
+Monolithic Power Systems, Inc. (MPS) to trivial devices.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ Documentation/devicetree/bindings/trivial-devices.yaml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/trivial-devices.yaml b/Documentation/devicetree/bindings/trivial-devices.yaml
+index 919a4bf03a5a..91a4a07a0ded 100644
+--- a/Documentation/devicetree/bindings/trivial-devices.yaml
++++ b/Documentation/devicetree/bindings/trivial-devices.yaml
+@@ -105,6 +105,8 @@ properties:
+           - fsl,mpl3115
+             # MPR121: Proximity Capacitive Touch Sensor Controller
+           - fsl,mpr121
++            # Monolithic Power Systems Inc. multi-phase controller mp2891
++          - mps,mp2891
+             # Monolithic Power Systems Inc. multi-phase controller mp2888
+           - mps,mp2888
+             # Monolithic Power Systems Inc. multi-phase controller mp2975
+-- 
+2.20.1
+
