@@ -109,7 +109,7 @@ def trim_array_str(str_list):
 def get_line_elements(line):
     columns_raw = line.split("|")
     if len(columns_raw) < 3:
-        return False\
+        return []
     # remove empty firsta and last elem
     columns_raw = columns_raw[1:-1]
     columns = trim_array_str(columns_raw)
@@ -186,8 +186,8 @@ def load_patch_table(path, k_version):
             if delimiter_count >= 3:
                 print("Err: too much leading delimers line #{}: {}".format(table_ofset + idx, line))
                 return None
-            elif table:
-                break
+            elif table or delimiter_count == 2:
+                break                
             continue
 
         # line without delimiter but header still not found
@@ -572,7 +572,7 @@ if __name__ == '__main__':
 
     print("-> Process patches")
     patch_table = load_patch_table(src_folder, k_version_major)
-    if not patch_table:
+    if patch_table == None:
         print("Can't load patch table from folder {}".format(src_folder))
         sys.exit(1)
 
