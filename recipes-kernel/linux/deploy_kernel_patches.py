@@ -109,7 +109,7 @@ def trim_array_str(str_list):
 def get_line_elements(line):
     columns_raw = line.split("|")
     if len(columns_raw) < 3:
-        return False\
+        return []
     # remove empty firsta and last elem
     columns_raw = columns_raw[1:-1]
     columns = trim_array_str(columns_raw)
@@ -143,6 +143,9 @@ def parse_status(line, patch_name):
                 ret = re.match(r'(\S+)\[(.*)\]', rule)
             except:
                 print("Incompatible status {} for {}".format(line, patch_name))
+                return None
+            if not ret or len(ret.groups()) < 2:
+                print("Error on parsing line {}".format(line))
                 return None
             status_dict[ret.group(1)] = ret.group(2).split(',')
     return status_dict
@@ -186,7 +189,7 @@ def load_patch_table(path, k_version):
             if delimiter_count >= 3:
                 print("Err: too much leading delimers line #{}: {}".format(table_ofset + idx, line))
                 return None
-            elif table:
+            elif table or delimiter_count == 2:
                 break
             continue
 
@@ -208,8 +211,9 @@ def load_patch_table(path, k_version):
                 patch_status_line = table_line[CONST.STATUS]
                 patch_status = parse_status(patch_status_line, table_line[CONST.PATCH_NAME])
                 if not patch_status:
-                    print("Err: can't parse patch {} status {}".format(table_line[CONST.PATCH_NAME],
-                                                                       patch_status_line))
+                    print("Err: can't parse patch {} line #{} status: \"{}\"".format(table_line[CONST.PATCH_NAME],
+                                                                                idx,
+                                                                                patch_status_line))
                     return None
                 table_line[CONST.STATUS] = patch_status
                 table_line[CONST.PATCH_DST] = None
@@ -572,7 +576,7 @@ if __name__ == '__main__':
 
     print("-> Process patches")
     patch_table = load_patch_table(src_folder, k_version_major)
-    if not patch_table:
+    if patch_table == None:
         print("Can't load patch table from folder {}".format(src_folder))
         sys.exit(1)
 
