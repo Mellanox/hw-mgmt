@@ -144,7 +144,7 @@ def parse_status(line, patch_name):
             except:
                 print("Incompatible status {} for {}".format(line, patch_name))
                 return None
-            if not ret or len(ret.groups() < 2):
+            if not ret or len(ret.groups()) < 2:
                 print("Rrror on parsing line {}".format(line))
                 return None
             status_dict[ret.group(1)] = ret.group(2).split(',')
