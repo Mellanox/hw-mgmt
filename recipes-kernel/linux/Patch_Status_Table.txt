@@ -394,6 +394,101 @@ Kernel-5.10
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+Kernel-5.14
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-i2c-mlxcpld-Update-module-license.patch                     | f069291bd5fc       | Rejected                         |            |                                                |
+|0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch  | cb9744178f33       | Rejected                          |            |                                                |
+|0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch  | 66b0c2846ba8       | Rejected                          |            |                                                |
+|0004-i2c-mux-mlxcpld-Update-module-license.patch                 | 337bc68c294d       | Rejected                          |            |                                                |
+|0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch     | 98d29c410475       | Rejected                          |            |                                                |
+|0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch     | 84af1b168c50       | Rejected                          |            |                                                |
+|0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch  | 81566938083a       | Rejected                          |            |                                                |
+|0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch  | cae5216387d1       | Rejected                          |            |                                                |
+|0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch  | c52a1c5f5db5       | Rejected                          |            |                                                |
+|0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch           | 699c0506543e       | Rejected                         |            |                                                |
+|0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch  | a39bd92e92b9       | Rejected                         |            |                                                |
+|0012-hwmon-mlxreg-fan-Add-support-for-fan-drawers-capabil.patch  | f7bf7eb2d734       | Rejected                         |            |                                                |
+|0013-hwmon-pmbus-shrink-code-and-remove-pmbus_do_remove.patch    | 3bce071a301f       | Rejected                         |            |                                                |
+|0014-thermal-drivers-core-Use-a-char-pointer-for-the-cool.patch  | 584837618100       | Rejected                           |  5.10.121  |                                                |
+|0015-mlxsw-core-Remove-critical-trip-points-from-thermal-.patch  | d567fd6e82fa       | Rejected                         |            |                                                |
+|0016-net-don-t-include-ethtool.h-from-netdevice.h.patch          | cc69837fcaf4       | Rejected                         |            |                                                |
+|0017-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch  | 314dbb19f95b       | Rejected                         |            |                                                |
+|0018-mlxsw-thermal-Add-function-for-reading-module-temper.patch  | e57977b34ab5       | Rejected                         |            |                                                |
+|0019-mlxsw-thermal-Read-module-temperature-thresholds-usi.patch  | 72a64c2fe9d8       | Rejected                         |            |                                                |
+|0020-mlxsw-thermal-Fix-null-dereference-of-NULL-temperatu.patch  | f3b5a8907543       | Rejected                         |            |                                                |
+|0021-mlxsw-reg-Add-bank-number-to-MCIA-register.patch            | d51ea60e01f9       | Rejected                         |            |                                                |
+|0022-mlxsw-reg-Document-possible-MCIA-status-values.patch        | cecefb3a6eeb       | Rejected                         |            |                                                |
+|0023-ethtool-Allow-network-drivers-to-dump-arbitrary-EEPR.patch  | c781ff12a2f3       | Rejected                         |            |                                                |
+|0024-net-ethtool-Export-helpers-for-getting-EEPROM-info.patch    | 95dfc7effd88       | Rejected                         |            |                                                |
+|0025-ethtool-Add-fallback-to-get_module_eeprom-from-netli.patch  | 96d971e307cc       | Rejected                         |            |                                                |
+|0026-mlxsw-core-Add-support-for-module-EEPROM-read-by-pag.patch  | 1e27b9e40803       | Rejected                         |            |                                                |
+|0027-ethtool-Decrease-size-of-module-EEPROM-get-policy-ar.patch  | f5fe211d13af       | Rejected                         |            |                                                |
+|0028-ethtool-Use-kernel-data-types-for-internal-EEPROM-st.patch  | b8c48be23c2d       | Rejected                         |            |                                                |
+|0029-ethtool-Validate-module-EEPROM-length-as-part-of-pol.patch  | 0dc7dd02ba7a       | Rejected                         |            |                                                |
+|0030-ethtool-Validate-module-EEPROM-offset-as-part-of-pol.patch  | 88f9a87afeee       | Rejected                         |            |                                                |
+|0031-mlxsw-core_env-Read-module-temperature-thresholds-us.patch  | befc2048088a       | Rejected                         |            |                                                |
+|0032-mlxsw-core_env-Avoid-unnecessary-memcpy-s.patch             | 911bd1b1f08f       | Rejected                         |            |                                                |
+|0033-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch  | 2fd8d84ce309       | Rejected                          |  5.10.46   |                                                |
+|0034-mlxsw-Verify-the-accessed-index-doesn-t-exceed-the-a.patch  | 0c1acde1d3d0       | Rejected                          |  5.10.83   |                                                |
+|0035-hwmon-pmbus-Increase-maximum-number-of-phases-per-pa.patch  | e4db7719d037       | Rejected                         |            |                                                |
+|0036-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch  | 0c1acde1d3d0       | Rejected                         |            |                                                |
+|0037-dt-bindings-Add-MP2888-voltage-regulator-device.patch       | 9abfb52b5028       | Rejected                         |            |                                                |
+|0038-ethtool-wire-in-generic-SFP-module-access.patch             | c97a31f66ebc       | Rejected                         |            |                                                |
+|0039-ethtool-Fix-NULL-pointer-dereference-during-module-E.patch  | 51c96a561f24       | Rejected                         |            |                                                |
+|0040-phy-sfp-add-netlink-SFP-support-to-generic-SFP-code.patch   | d740513f05a2       | Rejected                         |            |                                                |
+|0041-net-ethtool-clear-heap-allocations-for-ethtool-funct.patch  | 80ec82e3d2c1       | Rejected                          |  5.10.47   |                                                |
+|0042-ethtool-support-FEC-settings-over-netlink.patch             | 1e5d1f69d9fb       | Rejected                         |            |                                                |
+|0043-platform-mellanox-mlxreg-io-Fix-argument-base-in-kst.patch  | 452dcfab9954       | Rejected                          |  5.10.75   |                                                |
+|0044-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch  | 5fd56f11838d       | Rejected                          |  5.10.75   |                                                |
+|0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch        | 52f57396c75a       | Rejected                         |            |                                                |
+|0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch  | 669b2e4aa1a8       | Rejected                         |            | (5.16)                                         |
+|0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch  | 712d6617d0a2       | Rejected                         |            | (5.16)                                         |
+|0048-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch  | 2292e2f685cd       | Rejected                          |  5.10.71   |                                                |
+|0049-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted; take[ALL]           |            |Need to check patch apply. Can break patch apply|
+|0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
+|0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|-0052-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch  | e6fab7af6ba1       | Bugfix upstream                          |  5.10.71   |                                                |
+|0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                |
+|0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream accepted                      |            | must exist in Sonic/CL from 4.9                |
+|0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch  | aafa1cafedca       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0056-platform-x86-mlx-platform-Add-initial-support-for-ne.patch  | a5d8f57edfb4       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0057-platform-mellanox-mlxreg-hotplug-Extend-logic-for-ho.patch  | bb1023b6da37       | Feature upstream                         |            | Modular SN4800  accepted in (5.16)             |
+|0058-platform-x86-mlx-platform-Configure-notifier-callbac.patch  | 67eb006cc1d1       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0059-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  | bbfd79c68170       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0060-platform_data-mlxreg-Add-new-field-for-secured-acces.patch  | 9d93d7877c91       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0061-platform-mellanox-mlxreg-lc-Add-initial-support-for-.patch  | 62f9529b8d5c       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0062-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch  | 5b0a315c3db5       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0063-Documentation-ABI-Add-new-line-card-attributes-for-m.patch  | 164e32717cbd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0064-hwmon-mlxreg-fan-Extend-the-maximum-number-of-tachom.patch  | bc8de07e8812       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0065-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch  | 9045512ca6cd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0066-platform-x86-mlx-platform-Add-new-attributes-for-Cof.patch  | 4289fd4ad43a       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0067-platform-mellanox-Add-dedicated-match-for-system-typ.patch  |                    | Downstream accepted                      |            | for MQM8700                                    |
+|0068-mlxsw-core-Initialize-switch-driver-last.patch              | 3d7a6f677905       | Feature upstream                         |            |                                                |
+|0069-mlxsw-core-Remove-mlxsw_core_is_initialized.patch           | 25a91f835a7b       | Feature upstream                         |            |   ???                                             |
+|0070-mlxsw-core_env-Defer-handling-of-module-temperature-.patch  | 163f3d2dd01c       | Feature upstream                         |            |                                                |
+|0071-mlxsw-core_env-Convert-module_info_lock-to-a-mutex.patch    | bd6e43f5953d       | Feature upstream                         |            |                                                |
+|0072-mlxsw-Track-per-module-port-status.patch                    | 896f399be078       | Feature upstream                         |            |                                                |
+|0073-mlxsw-reg-Add-fields-to-PMAOS-register.patch                | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0074-mlxsw-Make-PMAOS-pack-function-more-generic.patch           | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0075-mlxsw-Add-support-for-transceiver-modules-reset.patch       | 49fd3b645de8       | Feature upstream                         |            |                                                |
+|0076-ethtool-Add-ability-to-control-transceiver-modules-p.patch ?? | 353407d917b2       | Feature upstream                         |            |                                                |
+|0077-mlxsw-reg-Add-Port-Module-Memory-Map-Properties-regi.patch  | f10ba086f7e3       | Feature upstream                         |            |                                                |
+|0078-mlxsw-reg-Add-Management-Cable-IO-and-Notifications-.patch  | fc53f5fb8037       | Feature upstream                         |            |                                                |
+|0079-mlxsw-Add-ability-to-control-transceiver-modules-pow.patch  | 0455dc50bcca       | Feature upstream                         |            |                                                |
+|0080-ethtool-Add-transceiver-module-extended-states.patch        | 3dfb51126064       | Feature upstream                         |            |                                                |
+|0081-platform-x86-mlx-platform-Add-support-for-multiply-c.patch  | 249606d37d20       | Feature upstream                         |            | (5.16)                                         |
+|0082-mlxsw-core-Extend-external-cooling-device-whitelist-.patch  |                    | Feature pending                          |            | SN2201                                         |
+|0083-platform_data-mlxreg-Add-field-for-notification-call.patch  | abcebcd39fe0       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0084-i2c-mlxcpld-Add-callback-to-notify-probing-completio.patch  | 1f438d2318f4       | Feature upstream                         |            | SN2201                                         |
+|0085-hwmon-powr1220-Upgrade-driver-to-support-hwmon-info-.patch  | 15b1c188f8cf       | Feature upstream                         |            | SN2201 SN2201                                  |
+|0086-hwmon-powr1220-Add-support-for-Lattice-s-POWR1014-po.patch  | 9f93aa1005fa       | Feature upstream                         |            | SN2201 SN2201                                  |
+|0087-hwmon-Add-support-for-EMC2305-RPM-based-PWM-Fan-Spee.patch  | 0d8400c5a2ce       | Feature upstream                         |            | SN2201                                         |
+|0088-dt-bindings-Add-description-for-EMC2305-for-RPM-base.patch  |                    | Rejected                                 |            | SN2201 (relevant for ARM ARCH only)            |
+|0089-platform-mellanox-Add-support-for-new-SN2201-system.patch   | 662f24826f95       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Kernel-6.1
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
