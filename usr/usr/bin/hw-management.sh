@@ -116,6 +116,7 @@ reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
+minimal_usupported=0
 
 mctp_bus=""
 mctp_addr=""
@@ -3269,7 +3270,7 @@ do_chip_up_down()
 		fi
 
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [ "$minimal_usupported" -ne 1 ]; then
+		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_usupported:-0} -eq 0 ]]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			set_i2c_bus_frequency_400KHz
@@ -3295,7 +3296,7 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [ "$minimal_usupported" -ne 1 ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_usupported:-0} -eq 0 ]]; then
 			sleep "$chipup_delay"
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
