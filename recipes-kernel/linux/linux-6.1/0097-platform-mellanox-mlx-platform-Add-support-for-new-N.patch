@@ -1,7 +1,7 @@
-From 3a0bc91c0436c9f06ff8d3cb8ed28d9ed999374c Mon Sep 17 00:00:00 2001
+From 60e5f8cfdf6bd3a18ffef73764e59ccd53bba9ff Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Fri, 11 Oct 2024 11:09:32 +0300
-Subject: [PATCH 18/20] platform: mellanox: mlx-platform: Add support for new
+Subject: [PATCH 1/3] platform: mellanox: mlx-platform: Add support for new
  Nvidia system
 
 Add support for SN5640 Nvidia switch.
@@ -19,11 +19,11 @@ SN5640 Features:
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 89 ++++++++++++++++++++++++
- 1 file changed, 89 insertions(+)
+ drivers/platform/mellanox/mlx-platform.c | 96 ++++++++++++++++++++++++
+ 1 file changed, 96 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index f94e2f2f6776..0ac528c4db6b 100644
+index f94e2f2f6776..5796e4695a2a 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -2131,6 +2131,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
@@ -136,7 +136,7 @@ index f94e2f2f6776..0ac528c4db6b 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -8386,6 +8468,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8386,6 +8468,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0019"),
  		},
  	},
@@ -145,6 +145,13 @@ index f94e2f2f6776..0ac528c4db6b 100644
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0022"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI171"),
++		},
++	},
++	{
++		.callback = mlxplat_dmi_ng400_hi171_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0022"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI172"),
 +		},
 +	},
  	{

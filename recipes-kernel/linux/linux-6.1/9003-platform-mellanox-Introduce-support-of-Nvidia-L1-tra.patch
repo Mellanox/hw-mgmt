@@ -1,7 +1,7 @@
-From 1d4c63235da4593308c6a6ee989f490edf2ee995 Mon Sep 17 00:00:00 2001
+From 862d26a9e9abfc37daf2bbdecf8068e2386e3d0f Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 14 Jan 2024 14:21:57 +0000
-Subject: [PATCH 19/20] platform: mellanox: Introduce support of Nvidia L1 tray
+Subject: [PATCH 2/3] platform: mellanox: Introduce support of Nvidia L1 tray
  DGX switch
 
 Add support for new L1 tray DGX switch node providing L1
@@ -24,7 +24,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 206 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 0ac528c4db6b..3fa564ebc034 100644
+index 5796e4695a2a..144ee24c11fd 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -3059,6 +3059,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {

@@ -306,14 +306,7 @@ atttrib_list = {
     ],
     "HI171|HI172": [
         {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic1"],
-         "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic1/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic2"],
-         "poll": 3, "ts": 0},
-
+         "fn": "asic_temp_populate",   "arg" : ["asic1"],   "poll": 3, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module0/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module1"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module1/temperature/input",
@@ -443,9 +436,7 @@ atttrib_list = {
         {"fin": "/sys/module/sx_core/asic0/module63/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module64"], "poll": 20, "ts": 0},
         {"fin": None,
-         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", 0], "poll": 10, "ts": 0},
-        {"fin": None,
-         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic1/", 0], "poll": 10, "ts": 0}
+         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", 0], "poll": 10, "ts": 0}
     ],
     "test": [
          {"fin": "/tmp/power_button_clr",
@@ -626,7 +617,6 @@ def asic_state_poll(arg_list, arg):
         with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
             f.write(str(asics_init_done)+"\n")
 
-
 # ----------------------------------------------------------------------
 def sync_fan(fan_id, val):
     if int(val) == 0:
@@ -700,7 +690,6 @@ def module_temp_populate(arg_list, arg):
         temp_emergency = ""
         temp_fault = ""
         temp_trip_crit = ""
-        
 
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val))
