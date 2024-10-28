@@ -1,7 +1,7 @@
-From 95d60daf2443af52cb42efbdba1a8a807b7d953c Mon Sep 17 00:00:00 2001
+From d6a6b670349391278befeb6ae13fdcc78244a9fa Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Fri, 11 Oct 2024 11:16:01 +0300
-Subject: [PATCH 20/20] platform: mellanox: Downstream: Introduce support of
+Subject: [PATCH 3/3] platform: mellanox: Downstream: Introduce support of
  Nvidia next genration L1 tray switch
 
 Add support for new L1 tray switch node providing L1 connectivity for
@@ -20,7 +20,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 1071 insertions(+), 104 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 3fa564ebc034..39fea95fb4dd 100644
+index 144ee24c11fd..2192f047ec70 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -53,6 +53,7 @@
@@ -1430,7 +1430,7 @@ index 3fa564ebc034..39fea95fb4dd 100644
  	{
  		.callback = mlxplat_dmi_ng400_hi171_matched,
  		.matches = {
-@@ -8769,8 +9736,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8776,8 +9743,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	int i, shift = 0;
  
  	/* Scan adapters from expected id to verify it is free. */
@@ -1441,7 +1441,7 @@ index 3fa564ebc034..39fea95fb4dd 100644
  	     mlxplat_max_adap_num; i++) {
  		search_adap = i2c_get_adapter(i);
  		if (search_adap) {
-@@ -8779,7 +9746,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8786,7 +9753,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  		}
  
  		/* Return if expected parent adapter is free. */
@@ -1450,7 +1450,7 @@ index 3fa564ebc034..39fea95fb4dd 100644
  			return 0;
  		break;
  	}
-@@ -8801,7 +9768,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8808,7 +9775,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	}
  
  	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */
