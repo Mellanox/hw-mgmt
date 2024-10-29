@@ -2333,7 +2333,6 @@ sn5640_specific()
 	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
 	thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 	named_busses+=(${sn5640_named_busses[@]})
-	asic_i2c_buses=(2 18)
 	add_come_named_busses $sn5640_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
