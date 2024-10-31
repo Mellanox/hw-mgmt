@@ -52,6 +52,7 @@ LOCKFILE="/var/run/hw-management-chassis.lock"
 board_type_file=/sys/devices/virtual/dmi/id/board_name
 sku_file=/sys/devices/virtual/dmi/id/product_sku
 system_ver_file=/sys/devices/virtual/dmi/id/product_version
+pn_file=/sys/devices/virtual/dmi/id/product_name
 devtree_file=$config_path/devtree
 dpu2host_events_file=$config_path/dpu_to_host_events
 dpu_events_file=$config_path/dpu_events

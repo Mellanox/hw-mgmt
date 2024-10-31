@@ -60,6 +60,7 @@
 source hw-management-helpers.sh
 [ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 [ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
+[ -f "$pn_file" ] && pn=$(< $pn_file) || pn="Unknown"
 source hw-management-devtree.sh
 # Local constants and variables
 
@@ -2261,7 +2262,14 @@ n51xxld_specific()
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
-	lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
+	case $pn in
+	N5200_LD)
+		lm_sensors_labels="$lm_sensors_configs_path/n52xxld_sensors_labels.json"
+		;;
+	*)
+		lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
+		;;
+	esac
 	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
