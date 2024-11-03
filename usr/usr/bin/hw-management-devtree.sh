@@ -208,7 +208,6 @@ declare -A sn5640_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
-				["tmp411_0"]="tmp411 0x4c 7 ext_amb" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \

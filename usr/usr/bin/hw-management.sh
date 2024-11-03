@@ -489,7 +489,6 @@ sn5640_base_connect_table=( \
 	mp2891 0x6e 5 \
 	tmp102 0x49 6 \
 	tmp102 0x4a 7 \
-	tmp411 0x4c 7 \
 	24c512 0x51 8 )
 
 p2317_connect_table=(	24c512 0x51 8)
