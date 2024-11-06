@@ -116,7 +116,7 @@ reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
-minimal_usupported=0
+minimal_unsupported=0
 
 mctp_bus=""
 mctp_addr=""
@@ -2325,7 +2325,7 @@ sn5640_specific()
 	hotplug_pwrs=4
 	hotplug_psus=4
 	psu_count=4
-	mlxminimal_usupported=1
+	minimal_unsupported=1
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
 	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
@@ -2801,8 +2801,8 @@ set_asic_pci_id()
 		echo $asic_control > "$config_path"/asic_control
 	fi
 
-	if [ ! -f "$config_path"/minimal_usupported ]; then
-		echo $minimal_usupported > "$config_path"/minimal_usupported
+	if [ ! -f "$config_path"/minimal_unsupported ]; then
+		echo $minimal_unsupported > "$config_path"/minimal_unsupported
 	fi
 
 	# Get ASIC PCI Ids.
@@ -3200,8 +3200,8 @@ do_chip_up_down()
 		return 0
 	fi
 
-	if [ -f "$config_path"/minimal_usupported ]; then
-		minimal_usupported=$(< $config_path/minimal_usupported)
+	if [ -f "$config_path"/minimal_unsupported ]; then
+		minimal_unsupported=$(< $config_path/minimal_unsupported)
 	fi
 
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
@@ -3267,7 +3267,7 @@ do_chip_up_down()
 		fi
 
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_usupported:-0} -eq 0 ]]; then
+		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			set_i2c_bus_frequency_400KHz
@@ -3293,7 +3293,7 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_usupported:-0} -eq 0 ]]; then
+		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
 			sleep "$chipup_delay"
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device
