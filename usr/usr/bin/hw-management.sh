@@ -136,7 +136,6 @@ ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
 xdr_cpu_bus_offset=66
 smart_switch_cpu_bus_offset=34
-sn5640_cpu_bus_offset=26
 
 connect_table=()
 named_busses=()
@@ -2309,7 +2308,7 @@ sn5640_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${sn5640_base_connect_table[@]})
-		add_cpu_board_to_connection_table $sn5640_cpu_bus_offset
+		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
 	# Set according to front fan max.
 	echo 21800 > $config_path/fan_max_speed
@@ -2319,8 +2318,8 @@ sn5640_specific()
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
 	echo 5500 > $config_path/psu_fan_min
-	i2c_comex_mon_bus_default=$((sn5640_cpu_bus_offset+5))
-	i2c_bus_def_off_eeprom_cpu=$((sn5640_cpu_bus_offset+6))
+	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
 	max_tachos=10
 	hotplug_fans=5
 	hotplug_pwrs=4
@@ -2332,7 +2331,7 @@ sn5640_specific()
 	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
 	thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 	named_busses+=(${sn5640_named_busses[@]})
-	add_come_named_busses $sn5640_cpu_bus_offset
+	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 	echo 0 > "$config_path"/labels_ready
@@ -3060,7 +3059,7 @@ pre_devtr_init()
 	VMOD0022)
 		case $sku in
 		HI171|HI172)
-			echo $sn5640_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
 		*)
 			;;
