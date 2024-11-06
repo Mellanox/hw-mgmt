@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 hw-management (1.mlnx.7.0040.2002) unstable; urgency=low
   [ MLNX ] 
 
@@ -16,3 +17,9 @@ hw-management (1.mlnx.7.0040.1126-QS) unstable; urgency=low
 
  -- Vadim Pasternak <vadimp@nvidia.com> Tue, 03 Nov 2024 13:10:00 +0300
 >>>>>>> 08988691 (hw-mgmt: Update changelog)
+=======
+hw-management (1.mlnx.7.0040.1127-QS) unstable; urgency=low
+  [ MLNX ] 
+
+ -- Vadim Pasternak <vadimp@nvidia.com> Tue, 05 Nov 2024 13:10:00 +0300
+>>>>>>> 7b9090c6 (Promote tag)
