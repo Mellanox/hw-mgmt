@@ -3076,8 +3076,7 @@ map_asic_pci_to_i2c_bus()
 
 do_start()
 {
-	init_hw_management_done_wd_files
-	init_hw_management_done_wd
+	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
@@ -3136,8 +3135,6 @@ do_start()
 	fi
 	log_info "Init completed."
 
-	# Wait for hw-mgmt done WD to finish.
-	monitor_link_wd
 }
 
 do_stop()

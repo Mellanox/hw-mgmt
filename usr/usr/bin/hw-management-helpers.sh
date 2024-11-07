@@ -31,18 +31,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# HW-MGMT WATCHDOG GLOBALS
-WATCHDOG_TIMEOUT=20 # Total WD T/O.
-WATCHDOG_DELAY=1 # Internal delay for WD loop to free CPU.
+# hw-mngmt-sysfs-monitor GLOBALS
+SYSFS_MONITOR_TIMEOUT=20 # Total WD T/O.
+SYSFS_MONITOR_DELAY=1 # Internal delay for WD loop to free CPU.
 MONITOR_INTERVAL=1 # Internal delay for Monitor WD loop to free CPU.
-HW_MGMT_SYSFS_RDY="/var/run/HW_MGMT_SYSFS_RDY"
-WATCHDOG_FIRST_RUN_FILE="tmp/watchdog_first_run"
-WATCHDOG_RESET_FILE_A="/tmp/watchdog_reset_time_a"
-WATCHDOG_RESET_FILE_B="/tmp/watchdog_reset_time_b"
-WATCHDOG_PID_FILE="/tmp/watchdog.pid"
-WATCHDOG_STATUS_FILE="/tmp/watchdog_status"
-WATCHDOG_STATUS_TEMP_FILE="/tmp/watchdog_status.tmp"
-WATCHDOG_SCRIPT="hw-management-done.sh"
+SYSFS_MONITOR_RDY_FILE="/var/run/SYSFS_MONITOR_RDY_FILE"
+SYSFS_MONITOR_RESET_FILE_A="/tmp/sysfs_monitor_time_a"
+SYSFS_MONITOR_RESET_FILE_B="/tmp/sysfs_monitor_time_b"
+SYSFS_MONITOR_PID_FILE="/tmp/sysfs_monitor.pid"
+SYSFS_MONITOR_STATUS_TEMP_FILE="/tmp/sysfs_monitor_status.tmp"
 
 
 hw_management_path=/var/run/hw-management
@@ -298,13 +295,12 @@ check_simx()
 	fi
 }
 
-init_hw_management_done_wd_files()
+init_sysfs_monitor_timestamp_files()
 {
     WD_FILES=(
-        "$WATCHDOG_RESET_FILE_A"
-        "$WATCHDOG_RESET_FILE_B"
-        "$WATCHDOG_STATUS_FILE"
-        "$WATCHDOG_STATUS_TEMP_FILE"
+        "$SYSFS_MONITOR_RESET_FILE_A"
+        "$SYSFS_MONITOR_RESET_FILE_B"
+        "$SYSFS_MONITOR_STATUS_TEMP_FILE"
     )
 
     # Remove all WD files if they exist from previous runs.
@@ -315,17 +311,9 @@ init_hw_management_done_wd_files()
     done
 
     # remove the sysfs ready file if it exists
-    if [[ -f "$HW_MGMT_SYSFS_RDY" ]]; then
-        rm "$HW_MGMT_SYSFS_RDY"
+    if [[ -f "$SYSFS_MONITOR_RDY_FILE" ]]; then
+        rm "$SYSFS_MONITOR_RDY_FILE"
     fi
-
-    # WATCHDOG_FIRST_RUN_FILE is created the first time
-    # check_n_link function is called.
-    if [[ -f "$WATCHDOG_FIRST_RUN_FILE" ]]; then
-        rm "$WATCHDOG_FIRST_RUN_FILE"
-    fi
-
-    echo "0" > "$WATCHDOG_STATUS_FILE"
 
     file_exist=true
     for FILE in "${WD_FILES[@]}"; do
@@ -336,7 +324,7 @@ init_hw_management_done_wd_files()
     # In case one of the WD files was not created, 
     # or in case the first run file was not removed,
     # exit with error.
-    if [ ! "$file_exist" ] || [ -f "$WATCHDOG_FIRST_RUN_FILE" ];then
+    if [ ! "$file_exist" ] ;then
         log_info "Error init. WD files."
         exit 1
     fi
@@ -344,73 +332,24 @@ init_hw_management_done_wd_files()
     log_info "Successfully init. WD files."
 }
 
-init_hw_management_done_wd()
-{
-    # Remove older WD process if it exists.
-    if [ -f "$WATCHDOG_PID_FILE" ]; then
-        local WATCHDOG_PID
-        WATCHDOG_PID=$(cat "$WATCHDOG_PID_FILE")
-        if kill -0 "$WATCHDOG_PID" 2>/dev/null; then
-            if kill "$WATCHDOG_PID"; then
-                log_info "HW Mangement old WD process killed succesfully."
-                rm -f "$WATCHDOG_PID_FILE"
-            else
-                log_info "HW Mangement failed to kill old WD process."
-                exit 1
-            fi
-        else
-            log_info "HW Mangement old WD process $WATCHDOG_PID already dead, remove the pid file."
-            rm -f "$WATCHDOG_PID_FILE"
-        fi
-    fi
-
-    # Start the watchdog process in the background.
-    bash "$WATCHDOG_SCRIPT" &
-    # Save the PID of the watchdog process.
-    touch "$WATCHDOG_PID_FILE"
-    echo $! > "$WATCHDOG_PID_FILE"
-    log_info "HW Mangement WD process created."
-}
-
 refresh_hw_management_done_wd()
 {
     # Capture the current time with milliseconds.
     local current_time=$(date +%s%3N)
     # Read the last update time from both reset files.
-    last_reset_time_A=$(cat "$WATCHDOG_RESET_FILE_A" 2>/dev/null || echo 0)
-    last_reset_time_B=$(cat "$WATCHDOG_RESET_FILE_B" 2>/dev/null || echo 0)
+    last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
+    last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
     # Ensure both variables are valid integers, defaulting to 0 if empty or invalid.
     last_reset_time_A=${last_reset_time_A:-0}
     last_reset_time_B=${last_reset_time_B:-0}
     # Determine which file was written most recently.
     if [ "$last_reset_time_A" -gt "$last_reset_time_B" ]; then
         # Write the current time to the less recently updated file (B).
-        echo "$current_time" > "$WATCHDOG_RESET_FILE_B"
+        echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_B"
     else
         # Write the current time to the less recently updated file (A).
-        echo "$current_time" > "$WATCHDOG_RESET_FILE_A"
+        echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_A"
     fi
-}
-
-# Function to monitor the watchdog status.
-monitor_link_wd()
-{
-    log_info "monitor_link_wd was called"
-    while true; do
-        if [[ -f "$WATCHDOG_STATUS_FILE" ]]; then
-            status=$(cat "$WATCHDOG_STATUS_FILE")
-            if [[ "$status" == "1" ]]; then
-                log_info "Watchdog status is 1: Condition met."
-                return 0
-            else
-                log_info "Watchdog status is not 1: Current status is $status."
-            fi
-        else
-            log_info "Watchdog Status: Not available"
-        fi
-        # Sleep for the specified interval to avoid stressing the CPU.
-        sleep "$MONITOR_INTERVAL"
-    done
 }
 
 # Check if file exists and create soft link
@@ -419,12 +358,6 @@ monitor_link_wd()
 # return none
 check_n_link()
 {
-    # In case this is the first call to check_n_link,
-    # Signal the WD to start monitoring.
-    # This will insure that the WD uses valid timestamps.
-    if [[ ! -f "$WATCHDOG_FIRST_RUN_FILE" ]]; then
-        touch "$WATCHDOG_FIRST_RUN_FILE"
-    fi
     refresh_hw_management_done_wd
     if [ -f "$1" ];
     then
