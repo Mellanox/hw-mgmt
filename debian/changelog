@@ -2,6 +2,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 hw-management (1.mlnx.7.0040.2002) unstable; urgency=low
   [ MLNX ] 
 
@@ -27,3 +28,9 @@ hw-management (1.mlnx.7.0040.1128-QS) unstable; urgency=low
 
  -- Vadim Pasternak <vadimp@nvidia.com> Tue, 05 Nov 2024 13:10:00 +0300
 >>>>>>> 7b9090c6 (Promote tag)
+=======
+hw-management (1.mlnx.7.0040.1129-QS) unstable; urgency=low
+  [ MLNX ] 
+
+ -- Vadim Pasternak <vadimp@nvidia.com> Tue, 10 Nov 2024 13:10:00 +0300
+>>>>>>> 77a34ea1 (Promote tag)
