@@ -307,6 +307,8 @@ atttrib_list = {
     "HI171|HI172": [
         {"fin": "/sys/module/sx_core/asic0/temperature/input",
          "fn": "asic_temp_populate",   "arg" : ["asic1"],   "poll": 3, "ts": 0},
+	{"fin": "/sys/module/sx_core/asic0/temperature/input",
+         "fn": "asic_temp_populate",   "arg" : ["asic"],    "poll": 3, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module0/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module1"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module1/temperature/input",
