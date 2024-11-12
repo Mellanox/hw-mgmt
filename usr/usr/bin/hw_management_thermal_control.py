@@ -111,6 +111,8 @@ class CONST(object):
     PERIODIC_REPORT_FILE = "config/periodic_report"
     # suspend control file path
     SUSPEND_FILE = "config/suspend"
+    # i2c control transfer file path
+    I2C_CTRL_FILE = "system/bmc_to_cpu_ctrl"
     # Sensor files for ambiant temperature measurement
     FAN_SENS = "fan_amb"
     PORT_SENS = "port_amb"
@@ -2815,6 +2817,21 @@ class ThermalManagement(hw_managemet_file_op):
         return val
 
     # ----------------------------------------------------------------------
+    def _is_i2c_control_with_bmc(self):
+        """
+        @summary: return the i2c bus owner 0 for CPU  1 for BMC
+        """
+        if self.check_file(CONST.I2C_CTRL_FILE):
+            try:
+                val_str = self.read_file(CONST.I2C_CTRL_FILE)
+                val = str2bool(val_str)
+            except ValueError:
+                return False
+        else:
+            return False
+        return val
+
+    # ----------------------------------------------------------------------
     def _sensor_add_config(self, sensor_type, sensor_name, extra_config=None):
         """
         @summary: Create sensor config and add it to main config dict
@@ -3317,6 +3334,11 @@ class ThermalManagement(hw_managemet_file_op):
             if not self.is_pwm_exists():
                 self.stop(reason="Missing PWM")
                 self.exit.wait(5)
+                continue
+
+            if self._is_i2c_control_with_bmc():
+                self.stop(reason="BMC has taken over i2c bus")
+                self.exit.wait(30)
                 continue
 
             if self._is_suspend():
