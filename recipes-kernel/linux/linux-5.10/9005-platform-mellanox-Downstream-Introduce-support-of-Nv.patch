@@ -651,7 +651,7 @@ index ad1e421fe..71ab11400 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_leak_con",
++		.label = "reset_pwr_button_or_leak_con",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,

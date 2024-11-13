@@ -1,0 +1,27 @@
+From d255399171abab17745ebfdad6a36f90405dd236 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 19 Dec 2021 09:31:32 +0000
+Subject: [PATCH backport 5.10 107/197] mlxsw: core: Export line card API
+
+Export API mlxsw_core_linecards() for being used by 'minimal' driver.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/net/ethernet/mellanox/mlxsw/core.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
+index 68bb489da9ac..7fc27178e972 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
+@@ -104,6 +104,7 @@ struct mlxsw_linecards *mlxsw_core_linecards(struct mlxsw_core *mlxsw_core)
+ {
+ 	return mlxsw_core->linecards;
+ }
++EXPORT_SYMBOL(mlxsw_core_linecards);
+ 
+ #define MLXSW_PORT_MAX_PORTS_DEFAULT	0x40
+ 
+-- 
+2.20.1
+
