@@ -45,7 +45,7 @@ declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps
 
 declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
 
-declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus")
+declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus" ["d"]="raa228000")
 
 declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
 
@@ -330,11 +330,13 @@ declare -A pwr_type2_alternatives=(["lm5066_0"]="lm5066 0x40 4 pdb_hotswap1" \
 # for JSO
 # P*OaOaOaOaH0Ei
 declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
-				   	["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
-				   	["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
-				   	["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
-				   	["lm5066_0"]="lm5066 0x16 4 pdb_hotswap1" \
-				   	["24c512_0"]="24c512 0x51 4 pdb_eeprom")
+				   ["raa228000_0"]="raa228000 0x60 4 pwr_conv1" \
+				   ["pmbus_1"]="pmbus 0x11 4 pwr_conv2" \
+				   ["raa228000_1"]="raa228000 0x61 4 pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
+				   ["lm5066_0"]="lm5066 0x16 4 pdb_hotswap1" \
+				   ["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
