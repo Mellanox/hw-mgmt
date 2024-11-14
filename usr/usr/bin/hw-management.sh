@@ -3117,6 +3117,9 @@ do_start()
 	set_asic_pci_id
 	set_sodimms
 
+	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then
+		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
+	fi
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
 		set_asic_i2c_bus
@@ -3148,9 +3151,6 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
-	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then 
-		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
-	fi 
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
