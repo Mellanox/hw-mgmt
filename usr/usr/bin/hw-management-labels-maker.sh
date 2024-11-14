@@ -38,10 +38,16 @@ ui_path=$hw_management_path/ui
 # Obtain label file (/var/run/hw-management/config/lm_sensors_labels).
 json_file=$hw_management_path/config/lm_sensors_labels
 
+if [ ! -f $json_file ]; then
+	exit 1
+fi
+
 # Check if the dictionary has already been loaded
 if [ ! -f "/tmp/sensor_labels_dictionary.pkl" ]; then
-    # Call the Python program to load the JSON file and store the dictionary
-    hw_management_parse_labels.py --json_file "$json_file"
+	lock_service_state_change
+	# Call the Python program to load the JSON file and store the dictionary
+	hw_management_parse_labels.py --json_file "$json_file" --sku "$sku" 
+	unlock_service_state_change
 fi
 
 # No prefix index, f.e. "drivetemp"
