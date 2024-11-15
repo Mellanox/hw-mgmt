@@ -76,9 +76,10 @@ fi
 case $sku in
 	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170)
 		# Only for MQM9700
-                if [ -e "$ui_tree_archive" ]; then
+                ui_tree_archive_file="$(get_ui_tree_archive_file)"
+                if [ -e "$ui_tree_archive_file" ]; then
                     # Extract the ui_tree archive to /var/run/hw-management
-                    tar xfz "$ui_tree_archive" -C "$hw_management_path"
+                    tar xfz "$ui_tree_archive_file" -C "$hw_management_path"
                     echo 1 > "$config_path"/labels_ready
                     log_info "Labels data base is ready"
                 else
