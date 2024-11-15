@@ -79,6 +79,16 @@ udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 
+# Validate label archive file.
+[ -f "$pn_file" ] && pn=$(< $pn_file) || pn="Unknown"
+case $pn in
+N5200_LD|N5101_LD|N5300_LD|N5210_LD)
+		ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku"_1.tar.gz"
+		;;
+*)
+		;;
+esac
+
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
 ["01PG798"]=F ["01PG800"]=R ["02YF120"]=R ["02YF121"]=F ["03GX980"]=F \
