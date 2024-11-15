@@ -69,20 +69,10 @@ smart_switch_dpu_events=("pg_1v8" "pg_dvdd" "pg_vdd pg_vddio" "thermal_trip" \
 			 "vdd_cpu_alert" "vddq_alert")
 l1_power_events=("power_button graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
-ui_tree_archive="/etc/hw-management-sensors/ui_tree_$ui_tree_sku.tar.gz"
+ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
-
-# Validate label archive file.
-[ -f "$pn_file" ] && pn=$(< $pn_file) || pn="Unknown"
-case $pn in
-N5200_LD|N5101_LD|N5300_LD|N5210_LD)
-		ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku"_1.tar.gz"
-		;;
-*)
-		;;
-esac
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -239,6 +229,7 @@ unlock_service_state_change()
 
 check_labels_enabled()
 {
+    ui_tree_archive_file="$(get_ui_tree_archive_file)"
     if ([ "$ui_tree_sku" = "HI130" ] ||
         [ "$ui_tree_sku" = "HI151" ] ||
         [ "$ui_tree_sku" = "HI157" ] ||
@@ -248,7 +239,7 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI167" ] ||
         [ "$ui_tree_sku" = "HI169" ] ||
         [ "$ui_tree_sku" = "HI170" ]) &&
-        ([ ! -e "$ui_tree_archive" ]); then
+        ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
     else
         return 1
@@ -775,4 +766,31 @@ load_dpu_sensors()
 			fi
 		fi
 	fi
+}
+
+get_ui_tree_archive_file()
+{
+	if [ ! -z $ui_tree_archive ]; then
+		echo $ui_tree_archive
+	fi
+
+	ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku".tar.gz"
+
+	# Validate label archive file.
+	case $board_type in
+	VMOD0021)
+		# Check if raa228000 converter present on expected i2c addr 12-0060
+		# if 'yes' - we should use special ui file
+		pdb_pwr_conv1_folder=$(< /sys/bus/i2c/devices/i2c-12/12-0060)
+		if [ -d $pdb_pwr_conv1_folder ]; then
+			pdb_pwr_conv1_name=$(< "$pdb_pwr_conv1_folder/name")
+			if [[ $pdb_pwr_conv1_name == "raa228000" ]]; then
+				ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku"_1.tar.gz"
+			fi
+		fi
+		;;
+	*)
+		;;
+	esac
+	echo $ui_tree_archive
 }
