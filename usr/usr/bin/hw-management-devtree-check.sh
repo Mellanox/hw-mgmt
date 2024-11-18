@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -141,7 +141,7 @@ devtr_sim_environment_vars()
 	fi
 
 	if [[ -z "${DT_SYS_SKU}" ]]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+		sku=$(< $sku_file)
 	else
 		sku="${DT_SYS_SKU}"
 	fi
