@@ -81,6 +81,9 @@ declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmo
 				   ["24c128_0"]="24c128 0x50 16 cpu_info" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
 
+declare -A bmc_comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 17 comex_voltmon1" \
+				   ["mp2975_1"]="mp2975 0x6a 17 comex_voltmon2")
+
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
 				 ["tps53679_1"]="tps53679 0x71 5 voltmon2" \
@@ -264,6 +267,9 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 mng_amb" \
 								["emc1412_0"]="emc1403 0x4C 6 fpga")
 
+declare -A bmc_n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 20 mng_amb" \
+								["emc1412_0"]="emc1403 0x4c 20 fpga")
+
 declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
 						["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
@@ -283,6 +289,25 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["stts751_0"]="stts751 0x4a 7 swb_asic1" \
 						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
 					   	["24c512_0"]="24c512 0x51 11 swb_info")
+
+declare -A bmc_n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 17 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 17 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 19 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 19 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 19 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["adt75_0"]="adt75 0x4a 21 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 21 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 21 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 21 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 21 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 21 swb_asic2")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -337,6 +362,15 @@ declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
 				   ["lm5066_0"]="lm5066 0x16 4 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 4 pdb_eeprom")
+
+declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
+				   ["raa228000_0"]="raa228000 0x60 18 pwr_conv1" \
+				   ["pmbus_1"]="pmbus 0x11 18 pwr_conv2" \
+				   ["raa228000_1"]="raa228000 0x61 18 pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x13 18 pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x15 18 pwr_conv4" \
+				   ["lm5066_0"]="lm5066 0x16 18 pdb_hotswap1" \
+				   ["24c512_0"]="24c512 0x51 18 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -675,8 +709,17 @@ devtr_check_board_components()
 	local board_name_pfx=
 	local board_type=static
 #	local board_addr_offset=0
+	local comp_arr
 
-	local comp_arr=($(echo "$board_str" | fold -w2))
+	case $cpu_type in
+	$ARMv7_CPU)
+		# busybox fold version.
+		local comp_arr=($(echo "$board_str" | fold -2))
+		;;
+	*)
+		local comp_arr=($(echo "$board_str" | fold -w2))
+		;;
+	esac
 
 	local board_key=${comp_arr[0]:0:1}
 	local board_name=${board_arr[$board_key]}
