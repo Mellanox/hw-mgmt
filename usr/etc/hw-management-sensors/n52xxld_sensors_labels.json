@@ -1,5 +1,71 @@
 {
 	"name": "Juliet",
+	"labels_HI167_alternativies" :{
+		"pwr_conv1": {
+			"pmbus" : {
+				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-1+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-1+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-1+Conv+Temp+1"}
+			},
+			"raa228000" : {
+				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-1+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-1+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-1+Conv+Temp+1"}
+			}
+		},
+		"pwr_conv2": {
+			"pmbus" : {
+				"in1": {"name": "PDB-2+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-2+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-2+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-2+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-2+Conv+Temp+1"}
+			},
+			"raa228000" : {
+				"in1": {"name": "PDB-2+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-2+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-2+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-2+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-2+Conv+Temp+1"}
+			}
+		},
+		"pwr_conv3": {
+			"pmbus" : {
+				"in1": {"name": "PDB-3+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-3+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-3+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-3+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-3+Conv+Temp+1"}
+			},
+			"raa228000" : {
+				"in1": {"name": "PDB-3+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-3+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-3+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-3+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-3+Conv+Temp+1"}
+			}
+		},
+		"pwr_conv4": {
+			"pmbus" : {
+				"in1": {"name": "PDB-4+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-4+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-4+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-4+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-4+Conv+Temp+1"}
+			},
+			"raa228000" : {
+				"in1": {"name": "PDB-4+Conv+Vol+In+1"},
+				"in2": {"name": "PDB-4+Conv+Vol+Out+1"},
+				"curr1": {"name": "PDB-4+Conv+curr+In+1"},
+				"curr2": {"name": "PDB-4+Conv+curr+Out+1"},
+				"temp1": {"name": "PDB-4+Conv+Temp+1"}
+			}
+		}
+	},
 	"labels_HI167_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
@@ -82,16 +148,6 @@
 		"comex_voltmon2_curr1" : "PMIC-8+COMEX_VDD_MEM+curr+In+1",
 		"comex_voltmon2_curr2" : "PMIC-8+COMEX_VDD_MEM+curr+Out+1",
 		"comex_voltmon2_temp1" : "PMIC-8+Temp+1",
-		"pwr_conv1_in1" : "PDB-1+Conv+Vol+In+1",
-		"pwr_conv1_in2" : "PDB-1+Conv+Vol+Out+1",
-		"pwr_conv1_curr1" : "PDB-1+Conv+curr+In+1",
-		"pwr_conv1_curr2" : "PDB-1+Conv+curr+Out+1",
-		"pwr_conv1_temp1" : "PDB-1+Conv+Temp+1",
-		"pwr_conv2_in1" : "PDB-2+Conv+Vol+In+1",
-		"pwr_conv2_in2" : "PDB-2+Conv+Vol+Out+1",
-		"pwr_conv2_curr1" : "PDB-2+Conv+curr+In+1",
-		"pwr_conv2_curr2" : "PDB-2+Conv+curr+Out+1",
-		"pwr_conv2_temp1" : "PDB-2+Conv+Temp+1",
 		"^fan1_(\\w+)$" : "Chassis_Fan_Drawer-1+RPM+1",
 		"^fan2_(\\w+)$" : "Chassis_Fan_Drawer-1+RPM+2",
 		"^fan3_(\\w+)$" : "Chassis_Fan_Drawer-2+RPM+1",
@@ -103,5 +159,5 @@
 		"drivetemp" : "SSD+Temp"
 	},
 	"labels_scale_HI167_rev1_array" : {
-	},
+	}
 }
