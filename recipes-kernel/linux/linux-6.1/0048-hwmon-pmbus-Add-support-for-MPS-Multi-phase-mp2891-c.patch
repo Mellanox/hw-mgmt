@@ -343,13 +343,13 @@ index 000000000..522c0bb5f
 +		if (ret <= 0)
 +			return ret;
 +		ret = (ret & GENMASK(10, 0)) * data->vid_step[page];
-+		return DIV_ROUND_CLOSEST(ret, 10000);
++		return DIV_ROUND_CLOSEST(ret, 100);
 +	case PMBUS_VOUT_OV_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, PMBUS_VOUT_MAX);
 +		if (ret <= 0)
 +			return ret;
 +		ret = (ret & GENMASK(10, 0)) * data->vid_step[page];
-+		return DIV_ROUND_CLOSEST(ret, 10000);
++		return DIV_ROUND_CLOSEST(ret, 100);
 +	case PMBUS_IOUT_UC_FAULT_LIMIT:
 +		ret = pmbus_read_word_data(client, page, phase, reg);
 +		return ret <= 0 ? ret : DIV_ROUND_CLOSEST((ret & GENMASK(7, 0)) *
