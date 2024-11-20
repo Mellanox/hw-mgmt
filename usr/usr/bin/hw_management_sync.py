@@ -304,6 +304,142 @@ atttrib_list = {
         {"fin": None,
          "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic1/", 0], "poll": 10, "ts": 0}
     ],
+    "HI171|HI172": [
+        {"fin": "/sys/module/sx_core/asic0/temperature/input",
+         "fn": "asic_temp_populate",   "arg" : ["asic1"],   "poll": 3, "ts": 0},
+	{"fin": "/sys/module/sx_core/asic0/temperature/input",
+         "fn": "asic_temp_populate",   "arg" : ["asic"],    "poll": 3, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module0/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module1"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module1/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module2"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module2/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module3"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module3/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module4"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module4/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module5"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module5/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module6"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module6/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module7"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module7/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module8"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module8/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module9"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module9/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module10"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module10/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module11"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module11/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module12"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module12/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module13"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module13/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module14"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module14/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module15"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module15/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module16"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module16/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module17"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module17/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module18"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module18/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module19"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module19/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module20"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module20/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module21"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module21/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module22"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module22/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module23"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module23/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module24"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module24/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module25"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module25/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module26"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module26/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module27"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module27/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module28"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module28/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module29"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module29/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module30"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module30/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module31"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module31/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module32"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module32/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module33"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module33/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module34"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module34/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module35"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module35/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module36"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module36/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module37"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module37/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module38"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module38/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module39"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module39/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module40"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module40/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module41"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module41/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module42"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module42/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module43"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module43/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module44"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module44/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module45"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module45/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module46"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module46/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module47"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module47/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module48"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module48/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module49"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module49/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module50"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module50/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module51"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module51/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module52"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module52/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module53"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module53/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module54"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module54/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module55"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module55/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module56"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module56/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module57"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module57/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module58"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module58/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module59"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module59/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module60"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module60/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module61"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module61/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module62"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module62/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module63"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module63/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module64"], "poll": 20, "ts": 0},
+        {"fin": None,
+         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", 0], "poll": 10, "ts": 0}
+    ],
     "test": [
          {"fin": "/tmp/power_button_clr",
          "fn": "run_power_button_event",
@@ -483,7 +619,6 @@ def asic_state_poll(arg_list, arg):
         with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
             f.write(str(asics_init_done)+"\n")
 
-
 # ----------------------------------------------------------------------
 def sync_fan(fan_id, val):
     if int(val) == 0:
@@ -502,12 +637,16 @@ def asic_temp_populate(arg_list, arg):
     """
     @summary: Update asic attributes
     """
+    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
+    if os.path.islink(f_name):
+        return
+
     arg = int(arg)
     if arg >= 0:
         val = arg * 125
     else:
         val = 0xffff + arg + 1
-    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
+
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val))
 
@@ -533,6 +672,10 @@ def module_temp_populate(arg_list, arg):
     """
     @summary: Update module attributes
     """
+    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
+    if os.path.islink(f_name):
+        return
+
     try:
         arg = int(arg)
         if arg >= 0:
@@ -549,8 +692,7 @@ def module_temp_populate(arg_list, arg):
         temp_emergency = ""
         temp_fault = ""
         temp_trip_crit = ""
-        
-    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
+
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val))
 
@@ -569,7 +711,6 @@ def module_temp_populate(arg_list, arg):
     f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(temp_trip_crit)
-
 
 # ----------------------------------------------------------------------
 def update_attr(attr_prop):
