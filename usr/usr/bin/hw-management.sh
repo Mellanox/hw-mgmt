@@ -820,7 +820,7 @@ set_jtag_gpio()
 		fi
 	fi
 
-	if [ "$board_type" == "VMOD0021" ]; then
+	if [ "$cpu_type" == "$AMD_SNW_CPU" ]; then
 		return 0
 	fi
 
