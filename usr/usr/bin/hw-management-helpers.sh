@@ -776,17 +776,16 @@ get_ui_tree_archive_file()
 
 	ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku".tar.gz"
 
+	[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
+
 	# Validate label archive file.
 	case $board_type in
 	VMOD0021)
 		# Check if raa228000 converter present on expected i2c addr 12-0060
 		# if 'yes' - we should use special ui file
-		pdb_pwr_conv1_folder=$(< /sys/bus/i2c/devices/i2c-12/12-0060)
-		if [ -d $pdb_pwr_conv1_folder ]; then
-			pdb_pwr_conv1_name=$(< "$pdb_pwr_conv1_folder/name")
-			if [[ $pdb_pwr_conv1_name == "raa228000" ]]; then
-				ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku"_1.tar.gz"
-			fi
+		i2cdetect -y -a -r 12 0x60 0x60 | grep -q -- "--"
+		if [ $? -eq 1 ]; then
+			ui_tree_archive="/etc/hw-management-sensors/ui_tree_"$ui_tree_sku"_1.tar.gz"
 		fi
 		;;
 	*)
