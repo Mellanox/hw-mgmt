@@ -2678,6 +2678,7 @@ create_symbolic_links()
 		mkdir $bin_path
 		# Copy binaries to make them available for the access from containers.
 		cp /usr/bin/hw_management_independent_mode_update.py "$bin_path"
+		cp /usr/bin/hw_management_dpu_thermal_update.py "$bin_path"
 	fi
 	if [ ! -d $dynamic_boards_path ]; then
 		mkdir $dynamic_boards_path
