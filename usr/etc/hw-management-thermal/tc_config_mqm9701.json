@@ -1,0 +1,49 @@
+ {
+	"name": "mqm9701",
+	"dmin" : {
+		"C2P": {
+			"untrusted": {"-127:25": 20, "26:35": 30, "36:120": 40},
+			"fan_err": {
+				"tacho": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"psu_err":  {
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"sensor_read_error" : {"-127:120": 70}
+		},
+		"P2C": {
+			"untrusted": {"-127:25": 20, "26:35": 30, "36:120": 40},
+			"fan_err": {
+				"tacho": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"psu_err":  {
+				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
+				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
+			},
+			"sensor_read_error" : {"-127:120": 60}
+		}
+	},
+	"psu_fan_pwm_decode" : {"0:10": 10, "11:21": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
+	"fan_trend" : {
+        "C2P": {
+			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30},
+			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30}}
+	}, 
+	"dev_parameters" : {
+		"asic\\d*":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
+		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
+		"voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
+		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
+		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 40, "val_min": 30000, "val_max": 50000, "poll_time": 30},
+		"ibc\\d+":        {"pwm_min": 30, "pwm_max" : 100, "val_min": "!70000", "val_max": "!100000", "poll_time": 30}
+	},
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "ibc1", "ibc2",
+					 "sensor_amb", "sodimm1", "voltmon1", "voltmon3", "voltmon4", "voltmon5", "voltmon6"],
+	"redundancy" : {"fan_err" : {"min_err_cnt" : "2" }}
+}
