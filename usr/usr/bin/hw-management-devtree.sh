@@ -539,6 +539,34 @@ devtr_check_supported_system_init_alternatives()
 			# Silent exit
 			return 1
 			;;
+		$ARMv7_CPU)
+			# This is BMC board.
+			sku=$(< $sku_file)
+			case "$sku" in
+			HI162|HI166|HI167|HI169|HI170)
+				for key in "${!bmc_comex_amd_snw_alternatives[@]}"; do
+					comex_alternatives["$key"]="${bmc_comex_amd_snw_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_n5110ld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${bmc_n5110ld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_pwr_type3_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${bmc_pwr_type3_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${bmc_n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			return 0
+			;;
 		*)
 			log_info "SMBIOS BOM info: unsupported cpu_type: ${cpu_type}"
 			return 1
@@ -761,8 +789,12 @@ devtr_check_board_components()
 
 	case $cpu_type in
 	$ARMv7_CPU)
-		# busybox fold version.
-		local comp_arr=($(echo "$board_str" | fold -2))
+		# Shell command "fold" is not available on this platform.
+		# Iterate over the string with a step size of 2
+		for ((i=0; i<${#board_str}; i+=2)); do
+			local pair="${board_str:i:2}"
+			comp_arr+=("$pair")
+		done
 		;;
 	*)
 		local comp_arr=($(echo "$board_str" | fold -w2))
