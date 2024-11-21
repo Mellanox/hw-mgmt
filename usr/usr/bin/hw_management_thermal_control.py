@@ -2588,6 +2588,21 @@ class ThermalManagement(hw_managemet_file_op):
             if res:
                 sensor_list.append("ibc{}".format(res.group(1)))
 
+        # collect sensors based on devtree
+        bom_file_data = self.read_file("config/devtree")
+        bom_file_array = bom_file_data.split()
+        for i in range(0, len(bom_file_array), 4):
+            component_lines = bom_file_array[i:i+4]
+            #component_name example: voltmon1, pwr_conv1 ...
+            component_name = component_lines[3]
+            res = re.match(r'(voltmon[0-9]+)', component_name)
+            if res:
+                sensor_list.append(res.group(1))
+
+            res = re.match(r'pwr_conv([0-9]+)', component_name)
+            if res:
+                sensor_list.append("ibc{}".format(res.group(1)))
+
         # Add cpu sensor
         if "cpu" not in sensor_list:
             sensor_list.append("cpu")
