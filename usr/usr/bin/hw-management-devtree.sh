@@ -622,6 +622,25 @@ devtr_check_supported_system_init_alternatives()
 #			done
 #			return 0
 #			;;
+
+		VMOD0010)
+			case $sku in
+			HI172)	# MQM9701
+				for key in "${!mqm97xx_alternatives[@]}"; do
+					swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
+				done
+				for key in "${!pwr_type3_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
+				done
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			for key in "${!fan_type0_alternatives[@]}"; do
+				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
+			done
+			return 0
 		VMOD0009)
 			case $sku in
 			HI117)
