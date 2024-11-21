@@ -43,11 +43,11 @@ BASE_PATH = "/var/run/hw-management"
 
 def get_dpu_count():
     """
-    @summary: Function gets DPU count from "{BASE_PATH}/system/dpu_num.
+    @summary: Function gets DPU count from "{BASE_PATH}/config/dpu_num.
     @return: # of dpus:in case of succesful read, 
              -1       :if path does not exist, or cannot be read
     """
-    dpu_count_file = os.path.join(BASE_PATH, "system", "dpu_num")
+    dpu_count_file = os.path.join(BASE_PATH, "config", "dpu_num")
     if os.path.exists(dpu_count_file):
         try:
             with open(dpu_count_file, 'r', encoding="utf-8") as f:
