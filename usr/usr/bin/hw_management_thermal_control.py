@@ -1680,10 +1680,10 @@ class psu_fan_sensor(system_device):
         @summary: Set PWM level for PSU FAN
         @param pwm: PWM level value <= 100%
         """
-        self.log.info("Write {} PWM {}".format(self.name, pwm))
         try:
             present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
             if present == 1:
+                self.log.info("Write {} PWM {}".format(self.name, pwm))
                 psu_pwm, _, _ = g_get_range_val(self.pwm_decode, pwm)
                 if not psu_pwm:
                     self.log.info("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
