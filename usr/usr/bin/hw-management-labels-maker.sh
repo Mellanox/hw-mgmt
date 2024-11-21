@@ -52,7 +52,7 @@ get_label_files0()
 	local key
 	local attr_file
 
-	folder=`echo $attr_name | cut -d '_' -f 2`
+	folder=`echo $attr_name | cut -d '_' -f 1`
 	key=`echo $attr_name | cut -d '_' -f 1`
 	attr_file=`echo "$attr_name" | cut -d '_' -f 2,3`
 	echo "$folder" "$key" "$attr_file"
