@@ -198,8 +198,8 @@ class RedfishClient:
         output_str = output.decode('utf-8')
         error_str = error.decode('utf-8')
         ret = process.returncode
-        #print ("Curl send:{}".format(cmd))
-        #print ("Curl rcv: err:{} out:{}".format(error_str, output_str))
+        #print ("Curl send:{}\n".format(cmd))
+        #print ("Curl rcv: err:{}\nout:{}".format(error_str, output_str))
 
         if (ret > 0):
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
@@ -390,24 +390,76 @@ class BMCAccessor(object):
 
     def get_login_password(self):
         try:
-            os.makedirs(self.BMC_DIR, exist_ok=True)
+            attempt = 1
+            max_attempts = 100
             hex_data = "1300NVOS-BMC-USER-Const"
+            os.makedirs(self.BMC_DIR, exist_ok=True)
             cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/nvos_const.bin'
             subprocess.run(cmd, shell=True, check=True)
 
-            tpm_command = ["sudo", "tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/nvos_const.bin", "-G", "aes256cfb"]
+            tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/nvos_const.bin", "-G", "aes256cfb"]
             result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
-            symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
-            symcipher_match = re.search(symcipher_pattern, result.stdout)
-            os.remove(f"{self.BMC_DIR}/nvos_const.bin")
 
-            if symcipher_match:
-                # BMC dictates a password of 13 charachters. Random from TPM is used with an append of A!
-                symcipher_value = symcipher_match.group(1)[:11] + "A!"
-                return symcipher_value
+            while attempt <= max_attempts:
+                if attempt > 1:
+                    const = f"1300NVOS-BMC-USER-Const-{attempt}"
+                    mess = f"Password did not meet criteria; retrying with const: {const}"
+                    print(mess)
+                    tpm_command = f'echo -n "{const}" | sudo tpm2_createprimary -C o -G aes -u -'
+                    result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
+
+                symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
+                symcipher_match = re.search(symcipher_pattern, result.stdout)
+
+                if not symcipher_match:
+                    raise Exception("Symmetric cipher not found in TPM output")
+
+                # BMC dictates a password of 13 characters. Random from TPM is used with an append of A!
+                symcipher_part = symcipher_match.group(1)[:11]
+                if symcipher_part.isdigit():
+                    symcipher_value = symcipher_part[:10] + 'vA!'
+                elif symcipher_part.isalpha() and symcipher_part.islower():
+                    symcipher_value = symcipher_part[:10] + '9A!'
+                else:
+                    symcipher_value = symcipher_part + 'A!'
+                if len (symcipher_value) != 13:
+                    raise Exception("Bad cipher length from TPM output")
+                
+                # check for monotonic
+                monotonic_check = True
+                for i in range(len(symcipher_value) - 3): 
+                    seq = symcipher_value[i:i+4] 
+                    increments = [ord(seq[j+1]) - ord(seq[j]) for j in range(3)]
+                    if increments == [1, 1, 1] or increments == [-1, -1, -1]:
+                        monotonic_check = False
+                        break
+
+                # check for consecutive_pairs
+                count = 0
+                for i in range(11):
+                    val1 = symcipher_value[i]
+                    val2 = symcipher_value[i + 1]
+                    if val2 == "v" or val1 == "v":
+                        continue
+                    if abs(int(val2, 16) - int(val1, 16)) == 1:
+                        count += 1
+
+                if count <= 4 and monotonic_check:
+                    os.remove(f"{self.BMC_DIR}/nvos_const.bin")
+                    #print (f"symcipher_value : {symcipher_value}")
+                    return symcipher_value
+                else:
+                    attempt += 1
+
+            raise Exception("Failed to generate a valid password after maximum retries.")
+
+        except subprocess.CalledProcessError as e:
+            #print(f"Error executing TPM command: {e}")
+            raise Exception("Failed to communicate with TPM")
+
         except Exception as e:
-            pass
-        return None
+            #print(f"Error: {e}")
+            raise
 
     def login(self, password = None):     
         ret = self.rf_client.login(password)
