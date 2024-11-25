@@ -2588,7 +2588,7 @@ load_modules()
 		fi
 	fi
 	case $cpu_type in
-		$AMD_SNW_CPU)
+		$AMD_SNW_CPU|$BF3_CPU)
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
