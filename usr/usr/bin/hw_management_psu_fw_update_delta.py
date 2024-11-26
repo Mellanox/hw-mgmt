@@ -65,6 +65,10 @@ MFR_FW_REVISION_ACBEL_460 = 0xd9
 # Delta 550 PSU Model
 MFR_MODEL_500AB = "DPS-550AB"
 
+# Acbel 2000 PSU Models
+MFR_MODEL_ACBEL_2000_FWD="FSP016-9G0G"
+MFR_MODEL_ACBEL_2000_REV="FSP017-9G0G"
+
 # Acbel 1100 PSU Models
 MFR_MODEL_ACBEL_1100_FWD="FSP007-9G0G"
 MFR_MODEL_ACBEL_1100_REV="FSN022-9G0G"
@@ -75,9 +79,10 @@ MFR_MODEL_ACBEL_460_REV="FSF007-9G0G"
 
 def mfr_model_is_acbel(mfr_model):
     """
-    @summary: Check if PSU model is Acbel 1100.
+    @summary: Check if PSU model is Acbel 1100 or 2000.
     """
-    if mfr_model.startswith(MFR_MODEL_ACBEL_1100_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_1100_REV):
+    if mfr_model.startswith(MFR_MODEL_ACBEL_2000_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_2000_REV) or \
+       mfr_model.startswith(MFR_MODEL_ACBEL_1100_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_1100_REV):
         return True
     else:
         return False
