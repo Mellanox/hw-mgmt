@@ -1053,7 +1053,7 @@ if [ "$1" == "add" ]; then
 			# Support FW update only for specific Acbel PSU capacities
 			fw_ver="N/A"
 			fw_primary_ver="N/A"
-			if [ "$cap" == "1100" ]; then
+			if [ "$cap" == "1100" -o "$cap" == "2000" ]; then
 				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr | tr -dc '[[:print:]]')
 				fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 				fw_ver=$(echo $fw_ver_all | cut -d. -f2)
