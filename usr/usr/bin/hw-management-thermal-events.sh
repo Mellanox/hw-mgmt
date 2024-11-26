@@ -1419,6 +1419,9 @@ else
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
 		fi
+		if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
+			rm -f "$config_path"/"$psu_name"_i2c_bus
+		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
