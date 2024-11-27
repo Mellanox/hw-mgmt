@@ -2301,14 +2301,6 @@ n51xxld_specific()
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
-	case $pn in
-	N5200_LD|N5101_LD|N5300_LD|N5210_LD)
-		lm_sensors_labels="$lm_sensors_configs_path/n52xxld_sensors_labels.json"
-		;;
-	*)
-		lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
-		;;
-	esac
 	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
