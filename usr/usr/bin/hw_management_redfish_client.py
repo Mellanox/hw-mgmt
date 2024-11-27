@@ -390,8 +390,10 @@ class BMCAccessor(object):
 
     def get_login_password(self):
         try:
+            pass_len = 13
             attempt = 1
             max_attempts = 100
+            max_repeat = int(3 + 0.09 * pass_len)
             hex_data = "1300NVOS-BMC-USER-Const"
             os.makedirs(self.BMC_DIR, exist_ok=True)
             cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/nvos_const.bin'
@@ -404,8 +406,8 @@ class BMCAccessor(object):
                 if attempt > 1:
                     const = f"1300NVOS-BMC-USER-Const-{attempt}"
                     mess = f"Password did not meet criteria; retrying with const: {const}"
-                    print(mess)
-                    tpm_command = f'echo -n "{const}" | sudo tpm2_createprimary -C o -G aes -u -'
+                    #print(mess)
+                    tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
                     result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
 
                 symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
@@ -415,14 +417,14 @@ class BMCAccessor(object):
                     raise Exception("Symmetric cipher not found in TPM output")
 
                 # BMC dictates a password of 13 characters. Random from TPM is used with an append of A!
-                symcipher_part = symcipher_match.group(1)[:11]
+                symcipher_part = symcipher_match.group(1)[:pass_len-2]
                 if symcipher_part.isdigit():
-                    symcipher_value = symcipher_part[:10] + 'vA!'
+                    symcipher_value = symcipher_part[:pass_len-3] + 'vA!'
                 elif symcipher_part.isalpha() and symcipher_part.islower():
-                    symcipher_value = symcipher_part[:10] + '9A!'
+                    symcipher_value = symcipher_part[:pass_len-3] + '9A!'
                 else:
                     symcipher_value = symcipher_part + 'A!'
-                if len (symcipher_value) != 13:
+                if len (symcipher_value) != pass_len:
                     raise Exception("Bad cipher length from TPM output")
                 
                 # check for monotonic
@@ -434,6 +436,9 @@ class BMCAccessor(object):
                         monotonic_check = False
                         break
 
+                variety_check = len(set(symcipher_value)) >= 5
+                repeating_pattern_check = sum(1 for i in range(pass_len - 1) if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
+
                 # check for consecutive_pairs
                 count = 0
                 for i in range(11):
@@ -443,10 +448,10 @@ class BMCAccessor(object):
                         continue
                     if abs(int(val2, 16) - int(val1, 16)) == 1:
                         count += 1
+                consecutive_pair_check = count <= 4
 
-                if count <= 4 and monotonic_check:
+                if consecutive_pair_check and variety_check and repeating_pattern_check and monotonic_check:
                     os.remove(f"{self.BMC_DIR}/nvos_const.bin")
-                    #print (f"symcipher_value : {symcipher_value}")
                     return symcipher_value
                 else:
                     attempt += 1
@@ -460,6 +465,7 @@ class BMCAccessor(object):
         except Exception as e:
             #print(f"Error: {e}")
             raise
+
 
     def login(self, password = None):     
         ret = self.rf_client.login(password)
