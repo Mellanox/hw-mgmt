@@ -333,12 +333,14 @@ BMCAccessor.func() implicitly defined.
 class BMCAccessor(object):
     CURL_PATH = '/usr/bin/curl'
     BMC_INTERNAL_IP_ADDR = '10.0.1.1'
-    BMC_ACCOUNT = 'admin'
+    BMC_ACCOUNT = 'nosbmc'  # Set default account to 'nosbmc'
+    BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"  
 
     def __init__(self):
+        print("Initializing BMCAccessor...")
 
         password = self.get_login_password()
 
@@ -349,6 +351,7 @@ class BMCAccessor(object):
                                        addr,
                                        BMCAccessor.BMC_ACCOUNT,
                                        password)
+
 
     def get_ip_addr(self):
         redis_cmd = '/usr/bin/sonic-db-cli ' \
@@ -467,17 +470,42 @@ class BMCAccessor(object):
             raise
 
 
-    def login(self, password = None):     
+    def login(self, password = None):
+        print(f"Attempting login with account: {self.BMC_ACCOUNT}")
+
+        # Attempt to log in with 'nosbmc' first (from default BMC_ACCOUNT). If it fails, fallback to BMC_ADMIN_ACCOUNT.
         ret = self.rf_client.login(password)
 
+        if ret == RedfishClient.ERR_CODE_OK:
+            print(f"Login successful with account: {self.BMC_ACCOUNT}")
+            # Successful login with 'nosbmc', continue using it
+            return ret
+        else:
+            print(f"Login failed with {self.BMC_ACCOUNT}. Trying fallback account: {self.BMC_ADMIN_ACCOUNT}")
+            # Fallback to BMC_ADMIN_ACCOUNT if 'nosbmc' login failed
+            self.BMC_ACCOUNT = BMCAccessor.BMC_ADMIN_ACCOUNT
+            ret = self.rf_client.login(password)
+            if ret == RedfishClient.ERR_CODE_OK:
+                print(f"Login successful with fallback account: {self.BMC_ADMIN_ACCOUNT}")
+                return ret
+
+        # If BMC_ADMIN_ACCOUNT also fails, proceed with default password from BMC_PASS_FILE or BMC_DEFAULT_PASSWORD
         if ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
+            print(f"Both {self.BMC_ACCOUNT} and {self.BMC_ADMIN_ACCOUNT} failed. Trying default password.")
             # read default BMC password 
             passwd = BMCAccessor.BMC_DEFAULT_PASSWORD
-            passfile_name = os.path.join(BMCAccessor.BMC_DIR,BMCAccessor.BMC_PASS_FILE)
+            passfile_name = os.path.join(BMCAccessor.BMC_DIR, BMCAccessor.BMC_PASS_FILE)
+
             if os.path.exists(passfile_name):
                 with open(passfile_name, "r+") as passfile:
                     passwd = passfile.readline()
-            if  self.rf_client.login(passwd) == RedfishClient.ERR_CODE_OK:
+                    print(f"Using password from {BMCAccessor.BMC_PASS_FILE}")
+
+            if self.rf_client.login(passwd) == RedfishClient.ERR_CODE_OK:
+                print("Login successful with default password.")
                 ret = RedfishClient.ERR_CODE_OK
+
+        if ret != RedfishClient.ERR_CODE_OK:
+            print(f"ERROR: Login failed after multiple attempts.")
 
         return ret
