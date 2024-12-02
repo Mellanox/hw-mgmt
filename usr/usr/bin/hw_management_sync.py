@@ -643,11 +643,23 @@ def asic_temp_populate(arg_list, arg):
     """
     @summary: Update asic attributes
     """
-    arg = int(arg)
-    if arg >= 0:
-        val = arg * 125
-    else:
-        val = 0xffff + arg + 1
+    try:
+        arg = int(arg)
+        if arg >= 0:
+            val = arg * 125
+        else:
+            val = 0xffff + arg + 1
+        temp_norm = "75000\n"
+        temp_crit = "85000\n"
+        temp_fault = "105000\n"
+        temp_emergency = "120000\n"
+    except:
+        val = ""
+        temp_crit = ""
+        temp_emergency = ""
+        temp_fault = ""
+        temp_norm = ""
+
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val)+"\n")
@@ -655,19 +667,19 @@ def asic_temp_populate(arg_list, arg):
     f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
     if not os.path.isfile(f_name):
         with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("105000\n")
+            f.write(temp_fault)
 
         f_name = "/var/run/hw-management/thermal/{}_temp_emergency".format(arg_list[0])
         with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("120000\n")
+            f.write(temp_emergency)
 
         f_name = "/var/run/hw-management/thermal/{}_temp_crit".format(arg_list[0])
         with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("85000\n")
+            f.write(temp_crit)
 
         f_name = "/var/run/hw-management/thermal/{}_temp_norm".format(arg_list[0])
         with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("75000\n")
+            f.write(temp_norm)
 
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, arg):
