@@ -890,11 +890,13 @@ if [ "$1" == "add" ]; then
 
 		if [ -f "$5""$3"/in3_input ]; then
 			psu_connect_power_sensor "$5""$3"/in3 "$psu_name"_volt_out2
-		else
-			in2_label=$(< "$5""$3"/in2_label)
-			if [ "$in2_label" == "vout1" ]; then
-				psu_connect_power_sensor "$5""$3"/in2 "$psu_name"_volt_out
-			fi
+		fi
+			
+		in2_label=$(< "$5""$3"/in2_label)
+		if [ "$in2_label" == "vout1" ]; then
+			psu_connect_power_sensor "$5""$3"/in2 "$psu_name"_volt_out
+		elif [ -f "$5""$3"/in3_input ]; then
+			psu_connect_power_sensor "$5""$3"/in3 "$psu_name"_volt_out
 		fi
 		psu_connect_power_sensor "$5""$3"/power1 "$psu_name"_power_in
 		psu_connect_power_sensor "$5""$3"/power2 "$psu_name"_power
