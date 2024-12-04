@@ -674,6 +674,10 @@ def module_temp_populate(arg_list, arg):
     """
     @summary: Update module attributes
     """
+    f_name = "/var/run/hw-management/thermal/{}_temp_input".format(arg_list[0])
+    if os.path.islink(f_name):
+        return
+
     try:
         arg = int(arg)
         if arg >= 0:
@@ -690,8 +694,7 @@ def module_temp_populate(arg_list, arg):
         temp_emergency = ""
         temp_fault = ""
         temp_trip_crit = ""
-        
-    f_name = "/var/run/hw-management/thermal/{}_temp_input".format(arg_list[0])
+
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val)+"\n")
 
