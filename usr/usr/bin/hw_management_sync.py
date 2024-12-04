@@ -437,6 +437,10 @@ atttrib_list = {
          "fn": "module_temp_populate", "arg" : ["module63"], "poll": 20, "ts": 0},
         {"fin": "/sys/module/sx_core/asic0/module63/temperature/input",
          "fn": "module_temp_populate", "arg" : ["module64"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module64/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module65"], "poll": 20, "ts": 0},
+        {"fin": "/sys/module/sx_core/asic0/module65/temperature/input",
+         "fn": "module_temp_populate", "arg" : ["module66"], "poll": 20, "ts": 0},
         {"fin": None,
          "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", 0], "poll": 10, "ts": 0}
     ],
