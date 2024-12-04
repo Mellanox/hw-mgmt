@@ -672,7 +672,7 @@ def module_temp_populate(arg_list, arg):
     """
     @summary: Update module attributes
     """
-    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
+    f_name = "/var/run/hw-management/thermal/{}_temp_input".format(arg_list[0])
     if os.path.islink(f_name):
         return
 
