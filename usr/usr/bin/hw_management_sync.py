@@ -687,7 +687,7 @@ def module_temp_populate(arg_list, arg):
         temp_fault = ""
         temp_trip_crit = ""
         
-    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
+    f_name = "/var/run/hw-management/thermal/{}_temp_input".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
         f.write(str(val)+"\n")
 
