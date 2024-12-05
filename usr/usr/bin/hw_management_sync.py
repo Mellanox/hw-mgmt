@@ -510,8 +510,8 @@ def asic_temp_populate(arg_list, arg):
             val = 0xffff + arg + 1
         temp_norm = "75000\n"
         temp_crit = "85000\n"
-        temp_fault = "105000\n"
-        temp_emergency = "120000\n"
+        temp_emergency = "105000\n"
+        temp_fault = "120000\n"
     except:
         val = ""
         temp_crit = ""
