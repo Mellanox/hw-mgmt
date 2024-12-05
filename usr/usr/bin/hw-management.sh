@@ -2335,8 +2335,20 @@ sn5640_specific()
 	minimal_unsupported=1
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	
+	case $sku in
+		HI172)	# Gaur
+			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
+		;;
+		HI671)	# Bison
+			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
+		;;
+		*)
+			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
+		;;
+	esac
+
 	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
-	thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 	named_busses+=(${sn5640_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
