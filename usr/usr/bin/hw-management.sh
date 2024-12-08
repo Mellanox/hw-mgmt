@@ -577,14 +577,18 @@ n5110ld_dynamic_i2c_bus_connect_table=( mp2891 0x66 6 voltmon1 \
 	mp2891 0x68 22 voltmon5 \
 	mp2891 0x6c 22 voltmon6)
 	
-n5110ld_cartridge_eeprom_connect_table=( 24c02 0x50 48 cable_cartridge_eeprom \
-   	24c02 0x51 48 cable_cartridge_eeprom2 \
-	24c02 0x50 49 cable_cartridge2_eeprom \
-	24c02 0x51 49 cable_cartridge2_eeprom2 \
-	24c02 0x50 50 cable_cartridge3_eeprom \
-	24c02 0x51 50 cable_cartridge3_eeprom2 \
-	24c02 0x50 51 cable_cartridge4_eeprom \
-	24c02 0x51 51 cable_cartridge4_eeprom2)
+so_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
+	24c02 0x50 48 cable_cartridge2_eeprom \
+	24c02 0x50 49 cable_cartridge3_eeprom \
+	24c02 0x50 50 cable_cartridge4_eeprom)
+
+nso_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
+	24c02 0x50 50 cable_cartridge2_eeprom \
+	24c02 0x50 51 cable_cartridge3_eeprom \
+	24c02 0x50 52 cable_cartridge4_eeprom)
+
+ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
+	24c02 0x50 50 cable_cartridge2_eeprom)
 
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 
@@ -2213,10 +2217,27 @@ n51xxld_specific()
 		connect_table+=(${n5110ld_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
 		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_dynamic_i2c_bus_connect_table[@]}"
-		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_cartridge_eeprom_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 	else
-		# adding Cable Cartridge support which is not included to BOM string.
-		echo -n "${n5110ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		# Adding Cable Cartridge support which is not included to BOM string.
+		case $sku in
+		HI166)	# Juliet SO.
+			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
+			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		HI169)	# Juliet Ariel.
+			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
+			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		HI167|HI170)	# Juliet NSO.
+			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
+			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		*)	# According Juliet SO.
+			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
+			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		esac
 		# Add VPD explicitly.
 		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
 	fi
