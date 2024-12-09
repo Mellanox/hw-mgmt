@@ -814,14 +814,10 @@ if [ "$1" == "add" ]; then
 				sodimm2_addr='001a'
 			;;
 			$AMD_SNW_CPU)
-				if [[ $sku == "HI171" ]] || [[ $sku == "HI172" ]]; then
-					sodimm1_addr='001b'
-				else
-					sodimm1_addr='001a'
-					sodimm2_addr='001b'
-					sodimm3_addr='001e'
-					sodimm4_addr='001f'
-				fi
+				sodimm1_addr='001a'
+				sodimm2_addr='001b'
+				sodimm3_addr='001e'
+				sodimm4_addr='001f'
 			;;
 			*)
 				exit 0
