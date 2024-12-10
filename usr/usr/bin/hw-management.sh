@@ -2057,6 +2057,31 @@ sn5x00_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
+sn5610d_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${sn5600_base_connect_table[@]})
+		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
+	fi
+	# Set according to front fan max. Rear fan max is 13200
+	echo 13800 > $config_path/fan_max_speed
+	echo 2800 > $config_path/fan_min_speed
+	echo 32500 > $config_path/psu_fan_max
+	echo 9500 > $config_path/psu_fan_min
+	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
+	max_tachos=8
+	hotplug_fans=4
+	hotplug_pwrs=0
+	hotplug_psus=0
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/sn5610d_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn5610d.json"1
+	named_busses+=(${sn5600_named_busses[@]})
+	add_come_named_busses $ng800_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+}
+
 sn_spc4_common()
 {
 	# ToDo Meantime same for all SPC4 systems.
@@ -2071,6 +2096,9 @@ sn_spc4_common()
 		;;
 		HI148)	# SN5700
 			sn5x00_specific
+		;;
+		HI174)	# SN5610d
+			sn5610d_specific
 		;;
 		*)
 			sn5x00_specific
