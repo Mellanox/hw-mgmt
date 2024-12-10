@@ -473,10 +473,6 @@ class BMCAccessor(object):
         if ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
             # read default BMC password 
             passwd = BMCAccessor.BMC_DEFAULT_PASSWORD
-            passfile_name = os.path.join(BMCAccessor.BMC_DIR,BMCAccessor.BMC_PASS_FILE)
-            if os.path.exists(passfile_name):
-                with open(passfile_name, "r+") as passfile:
-                    passwd = passfile.readline()
             if  self.rf_client.login(passwd) == RedfishClient.ERR_CODE_OK:
                 ret = RedfishClient.ERR_CODE_OK
 
