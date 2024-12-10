@@ -659,7 +659,7 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0013)
 			case $sku in
-				HI144|HI147|HI148)	# ToDo Separate Ibex HI148 if it will be required
+				HI144|HI147|HI148|HI174)	# ToDo Separate Ibex HI148 if it will be required
 					for key in "${!sn5600_alternatives[@]}"; do
 						swb_alternatives["$key"]="${sn5600_alternatives["$key"]}"
 					done
