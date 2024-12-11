@@ -43,8 +43,9 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - P4300-A00
 
 ## Supported Kernel versions:
-- 5.10.218
-- 6.1.38
+- 5.10.103, 5.10.140, 5.10.179, 5.10.218, 5.10.226
+- 5.14 all up to 5.14.21
+- 6.1.38, 6.1.90, ,6.1.94, 6.1.119, 6.1.123
 
 ## Sysfs attributes:
 The thermal control operates over sysfs attributes.
