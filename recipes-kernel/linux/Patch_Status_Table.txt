@@ -636,6 +636,7 @@ Kernel-6.1
 |0027-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
 |0028-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
 |0029-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            |                                                |
+|0030-1-platform-mellanox-nvsw-sn2201-Add-check-for-platform.patch| d56fbfbaf592       | Bugfix accepted                          | v6.1.101   |                                                |
 |0030-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Feature pending                          |            |                                                |
 |0032-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
 |0033-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
