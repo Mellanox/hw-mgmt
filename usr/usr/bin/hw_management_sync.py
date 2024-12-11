@@ -232,9 +232,9 @@ atttrib_list = {
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0},
         {"fin": None,
-         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", 0], "poll": 10, "ts": 0},
+         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", None], "poll": 10, "ts": 0},
         {"fin": None,
-         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic1/", 0], "poll": 10, "ts": 0}
+         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic1/", None], "poll": 10, "ts": 0}
     ],
     "test": [
          {"fin": "/tmp/power_button_clr",
@@ -373,32 +373,44 @@ def asic_state_poll(arg_list, arg):
         Check if all expected ASICs are inited
     """
     asic_path = arg_list[0]
-    asic_state_old = arg_list[1]
+    asic_state_prev = arg_list[1]
+
+    asic_chipup_completed_fname = os.path.join("/var/run/hw-management/config", "asic_chipup_completed")
+    asic_num_fname = os.path.join("/var/run/hw-management/config", "asic_num")
+    asics_init_done_fname = os.path.join("/var/run/hw-management/config", "asics_init_done")
+
+    if asic_state_prev == None:
+        first_run = 1
+        asic_state_prev = 0
+        with open(asic_chipup_completed_fname, 'w', encoding="utf-8") as f:
+            f.write("0\n")
+            
+        with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
+            f.write("0\n")
+    else:
+        first_run = 0
 
     if os.path.exists(asic_path):
         asic_state = 1
     else:
         asic_state = 0
 
-    if asic_state != asic_state_old:            
+    if asic_state != asic_state_prev:         
         arg_list[1] = asic_state
-        asic_chipup_completed_fname = os.path.join("/var/run/hw-management/config", "asic_chipup_completed")
-        with open(asic_chipup_completed_fname, 'a+', encoding="utf-8") as f:
-            f.seek(0)
-            try:
-                asic_chipup_completed = f.read().rstrip('\n')
-                asic_chipup_completed = int(asic_chipup_completed)
-            except: 
-                asic_chipup_completed = 0
 
-            if asic_state == 1:
-                asic_chipup_completed += 1
-            else:
-                asic_chipup_completed -= 1
-        with open(asic_chipup_completed_fname, 'w', encoding="utf-8") as f:
-            f.write(str(asic_chipup_completed)+"\n")
+        try:
+            with open(asic_chipup_completed_fname, 'a+', encoding="utf-8") as f:
+                f.seek(0)
+                asic_chipup_completed = int(f.read().rstrip('\n'))
+                if asic_state == 1:
+                    asic_chipup_completed += 1
+                else:
+                    asic_chipup_completed -= 1
+                with open(asic_chipup_completed_fname, 'w', encoding="utf-8") as f:
+                    f.write(str(asic_chipup_completed)+"\n")
+        except:
+            pass
 
-        asic_num_fname = os.path.join("/var/run/hw-management/config", "asic_num")
         try:
             with open(asic_num_fname, 'r', encoding="utf-8") as f:
                 asic_num = f.read().rstrip('\n')
@@ -411,10 +423,8 @@ def asic_state_poll(arg_list, arg):
         else:
             asics_init_done = 0
 
-        asics_init_done_fname = os.path.join("/var/run/hw-management/config", "asics_init_done")
         with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
             f.write(str(asics_init_done)+"\n")
-
 
 # ----------------------------------------------------------------------
 def sync_fan(fan_id, val):
