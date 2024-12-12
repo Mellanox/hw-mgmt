@@ -1,4 +1,4 @@
-hw-management (1.mlnx.7.0040.2016) unstable; urgency=low
+hw-management (1.mlnx.7.0040.2017) unstable; urgency=low
   [ MLNX ] 
 
- -- Oleksandr Shamray <oleksandrs@nvidia.com> Wed, 11 Dec 2024 12:30:00 +0300
+ -- Felix Radensky <fradensky@nvidia.com> Wed, 12 Dec 2024 16:15:00 +0300
