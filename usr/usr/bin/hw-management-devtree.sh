@@ -265,12 +265,12 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
 declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 mng_amb" \
-								["emc1412_1"]="emc1403 0x4C 6 fpga" \
-								["lm90_1"]="lm90 0x4c 20 fpga")
+						["emc1412_1"]="emc1403 0x4c 6 fpga" \
+						["lm90_1"]="lm90 0x4c 6 fpga")
 
 declare -A bmc_n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 20 mng_amb" \
-								["emc1412_1"]="emc1403 0x4c 20 fpga" \
-								["lm90_1"]="lm90 0x4c 20 fpga")
+						["emc1412_1"]="emc1403 0x4c 20 fpga" \
+						["lm90_1"]="lm90 0x4c 20 fpga")
 
 declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
@@ -362,7 +362,7 @@ declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["raa228000_1"]="raa228000 0x61 4 pwr_conv2" \
 				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
 				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
-				   ["lm5066_0"]="lm5066 0x16 4 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066i 0x16 4 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
 declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
@@ -371,7 +371,7 @@ declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
 				   ["raa228000_1"]="raa228000 0x61 18 pwr_conv2" \
 				   ["pmbus_2"]="pmbus 0x13 18 pwr_conv3" \
 				   ["pmbus_3"]="pmbus 0x15 18 pwr_conv4" \
-				   ["lm5066_0"]="lm5066 0x16 18 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066i 0x16 18 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 18 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
