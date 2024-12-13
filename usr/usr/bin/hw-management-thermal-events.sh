@@ -584,6 +584,13 @@ if [ "$1" == "add" ]; then
 					echo 1 > $events_path/pwr"$i"
 				fi
 			fi
+			if [ -f "$3""$4"/pdb$i ]; then
+				check_n_link "$3""$4"/pdb$i $thermal_path/pdb"$i"_pwr_status
+				event=$(< "$thermal_path"/pdb"$i"_pwr_status)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/pdb"$i"
+				fi
+			fi
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
 			if [ -f "$3""$4"/lc"$i"_active ]; then

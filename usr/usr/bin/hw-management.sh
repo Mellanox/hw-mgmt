@@ -83,6 +83,7 @@ chipup_delay_default=0
 hotplug_psus=2
 hotplug_fans=6
 hotplug_pwrs=2
+hotplug_pdbs=0
 hotplug_linecards=0
 erot_count=0
 health_events_count=0
@@ -385,12 +386,14 @@ mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 			mp2975 0x6c 5 voltmon6 \
 			mp2975 0x6e 5 voltmon7 )
 
-mqm97xx_pdb_connect_table=( raa228000 0x61 3 pwr_conv1 \
-			lm5066i	0x14 3 pdb_hotswap1 \
-			24c04  0x50 3 pdb_eeprom  \
-			tmp1075 0x4c pdb_temp1 \
-			tmp1075 0x4e pdb_temp2)
-
+mqm97xx_pdb_connect_table=( raa228000 0x60 4 pwr_conv1 \
+			raa228000 0x61 4 pwr_conv2 \
+			lm5066i	0x12 4 pdb_hotswap1 \
+			lm5066i	0x14 4 pdb_hotswap2 \
+			24c04  0x50 4 pdb_eeprom  \
+			tmp451 0x4c 4 pdb_mos_amb \
+			tmp1075 0x4e 4 pdb_intel_amb)
+	   
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
 			tmp102 0x4a 7 \
@@ -1015,8 +1018,8 @@ add_cpu_board_to_connection_table()
 			;;
 		$CFL_CPU)
 			case $sku in
-				# MQM9700, P4697, P4262, P4300 removed A2D from CFL
-				HI130|HI142|HI152|HI157|HI158|HI159)
+				# MQM9700, MQM9701 P4697, P4262, P4300 removed A2D from CFL
+				HI130|HI142|HI152|HI157|HI158|HI159|HI173)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
@@ -1686,6 +1689,8 @@ mqm97xx_specific()
 		lm_sensors_labels="$lm_sensors_configs_path/mqm9701_sensors_labels.json"
 		thermal_control_config="$thermal_control_configs_path/tc_config_mqm9701.json"
 		hotplug_psus=0
+		hotplug_pwrs=0
+		hotplug_pdbs=1
 		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
 		echo C2P > $config_path/system_flow_capability
 		;;
@@ -2056,7 +2061,7 @@ sn5x00_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 }
 
-sn5610d_specific()
+sn5600d_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${sn5600_base_connect_table[@]})
@@ -2073,9 +2078,10 @@ sn5610d_specific()
 	hotplug_fans=4
 	hotplug_pwrs=0
 	hotplug_psus=0
+	hotplug_pdbs=1
 	echo 4 > $config_path/cpld_num
-	lm_sensors_config="$lm_sensors_configs_path/sn5610d_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn5610d.json"1
+	lm_sensors_config="$lm_sensors_configs_path/sn5600d_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn5600d.json"1
 	named_busses+=(${sn5600_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
@@ -2096,8 +2102,8 @@ sn_spc4_common()
 		HI148)	# SN5700
 			sn5x00_specific
 		;;
-		HI174)	# SN5610d
-			sn5610d_specific
+		HI174)	# SN5600d
+			sn5600d_specific
 		;;
 		*)
 			sn5x00_specific
@@ -2599,6 +2605,11 @@ create_event_files()
 			check_n_init $events_path/pwr$i 0
 		done
 	fi
+	if [ $hotplug_pdbs -ne 0 ]; then
+		for ((i=1; i<=hotplug_pdbs; i+=1)); do
+			check_n_init $events_path/pdb$i 0
+		done
+	fi
 	if [ $hotplug_fans -ne 0 ]; then
 		for ((i=1; i<=hotplug_fans; i+=1)); do
 			check_n_init $events_path/fan$i 0
@@ -2705,6 +2716,7 @@ set_config_data()
 	echo 0 > $config_path/chipdown_delay
 	echo $hotplug_psus > $config_path/hotplug_psus
 	echo $hotplug_pwrs > $config_path/hotplug_pwrs
+	echo $hotplug_pdbs > $config_path/hotplug_pdbs
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
@@ -2894,7 +2906,7 @@ set_asic_pci_id()
 	HI130|HI140|HI141|HI151|HI173)
 		asic_pci_id=$quantum2_pci_id
 		;;
-	HI144|HI147|HI148)
+	HI144|HI147|HI148|HI174)
 		asic_pci_id=$spc4_pci_id
 		;;
 	HI131)
@@ -2952,7 +2964,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI144|HI147|HI148)
+	HI144|HI147|HI148|HI174)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo 1 > "$config_path"/asic_num

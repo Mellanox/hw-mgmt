@@ -1,4 +1,4 @@
-From 5352c77435ef79feff7c248526677919918fe774 Mon Sep 17 00:00:00 2001
+From eeb3be6227ca1551d38a9a89bd1f46f468b5ab90 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Mon, 9 Dec 2024 11:42:37 +0200
 Subject: [PATCH 1/2] platform: mellanox: Downstream: Add support for new
@@ -13,18 +13,69 @@ Key changes:
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 431 +++++++++++++++++++++++
- 1 file changed, 431 insertions(+)
+ drivers/platform/mellanox/mlx-platform.c | 456 +++++++++++++++++++++++++++++++
+ 1 file changed, 456 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 6642f5173da4..d64c4651d645 100644
+index 6642f51..5a8423a 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -1647,6 +1647,27 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ext_items[] = {
+@@ -875,6 +875,16 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_psu_items_data[] = {
+ 	},
+ };
+ 
++/* Platform hotplug dgx data */
++static struct mlxreg_core_data mlxplat_mlxcpld_dgx_psu_items_data[] = {
++	{
++		.label = "pdb1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++};
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_items_data[] = {
+ 	{
+ 		.label = "pwr1",
+@@ -924,6 +934,15 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_ng800_items_data[] =
+ 	},
+ };
+ 
++static struct mlxreg_core_data mlxplat_mlxcpld_dgx_pwr_items_data[] = {
++	{
++		.label = "pwr1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE ,
++	},
++};
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_items_data[] = {
+ 	{
+ 		.label = "fan1",
+@@ -1647,6 +1666,45 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ext_items[] = {
  	}
  };
  
 +static struct mlxreg_core_item mlxplat_mlxcpld_ext_dgx_items[] = {
++	{
++		.data = mlxplat_mlxcpld_dgx_psu_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PSU_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.mask = MLXPLAT_CPLD_PSU_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_psu_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_dgx_pwr_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PWR_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = MLXPLAT_CPLD_PWR_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_pwr_items_data),
++		.inversed = 0,
++		.health = false,
++	},
 +	{
 +		.data = mlxplat_mlxcpld_default_ng_fan_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
@@ -48,11 +99,10 @@ index 6642f5173da4..d64c4651d645 100644
  static struct mlxreg_core_item mlxplat_mlxcpld_ng800_items[] = {
  	{
  		.data = mlxplat_mlxcpld_default_ng_psu_items_data,
-@@ -2133,6 +2154,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
- 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
+@@ -2134,6 +2192,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
  };
  
-+static
+ static
 +struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_dgx_ext_data = {
 +	.items = mlxplat_mlxcpld_ext_dgx_items,
 +	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ext_dgx_items),
@@ -62,10 +112,11 @@ index 6642f5173da4..d64c4651d645 100644
 +	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
 +};
 +
- static
++static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ng800_data = {
  	.items = mlxplat_mlxcpld_ng800_items,
-@@ -5563,6 +5594,373 @@ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
+ 	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ng800_items),
+@@ -5563,6 +5631,361 @@ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data),
  };
  
@@ -228,12 +279,6 @@ index 6642f5173da4..d64c4651d645 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_pwr_converter_fail",
-+		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(0),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "reset_system",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(1),
@@ -258,21 +303,15 @@ index 6642f5173da4..d64c4651d645 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_ac_pwr_fail",
++		.label = "reset_pdb_pwr_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_ac_ok_fail",
-+		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(7),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "psu2_on",
++		.label = "reset_stby",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mask = GENMASK(7, 0) & ~BIT(0),
 +		.mode = 0200,
 +	},
 +	{
@@ -439,7 +478,7 @@ index 6642f5173da4..d64c4651d645 100644
  /* Platform register access for modular systems families data */
  static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
  	{
-@@ -9204,6 +9602,32 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+@@ -9204,6 +9627,32 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -472,20 +511,20 @@ index 6642f5173da4..d64c4651d645 100644
  static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9552,6 +9976,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
- 			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI142"),
+@@ -9553,6 +10002,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
-+	{
+ 	{
 +		.callback = mlxplat_dmi_ng400_dgx_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI173"),
 +		},
 +	},
- 	{
++	{
  		.callback = mlxplat_dmi_ng400_matched,
  		.matches = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 -- 
-2.20.1
+2.8.4
 

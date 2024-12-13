@@ -245,7 +245,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI166" ] ||
         [ "$ui_tree_sku" = "HI167" ] ||
         [ "$ui_tree_sku" = "HI169" ] ||
-        [ "$ui_tree_sku" = "HI170" ]) &&
+        [ "$ui_tree_sku" = "HI170" ] || 
+        [ "$ui_tree_sku" = "HI173" ] ) &&
         ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
     else
@@ -257,7 +258,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI171|HI172)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI171|HI172|HI173|HI174)
 			return 0
 			;;
 

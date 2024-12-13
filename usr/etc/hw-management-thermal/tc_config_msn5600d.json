@@ -1,5 +1,5 @@
  {
-	"name": "msn5610d",
+	"name": "msn5600d",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
@@ -28,9 +28,6 @@
 	},
 	"psu_fan_pwm_decode" : {"0:100": -1},
 	"fan_trend" : {
-        "C2P": {
-			"0" : {"rpm_min":4143, "rpm_max":13500, "slope": 133, "pwm_min" : 30, "pwm_max_reduction" : 10},
-			"1" : {"rpm_min":3891, "rpm_max":12603, "slope": 123, "pwm_min" : 30, "pwm_max_reduction" : 10}},
 		"P2C": {
 			"0" : {"rpm_min":4143, "rpm_max":13500, "slope": 133, "pwm_min" : 30, "pwm_max_reduction" : 10},
 			"1" : {"rpm_min":3891, "rpm_max":12603, "slope": 123, "pwm_min" : 30, "pwm_max_reduction" : 10}
@@ -46,6 +43,7 @@
 		"drivetemp":      {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60},
 		"ibc\\d+":         {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60}
 	},
-	"sensor_list" : ["asic1", "cpu", "drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "ibc1", "ibc2", "ibc3", "ibc4", "psu1", "psu2", 
-	"sensor_amb", "sodimm1", "sodimm2", "voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5", "voltmon6", "voltmon7", "voltmon8", "voltmon9", "voltmon10", "voltmon11"]
+	"sensor_list" : ["asic1", "cpu", "drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "ibc1", "sensor_amb", "sodimm1", "sodimm2", 
+	"voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5", "voltmon6", "voltmon7", "voltmon8", "voltmon9", "voltmon10", "voltmon11"],
+	"redundancy" : {"fan_err" : {"min_err_cnt" : "2" }}
 }

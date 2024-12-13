@@ -1,4 +1,4 @@
-From 1243d4da5c48012603f1ce4ec3d36b22ac9d26ff Mon Sep 17 00:00:00 2001
+From 2eadbd930fe687b5ab1b2caa339f40950f8651a3 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Mon, 9 Dec 2024 13:38:05 +0200
 Subject: [PATCH 2/2] platform: mellanox: Downstream: Add support DGX flavor of
@@ -16,14 +16,14 @@ Key changes:
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 28 ++++++++++++++++++++++++
+ drivers/platform/mellanox/mlx-platform.c | 28 ++++++++++++++++++++++++++++
  1 file changed, 28 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d64c4651d645..56a65793b985 100644
+index 5a8423a..e1da75b 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -9739,6 +9739,27 @@ static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
+@@ -9764,6 +9764,27 @@ static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -51,20 +51,20 @@ index d64c4651d645..56a65793b985 100644
  static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9995,6 +10016,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0011"),
+@@ -10021,6 +10042,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
-+	{
+ 	{
 +	    .callback = mlxplat_dmi_ng800_dgx_matched,
 +	    .matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0013"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI174"),
 +	    },
 +	},
- 	{
++	{
  		.callback = mlxplat_dmi_ng800_matched,
  		.matches = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0013"),
 -- 
-2.20.1
+2.8.4
 
