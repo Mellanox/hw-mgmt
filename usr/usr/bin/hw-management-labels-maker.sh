@@ -196,7 +196,7 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	port_amb|fan_amb|swb_asic*|fpga|mng_amb)
+	port_amb|fan_amb|swb_asic*|fpga|mng_amb|pdb_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
