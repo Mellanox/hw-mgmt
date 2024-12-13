@@ -393,6 +393,8 @@ Kernel-5.10
 |9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9007-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Feature pending;skip[ALL];take[opt]      |            | SN5640                                         |
+|9008-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
+|9009-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.14
