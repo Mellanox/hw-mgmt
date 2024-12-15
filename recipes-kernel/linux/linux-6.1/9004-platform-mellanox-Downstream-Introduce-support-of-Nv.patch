@@ -687,7 +687,7 @@ index 144ee24c11fd..2192f047ec70 100644
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
-+	{
++	/*{
 +		.label = "reset_sw_reset",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -704,31 +704,31 @@ index 144ee24c11fd..2192f047ec70 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
-+	},
++	},*/
 +	{
 +		.label = "reset_comex_pwr_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
-+	{
++	/*{
 +		.label = "reset_platform",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
-+	},
++	},*/
 +	{
 +		.label = "reset_soc",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
 +	},
-+	{
++	/*{
 +		.label = "reset_pwr",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
-+	},
++	},*/
 +	{
 +		.label = "reset_erot",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
