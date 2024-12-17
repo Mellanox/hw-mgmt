@@ -24,7 +24,7 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	dh_installdirs -p$(pname) etc/modprobe.d
-	cp usr/etc/modprobe.d/* debian/$(pname)/etc/modprobe.d
+	cp usr/etc/modprobe.d/hw-management.conf debian/$(pname)/etc/modprobe.d
 	dh_installdirs -p$(pname) etc/modules-load.d
 	cp usr/etc/modules-load.d/05-hw-management-modules.conf debian/$(pname)/etc/modules-load.d
 	dh_installdirs -p$(pname) usr/bin
