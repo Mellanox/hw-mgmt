@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2018 - 2021, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -1199,8 +1199,14 @@ if [ "$1" == "add" ]; then
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
 		cable_cartridge*_eeprom*)
-			eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
-			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
+			if [ "$board_type" == "VMOD0021" ]; then
+				if command -v ipmi-fru 2>&1 >/dev/null; then
+					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
+				fi
+			else
+				eeprom_vpd_filename=${eeprom_name/"_eeprom"/"_data"}
+				hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
+			fi
 			;;
 		fio_info)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/fio_data
