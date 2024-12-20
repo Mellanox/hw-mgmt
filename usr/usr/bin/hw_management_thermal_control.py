@@ -1084,6 +1084,10 @@ class system_device(hw_managemet_file_op):
 
             if print_log and err_cnt < err_level:
                 self.log.warn("{}: file:{} read error {} times".format(self.name, filename, err_cnt))
+
+            # to reduse log: print err message first 3 times and then only each 10's message
+            if err_cnt <= (self.err_fread_max + 2) or divmod(err_cnt, 100)[1] == 0:
+                self.log.error("{}: read file {} errors count {}".format(self.name, filename, err_cnt))
         else:
             if err_cnt and err_cnt != 0 and print_log:
                 self.log.notice("{}: file:{} read OK".format(self.name, filename))
@@ -1099,9 +1103,6 @@ class system_device(hw_managemet_file_op):
         err_keys = []
         for key, val in self.err_fread_err_counter_dict.items():
             if val >= self.err_fread_max:
-                # to reduse log: print err message first 5 times and then only each 10's message
-                if val <= (self.err_fread_max + 5) or divmod(val, 100)[1] == 0:
-                    self.log.error("{}: read file {} errors count {}".format(self.name, key, val))
                 err_keys.append(key)
         return err_keys
 
@@ -1370,8 +1371,14 @@ class system_device(hw_managemet_file_op):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        if CONST.SENSOR_READ_ERR in fault_list:
+            value = "N/A"
+        else:
+            value = self.value
         info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], pwm: {}, {}".format(self.name,
-                                                                                          self.value,
+                                                                                          value,
                                                                                           self.val_min,
                                                                                           self.val_max,
                                                                                           self.get_fault_list_str(),
@@ -1414,23 +1421,18 @@ class thermal_sensor(system_device):
             try:
                 value = self.read_file_int(self.file_input, self.scale)
                 self.handle_reading_file_err(self.file_input, reset=True)
+                self.update_value(value)
+                if self.value > self.val_max:
+                    self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
+                                                                                      self.value,
+                                                                                      self.val_max,
+                                                                                      pwm))
+                elif self.value < self.val_min:
+                    self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
                 self.log.warn("Wrong value reading from file: {}".format(self.file_input))
                 self.handle_reading_file_err(self.file_input)
-        self.update_value(value)
-
-        if self.value > self.val_max:
-            pwm = self.pwm_max
-            self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
-                                                                              self.value,
-                                                                              self.val_max,
-                                                                              pwm))
-        elif self.value < self.val_min:
-            pwm = self.pwm_min
-            self.log.debug("{} value {}".format(self.name, self.value))
-        else:
-            pwm = self.calculate_pwm_formula()
-
+        pwm = self.calculate_pwm_formula()
         self.pwm = pwm
 
     # ----------------------------------------------------------------------
@@ -1565,22 +1567,21 @@ class thermal_module_sensor(system_device):
 
                 if self.value != 0:
                     if self.value > self.val_max:
-                        pwm = self.pwm_max
                         self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
                                                                                           self.value,
                                                                                           self.val_max,
                                                                                           pwm))
                     elif self.value < self.val_min:
-                        pwm = self.pwm_min
+                        self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
                 self.log.warn("value reading from file: {}".format(self.base_file_name))
                 self.handle_reading_file_err(temp_read_file)
 
-        self.pwm = pwm
-        # check if module have sensor interface
+        # check if module have temperature reading interface
         if self.get_temp_support_status():
             # calculate PWM based on formula
-            self.pwm = max(self.calculate_pwm_formula(), pwm)
+            pwm = max(self.calculate_pwm_formula(), pwm)
+        self.pwm = pwm
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -2249,6 +2250,17 @@ class ambiant_thermal_sensor(system_device):
         return err_cnt
 
     # ----------------------------------------------------------------------
+    def get_value(self):
+        """
+        @summary: Return sensor value. Value type depends from sensor type and can be: Celsius degree, rpm, ...
+        """
+        min_sens_value =  min(self.value_dict.values())
+        if min_sens_value != CONST.AMB_TEMP_ERR_VAL:
+            return self.value
+        else:
+            return CONST.AMB_TEMP_ERR_VAL
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
@@ -2268,7 +2280,7 @@ class ambiant_thermal_sensor(system_device):
                 except BaseException:
                     self.log.error("Error value reading from file: {}".format(sens_file_name))
                     self.handle_reading_file_err(sens_file_name)
-            # in case of multiple error - set sesor to ignore
+            # in case of file reading error - set sesor to ignore
             if sens_file_name in self.check_reading_file_err():
                 self.value_dict[file_name] = CONST.AMB_TEMP_ERR_VAL
 
@@ -2315,8 +2327,8 @@ class ambiant_thermal_sensor(system_device):
         sens_val = ""
         sensor_name_min = min(self.value_dict, key=self.value_dict.get)
         for key, val in self.value_dict.items():
-            if val >= self.val_max:
-                val = "err"
+            if val == CONST.AMB_TEMP_ERR_VAL:
+                val = "N/A"
             sens_val += "{}:{} ".format(key, val)
         info_str = "\"{}\" {}({}), dir:{}, faults:[{}] pwm:{}, {}".format(self.name,
                                                                           sens_val,
@@ -2898,6 +2910,8 @@ class ThermalManagement(hw_managemet_file_op):
             if val > pwm_max:
                 pwm_max = val
                 name = key
+            elif val == pwm_max and "total_err_cnt" in key:
+                name = key
         return pwm_max, name
 
     # ----------------------------------------------------------------------
@@ -3442,17 +3456,18 @@ class ThermalManagement(hw_managemet_file_op):
 
             if total_err_count >= CONST.TOTAL_MAX_ERR_COUNT:
                 pwm_list["total_err_cnt({})>={}".format(total_err_count, CONST.TOTAL_MAX_ERR_COUNT)] = CONST.PWM_MAX
+                force_reason = True
             elif fault_cnt_old >= CONST.TOTAL_MAX_ERR_COUNT:
                 self.log.info("'total_err_cnt>2' error flag clear")
+                force_reason = True
+            else:
+                force_reason = False
             fault_cnt_old = total_err_count
 
             pwm, name = self._pwm_get_max(pwm_list)
             self.log.debug("Result PWM {}".format(pwm))
-            if "total_err_cnt" in name:
-                # Always update total error count value in PWM change reason
-                self._set_pwm(pwm, reason=name, force_reason=True)
-            else:
-                self._set_pwm(pwm, reason=name, force_reason=False)
+            self._set_pwm(pwm, reason=name, force_reason=force_reason)
+
             sleep_ms = int(timestump_next - current_milli_time())
 
             # Poll time should not be smaller than 1 sec to reduce system load
@@ -3472,7 +3487,7 @@ class ThermalManagement(hw_managemet_file_op):
         if ambient_sensor:
             amb_tmp = ambient_sensor.get_value()
             if amb_tmp == CONST.AMB_TEMP_ERR_VAL:
-                amb_tmp = "err"
+                amb_tmp = "N/A"
             flow_dir = self.system_flow_dir
         else:
             amb_tmp = "-"
