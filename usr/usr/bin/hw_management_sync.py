@@ -320,6 +320,12 @@ atttrib_list = {
     ]
 }
 
+class CONST(object):
+    # inde1pendent mode - module reading temperature via SDK sysfs
+    SDK_FW_CONTROL = 0
+    # inde1pendent mode - module reading temperature via EEPROM
+    SDK_SW_CONTROL = 1
+    
 REDFISH_OBJ = None
 
 """
@@ -598,10 +604,10 @@ def module_temp_populate(arg_list, _dummy):
                     read_mode = int(f.read().strip())
             except:
                 # by default use SW control
-                read_mode = 1
-    
+                read_mode = CONST.SDK_FW_CONTROL
+
             # If control mode is FW, skip temperature reading
-            if read_mode == 0:
+            if read_mode == CONST.SDK_SW_CONTROL:
                 continue
 
             f_src_input = os.path.join(f_src_path, "temperature/input")
