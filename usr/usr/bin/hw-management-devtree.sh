@@ -401,6 +401,13 @@ declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
 				   ["lm5066_0"]="lm5066 0x16 18 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 18 pdb_eeprom")
 
+# Q3450
+declare -A pwr_type4_alternatives=( \
+				   ["raa228000_0"]="raa228000 0x60 3 pwr_conv1" \
+				   ["raa228000_1"]="raa228000 0x60 4 pwr_conv2" \
+				   ["lm5066_0"]="lm5066i 0x16 3 pdb_hotswap1" \
+				   ["lm5066_1"]="lm5066i 0x16 4 pdb_hotswap2" \)
+
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
 					["tmp75_0"]="tmp75 0x49 7 fan_amb")
@@ -772,6 +779,30 @@ devtr_check_supported_system_init_alternatives()
 				;;
 			esac
 			;;
+		VMOD0023)
+			case $sku in
+			HI175)
+				for key in "${!q3400_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3400_alternatives["$key"]}"
+				done
+				for key in "${!platform_type1_alternatives[@]}"; do
+					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
+				done
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+				done
+				for key in "${!pwr_type4_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${pwr_type4_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			return 0
+			;;
+
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1
