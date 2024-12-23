@@ -37,7 +37,6 @@ alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
-sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 config_path=$hw_management_path/config
 events_path=$hw_management_path/events

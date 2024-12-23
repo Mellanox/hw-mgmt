@@ -436,14 +436,6 @@ find_eeprom_name_on_remove()
 	echo $eeprom_name
 }
 
-function create_sfp_symbolic_links()
-{
-	local event_path="${1}"
-	local sfp_name=${event_path##*/net/}
-
-	ln -sf /usr/bin/hw-management-sfp-helper.sh ${sfp_path}/"${sfp_name}"_status
-}
-
 # ASIC CPLD event
 function asic_cpld_add_handler()
 {
@@ -1286,13 +1278,6 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "i2c_link" ]; then
 		create_main_i2c_links "$4"
 	fi
-elif [ "$1" == "mv" ]; then
-	if [ "$2" == "sfp" ]; then
-		lock_service_state_change
-		change_file_counter $config_path/sfp_counter 1
-		unlock_service_state_change
-		create_sfp_symbolic_links "${3}${4}"
-	fi
 elif [ "$1" == "hotplug-event" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
@@ -1558,12 +1543,6 @@ else
 			*)
 				;;
 		esac
-	fi
-	if [ "$2" == "sfp" ]; then
-		lock_service_state_change
-		change_file_counter $config_path/sfp_counter -1
-		unlock_service_state_change
-		rm -rf ${sfp_path}/*_status
 	fi
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
