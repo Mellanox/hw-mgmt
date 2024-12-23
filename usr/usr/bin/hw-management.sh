@@ -3129,6 +3129,7 @@ do_start()
 	check_system
 	set_asic_pci_id
 	set_sodimms
+	set_config_data
 
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
@@ -3136,7 +3137,7 @@ do_start()
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
-	set_config_data
+	
 	udevadm trigger --action=add
 	udevadm settle
 	set_sodimm_temp_limits
