@@ -3149,6 +3149,7 @@ do_start()
 	check_system
 	set_asic_pci_id
 	set_sodimms
+	set_config_data
 
 	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then
 		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
@@ -3159,7 +3160,7 @@ do_start()
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
-	set_config_data
+	
 	udevadm trigger --action=add
 	udevadm settle
 	set_sodimm_temp_limits
