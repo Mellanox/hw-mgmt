@@ -2750,9 +2750,6 @@ create_symbolic_links()
 	if [ ! -d $system_path ]; then
 		mkdir $system_path
 	fi
-	if [ ! -d $sfp_path ]; then
-		mkdir $sfp_path
-	fi
 	if [ ! -d $watchdog_path ]; then
 		mkdir $watchdog_path
 	fi
@@ -2782,9 +2779,6 @@ create_symbolic_links()
 	fi
 	if [ ! -f "$config_path/module_counter" ]; then
 		echo 0 > "$config_path"/module_counter
-	fi
-	if [ ! -f "$config_path/sfp_counter" ]; then
-		echo 0 > "$config_path"/sfp_counter
 	fi
 	if [ ! -f "$config_path/asic_chipup_counter" ]; then
 		echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
@@ -3319,9 +3313,6 @@ do_chip_up_down()
 		fi
 		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		asic_chipup_completed=$(< $config_path/asic_chipup_completed)
-		if [ ${asic_chipup_completed} -eq 0 ]; then
-			echo 0 > $config_path/sfp_counter
-		fi
 		;;
 	1)
 		lock_service_state_change
