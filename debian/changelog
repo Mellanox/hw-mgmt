@@ -1,4 +1,4 @@
-hw-management (1.mlnx.7.0040.1741-PS) unstable; urgency=low
+hw-management (1.mlnx.7.0040.1830) unstable; urgency=low
   [ MLNX ] 
 
- -- Oleksandrs Shamray <oleksandrs@nvidia.com> Tue 13 Dec 2024 17:43:00 +0300
+ -- Abraham Coifman <acoifmans@nvidia.com> Mon 23 Dec 2024 09:47:00 +0300
