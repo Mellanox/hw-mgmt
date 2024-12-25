@@ -534,26 +534,18 @@ def asic_temp_populate(arg_list, arg):
     """
     @summary: Update asic attributes
     """
-    f_asic_ready = "/var/run/hw-management/config/{}_ready".format(arg_list[0])
     try:
-        with open(f_asic_reay, 'r') as f:
-            asic_ready = int(f.read().strip())
-    except (FileNotFoundError, ValueError):
-        asic_ready = 1
-
-    if asic_ready:
-        try:
-            val = sdk_temp2degree(int(arg))
-            temp_norm = "75000\n"
-            temp_crit = "85000\n"
-            temp_emergency = "105000\n"
-            temp_fault = "120000\n"
-        except:
-            val = "0"
-            temp_crit = ""
-            temp_emergency = ""
-            temp_fault = ""
-            temp_norm = ""
+        val = sdk_temp2degree(int(arg))
+        temp_norm = "75000\n"
+        temp_crit = "85000\n"
+        temp_emergency = "105000\n"
+        temp_fault = "120000\n"
+    except:
+        val = ""
+        temp_crit = ""
+        temp_emergency = ""
+        temp_fault = ""
+        temp_norm = ""
 
     f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
     with open(f_name, 'w', encoding="utf-8") as f:
