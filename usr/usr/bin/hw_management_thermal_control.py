@@ -2554,7 +2554,10 @@ class ThermalManagement(hw_managemet_file_op):
             while timeout > current_milli_time():
                 if not self.write_pwm(self.pwm_target):
                     self.log.info("Set PWM failed. Possible SDK is not started")
-                self.exit.wait(2)
+                    self.exit.wait(2)
+                else:
+                    self.log.info("Set PWM successful")
+                    break
 
         if not self.is_fan_tacho_init():
             self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for ASIC init", 1)
@@ -2982,8 +2985,12 @@ class ThermalManagement(hw_managemet_file_op):
         tacho_cnt = 0
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"] is True:
             if self.check_file("config/max_tachos"):
-                tacho_cnt = self.read_file("config/max_tachos")
-            ret = bool(tacho_cnt)
+                try:
+                    tacho_cnt = self.read_file("config/max_tachos")
+                    ret = bool(int(tacho_cnt))
+                except:
+                    self.log.notice("Can't read config/max_tachos. None-numeric value: {}".format(tacho_cnt))
+                    ret = False
         return ret
 
     # ----------------------------------------------------------------------
