@@ -2287,7 +2287,7 @@ n51xxld_specific()
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo 16 > $config_path/reset_attr_num
 	echo 33000 > $config_path/fan_max_speed
 	echo 6000 > $config_path/fan_min_speed
 	
