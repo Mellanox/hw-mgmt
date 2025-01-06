@@ -312,6 +312,14 @@ atttrib_list = {
 #        {"fin": None,
 #         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", None], "poll": 10, "ts": 0}
 #    ],
+     "def": [
+         {"fin": "/var/run/hw-management/config/thermal_enforced_full_spped",
+         "fn": "run_cmd",
+         "arg": ["if [[ -f /var/run/hw-management/config/thermal_enforced_full_spped && "
+                 "$(</var/run/hw-management/config/thermal_enforced_full_spped) == \"1\" ]]; then "
+                 "/usr/bin/hw-management-user-dump; fi"],
+         "poll": 5, "ts": 0},
+    ],
     "test": [
          {"fin": "/tmp/power_button_clr",
          "fn": "run_power_button_event",
@@ -717,16 +725,11 @@ def main():
         product_sku = sys.argv[1]
     product_sku = product_sku.strip()
     
-    sys_attr = None
+    sys_attr = atttrib_list["def"]
     for key, val in atttrib_list.items():
         if re.match(key, product_sku):
-            sys_attr = val
+            sys_attr.update(val)
             break
-
-    if not sys_attr:
-        print("Not supported product SKU: {}".format(product_sku))
-        while True:
-            time.sleep(10)
 
     for attr in sys_attr:
         init_attr(attr)
