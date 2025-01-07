@@ -3257,7 +3257,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : 2, "curr_err_cnt" : 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
-                err_mask = CONST.DRWR_ERR_LIST
+                err_mask = CONST.PSU_ERR_LIST
         self._sensor_add_config("psu_fan_sensor", psu_name, {"base_file_name": in_file, "dynamic_err_mask": err_mask})
 
     # ----------------------------------------------------------------------
@@ -3272,7 +3272,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": "drwr\d+", "min_err_cnt" : 2, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
-                err_mask = CONST.PSU_ERR_LIST
+                err_mask = CONST.DRWR_ERR_LIST
         self._sensor_add_config("fan_sensor", name, {"base_file_name": name,
                                                      "drwr_id": drwr_idx,
                                                      "tacho_cnt": self.fan_drwr_capacity,
