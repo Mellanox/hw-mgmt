@@ -1439,7 +1439,7 @@ class system_device(hw_managemet_file_op):
                 self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
 
             self.handle_input(thermal_table, flow_dir, amb_tmp)
-            self.handle_err(thermal_table, flow_dir, amb_tmp)
+            self.collect_err()
 
     # ----------------------------------------------------------------------
     def info(self):
@@ -1554,6 +1554,7 @@ class thermal_module_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        self.refresh_attr()
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -3566,8 +3567,7 @@ class ThermalManagement(hw_managemet_file_op):
                 if dev_obj.enable:
                     if curr_timestamp >= dev_obj.get_timestump():
                         # process sensors
-                        dev_obj.handle_input(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
-                        dev_obj.collect_err()
+                        dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
                         if dev_obj.name == "sensor_amb":
                             self.amb_tmp = dev_obj.get_value()
 
