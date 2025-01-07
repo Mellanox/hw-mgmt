@@ -248,8 +248,8 @@ SENSOR_DEF_CONFIG = {
                          "input_suffix": "_input", "input_smooth_level": 2
                         },
     r'pch':             {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 60, "val_min": 50000, "val_max": 85000, "poll_time": 10,
-                         "input_suffix": "_temp", "value_hyst": 2, "input_smooth_level": 2, "enable": 0
+                         "pwm_min": 30, "pwm_max": 100, "val_min": 70000, "val_max": 108000, "poll_time": 3,
+                         "input_suffix": "_temp", "input_smooth_level": 3
                         },
     r'comex_amb':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
@@ -2415,6 +2415,7 @@ class ThermalManagement(hw_managemet_file_op):
                           r'sodimm\d+':"add_sodimm_sensor",
                           r'sensor_amb':"add_amb_sensor",
                           r'drivetemp':"add_drivetemp_sensor",
+                          r'pch':"add_pch_sensor",
                           r'ibc\d*':"add_ibc_sensor",
                           r'ctx_amb\d*':"add_connectx_sensor",
                           r'hotswap\d+':"add_hotswap_sensor",
@@ -3148,6 +3149,11 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     def add_drivetemp_sensor(self, name):
+        in_file = "thermal/{}".format(name)
+        self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
+
+    # ----------------------------------------------------------------------
+    def add_pch_sensor(self, name):
         in_file = "thermal/{}".format(name)
         self._sensor_add_config("thermal_sensor", name, {"base_file_name": in_file})
 
