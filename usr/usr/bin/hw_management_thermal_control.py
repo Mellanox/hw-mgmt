@@ -1533,7 +1533,6 @@ class thermal_sensor(system_device):
         """
         @summary: handle sensor errors
         """
-        self.collect_err()
         fault_list = self.get_fault_list_filtered()
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
@@ -1658,7 +1657,6 @@ class thermal_module_sensor(system_device):
         """
         @summary: handle sensor errors
         """
-        self.collect_err()
         fault_list = self.get_fault_list_filtered()
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
@@ -1902,8 +1900,6 @@ class psu_fan_sensor(system_device):
         """
         @summary: handle sensor error
         """
-        self.collect_err()
-
         pwm_new = self.pwm
         fault_list = self.get_fault_list_filtered()
         self.fault_list_old = self.fault_list
@@ -2282,8 +2278,6 @@ class fan_sensor(system_device):
         """
         @summary: handle sensor error
         """
-        self.collect_err()
-
         pwm_new = self.pwm
         fault_list = self.get_fault_list_filtered()
         if CONST.PRESENT in fault_list:
@@ -2444,7 +2438,6 @@ class ambiant_thermal_sensor(system_device):
         """
         @summary: handle sensor errors
         """
-        self.collect_err()
         fault_list = self.get_fault_list_filtered()
 
         if CONST.SENSOR_READ_ERR in fault_list:
@@ -3568,6 +3561,16 @@ class ThermalManagement(hw_managemet_file_op):
 
             # collect errors
             curr_timestamp = current_milli_time()
+
+            for dev_obj in self.dev_obj_list:
+                if dev_obj.enable:
+                    if curr_timestamp >= dev_obj.get_timestump():
+                        # process sensors
+                        dev_obj.handle_input(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
+                        dev_obj.collect_err()
+                        if dev_obj.name == "sensor_amb":
+                            self.amb_tmp = dev_obj.get_value()
+
             total_err_count = 0
             for name, conf in self.dev_err_exclusion_conf.items():
                 conf["curr_err_cnt"] = 0
@@ -3622,7 +3625,7 @@ class ThermalManagement(hw_managemet_file_op):
                             if re.match(name_mask, dev_obj.name):
                                 dev_obj.set_dynamic_filter_ena(conf["skip_err"])
 
-                        dev_obj.process(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
+                        dev_obj.handle_err(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
                         if dev_obj.name == "sensor_amb":
                             self.amb_tmp = dev_obj.get_value()
                         dev_obj.update_timestump()
