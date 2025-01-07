@@ -46,6 +46,6 @@
 					 "psu1", "psu2", "psu3", "psu4",
 					 "sensor_amb", "voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5",
 					 "voltmon6", "voltmon7", "voltmon8", "voltmon9", "voltmon10", "voltmon11"],
-	"redundancy" : {"psu_err" : {"min_err_cnt" : "3", "err_mask" : ["present","direction"]},
-					"fan_err" : {"min_err_cnt" : "2" }}
+	"error_mask" : {"psu" : ["direction", "present"]},
+	"redundancy" : {"fan_err" : {"min_err_cnt" : "2" }}
 }
