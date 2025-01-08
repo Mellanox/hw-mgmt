@@ -1073,6 +1073,7 @@ class system_device(hw_managemet_file_op):
         self.pwm_max = CONST.PWM_MAX
         self.value = CONST.TEMP_INIT_VAL_DEF
         self.value_acc = self.value * self.input_smooth_level
+        self.last_value = self.value
         self.pwm = CONST.PWM_MIN
         self.last_pwm = self.pwm
         self.pwm_hysteresis = int(self.sensors_config.get("pwm_hyst", CONST.PWM_HYSTERESIS_DEF))
@@ -1225,20 +1226,22 @@ class system_device(hw_managemet_file_op):
 
             input_smooth_level defined in sensor configuration
         2. Add hysteresis for value change
-            if value >= old_value + hysteresis then update old_value to the new
-            If new change in the same diraction (up or downn) then updating value will be immediatly without hysteresis.
+            if value >= prev_value + hysteresis then update prev_value to the new
+            If new change in the same direction (up or downn) then updating value will be immediatly without hysteresis.
 
             value_hyst defined in sensor configuration
         """
-        old_value = self.value
+        self.last_value = value
+        prev_value = self.value
+
         # integral filter for soothing temperature change
         self.value_acc -= self.value_acc / self.input_smooth_level
         self.value_acc += value
         self.value = int(round(float(self.value_acc) / self.input_smooth_level))
 
-        if self.value > old_value:
+        if self.value > prev_value:
             value_trend = 1
-        elif self.value < old_value:
+        elif self.value < prev_value:
             value_trend = -1
         else:
             value_trend = 0
@@ -1597,7 +1600,7 @@ class thermal_module_sensor(system_device):
         """
         status = True
 
-        if self.value == 0 and self.val_max == 0 and self.val_min == 0:
+        if self.last_value == 0 and self.val_max == 0 and self.val_min == 0:
             self.log.debug("Module not supporting temp reading val:{} max:{}".format(self.value, self.val_max))
             status = False
 
@@ -1628,7 +1631,7 @@ class thermal_module_sensor(system_device):
                     self.refresh_attr()
                 self.update_value(value)
 
-                if self.value != 0:
+                if self.get_temp_support_status():
                     if self.value > self.val_max:
                         self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
                                                                                           self.value,
