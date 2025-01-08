@@ -39,7 +39,7 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="emc1412" ["h"]="lm90" ["i"]="tmp411" ["j"]="tmp1075" ["j"]="tmp451")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="lm90" ["h"]="emc1412" ["i"]="tmp411" ["j"]="tmp1075" ["k"]="tmp451")
 
 declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7" ["i"]="mp2855")
 
