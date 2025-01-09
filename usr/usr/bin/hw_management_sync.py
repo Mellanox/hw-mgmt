@@ -459,11 +459,12 @@ def asic_temp_populate(arg_list, arg):
     @summary: Update asic attributes
     """
     f_asic_ready = "/var/run/hw-management/config/{}_ready".format(arg_list[0])
+    asic_ready = 1 
     try:
-        with open(f_asic_reay, 'r') as f:
+        with open(f_asic_ready, 'r') as f:
             asic_ready = int(f.read().strip())
     except (FileNotFoundError, ValueError):
-        asic_ready = 1
+        pass
 
     if asic_ready:
         try:
