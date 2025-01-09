@@ -1,4 +1,51 @@
 ================================================================================
+- V.7.0040.3001
+- Thu , 9 Jan 2025
+--------------------------------------------------------------------------------
+
+- New features 
+    o Add support for SPC-4 SN5610 – ES level quality
+    o Add support for N5300_LD – PS level quality
+    o Add support for N5200_LD – PS level quality
+    o Add support for N5101_LD - PS level Quality
+    o Add support for kernel 5.14.21
+    o Add new interface account for for BMC
+
+- Bug fixes
+	#4220139 thermal: TC Fix debug log printouts
+	#4215389 scripts: Add loading of MP2891 VR driver on X86 systems
+	#4207762 attributes: Fix PDB thermal sensor name/address
+	#4205069 scripts: Add loading of MP2855 VR driver on X86 systems
+	#4146744 rules: Add rules for network interface
+	#4201043 scripts: Fix module reading in sync script
+	#4143199 attributes: Fix PSU volt out attributes
+	#4176442 topology: Add TC component monitoring based on devtree
+	#4116810 scripts: fix init errors of GPIOs for JTAG on AMD based systems.
+	#4124359 sensor: Correct fan names for MSN4600
+	#4023734 patches: Change dpu attribute permission
+		- 0299-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch
+		- 0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch
+	#3874682 kernel: 6.1: Fix for PSU attributes
+	#4075088 scripts: Fix hw-management-sync crash
+	#4051715 sensors: Fix sensors conf name for n51xx systems
+	#3896626 patches: kernel 5.10/6.1: Update N51xx support in mlx-platform driver
+		- 9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch
+		- 9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch
+	#4134316 patches: Add support for SN5610
+		- 9007-platform-mellanox-mlx-platform-Add-support-for-new-N.patch
+		- 0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.3000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0040.3000
 - Mon , 6 Jan 2025
 --------------------------------------------------------------------------------
