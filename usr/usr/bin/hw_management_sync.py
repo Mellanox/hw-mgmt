@@ -89,18 +89,12 @@ atttrib_list = {
          "arg": [],
          "poll": 1, "ts": 0},
 
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic"],
-         "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic1"],
-         "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic1/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic2"],
-         "poll": 3, "ts": 0},
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
+                },
+        },
 
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {  "module1": {"fin": "/sys/module/sx_core/asic0/module0/"},
@@ -138,7 +132,7 @@ atttrib_list = {
                     "module33": {"fin": "/sys/module/sx_core/asic0/module32/"},
                     "module34": {"fin": "/sys/module/sx_core/asic0/module33/"},
                     "module35": {"fin": "/sys/module/sx_core/asic0/module34/"},
-                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"}, },
+                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"} }
         },
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
@@ -178,18 +172,12 @@ atttrib_list = {
          "arg": [],
          "poll": 1, "ts": 0},
 
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic"],
-         "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic1"],
-         "poll": 3, "ts": 0},
-        {"fin": "/sys/module/sx_core/asic1/temperature/input",
-         "fn": "asic_temp_populate",
-         "arg" : ["asic2"],
-         "poll": 3, "ts": 0},
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
+                }
+        },
 
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {  "module1": {"fin": "/sys/module/sx_core/asic0/module0/"},
@@ -227,7 +215,7 @@ atttrib_list = {
                     "module33": {"fin": "/sys/module/sx_core/asic0/module32/"},
                     "module34": {"fin": "/sys/module/sx_core/asic0/module33/"},
                     "module35": {"fin": "/sys/module/sx_core/asic0/module34/"},
-                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"}, },
+                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"} }
         },
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0},
@@ -307,7 +295,7 @@ atttrib_list = {
 #                    "module63": {"fin": "/sys/module/sx_core/asic0/module62/"},
 #                    "module64": {"fin": "/sys/module/sx_core/asic0/module63/"},
 #                    "module65": {"fin": "/sys/module/sx_core/asic0/module64/"},
-#                    "module66": {"fin": "/sys/module/sx_core/asic0/module65/"}, },
+#                    "module66": {"fin": "/sys/module/sx_core/asic0/module65/"} }
 #        },
 #        {"fin": None,
 #         "fn": "asic_state_poll", "arg" : ["/sys/module/sx_core/asic0/", None], "poll": 10, "ts": 0}
@@ -333,7 +321,7 @@ class CONST(object):
     SDK_FW_CONTROL = 0
     # inde1pendent mode - module reading temperature via EEPROM
     SDK_SW_CONTROL = 1
-    
+
 REDFISH_OBJ = None
 
 """
@@ -469,12 +457,12 @@ def asic_state_poll(arg_list, arg):
     asic_num_fname = os.path.join("/var/run/hw-management/config", "asic_num")
     asics_init_done_fname = os.path.join("/var/run/hw-management/config", "asics_init_done")
 
-    if asic_state_prev == None:
+    if asic_state_prev is None:
         first_run = 1
         asic_state_prev = 0
         with open(asic_chipup_completed_fname, 'w', encoding="utf-8") as f:
             f.write("0\n")
-            
+
         with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
             f.write("0\n")
     else:
@@ -485,7 +473,7 @@ def asic_state_poll(arg_list, arg):
     else:
         asic_state = 0
 
-    if asic_state != asic_state_prev:         
+    if asic_state != asic_state_prev:
         arg_list[1] = asic_state
 
         try:
@@ -538,52 +526,83 @@ def sdk_temp2degree(val):
     return temperature
 
 # ----------------------------------------------------------------------
+def is_module_host_management_mode(f_src_path):
+    """
+    @summary: Check if ASIC in independent mode
+    @return: True if ASIC in independent mode
+    """
+
+    # Based on modue control type we can get SDK mode (dependent/independent)
+    f_mode_path = os.path.join(f_src_path, "control")
+    try:
+        with open(f_mode_path, 'r') as f:
+            # reading module control. 1 - SW(independent), 0 - FW(dependent)
+            read_mode = int(f.read().strip())
+    except:
+        # by default use FW control (dependent mode)
+        read_mode = CONST.SDK_FW_CONTROL
+
+    # If control mode is FW, skip temperature reading (independent mode)
+    return read_mode == CONST.SDK_SW_CONTROL
+
+# ----------------------------------------------------------------------
 def asic_temp_populate(arg_list, arg):
     """
     @summary: Update asic attributes
     """
-    f_asic_ready = "/var/run/hw-management/config/{}_ready".format(arg_list[0])
-    asic_ready = 1 
-    try:
-        with open(f_asic_ready, 'r') as f:
-            asic_ready = int(f.read().strip())
-    except (FileNotFoundError, ValueError):
-        pass
+    for asic_name, asic_attr in arg_list.items():
+        f_asic_ready = "/var/run/hw-management/config/{}_ready".format(asic_name)
 
-    if asic_ready:
+        # If link to asic temperatule already exists - nothing to do
+        f_dst_name = "/var/run/hw-management/thermal/{}".format(asic_name)
+        if os.path.islink(f_dst_name):
+            continue
+
+        asic_ready = 1
         try:
-            val = sdk_temp2degree(int(arg))
-            temp_norm = "75000\n"
-            temp_crit = "85000\n"
-            temp_emergency = "105000\n"
-            temp_fault = "120000\n"
+            with open(f_asic_ready, 'r') as f:
+                asic_ready = int(f.read().strip())
         except:
-            val = "0"
-            temp_crit = ""
-            temp_emergency = ""
-            temp_fault = ""
-            temp_norm = ""
+            pass
 
-    f_name = "/var/run/hw-management/thermal/{}".format(arg_list[0])
-    with open(f_name, 'w', encoding="utf-8") as f:
-        f.write(str(val)+"\n")
+        if not asic_ready:
+            continue
 
-    f_name = "/var/run/hw-management/thermal/{}_temp_trip_crit".format(arg_list[0])
-    if not os.path.isfile(f_name):
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write(temp_fault)
+        f_asic_src_path = asic_attr["fin"]
+        # If independent mode - skip temperature reading
+        if is_module_host_management_mode(os.path.join(f_asic_src_path, "module0")):
+            continue
 
-        f_name = "/var/run/hw-management/thermal/{}_temp_emergency".format(arg_list[0])
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write(temp_emergency)
+        # Default temperature values
+        try:
+            f_src_input = os.path.join(f_asic_src_path, "temperature/input")
+            with open(f_src_input, 'r') as f:
+                val = f.read()
+            temperature = sdk_temp2degree(int(val))
+            temperature_min = "75000"
+            temperature_max = "85000"
+            temperature_fault = "105000"
+            temperature_crit = "120000"
+        except:
+            temperature = "0"
+            temperature_min = ""
+            temperature_max = ""
+            temperature_fault = ""
+            temperature_crit = ""
 
-        f_name = "/var/run/hw-management/thermal/{}_temp_crit".format(arg_list[0])
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write(temp_crit)
+        # Write the temperature data to files
+        file_paths = {
+            "": temperature,
+            "_temp_norm": temperature_min,
+            "_temp_crit": temperature_max,
+            "_temp_emergency": temperature_fault,
+            "_temp_trip_crit": temperature_crit
+        }
 
-        f_name = "/var/run/hw-management/thermal/{}_temp_norm".format(arg_list[0])
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write(temp_norm)
+        for suffix, value in file_paths.items():
+            f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
+            with open(f_name, 'w', encoding="utf-8") as f:
+                f.write("{}\n".format(value))
 
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, _dummy):
@@ -603,7 +622,7 @@ def module_temp_populate(arg_list, _dummy):
         try:
             with open(f_src_present, 'r') as f:
                 module_present = int(f.read().strip())
-        except (FileNotFoundError, ValueError):
+        except:
             pass  # Module is not present or file reading failed
 
         # Default temperature values
@@ -614,17 +633,8 @@ def module_temp_populate(arg_list, _dummy):
         temperature_crit = "0"
 
         if module_present:
-            # reading module control (1 -SW, 0 - FW)
-            f_read_mode_path = os.path.join(f_src_path, "control")
-            try:
-                with open(f_read_mode_path, 'r') as f:
-                    read_mode = int(f.read().strip())
-            except:
-                # by default use SW control
-                read_mode = CONST.SDK_FW_CONTROL
-
-            # If control mode is FW, skip temperature reading
-            if read_mode == CONST.SDK_SW_CONTROL:
+            # If control mode is FW, skip temperature reading (independent mode)
+            if is_module_host_management_mode(f_src_path):
                 continue
 
             f_src_input = os.path.join(f_src_path, "temperature/input")
@@ -651,7 +661,7 @@ def module_temp_populate(arg_list, _dummy):
                      temperature_max = "75000"
                 temperature_crit = "120000"
             except:
-               pass
+                pass
 
         # Write the temperature data to files
         file_paths = {
@@ -666,7 +676,7 @@ def module_temp_populate(arg_list, _dummy):
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
             with open(f_name, 'w', encoding="utf-8") as f:
                 f.write("{}\n".format(value))
-    
+
     with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
         f.write("{}\n".format(total_module_count))
     return
@@ -733,7 +743,7 @@ def main():
     else:
         product_sku = sys.argv[1]
     product_sku = product_sku.strip()
-    
+
     sys_attr = atttrib_list["def"]
     for key, val in atttrib_list.items():
         if re.match(key, product_sku):
