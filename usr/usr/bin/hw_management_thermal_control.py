@@ -136,7 +136,7 @@ class CONST(object):
     SENSOR_POLL_TIME_DEF = 30
     TEMP_INIT_VAL_DEF = 25
     TEMP_SENSOR_SCALE = 1000.0
-    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000}
+    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     AMB_TEMP_ERR_VAL = 255
 
@@ -233,48 +233,57 @@ SENSOR_DEF_CONFIG = {
                          "refresh_attr_period": 1 * 60
                         },
     r'module\d+':       {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000, "val_lcrit": 0, "poll_time": 20,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "val_lcrit": 5,  "poll_tme": 6,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
+                         "val_lcrit": 5, "val_hcrit": 150000,  "poll_tme": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
     r'asic\d*':         {"type": "thermal_asic_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "val_lcrit": 0, "poll_time": 3,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                          "value_hyst": 2, "input_smooth_level": 1
                         },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor",
-                                "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "90000", "val_lcrit": 0, "poll_time": 3,
+                                "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "90000",
+                                "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                                 "value_hyst": 5, "input_smooth_level": 3
                                },
     r'sodimm\d_temp':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!75000", "val_max": 85000, "val_lcrit": 0, "poll_time": 30,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!75000", "val_max": 85000,
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                          "input_suffix": "_input", "input_smooth_level": 2
                         },
     r'pch':             {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 60, "val_min": 50000, "val_max": 85000, "poll_time": 10,
+                         "pwm_min": 30, "pwm_max": 60, "val_min": 50000, "val_max": 85000,
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 10,
                          "input_suffix": "_temp", "value_hyst": 2, "input_smooth_level": 2, "enable": 0
                         },
     r'comex_amb':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
                         },
-    r'sensor_amb':      {"type": "ambiant_thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, "poll_time": 30,
+    r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, 
+                         "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
                          "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0, "input_smooth_level": 1
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor",
                          "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
                         },
     r'voltmon\d+_temp': {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                          "input_suffix": "_input"
                         },
     r'drivetemp':       {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 60
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                         "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 60
                         },
     r'ibc\d+':          {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "val_lcrit": 0, "poll_time": 60,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000",
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60, 
                          "input_suffix": "_input"
                         },
     r'ctx_amb\d*':      {"type": "thermal_sensor",
@@ -282,30 +291,35 @@ SENSOR_DEF_CONFIG = {
                          "input_suffix": "_input"
                         },
     r'hotswap\d+_temp': {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "val_lcrit": -10000, "val_hcrit": 120000, "poll_time": 30,
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30, 
                          "input_suffix": "_input"
                         },
     r'bmc\d+_temp':     {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
+                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                         },
     r'dpu\\d+_module':  {"type": "dpu_module",
-                         "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000", "poll_time": 5, "child_sensors_list" : []
+                         "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000",
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list" : []
                         },
     r'dpu\d+_cx_amb':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3},
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3},
     r'dpu\d+_cpu':      {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", "poll_time": 3,
-                         "input_smooth_level": 1
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", 
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_smooth_level": 1
                         },
     r'dpu\d+_sodimm\d+': {"type": "thermal_sensor",
                           "pwm_min": 30, "pwm_max": 70
                          },
     r'dpu\d+_drivetemp': {"type": "thermal_sensor",
-                          "pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000", "poll_time": 60
+                          "pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000",
+                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60
                          },
     r'dpu\d+_voltmon\d+_temp': {"type": "thermal_sensor",
-                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 3,
-                                "input_suffix": "_input"
+                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", 
+                                "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_suffix": "_input"
                                },
 }
 
@@ -870,6 +884,8 @@ class hw_managemet_file_op(object):
             check if file exist in file system in hw-management tree.
         @param filename: file to check {hw-management-folder}/filename
         """
+        if not filename:
+            return False
         filename = os.path.join(self.root_folder, filename)
         return os.path.isfile(filename)
 
@@ -1064,11 +1080,11 @@ class system_device(hw_managemet_file_op):
             self.input_smooth_level = 1
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.update_timestump(1000)
+        self.scale = CONST.TEMP_SENSOR_SCALE
         self.val_min = CONST.TEMP_MIN_MAX["val_min"]
         self.val_max = CONST.TEMP_MIN_MAX["val_max"]
-        self.val_hcrit = self.sensors_config.get("val_hcrit", None)      
-        self.val_lcrit = self.sensors_config.get("val_lcrit", None)
-        self.scale = CONST.TEMP_SENSOR_SCALE
+        self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
+        self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
         self.pwm_min = CONST.PWM_MIN
         self.pwm_max = CONST.PWM_MAX
         self.value = CONST.TEMP_INIT_VAL_DEF
@@ -1301,17 +1317,19 @@ class system_device(hw_managemet_file_op):
         @param scale: scale for read value
         @return: int min/max value
         """
-        default_val = str(self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type]))
-        if default_val[0] == "!":
+        default_val = self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type])
+        if str(default_val)[0] == "!":
             # Use config value instead of device parameter reading
             default_val = default_val[1:]
-            val = int(default_val)
+            val = default_val
         else:
-            default_val = int(default_val)
             val = self.get_file_val(filename, default_val)
-        val /= scale
+        try:
+            val = int(val) / scale
+        except:
+            pass
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
-        return int(val)
+        return val
 
     # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
@@ -1498,24 +1516,23 @@ class thermal_sensor(system_device):
         else:
             try:
                 value = self.read_file_int(self.file_input, self.scale)
-                self.update_value(value)
-                if self.val_hcrit != None and self.value >= self.val_hcrit:
+                if self.val_hcrit != None and value >= self.val_hcrit:
                     self.log.warn("{} value({}) >= hcrit({})".format(self.name,
-                                                                            self.value,
-                                                                            self.val_hcrit))
+                                                                     value,
+                                                                     self.val_hcrit))
                     self.fread_err.handle_err(self.file_input)
-                elif self.val_lcrit != None and self.value <= self.val_lcrit:
+                elif self.val_lcrit != None and value <= self.val_lcrit:
                     self.log.warn("{} value({}) <= lcrit({})".format(self.name,
-                                                                            self.value,
-                                                                            self.val_lcrit))
+                                                                     value,
+                                                                     self.val_lcrit))
                     self.fread_err.handle_err(self.file_input)
                 else:
                     self.fread_err.handle_err(self.file_input, reset=True)
+                    self.update_value(value)
                     if self.value > self.val_max:
-                        self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
-                                                                                      self.value,
-                                                                                      self.val_max,
-                                                                                      pwm))
+                        self.log.warn("{} value({}) > max({})".format(self.name,
+                                                                      self.value,
+                                                                      self.val_max))
                     elif self.value < self.val_min:
                         self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
@@ -1633,10 +1650,7 @@ class thermal_module_sensor(system_device):
 
                 if self.get_temp_support_status():
                     if self.value > self.val_max:
-                        self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
-                                                                                          self.value,
-                                                                                          self.val_max,
-                                                                                          pwm))
+                        self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
                     elif self.value < self.val_min:
                         self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
@@ -1702,8 +1716,6 @@ class thermal_asic_sensor(thermal_module_sensor):
         else:
             try:
                 value = self.read_file_int(temp_read_file, self.scale)
-                self.update_value(value)
-                                    
                 if value == 0:
                     self.log.error("{} Incorrect value: {} in the file: {}). Emergency error!".format(self.name, 
                                                                                         value, 
@@ -1712,23 +1724,23 @@ class thermal_asic_sensor(thermal_module_sensor):
                 else:
                     self.asic_fault_err.handle_err(temp_read_file, reset=True)
 
-                if self.val_hcrit != None and self.value >= self.val_hcrit:
+                if self.val_hcrit != None and value >= self.val_hcrit:
                     self.log.warn("{} value({}) >= hcrit({})".format(self.name,
-                                                                            self.value,
-                                                                            self.val_hcrit))
+                                                                     value,
+                                                                     self.val_hcrit))
                     self.fread_err.handle_err(temp_read_file)
-                elif self.val_lcrit != None and self.value <= self.val_lcrit:
+                elif self.val_lcrit != None and value <= self.val_lcrit:
                     self.log.warn("{} value({}) =< lcrit({})".format(self.name,
-                                                                            self.value,
-                                                                            self.val_lcrit))
+                                                                     value,
+                                                                     self.val_lcrit))
                     self.fread_err.handle_err(temp_read_file)
                 else:
-                    self.fread_err.handle_err(self.file_input, reset=True)
+                    self.fread_err.handle_err(temp_read_file, reset=True)
+                    self.update_value(value)
                     if self.value > self.val_max:
-                        self.log.warn("{} value({}) more then max({}). Set pwm {}".format(self.name,
-                                                                                      self.value,
-                                                                                      self.val_max,
-                                                                                      pwm))
+                        self.log.warn("{} value({}) >= max({})".format(self.name,
+                                                                       self.value,
+                                                                      self.val_max))
                     elif self.value < self.val_min:
                         self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
@@ -2408,10 +2420,21 @@ class ambiant_thermal_sensor(system_device):
                 self.fread_err.handle_err(sens_file_name)
             else:
                 try:
-                    temperature = self.read_file_int(sens_file_name, self.scale)
-                    self.fread_err.handle_err(sens_file_name, reset=True)
-                    self.value_dict[file_name] = temperature
-                    self.log.debug("{} {} value {}".format(self.name, sens_file_name, temperature))
+                    value = self.read_file_int(sens_file_name, self.scale)
+                    if self.val_hcrit != None and value >= self.val_hcrit:
+                        self.log.warn("{} value({}) >= hcrit({})".format(self.name,
+                                                                         value,
+                                                                         self.val_hcrit))
+                        self.fread_err.handle_err(sens_file_name)
+                    elif self.val_lcrit != None and value <= self.val_lcrit:
+                        self.log.warn("{} value({}) <= lcrit({})".format(self.name,
+                                                                         value,
+                                                                         self.val_lcrit))
+                        self.fread_err.handle_err(sens_file_name)
+                    else:
+                        self.fread_err.handle_err(sens_file_name, reset=True)
+                        self.value_dict[file_name] = value
+                        self.log.debug("{} {} value {}".format(self.name, sens_file_name, value))
                 except BaseException:
                     self.log.error("Error value reading from file: {}".format(sens_file_name))
                     self.fread_err.handle_err(sens_file_name)
