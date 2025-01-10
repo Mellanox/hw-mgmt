@@ -737,7 +737,7 @@ def main():
     sys_attr = atttrib_list["def"]
     for key, val in atttrib_list.items():
         if re.match(key, product_sku):
-            sys_attr.update(val)
+            sys_attr.extend(val)
             break
 
     for attr in sys_attr:
