@@ -403,13 +403,11 @@ declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
 
 # for DGX platform PDB -1 - pwr_conv, 1- HotPlug, 2 - thermal, 1 - eeprom 24c02 			   
 declare -A pwr_type4_alternatives=( \
-				   ["raa228000_0"]="raa228000 0x60 4 pwr_conv1" \
-				   ["raa228000_1"]="raa228000 0x61 4 pwr_conv2" \
-				   ["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
-				   ["lm5066_1"]="lm5066i 0x14 4 pdb_hotswap2" \
+				   ["raa228000_0"]="raa228000 0x61 4 pdb_pwr_conv1" \
+				   ["lm5066_0"]="lm5066i 0x14 4 pdb_hotswap1" \
 				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
 				   ["tmp1075_0"]="lm5066i 0x4e 4 pdb_intel_amb" \
-				   ["24c04_0"]="24c512 0x50 4 pdb_eeprom")				   
+				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -676,7 +674,7 @@ devtr_check_supported_system_init_alternatives()
 					for key in "${!pwr_type0_alternatives[@]}"; do
 						pwr_alternatives["$key"]="${pwr_type0_alternatives["$key"]}"
 					done
-				
+					;;
 				HI174)
 					for key in "${!sn5600_alternatives[@]}"; do
 						swb_alternatives["$key"]="${sn5600_alternatives["$key"]}"
@@ -684,8 +682,8 @@ devtr_check_supported_system_init_alternatives()
 					for key in "${!pwr_type4_alternatives[@]}"; do
 						pwr_alternatives["$key"]="${pwr_type4_alternatives["$key"]}"
 					done
-				;;
-			*)
+					;;
+				*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
 				return 1
 				;;

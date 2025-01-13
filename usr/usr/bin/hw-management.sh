@@ -386,13 +386,12 @@ mqm97xx_power_voltmon_connect_table=( mp2975 0x62 5 voltmon1 \
 			mp2975 0x6c 5 voltmon6 \
 			mp2975 0x6e 5 voltmon7 )
 
-mqm97xx_pdb_connect_table=( raa228000 0x60 4 pwr_conv1 \
-			raa228000 0x61 4 pwr_conv2 \
+mqm97xx_pdb_connect_table=( raa228000 0x61 4 pdb_pwr_conv1 \
 			lm5066i	0x12 4 pdb_hotswap1 \
 			lm5066i	0x14 4 pdb_hotswap2 \
-			24c04  0x50 4 pdb_eeprom  \
 			tmp451 0x4c 4 pdb_mos_amb \
-			tmp1075 0x4e 4 pdb_intel_amb)
+			tmp1075 0x4e 4 pdb_intel_amb \
+			24c02 0x50 4 pdb_eeprpm )
 	   
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
@@ -1707,6 +1706,7 @@ mqm97xx_specific()
 	hotplug_fans=7
 	echo 29500 > $config_path/fan_max_speed
 	echo 5000 > $config_path/fan_min_speed
+	echo 7 > $config_path/fan_drwr_num
 	echo 3 > $config_path/cpld_num
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
@@ -2423,6 +2423,7 @@ sn5640_specific()
 	esac
 
 	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 	named_busses+=(${sn5640_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
