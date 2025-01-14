@@ -522,6 +522,7 @@ def asic_temp_populate(arg_list, arg):
     @summary: Update asic attributes
     """
     asic_chipup_completed = 0
+    asic_src_list = []
     for asic_name, asic_attr in arg_list.items():
         f_asic_src_path = asic_attr["fin"]
         # ASIC not ready (SDK is not started)
@@ -529,7 +530,9 @@ def asic_temp_populate(arg_list, arg):
             asic_temp_reset(asic_name, f_asic_src_path)
             continue
 
-        asic_chipup_completed += 1
+        if f_asic_src_path not in asic_src_list:
+            asic_src_list.append(f_asic_src_path)
+            asic_chipup_completed += 1
 
         # If link to asic temperatule already exists - nothing to do
         f_dst_name = "/var/run/hw-management/thermal/{}".format(asic_name)
