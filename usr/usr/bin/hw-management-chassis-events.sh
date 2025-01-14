@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2018 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 source hw-management-helpers.sh
 board_type=$(< $board_type_file)
 sku=$(< $sku_file)
+cpu_type=$(<"$config_path"/cpu_type)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
 i2c_bus_def_off_eeprom_cartridge=7
@@ -68,6 +69,7 @@ mlxreg_lc_addr=32
 lc_max_num=8
 dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 fan_debounce_timeout_ms=2000
+cfl_comex_vcore_out_idx=2
 
 case "$board_type" in
 VMOD0014)
@@ -912,6 +914,18 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/in"$sensor_id"_max $environment_path/"$prefix"_in"$i"_crit
 					fi
 					if [ -f "$3""$4"/in"$sensor_id"_lcrit ]; then
+						# There is a problem in VCORE output of VR on Comex board. This output depends
+						# on CPU frequency and according to MPS vendor theoretically can be 0.
+						# Thus reported lcrit should be 0 too.
+						# Currently problem is reported just for CFL CPU comex VR.
+						if [ "$prefix" == "comex_voltmon1" ] || [ "$prefix" == "comex_voltmon2" ]; then
+							if [ "$cpu_type" == "$CFL_CPU" ]; then
+								if [ $sensor_id -eq $cfl_comex_vcore_out_idx ]; then
+									chmod 644 "$3""$4"/in"$sensor_id"_lcrit
+									echo 0 > "$3""$4"/in"$sensor_id"_lcrit
+								fi
+							fi
+						fi
 						check_n_link "$3""$4"/in"$sensor_id"_lcrit $environment_path/"$prefix"_in"$i"_lcrit
 					else
 						check_n_link "$3""$4"/in"$sensor_id"_min $environment_path/"$prefix"_in"$i"_lcrit
