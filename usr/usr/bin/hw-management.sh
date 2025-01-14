@@ -1018,7 +1018,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# MQM9700, MQM9701 P4697, P4262, P4300 removed A2D from CFL
-				HI130|HI142|HI152|HI157|HI158|HI159|HI173)
+				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
@@ -2066,12 +2066,12 @@ sn5600d_specific()
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
 	fi
 	# Set according to front fan max. Rear fan max is 13200
 	echo 13800 > $config_path/fan_max_speed
 	echo 2800 > $config_path/fan_min_speed
-	echo 32500 > $config_path/psu_fan_max
-	echo 9500 > $config_path/psu_fan_min
+	echo C2P > $config_path/system_flow_capability
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
 	max_tachos=8
@@ -2079,7 +2079,9 @@ sn5600d_specific()
 	hotplug_pwrs=0
 	hotplug_psus=0
 	hotplug_pdbs=1
+	echo 7 > $config_path/fan_drwr_num
 	echo 4 > $config_path/cpld_num
+	echo 0 > "$config_path"/labels_ready
 	lm_sensors_config="$lm_sensors_configs_path/sn5600d_sensors.conf"
 	thermal_control_config="$thermal_control_configs_path/tc_config_msn5600d.json"1
 	named_busses+=(${sn5600_named_busses[@]})
