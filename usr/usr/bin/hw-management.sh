@@ -113,6 +113,7 @@ device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
+n51xx_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
 
@@ -2287,7 +2288,7 @@ n51xxld_specific()
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
-	echo 16 > $config_path/reset_attr_num
+	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 33000 > $config_path/fan_max_speed
 	echo 6000 > $config_path/fan_min_speed
 	
