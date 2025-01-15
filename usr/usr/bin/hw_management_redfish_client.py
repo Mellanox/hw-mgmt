@@ -370,7 +370,8 @@ class BMCAccessor(object):
     BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51" # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
     BMC_ROOT_PASSWORD = "ABYX12#14artb" # root pwd which should be patched to
     BMC_DIR = "/host/bmc"
-    BMC_PASS_FILE = "bmc_pass"  
+    BMC_PASS_FILE = "bmc_pass"
+    BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
 
     def __init__(self):
         # TBD: Token persistency.
@@ -426,7 +427,7 @@ class BMCAccessor(object):
             max_repeat = int(3 + 0.09 * pass_len)
             hex_data = "1300NVOS-BMC-USER-Const"
             os.makedirs(self.BMC_DIR, exist_ok=True)
-            cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/nvos_const.bin'
+            cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
             subprocess.run(cmd, shell=True, check=True)
 
             tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/nvos_const.bin", "-G", "aes256cfb"]
@@ -481,7 +482,7 @@ class BMCAccessor(object):
                 consecutive_pair_check = count <= 4
 
                 if consecutive_pair_check and variety_check and repeating_pattern_check and monotonic_check:
-                    os.remove(f"{self.BMC_DIR}/nvos_const.bin")
+                    os.remove(f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}")
                     return symcipher_value
                 else:
                     attempt += 1
