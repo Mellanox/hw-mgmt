@@ -2585,6 +2585,7 @@ class ThermalManagement(hw_managemet_file_op):
                           r'sensor_amb':"add_amb_sensor",
                           r'drivetemp':"add_drivetemp_sensor",
                           r'ibc\d*':"add_ibc_sensor",
+                          r'pdb_pwr\d*':"add_pdb_pwr_sensor",
                           r'ctx_amb\d*':"add_connectx_sensor",
                           r'hotswap\d+':"add_hotswap_sensor",
                           r'bmc\d+':"add_bmc_sensor",
@@ -3362,6 +3363,13 @@ class ThermalManagement(hw_managemet_file_op):
         idx = name[3:]
         in_file = "thermal/pwr_conv{}_temp1".format(idx)
         sensor_name = "{}".format(name)
+        self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
+        
+    # ----------------------------------------------------------------------
+    def add_pdb_pwr_sensor(self, name):
+        idx = name[7:]
+        in_file = "thermal/pdb_pwr_conv{}_temp1".format(idx)
+        sensor_name = "ibc{}".format(idx)
         self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
 
     # ----------------------------------------------------------------------
