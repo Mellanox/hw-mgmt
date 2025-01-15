@@ -1687,6 +1687,7 @@ mqm97xx_specific()
 	HI173)
 		lm_sensors_labels="$lm_sensors_configs_path/mqm9701_sensors_labels.json"
 		thermal_control_config="$thermal_control_configs_path/tc_config_mqm9701.json"
+		lm_sensors_config="$lm_sensors_configs_path/mqm9701_sensors.conf"
 		hotplug_psus=0
 		hotplug_pwrs=0
 		hotplug_pdbs=1
