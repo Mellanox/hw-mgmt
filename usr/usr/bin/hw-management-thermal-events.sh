@@ -869,8 +869,6 @@ if [ "$1" == "add" ]; then
 		# Allow PS controller to stabilize
 		retry_helper "ls" 0.2 20 "$2 takes too long to init" "$5""$3"/in1_input
 		sleep 1
-		# Set I2C bus for psu
-		echo "$bus" > $config_path/"$psu_name"_i2c_bus
 		# Set default fan speed
 		psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		# Add thermal attributes
@@ -1420,9 +1418,6 @@ else
 		if [ -e "$config_path"/"$psu_name"_power_slope ]; then
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
-		fi
-		if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
-			rm -f "$config_path"/"$psu_name"_i2c_bus
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then

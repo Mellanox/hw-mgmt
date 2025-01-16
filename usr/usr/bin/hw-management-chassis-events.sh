@@ -652,6 +652,31 @@ function handle_hotplug_event()
 			fi
 		fi
 		;;
+	psu*)
+		psu_name="$attribute"
+		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
+		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
+			psu_name="psu2"
+		fi
+		find_i2c_bus
+		i2c_comex_mon_bus_default=$(< $i2c_comex_mon_bus_default_file)
+		comex_bus=$((i2c_comex_mon_bus_default+i2c_bus_offset))
+		busdir=$(echo "$5""$3" |xargs dirname |xargs dirname)
+		busfolder=$(basename "$busdir")
+		bus="${busfolder:0:${#busfolder}-5}"
+		# Verify if this is COMEX device
+		if [ "$bus" == "$comex_bus" ]; then
+			return
+		fi
+
+		if [ "$event" -eq 1 ]; then
+			echo "$bus" > $config_path/"$psu_name"_i2c_bus
+		else
+			if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
+				rm -f $config_path/"$psu_name"_i2c_bus
+			fi
+		fi
+		;;
 	*)
 		;;
 	esac
