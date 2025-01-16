@@ -32,7 +32,7 @@
 		"hotswap\\d+_temp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!150000", "poll_time": 30},
 		"bmc\\d+_temp":   {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!125000", "poll_time": 30}
 	},
-	"error_mask" : {"psu" : ["direction", "present"], "fan" : ["direction"]},
+	"error_mask" : {"psu_err" : ["direction", "present"], "fan_err" : ["direction"]},
 	"sensor_list" : ["cpu",
 					"swb_voltmon1", "swb_voltmon2", "swb_voltmon3", "swb_voltmon4", "swb_voltmon5", "swb_voltmon6",
 					"sodimm1",

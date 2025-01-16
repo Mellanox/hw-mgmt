@@ -50,7 +50,7 @@
    		"dpu\\d+_drivetemp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000", "poll_time": 60},
     	"dpu\\d+_voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60}
 	},
-	"error_mask" : {"psu" : ["direction", "present"]},
+	"error_mask" : {"psu_err" : ["direction", "present"]},
 	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "psu1", "psu2", "sensor_amb",
 					"voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5",
 					"dpu1_module", "dpu2_module", "dpu3_module", "dpu4_module"]
