@@ -97,6 +97,7 @@ i2c_freq_reg=0x2004
 # ASIC PCIe Ids.
 spc3_pci_id=cf70
 spc4_pci_id=cf80
+spc5_pci_id=cf82
 quantum2_pci_id=d2f2
 quantum3_pci_id=d2f4
 nv3_pci_id=1af1
@@ -113,8 +114,10 @@ device_connect_retry=2
 chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
+n51xx_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
+minimal_unsupported=0
 
 mctp_bus=""
 mctp_addr=""
@@ -472,6 +475,22 @@ sn5600_base_connect_table=( \
 	tmp102 0x4a 7 \
 	24c512 0x51 8 )
 
+sn5640_base_connect_table=( \
+	mp2891 0x62 5 \
+	mp2891 0x63 5 \
+	mp2891 0x64 5 \
+	mp2891 0x65 5 \
+	mp2891 0x66 5 \
+	mp2891 0x67 5 \
+	mp2891 0x68 5 \
+	mp2891 0x69 5 \
+	mp2891 0x6a 5 \
+	mp2891 0x6c 5 \
+	mp2891 0x6e 5 \
+	tmp102 0x49 6 \
+	tmp102 0x4a 7 \
+	24c512 0x51 8 )
+
 p2317_connect_table=(	24c512 0x51 8)
 
 # 6 TS are temporary for BU and will be removed later.
@@ -577,14 +596,18 @@ n5110ld_dynamic_i2c_bus_connect_table=( mp2891 0x66 6 voltmon1 \
 	mp2891 0x68 22 voltmon5 \
 	mp2891 0x6c 22 voltmon6)
 	
-n5110ld_cartridge_eeprom_connect_table=( 24c02 0x50 48 cable_cartridge_eeprom \
-   	24c02 0x51 48 cable_cartridge_eeprom2 \
-	24c02 0x50 49 cable_cartridge2_eeprom \
-	24c02 0x51 49 cable_cartridge2_eeprom2 \
-	24c02 0x50 50 cable_cartridge3_eeprom \
-	24c02 0x51 50 cable_cartridge3_eeprom2 \
-	24c02 0x50 51 cable_cartridge4_eeprom \
-	24c02 0x51 51 cable_cartridge4_eeprom2)
+so_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
+	24c02 0x50 48 cable_cartridge2_eeprom \
+	24c02 0x50 49 cable_cartridge3_eeprom \
+	24c02 0x50 50 cable_cartridge4_eeprom)
+
+nso_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
+	24c02 0x50 50 cable_cartridge2_eeprom \
+	24c02 0x50 51 cable_cartridge3_eeprom \
+	24c02 0x50 52 cable_cartridge4_eeprom)
+
+ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
+	24c02 0x50 50 cable_cartridge2_eeprom)
 
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 
@@ -600,7 +623,8 @@ p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 q3200_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
-n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 58 cart2 59 cart3 60 cart4 61)
+n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
+sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 
 ACTION=$1
 
@@ -820,7 +844,7 @@ set_jtag_gpio()
 		fi
 	fi
 
-	if [ "$board_type" == "VMOD0021" ]; then
+	if [ "$cpu_type" == "$AMD_SNW_CPU" ]; then
 		return 0
 	fi
 
@@ -1985,7 +2009,7 @@ p2317_specific()
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
-sn56xx_specific()
+sn5x00_specific()
 {
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${sn5600_base_connect_table[@]})
@@ -2019,18 +2043,18 @@ sn_spc4_common()
 	# ToDo Meantime same for all SPC4 systems.
 	case $sku in
 		HI144)	# SN5600
-			sn56xx_specific
+			sn5x00_specific
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn5600.json"
 		;;
 		HI147)	# SN5400
-			sn56xx_specific
+			sn5x00_specific
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn5400.json"
 		;;
 		HI148)	# SN5700
-			sn56xx_specific
+			sn5x00_specific
 		;;
 		*)
-			sn56xx_specific
+			sn5x00_specific
 		;;
 	esac
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
@@ -2213,10 +2237,27 @@ n51xxld_specific()
 		connect_table+=(${n5110ld_base_connect_table[@]})
 		add_cpu_board_to_connection_table $cpu_bus_offset
 		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_dynamic_i2c_bus_connect_table[@]}"
-		add_i2c_dynamic_bus_dev_connection_table "${n5110ld_cartridge_eeprom_connect_table[@]}"
+		add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 	else
-		# adding Cable Cartridge support which is not included to BOM string.
-		echo -n "${n5110ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		# Adding Cable Cartridge support which is not included to BOM string.
+		case $sku in
+		HI166)	# Juliet SO.
+			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
+			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		HI169)	# Juliet Ariel.
+			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
+			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		HI167|HI170)	# Juliet NSO.
+			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
+			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		*)	# According Juliet SO.
+			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
+			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			;;
+		esac
 		# Add VPD explicitly.
 		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
 	fi
@@ -2232,7 +2273,7 @@ n51xxld_specific()
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
-		HI166|HI169)	# TTM, ARIEL
+		HI166|HI169|HI170)	# TTM, ARIEL, MSFT
 			max_tachos=8
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
@@ -2261,20 +2302,13 @@ n51xxld_specific()
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
-	case $pn in
-	N5200_LD|N5101_LD|N5300_LD|N5210_LD)
-		lm_sensors_labels="$lm_sensors_configs_path/n52xxld_sensors_labels.json"
-		;;
-	*)
-		lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
-		;;
-	esac
+	lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
 	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
 	add_come_named_busses $cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 33000 > $config_path/fan_max_speed
 	echo 6000 > $config_path/fan_min_speed
 	
@@ -2290,6 +2324,51 @@ n51xxld_specific_cleanup()
 	# Remove VPD explicitly.
 	echo ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/delete_device
 
+}
+
+sn5640_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${sn5640_base_connect_table[@]})
+		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
+	fi
+	# Set according to front fan max.
+	echo 21800 > $config_path/fan_max_speed
+	# Set at 20% PWM
+	echo 4464 > $config_path/fan_min_speed
+	echo C2P > $config_path/system_flow_capability
+	echo 27500 > $config_path/psu_fan_max
+	# Set as 20% of max speed
+	echo 5500 > $config_path/psu_fan_min
+	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
+	max_tachos=10
+	hotplug_fans=5
+	hotplug_pwrs=4
+	hotplug_psus=4
+	psu_count=4
+	#minimal_unsupported=1
+	echo 4 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+	
+	case $sku in
+		HI172)	# Gaur
+			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
+		;;
+		HI671)	# Bison
+			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
+		;;
+		*)
+			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
+		;;
+	esac
+
+	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
+	named_busses+=(${sn5640_named_busses[@]})
+	add_come_named_busses $ng800_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	echo 0 > "$config_path"/labels_ready
 }
 
 system_cleanup_specific()
@@ -2357,6 +2436,9 @@ check_system()
 			;;
 		VMOD0021)
 			n51xxld_specific
+			;;
+		VMOD0022)
+			sn5640_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -2533,7 +2615,7 @@ load_modules()
 		fi
 	fi
 	case $cpu_type in
-		$AMD_SNW_CPU)
+		$AMD_SNW_CPU|$BF3_CPU)
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
@@ -2662,9 +2744,6 @@ create_symbolic_links()
 	if [ ! -d $system_path ]; then
 		mkdir $system_path
 	fi
-	if [ ! -d $sfp_path ]; then
-		mkdir $sfp_path
-	fi
 	if [ ! -d $watchdog_path ]; then
 		mkdir $watchdog_path
 	fi
@@ -2695,9 +2774,6 @@ create_symbolic_links()
 	fi
 	if [ ! -f "$config_path/module_counter" ]; then
 		echo 0 > "$config_path"/module_counter
-	fi
-	if [ ! -f "$config_path/sfp_counter" ]; then
-		echo 0 > "$config_path"/sfp_counter
 	fi
 	if [ ! -f "$config_path/asic_chipup_counter" ]; then
 		echo "$asic_chipup_retry" > "$config_path"/asic_chipup_counter
@@ -2754,6 +2830,10 @@ set_asic_pci_id()
 		echo $asic_control > "$config_path"/asic_control
 	fi
 
+	if [ ! -f "$config_path"/minimal_unsupported ]; then
+		echo $minimal_unsupported > "$config_path"/minimal_unsupported
+	fi
+
 	# Get ASIC PCI Ids.
 	case $sku in
 	HI122|HI123|HI124|HI126|HI156|HI160)
@@ -2780,6 +2860,12 @@ set_asic_pci_id()
 		;;
 	HI158)
 		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
+		;;
+	HI171)
+		asic_pci_id=$spc5_pci_id
+		;;
+	HI172)
+		asic_pci_id=$spc4_pci_id
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num
@@ -2999,6 +3085,15 @@ pre_devtr_init()
 			;;
 		esac
 		;;
+	VMOD0022)
+		case $sku in
+		HI171|HI172)
+			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
+		;;
 	*)
 		;;
 	esac
@@ -3043,14 +3138,18 @@ do_start()
 	check_system
 	set_asic_pci_id
 	set_sodimms
+	set_config_data
 
+	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then
+		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
+	fi
 	asic_control=$(< $config_path/asic_control) 
 	if [[ $asic_control -ne 0 ]]; then
 		set_asic_i2c_bus
 	fi
 	touch $udev_ready
 	depmod -a 2>/dev/null
-	set_config_data
+	
 	udevadm trigger --action=add
 	udevadm settle
 	set_sodimm_temp_limits
@@ -3075,9 +3174,6 @@ do_start()
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
 	fi
-	if [ -v "lm_sensors_labels" ] && [ -f $lm_sensors_labels ]; then 
-		ln -sf $lm_sensors_labels $config_path/lm_sensors_labels
-	fi 
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
@@ -3133,6 +3229,11 @@ do_chip_up_down()
 		log_info "Current ASIC type does not support this operation type"
 		return 0
 	fi
+
+	if [ -f "$config_path"/minimal_unsupported ]; then
+		minimal_unsupported=$(< $config_path/minimal_unsupported)
+	fi
+
 	board=$(cat /sys/devices/virtual/dmi/id/board_name)
 	case $board in
 		VMOD0005)
@@ -3196,7 +3297,7 @@ do_chip_up_down()
 		fi
 
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
+		if [ -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
 			chipdown_delay=$(< $config_path/chipdown_delay)
 			sleep "$chipdown_delay"
 			set_i2c_bus_frequency_400KHz
@@ -3208,9 +3309,6 @@ do_chip_up_down()
 		fi
 		unlock_service_state_change_update_and_match $config_path/asic_chipup_completed -1 $config_path/asic_num $config_path/asics_init_done
 		asic_chipup_completed=$(< $config_path/asic_chipup_completed)
-		if [ ${asic_chipup_completed} -eq 0 ]; then
-			echo 0 > $config_path/sfp_counter
-		fi
 		;;
 	1)
 		lock_service_state_change
@@ -3222,7 +3320,7 @@ do_chip_up_down()
 			exit 0
 		fi
 		chipup_delay=$(< $config_path/chipup_delay)
-		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ]; then
+		if [ ! -d /sys/bus/i2c/devices/"$asic_i2c_bus"-"$i2c_asic_addr_name" ] && [[ ${minimal_unsupported:-0} -eq 0 ]]; then
 			sleep "$chipup_delay"
 			set_i2c_bus_frequency_400KHz
 			echo mlxsw_minimal $i2c_asic_addr > /sys/bus/i2c/devices/i2c-"$asic_i2c_bus"/new_device

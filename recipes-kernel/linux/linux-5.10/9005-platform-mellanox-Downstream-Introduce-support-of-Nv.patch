@@ -105,8 +105,8 @@ index ad1e421fe..71ab11400 100644
 +static const int mlxplat_l1_scale_out_channels[] = {
 +	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 +	18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-+	33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-+	48, 49, 50, 51, 52,
++	33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 48, 49,
++	50, 51, 52, 53, 54,
 +};
 +
 +/* Platform L1 scale out mux data */
@@ -668,7 +668,7 @@ index ad1e421fe..71ab11400 100644
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
-+	{
++	/*{
 +		.label = "reset_sw_reset",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -685,29 +685,23 @@ index ad1e421fe..71ab11400 100644
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
-+	},
++	},*/
 +	{
 +		.label = "reset_comex_pwr_fail",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
-+	{
++	/*{
 +		.label = "reset_platform",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
-+	},
++	},*/
 +	{
 +		.label = "reset_soc",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "reset_pwr",
-+		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
 +	{
@@ -750,6 +744,12 @@ index ad1e421fe..71ab11400 100644
 +		.label = "reset_main_5v",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_mgmt_pwr",
++		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
 +	{

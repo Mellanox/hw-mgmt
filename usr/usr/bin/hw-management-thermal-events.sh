@@ -890,11 +890,13 @@ if [ "$1" == "add" ]; then
 
 		if [ -f "$5""$3"/in3_input ]; then
 			psu_connect_power_sensor "$5""$3"/in3 "$psu_name"_volt_out2
-		else
-			in2_label=$(< "$5""$3"/in2_label)
-			if [ "$in2_label" == "vout1" ]; then
-				psu_connect_power_sensor "$5""$3"/in2 "$psu_name"_volt_out
-			fi
+		fi
+			
+		in2_label=$(< "$5""$3"/in2_label)
+		if [ "$in2_label" == "vout1" ]; then
+			psu_connect_power_sensor "$5""$3"/in2 "$psu_name"_volt_out
+		elif [ -f "$5""$3"/in3_input ]; then
+			psu_connect_power_sensor "$5""$3"/in3 "$psu_name"_volt_out
 		fi
 		psu_connect_power_sensor "$5""$3"/power1 "$psu_name"_power_in
 		psu_connect_power_sensor "$5""$3"/power2 "$psu_name"_power
@@ -1053,7 +1055,7 @@ if [ "$1" == "add" ]; then
 			# Support FW update only for specific Acbel PSU capacities
 			fw_ver="N/A"
 			fw_primary_ver="N/A"
-			if [ "$cap" == "1100" ]; then
+			if [ "$cap" == "1100" -o "$cap" == "2000" ]; then
 				fw_ver_all=$(hw_management_psu_fw_update_delta.py -v -b $bus -a $psu_addr | tr -dc '[[:print:]]')
 				fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 				fw_ver=$(echo $fw_ver_all | cut -d. -f2)
@@ -1418,6 +1420,9 @@ else
 		if [ -e "$config_path"/"$psu_name"_power_slope ]; then
 			rm -f "$config_path"/"$psu_name"_power_slope
 			rm -f "$config_path"/"$psu_name"_power_capacity
+		fi
+		if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
+			rm -f "$config_path"/"$psu_name"_i2c_bus
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then

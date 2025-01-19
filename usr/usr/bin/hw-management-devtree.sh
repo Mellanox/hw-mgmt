@@ -39,7 +39,7 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="emc1412")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="lm90" ["h"]="emc1412" ["i"]="tmp411" ["j"]="tmp1075" ["k"]="tmp451")
 
 declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7" ["i"]="mp2855")
 
@@ -80,6 +80,9 @@ declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmo
 				   ["mp2975_1"]="mp2975 0x6a 15 comex_voltmon2" \
 				   ["24c128_0"]="24c128 0x50 16 cpu_info" \
 				   ["24c512_0"]="24c512 0x50 16 cpu_info")
+
+declare -A bmc_comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 17 comex_voltmon1" \
+				   ["mp2975_1"]="mp2975 0x6a 17 comex_voltmon2")
 
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
@@ -183,6 +186,33 @@ declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
+declare -A sn5640_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
+				["mp2891_1"]="mp2891 0x63 5 voltmon2" \
+				["mp2891_2"]="mp2891 0x64 5 voltmon3" \
+				["mp2891_3"]="mp2891 0x65 5 voltmon4" \
+				["mp2891_4"]="mp2891 0x66 5 voltmon5" \
+				["mp2891_5"]="mp2891 0x67 5 voltmon6" \
+				["mp2891_6"]="mp2891 0x68 5 voltmon7" \
+				["mp2891_7"]="mp2891 0x69 5 voltmon8" \
+				["mp2891_8"]="mp2891 0x6a 5 voltmon9" \
+				["mp2891_9"]="mp2891 0x6c 5 voltmon10" \
+				["mp2891_10"]="mp2891 0x6e 5 voltmon11" \
+				["xdpe1a2g7_0"]="xdpe1a2g7 0x62 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7 0x63 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7 0x64 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7 0x65 5 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7 0x66 5 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x67 5 voltmon6" \
+				["xdpe1a2g7_6"]="xdpe1a2g7 0x68 5 voltmon7" \
+				["xdpe1a2g7_7"]="xdpe1a2g7 0x69 5 voltmon8" \
+				["xdpe1a2g7_8"]="xdpe1a2g7 0x6a 5 voltmon9" \
+				["xdpe1a2g7_9"]="xdpe1a2g7 0x6c 5 voltmon10" \
+				["xdpe1a2g7_10"]="xdpe1a2g7 0x6e 5 voltmon11" \
+				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+				["adt75_0"]="adt75 0x4a 7 port_amb" \
+				["stts751_0"]="stts751 0x4a 7 port_amb" \
+				["24c512_0"]="24c512 0x51 8 vpd_info")
+
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
 			       ["tmp75_1"]="tmp75 0x49 7 port_temp2" \
@@ -262,7 +292,12 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
 declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 mng_amb" \
-								["emc1412_0"]="emc1403 0x4C 6 fpga")
+						["emc1412_1"]="emc1403 0x4c 6 fpga" \
+						["lm90_1"]="lm90 0x4c 6 fpga")
+
+declare -A bmc_n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 20 mng_amb" \
+						["emc1412_1"]="emc1403 0x4c 20 fpga" \
+						["lm90_1"]="lm90 0x4c 20 fpga")
 
 declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
@@ -283,6 +318,25 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["stts751_0"]="stts751 0x4a 7 swb_asic1" \
 						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
 					   	["24c512_0"]="24c512 0x51 11 swb_info")
+
+declare -A bmc_n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 17 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 17 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 19 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 19 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 19 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["adt75_0"]="adt75 0x4a 21 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 21 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 21 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 21 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 21 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 21 swb_asic2")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -335,8 +389,17 @@ declare -A pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 4 pwr_conv1" \
 				   ["raa228000_1"]="raa228000 0x61 4 pwr_conv2" \
 				   ["pmbus_2"]="pmbus 0x13 4 pwr_conv3" \
 				   ["pmbus_3"]="pmbus 0x15 4 pwr_conv4" \
-				   ["lm5066_0"]="lm5066 0x16 4 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066i 0x16 4 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 4 pdb_eeprom")
+
+declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
+				   ["raa228000_0"]="raa228000 0x60 18 pwr_conv1" \
+				   ["pmbus_1"]="pmbus 0x11 18 pwr_conv2" \
+				   ["raa228000_1"]="raa228000 0x61 18 pwr_conv2" \
+				   ["pmbus_2"]="pmbus 0x13 18 pwr_conv3" \
+				   ["pmbus_3"]="pmbus 0x15 18 pwr_conv4" \
+				   ["lm5066_0"]="lm5066i 0x16 18 pdb_hotswap1" \
+				   ["24c512_0"]="24c512 0x51 18 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -477,6 +540,34 @@ devtr_check_supported_system_init_alternatives()
 		$DNV_CPU)
 			# Silent exit
 			return 1
+			;;
+		$ARMv7_CPU)
+			# This is BMC board.
+			sku=$(< $sku_file)
+			case "$sku" in
+			HI162|HI166|HI167|HI169|HI170)
+				for key in "${!bmc_comex_amd_snw_alternatives[@]}"; do
+					comex_alternatives["$key"]="${bmc_comex_amd_snw_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_n5110ld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${bmc_n5110ld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_pwr_type3_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${bmc_pwr_type3_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${bmc_n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			return 0
 			;;
 		*)
 			log_info "SMBIOS BOM info: unsupported cpu_type: ${cpu_type}"
@@ -660,6 +751,27 @@ devtr_check_supported_system_init_alternatives()
 				;;
 			esac
 			;;
+		VMOD0022)
+			case $sku in
+			HI171|HI172)
+				for key in "${!sn5640_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn5640_alternatives["$key"]}"
+				done
+
+				for key in "${!fan_type1_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+				done
+
+				for key in "${!clk_type0_alternatives[@]}"; do
+					clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1
@@ -675,8 +787,21 @@ devtr_check_board_components()
 	local board_name_pfx=
 	local board_type=static
 #	local board_addr_offset=0
+	local comp_arr
 
-	local comp_arr=($(echo "$board_str" | fold -w2))
+	case $cpu_type in
+	$ARMv7_CPU)
+		# Shell command "fold" is not available on this platform.
+		# Iterate over the string with a step size of 2
+		for ((i=0; i<${#board_str}; i+=2)); do
+			local pair="${board_str:i:2}"
+			comp_arr+=("$pair")
+		done
+		;;
+	*)
+		local comp_arr=($(echo "$board_str" | fold -w2))
+		;;
+	esac
 
 	local board_key=${comp_arr[0]:0:1}
 	local board_name=${board_arr[$board_key]}

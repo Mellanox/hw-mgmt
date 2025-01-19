@@ -67,7 +67,12 @@ class RedfishClient:
         self.__token = None
        
     def get_token(self):
-        return __token
+        return self.__token
+
+    def update_credentials(self, user, password=None):
+        self.__user = user
+        self.__token = None
+        self.__password = password
 
     '''
     Build the POST command to get bearer token
@@ -89,7 +94,7 @@ class RedfishClient:
         return cmd
 
     '''
-    Build the POST command to do firmware upgdate
+    Build the POST command to do firmware update
     '''
     def __build_fw_update_cmd(self, fw_image):
         cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
@@ -107,6 +112,30 @@ class RedfishClient:
               f'https://{self.__svr_ip}' \
               f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user} ' \
               f'-d \'{{"Password" : "{new_password}"}}\''
+        return cmd
+
+    def _build_change_user_password_cmd(self, user, new_password):
+        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
+            f'-H "Content-Type: application/json" -X PATCH ' \
+            f'https://{self.__svr_ip}' \
+            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user} ' \
+            f'-d \'{{"Password" : "{new_password}"}}\''  # Change password for the specific user
+        return cmd
+
+    def _build_change_user_password_after_factory_cmd(self, user, user_pwd, new_password):
+        cmd = f'{self.__curl_path} -k -u {user}:{user_pwd} ' \
+            f'-H "Content-Type: application/json" -X PATCH ' \
+            f'https://{self.__svr_ip}' \
+            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user} ' \
+            f'-d \'{{"Password" : "{new_password}"}}\''  # Change password for the specific user
+        return cmd
+
+    def _build_delete_cmd(self, user_to_delete):
+        # curl -k -H "X-Auth-Token: $bmc_token" -X DELETE https://${bmc}/redfish/v1/AccountService/Accounts/admin_user
+        cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
+            f'-X DELETE ' \
+            f'https://{self.__svr_ip}' \
+            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{user_to_delete} '
         return cmd
 
     '''
@@ -127,8 +156,8 @@ class RedfishClient:
         data_str = json.dumps(data_dict)
         cmd = f'{self.__curl_path} -m {timeout} -k -H "X-Auth-Token: {self.__token}" ' \
               f'-H "Content-Type: application/json" ' \
-              f'-X POST https://{self.__svr_ip}/{uri} ' \
-              f'-d \'{data_str} \' '
+              f'-X POST https://{self.__svr_ip}{uri} ' \
+              f'-d \'{data_str}\''
         return cmd
 
     '''
@@ -252,6 +281,7 @@ class RedfishClient:
         # GET & POST.
         # Need to re-generate token
         if (is_empty_response and (not is_login_cmd) and (not is_patch_req)):
+            # print(f'need to regenerate token..')
             self.__token = None
             ret = self.login()
             if ret == RedfishClient.ERR_CODE_OK:
@@ -284,6 +314,7 @@ class RedfishClient:
             password = self.__password
 
         cmd = self.__build_login_cmd(password)
+        # print(f'cmd:{cmd}')
         ret, response, error = self.exec_curl_cmd(cmd)
 
         if (ret != 0): # cURL execution error
@@ -333,22 +364,22 @@ BMCAccessor.func() implicitly defined.
 class BMCAccessor(object):
     CURL_PATH = '/usr/bin/curl'
     BMC_INTERNAL_IP_ADDR = '10.0.1.1'
-    BMC_ACCOUNT = 'admin'
+    BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
+    BMC_NOS_ACCOUNT = 'yormnAnb' # used for communication between NOS and BMC
+    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51" # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    BMC_ROOT_PASSWORD = "ABYX12#14artb" # root pwd which should be patched to
     BMC_DIR = "/host/bmc"
-    BMC_PASS_FILE = "bmc_pass"  
+    BMC_PASS_FILE = "bmc_pass"
+    BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
 
     def __init__(self):
-
-        password = self.get_login_password()
-
         # TBD: Token persistency.
 
-        addr = self.get_ip_addr()
         self.rf_client = RedfishClient(BMCAccessor.CURL_PATH,
-                                       addr,
-                                       BMCAccessor.BMC_ACCOUNT,
-                                       password)
+                                       self.get_ip_addr(),
+                                       BMCAccessor.BMC_NOS_ACCOUNT,
+                                       self.get_login_password())
 
     def get_ip_addr(self):
         redis_cmd = '/usr/bin/sonic-db-cli ' \
@@ -390,11 +421,13 @@ class BMCAccessor(object):
 
     def get_login_password(self):
         try:
+            pass_len = 13
             attempt = 1
             max_attempts = 100
+            max_repeat = int(3 + 0.09 * pass_len)
             hex_data = "1300NVOS-BMC-USER-Const"
             os.makedirs(self.BMC_DIR, exist_ok=True)
-            cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/nvos_const.bin'
+            cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
             subprocess.run(cmd, shell=True, check=True)
 
             tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/nvos_const.bin", "-G", "aes256cfb"]
@@ -404,8 +437,8 @@ class BMCAccessor(object):
                 if attempt > 1:
                     const = f"1300NVOS-BMC-USER-Const-{attempt}"
                     mess = f"Password did not meet criteria; retrying with const: {const}"
-                    print(mess)
-                    tpm_command = f'echo -n "{const}" | sudo tpm2_createprimary -C o -G aes -u -'
+                    #print(mess)
+                    tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
                     result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
 
                 symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
@@ -415,14 +448,14 @@ class BMCAccessor(object):
                     raise Exception("Symmetric cipher not found in TPM output")
 
                 # BMC dictates a password of 13 characters. Random from TPM is used with an append of A!
-                symcipher_part = symcipher_match.group(1)[:11]
+                symcipher_part = symcipher_match.group(1)[:pass_len-2]
                 if symcipher_part.isdigit():
-                    symcipher_value = symcipher_part[:10] + 'vA!'
+                    symcipher_value = symcipher_part[:pass_len-3] + 'vA!'
                 elif symcipher_part.isalpha() and symcipher_part.islower():
-                    symcipher_value = symcipher_part[:10] + '9A!'
+                    symcipher_value = symcipher_part[:pass_len-3] + '9A!'
                 else:
                     symcipher_value = symcipher_part + 'A!'
-                if len (symcipher_value) != 13:
+                if len (symcipher_value) != pass_len:
                     raise Exception("Bad cipher length from TPM output")
                 
                 # check for monotonic
@@ -434,6 +467,9 @@ class BMCAccessor(object):
                         monotonic_check = False
                         break
 
+                variety_check = len(set(symcipher_value)) >= 5
+                repeating_pattern_check = sum(1 for i in range(pass_len - 1) if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
+
                 # check for consecutive_pairs
                 count = 0
                 for i in range(11):
@@ -443,10 +479,10 @@ class BMCAccessor(object):
                         continue
                     if abs(int(val2, 16) - int(val1, 16)) == 1:
                         count += 1
+                consecutive_pair_check = count <= 4
 
-                if count <= 4 and monotonic_check:
-                    os.remove(f"{self.BMC_DIR}/nvos_const.bin")
-                    #print (f"symcipher_value : {symcipher_value}")
+                if consecutive_pair_check and variety_check and repeating_pattern_check and monotonic_check:
+                    os.remove(f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}")
                     return symcipher_value
                 else:
                     attempt += 1
@@ -461,17 +497,79 @@ class BMCAccessor(object):
             #print(f"Error: {e}")
             raise
 
-    def login(self, password = None):     
-        ret = self.rf_client.login(password)
-
-        if ret == RedfishClient.ERR_CODE_BAD_CREDENTIAL:
-            # read default BMC password 
-            passwd = BMCAccessor.BMC_DEFAULT_PASSWORD
-            passfile_name = os.path.join(BMCAccessor.BMC_DIR,BMCAccessor.BMC_PASS_FILE)
-            if os.path.exists(passfile_name):
-                with open(passfile_name, "r+") as passfile:
-                    passwd = passfile.readline()
-            if  self.rf_client.login(passwd) == RedfishClient.ERR_CODE_OK:
-                ret = RedfishClient.ERR_CODE_OK
-
+    def create_user(self, user, password):
+        cmd = self.rf_client.build_post_cmd(RedfishClient.REDFISH_URI_ACCOUNTS, {
+            "UserName": user,
+            "Password": password,
+            "RoleId": "Administrator"
+        })
+        
+        # print(f'cmd:{cmd}')
+        ret, output, error = self.rf_client.exec_curl_cmd(cmd)
         return ret
+
+    def reset_user_password(self, user, password):
+        if not self.rf_client.has_login():
+            return RedfishClient.ERR_CODE_NOT_LOGIN
+
+        cmd = self.rf_client._build_change_user_password_cmd(user, password) 
+        # print(f'cmd:{cmd}')
+        ret, output_str, error_str = self.rf_client.exec_curl_cmd(cmd)
+        return ret
+
+    def try_rf_login(self, user, password):
+        self.rf_client.update_credentials(user, password)
+        ret = self.rf_client.login()
+        return ret
+
+    def login(self, password = None):
+        print("Login to BMC")
+        cp = []
+        try:
+            cp.append("A") # try with BMC_NOS_ACCOUNT and TPM password")
+            ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+            if ret == RedfishClient.ERR_CODE_OK:
+                cp.append("Z1")
+                return ret
+
+            cp.append("B") # try with BMC_NOS_ACCOUNT and bmc account default password")
+            ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
+            if ret == RedfishClient.ERR_CODE_OK:
+                cp.append("Z2")
+                ret = self.reset_user_password(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+                if ret == RedfishClient.ERR_CODE_OK:
+                    cp.append("Z2")
+                else:
+                    cp.append("Z'1")
+                return ret
+
+            cp.append("C") # login as admin and tpm pwd")
+            ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, self.get_login_password())
+            if ret != RedfishClient.ERR_CODE_OK:
+                cp.append("C1") # login as admin and default pwd")
+                ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
+                if ret != RedfishClient.ERR_CODE_OK:
+                    cp.append("Z'2")
+                    return ret
+
+            cp.append("D") # add BMC_NOS_ACCOUNT with tpm pwd")
+            self.rf_client.update_credentials(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
+            ret = self.rf_client.login()
+
+            ret = self.create_user(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+            if ret == RedfishClient.ERR_CODE_OK:
+                ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+                if ret == RedfishClient.ERR_CODE_OK:
+                    cp.append("Z3")
+                    return ret
+                else:
+                    cp.append("Z'3")
+                    return ret
+            else:
+                cp.append("Z'4")
+                return ret
+        finally:
+            if any("'" in item for item in cp):
+                print(f"-- BMC Login Fail, Flow: {'->'.join(cp)}")
+            else:
+                print(f"-- BMC Login Pass, Flow: {'->'.join(cp)}")

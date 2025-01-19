@@ -30,7 +30,7 @@
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time":  60},
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
 	},
-	"error_mask" : {"psu" : ["direction", "present"]},
+	"error_mask" : {"psu_err" : ["direction", "present"]},
 	"sensor_list" : ["asic1", "asic2", "asic3", "asic4", "cpu",
 					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "drwr8", "drwr9", "drwr10",
 					"psu1", "psu2", "psu3", "psu4", "psu5", "psu6", "psu7", "psu8", "sodimm1", "sodimm2",

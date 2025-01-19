@@ -37,7 +37,6 @@ alarm_path=$hw_management_path/alarm
 eeprom_path=$hw_management_path/eeprom
 led_path=$hw_management_path/led
 system_path=$hw_management_path/system
-sfp_path=$hw_management_path/sfp
 watchdog_path=$hw_management_path/watchdog
 config_path=$hw_management_path/config
 events_path=$hw_management_path/events
@@ -49,9 +48,15 @@ bin_path=$hw_management_path/bin
 dynamic_boards_path=$config_path/dynamic_boards
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
-board_type_file=/sys/devices/virtual/dmi/id/board_name
-sku_file=/sys/devices/virtual/dmi/id/product_sku
-system_ver_file=/sys/devices/virtual/dmi/id/product_version
+if [ -d /sys/devices/virtual/dmi/id ]; then
+	board_type_file=/sys/devices/virtual/dmi/id/board_name
+	sku_file=/sys/devices/virtual/dmi/id/product_sku
+	system_ver_file=/sys/devices/virtual/dmi/id/product_version
+else
+	board_type_file=/var/run/hw-management/config/pn
+	sku_file=/var/run/hw-management/config/hid
+	system_ver_file=/var/run/hw-management/config/bom
+fi
 pn_file=/sys/devices/virtual/dmi/id/product_name
 devtree_file=$config_path/devtree
 dpu2host_events_file=$config_path/dpu_to_host_events
@@ -121,6 +126,7 @@ device_connect_delay=0.2
 # DNV - Denverton
 # BF3 - BlueField-3
 # AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
+# ARMv7 - Aspeed 2600
 IVB_CPU=0x63A
 RNG_CPU=0x64D
 BDW_CPU=0x656
@@ -128,6 +134,7 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+ARMv7_CPU=0xC07
 amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 n5110_mctp_bus="0"
 n5110_mctp_addr="1040"
@@ -155,7 +162,7 @@ check_cpu_type()
 		cpu_pn=$(grep -m1 "CPU part" /proc/cpuinfo | awk '{print $4}')
 		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
 		cpu_pn=0x$cpu_pn
-		if [ "$cpu_pn" == "$BF3_CPU" ]; then
+		if [ "$cpu_pn" == "$BF3_CPU" ] || [ "$cpu_pn" == "$ARMv7_CPU" ]; then
 			cpu_type=$cpu_pn
 			echo $cpu_type > $config_path/cpu_type
 			return 0
@@ -250,7 +257,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI171|HI172)
 			return 0
 			;;
 
