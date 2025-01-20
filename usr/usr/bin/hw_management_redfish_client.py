@@ -430,7 +430,7 @@ class BMCAccessor(object):
             cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
             subprocess.run(cmd, shell=True, check=True)
 
-            tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/nvos_const.bin", "-G", "aes256cfb"]
+            tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
             result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
 
             while attempt <= max_attempts:
