@@ -1259,7 +1259,11 @@ class system_device(hw_managemet_file_op):
             self.value_acc -= self.value_acc / input_smooth_level
             self.value_acc += value
 
-            return round(self.value_acc / input_smooth_level, 3)
+            result = round(self.value_acc / input_smooth_level, 3)
+            if abs(result - value) < 0.25:
+                result = value
+
+            return result
         elif formula_type == CONST.VAL_AVG_ARRAY:
             input_smooth_level =  self.input_smooth_level + 1
 
@@ -1270,6 +1274,7 @@ class system_device(hw_managemet_file_op):
             return sum(self.value_items_lst)/input_smooth_level
 
         elif formula_type == CONST.VAL_AVG_ARRAY_WEGHT:
+            
             input_smooth_level =  self.input_smooth_level + 1
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_items_lst = [value] * input_smooth_level
@@ -1283,7 +1288,14 @@ class system_device(hw_managemet_file_op):
 
             self.value_items_lst = [value] + self.value_items_lst[:-1]
             result = [a * b for a, b in zip(self.value_items_lst, self.value_items_weght)]
-            return sum(result)
+            result_sum = sum(result)
+            self.log.info("{} Update value: {}, weght:{}, val: {}, res: {}, sum {}".format(self.name,
+                                                                                           value,
+                                                                                        self.value_items_weght,
+                                                                                        self.value_items_lst,
+                                                                                        result,
+                                                                                        result_sum))
+            return result_sum
         else:
             return value
     # ----------------------------------------------------------------------
@@ -1306,9 +1318,6 @@ class system_device(hw_managemet_file_op):
         self.last_value = value
         prev_value = self.value
         self.value = self._update_value_formula(value, formula_type=self.smooth_formula)
-
-        if abs(self.value - value) < 0.5:
-            self.value = value
 
         if self.value > prev_value:
             value_trend = 1
@@ -1650,7 +1659,7 @@ class thermal_module_sensor(system_device):
             False - if module is in 'faulty' state
         """
         status = False
-        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
+        fault_file6name = "thermal/{}_temp_fault".format(self.base_file_name)
         if self.check_file(fault_filename):
             try:
                 fault_status = int(self.read_file(fault_filename))
