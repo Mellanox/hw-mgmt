@@ -3651,16 +3651,14 @@ class ThermalManagement(hw_managemet_file_op):
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     if curr_timestamp >= dev_obj.get_timestump():
-                        # process sensors
-                        for name, conf in self.dev_err_exclusion_conf.items():
-                            name_mask = conf["name_mask"]
-                            # if exists min err rule for current device
-                            if re.match(name_mask, dev_obj.name):
-                                dev_obj.set_dynamic_filter_ena(conf["skip_err"])
-
-                        dev_obj.handle_err(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
-                        if dev_obj.name == "sensor_amb":
-                            self.amb_tmp = dev_obj.get_value()
+                        if dev_obj.state == CONST.RUNNING:
+                            # process sensors
+                            for name, conf in self.dev_err_exclusion_conf.items():
+                                name_mask = conf["name_mask"]
+                                # if exists min err rule for current device
+                                if re.match(name_mask, dev_obj.name):
+                                    dev_obj.set_dynamic_filter_ena(conf["skip_err"])
+                            dev_obj.handle_err(self.sys_config[CONST.SYS_CONF_DMIN], self.system_flow_dir, self.amb_tmp)
                         dev_obj.update_timestump()
 
                     pwm = dev_obj.get_pwm()
