@@ -1291,10 +1291,11 @@ class system_device(hw_managemet_file_op):
             return sum(self.value_items_lst)/input_smooth_level
 
         elif formula_type == CONST.VAL_AVG_ARRAY_WEGHT:
+            
             input_smooth_level =  self.input_smooth_level + 1
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_items_lst = [value] * input_smooth_level
-                
+
                 # Init weight coef.
                 self.value_items_weght = [0] * input_smooth_level
                 self.value_items_weght[0] = 0.5+(1/input_smooth_level)
@@ -1304,7 +1305,14 @@ class system_device(hw_managemet_file_op):
 
             self.value_items_lst = [value] + self.value_items_lst[:-1]
             result = [a * b for a, b in zip(self.value_items_lst, self.value_items_weght)]
-            return sum(result)
+            result_sum = sum(result)
+            self.log.info("{} Update value: {}, weght:{}, val: {}, res: {}, sum {}".format(self.name,
+                                                                                           value,
+                                                                                        self.value_items_weght,
+                                                                                        self.value_items_lst,
+                                                                                        result,
+                                                                                        result_sum))
+            return result_sum
         else:
             return value
     # ----------------------------------------------------------------------
@@ -1326,7 +1334,6 @@ class system_device(hw_managemet_file_op):
         """
         self.last_value = value
         prev_value = self.value
-
         self.value = self._update_value_formula(value, formula_type=self.smooth_formula)
 
         if self.value > prev_value:
@@ -1547,10 +1554,12 @@ class system_device(hw_managemet_file_op):
             value = "N/A"
         else:
             value = self.value
-        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], pwm: {}, {}".format(self.name,
+        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, lcrit {}, hcrit {}, faults:[{}], pwm: {}, {}".format(self.name,
                                                                                           value,
                                                                                           self.val_min,
                                                                                           self.val_max,
+                                                                                          self.val_lcrit,
+                                                                                          self.val_hcrit,
                                                                                           self.get_fault_list_str(),
                                                                                           self.pwm,
                                                                                           self.state)
@@ -2033,9 +2042,11 @@ class psu_fan_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        return "\"{}\" rpm:{}, dir:{} faults:[{}] pwm: {}, {}".format(self.name,
+        return "\"{}\" rpm:{}, dir:{} lcrit {}, hcrit {}, faults:[{}] pwm: {}, {}".format(self.name,
                                                                       int(self.value),
                                                                       self.fan_dir,
+                                                                      self.val_lcrit,
+                                                                      self.val_hcrit,
                                                                       self.get_fault_list_str(),
                                                                       self.pwm,
                                                                       self.state)
@@ -2421,9 +2432,11 @@ class fan_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        info_str = "\"{}\" rpm:{}, dir:{} faults:[{}] pwm {} {}".format(self.name,
+        info_str = "\"{}\" rpm:{}, dir:{} lcrit {}, hcrit {} faults:[{}] pwm {} {}".format(self.name,
                                                                         self.value,
                                                                         self.fan_dir,
+                                                                        self.val_lcrit,
+                                                                        self.val_hcrit,
                                                                         self.get_fault_list_str(),
                                                                         self.pwm,
                                                                         self.state)
@@ -2561,9 +2574,11 @@ class ambiant_thermal_sensor(system_device):
             if val == CONST.AMB_TEMP_ERR_VAL:
                 val = "N/A"
             sens_val += "{}:{} ".format(key, round(val,1))
-        info_str = "\"{}\" {}({}), dir:{}, faults:[{}] pwm:{}, {}".format(self.name,
+        info_str = "\"{}\" {}({}), lcrit {}, hcrit {}, dir:{}, faults:[{}] pwm:{}, {}".format(self.name,
                                                                           sens_val,
                                                                           round(self.value_dict[sensor_name_min],1),
+                                                                          self.val_lcrit,
+                                                                          self.val_hcrit,
                                                                           self.flow_dir,
                                                                           self.get_fault_list_str(),
                                                                           self.pwm,
@@ -3773,7 +3788,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         ambient_sensor = self._get_dev_obj("sensor_amb")
         if ambient_sensor:
-            amb_tmp = ambient_sensor.get_value()
+            amb_tmp = round(ambient_sensor.get_value(),1)
             if amb_tmp == CONST.AMB_TEMP_ERR_VAL:
                 amb_tmp = "N/A"
             flow_dir = self.system_flow_dir
@@ -3789,7 +3804,7 @@ class ThermalManagement(hw_managemet_file_op):
                 asic_tmp = asic_obj.get_value()
             else:
                 asic_tmp = "N/A"
-            asic_info += " {} {},".format(asic_name, asic_tmp)
+            asic_info += " {} {},".format(asic_name, round(asic_tmp,1))
 
         self.log.info("Thermal periodic report")
         self.log.info("================================")
