@@ -28,7 +28,7 @@
 	},
 	"psu_fan_pwm_decode" : {"0:100": -1},
 	"fan_trend" : {
-		"P2C": {
+		"C2P": {
 			"0" : {"rpm_min":4143, "rpm_max":13500, "slope": 133, "pwm_min" : 30, "pwm_max_reduction" : 10},
 			"1" : {"rpm_min":3891, "rpm_max":12603, "slope": 123, "pwm_min" : 30, "pwm_max_reduction" : 10}
 		}
