@@ -2334,8 +2334,8 @@ sn5640_specific()
 	fi
 	# Set according to front fan max.
 	echo 21800 > $config_path/fan_max_speed
-	# Set at 20% PWM
-	echo 4464 > $config_path/fan_min_speed
+	# Set at 30% PWM
+	echo 6540 > $config_path/fan_min_speed
 	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
