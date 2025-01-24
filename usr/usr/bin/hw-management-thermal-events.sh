@@ -381,7 +381,7 @@ if [ "$1" == "add" ]; then
 						check_n_link "$3""$4"/fan"$i"_fault "$tpath"/fan"$j"_fault
 						check_n_link "$cpath"/fan_min_speed "$tpath"/fan"$j"_min
 						check_n_link "$cpath"/fan_max_speed "$tpath"/fan"$j"_max
-						check_n_link "$cpath"/fan_speed_tolerance "$tpath"/fan"$j"_speed_tolerance
+						ln -sf "$cpath"/fan_speed_tolerance "$tpath"/fan"$j"_speed_tolerance
 						# Save max_tachos to config
 						echo $i > "$cpath"/max_tachos
 					fi
@@ -582,6 +582,13 @@ if [ "$1" == "add" ]; then
 				event=$(< "$thermal_path"/psu"$i"_pwr_status)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/pwr"$i"
+				fi
+			fi
+			if [ -f "$3""$4"/pdb$i ]; then
+				check_n_link "$3""$4"/pdb$i $thermal_path/pdb"$i"_pwr_status
+				event=$(< "$thermal_path"/pdb"$i"_pwr_status)
+				if [ "$event" -eq 1 ]; then
+					echo 1 > $events_path/pdb"$i"
 				fi
 			fi
 		done
