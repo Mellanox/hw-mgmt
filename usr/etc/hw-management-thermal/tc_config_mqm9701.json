@@ -25,6 +25,7 @@
 				"present": {"-127:25": 30, "26:35": 40, "36:120": 50},
 				"direction": {"-127:25": 30, "26:35": 40, "36:120": 50}
 			},
+			
 			"sensor_read_error" : {"-127:120": 60}
 		}
 	},
@@ -43,7 +44,6 @@
 		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 40, "val_min": 30000, "val_max": 50000, "poll_time": 30},
 		"ibc\\d+":        {"pwm_min": 30, "pwm_max" : 100, "val_min": "!70000", "val_max": "!100000", "poll_time": 30}
 	},
-	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "ibc1", "ibc2",
-					 "sensor_amb", "sodimm1", "voltmon1", "voltmon3", "voltmon4", "voltmon5", "voltmon6"],
-	"redundancy" : {"fan_err" : {"min_err_cnt" : "2" }}
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "pdb_pwr1",
+					 "sensor_amb", "sodimm1", "voltmon1", "voltmon3", "voltmon4", "voltmon5", "voltmon6"]
 }
