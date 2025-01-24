@@ -92,6 +92,20 @@ get_label_files2()
 	echo "$folder" "$key" "$attr_file"
 }
 
+# Three prefixes index, f.e. "pdb_pwr_conv1".
+get_label_files3()
+{
+	local attr_name="$1"
+	local folder
+	local key
+	local attr_file
+
+	folder=`echo $attr_name | cut -d '_' -f 1,2,3`
+	key=`echo $attr_name | cut -d '_' -f 1,2,3,4`
+	attr_file=`echo "$attr_name" | cut -d '_' -f 5`
+	echo "$folder" "$key" "$attr_file"
+}
+
 # Create labels
 # $1 - file path
 make_labels()
@@ -185,27 +199,49 @@ make_labels()
 	pwr_conv1_temp*|pwr_conv2_temp*|pwr_conv3_temp*|pwr_conv4_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
+		;;	
+	pdb_pwr_conv1_in*)
+		subfolder="voltage"
+		read folder key attr_file < <(get_label_files3 $attr_name)
 		;;
-	pdb_hotswap1_in*|pdb_hotwap2_in*|pdb_hotwap3_in*|pdb_hotwap4_in*)
+	pdb_pwr_conv1_curr*)
+		subfolder="current"
+		read folder key attr_file < <(get_label_files3 $attr_name)
+		;;
+	pdb_pwr_conv1_temp*)
+		subfolder="temperature"
+		read folder key attr_file < <(get_label_files3 $attr_name)
+		;;
+	pdb_pwr_conv1_power*)
+		subfolder="power"
+		read folder key attr_file < <(get_label_files3 $attr_name)
+		;;		
+	pdb_hotswap1_in*|pdb_hotswap2_in*|pdb_hotswap3_in*|pdb_hotswap4_in*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotswap1_curr*|pdb_hotwap2_curr*|pdb_hotwap3_curr*|pdb_hotwap4_curr*)
+	pdb_hotswap1_curr*|pdb_hotswap2_curr*|pdb_hotswap3_curr*|pdb_hotswap4_curr*)
 		subfolder="current"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotswap1_pwr*|pdb_hotwap2_pwr*|pdb_hotwap3_pwr*|pdb_hotwap4_pwr*)
+	pdb_hotswap1_pwr*|pdb_hotswap2_pwr*|pdb_hotswap3_pwr*|pdb_hotswap4_pwr*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	pdb_hotswap1_temp*|pdb_hotwap2_temp*|pdb_hotwap3_temp*|pdb_hotwap4_temp*)
+	pdb_hotswap1_temp*|pdb_hotswap2_temp*|pdb_hotswap3_temp*|pdb_hotswap4_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
-	port_amb|fan_amb|swb_asic*|fpga|mng_amb)
+	port_amb|fan_amb|swb_asic*|fpga|mng_amb|pdb_temp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
+	pdb_*_amb)
+		subfolder="temperature"
+		folder=$attr_name
+		key=$attr_name
+		attr_file="input"
+		;;	
 	drivetemp*)
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files0 $attr_name)
