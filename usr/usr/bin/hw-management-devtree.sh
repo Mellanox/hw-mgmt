@@ -116,7 +116,6 @@ declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 #					 ["mp2975_4"]="mp2975 0x6e 5 voltmon5" \
 #					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 #					 ["24c32_0"]="24c32 0x51 8 vpd_info")
-
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
 				 ["mp2975_2"]="mp2975 0x68 5 voltmon4" \
@@ -158,6 +157,7 @@ declare -A mqm9520_alternatives=(["mp2888_0"]="mp2975 0x66 5 voltmon1" \
 				 ["adt75_1"]="adt75 0x4a 15 port_amb2" \
 				 ["24c512_0"]="24c512 0x51 8 vpd_info")
 
+# S*RaRaRaRaRaRaRaRaRaRaRaA0TbEi
 declare -A sn5600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 				["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				["mp2975_1"]="mp2975 0x63 5 voltmon2" \
@@ -401,6 +401,16 @@ declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
 				   ["lm5066_0"]="lm5066i 0x16 18 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 18 pdb_eeprom")
 
+# for DGX platform PDB -1 - pwr_conv, 1- HotPlug, 2 - thermal, 1 - eeprom 24c02 	
+# P*HaHaTjTkEaOdOd
+declare -A pwr_type4_alternatives=( \
+				   ["raa228000_0"]="raa228000 0x61 4 pdb_pwr_conv1" \
+				   ["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+				   ["lm5066_1"]="lm5066i 0x14 4 pdb_hotswap2" \
+				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
+				   ["tmp1075_0"]="tmp1075 0x4e 4 pdb_intel_amb" \
+				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
+
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
 					["tmp75_0"]="tmp75 0x49 7 fan_amb")
@@ -622,16 +632,16 @@ devtr_check_supported_system_init_alternatives()
 #			done
 #			return 0
 #			;;
-
 		VMOD0010)
 			case $sku in
-			HI172)	# MQM9701
+			HI173)	# MQM9701
 				for key in "${!mqm97xx_alternatives[@]}"; do
 					swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
 				done
 				for key in "${!pwr_type3_alternatives[@]}"; do
-					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
+					pwr_alternatives["$key"]="${pwr_type4_alternatives["$key"]}"
 				done
+				;;
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
 				return 1
@@ -641,6 +651,7 @@ devtr_check_supported_system_init_alternatives()
 				fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
 			done
 			return 0
+			;;
 		VMOD0009)
 			case $sku in
 			HI117)
@@ -659,21 +670,29 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0013)
 			case $sku in
-				HI144|HI147|HI148|HI174)	# ToDo Separate Ibex HI148 if it will be required
+				HI144|HI147|HI148)	# ToDo Separate index HI148 if it will be required
 					for key in "${!sn5600_alternatives[@]}"; do
 						swb_alternatives["$key"]="${sn5600_alternatives["$key"]}"
 					done
-				;;
-			*)
+					for key in "${!pwr_type0_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type0_alternatives["$key"]}"
+					done
+					;;
+				HI174)
+					for key in "${!sn5600_alternatives[@]}"; do
+						swb_alternatives["$key"]="${sn5600_alternatives["$key"]}"
+					done
+					for key in "${!pwr_type4_alternatives[@]}"; do
+						pwr_alternatives["$key"]="${pwr_type4_alternatives["$key"]}"
+					done
+					;;
+				*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
 				return 1
 				;;
 			esac
 			for key in "${!fan_type1_alternatives[@]}"; do
 				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
-			done
-			for key in "${!pwr_type0_alternatives[@]}"; do
-				pwr_alternatives["$key"]="${pwr_type0_alternatives["$key"]}"
 			done
 			for key in "${!clk_type0_alternatives[@]}"; do
 				clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
