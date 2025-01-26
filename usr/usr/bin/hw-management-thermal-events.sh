@@ -936,10 +936,14 @@ if [ "$1" == "add" ]; then
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
 		cmd_status=$?
 		if [ $cmd_status -eq 0 ] && [ ! -L $eeprom_path/"$psu_name"_info ] && [ ! -f "$eeprom_file" ]; then
-			if [ "$board_type" == "VMOD0014" ]; then
-				psu_eeprom_type="24c02"
-			else
-				psu_eeprom_type="24c32"
+			psu_eeprom_type=$(hw_management_psu_fw_update_delta.py --prop=eeprom -b $bus -a $psu_addr)
+			cmd_status=$?
+			if [ $cmd_status -ne 0 ]; then
+				if [ "$board_type" == "VMOD0014" ]; then
+					psu_eeprom_type="24c02"
+				else
+					psu_eeprom_type="24c32"
+				fi
 			fi
 			if [ -f $config_path/psu_eeprom_type ]; then
 				psu_eeprom_type=$(< "$config_path"/psu_eeprom_type)

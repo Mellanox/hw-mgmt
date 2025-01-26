@@ -32,6 +32,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+from random import choice
 
 '''
 Created on June 10, 2021
@@ -62,27 +63,52 @@ MFR_FWUPLOAD_ACBEL_460 = 0xfb
 MFR_FWUPLOAD_STATUS_ACBEL_460 = 0xfc
 MFR_FW_REVISION_ACBEL_460 = 0xd9
 
-# Delta 550 PSU Model
-MFR_MODEL_500AB = "DPS-550AB"
+class PSU_MODEL(object):
+    # Delta 550 PSU Model
+    DELTA_500AB = "DELTA_550"
+    # Acbel 2000 PSU Models
+    ACBEL_2000="ACBEL_2000"
+    # Acbel 1100 PSU Models
+    ACBEL_1100="ACBEL_1100"
+    # Acbel 460 PSU Models
+    ACBEL_460="ACBEL_460"
+    
+class MFR_PSU_MODEL(object):
+    # Delta 550 PSU Model
+    DELTA_500AB = "DPS-550AB"
+    # Acbel 2000 PSU Models
+    ACBEL_2000_FWD="FSP016-9G0G"
+    ACBEL_2000_REV="FSP017-9G0G"
+    # Acbel 1100 PSU Models
+    ACBEL_1100_FWD="FSP007-9G0G"
+    ACBEL_1100_REV="FSN022-9G0G"
+    # Acbel 460 PSU Models
+    ACBEL_460_FWD="FSF008-9G0G"
+    ACBEL_460_REV="FSF007-9G0G"
 
-# Acbel 2000 PSU Models
-MFR_MODEL_ACBEL_2000_FWD="FSP016-9G0G"
-MFR_MODEL_ACBEL_2000_REV="FSP017-9G0G"
+class PSU_VENDOR(object):
+    DELTA = "Delta"
+    MURATA = "Murata"
+    ACBEL = "Acbel"
 
-# Acbel 1100 PSU Models
-MFR_MODEL_ACBEL_1100_FWD="FSP007-9G0G"
-MFR_MODEL_ACBEL_1100_REV="FSN022-9G0G"
+class CONST(object):
+    VENDOR = "vendor"
+    EEPROM_TYPE = "eeprom"
+    #@ EEPROM Types
+    _24C32 = "24c32"
+    _24C02 = "24c02"
 
-# Acbel 460 PSU Models
-MFR_MODEL_ACBEL_460_FWD="FSF008-9G0G"
-MFR_MODEL_ACBEL_460_REV="FSF007-9G0G"
+PSU_MODEL_DICT = {PSU_MODEL.DELTA_500AB : {CONST.VENDOR : PSU_VENDOR.DELTA, CONST.EEPROM_TYPE : CONST._24C32},
+                  PSU_MODEL.ACBEL_2000 : {CONST.VENDOR : PSU_VENDOR.ACBEL, CONST.EEPROM_TYPE : CONST._24C02},
+                  PSU_MODEL.ACBEL_1100 : {CONST.VENDOR : PSU_VENDOR.ACBEL, CONST.EEPROM_TYPE : CONST._24C02},
+                  PSU_MODEL.ACBEL_460 : {CONST.VENDOR : PSU_VENDOR.ACBEL, CONST.EEPROM_TYPE : CONST._24C02}}
 
 def mfr_model_is_acbel(mfr_model):
     """
     @summary: Check if PSU model is Acbel 1100 or 2000.
     """
-    if mfr_model.startswith(MFR_MODEL_ACBEL_2000_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_2000_REV) or \
-       mfr_model.startswith(MFR_MODEL_ACBEL_1100_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_1100_REV):
+    if mfr_model.startswith(MFR_PSU_MODEL.ACBEL_2000_FWD) or mfr_model.startswith(MFR_PSU_MODEL.ACBEL_2000_REV) or \
+       mfr_model.startswith(MFR_PSU_MODEL.ACBEL_1100_FWD) or mfr_model.startswith(MFR_PSU_MODEL.ACBEL_1100_REV):
         return True
     else:
         return False
@@ -91,7 +117,7 @@ def mfr_model_is_acbel_460(mfr_model):
     """
     @summary: Check if PSU model is Acbel 460.
     """
-    if mfr_model.startswith(MFR_MODEL_ACBEL_460_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_460_REV):
+    if mfr_model.startswith(MFR_PSU_MODEL.ACBEL_460_FWD) or mfr_model.startswith(MFR_PSU_MODEL.ACBEL_460_REV):
         return True
     else:
         return False
@@ -101,7 +127,7 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
     @summary: Read MFR_FW_REVISION.
     """
     mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
-    if mfr_model.startswith(MFR_MODEL_500AB):
+    if mfr_model.startswith(MFR_PSU_MODEL.DELTA_500AB):
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FW_REVISION, 8)
     elif mfr_model_is_acbel(mfr_model):
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FW_REVISION_ACBEL, 4)
@@ -439,6 +465,23 @@ def update_acbel_460(i2c_bus, i2c_addr, fw_filename):
         print("FW version not changed.")
         exit(1)
 
+def get_psu_prop(i2c_bus, i2c_addr):
+    prop = {}
+
+    mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
+
+    if mfr_model.startswith(MFR_PSU_MODEL.DELTA_500AB):
+        prop = PSU_MODEL_DICT.get(PSU_MODEL.DELTA_500AB, {})
+    elif mfr_model.startswith(MFR_PSU_MODEL.ACBEL_2000_FWD) or mfr_model.startswith(MFR_PSU_MODEL.ACBEL_2000_REV):
+        prop = PSU_MODEL_DICT.get(PSU_MODEL.ACBEL_2000, {})
+    elif mfr_model.startswith(MFR_PSU_MODEL.ACBEL_1100_FWD) or mfr_model.startswith(MFR_PSU_MODEL.ACBEL_1100_REV):
+        prop = PSU_MODEL_DICT.get(PSU_MODEL.ACBEL_1100, {})
+    elif mfr_model_is_acbel_460(mfr_model):
+        prop = PSU_MODEL_DICT.get(PSU_MODEL.ACBEL_460, {})
+
+    return prop
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required arguments')
@@ -447,9 +490,28 @@ if __name__ == '__main__':
     required.add_argument('-a', "--i2c_addr", type=lambda x: int(x, 0), default=0, required=True)
     parser.add_argument('-S', "--skip_redundancy_check", type=bool, nargs='?',
                         const=True, default=False)
+    parser.add_argument("--prop",   const='-',
+                        nargs='?',
+                        choices=[CONST.VENDOR, CONST.EEPROM_TYPE, '-'], 
+                        required=False,
+                        help="Get PSU property")
     required.add_argument('-v', "--version", type=bool, nargs='?',
                         const=True, default=False)
     args = parser.parse_args()
+
+    if args.prop != "-":
+        psu_prop = get_psu_prop(args.i2c_bus, args.i2c_addr)
+        val = psu_prop.get(args.prop, None)
+        if not val:
+            exit(1)
+        else:
+            print (val)
+        exit(0)
+
+    if args.version:
+        fw_rev = read_mfr_fw_revision(args.i2c_bus, args.i2c_addr)
+        print(fw_rev)
+        exit(1)
 
     if args.version:
         fw_rev = read_mfr_fw_revision(args.i2c_bus, args.i2c_addr)
