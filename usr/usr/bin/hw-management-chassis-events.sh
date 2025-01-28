@@ -967,6 +967,17 @@ if [ "$1" == "add" ]; then
 			done
 			;;
 		esac
+		# WA for fix negative vout_min value in lm5066i sensor
+		dev_name=$(cat "$3""$4"/name)
+		if  [ "$dev_name" == "lm5066i" ]; then
+			if [ -f $environment_path/"$prefix"_in2_min ]; then
+				val=$(cat $environment_path/"$prefix"_in2_min)
+				# check if Vout min is negative and fix it
+				if  [[ $val == -* ]]; then
+					echo 0 > $environment_path/"$prefix"_in2_min
+				fi
+			fi
+		fi
 	fi
 	if [ "$2" == "led" ]; then
 		# Detect if it belongs to line card or to main board.
