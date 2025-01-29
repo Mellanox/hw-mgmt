@@ -259,6 +259,22 @@ get_psu_fan_direction()
 	return $dir
 }
 
+function get_psu_eeprom_type()
+{
+	BUS_ID=$1
+	I2C_ADDR=$2
+	eeprom_type="24c32"
+	cmd_len=$(i2ctransfer -f -y "${BUS_ID}" w1@"${I2C_ADDR}" 0x9a r1)
+	if [[ $cmd_len =~ ^0x[0-9A-Fa-f]+$ ]]; then
+    	 cmd_len=$(echo $(($cmd_len)))
+    	 mfr_model=$(i2ctransfer -f -y "${BUS_ID}" w1@"${I2C_ADDR}" 0x9a r$cmd_len | xxd -r | sed 's/[^a-zA-Z0-9_-]//g')
+    	 if [ ! ${psu_type_vs_eeprom[$mfr_model]}_ = _ ]; then
+			eeprom_type=${psu_type_vs_eeprom[$mfr_model]}
+		 fi
+	fi
+	echo $eeprom_type
+}
+
 # Don't process udev events until service is started and directories are created
 if [ ! -f ${udev_ready} ]; then
 	exit 0
@@ -943,10 +959,14 @@ if [ "$1" == "add" ]; then
 		i2cget -f -y "$bus" 0x$psu_eeprom_addr 0x0 > /dev/null 2>&1
 		cmd_status=$?
 		if [ $cmd_status -eq 0 ] && [ ! -L $eeprom_path/"$psu_name"_info ] && [ ! -f "$eeprom_file" ]; then
-			if [ "$board_type" == "VMOD0014" ]; then
-				psu_eeprom_type="24c02"
-			else
-				psu_eeprom_type="24c32"
+			psu_eeprom_type=$(get_psu_eeprom_type $bus $psu_addr)
+			cmd_status=$?
+			if [ $cmd_status -ne 0 ]; then
+				if [ "$board_type" == "VMOD0014" ]; then
+					psu_eeprom_type="24c02"
+				else
+					psu_eeprom_type="24c32"
+				fi
 			fi
 			if [ -f $config_path/psu_eeprom_type ]; then
 				psu_eeprom_type=$(< "$config_path"/psu_eeprom_type)
