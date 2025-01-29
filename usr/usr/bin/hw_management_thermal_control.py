@@ -95,6 +95,8 @@ class CONST(object):
     SYS_CONF_SENSOR_LIST_PARAM = "sensor_list"
     SYS_CONF_ERR_MASK = "error_mask"
     SYS_CONF_REDUNDANCY_PARAM = "redundancy"
+    SYS_CONF_GENERAL_CONFIG_PARAM = "general_config"
+    SYS_CONF_PWM_UPDATE_PERIOD_PARAM = "pwm_update_period"
 
     # *************************
     # Folders definition
@@ -165,7 +167,7 @@ class CONST(object):
     DMIN_PWM_STEP_MIN = 2
     # PWM smoothing in time
     PWM_MAX_REDUCTION = 8
-    PWM_WORKER_POLL_TIME = 5
+    PWM_UPDATE_TIME_DEF = 5
     PWM_VALIDATE_TIME = 30
     # FAN RPM tolerance in percent
     FAN_RPM_TOLERANCE = 30
@@ -2701,7 +2703,6 @@ class ThermalManagement(hw_managemet_file_op):
         self.dev_obj_list = []
 
         self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
-        self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
         self.pwm_worker_timer = None
         self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
         self.state = CONST.UNCONFIGURED
@@ -2727,6 +2728,13 @@ class ThermalManagement(hw_managemet_file_op):
                 self.log.notice("Wait...")
                 self.exit.wait(10)
             self.log.notice("PWM control activated", 1)
+
+        pwm_update_period = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_PWM_UPDATE_PERIOD_PARAM])
+        if pwm_update_period:
+            self.pwm_worker_poll_time = pwm_update_period
+        else:
+            self.pwm_worker_poll_time = CONST.PWM_UPDATE_TIME_DEF
+        self.log.notice("PWM update time: {} sec".format(self.pwm_worker_poll_time))
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
@@ -3351,6 +3359,9 @@ class ThermalManagement(hw_managemet_file_op):
 
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_REDUNDANCY_PARAM] = {}
+            
+        if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
+            sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
 
         self.sys_config = sys_config
 
