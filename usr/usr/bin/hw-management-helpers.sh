@@ -117,6 +117,8 @@ declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"
 ["90Y3779"]=R ["90Y3781"]=R ["90Y3779"]=R ["SA001871"]=F ["00WT021"]=F \
 ["105-575-014-00"]=F )
 
+declare -A psu_type_vs_eeprom=( ["FSP016-9G0G"]="24c02" ["FSP017-9G0G"]="24c02" )
+
 base_cpu_bus_offset=10
 max_tachos=20
 i2c_asic_bus_default=2
