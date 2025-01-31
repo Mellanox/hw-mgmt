@@ -2411,7 +2411,7 @@ sn5640_specific()
 		HI172)	# Gaur
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
 		;;
-		HI671)	# Bison
+		HI171)	# Bison
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 		;;
 		*)
@@ -2420,7 +2420,6 @@ sn5640_specific()
 	esac
 
 	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
-	thermal_control_config="$thermal_control_configs_path/tc_config_sn5640.json"
 	named_busses+=(${sn5640_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
