@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2022, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -39,15 +39,15 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="lm90" ["h"]="emc1412" ["i"]="tmp411" ["j"]="tmp1075" ["k"]="tmp451")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="emc1412")
 
-declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7" ["i"]="mp2855")
+declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7" ["i"]="mp2855" ["j"]="mp29816")
 
-declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
+declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603" ["b"]="ads1015")
 
-declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus" ["d"]="raa228000")
+declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus" ["d"]="raa228000" ["e"]="mp29502" ["f"]="raa228004")
 
-declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
+declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066" ["c"]="lm5066i")
 
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
@@ -319,6 +319,46 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
 					   	["24c512_0"]="24c512 0x51 11 swb_info")
 
+declare -A gb3000_swb_alternatives=(["mp29816_0"]="mp29816 0x66 5 voltmon1" \
+						["mp29816_1"]="mp29816 0x68 5 voltmon2" \
+						["mp29816_2"]="mp29816 0x6c 5 voltmon3" \
+						["mp29816_3"]="mp29816 0x66 21 voltmon4" \
+						["mp29816_4"]="mp29816 0x68 21 voltmon5" \
+						["mp29816_5"]="mp29816 0x6c 21 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+						["24c512_0"]="24c512 0x51 11 swb_info")
+
+declare -A gb200hd_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
+						["mp2891_6"]="mp2891 0x66 62 voltmon7" \
+						["mp2891_7"]="mp2891 0x68 62 voltmon8" \
+						["mp2891_8"]="mp2891 0x6c 62 voltmon9" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+						["xdpe1a2g7_6"]="xdpe1a2g7 0x66 62 voltmon7" \
+						["xdpe1a2g7_7"]="xdpe1a2g7 0x68 62 voltmon8" \
+						["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 62 voltmon9" \
+						["adt75_0"]="adt75 0x4a 7 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 7 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 7 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
+						["24c512_0"]="24c512 0x51 11 swb_info")
+
 declare -A bmc_n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 17 voltmon2" \
 						["mp2891_2"]="mp2891 0x6c 17 voltmon3" \
@@ -331,6 +371,45 @@ declare -A bmc_n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" 
 						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
 						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
 						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["adt75_0"]="adt75 0x4a 21 swb_asic1" \
+						["adt75_1"]="adt75 0x4b 21 swb_asic2" \
+						["tmp102_0"]="tmp102 0x4a 21 swb_asic1" \
+						["tmp102_1"]="tmp102 0x4b 21 swb_asic2" \
+						["stts751_0"]="stts751 0x4a 21 swb_asic1" \
+						["stts751_1"]="stts751 0x4b 21 swb_asic2")
+
+declare -A bmc_gb300_swb_alternatives=(["mp29816_0"]="mp29816 0x66 17 voltmon1" \
+						["mp29816_1"]="mp29816 0x68 17 voltmon2" \
+						["mp29816_2"]="mp29816 0x6c 17 voltmon3" \
+						["mp29816_3"]="mp29816 0x66 19 voltmon4" \
+						["mp29816_4"]="mp29816 0x68 19 voltmon5" \
+						["mp29816_5"]="mp29816 0x6c 19 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["24c512_0"]="24c512 0x51 36 swb_info")
+
+declare -A bmc_gb200hd_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 17 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 17 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 19 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 19 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 19 voltmon6" \
+						["mp2891_6"]="mp2891 0x66 25 voltmon7" \
+						["mp2891_7"]="mp2891 0x68 25 voltmon8" \
+						["mp2891_8"]="mp2891 0x6c 25 voltmon9" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["xdpe1a2g7_6"]="xdpe1a2g7 0x66 25 voltmon7" \
+						["xdpe1a2g7_7"]="xdpe1a2g7 0x68 25 voltmon8" \
+						["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 25 voltmon9" \
 						["adt75_0"]="adt75 0x4a 21 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 21 swb_asic2" \
 						["tmp102_0"]="tmp102 0x4a 21 swb_asic1" \
@@ -410,6 +489,12 @@ declare -A pwr_type4_alternatives=( \
 				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
 				   ["tmp1075_0"]="tmp1075 0x4e 4 pdb_intel_amb" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
+
+declare -A gb300_pwr_type1_alternatives=(["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
+				   ["mp29502_0"]="mp29502 0x60 4 pwr_conv1" \
+				   ["lm5066i_0"]="lm5066i 0x16 4 pdb_hotswap1" \
+				   ["mp5926_0"]="mp5926 0x16 4 pdb_hotswap1" \
+				   ["24c512_0"]="24c512 0x51 4 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -566,6 +651,40 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!bmc_pwr_type3_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${bmc_pwr_type3_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${bmc_n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI176)
+				for key in "${!bmc_comex_amd_snw_alternatives[@]}"; do
+					comex_alternatives["$key"]="${bmc_comex_amd_snw_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_gb300_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${bmc_gb300_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_gb300_pwr_type1_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${bmc_gb300_pwr_type1_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${bmc_n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI177)
+				for key in "${!bmc_comex_amd_snw_alternatives[@]}"; do
+					comex_alternatives["$key"]="${bmc_comex_amd_snw_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_gb200hd_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${bmc_gb200hd_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!bmc_gb300_pwr_type1_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${bmc_gb300_pwr_type1_alternatives["$key"]}"
 				done
 
 				for key in "${!bmc_n5110ld_platform_alternatives[@]}"; do
@@ -779,6 +898,32 @@ devtr_check_supported_system_init_alternatives()
 					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
 				done
 				
+				for key in "${!n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI176)
+				for key in "${!gb3000_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${gb3000_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!gb300_pwr_type1_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${gb300_pwr_type1_alternatives["$key"]}"
+				done
+
+				for key in "${!n5110ld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI177)
+				for key in "${!gb200hd_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${gb200hd_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!gb300_pwr_type1_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${gb300_pwr_type1_alternatives["$key"]}"
+				done
+
 				for key in "${!n5110ld_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
 				done
