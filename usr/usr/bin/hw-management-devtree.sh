@@ -116,6 +116,7 @@ declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 #					 ["mp2975_4"]="mp2975 0x6e 5 voltmon5" \
 #					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 #					 ["24c32_0"]="24c32 0x51 8 vpd_info")
+
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
 				 ["mp2975_2"]="mp2975 0x68 5 voltmon4" \
@@ -495,6 +496,12 @@ declare -A gb300_pwr_type1_alternatives=(["raa228004_0"]="raa228004 0x60 4 pwr_c
 				   ["lm5066i_0"]="lm5066i 0x16 4 pdb_hotswap1" \
 				   ["mp5926_0"]="mp5926 0x16 4 pdb_hotswap1" \
 				   ["24c512_0"]="24c512 0x51 4 pdb_eeprom")
+
+declare -A bmc_gb300_pwr_type1_alternatives=(["raa228004_0"]="raa228004 0x60 18 pwr_conv1" \
+				   ["mp29502_0"]="mp29502 0x60 18 pwr_conv1" \
+				   ["lm5066i_0"]="lm5066i 0x16 18 pdb_hotswap1" \
+				   ["mp5926_0"]="mp5926 0x16 18 pdb_hotswap1" \
+				   ["24c512_0"]="24c512 0x51 18 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
@@ -893,11 +900,11 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!n5110ld_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${n5110ld_swb_alternatives["$key"]}"
 				done
-				
+
 				for key in "${!pwr_type3_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${pwr_type3_alternatives["$key"]}"
 				done
-				
+
 				for key in "${!n5110ld_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${n5110ld_platform_alternatives["$key"]}"
 				done
