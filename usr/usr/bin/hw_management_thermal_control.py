@@ -1318,16 +1318,15 @@ class system_device(hw_managemet_file_op):
         @return: int min/max value
         """
         default_val = self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type])
-        if str(default_val)[0] == "!":
-            # Use config value instead of device parameter reading
-            default_val = default_val[1:]
-            val = default_val
-        else:
-            val = self.get_file_val(filename, default_val)
         try:
-            val = int(val) / scale
+            if str(default_val)[0] == "!":
+                # Use config value instead of device parameter reading
+                default_val = default_val[1:]
+                val = int(default_val) / CONST.TEMP_SENSOR_SCALE
+            else:
+                val = self.get_file_val(filename, int(default_val) / CONST.TEMP_SENSOR_SCALE, scale)
         except:
-            pass
+            val = None 
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
         return val
 
