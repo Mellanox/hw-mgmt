@@ -1,5 +1,6 @@
+#!/bin/bash
 ###########################################################################
-# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,12 +30,26 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# This script is executed by udev rules to up/down USB network interface
 
-# These rules handle USB net up/down events.
+ACTION=$2
+INTERFACE=$1
 
-# Bring up the USB network interface when it is plugged in.
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 up"
+if [ -z "${ACTION}" ] || [ -z "${INTERFACE}" ]; then
+	echo "Missing parameters"
+	exit 1
+fi
 
-# Bring down the USB network interface when it is unplugged.
-SUBSYSTEM=="net", ACTION=="remove", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 down"
+if [ ! -e /sys/class/net/${INTERFACE} ] ||
+   [ ! -e /etc/network/interfaces ] ||
+   ! grep -q ${INTERFACE} /etc/network/interfaces; then
+	exit 0
+fi
 
+if [ "${ACTION}" = "up" ]; then
+	ifup ${INTERFACE}
+else
+	ifdown ${INTERFACE}
+fi
+
+exit 0
