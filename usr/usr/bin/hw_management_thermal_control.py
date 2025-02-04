@@ -295,7 +295,7 @@ SENSOR_DEF_CONFIG = {
                          "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30, 
                          "input_suffix": "_input"
                         },
-    r'bmc\d+_temp':     {"type": "thermal_sensor",
+    r'bmc_temp':     {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                         },
@@ -2587,7 +2587,7 @@ class ThermalManagement(hw_managemet_file_op):
                           r'pdb_pwr\d*':"add_pdb_pwr_sensor",
                           r'ctx_amb\d*':"add_connectx_sensor",
                           r'hotswap\d+':"add_hotswap_sensor",
-                          r'bmc\d+':"add_bmc_sensor",
+                          r'bmc':"add_bmc_sensor",
                           r'dpu\d*_cpu':"add_DPU_cpu_sensor",
                           r'dpu\d*_sodimm\d+':"add_DPU_sodimm_sensor",
                           r'dpu\d*_drivetemp':"add_DPU_drivetemp_sensor",
@@ -3383,7 +3383,7 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     def add_bmc_sensor(self, name):
-        in_file = "thermal/bmc{}_temp".format(name)
+        in_file = "thermal/{}".format(name)
         sensor_name = "{}_temp".format(name)
         self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
 
