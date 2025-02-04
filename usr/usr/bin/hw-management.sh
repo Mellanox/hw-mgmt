@@ -2300,28 +2300,34 @@ n51xxld_specific()
 		HI166)	# Juliet SO.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
 			;;
 		HI169)	# Juliet Ariel.
 			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
 			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 2 > $config_path/cartridge_counter
 			;;
-		HI167|HI170)	# Juliet NSO.
+		HI167|HI170|HI176)	# Juliet NSO, gb300
 			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
 			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
+			;;
+		HI177)	# Kyber
+			echo 0 > $config_path/cartridge_counter
 			;;
 		*)	# According Juliet SO.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
 			;;
 		esac
 		# Add VPD explicitly.
 		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
 	fi
+	
 	asic_i2c_buses=(11 21)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
-	echo 4 > $config_path/cpld_num
-	echo 2 > $config_path/clk_brd_num
 
 	case $sku in
 		HI162)	# power-on
@@ -2329,7 +2335,7 @@ n51xxld_specific()
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
-		HI166|HI169|HI170)	# TTM, ARIEL, MSFT
+		HI166|HI169)	# TTM, ARIEL
 			max_tachos=8
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
@@ -2339,19 +2345,30 @@ n51xxld_specific()
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
 		;;
+		HI176|HI177)	# Kyber/gb300
+			max_tachos=0
+			echo 0 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			leakage_count=1
+			erot_count=4
+			echo 3 > $config_path/clk_brd_num
+			echo 3 > $config_path/cpld_num
+		;;
 		*)
 			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
+			leakage_count=4
+			erot_count=3
+			echo 2 > $config_path/clk_brd_num
+			echo 4 > $config_path/cpld_num
 		;;
 	esac
 
 	psu_count=0
 	hotplug_fans=0
-	leakage_count=4
 	hotplug_pwrs=0
 	hotplug_psus=0
-	erot_count=3
 	asic_control=0
 	health_events_count=0
 	pwr_events_count=1
@@ -2367,7 +2384,7 @@ n51xxld_specific()
 	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
 	echo 33000 > $config_path/fan_max_speed
 	echo 6000 > $config_path/fan_min_speed
-	
+
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
@@ -2379,7 +2396,6 @@ n51xxld_specific_cleanup()
 	unlink /dev/i2c-8
 	# Remove VPD explicitly.
 	echo ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/delete_device
-
 }
 
 sn5640_specific()
@@ -2687,7 +2703,7 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170)	# Juliet
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# Juliet
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
@@ -2917,7 +2933,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI176|HI177)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -2944,7 +2960,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170)
+	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170|HI176|HI177)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
@@ -3140,7 +3156,7 @@ pre_devtr_init()
 		;;
 	VMOD0021)
 		case $sku in
-		HI162|HI166|HI167|HI169|HI170)
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)
 			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)
