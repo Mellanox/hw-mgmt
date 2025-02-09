@@ -1,5 +1,5 @@
  {
-	"name": "q3450/qm3450",
+	"name": "q3450",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
@@ -30,7 +30,7 @@
 
 		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
 
-		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30},
+		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30, "base_file_name": {"C2P": "port_amb"}},
 
 		"swb\\d+_voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 
