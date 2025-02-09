@@ -33,7 +33,7 @@
 # These rules handle USB net up/down events.
 
 # Bring up the USB network interface when it is plugged in.
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 up"
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", NAME="usb0", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 up"
 
 # Bring down the USB network interface when it is unplugged.
 SUBSYSTEM=="net", ACTION=="remove", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 down"
