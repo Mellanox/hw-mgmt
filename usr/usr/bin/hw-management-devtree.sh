@@ -39,15 +39,15 @@ declare -A board_arr=(["C"]="cpu_board" ["S"]="switch_board" ["F"]="fan_board" [
 
 declare -A category_arr=(["T"]="thermal" ["R"]="regulator" ["A"]="a2d" ["P"]="pressure" ["E"]="eeprom" ["O"]="powerconv" ["H"]="hotswap" ["G"]="gpio" ["N"]="network" ["J"]="jitter" ["X"]="osc" ["F"]="fpga", ["S"]="erot", ["C"]="rtc")
 
-declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="lm90" ["h"]="emc1412" ["i"]="tmp411" ["j"]="tmp1075" ["k"]="tmp451")
+declare -A thermal_arr=(["0"]="dummy" ["a"]="lm75" ["b"]="tmp102" ["c"]="adt75" ["d"]="stts751" ["e"]="tmp75" ["f"]="tmp421" ["g"]="emc1412")
 
 declare -A regulator_arr=(["0"]="dummy" ["a"]="mp2975" ["b"]="mp2888" ["c"]="tps53679" ["d"]="xdpe12284" ["e"]="152x4" ["f"]="pmbus" ["g"]="mp2891" ["h"]="xdpe1a2g7" ["i"]="mp2855")
 
-declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603")
+declare -A a2d_arr=(["0"]="dummy" ["a"]="max11603" ["b"]="ads1015")
 
-declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus" ["d"]="raa228000")
+declare -A pwr_conv_arr=(["0"]="dummy" ["a"]="pmbus" ["b"]="pmbus" ["c"]="pmbus" ["d"]="raa228000" ["e"]="mp29502" ["f"]="raa228004")
 
-declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066")
+declare -A hotswap_arr=(["0"]="dummy" ["a"]="lm5066" ["c"]="lm5066i")
 
 # Just currently used EEPROMs are in this mapping.
 declare -A eeprom_arr=(["0"]="dummy" ["a"]="24c02" ["c"]="24c08" ["e"]="24c32" ["g"]="24c128" ["i"]="24c512")
