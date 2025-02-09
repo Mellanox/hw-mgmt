@@ -2180,6 +2180,10 @@ qm3xxx_specific()
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
 	elif [ "$sku" == "HI175" ]; then
+		# Set according to front fan max.
+		echo 13800 > $config_path/fan_max_speed
+		# Set as 30% of max speed
+		echo 4140 > $config_path/fan_min_speed
 		max_tachos=4
 		leakage_count=3
 		hotplug_fans=2
