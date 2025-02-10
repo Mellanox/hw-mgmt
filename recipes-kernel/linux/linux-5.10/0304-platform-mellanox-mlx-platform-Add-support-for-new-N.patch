@@ -1,8 +1,8 @@
-From 463c161032854233835045c9a84a9fc22f55d1e9 Mon Sep 17 00:00:00 2001
+From 0bff0c853937f34bc4ae221fb2b86da84f9a95b8 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
-Date: Mon, 28 Oct 2024 16:11:41 +0200
-Subject: [PATCH] platform: mellanox: mlx-platform: Add support for new Nvidia
- system
+Date: Mon, 10 Feb 2025 13:36:13 +0200
+Subject: [PATCH 88/95] platform: mellanox: mlx-platform: Add support for new 
+ Nvidia system
 
 Add support for SN5640 and SN5610 Nvidia switches.
 
@@ -29,14 +29,14 @@ SN5610 Features:
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 95 ++++++++++++++++++++++++
+ drivers/platform/mellanox/mlx-platform.c | 95 ++++++++++++++++++++++++++++++++
  1 file changed, 95 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index fcac62431..e8a93ccd2 100644
+index e3cef3c..18e0206 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -2992,6 +2992,60 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_modular_data = {
+@@ -2940,6 +2940,60 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_modular_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
  };
  
@@ -97,20 +97,20 @@ index fcac62431..e8a93ccd2 100644
  /* Platform hotplug for chassis blade systems family data  */
  static struct mlxreg_core_data mlxplat_mlxcpld_global_wp_items_data[] = {
  	{
-@@ -5387,6 +5441,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
- 		.mask = GENMASK(7, 0) & ~BIT(4),
+@@ -5111,6 +5165,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0644,
  	},
-+	{
+ 	{
 +		.label = "shutdown_unlock",
 +		.reg = MLXPLAT_CPLD_LPC_REG_GP0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0644,
 +	},
- 	{
++	{
  		.label = "erot1_ap_reset",
  		.reg = MLXPLAT_CPLD_LPC_REG_GP4_RO_OFFSET,
-@@ -9366,6 +9426,27 @@ static int __init mlxplat_dmi_l1_scale_out_switch_matched(const struct dmi_syste
+ 		.mask = GENMASK(7, 0) & ~BIT(0),
+@@ -8264,6 +8324,27 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
  	return mlxplat_register_platform_device();
  }
  
@@ -138,11 +138,10 @@ index fcac62431..e8a93ccd2 100644
  static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  	{
  		.callback = mlxplat_dmi_default_wc_matched,
-@@ -9526,6 +9607,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0021"),
+@@ -8384,6 +8465,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
-+{
+ 	{
 +		.callback = mlxplat_dmi_ng400_hi171_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0022"),
@@ -156,9 +155,10 @@ index fcac62431..e8a93ccd2 100644
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI172"),
 +		},
 +	},
- 	{
++	{
  		.callback = mlxplat_dmi_msn274x_matched,
  		.matches = {
+ 			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
 -- 
-2.20.1
+2.8.4
 
