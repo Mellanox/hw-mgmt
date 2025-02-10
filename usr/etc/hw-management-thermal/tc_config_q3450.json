@@ -40,8 +40,8 @@
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 100000, "poll_time": 60}
 	},
 	"error_mask" : {"psu" : ["direction", "present"]},
-	"sensor_list" : ["cpu", "pch", "drivetemp", "sodimm1", "drwr1", "drwr2", "sensor_amb",
-					"swb1_voltmon1", "swb1_voltmon2", "swb1_voltmon3", "swb1_voltmon4", "swb1_voltmon5", "swb1_voltmon6",
-					"swb2_voltmon1", "swb2_voltmon2", "swb2_voltmon3", "swb2_voltmon4", "swb2_voltmon5", "swb2_voltmon6"
-					]
+	"sensor_list" : ["asic1", "asic2", "asic3", "asic4", "cpu", "pch", "drivetemp", "sodimm1", "sodimm2", "drwr1", "drwr2", "sensor_amb",
+			 "swb1_voltmon1", "swb1_voltmon2", "swb1_voltmon3", "swb1_voltmon4", "swb1_voltmon5", "swb1_voltmon6",
+			 "swb2_voltmon1", "swb2_voltmon2", "swb2_voltmon3", "swb2_voltmon4", "swb2_voltmon5", "swb2_voltmon6"
+			]
 }
