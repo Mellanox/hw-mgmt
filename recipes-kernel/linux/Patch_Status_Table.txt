@@ -311,6 +311,9 @@ Kernel-5.10
 |0301-crypto-ccp-Reject-SEV-commands-with-mismatching-comm.patch  | d5760dee127b       | Bugfix upstream                          | 5.1.184    |                                                |
 |0302-crypto-ccp-Play-nice-with-vmalloc-d-memory-for-SEV-c.patch  | 8347b99473a3       | Bugfix upstream                          | 5.1.184    |                                                |
 |0303-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
+|0304-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted                      |            | SN5640                                         |
+|0305-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
+|0306-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
 |7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
 |7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
@@ -393,9 +396,6 @@ Kernel-5.10
 |9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch|                 | Downstream accepted                      |            |                                                |
 |9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
-|9007-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Feature pending;skip[ALL];take[opt]      |            | SN5640                                         |
-|9008-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
-|9009-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.14
