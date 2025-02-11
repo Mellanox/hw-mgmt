@@ -707,6 +707,7 @@ Kernel-6.1
 |0099-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
 |0100-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted					  |            |                                                |
 |0101-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Downstream accepted                      |            | mp2869                                         |
+|0102-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Downstream accepted                      |            | mp29502                                        |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
