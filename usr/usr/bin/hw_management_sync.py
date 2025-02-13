@@ -150,6 +150,8 @@ atttrib_list = {
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
     "HI171|HI172|HI144|HI147|HI148|HI174": [
+        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
+         "arg": [], "poll": 1, "ts": 0},
         {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
          "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
                     "asic1": {"fin": "/sys/module/sx_core/asic0/"}
@@ -226,83 +228,31 @@ atttrib_list = {
          "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 91}
         }
     ],
-    "HI176|HI177": [
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1",
-         "fn": "run_cmd",
-         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"],
-         "poll": 2, "ts": 0},
-
-        {"fin": "/var/run/hw-management/system/graseful_pwr_off",
-         "fn": "run_power_button_event",
-         "arg": [],
-         "poll": 1, "ts": 0},
-
+    "HI176": [
+        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
+         "arg": [], "poll": 1, "ts": 0},
         {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic": {"fin": "/sys/module/sx_core/asic0/"},
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
+                }
+        },
+
+        {"fin": None,
+         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}     
+    ],
+    "HI177": [
+        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
+         "arg": [], "poll": 1, "ts": 0},
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
                     "asic1": {"fin": "/sys/module/sx_core/asic0/"},
                     "asic2": {"fin": "/sys/module/sx_core/asic1/"},
                     "asic3": {"fin": "/sys/module/sx_core/asic2/"}
                 }
         },
-
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {  "module1": {"fin": "/sys/module/sx_core/asic0/module0/"},
-                    "module2": {"fin": "/sys/module/sx_core/asic0/module1/"},
-                    "module3": {"fin": "/sys/module/sx_core/asic0/module2/"},
-                    "module4": {"fin": "/sys/module/sx_core/asic0/module3/"},
-                    "module5": {"fin": "/sys/module/sx_core/asic0/module4/"},
-                    "module6": {"fin": "/sys/module/sx_core/asic0/module5/"},
-                    "module7": {"fin": "/sys/module/sx_core/asic0/module6/"},
-                    "module8": {"fin": "/sys/module/sx_core/asic0/module7/"},
-                    "module9": {"fin": "/sys/module/sx_core/asic0/module8/"},
-                    "module10": {"fin": "/sys/module/sx_core/asic0/module9/"},
-                    "module11": {"fin": "/sys/module/sx_core/asic0/module10/"},
-                    "module12": {"fin": "/sys/module/sx_core/asic0/module11/"},
-                    "module13": {"fin": "/sys/module/sx_core/asic0/module12/"},
-                    "module14": {"fin": "/sys/module/sx_core/asic0/module13/"},
-                    "module15": {"fin": "/sys/module/sx_core/asic0/module14/"},
-                    "module16": {"fin": "/sys/module/sx_core/asic0/module15/"},
-                    "module17": {"fin": "/sys/module/sx_core/asic0/module16/"},
-                    "module18": {"fin": "/sys/module/sx_core/asic0/module17/"},
-                    "module19": {"fin": "/sys/module/sx_core/asic0/module18/"},
-                    "module20": {"fin": "/sys/module/sx_core/asic0/module19/"},
-                    "module21": {"fin": "/sys/module/sx_core/asic0/module20/"},
-                    "module22": {"fin": "/sys/module/sx_core/asic0/module21/"},
-                    "module23": {"fin": "/sys/module/sx_core/asic0/module22/"},
-                    "module24": {"fin": "/sys/module/sx_core/asic0/module23/"},
-                    "module25": {"fin": "/sys/module/sx_core/asic0/module24/"},
-                    "module26": {"fin": "/sys/module/sx_core/asic0/module25/"},
-                    "module27": {"fin": "/sys/module/sx_core/asic0/module26/"},
-                    "module28": {"fin": "/sys/module/sx_core/asic0/module27/"},
-                    "module29": {"fin": "/sys/module/sx_core/asic0/module28/"},
-                    "module30": {"fin": "/sys/module/sx_core/asic0/module29/"},
-                    "module31": {"fin": "/sys/module/sx_core/asic0/module30/"},
-                    "module32": {"fin": "/sys/module/sx_core/asic0/module31/"},
-                    "module33": {"fin": "/sys/module/sx_core/asic0/module32/"},
-                    "module34": {"fin": "/sys/module/sx_core/asic0/module33/"},
-                    "module35": {"fin": "/sys/module/sx_core/asic0/module34/"},
-                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"},
-                    "module37": {"fin": "/sys/module/sx_core/asic0/module36/"},
-                    "module38": {"fin": "/sys/module/sx_core/asic0/module37/"},
-                    "module39": {"fin": "/sys/module/sx_core/asic0/module38/"},
-                    "module40": {"fin": "/sys/module/sx_core/asic0/module39/"},
-                    "module41": {"fin": "/sys/module/sx_core/asic0/module40/"},
-                    "module42": {"fin": "/sys/module/sx_core/asic0/module41/"},
-                    "module43": {"fin": "/sys/module/sx_core/asic0/module42/"},
-                    "module44": {"fin": "/sys/module/sx_core/asic0/module43/"},
-                    "module45": {"fin": "/sys/module/sx_core/asic0/module44/"},
-                    "module46": {"fin": "/sys/module/sx_core/asic0/module45/"},
-                    "module47": {"fin": "/sys/module/sx_core/asic0/module46/"},
-                    "module48": {"fin": "/sys/module/sx_core/asic0/module47/"},
-                    "module49": {"fin": "/sys/module/sx_core/asic0/module48/"},
-                    "module50": {"fin": "/sys/module/sx_core/asic0/module49/"},
-                    "module51": {"fin": "/sys/module/sx_core/asic0/module50/"},
-                    "module52": {"fin": "/sys/module/sx_core/asic0/module51/"},
-                    "module53": {"fin": "/sys/module/sx_core/asic0/module52/"},
-                    "module54": {"fin": "/sys/module/sx_core/asic0/module53/"} }
-        },
         {"fin": None,
-         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
+         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}   
     ],
     "HI178": [
        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
