@@ -1228,6 +1228,19 @@ if [ "$1" == "add" ]; then
 		fio_info)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/fio_data
 			;;
+		mgmt_fru*_info)
+			eeprom_vpd_filename=${eeprom_name/"_info"/"_data"}
+			if command -v ipmi-fru 2>&1 >/dev/null; then
+				ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_vpd_filename"
+			fi
+			;;
+		swb_info)
+			if [ "$board_type" == "VMOD0021" ]; then
+				if command -v ipmi-fru 2>&1 >/dev/null; then
+					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/swb_data
+				fi
+			fi
+			;;			
 		*)
 			;;
 		esac
