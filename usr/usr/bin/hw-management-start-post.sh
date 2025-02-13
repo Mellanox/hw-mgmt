@@ -102,3 +102,17 @@ case $sku in
 	*)
 		# Do nothing
 esac
+
+
+## Checking if system doesn't require TC
+case $sku in
+	HI176|HI177)
+		# disable TC
+		log_info "Disabe Thermal Control for this system: $sku"
+		systemctl stop hw-management-tc.service
+		systemctl disable hw-management-tc.service  
+		;;
+	*)
+		# Do nothing
+esac
+
