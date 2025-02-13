@@ -923,8 +923,10 @@ if [ "$1" == "add" ]; then
 		fi
 		psu_connect_power_sensor "$5""$3"/power1 "$psu_name"_power_in
 		psu_connect_power_sensor "$5""$3"/power2 "$psu_name"_power
+		psu_connect_power_sensor "$5""$3"/power2 "$psu_name"_power_out
 		psu_connect_power_sensor "$5""$3"/curr1 "$psu_name"_curr_in
 		psu_connect_power_sensor "$5""$3"/curr2 "$psu_name"_curr
+		psu_connect_power_sensor "$5""$3"/curr2 "$psu_name"_curr_out
 
 		# Allow modification for some PSU thresholds through 'sensors'
 		# utilities 'sets instruction.
