@@ -1228,6 +1228,10 @@ if [ "$1" == "add" ]; then
 		fio_info)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/fio_data
 			;;
+		mgmt_fru*_info)
+			eeprom_vpd_filename=${eeprom_name/"_info"/"_data"}
+			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/$eeprom_vpd_filename
+			;;
 		*)
 			;;
 		esac
