@@ -181,6 +181,11 @@ class CONST(object):
     # Consistent file read  errors for set error state
     SENSOR_FREAD_FAIL_TIMES = 3
 
+    # formula param will be switched to next state, if sensor val >= val_max N times
+    FORMULA_SATATE_TRH_TIMES = 3
+    # treshold for formula param switch in hi->low directiomn
+    FORMULA_SATATE_HYST = 4000
+
     # If more than 1 error, set fans to 100%
     TOTAL_MAX_ERR_COUNT = 2
 
@@ -241,7 +246,7 @@ SENSOR_DEF_CONFIG = {
                          "refresh_attr_period": 1 * 60
                         },
     r'module\d+':       {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000, "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_ARRAY_WEGHT,
                          "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
@@ -1139,19 +1144,14 @@ class system_device(hw_managemet_file_op):
         self.value_trend = 0
         self.value_hyst = int(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
         self.smooth_formula = int(self.sensors_config.get("smooth_formula", CONST.VAL_AVG_INTEGRAL))
-        self.clear_fault_list()
 
         # ==================
+        self.clear_fault_list()
+        self.mask_fault_list = []
         self.static_mask_fault_list = []
         self.dynamic_mask_fault_list = self.sensors_config.get("dynamic_err_mask", [])
         if not self.dynamic_mask_fault_list:
             self.dynamic_mask_fault_list = []
-        self.mask_fault_list = []
-        self.fault_list = []
-
-        self.fault_list_static_filtered = []
-        self.fault_list_dynamic_filtered = []
-        self.fault_list_dynamic = []
         self.dynamic_filter_ena = False
 
 
@@ -1168,7 +1168,6 @@ class system_device(hw_managemet_file_op):
             return
 
         self.log.info("Staring {}".format(self.name))
-        self.state = CONST.RUNNING
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
@@ -1184,9 +1183,10 @@ class system_device(hw_managemet_file_op):
         self.enable = bool(self.sensors_config.get("enable", 1))
         self.value_acc = 0
         self.fread_err.reset_all()
-        self.sensor_configure()
         self.update_timestump(1000)
         self.clear_fault_list()
+        self.sensor_configure()
+        self.state = CONST.RUNNING
 
     # ----------------------------------------------------------------------
     def stop(self):
@@ -1385,7 +1385,7 @@ class system_device(hw_managemet_file_op):
         return int(round(pwm))
 
     # ----------------------------------------------------------------------
-    def read_val_min_max(self, filename, trh_type, scale=1):
+    def read_val_min_max(self, filename, trh_type, scale=1, config_dict=None):
         """
         @summary: read device min/max values from file. If file can't be read - returning default value from CONST.TEMP_MIN_MAX
         @param filename: file to be read
@@ -1393,7 +1393,9 @@ class system_device(hw_managemet_file_op):
         @param scale: scale for read value
         @return: float min/max value
         """
-        default_val = self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type])
+        if not config_dict:
+            config_dict = self.sensors_config
+        default_val = config_dict.get(trh_type, CONST.TEMP_MIN_MAX[trh_type])
         try:
             if str(default_val)[0] == "!":
                 # Use config value instead of device parameter reading
@@ -1538,7 +1540,7 @@ class system_device(hw_managemet_file_op):
             self.collect_err()
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
@@ -1556,7 +1558,6 @@ class system_device(hw_managemet_file_op):
                                                                                           self.pwm,
                                                                                           self.state)
         return info_str
-
 
 class thermal_sensor(system_device):
     """
@@ -1649,6 +1650,20 @@ class thermal_module_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+
+        self.formula_optimized_config = self.sensors_config.get("optimized_param", None);
+        self.formula_optimized_ena = False if (self.formula_optimized_config is None) else True
+
+        self.formula_normal_config = {}
+        self.formula_normal_config["pwm_min"] = self.sensors_config.get("pwm_min", 0)
+        self.formula_normal_config["pwm_max"] = self.sensors_config.get("pwm_max", 0)
+        self.formula_normal_config["val_min"] = self.sensors_config.get("val_min", 0)
+        self.formula_normal_config["val_max"] = self.sensors_config.get("val_max", 0)
+        self.formula_normal_config["val_min_offset"] = self.sensors_config.get("val_min_offset", 0)
+        self.formula_normal_config["val_max_offset"] = self.sensors_config.get("val_max_offset", 0)
+
+        self.formula_state_trh_counter = 0
+        self._update_optimized_param()
         self.refresh_attr()
 
     # ----------------------------------------------------------------------
@@ -1657,31 +1672,66 @@ class thermal_module_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
-        if self.val_max != 0:
-            self.val_min = self.val_max - 10
+        self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        val_min_offset = self.sensors_config.get("val_min_offset", 0)
+        val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
+        if val_max != 0:
+            self.val_min = val_max + val_min_offset / self.scale
+            self.val_max = val_max + val_max_offset / self.scale
         else:
-            self.val_min = self.val_max
+            self.val_max = 0
+            self.val_min = 0
 
     # ----------------------------------------------------------------------
-    def get_fault(self):
-        """
-        @summary: Get module sensor fault status
-        @return: True - in case if sensor is readeble and have consistent values
-            False - if module is in 'faulty' state
-        """
-        status = False
-        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
-        if self.check_file(fault_filename):
-            try:
-                fault_status = int(self.read_file(fault_filename))
-                if fault_status:
-                    status = True
-            except BaseException:
-                self.log.error("{}- Incorrect value in the file: {} ({})".format(self.name, fault_filename, BaseException))
-                status = True
+    def _update_optimized_param(self):
+        """"""
+        formula_switched = False 
+        val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale, config_dict=self.formula_normal_config)
+        if self.formula_optimized_config and val_max != 0:
+            val_max_offset = self.formula_normal_config.get("val_max_offset", 0)
+            val_max_trh = val_max + val_max_offset / self.scale
+            state_hyst = self.formula_optimized_config.get("hyst", CONST.FORMULA_SATATE_HYST) / CONST.TEMP_SENSOR_SCALE
 
-        return status
+            if self.value >= val_max:
+                self.formula_state_trh_counter += 1
+                if self.formula_state_trh_counter >= CONST.FORMULA_SATATE_TRH_TIMES and self.formula_optimized_ena:
+                    self.formula_optimized_ena = False
+                    formula_switched = True
+                    self.log.info("{}: state: optimized -> normal params, val: {}".format(self.name, self.value))
+            elif self.value < (val_max_trh + val_max_offset - state_hyst) and not self.formula_optimized_ena:
+                self.formula_state_trh_counter = 0
+                self.formula_optimized_ena = True
+                formula_switched = True
+                self.log.info("{}: state: normal -> optimized pasrams, val: {}".format(self.name, self.value))
+
+        if self.formula_optimized_ena:
+            formula_config = self.formula_optimized_config
+        else:
+            formula_config = self.formula_normal_config
+
+        self.sensors_config["pwm_min"] = formula_config.get("pwm_min", 0)
+        self.sensors_config["pwm_max"] = formula_config.get("pwm_max", 0)
+        self.sensors_config["val_min"] = formula_config.get("val_min", 0)
+        self.sensors_config["val_max"] = formula_config.get("val_max", 0)
+        self.sensors_config["val_min_offset"] = formula_config.get("val_min_offset", 0)
+        self.sensors_config["val_max_offset"] = formula_config.get("val_max_offset", 0)
+        if formula_switched:
+            self.refresh_attr()
+            self.param_info()
+
+    # ----------------------------------------------------------------------
+    def param_info(self):
+        self.log.info("{}: pwm_min:{} pwm_max:{} val_min:{} val_max:{}".format(
+                                                                    self.name,
+                                                                    self.pwm_min,
+                                                                    self.pwm_max,
+                                                                    self.val_min,
+                                                                    self.val_max))
+
+        self.log.info("{}: normal_config:{}".format(self.name, self.formula_normal_config))
+        self.log.info("{}: optimized_config:{}".format(self.name, self.formula_optimized_config))
 
     # ----------------------------------------------------------------------
     def get_temp_support_status(self):
@@ -1692,8 +1742,8 @@ class thermal_module_sensor(system_device):
         """
         status = True
 
-        if self.last_value == 0 and self.val_max == 0 and self.val_min == 0:
-            self.log.debug("Module not supporting temp reading val:{} max:{}".format(self.value, self.val_max))
+        if self.val_max == 0:
+            self.log.debug("{} does not support temp reading max:{}".format(self.name, self.val_max))
             status = False
 
         return status
@@ -1735,6 +1785,7 @@ class thermal_module_sensor(system_device):
         # check if module have temperature reading interface
         if self.get_temp_support_status():
             # calculate PWM based on formula
+            self._update_optimized_param()
             pwm = max(self.calculate_pwm_formula(), pwm)
         self.pwm = pwm
 
@@ -1763,10 +1814,35 @@ class thermal_module_sensor(system_device):
         self._update_pwm()
         return None
 
+        # ----------------------------------------------------------------------
+    def __str__(self):
+        """
+        @summary: returning info about current device state. Can be overridden in child class
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        if CONST.SENSOR_READ_ERR in fault_list:
+            value = "N/A"
+        else:
+            value = self.value
+        if  self.formula_optimized_ena:
+            formuls_param = "opt"
+        else:
+            formuls_param = "norm"
+        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, [{}] faults:[{}], pwm: {}, {}".format(self.name,
+                                                                                          round(value,2),
+                                                                                          self.val_min,
+                                                                                          self.val_max,
+                                                                                          formuls_param,
+                                                                                          self.get_fault_list_str(),
+                                                                                          self.pwm,
+                                                                                          self.state)
+        return info_str
 
-class thermal_asic_sensor(thermal_module_sensor):
+
+class thermal_asic_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
-        thermal_module_sensor.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.asic_fault_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
         
     # ----------------------------------------------------------------------
@@ -2030,7 +2106,7 @@ class psu_fan_sensor(system_device):
         return
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2418,7 +2494,7 @@ class fan_sensor(system_device):
         return
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2552,7 +2628,7 @@ class ambiant_thermal_sensor(system_device):
         return None
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2625,7 +2701,7 @@ class dpu_module(system_device):
                 child_obj.enable = False
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state.
         """
@@ -3817,9 +3893,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.info("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
-                obj_info_str = dev_obj.info()
-                if obj_info_str:
-                    self.log.info(obj_info_str)
+                self.log.info(str(dev_obj))
         self.log.info("================================")
 
 
