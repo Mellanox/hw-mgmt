@@ -719,7 +719,7 @@ Kernel-6.1
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
 |9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
 |9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
-|9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[sonic,cumulus]           |            | Q3200                                          |
 |9007-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
 |9008-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
 |9009-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
