@@ -275,6 +275,22 @@ declare -A q3200_alternatives=( \
 				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
+declare -A q3450_alternatives=( \
+				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+				["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+				["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
+				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+				["raa228004_0"]="raa228004 0x60 3 pwr_conv" \
+				["lm5066i_0"]="lm5066i 0x16 3 hotswap" )
+
 declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 					 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 					 ["mp2975_1"]="mp2975 0x64 5 voltmon2" \
@@ -852,6 +868,12 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!q3200_alternatives[@]}"; do
 					swb_alternatives["$key"]="${q3200_alternatives["$key"]}"
 				done
+				for key in "${!fan_type1_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+				done
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+				done
 				;;
 			HI158)
 				for key in "${!q3400_alternatives[@]}"; do
@@ -860,18 +882,29 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!platform_type1_alternatives[@]}"; do
 					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
 				done
+				for key in "${!fan_type1_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+				done
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+				done
+				;;
+			HI175)
+				for key in "${!q3450_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3450_alternatives["$key"]}"
+				done
+				for key in "${!platform_type1_alternatives[@]}"; do
+					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
+				done
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+				done
 				;;
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
 				return 1
 				;;
 			esac
-			for key in "${!fan_type1_alternatives[@]}"; do
-				fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
-			done
-			for key in "${!port_type0_alternatives[@]}"; do
-				port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
-			done
 			return 0
 			;;
 		VMOD0019)
@@ -1255,16 +1288,34 @@ devtr_check_board_components()
 				fi
 				component_name=${pwr_conv_arr[$component_key]}
 				alternative_key="${component_name}_${o_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
-				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${o_cnt}"
-				else
-					echo -n "${alternative_comp} " >> "$devtree_file"
-					if [ $devtr_verb_display -eq 1 ]; then
-						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				# q3450 have 2 switch boards, each with 1 power converter
+				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
+					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component[2]=$((curr_component[2]+brd))
+					if [ ! -z "${board_name_pfx}" ]; then
+						curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
 					fi
-				fi
+					# Check if component from SMBIOS BOM string is defined in layout
+					if [ -z "${curr_component[0]}" ]; then
+						log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${o_cnt}"
+					else
+						if [ $board_num -gt 1 ]; then
+							board_name_str="${board_name}${n}"
+						else
+							board_name_str="$board_name"
+						fi
+						# Components of dynamic boards write to separate per board devtree file
+						if [ "${board_type}" == "dynamic" ]; then
+							echo -n "${curr_component[@]} " >> "$dynamic_boards_path"/"$board_name_str"
+						else
+							echo -n "${curr_component[@]} " >> "$devtree_file"
+						fi
+						if [ $devtr_verb_display -eq 1 ]; then
+							log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
+							echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
+						fi
+					fi
+				done
 				o_cnt=$((o_cnt+1))
 				;;
 			H)	# Hot-swap
@@ -1274,16 +1325,34 @@ devtr_check_board_components()
 				fi
 				component_name=${hotswap_arr[$component_key]}
 				alternative_key="${component_name}_${h_cnt}"
-				alternative_comp=${board_alternatives[$alternative_key]}
-				if [ -z "${alternative_comp[0]}" ]; then
-					log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${h_cnt}"
-				else
-					echo -n "${alternative_comp} " >> "$devtree_file"
-					if [ $devtr_verb_display -eq 1 ]; then
-						log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${alternative_comp}, category key: ${category_key}, device code: ${component_key}"
-						echo -n " ${board_name} ${category_key} ${component_key} " >> "$devtree_codes_file"
+				# q3450 have 2 switch boards, each with 1 hot-swap controller
+				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
+					curr_component=(${board_alternatives[$alternative_key]})
+					curr_component[2]=$((curr_component[2]+brd))
+					if [ ! -z "${board_name_pfx}" ]; then
+						curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
 					fi
-				fi
+					# Check if component from SMBIOS BOM string is defined in layout
+					if [ -z "${curr_component[0]}" ]; then
+						log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${o_cnt}"
+					else
+						if [ $board_num -gt 1 ]; then
+							board_name_str="${board_name}${n}"
+						else
+							board_name_str="$board_name"
+						fi
+						# Components of dynamic boards write to separate per board devtree file
+						if [ "${board_type}" == "dynamic" ]; then
+							echo -n "${curr_component[@]} " >> "$dynamic_boards_path"/"$board_name_str"
+						else
+							echo -n "${curr_component[@]} " >> "$devtree_file"
+						fi
+						if [ $devtr_verb_display -eq 1 ]; then
+							log_info "DBG SMBIOS BOM: ${board_name} ${category} component - ${curr_component[@]}, category key: ${category_key}, device code: ${component_key}"
+							echo -n " ${board_name_str} ${category_key} ${component_key} " >> "$devtree_codes_file"
+						fi
+					fi
+				done
 				h_cnt=$((h_cnt+1))
 				;;
 			G)	# GPIO Expander
