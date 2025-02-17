@@ -739,7 +739,10 @@ if [ "$1" == "add" ]; then
 		else
 			asic_num=$(< $config_path/asic_num)
 		fi
-		if [ ! -d /sys/module/mlxsw_minimal ]; then
+		if [ -f "$config_path"/minimal_unsupported ]; then
+			minimal_unsupported=$(< $config_path/minimal_unsupported)
+		fi
+		if [ ${minimal_unsupported} -eq 0 ] && [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
 		for ((i=1; i<=asic_num; i+=1)); do
@@ -1099,7 +1102,10 @@ if [ "$1" == "add" ]; then
 
 	fi
 	if [ "$2" == "sxcore" ]; then
-		if [ ! -d /sys/module/mlxsw_minimal ]; then
+		if [ -f "$config_path"/minimal_unsupported ]; then
+			minimal_unsupported=$(< $config_path/minimal_unsupported)
+		fi
+		if [ ${minimal_unsupported} -eq 0 ] && [ ! -d /sys/module/mlxsw_minimal ]; then
 			modprobe mlxsw_minimal
 		fi
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
@@ -1162,7 +1168,10 @@ elif [ "$1" == "change" ]; then
 			exit 0
 		fi
 		if [ "$3" == "up" ]; then
-			if [ ! -d /sys/module/mlxsw_minimal ]; then
+			if [ -f "$config_path"/minimal_unsupported ]; then
+				minimal_unsupported=$(< $config_path/minimal_unsupported)
+			fi
+			if [ ${minimal_unsupported} -eq 0 ] && [ ! -d /sys/module/mlxsw_minimal ]; then
 				modprobe mlxsw_minimal
 			fi
 			# Run automatic chipup based on ASIC health event only in special CI/verification OSes.
