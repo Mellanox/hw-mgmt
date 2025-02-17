@@ -141,6 +141,21 @@ amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 n5110_mctp_bus="0"
 n5110_mctp_addr="1040"
 
+# hw-mngmt-sysfs-monitor GLOBALS
+SYSFS_MONITOR_TIMEOUT=20 # Total Sysfs T/O.
+SYSFS_MONITOR_DELAY=1 # Internal delay for Sysfs monitor loop to free CPU.
+SYSFS_MONITOR_RDY_FILE=$hw_management_path/sysfs_labels_rdy
+SYSFS_MONITOR_RESET_FILE_A="/tmp/sysfs_monitor_time_a"
+SYSFS_MONITOR_RESET_FILE_B="/tmp/sysfs_monitor_time_b"
+SYSFS_MONITOR_PID_FILE="/tmp/sysfs_monitor.pid"
+
+# hw-mngmt-fast-sysfs-monitor GLOBALS
+FAST_SYSFS_MONITOR_INTERVAL=0.5  # 500 milliseconds
+FAST_SYSFS_MONITOR_TIMEOUT=120   # 2 minutes
+FAST_SYSFS_MONITOR_LABELS_JSON="/etc/hw-management-fast-sysfs-monitor/fast_sysfs_labels.json"
+FAST_SYSFS_MONITOR_PID_FILE="/tmp/fast_sysfs_monitor.pid"
+FAST_SYSFS_MONITOR_RDY_FILE=$hw_management_path/fast_sysfs_labels_rdy
+
 log_err()
 {
     logger -t hw-management -p daemon.err "$@"
@@ -281,12 +296,77 @@ check_simx()
 	fi
 }
 
+# This function create or cleans sysfs monitor helper files.
+init_sysfs_monitor_timestamp_files()
+{
+    SYSFS_MONITOR_FILES=(
+        "$SYSFS_MONITOR_RESET_FILE_A"
+        "$SYSFS_MONITOR_RESET_FILE_B"
+    )
+
+    # Remove all sysfs monitor files if they exist from previous runs.
+    # They might contain garbage. Then create new ones.
+    for FILE in "${SYSFS_MONITOR_FILES[@]}"; do
+        [ -f "$FILE" ] && rm "$FILE"
+        touch "$FILE"
+    done
+
+    # remove the sysfs ready file if it exists.
+    if [[ -f "$SYSFS_MONITOR_RDY_FILE" ]]; then
+        rm "$SYSFS_MONITOR_RDY_FILE"
+    fi
+
+    # remove the fast sysfs ready file if it exists.
+    if [[ -f "$FAST_SYSFS_MONITOR_RDY_FILE" ]]; then
+        rm "$FAST_SYSFS_MONITOR_RDY_FILE"
+    fi
+
+    file_exist=true
+    for FILE in "${SYSFS_MONITOR_FILES[@]}"; do
+        [ ! -f "$FILE" ]
+        file_exist=false
+        break
+    done
+    # In case one of the Sysfs monitor files was not created, 
+    # or in case the first run file was not removed,
+    # exit with error.
+    if [ ! "$file_exist" ] ;then
+        log_info "Error init. Sysfs Monitor files."
+        exit 1
+    fi
+
+    log_info "Successfully init. Sysfs Monitor files."
+}
+
+# This function writes the current timestamp to the relevant file.
+# Used by both hw-management service and sysfs monitor service.
+refresh_sysfs_monitor_timestamps()
+{
+    # Capture the current time with milliseconds.
+    local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
+    # Read the last update time from both reset files.
+    local last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
+    local last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
+    # Ensure both variables are valid integers, defaulting to 0 if empty or invalid.
+    last_reset_time_A=${last_reset_time_A:-0}
+    last_reset_time_B=${last_reset_time_B:-0}
+    # Determine which file was written most recently.
+    if [ "$last_reset_time_A" -gt "$last_reset_time_B" ]; then
+        # Write the current time to the less recently updated file (B).
+        echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_B"
+    else
+        # Write the current time to the less recently updated file (A).
+        echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_A"
+    fi
+}
+
 # Check if file exists and create soft link
 # $1 - file path
 # $2 - link path
 # return none
 check_n_link()
 {
+    refresh_sysfs_monitor_timestamps
     if [ -f "$1" ];
     then
         ln -sf "$1" "$2"
