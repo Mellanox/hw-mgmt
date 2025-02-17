@@ -2313,7 +2313,7 @@ n51xxld_specific()
 			echo 4 > $config_path/cartridge_num
 			;;
 		HI177)	# Kyber
-			echo 4 > $config_path/cartridge_num
+			echo 0 > $config_path/cartridge_num
 			;;
 		*)	# According Juliet SO.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
