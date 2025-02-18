@@ -96,7 +96,7 @@ atttrib_list = {
                 },
         },
 
-        {"fin": None, "fn": "module_temp_populate", "poll": 4, "ts": 0,
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 36}
         },
         {"fin": None,
@@ -143,7 +143,7 @@ atttrib_list = {
                     "asic2": {"fin": "/sys/module/sx_core/asic1/"}
                 }
         },
-        {"fin": None, "fn": "module_temp_populate", "poll": 4, "ts": 0,
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 36}
         },
         {"fin": None,
@@ -370,7 +370,7 @@ def is_asic_ready(asic_name, asic_attr):
 def asic_temp_reset(asic_name, f_asic_src_path):
     # Default temperature values
     file_paths = {
-        "": 0,
+        "": "",
         "_temp_norm": "",
         "_temp_crit": "",
         "_temp_emergency": "",
@@ -419,7 +419,7 @@ def asic_temp_populate(arg_list, arg):
             temperature_fault = CONST.ASIC_TEMP_FAULT_DEF
             temperature_crit = CONST.ASIC_TEMP_CRIT_DEF
         except:
-            temperature = "0"
+            temperature = ""
             temperature_min = ""
             temperature_max = ""
             temperature_fault = ""
@@ -469,7 +469,8 @@ def module_temp_populate(arg_list, _dummy):
     offset = arg_list["fout_idx_offset"]
     host_management_mode = None
     for idx in range(module_count):
-        f_dst_name = "/var/run/hw-management/thermal/module{}_temp_input".format(idx+offset)
+        module_name = "module{}".format(idx+offset)
+        f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
             continue
 
