@@ -715,12 +715,12 @@ index bfa2588782bd..09390c38723a 100644
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
-+	/*{
++	{
 +		.label = "reset_platform",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
-+	},*/
++	},
 +	{
 +		.label = "reset_soc",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,

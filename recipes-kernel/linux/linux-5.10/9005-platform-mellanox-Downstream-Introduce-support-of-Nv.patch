@@ -692,12 +692,12 @@ index ad1e421fe..71ab11400 100644
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
-+	/*{
++	{
 +		.label = "reset_platform",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
-+	},*/
++	},
 +	{
 +		.label = "reset_soc",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE1_OFFSET,
@@ -879,13 +879,13 @@ index ad1e421fe..71ab11400 100644
 +	{
 +		.label = "sgmii_phy",
 +		.reg = MLXPLAT_CPLD_LPC_REG_BRD_OFFSET,
-+		.mask = BIT(5),
++		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
 +	},
 +	{
 +		.label = "fan_oc",
 +		.reg = MLXPLAT_CPLD_LPC_REG_BRD_OFFSET,
-+		.mask = BIT(7),
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
 +	{
@@ -909,7 +909,7 @@ index ad1e421fe..71ab11400 100644
 +	{
 +		.label = "amb_sens",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWRB_OFFSET,
-+		.mask = BIT(1),
++		.mask = GENMASK(7, 0) & ~BIT(1),
 +		.mode = 0444,
 +	},
 +};
