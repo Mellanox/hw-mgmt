@@ -1490,15 +1490,16 @@ class thermal_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
+        self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
+        self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
+        self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
         @summary: this function calling on sensor start after initialization or resume
         """
-        scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
-        self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
-
         self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", self.scale)
         self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", self.scale)
 
@@ -1573,6 +1574,10 @@ class thermal_module_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
+        self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
+        self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
+        self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
         self.refresh_attr()
 
     # ----------------------------------------------------------------------
@@ -1692,13 +1697,16 @@ class thermal_asic_sensor(thermal_module_sensor):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         thermal_module_sensor.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.asic_fault_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
+        scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
+        self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
+        self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
+        self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
         
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        # Disable kernel control for this thermal zone
         self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
 
