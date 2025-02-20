@@ -2345,14 +2345,21 @@ n51xxld_specific()
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
 		;;
-		HI176|HI177)	# Kyber/gb300
+		HI176)	# gb300
+			max_tachos=0
+			echo 0 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			leakage_count=1
+			erot_count=3
+			echo 3 > $config_path/cpld_num
+		;;
+		HI177)	# Kyber
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			leakage_count=1
 			erot_count=4
-			echo 3 > $config_path/clk_brd_num
-			echo 3 > $config_path/cpld_num
+			echo 2 > $config_path/cpld_num
 		;;
 		*)
 			max_tachos=8

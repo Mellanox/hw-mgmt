@@ -293,12 +293,16 @@ declare -A sn4280_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
 # V0-K*G0EgEgJa-S*RgRgRgTcTcFcEiRgRgRgSaSaGeGb-L*GbFdEiTcFdSaXbXc-P*OaOaOaOaHaEi-C*GeGdFdRiRaEg
 # for JSO
 declare -A n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 6 mng_amb" \
+						["tmp102_0"]="tmp102 0x49 6 mng_amb" \
+						["stts751_0"]="stts751 0x49 6 mng_amb" \
 						["emc1412_1"]="emc1403 0x4c 6 fpga" \
 						["lm90_1"]="lm90 0x4c 6 fpga" \
 						["24c512_0"]="24c512 0x50 6 mgmt_fruid_info" \
 						["24c512_1"]="24c512 0x51 6 mgmt_fru_info")
 
 declare -A bmc_n5110ld_platform_alternatives=(["adt75_0"]="adt75 0x49 20 mng_amb" \
+						["tmp102_0"]="tmp102 0x49 20 mng_amb" \
+						["stts751_0"]="stts751 0x49 20 mng_amb" \
 						["emc1412_1"]="emc1403 0x4c 20 fpga" \
 						["lm90_1"]="lm90 0x4c 20 fpga"\
 						["24c512_0"]="24c512 0x50 6 mgmt_fruid_info" \
@@ -498,20 +502,26 @@ declare -A pwr_type4_alternatives=( \
 				   ["tmp1075_0"]="tmp1075 0x4e 4 pdb_intel_amb" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
 
-# P*OdOdHaEi
+# P*HaEaOfTk
 declare -A gb300_pwr_type1_alternatives=(["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
-				   ["mp29502_0"]="mp29502 0x60 4 pwr_conv1" \
-				   ["lm5066i_0"]="lm5066i 0x16 4 pdb_hotswap1" \
-				   ["lm5066_0"]="lm5066i 0x16 4 pdb_hotswap1" \
-				   ["mp5926_0"]="mp5926 0x16 4 pdb_hotswap1" \
-				   ["24c02_0"]="24c02 0x51 4 pdb_eeprom")
+				   ["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" \
+				   ["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+				   ["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" \
+				   ["tmp1075_0"]="tmp1075 0x4c 4 pdb_mos_amb" \
+				   ["tmp411_0"]="tmp411 0x4c 4 pdb_mos_amb" \
+				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
+				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
 
 declare -A bmc_gb300_pwr_type1_alternatives=(["raa228004_0"]="raa228004 0x60 18 pwr_conv1" \
-				   ["mp29502_0"]="mp29502 0x60 18 pwr_conv1" \
-				   ["lm5066i_0"]="lm5066i 0x16 18 pdb_hotswap1" \
-				   ["lm5066_0"]="lm5066i 0x16 18 pdb_hotswap1" \
-				   ["mp5926_0"]="mp5926 0x16 18 pdb_hotswap1" \
-				   ["24c02_0"]="24c02 0x51 18 pdb_eeprom")
+				   ["mp29502_0"]="mp29502 0x2e 18 pwr_conv1" \
+				   ["lm5066i_0"]="lm5066i 0x12 18 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066i 0x12 18 pdb_hotswap1" \
+				   ["mp5926_0"]="mp5926 0x12 18 pdb_hotswap1" \
+				   ["tmp1075_0"]="tmp1075 0x4c 18 pdb_mos_amb" \
+				   ["tmp411_0"]="tmp411 0x4c 18 pdb_mos_amb" \
+				   ["tmp451_0"]="tmp451 0x4c 18 pdb_mos_amb" \
+				   ["24c02_0"]="24c02 0x50 18 pdb_eeprom")
 
 declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier_a2d" \
 					["lm75_0"]="lm75 0x49 17 fan_amb" \
