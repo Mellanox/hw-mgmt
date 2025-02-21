@@ -481,6 +481,10 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
         return CONST.PWM_MIN
     # get current range
     dmin, range_min, range_max = g_get_range_val(line, temp)
+    if not dmin:
+        dmin, _, _ = g_get_range_val(line, 100)
+        return dmin
+
     if not interpolated:
         return dmin
 
@@ -3103,11 +3107,14 @@ class ThermalManagement(hw_managemet_file_op):
         pwm_max = 0
         name = ""
         for key, val in pwm_list.items():
-            if val > pwm_max:
-                pwm_max = val
-                name = key
-            elif val == pwm_max and "total_err_cnt" in key:
-                name = key
+            try:
+                if val > pwm_max:
+                    pwm_max = val
+                    name = key
+                elif val == pwm_max and "total_err_cnt" in key:
+                    name = key
+            except:
+                self.log("Unaplicable pwm:{} for:{}".format(val, key))
         return pwm_max, name
 
     # ----------------------------------------------------------------------
