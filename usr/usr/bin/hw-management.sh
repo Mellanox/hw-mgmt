@@ -2095,7 +2095,8 @@ sn5600d_specific()
 
 sn_spc4_common()
 {
-	# ToDo Meantime same for all SPC4 systems.
+	minimal_unsupported=1
+
 	case $sku in
 		HI144)	# SN5600
 			sn5x00_specific
