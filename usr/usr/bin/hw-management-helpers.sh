@@ -793,3 +793,33 @@ get_ui_tree_archive_file()
 	esac
 	echo $ui_tree_archive
 }
+
+tracing_start()
+{
+	echo 1 > /sys/kernel/debug/tracing/events/i2c/enable
+	echo adapter_nr==$1 > /sys/kernel/debug/tracing/events/i2c/filter
+}
+
+tracing_stop()
+{
+	echo 0 > /sys/kernel/debug/tracing/events/i2c/enable
+	echo > /sys/kernel/debug/tracing/trace
+}
+
+tracing_log()
+{
+	local log_file=$1
+	local log_size=$2
+
+	# Dump kernel trace buffer to log file
+	cat /sys/kernel/debug/tracing/trace >> $log_file
+
+	# Check log size in (bytes) and rotate if necessary.
+	file_size=`du -b $1 | tr -s '\t' ' ' | cut -d' ' -f1`
+	if [ $file_size -gt $log_size ]; then
+		timestamp=`date +%s`
+		mv ${log_file} ${log_file}.$timestamp
+		gzip ${log_file}.$timestamp
+		touch ${log_file}
+	fi
+}

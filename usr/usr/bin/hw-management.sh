@@ -2644,6 +2644,8 @@ set_config_data()
 
 connect_platform()
 {
+	local tracing_enabled=0
+
 	find_i2c_bus
 	# Check if it's new or old format of connect table
 	if [ -e "$devtree_file" ]; then
@@ -2657,13 +2659,27 @@ connect_platform()
 
 	for ((i=0; i<${#connect_table[@]}; i+=$dev_step)); do
 		for ((j=0; j<${device_connect_retry}; j++)); do
+			# Temporarily add tracing of power converter devices on SN5600, RM 4252430
+			if [ ${sku} = "HI144" ] && [[ ${connect_table[i+3]} == pwr_conv* ]]; then
+				tracing_enabled=1
+				tracing_start ${connect_table[i+2]}
+			fi
 			connect_device "${connect_table[i]}" "${connect_table[i+1]}" \
 					"${connect_table[i+2]}"
 			if [ $? -eq 0 ]; then
+				if [ $tracing_enabled -eq 1 ]; then
+					tracing_stop
+					tracing_enabled=0
+				fi
 				break;
 			fi
 			disconnect_device "${connect_table[i+1]}" "${connect_table[i+2]}"
 		done
+		if [ $tracing_enabled -eq 1 ]; then
+			tracing_log /var/log/hw_mgmt_connect_trace.log 1048566
+			tracing_stop
+			tracing_enabled=0
+		fi
 	done
 	if [ ! -z $mctp_addr ]; then
 		echo $mctp_addr > $config_path/mctp_addr
