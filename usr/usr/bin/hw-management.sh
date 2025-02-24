@@ -3192,6 +3192,7 @@ map_asic_pci_to_i2c_bus()
 
 do_start()
 {
+	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init

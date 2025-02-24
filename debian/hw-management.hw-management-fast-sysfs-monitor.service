@@ -1,0 +1,18 @@
+[Unit]
+Description=HW management Fast Lables Monitor
+Before=hw-management.service
+PartOf=hw-management.service
+
+StartLimitIntervalSec=1200
+StartLimitBurst=5
+
+[Service]
+ExecStart=/bin/sh -c "/usr/bin/hw-management-fast-sysfs-monitor.sh start"
+ExecStop=/bin/sh -c "/usr/bin/hw-management-fast-sysfs-monitor.sh stop"
+TimeoutStopSec=1
+
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target
