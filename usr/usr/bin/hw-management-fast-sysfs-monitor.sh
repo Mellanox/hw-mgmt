@@ -1,6 +1,6 @@
 #!/bin/bash
 ##################################################################################
-# Copyright (c) 2020 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,49 +41,71 @@ Usage: $(basename "$0") [Options]
 
 Options:
     start   Start hw-mngmt-fast-sysfs-monitor.
-	stop	Stop hw-mngmt-fast-sysfs-monitor.
+    stop    Stop hw-mngmt-fast-sysfs-monitor.
     restart
-    force-reload	Performs hw-mngmt-fast-sysfs-monitor 'stop' and the 'start.
+    force-reload    Performs hw-mngmt-fast-sysfs-monitor 'stop' and the 'start.
 "
 
 do_start_fast_sysfs_monitor()
 {
     log_info "Starting hw-mngmt-fast-sysfs-monitor logic."
-    # Extract file paths from JSON manually (removes brackets, quotes, and spaces)
+    # Extract file paths from JSON manually (removes brackets, quotes, and spaces).
     FILES=($(grep -o '"[^"]*"' "$FAST_SYSFS_MONITOR_LABELS_JSON" | tr -d '"' ))
+    # Extract the last element (filename) from each JSON path.
+    DEV_FILES=($(for file in "${FILES[@]}"; do basename "$file"; done))
     # Get the total number of files to check.
     TOTAL_FILES=${#FILES[@]}
     declare -A FOUND_FILES
+    declare -A DEVICE_ADDED  # Track added devices per file name.
     ELAPSED=0
     log_info "Monitoring ${TOTAL_FILES} files..."
-    # Loop until all files exist or timeout is reached.
-    while (( $(echo "$ELAPSED < $FAST_SYSFS_MONITOR_TIMEOUT" | bc -l) )); do
-        for FILE in "${FILES[@]}"; do
-            if [[ -f "$FILE" ]]; then
-                FOUND_FILES["$FILE"]=1
+    while (( ELAPSED < FAST_SYSFS_MONITOR_TIMEOUT )); do
+    # Check and add missing devices from devtree_file.
+    if [ -e "$devtree_file" ] && [[ ${#DEVICE_ADDED[@]} -lt ${#DEV_FILES[@]} ]]; then
+        # Read the entire content into an array (space-separated tokens).
+        read -ra DEVTREE_ENTRIES < "$devtree_file"
+        # Process every 4 tokens as one device entry
+        for ((i = 0; i < ${#DEVTREE_ENTRIES[@]}; i += 4)); do
+            driver_name=${DEVTREE_ENTRIES[i]}
+            address=${DEVTREE_ENTRIES[i+1]}
+            bus=${DEVTREE_ENTRIES[i+2]}
+            file_name=${DEVTREE_ENTRIES[i+3]}
+            # Check if file_name is in monitored devices and also hasn't been added yet.
+            if [[ " ${DEV_FILES[@]} " =~ " $file_name " && -z "${DEVICE_ADDED[$file_name]}" ]]; then
+                log_info "Adding device: $driver_name $address $bus $file_name"
+                echo "$driver_name $address" > "/sys/bus/i2c/devices/i2c-$bus/new_device"
+                sleep 1 # Let the filesystem relax.
+                DEVICE_ADDED[$file_name]=1
             fi
         done
-        # Check if all files are found.
-        if [[ ${#FOUND_FILES[@]} -eq $TOTAL_FILES ]]; then
-            log_info "All fast sysfs lables exist. Done."
-            # Get the current time with milliseconds.
-            local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
-            # Write the current time into the fast sysfs ready file.
-            echo "$current_time" > "$FAST_SYSFS_MONITOR_RDY_FILE"
-            exit 0
+    fi
+    # Check monitored files.
+    for FILE in "${FILES[@]}"; do
+        if [[ -f "$FILE" ]]; then
+            FOUND_FILES["$FILE"]=1
         fi
-        # Wait and increment elapsed time
-        sleep "$FAST_SYSFS_MONITOR_INTERVAL"
-        ELAPSED=$(echo "$ELAPSED + $FAST_SYSFS_MONITOR_INTERVAL" | bc)
     done
-    
+    # Exit if all monitored files exist.
+    if [[ ${#FOUND_FILES[@]} -eq $TOTAL_FILES ]]; then
+        log_info "All fast sysfs labels exist. Done."
+        # Get the current time in milliseconds.
+        local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
+        # Write the current time into the fast sysfs ready file.
+        echo "$current_time" > "$FAST_SYSFS_MONITOR_RDY_FILE"
+        exit 0
+    fi
+    # Sleep for the defined interval.
+    sleep "$FAST_SYSFS_MONITOR_INTERVAL"
+    # Increment elapsed time.
+    (( ELAPSED += FAST_SYSFS_MONITOR_INTERVAL ))
+    done
     log_info "Timeout reached. Not all files were found."
     exit 1
 }
 
 do_stop_fast_sysfs_monitor()
 {
-    # Remove older WD process if it exists.
+    # Remove older fast-sysfs-monitor process if it exists.
     if [ -f "$FAST_SYSFS_MONITOR_PID_FILE" ]; then
         local FAST_MONITOR_PID
         FAST_MONITOR_PID=$(cat "$FAST_SYSFS_MONITOR_PID_FILE")

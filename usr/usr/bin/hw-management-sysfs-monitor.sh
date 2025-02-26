@@ -1,6 +1,6 @@
 #!/bin/bash
 ##################################################################################
-# Copyright (c) 2020 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,9 +41,9 @@ Usage: $(basename "$0") [Options]
 
 Options:
     start   Start hw-mngmt-sysfs-monitor.
-	stop	Stop hw-mngmt-sysfs-monitor.
+    stop    Stop hw-mngmt-sysfs-monitor.
     restart
-    force-reload	Performs hw-mngmt-sysfs-monitor 'stop' and the 'start.
+    force-reload    Performs hw-mngmt-sysfs-monitor 'stop' and the 'start.
 "
 
 do_start_sysfs_monitor()
@@ -85,7 +85,7 @@ do_start_sysfs_monitor()
 
 do_stop_sysfs_monitor()
 {
-    # Remove older WD process if it exists.
+    # Remove older sysfs-monitor process if it exists.
     if [ -f "$SYSFS_MONITOR_PID_FILE" ]; then
         local MONITOR_PID
         MONITOR_PID=$(cat "$SYSFS_MONITOR_PID_FILE")
