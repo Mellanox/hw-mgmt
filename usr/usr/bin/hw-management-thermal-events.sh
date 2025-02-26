@@ -1029,6 +1029,15 @@ if [ "$1" == "add" ]; then
 				fi
 			fi
 		fi
+
+		# Check if we have reached the expected number of discovered PSUs
+		# and provide indication
+		expected_psu_num=`cat  $config_path/hotplug_psus`
+		count=`ls $eeprom_path/psu[0-9]_vpd | wc -l`
+		if [ "$count" -eq "$expected_psu_num" ]; then
+			touch $eeprom_path/psu_done
+		fi
+
 		# Get PSU FAN direction
 		get_psu_fan_direction $eeprom_path/"$psu_name"_vpd
 		echo $? > "$thermal_path"/"$psu_name"_fan_dir
@@ -1461,6 +1470,13 @@ else
 		fi
 		if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
 			rm -f "$config_path"/"$psu_name"_i2c_bus
+		fi
+
+		# Update psu_done indication if required.
+		expected_psu_num=`cat  $config_path/hotplug_psus`
+		count=`ls $eeprom_path/psu[0-9]_vpd | wc -l`
+		if [ "$count" -ne "$expected_psu_num" ]; then
+			rm -f $eeprom_path/psu_done
 		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
