@@ -1692,6 +1692,7 @@ mqm97xx_specific()
 		hotplug_psus=0
 		hotplug_pwrs=0
 		hotplug_pdbs=1
+		psu_count=0
 		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
 		echo C2P > $config_path/system_flow_capability
 		;;
@@ -2081,6 +2082,7 @@ sn5600d_specific()
 	hotplug_pwrs=0
 	hotplug_psus=0
 	hotplug_pdbs=1
+	psu_count=0
 	echo 7 > $config_path/fan_drwr_num
 	echo 4 > $config_path/cpld_num
 	echo 0 > "$config_path"/labels_ready
