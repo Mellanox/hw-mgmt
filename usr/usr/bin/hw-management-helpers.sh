@@ -150,7 +150,7 @@ SYSFS_MONITOR_RESET_FILE_B="/tmp/sysfs_monitor_time_b"
 SYSFS_MONITOR_PID_FILE="/tmp/sysfs_monitor.pid"
 
 # hw-mngmt-fast-sysfs-monitor GLOBALS
-FAST_SYSFS_MONITOR_INTERVAL=0.5  # 500 milliseconds
+FAST_SYSFS_MONITOR_INTERVAL=1  # 1 seconds
 FAST_SYSFS_MONITOR_TIMEOUT=120   # 2 minutes
 FAST_SYSFS_MONITOR_LABELS_JSON="/etc/hw-management-fast-sysfs-monitor/fast_sysfs_labels.json"
 FAST_SYSFS_MONITOR_PID_FILE="/tmp/fast_sysfs_monitor.pid"

@@ -44,7 +44,7 @@ Options:
     start   Start hw-mngmt-fast-sysfs-monitor.
     stop    Stop hw-mngmt-fast-sysfs-monitor.
     restart
-    force-reload	Performs hw-mngmt-fast-sysfs-monitor 'stop' and the 'start.
+    force-reload    Performs hw-mngmt-fast-sysfs-monitor 'stop' and the 'start.
 "
 
 $EXECUTABLE $ACTION
