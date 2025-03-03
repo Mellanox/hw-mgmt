@@ -2717,6 +2717,11 @@ set_config_data()
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
+	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+		cp $thermal_control_config $config_path/tc_config.json
+	else
+		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
+	fi
 }
 
 connect_platform()
@@ -3235,11 +3240,6 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
-	fi
-	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
-		cp $thermal_control_config $config_path/tc_config.json
-	else
-		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }
