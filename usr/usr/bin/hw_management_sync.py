@@ -189,6 +189,30 @@ atttrib_list = {
          "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 28}
         }
     ],
+    "HI157": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 37}
+        }
+    ],
+    "HI158": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"},
+                    "asic3": {"fin": "/sys/module/sx_core/asic2/"},
+                    "asic4": {"fin": "/sys/module/sx_core/asic3/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 73}
+        }
+    ],
     "HI175": [
        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
          "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
