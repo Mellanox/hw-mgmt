@@ -2208,6 +2208,7 @@ qm3xxx_specific()
 	fi
 	i2c_comex_mon_bus_default=$((xdr_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((xdr_cpu_bus_offset+6))
+	minimal_unsupported=1
 
 	if [ "$sku" == "HI157" ]; then
 		# Set according to front fan max.
@@ -2264,7 +2265,6 @@ qm3xxx_specific()
 		hotplug_pwrs=0
 		hotplug_psus=0
 		psu_count=0
-		minimal_unsupported=1
 		echo 7 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/q3450_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/q3450_sensors_labels.json"
