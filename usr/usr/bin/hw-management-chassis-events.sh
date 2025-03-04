@@ -515,6 +515,46 @@ function set_fan_direction()
 	esac
 }
 
+
+# Get FAN direction based on VPD PN field
+#
+# Input parameters:
+# 1 - "$vpd_file"
+# Return FAN direction
+# 0 - Reverse (C2P)
+# 1 - Forward(P2C)
+# 2 - unknown (read error or field missing)
+get_fan_direction_by_vpd()
+{
+	vpd_file=$1
+	# Default dir "unknown" till it will not be detected later
+	dir=2
+	pn=$(grep PN: $vpd_file | grep -oE "[^ ]+$")
+	if [ -z $pn ]; then
+		if [ -f $config_path/fixed_fans_dir ]; then
+			dir=$(< $config_path/fixed_fans_dir) 
+		fi
+	else 
+		dir_char=""
+		if [ ! ${sys_fandir_vs_pn[$pn]}_ = _ ]; then
+			dir_char=${sys_fandir_vs_pn[$pn]}
+		else
+			PN_REGEXP="MTEF-FAN([R,F])"
+		    
+		    [[ $pn =~ $PN_REGEXP ]]
+		    if [[ ! -z "${BASH_REMATCH[1]}" ]]; then
+		        dir_char="${BASH_REMATCH[1]}"
+		    fi
+		fi
+		if [ $dir_char == "R" ]; then
+			dir=0
+		elif [ $dir_char == "F" ]; then
+			dir=1
+		fi
+	fi
+	return $dir
+}
+
 function set_fpga_combined_version()
 {
 	path="$1"
@@ -1176,31 +1216,17 @@ if [ "$1" == "add" ]; then
 			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
-			# Replace "_info" to "_data" in eeprom name.
-			eeprom_vpd_filename=${eeprom_name/"_info"/"_data"}
-			hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/$eeprom_vpd_filename
+			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
 			if [ "$board_type" == "VMOD0014" ]; then
-				fan_dir_offset=0x8
+				hw-management-vpd-parser.py -t FIXED_FIELD_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
 			else
-				fan_dir_offset=$fan_dir_offset_in_vpd_eeprom_pn
+				hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
 			fi
-			# We need to read FAN direction from eeprom if cpld fan direction exists
-			if [[ ! -f $system_path/fan_dir ]] || [[ "$sku" == "HI117" ]]; then
-				fan_direction=$(xxd -u -p -l 1 -s $fan_dir_offset $eeprom_path/$eeprom_name)
-				fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
-				case $fan_direction in
-				$fan_direction_exhaust)
-					echo 1 > $thermal_path/"${fan_prefix}"_dir
-					;;
-				$fan_direction_intake)
-					echo 0 > $thermal_path/"${fan_prefix}"_dir
-					;;
-				*)
-					# Unknown FAN dir
-					echo 2 > $thermal_path/"${fan_prefix}"_dir
-					;;
-				esac
-			fi
+			# Get PSU FAN direction
+			set -x
+			exec 3>&1 4>&2 >>/tmp/log 2>&1
+			get_fan_direction_by_vpd $eeprom_path/"$fan_prefix"_data
+			echo $? > $thermal_path/"${fan_prefix}"_dir
 			;;
 		vpd_info)
 			hw-management-vpd-parser.py -t SYSTEM_VPD -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/vpd_data
