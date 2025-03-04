@@ -312,7 +312,17 @@ MLNX_VENDOR_BLK = {"type": "MLNX",
                         ]},
 }
 
+# FAN "fixed fileds" FRU fields description
+FIXED_FIELD_FAN_VPD = {"type": "FIXED_FILED_VPD",
+                           "blk_type": "FIXED_FIELD_FAN_VPD_BLK",
+                           "format" : [
+                               ["PN",  0, 16,  "FT_ASCII"],
+                               ["SN",  16, 16, "FT_ASCII"]
+                          ]}
+
 MLNX_VENDOR_BLK_FIELDS = ["name", "minor_version", "offset", "length", "info_type", "type"]
+FIXED_FIELD_BLK_FIELDS = ["name", "offset", "length",  "type"]
+
 MLNX_CPU_VPD = MLNX_VENDOR_BLK
 MLNX_FAN_VPD = MLNX_VENDOR_BLK
 MLNX_PDB_VPD = MLNX_VENDOR_BLK
@@ -349,6 +359,54 @@ def format_unpack(_data, item, blk_header, verbose=False):
     val = bin_decode(val)
     return val
 
+
+def parse_fru_fixed_fields_bin(data, blk_hdr, verbose=False):
+    if "format" not in blk_hdr.keys():
+        return "-"
+    block_format = blk_hdr["format"]
+    printv("Block_type {}\n".format(blk_hdr["blk_type"]), verbose)
+    rec_list = []
+    for rec in block_format:
+        rec_dict = dict(list(zip(FIXED_FIELD_BLK_FIELDS, rec)))
+        rec_size = rec_dict["length"]
+        rec_offset = rec_dict["offset"]
+
+        rec_type = rec_dict["type"]
+        if rec_type == "FT_RESERVED":
+            continue
+
+        printv("rec: {}".format(rec), verbose)
+
+        _data = data[rec_offset : rec_offset+rec_size]
+        rec_name = rec_dict["name"]
+        if rec_type == "FT_ASCII":
+            item_format = "{}s".format(rec_size)
+            val = struct.unpack(item_format, _data)[0]
+            val = val.split(b'\x00')[0]
+        elif rec_type == "FT_NUM":
+            _data_str = struct.unpack("{}B".format(rec_size), _data)
+            val = int_unpack_be(_data_str)
+        elif rec_type == "FT_NUM_INV":
+            _data_str = struct.unpack("{}B".format(rec_size), _data)
+            val = int_unpack_le(_data_str)
+        elif rec_type == "FT_HEX":
+            _data_str = struct.unpack("{}B".format(rec_size), _data)
+            val = hex(int_unpack_be(_data_str))
+        elif rec_type == "FT_HEX_INV":
+            _data_str = struct.unpack("{}B".format(rec_size), _data)
+            val = hex(int_unpack_le(_data_str))
+        elif rec_type == "FT_MAC":
+            _data_str = struct.unpack("{}B".format(rec_size), _data)
+            val = ':'.join(['{:02X}'.format(byte) for byte in _data_str])
+        else:
+            continue
+
+        printv("BIN: {}".format(binascii.hexlify(_data)), verbose)
+        printv("{} : {}\n".format(rec_name, bin_decode(val)), verbose)
+
+        rec_list.append([rec_name, bin_decode(val)])
+
+    return {'items' : rec_list}
 
 def mlnx_blk_unpack(data, blk_hdr, size, verbose=False):
     if "format" not in blk_hdr.keys():
@@ -585,6 +643,8 @@ def parse_fru_bin(data, VPD_TYPE, verbose):
         res = parse_fru_onie_bin(data, FRU_ITEMS, verbose)
     elif FRU_ITEMS["type"] == "MLNX":
         res = parse_fru_mlnx_bin(data, FRU_ITEMS, verbose)
+    elif FRU_ITEMS["type"] == "FIXED_FILED_VPD":
+        res = parse_fru_fixed_fields_bin(data, FRU_ITEMS, verbose)
     else:
         res = parse_fru_onie_bin(data, SYSTEM_VPD, verbose)
         if not res:
@@ -670,6 +730,7 @@ if __name__ == '__main__':
                                                                                                                    "SYSTEM_VPD",
                                                                                                                    "MLNX_CPU_VPD",
                                                                                                                    "MLNX_FAN_VPD",
+                                                                                                                   "FIXED_FIELD_FAN_VPD",
                                                                                                                    "MLNX_PDB_VPD",
                                                                                                                    "MLNX_CARTRIDGE_VPD"])
     parser.add_argument('--verbose', dest='verbose', required=False, default=0, help=argparse.SUPPRESS)
