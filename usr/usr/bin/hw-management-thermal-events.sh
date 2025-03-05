@@ -908,20 +908,6 @@ if [ "$1" == "add" ]; then
 		# Set I2C bus for psu
 		echo "$bus" > $config_path/"$psu_name"_i2c_bus
 
-		# Set default fan speed only if TC will handle it
-		# Otherwise don't touch - let's PSU FW handle it
-		if [ -f $config_path/tc_config.json ]; then
-			# Check if TC have config for PSU fan control
-			fan_pwm_decode=$(cat $config_path/tc_config.json | grep psu_fan_pwm_decode)
-			if [ $? -eq 0 ]; then
-				# TC config for PSU is not disabled
-				echo $fan_pwm_decode | grep "0:100" | grep \\-1
-				if [ $? -ne 0 ]; then
-					psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
-				fi
-			fi
-		fi
-
 		# Add thermal attributes
 		check_n_link "$5""$3"/temp1_input $thermal_path/"$psu_name"_temp1
 		check_n_link "$5""$3"/temp1_max $thermal_path/"$psu_name"_temp1_max
@@ -1069,6 +1055,12 @@ if [ "$1" == "add" ]; then
 		# PSU FW VER
 		mfr=$(grep MFR_NAME $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
 		cap=$(grep CAPACITY $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
+
+		# Don't set default PSU FAN speed for Delta 2000 on HI172 - let's PSU FW handle it
+		if [[ "$cap" != "2000" || $sku != "HI172" || $mfr != "DELTA" ]]; then
+		    psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
+		fi
+
 		if echo $mfr | grep -iq "Murata"; then
 			# Support FW update only for specific Murata PSU capacities
 			fw_ver="N/A"
