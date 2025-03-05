@@ -1,4 +1,3 @@
-From 0cfea65c3af019ebe8b5a8e25f6f59f31b9458de Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 17:02:32 +0200
 Subject: platform: mellanox: mlx-platform: Add support for Q3450-LD Nvidia XDR switch
@@ -23,7 +22,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 294 insertions(+), 28 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 67d626e10..dea0c873a 100644
+index 67d626e10..932fe5653 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -38,6 +38,7 @@
@@ -467,7 +466,7 @@ index 67d626e10..dea0c873a 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -10083,6 +10342,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -10083,6 +10342,20 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
  		},
  	},
@@ -476,6 +475,13 @@ index 67d626e10..dea0c873a 100644
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI175"),
++		},
++	},
++	{
++		.callback = mlxplat_dmi_xdr_liq_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI178"),
 +		},
 +	},
  	{
