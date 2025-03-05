@@ -268,7 +268,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI170" ] || 
         [ "$ui_tree_sku" = "HI173" ] ||
         [ "$ui_tree_sku" = "HI174" ] ||
-        [ "$ui_tree_sku" = "HI175" ]) &&
+        [ "$ui_tree_sku" = "HI175" ] ||
+        [ "$ui_tree_sku" = "HI178" ]) &&
         ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
     else
