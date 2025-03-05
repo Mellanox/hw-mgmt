@@ -1,4 +1,4 @@
-hw-management (1.mlnx.7.0040.3434) unstable; urgency=low
+hw-management (1.mlnx.7.0040.3435) unstable; urgency=low
   [ MLNX ] 
 
- -- Felix Radensky <acoifman@nvidia.com> Tue, 04 Mar 2025 15:16:00 +030
+ -- Felix Radensky <fradensky@nvidia.com> Wed, 05 Mar 2025 15:29:00 +030
