@@ -889,7 +889,7 @@ devtr_check_supported_system_init_alternatives()
 					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
 				done
 				;;
-			HI175)
+			HI175|HI178)
 				for key in "${!q3450_alternatives[@]}"; do
 					swb_alternatives["$key"]="${q3450_alternatives["$key"]}"
 				done

@@ -1019,7 +1019,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# Systems without A2D on COMEx
-				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175)
+				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175|HI178)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
@@ -2247,7 +2247,7 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
-	elif [ "$sku" == "HI175" ]; then
+	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
 		# Set according to front fan max.
 		echo 13800 > $config_path/fan_max_speed
 		# Set as 30% of max speed
@@ -2283,7 +2283,7 @@ qm_qm3_common()
 		HI158)	# Q3400
 			qm3xxx_specific
 		;;
-		HI175)	# Q3450
+		HI175|HI178)	# Q3450/Q3451
 			qm3xxx_specific
 		;;
 		*)
@@ -2952,7 +2952,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI175|HI178)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -3024,7 +3024,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI175)
+	HI175|HI178)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
@@ -3165,7 +3165,7 @@ pre_devtr_init()
 		;;
 	VMOD0018)
 		case $sku in
-		HI158|HI175)
+		HI158|HI175|HI178)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
 			;;
