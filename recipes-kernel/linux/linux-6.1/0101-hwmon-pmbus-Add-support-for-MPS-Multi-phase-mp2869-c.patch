@@ -1,7 +1,7 @@
-From c06102ded8305ed9ba4e07fb3b5cb7ae3b4f1dea Mon Sep 17 00:00:00 2001
+From 3c0a20fad0d27dbe6d99c764d9df11218a0247e8 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 5 Feb 2025 10:19:06 +0200
-Subject: [PATCH 1/2] hwmon: (pmbus) Add support for MPS Multi-phase mp2869
+Subject: [PATCH 6.1 1/2] hwmon: (pmbus) Add support for MPS Multi-phase mp2868
  controller
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -35,12 +35,12 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/hwmon/pmbus/Kconfig  |   9 +
  drivers/hwmon/pmbus/Makefile |   1 +
- drivers/hwmon/pmbus/mp2869.c | 601 +++++++++++++++++++++++++++++++++++
- 3 files changed, 611 insertions(+)
+ drivers/hwmon/pmbus/mp2869.c | 606 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 616 insertions(+)
  create mode 100644 drivers/hwmon/pmbus/mp2869.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
-index f173c4195d86..ed85503024a8 100644
+index f173c4195d86..35f50fa8f152 100644
 --- a/drivers/hwmon/pmbus/Kconfig
 +++ b/drivers/hwmon/pmbus/Kconfig
 @@ -300,6 +300,15 @@ config SENSORS_MP2855
@@ -55,7 +55,7 @@ index f173c4195d86..ed85503024a8 100644
 +
 +	  This driver can also be built as a module. If so, the module will
 +	  be called mp2869.
-+	  
++ 
  config SENSORS_MP2888
  	tristate "MPS MP2888"
  	help
@@ -73,10 +73,10 @@ index 24b38e451bc7..9b44dd903a47 100644
  obj-$(CONFIG_SENSORS_MP2975)	+= mp2975.o
 diff --git a/drivers/hwmon/pmbus/mp2869.c b/drivers/hwmon/pmbus/mp2869.c
 new file mode 100644
-index 000000000000..96dbadafa138
+index 000000000000..1f003c511c3e
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp2869.c
-@@ -0,0 +1,601 @@
+@@ -0,0 +1,606 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +/*
 + * Hardware monitoring driver for MPS Multi-phase Digital VR Controllers(MP2869)
@@ -630,6 +630,10 @@ index 000000000000..96dbadafa138
 +	.identify = mp2869_identify,
 +};
 +
++static struct pmbus_platform_data mp2869_pdata = {
++	.flags = PMBUS_SKIP_STATUS_CHECK,
++};
++
 +static int mp2869_probe(struct i2c_client *client)
 +{
 +	struct pmbus_driver_info *info;
@@ -639,6 +643,7 @@ index 000000000000..96dbadafa138
 +	if (!data)
 +		return -ENOMEM;
 +
++	client->dev.platform_data = &mp2869_pdata;
 +	memcpy(&data->info, &mp2869_info, sizeof(*info));
 +	info = &data->info;
 +
