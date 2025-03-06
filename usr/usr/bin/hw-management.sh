@@ -618,6 +618,7 @@ ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 	24c02 0x50 50 cable_cartridge2_eeprom)
 
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
+n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
@@ -2350,6 +2351,9 @@ n51xxld_specific()
 		esac
 		# Add VPD explicitly.
 		echo ${n5110ld_vpd_connect_table[0]} ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/new_device
+		if check_simx; then
+			echo ${n5110ld_virtual_vpd_connect_table[0]} ${n5110ld_virtual_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/new_device
+		fi
 	fi
 	asic_i2c_buses=(11 21)
 	echo 1 > $config_path/global_wp_wait_step
@@ -2413,6 +2417,10 @@ n51xxld_specific_cleanup()
 	unlink /dev/i2c-8
 	# Remove VPD explicitly.
 	echo ${n5110ld_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_vpd_connect_table[2]}/delete_device
+	if check_simx; then
+		echo ${n5110ld_virtual_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/delete_device
+	fi
+
 
 }
 
@@ -3123,6 +3131,11 @@ set_sodimms()
 
 	i2c_dir=$(ls -1d "$amd_snw_i2c_sodimm_dev"/i2c-*)
 	i2c_bus="${i2c_dir##*-}"
+	if check_simx; then
+		# i2c-designware emulattion is not available. For the virtual
+		# platforms that used AMD comex, sodimm sensor is defined at i2c-10
+		i2c_bus=10
+	fi
 	if [ -z "$i2c_bus" ]; then
 		log_err "Error: I2C bus of SODIMMs TS isn't found."
 		return 1
