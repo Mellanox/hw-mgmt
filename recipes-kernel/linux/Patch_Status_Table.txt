@@ -317,6 +317,7 @@ Kernel-5.10
 |0307-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
 |0308-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
 |0309-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp2869                                         |
+|0310-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp29502                                        |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
 |7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
 |7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
