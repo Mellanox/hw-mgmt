@@ -1,0 +1,32 @@
+comex_voltmon1_curr2_input 750
+comex_voltmon1_curr3_input 6500
+comex_voltmon1_in1_input 13437
+comex_voltmon1_in2_crit 1281
+comex_voltmon1_in2_input 1081
+comex_voltmon1_in2_lcrit 656
+comex_voltmon1_in3_crit 1168
+comex_voltmon1_in3_input 968
+comex_voltmon1_in3_lcrit 543
+
+comex_voltmon2_curr1_input 0
+comex_voltmon2_curr2_input 1000
+comex_voltmon2_in1_crit 17000
+comex_voltmon2_in1_input 13250
+comex_voltmon2_in2_crit 1290
+comex_voltmon2_in2_input 1201
+comex_voltmon2_in2_lcrit 900
+comex_voltmon2_power1_input 0
+comex_voltmon2_power2_input 1000000
+
+pdb_hotswap1_curr1_input 2467
+pdb_hotswap1_curr1_max 27195
+pdb_hotswap1_in1_crit 88724
+pdb_hotswap1_in1_input 54307
+pdb_hotswap1_in1_lcrit 30
+pdb_hotswap1_in1_max 88724
+pdb_hotswap1_in1_min 30
+pdb_hotswap1_in2_input 54324
+pdb_hotswap1_in2_lcrit 0
+pdb_hotswap1_in2_min 0
+pdb_hotswap1_power1_input 135802469
+pdb_hotswap1_power1_max 2409758965
