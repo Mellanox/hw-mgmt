@@ -766,12 +766,13 @@
 				"curr2": {"name": "PDB-1+Conv+curr+Out+1"},
 				"temp1": {"name": "PDB-1+Conv+Temp+1"}
 			},
-			"RAA228004" : {
+			"raa228004" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
 				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
 				"curr1": {"name": "PDB-1+Conv+curr+In+1"},
 				"curr2": {"name": "PDB-1+Conv+curr+Out+1"},
-				"temp1": {"name": "PDB-1+Conv+Temp+1"}
+				"temp1": {"name": "PDB-1+Conv+Temp+1"},
+				"power2" : {"name": "PDB-1+Conv+Pwr+Out+1"}
 			}
 		},
 		"pdb_hotswap1": {
@@ -794,7 +795,7 @@
 	"labels_HI176_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
-		"fan_amb" : "Ambient+Fan+Side+Temp",
+		"pdb_mos_amb" : "Ambient+MOS+Temp",
 		"fpga" : "FPGA+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
@@ -855,12 +856,14 @@
 		"voltmon6_curr2" : "PMIC-6+ASIC2_HVDD_PL1+curr+Out+1",
 		"voltmon6_curr3" : "PMIC-6+ASIC2_DVDD_PL1+curr+Out+2",
 		"comex_voltmon1_in1" : "PMIC-7+12V_MAIN+Vol+In+1",
-		"comex_voltmon1_in2" : "PMIC-7+CEX_VDD+Vol+Out+1",
+		"comex_voltmon1_in2" : "PMIC-7+CPU+Vol+Out+1",
+		"comex_voltmon1_in3" : "PMIC-7+SOC+Vol+Out+2",
 		"comex_voltmon1_temp1" : "PMIC-7+Temp+1",
 		"comex_voltmon1_power1" : "PMIC-7+12V_MAIN+Pwr+In+1",
 		"comex_voltmon1_power2" : "PMIC-7+CEX_VDD+Pwr+Out+1",
 		"comex_voltmon1_curr1" : "PMIC-7+12V_MAIN+curr+In+1",
-		"comex_voltmon1_curr2" : "PMIC-7+CEX_VDD+curr+Out+1",
+		"comex_voltmon1_curr2" : "PMIC-7+CPU+curr+Out+1",
+		"comex_voltmon1_curr3" : "PMIC-7+SOC+curr+Out+2",
 		"comex_voltmon2_in1" : "PMIC-8+COMEX_VDD_MEM+Vol+In+1",
 		"comex_voltmon2_in2" : "PMIC-8+COMEX_VDD_MEM+Vol+Out+1",
 		"comex_voltmon2_power1" : "PMIC-8+COMEX_VDD_MEM+Pwr+In+1",
@@ -881,12 +884,13 @@
 				"curr2": {"name": "PDB-1+Conv+curr+Out+1"},
 				"temp1": {"name": "PDB-1+Conv+Temp+1"}
 			},
-			"RAA228004" : {
+			"raa228004" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
 				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
 				"curr1": {"name": "PDB-1+Conv+curr+In+1"},
 				"curr2": {"name": "PDB-1+Conv+curr+Out+1"},
-				"temp1": {"name": "PDB-1+Conv+Temp+1"}
+				"temp1": {"name": "PDB-1+Conv+Temp+1"},
+				"power2" : {"name": "PDB-1+Conv+Pwr+Out+1"}
 			}
 		},
 		"pdb_hotswap1": {
@@ -909,7 +913,9 @@
 	"labels_HI177_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
+		"swb_asic3" : "SWB+ASIC3+PCB+Temp",
 		"fan_amb" : "Ambient+Fan+Side+Temp",
+		"pdb_mos_amb" : "Ambient+MOS+Temp",
 		"fpga" : "FPGA+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
@@ -970,12 +976,14 @@
 		"voltmon6_curr2" : "PMIC-6+ASIC2_HVDD_PL1+curr+Out+1",
 		"voltmon6_curr3" : "PMIC-6+ASIC2_DVDD_PL1+curr+Out+2",
 		"comex_voltmon1_in1" : "PMIC-7+12V_MAIN+Vol+In+1",
-		"comex_voltmon1_in2" : "PMIC-7+CEX_VDD+Vol+Out+1",
+		"comex_voltmon1_in2" : "PMIC-7+CPU+Vol+Out+1",
+		"comex_voltmon1_in3" : "PMIC-7+SOC+Vol+Out+2",
 		"comex_voltmon1_temp1" : "PMIC-7+Temp+1",
 		"comex_voltmon1_power1" : "PMIC-7+12V_MAIN+Pwr+In+1",
 		"comex_voltmon1_power2" : "PMIC-7+CEX_VDD+Pwr+Out+1",
 		"comex_voltmon1_curr1" : "PMIC-7+12V_MAIN+curr+In+1",
-		"comex_voltmon1_curr2" : "PMIC-7+CEX_VDD+curr+Out+1",
+		"comex_voltmon1_curr2" : "PMIC-7+CPU+curr+Out+1",
+		"comex_voltmon1_curr3" : "PMIC-7+SOC+curr+Out+2",
 		"comex_voltmon2_in1" : "PMIC-8+COMEX_VDD_MEM+Vol+In+1",
 		"comex_voltmon2_in2" : "PMIC-8+COMEX_VDD_MEM+Vol+Out+1",
 		"comex_voltmon2_power1" : "PMIC-8+COMEX_VDD_MEM+Pwr+In+1",
