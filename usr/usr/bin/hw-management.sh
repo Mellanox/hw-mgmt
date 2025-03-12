@@ -2349,7 +2349,7 @@ n51xxld_specific()
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-			leakage_count=1
+			leakage_count=2
 			erot_count=3
 			echo 3 > $config_path/cpld_num
 		;;
@@ -2357,7 +2357,7 @@ n51xxld_specific()
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-			leakage_count=1
+			leakage_count=2
 			erot_count=4
 			echo 2 > $config_path/cpld_num
 		;;
@@ -2740,6 +2740,7 @@ set_config_data()
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
+	echo $leakage_count > $config_path/leakage_counter
 }
 
 connect_platform()
