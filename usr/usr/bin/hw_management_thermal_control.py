@@ -1666,6 +1666,10 @@ class thermal_module_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
 
+        self.max_pwm_inc = CONST.PWM_MAX
+        self.pwm_curr = self.pwm
+        self.pwm_prev = self.pwm
+
         self.formula_optimized_config = self.sensors_config.get("optimized_param", None);
         self.formula_optimized_ena = False if (self.formula_optimized_config is None) else True
 
@@ -1714,11 +1718,13 @@ class thermal_module_sensor(system_device):
                 if self.formula_state_trh_counter >= CONST.FORMULA_SATATE_TRH_TIMES and self.formula_optimized_ena:
                     self.formula_optimized_ena = False
                     formula_switched = True
+                    self.max_pwm_inc = self.sensors_config.get("max_pwm_inc", CONST.PWM_MAX)
                     self.log.info("{}: state: optimized -> normal params, val: {}".format(self.name, self.value))
             elif self.value < (val_max_trh + val_max_offset - state_hyst) and not self.formula_optimized_ena:
                 self.formula_state_trh_counter = 0
                 self.formula_optimized_ena = True
                 formula_switched = True
+                self.max_pwm_inc = CONST.PWM_MAX
                 self.log.info("{}: state: normal -> optimized pasrams, val: {}".format(self.name, self.value))
 
         if self.formula_optimized_ena:
@@ -1747,6 +1753,21 @@ class thermal_module_sensor(system_device):
 
         self.log.info("{}: normal_config:{}".format(self.name, self.formula_normal_config))
         self.log.info("{}: optimized_config:{}".format(self.name, self.formula_optimized_config))
+
+    # ----------------------------------------------------------------------
+    def _process_pwm(self, pwm):
+        if pwm > self.pwm_curr:
+            diff = abs(pwm - self.pwm_curr)
+            if diff > self.max_pwm_inc:
+                self.pwm_curr += self.max_pwm_inc
+            else:
+                self.pwm_curr = pwm
+                self.max_pwm_inc = CONST.PWM_MAX
+        else:
+            self.pwm_curr = pwm
+            self.max_pwm_inc = CONST.PWM_MAX
+                
+        return self.pwm_curr
 
     # ----------------------------------------------------------------------
     def get_temp_support_status(self):
@@ -1802,7 +1823,7 @@ class thermal_module_sensor(system_device):
             # calculate PWM based on formula
             self._update_optimized_param()
             pwm = max(self.calculate_pwm_formula(), pwm)
-        self.pwm = pwm
+        self.pwm = self._process_pwm(pwm)
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -1844,13 +1865,21 @@ class thermal_module_sensor(system_device):
             formuls_param = "opt"
         else:
             formuls_param = "norm"
-        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, [{}] faults:[{}], pwm: {}, {}".format(self.name,
+
+        if self.pwm > self.pwm_prev:
+            sign = u'\u2191' # up arrow
+        elif self.pwm < self.pwm_prev:
+            sign = u'\u2193' # down arrow
+        else:
+            sign = '' # no change
+        self.pwm_prev = self.pwm
+        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, [{}] faults:[{}], pwm: {}{}, {}".format(self.name,
                                                                                           round(value,2),
                                                                                           self.val_min,
                                                                                           self.val_max,
                                                                                           formuls_param,
                                                                                           self.get_fault_list_str(),
-                                                                                          round(self.pwm, 2),
+                                                                                          round(self.pwm, 2), sign,
                                                                                           self.state)
         return info_str
 
@@ -3186,6 +3215,7 @@ class ThermalManagement(hw_managemet_file_op):
             self.pwm -= step
         else:
             self.pwm = self.pwm_target
+        self.pwm = round(self.pwm, 2)
         self._update_chassis_fan_speed(self.pwm)
 
     # ----------------------------------------------------------------------
