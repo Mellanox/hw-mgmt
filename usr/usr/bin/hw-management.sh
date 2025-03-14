@@ -2307,9 +2307,14 @@ n51xxld_specific()
 			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 2 > $config_path/cartridge_counter
 			;;
-		HI167|HI170|HI176)	# Juliet NSO, gb300
+		HI167|HI170)	# Juliet NSO
 			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
 			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
+			;;
+		HI176)	# gb300
+			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
+			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
 			;;
 		HI177)	# Kyber
