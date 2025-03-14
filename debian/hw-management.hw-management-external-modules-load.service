@@ -1,0 +1,17 @@
+[Unit]
+Description=Load other required modules
+Before=networking.service
+
+StartLimitIntervalSec=1200
+StartLimitBurst=5
+
+[Service]
+ExecStart=/bin/sh -c "/usr/bin/hw-management-external-modules-load.sh"
+ExecStop=/bin/kill $MAINPID
+TimeoutStopSec=1
+
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

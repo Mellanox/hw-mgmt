@@ -2223,6 +2223,7 @@ smart_switch_common()
 	i2c_comex_mon_bus_default=$((smart_switch_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((smart_switch_cpu_bus_offset+6))
 	echo "$smart_switch_reset_attr_num" > $config_path/reset_attr_num
+	modprobe mlx5-core
 }
 
 n51xxld_specific()
