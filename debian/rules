@@ -55,6 +55,7 @@ override_dh_installinit:
 	dh_installinit --name=hw-management-sync
 	dh_installinit --name=hw-management-sysfs-monitor
 	dh_installinit --name=hw-management-fast-sysfs-monitor
+	dh_installinit --name=hw-management-external-modules-load
 
 override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management
@@ -62,6 +63,7 @@ override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management-sync
 	dh_systemd_enable --name=hw-management-sysfs-monitor
 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
+	dh_systemd_enable --name=hw-management-external-modules-load
 
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management
@@ -69,6 +71,7 @@ override_dh_systemd_start:
 	dh_systemd_start --name=hw-management-sync
 	dh_systemd_start --name=hw-management-sysfs-monitor
 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
+	dh_systemd_start --name=hw-management-external-modules-load
 
 override_dh_strip_nondeterminism:
 
