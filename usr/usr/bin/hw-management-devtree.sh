@@ -501,6 +501,7 @@ declare -A bmc_pwr_type3_alternatives=(["pmbus_0"]="pmbus 0x10 18 pwr_conv1" \
 # P*HaHaTjTkEaOdOd
 declare -A pwr_type4_alternatives=( \
 				   ["raa228000_0"]="raa228000 0x61 4 pdb_pwr_conv1" \
+				   ["raa228004_0"]="raa228004 0x61 4 pdb_pwr_conv1" \
 				   ["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
 				   ["lm5066_1"]="lm5066i 0x14 4 pdb_hotswap2" \
 				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
