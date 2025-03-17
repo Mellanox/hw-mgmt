@@ -2394,9 +2394,10 @@ n51xxld_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
-	echo 33000 > $config_path/fan_max_speed
-	echo 6000 > $config_path/fan_min_speed
-
+	if [ $max_tachos -ne 0 ]; then
+		echo 33000 > $config_path/fan_max_speed
+		echo 6000 > $config_path/fan_min_speed
+	fi
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
@@ -2735,7 +2736,10 @@ set_config_data()
 		echo $fan_command > $config_path/fan_command
 		echo $fan_config_command > $config_path/fan_config_command
 	fi
-	echo $fan_speed_units > $config_path/fan_speed_units
+	if [ $max_tachos -ne 0 ]; then
+		echo $fan_speed_units > $config_path/fan_speed_units
+		echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
+	fi
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
@@ -2744,7 +2748,6 @@ set_config_data()
 	echo $hotplug_pdbs > $config_path/hotplug_pdbs
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
-	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
 	echo $leakage_count > $config_path/leakage_counter
 }
 
@@ -2973,12 +2976,21 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170|HI176|HI177)
+	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170|HI176)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
+		;;
+	HI177)
+		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo 3 > "$config_path"/asic_num
 		;;
 	HI143)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
