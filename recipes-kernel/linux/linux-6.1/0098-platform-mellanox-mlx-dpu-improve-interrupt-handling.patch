@@ -1,0 +1,356 @@
+From bd0e55214a8ebdaf470f29d4b73d8585bf342eb1 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Tue, 18 Mar 2025 21:15:00 +0200
+Subject: platform/mellanox: mlxreg-dpu: Introduce completion callback
+
+DPU auxiliary powering can cause interrupt flooding because
+DPU interrupt handlers are not configured yet, while middle
+interrupt aggregation register is unmasked by default during
+initialization. Thus, interrupts are getting through, while
+handlers are still not fully initialized. Do not unmask
+aggregation interrupt register at initialization for all
+DPUs. Instead do it per DPU, when its initialization is done.
+
+This patch also adds the change to clear the DPU event
+registers.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 28 +++++++-
+ drivers/platform/mellanox/mlxreg-dpu.c   | 85 +++++++++++++-----------
+ include/linux/platform_data/mlxreg.h     |  4 ++
+ 3 files changed, 76 insertions(+), 41 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index ac29422a2..85c444157 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -2184,6 +2184,8 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
+ 	},
+ };
+ 
++#define MLXPLAT_SMART_SWITCH_SLOT_TO_MASK(s)   (GENMASK((s) * 2 - 1, (s) * 2 - 2))
++
+ 
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_lc_act = {
+@@ -3339,6 +3341,23 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+ 	},
+ };
+ 
++static int mlxplat_dpu_completion_notify(void *handle, int id)
++{
++       u32 regval, mask;
++       int err;
++
++       if (id <= 0 || id > 4)
++               return -EINVAL;
++
++       err = regmap_read(handle, MLXPLAT_CPLD_LPC_REG_AGGRCX_MASK_OFFSET, &regval);
++       if (err)
++               return err;
++
++       mask = MLXPLAT_SMART_SWITCH_SLOT_TO_MASK(id);
++
++       return regmap_write(handle, MLXPLAT_CPLD_LPC_REG_AGGRCX_MASK_OFFSET, regval | mask);
++}
++
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_smart_switch_data = {
+ 	.items = mlxplat_mlxcpld_smart_switch_items,
+@@ -3376,24 +3395,28 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_data[] = {
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[0],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE,
+ 		.slot = 1,
++		.completion_notify = mlxplat_dpu_completion_notify,
+ 	},
+ 	{
+ 		.label = "dpu2",
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[1],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE + 1,
+ 		.slot = 2,
++		.completion_notify = mlxplat_dpu_completion_notify,
+ 	},
+ 	{
+ 		.label = "dpu3",
+ 		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[2],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE + 2,
+ 		.slot = 3,
++		.completion_notify = mlxplat_dpu_completion_notify,
+ 	},
+ 	{
+ 		.label = "dpu4",
+-		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[2],
++		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[3],
+ 		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE + 3,
+ 		.slot = 4,
++		.completion_notify = mlxplat_dpu_completion_notify,
+ 	},
+ };
+ 
+@@ -8646,8 +8669,6 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
+ 	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
+ 	{ MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET, 0x00 },
+ 	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
+-	{ MLXPLAT_CPLD_LPC_REG_AGGRCX_MASK_OFFSET,
+-	  MLXPLAT_CPLD_LPC_SM_SW_MASK },
+ };
+ 
+ 
+@@ -10039,6 +10060,7 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+ 	/* Add DPU drivers. */
+ 	for (j = 0; j < MLXPLAT_CPLD_DPU_MAX_DEVS; j++) {
+ 		if (mlxplat_dpu_data[j]) {
++			mlxplat_dpu_data[j]->handle = priv->regmap;
+ 			priv->pdev_dpu[j] =
+ 				platform_device_register_resndata(&mlxplat_dev->dev, "mlxreg-dpu",
+ 								  j, NULL, 0, mlxplat_dpu_data[j],
+diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
+index f831d6dd5..aa8923c49 100644
+--- a/drivers/platform/mellanox/mlxreg-dpu.c
++++ b/drivers/platform/mellanox/mlxreg-dpu.c
+@@ -2,10 +2,11 @@
+ /*
+  * Nvidia Data Processor Unit platform driver
+  *
+- * Copyright (C) 2024 Nvidia Technologies Ltd.
++ * Copyright (C) 2025 Nvidia Technologies Ltd.
+  */
+ 
+ #include <linux/device.h>
++#include <linux/dev_printk.h>
+ #include <linux/i2c.h>
+ #include <linux/module.h>
+ #include <linux/platform_data/mlxcpld.h>
+@@ -165,7 +166,7 @@ static struct mlxreg_core_data mlxreg_dpu_io_data[] = {
+ 	{
+ 		.label = "dpu_id",
+ 		.reg = MLXREG_DPU_REG_GP0_RO_OFFSET,
+-		.bit = GENMASK(3, 0),
++		.mask = GENMASK(3, 0),
+ 		.mode = 0444,
+ 	},
+ 	{
+@@ -177,8 +178,8 @@ static struct mlxreg_core_data mlxreg_dpu_io_data[] = {
+ 	},
+ 	{
+ 		.label = "boot_progress",
+-		.reg = MLXREG_DPU_REG_GP1_OFFSET,
+-		.bit = GENMASK(3, 0),
++		.reg = MLXREG_DPU_REG_GP0_OFFSET,
++		.mask = GENMASK(3, 0),
+ 		.mode = 0444,
+ 	},
+ 	{
+@@ -314,13 +315,14 @@ struct mlxreg_core_hotplug_platform_data mlxreg_dpu_default_hotplug_data = {
+ 	.mask = MLXREG_DPU_AGGR_MASK,
+ };
+ 
+-/* mlxreg_dpu - device private data
+- * @dev: platform device;
+- * @data: pltaform core data;
+- * @io_data: register access platform data;
+- * @io_regs: register access device;
+- * @hotplug_data: hotplug platform data;
+- * @hotplug: hotplug device;
++/**
++ * struct mlxreg_dpu - device private data
++ * @dev: platform device
++ * @data: platform core data
++ * @io_data: register access platform data
++ * @io_regs: register access device
++ * @hotplug_data: hotplug platform data
++ * @hotplug: hotplug device
+  */
+ struct mlxreg_dpu {
+ 	struct device *dev;
+@@ -403,6 +405,11 @@ static bool mlxreg_dpu_volatile_reg(struct device *dev, unsigned int reg)
+ 	return false;
+ }
+ 
++static const struct reg_default mlxreg_dpu_regmap_default[] = {
++        { MLXREG_DPU_REG_PG_EVENT_OFFSET, 0x00 },
++        { MLXREG_DPU_REG_HEALTH_EVENT_OFFSET, 0x00 },
++};
++
+ /* Configuration for the register map of a device with 2 bytes address space. */
+ static const struct regmap_config mlxreg_dpu_regmap_conf = {
+ 	.reg_bits = 16,
+@@ -412,10 +419,13 @@ static const struct regmap_config mlxreg_dpu_regmap_conf = {
+ 	.writeable_reg = mlxreg_dpu_writeable_reg,
+ 	.readable_reg = mlxreg_dpu_readable_reg,
+ 	.volatile_reg = mlxreg_dpu_volatile_reg,
++	.reg_defaults = mlxreg_dpu_regmap_default,
++	.num_reg_defaults = ARRAY_SIZE(mlxreg_dpu_regmap_default),
+ };
+ 
+-static int mlxreg_dpu_copy_hotplug_data(struct device *dev, struct mlxreg_dpu *mlxreg_dpu,
+-					struct mlxreg_core_hotplug_platform_data *hotplug_data)
++static int
++mlxreg_dpu_copy_hotplug_data(struct device *dev, struct mlxreg_dpu *mlxreg_dpu,
++			     const struct mlxreg_core_hotplug_platform_data *hotplug_data)
+ {
+ 	struct mlxreg_core_item *item;
+ 	int i;
+@@ -427,18 +437,15 @@ static int mlxreg_dpu_copy_hotplug_data(struct device *dev, struct mlxreg_dpu *m
+ 
+ 	mlxreg_dpu->hotplug_data->items = devm_kmemdup(dev, hotplug_data->items,
+ 						       mlxreg_dpu->hotplug_data->counter *
+-						       sizeof(*hotplug_data->items),
++						       sizeof(*mlxreg_dpu->hotplug_data->items),
+ 						       GFP_KERNEL);
+ 	if (!mlxreg_dpu->hotplug_data->items)
+ 		return -ENOMEM;
+ 
+ 	item = mlxreg_dpu->hotplug_data->items;
+-	for (i = 0; i < mlxreg_dpu->hotplug_data->counter; i++, item++) {
+-		item = devm_kmemdup(dev, &hotplug_data->items[i], sizeof(*item), GFP_KERNEL);
+-		if (!item)
+-			return -ENOMEM;
++	for (i = 0; i < hotplug_data->counter; i++, item++) {
+ 		item->data = devm_kmemdup(dev, hotplug_data->items[i].data,
+-					  hotplug_data->items[i].count * sizeof(item->data),
++					  hotplug_data->items[i].count * sizeof(*item->data),
+ 					  GFP_KERNEL);
+ 		if (!item->data)
+ 			return -ENOMEM;
+@@ -458,6 +465,7 @@ static int mlxreg_dpu_config_init(struct mlxreg_dpu *mlxreg_dpu, void *regmap,
+ 	err = regmap_read(regmap, MLXREG_DPU_REG_CONFIG3_OFFSET, &regval);
+ 	if (err)
+ 		return err;
++
+ 	switch (regval) {
+ 	case MLXREG_DPU_BF3:
+ 		/* Copy platform specific hotplug data. */
+@@ -477,15 +485,15 @@ static int mlxreg_dpu_config_init(struct mlxreg_dpu *mlxreg_dpu, void *regmap,
+ 	if (mlxreg_dpu->io_data) {
+ 		mlxreg_dpu->io_data->regmap = regmap;
+ 		mlxreg_dpu->io_regs =
+-		platform_device_register_resndata(dev, "mlxreg-io", data->slot, NULL, 0,
+-						  mlxreg_dpu->io_data,
+-						  sizeof(*mlxreg_dpu->io_data));
++			platform_device_register_resndata(dev, "mlxreg-io",
++							  data->slot, NULL, 0,
++							  mlxreg_dpu->io_data,
++							  sizeof(*mlxreg_dpu->io_data));
+ 		if (IS_ERR(mlxreg_dpu->io_regs)) {
+ 			dev_err(dev, "Failed to create regio for client %s at bus %d at addr 0x%02x\n",
+ 				data->hpdev.brdinfo->type, data->hpdev.nr,
+ 				data->hpdev.brdinfo->addr);
+-			err = PTR_ERR(mlxreg_dpu->io_regs);
+-			goto fail_register_io;
++			return PTR_ERR(mlxreg_dpu->io_regs);
+ 		}
+ 	}
+ 
+@@ -494,9 +502,10 @@ static int mlxreg_dpu_config_init(struct mlxreg_dpu *mlxreg_dpu, void *regmap,
+ 		mlxreg_dpu->hotplug_data->regmap = regmap;
+ 		mlxreg_dpu->hotplug_data->irq = irq;
+ 		mlxreg_dpu->hotplug =
+-		platform_device_register_resndata(dev, "mlxreg-hotplug", data->slot, NULL, 0,
+-						  mlxreg_dpu->hotplug_data,
+-						  sizeof(*mlxreg_dpu->hotplug_data));
++			platform_device_register_resndata(dev, "mlxreg-hotplug",
++							  data->slot, NULL, 0,
++							  mlxreg_dpu->hotplug_data,
++							  sizeof(*mlxreg_dpu->hotplug_data));
+ 		if (IS_ERR(mlxreg_dpu->hotplug)) {
+ 			err = PTR_ERR(mlxreg_dpu->hotplug);
+ 			goto fail_register_hotplug;
+@@ -507,16 +516,13 @@ static int mlxreg_dpu_config_init(struct mlxreg_dpu *mlxreg_dpu, void *regmap,
+ 
+ fail_register_hotplug:
+ 	platform_device_unregister(mlxreg_dpu->io_regs);
+-fail_register_io:
+ 
+ 	return err;
+ }
+ 
+ static void mlxreg_dpu_config_exit(struct mlxreg_dpu *mlxreg_dpu)
+ {
+-	/* Unregister hotplug driver. */
+ 	platform_device_unregister(mlxreg_dpu->hotplug);
+-	/* Unregister IO access driver. */
+ 	platform_device_unregister(mlxreg_dpu->io_regs);
+ }
+ 
+@@ -531,14 +537,14 @@ static int mlxreg_dpu_probe(struct platform_device *pdev)
+ 	if (!data || !data->hpdev.brdinfo)
+ 		return -EINVAL;
+ 
+-	mlxreg_dpu = devm_kzalloc(&pdev->dev, sizeof(*mlxreg_dpu), GFP_KERNEL);
+-	if (!mlxreg_dpu)
+-		return -ENOMEM;
+-
+ 	data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr);
+ 	if (!data->hpdev.adapter)
+ 		return -EPROBE_DEFER;
+ 
++	mlxreg_dpu = devm_kzalloc(&pdev->dev, sizeof(*mlxreg_dpu), GFP_KERNEL);
++	if (!mlxreg_dpu)
++		return -ENOMEM;
++
+ 	/* Create device at the top of DPU I2C tree.*/
+ 	data->hpdev.client = i2c_new_client_device(data->hpdev.adapter,
+ 						   data->hpdev.brdinfo);
+@@ -549,8 +555,7 @@ static int mlxreg_dpu_probe(struct platform_device *pdev)
+ 		goto i2c_new_device_fail;
+ 	}
+ 
+-	regmap = devm_regmap_init_i2c(data->hpdev.client,
+-				      &mlxreg_dpu_regmap_conf);
++	regmap = devm_regmap_init_i2c(data->hpdev.client, &mlxreg_dpu_regmap_conf);
+ 	if (IS_ERR(regmap)) {
+ 		dev_err(&pdev->dev, "Failed to create regmap for client %s at bus %d at addr 0x%02x\n",
+ 			data->hpdev.brdinfo->type, data->hpdev.nr, data->hpdev.brdinfo->addr);
+@@ -572,13 +577,18 @@ static int mlxreg_dpu_probe(struct platform_device *pdev)
+ 	mlxreg_dpu->dev = &pdev->dev;
+ 	platform_set_drvdata(pdev, mlxreg_dpu);
+ 
+-	/* Configure DPU. */
+ 	err = mlxreg_dpu_config_init(mlxreg_dpu, regmap, data, data->hpdev.brdinfo->irq);
+ 	if (err)
+ 		goto mlxreg_dpu_config_init_fail;
+ 
++	err = data->completion_notify(data->handle, data->slot);
++	if (err)
++		goto mlxreg_dpu_completion_notify_fail;
++
+ 	return err;
+ 
++mlxreg_dpu_completion_notify_fail:
++	mlxreg_dpu_config_exit(mlxreg_dpu);
+ mlxreg_dpu_config_init_fail:
+ regcache_sync_fail:
+ devm_regmap_init_i2c_fail:
+@@ -622,4 +632,3 @@ MODULE_AUTHOR("Vadim Pasternak <vadimp@nvidia.com>");
+ MODULE_DESCRIPTION("Nvidia Data Processor Unit platform driver");
+ MODULE_LICENSE("Dual BSD/GPL");
+ MODULE_ALIAS("platform:mlxreg-dpu");
+-
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index d9f679752..7d054ddda 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -133,6 +133,8 @@ struct mlxreg_hotplug_device {
+  * @regnum: number of registers occupied by multi-register attribute;
+  * @slot: slot number, at which device is located;
+  * @secured: if set indicates that entry access is secured;
++ + @handle: parent handle;
++ + @completion_notify: callback to notify when platform driver probing is done;
+  */
+ struct mlxreg_core_data {
+ 	char label[MLXREG_CORE_LABEL_MAX_SIZE];
+@@ -155,6 +157,8 @@ struct mlxreg_core_data {
+ 	u8 regnum;
+ 	u8 slot;
+ 	u8 secured;
++	void *handle;
++	int (*completion_notify)(void *handle, int id);
+ };
+ 
+ /**
+-- 
+2.44.0
+
