@@ -717,6 +717,7 @@ Kernel-6.1
 |9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9007-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
+|0098-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
