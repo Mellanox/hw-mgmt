@@ -374,6 +374,7 @@ process_simx_links()
         for i in $dir_list; do
                 while IFS=' ' read -r filename value; do
                         [ -z "$filename" ] && continue
+                        [ -L "$hw_management_path"/"$i"/"$filename" ] && check_n_unlink "$hw_management_path"/"$i"/"$filename"
                         echo "$value" > "$hw_management_path"/"$i"/"$filename"
                 done < "$vm_vpd_path"/"$i"
         done
