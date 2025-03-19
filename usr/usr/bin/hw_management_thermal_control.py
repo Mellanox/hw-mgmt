@@ -207,7 +207,7 @@ class CONST(object):
     # Value averege formula type
     VAL_AVG_INTEGRAL = 1
     VAL_AVG_ARRAY = 2
-    VAL_AVG_ARRAY_WEGHT = 3 
+    VAL_AVG_ARRAY_WEGHT = 3
 
 """
 Default sensor  configuration.
@@ -247,11 +247,11 @@ SENSOR_DEF_CONFIG = {
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
-                         "val_lcrit": 5, "val_hcrit": 150000,  "poll_tme": 6,
+                         "val_lcrit": 5, "val_hcrit": 150000, "poll_tme": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
     r'asic\d*':         {"type": "thermal_asic_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                          "value_hyst": 2
                         },
@@ -273,7 +273,7 @@ SENSOR_DEF_CONFIG = {
     r'comex_amb':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
                         },
-    r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, 
+    r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000,
                          "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
                          "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0
                         },
@@ -291,7 +291,7 @@ SENSOR_DEF_CONFIG = {
                         },
     r'ibc\d+':          {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60, 
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60,
                          "input_suffix": "_input"
                         },
     r'ctx_amb\d*':      {"type": "thermal_sensor",
@@ -300,10 +300,10 @@ SENSOR_DEF_CONFIG = {
                         },
     r'hotswap\d+_temp': {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30, 
+                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30,
                          "input_suffix": "_input"
                         },
-    r'bmc_temp':     {"type": "thermal_sensor",
+    r'bmc_temp':        {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                         },
@@ -312,10 +312,10 @@ SENSOR_DEF_CONFIG = {
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list" : []
                         },
     r'dpu\d+_cx_amb':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3},
     r'dpu\d+_cpu':      {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3
                         },
     r'dpu\d+_sodimm\d+': {"type": "thermal_sensor",
@@ -326,7 +326,7 @@ SENSOR_DEF_CONFIG = {
                           "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60
                          },
     r'dpu\d+_voltmon\d+_temp': {"type": "thermal_sensor",
-                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", 
+                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                                 "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_suffix": "_input"
                                },
 }
@@ -845,7 +845,7 @@ class hw_managemet_file_op(object):
         val = self.read_file(filename)
         val = int(val) / scale
         return int(val)
-    
+
     # ----------------------------------------------------------------------
     def read_file_float(self, filename, scale=1, round_digits=3):
         """
@@ -869,7 +869,7 @@ class hw_managemet_file_op(object):
         """
         val = self.read_file_int(os.path.join("thermal", filename), scale)
         return val
-    
+
     # ----------------------------------------------------------------------
     def thermal_read_file_float(self, filename, scale=1, round_digits=3):
         """
@@ -1018,10 +1018,10 @@ class hw_managemet_file_op(object):
         try:
             mlxreg_get_cmd = CONST.MLXREG_GET_CMD_STR.format(pcidev=self.asic_pcidev)
             self.log.debug("get mlxreg pwm cmd:{}".format(mlxreg_get_cmd))
-            subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True, 
-                                                            check=False, 
-                                                            stdout=subprocess.PIPE, 
-                                                            stderr=subprocess.PIPE, 
+            result = subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True,
+                                                            check=False,
+                                                            stdout=subprocess.PIPE,
+                                                            stderr=subprocess.PIPE,
                                                             text=True)
             ret = result.stdout
             pwm = int(ret.strip(), 16)
@@ -1030,7 +1030,7 @@ class hw_managemet_file_op(object):
             pass
 
         return pwm_out
-    
+
     # ----------------------------------------------------------------------
     def percent2pwm(self, pwm_percent):
         pwm = pwm_percent * 2.55
@@ -1040,7 +1040,7 @@ class hw_managemet_file_op(object):
     # ----------------------------------------------------------------------
     def pwm2percent(self, pwm):
         pwm_percent = int(pwm) * 100 / 255
-        pwm_percent = round(pwm_percent, 2) 
+        pwm_percent = round(pwm_percent, 2)
         return pwm_percent
 
     # ----------------------------------------------------------------------
@@ -1189,6 +1189,7 @@ class system_device(hw_managemet_file_op):
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
+        self.value_items_lst = None
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.enable = bool(self.sensors_config.get("enable", 1))
         self.value_acc = 0
@@ -1279,7 +1280,7 @@ class system_device(hw_managemet_file_op):
     def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_INTEGRAL):
         # Value a,verege formula type
         if formula_type == CONST.VAL_AVG_INTEGRAL:
-            input_smooth_level =  self.input_smooth_level + 1
+            input_smooth_level = self.input_smooth_level + 1
             # first time init
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_acc = value * input_smooth_level
@@ -1294,7 +1295,7 @@ class system_device(hw_managemet_file_op):
 
             return result
         elif formula_type == CONST.VAL_AVG_ARRAY:
-            input_smooth_level =  self.input_smooth_level + 1
+            input_smooth_level = self.input_smooth_level + 1
 
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_items_lst = [value] * input_smooth_level
@@ -1303,15 +1304,15 @@ class system_device(hw_managemet_file_op):
             return sum(self.value_items_lst)/input_smooth_level
 
         elif formula_type == CONST.VAL_AVG_ARRAY_WEGHT:
-            input_smooth_level =  self.input_smooth_level + 1
+            input_smooth_level = self.input_smooth_level + 1
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_items_lst = [value] * input_smooth_level
-                
+
                 # Init weight coef.
                 self.value_items_weght = [0] * input_smooth_level
                 self.value_items_weght[0] = 0.5+(1/input_smooth_level)
                 for idx in range(1, input_smooth_level-1):
-                    self.value_items_weght[idx] = ( 1 - sum( self.value_items_weght[0:idx] ) ) / 2
+                    self.value_items_weght[idx] = (1 - sum(self.value_items_weght[0:idx])) / 2
                 self.value_items_weght[self.input_smooth_level] = self.value_items_weght[self.input_smooth_level-1]
 
             self.value_items_lst = [value] + self.value_items_lst[:-1]
@@ -1412,7 +1413,7 @@ class system_device(hw_managemet_file_op):
             else:
                 val = self.get_file_val(filename, float(default_val) / CONST.TEMP_SENSOR_SCALE, scale)
         except:
-            val = None 
+            val = None
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
         return val
 
@@ -1547,6 +1548,10 @@ class system_device(hw_managemet_file_op):
             self.handle_input(thermal_table, flow_dir, amb_tmp)
             self.collect_err()
 
+    def __formula_process(self):
+        pwm = self.calculate_pwm_formula()
+        return pwm
+
     # ----------------------------------------------------------------------
     def __str__(self):
         """
@@ -1623,7 +1628,7 @@ class thermal_sensor(system_device):
             except BaseException:
                 self.log.warn("Wrong value reading from file: {}".format(self.file_input))
                 self.fread_err.handle_err(self.file_input)
-        pwm = self.calculate_pwm_formula()
+        pwm = self._formula_process()
         self.pwm = pwm
 
     # ----------------------------------------------------------------------
@@ -1732,7 +1737,7 @@ class thermal_module_sensor(system_device):
         # check if module have temperature reading interface
         if self.get_temp_support_status():
             # calculate PWM based on formula
-            pwm = max(self.calculate_pwm_formula(), pwm)
+            pwm = max(self.__formula_process(), pwm)
         self.pwm = pwm
 
     # ----------------------------------------------------------------------
@@ -1780,12 +1785,12 @@ class thermal_module_sensor(system_device):
             sign = '' # no change
         self.pwm_prev = self.pwm
         info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], pwm: {}{}, {}".format(self.name,
-                                                                                          round(value,2),
-                                                                                          self.val_min,
-                                                                                          self.val_max,
-                                                                                          self.get_fault_list_str(),
-                                                                                          round(self.pwm, 2), sign,
-                                                                                          self.state)
+                                                                                            round(value,2),
+                                                                                            self.val_min,
+                                                                                            self.val_max,
+                                                                                            self.get_fault_list_str(),
+                                                                                            round(self.pwm, 2), sign,
+                                                                                            self.state)
         return info_str
 
 
@@ -1793,7 +1798,7 @@ class thermal_asic_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.asic_fault_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
-        
+ 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
@@ -1840,7 +1845,7 @@ class thermal_asic_sensor(system_device):
                     if self.value > self.val_max:
                         self.log.warn("{} value({}) >= max({})".format(self.name,
                                                                        self.value,
-                                                                      self.val_max))
+                                                                       self.val_max))
                     elif self.value < self.val_min:
                         self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
@@ -1848,7 +1853,7 @@ class thermal_asic_sensor(system_device):
                 self.fread_err.handle_err(temp_read_file)
 
         # calculate PWM based on formula
-        pwm = max(self.calculate_pwm_formula(), pwm)
+        pwm = max(self.__formula_process(), pwm)
         self.pwm = pwm
 
     # ----------------------------------------------------------------------
@@ -2251,10 +2256,10 @@ class fan_sensor(system_device):
                     rpm_diff = abs(rpm_real - rpm_calcuated)
                     rpm_diff_norm = float(rpm_diff) / rpm_calcuated
                     self.log.debug("validate_rpm:{} b:{} rpm_calcuated:{} rpm_diff:{} rpm_diff_norm:{:.2f}%".format(self.name,
-                                                                                                                   b,
-                                                                                                                   rpm_calcuated,
-                                                                                                                   rpm_diff,
-                                                                                                                   rpm_diff_norm * 100))
+                                                                                                                    b,
+                                                                                                                    rpm_calcuated,
+                                                                                                                    rpm_diff,
+                                                                                                                    rpm_diff_norm * 100))
                     if rpm_diff_norm >= rpm_tolerance:
                         self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} pwm  {}".format(self.name,
                                                                                                                     tacho_idx,
@@ -2501,7 +2506,7 @@ class ambiant_thermal_sensor(system_device):
         """
         @summary: Return sensor value. Value type depends from sensor type and can be: Celsius degree, rpm, ...
         """
-        min_sens_value =  min(self.value_dict.values())
+        min_sens_value = min(self.value_dict.values())
         if min_sens_value != CONST.AMB_TEMP_ERR_VAL:
             return self.value
         else:
@@ -2551,7 +2556,7 @@ class ambiant_thermal_sensor(system_device):
         elif self.value < self.val_min:
             self.log.debug("{} value {} less min({})".format(self.name, self.value, self.val_min))
 
-        self.pwm = self.calculate_pwm_formula()
+        self.pwm = self.__formula_process()
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -2586,10 +2591,10 @@ class ambiant_thermal_sensor(system_device):
         for key, val in self.value_dict.items():
             if val == CONST.AMB_TEMP_ERR_VAL:
                 val = "N/A"
-            sens_val += "{}:{} ".format(key, round(val,1))
+            sens_val += "{}:{} ".format(key, round(val, 1))
         info_str = "\"{}\" {}({}), dir:{}, faults:[{}] pwm:{}, {}".format(self.name,
                                                                           sens_val,
-                                                                          round(self.value_dict[sensor_name_min],1),
+                                                                          round(self.value_dict[sensor_name_min], 1),
                                                                           self.flow_dir,
                                                                           self.get_fault_list_str(),
                                                                           round(self.pwm, 2),
@@ -2831,17 +2836,17 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.error("Missing max tachos config.", 1)
             sys.exit(1)
         # Find ASIC pci device fio
-        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True, 
-                                                            check=False, 
-                                                            stdout=subprocess.PIPE, 
-                                                            stderr=subprocess.PIPE, 
+        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True,
+                                                            check=False,
+                                                            stdout=subprocess.PIPE,
+                                                            stderr=subprocess.PIPE,
                                                             text=True)
         # Get the output
-        mst_dev = result.stdout 
+        mst_dev = result.stdout
         if "_pciconf0" in mst_dev:
             self.asic_pcidev = mst_dev.strip()
         else:
-            self.asic_pcidev = None       
+            self.asic_pcidev = None
 
         # Collect FAN DRWR sensors
         try:
@@ -3059,7 +3064,7 @@ class ThermalManagement(hw_managemet_file_op):
         @summary: Set target PWM for the system
         @param pwm: target PWM value
         """
-        pwm = round(pwm,2)
+        pwm = round(pwm, 2)
         if self.state == CONST.UNCONFIGURED:
             self.log.info("TC is not configureed. Try to force set PWM1 {}%".format(pwm))
             if not self.write_pwm(pwm, validate=True):
@@ -3387,7 +3392,7 @@ class ThermalManagement(hw_managemet_file_op):
 
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_REDUNDANCY_PARAM] = {}
-            
+
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
 
@@ -3400,7 +3405,7 @@ class ThermalManagement(hw_managemet_file_op):
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.PSU_ERR])
         err_mask = None
         if exclusion_conf:
-            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : 2, "curr_err_cnt" : 0}
+            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": r"psu\d+_fan", "min_err_cnt" : 2, "curr_err_cnt" : 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.PSU_ERR_LIST
@@ -3415,7 +3420,7 @@ class ThermalManagement(hw_managemet_file_op):
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.FAN_ERR])
         err_mask = None
         if exclusion_conf:
-            self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": "drwr\d+", "min_err_cnt" : 2, "curr_err_cnt": 0}
+            self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": r"drwr\d+", "min_err_cnt" : 2, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.DRWR_ERR_LIST
@@ -3476,7 +3481,7 @@ class ThermalManagement(hw_managemet_file_op):
         in_file = "thermal/pwr_conv{}_temp1".format(idx)
         sensor_name = "{}".format(name)
         self._sensor_add_config("thermal_sensor", sensor_name, {"base_file_name": in_file})
-        
+   
     # ----------------------------------------------------------------------
     def add_pdb_pwr_sensor(self, name):
         idx = name[7:]
@@ -3632,7 +3637,7 @@ class ThermalManagement(hw_managemet_file_op):
                 ambient_sensor = self._get_dev_obj("sensor_amb")
                 self.amb_tmp = ambient_sensor.get_value()
 
-            self.write_file("config/thermal_enforced_full_spped", "0\n")   
+            self.write_file("config/thermal_enforced_full_spped", "0\n")
 
     # ----------------------------------------------------------------------
     def stop(self, reason=""):
