@@ -1552,6 +1552,7 @@ msn47xx_specific()
 	fi
 
 	max_tachos=12
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -1599,6 +1600,7 @@ msn46xx_specific()
 
 	max_tachos=3
 	hotplug_fans=3
+	minimal_unsupported=1
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
@@ -2096,7 +2098,8 @@ sn5600d_specific()
 
 sn_spc4_common()
 {
-	# ToDo Meantime same for all SPC4 systems.
+	minimal_unsupported=1
+
 	case $sku in
 		HI144)	# SN5600
 			sn5x00_specific
@@ -2205,6 +2208,7 @@ qm3xxx_specific()
 	fi
 	i2c_comex_mon_bus_default=$((xdr_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((xdr_cpu_bus_offset+6))
+	minimal_unsupported=1
 
 	if [ "$sku" == "HI157" ]; then
 		# Set according to front fan max.
@@ -2261,7 +2265,6 @@ qm3xxx_specific()
 		hotplug_pwrs=0
 		hotplug_psus=0
 		psu_count=0
-		minimal_unsupported=1
 		echo 7 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/q3450_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/q3450_sensors_labels.json"
@@ -2307,6 +2310,7 @@ smart_switch_common()
 	named_busses+=(${smart_switch_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	max_tachos=4
+	minimal_unsupported=1
 	echo 11000 > $config_path/fan_max_speed
 	echo 3100 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
