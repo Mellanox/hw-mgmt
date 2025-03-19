@@ -2333,6 +2333,7 @@ n51xxld_specific()
 	asic_i2c_buses=(11 21)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
+	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
 
 	case $sku in
 		HI162)	# power-on
@@ -2362,6 +2363,7 @@ n51xxld_specific()
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			lm_sensors_config="$lm_sensors_configs_path/n5240ld_sensors.conf"
 			leakage_count=2
 			erot_count=4
 			echo 2 > $config_path/cpld_num
@@ -2385,8 +2387,7 @@ n51xxld_specific()
 	health_events_count=0
 	pwr_events_count=1
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
-	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
-	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
+	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))	
 	lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
 	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
