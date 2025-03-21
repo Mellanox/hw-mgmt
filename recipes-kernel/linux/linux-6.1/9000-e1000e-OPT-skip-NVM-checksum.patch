@@ -1,7 +1,9 @@
-From c93c44e9ffb798072a22557d0be7a9290a5affda Mon Sep 17 00:00:00 2001
+From 7659feceda1c645d1931fa6a34ec6ea7075dccce Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Thu, 23 Mar 2023 17:59:25 +0000
-Subject: [PATCH backport 6.1.42 84/85] e1000e: OPT: skip NVM checksum.
+Subject: =?UTF-8?q?From=20c93c44e9ffb798072a22557d0be7a9290a5affda=20Mon?=
+ =?UTF-8?q?=20Sep=2017=2000:00:00=202001=0ASubject:=20[PATCH=20backport=20?=
+ =?UTF-8?q?6.1.42=2084/85]=20e1000e:=20OPT:=20skip=20NVM=20checksum.?=
 
 NVM checksum is reported as bad in many cases after full
 BIOS SPI flash including GbE section burn by Dediprog.
@@ -15,7 +17,7 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/drivers/net/ethernet/intel/e1000e/netdev.c b/drivers/net/ethernet/intel/e1000e/netdev.c
-index db8e06157da2..8a922a9c9573 100644
+index cbd8357c6..8940b41de 100644
 --- a/drivers/net/ethernet/intel/e1000e/netdev.c
 +++ b/drivers/net/ethernet/intel/e1000e/netdev.c
 @@ -7568,6 +7568,12 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
@@ -41,5 +43,5 @@ index db8e06157da2..8a922a9c9573 100644
  	e1000_eeprom_checks(adapter);
  
 -- 
-2.20.1
+2.44.0
 

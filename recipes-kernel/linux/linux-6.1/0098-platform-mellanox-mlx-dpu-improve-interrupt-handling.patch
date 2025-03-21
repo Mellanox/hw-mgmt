@@ -1,4 +1,4 @@
-From cb4b2c2f1974fba33a9d2ac0dc992d4b3b1c7b16 Mon Sep 17 00:00:00 2001
+From a66f017a034d2b370c341af5e0eeb71ba7f44fc9 Mon Sep 17 00:00:00 2001
 From: Ciju Rajan K <crajank@nvidia.com>
 Date: Tue, 18 Mar 2025 21:15:00 +0200
 Subject: platform/mellanox: mlxreg-dpu: Introduce completion callback
@@ -23,10 +23,10 @@ Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
  3 files changed, 37 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index ac29422a2..85c444157 100644
+index b2ef122ad..377abea97 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -2184,6 +2184,8 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
+@@ -2131,6 +2131,8 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
  	},
  };
  
@@ -35,7 +35,7 @@ index ac29422a2..85c444157 100644
  
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_lc_act = {
-@@ -3339,6 +3341,23 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+@@ -3267,6 +3269,23 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
  	},
  };
  
@@ -59,7 +59,7 @@ index ac29422a2..85c444157 100644
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_smart_switch_data = {
  	.items = mlxplat_mlxcpld_smart_switch_items,
-@@ -3376,24 +3395,28 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_data[] = {
+@@ -3304,24 +3323,28 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_data[] = {
  		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[0],
  		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE,
  		.slot = 1,
@@ -89,7 +89,7 @@ index ac29422a2..85c444157 100644
  	},
  };
  
-@@ -8646,8 +8669,6 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
+@@ -7606,8 +7629,6 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
  	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
  	{ MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET, 0x00 },
  	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
@@ -97,8 +97,8 @@ index ac29422a2..85c444157 100644
 -	  MLXPLAT_CPLD_LPC_SM_SW_MASK },
  };
  
- 
-@@ -10039,6 +10060,7 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+ struct mlxplat_mlxcpld_regmap_context {
+@@ -8866,6 +8887,7 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
  	/* Add DPU drivers. */
  	for (j = 0; j < MLXPLAT_CPLD_DPU_MAX_DEVS; j++) {
  		if (mlxplat_dpu_data[j]) {

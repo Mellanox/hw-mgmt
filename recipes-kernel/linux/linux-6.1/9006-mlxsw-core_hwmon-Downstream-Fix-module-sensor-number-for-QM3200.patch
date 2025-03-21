@@ -1,7 +1,9 @@
-From 370387a12367612af4de85edce10abf8e8d20ddb Mon Sep 17 00:00:00 2001
+From cafdaf44d9d3773ac781d34603a4961b0fb11592 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Wed, 17 Apr 2024 12:50:11 +0000
-Subject: [PATCH] mlxsw: core_hwmon: Fix module sensor number for QM3200
+Subject: =?UTF-8?q?From=20370387a12367612af4de85edce10abf8e8d20ddb=20Mon?=
+ =?UTF-8?q?=20Sep=2017=2000:00:00=202001=0ASubject:=20[PATCH]=20mlxsw:=20c?=
+ =?UTF-8?q?ore=5Fhwmon:=20Fix=20module=20sensor=20number=20for=20QM3200?=
 
 This patch hardcodes the number of modules per ASICs on QM3200 systems
 instead of reading the actual number of modules from the MGPIR register.
@@ -13,7 +15,7 @@ ASICs are identified by thir i2c bus number, with ASIC1 using i2c bus 2.
 
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 ---
- drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c | 33 ++++++++++++++++++++++++
+ .../net/ethernet/mellanox/mlxsw/core_hwmon.c  | 33 +++++++++++++++++++
  1 file changed, 33 insertions(+)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c b/drivers/net/ethernet/mellanox/mlxsw/core_hwmon.c
@@ -96,5 +98,5 @@ index 9c12e1feb..8d38df80a 100644
  	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mgpir), mgpir_pl);
  	if (err)
 -- 
-2.14.1
+2.44.0
 

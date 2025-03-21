@@ -1,8 +1,10 @@
-From 6f0440c456b35296046dfdc5625e8c3661e21fc9 Mon Sep 17 00:00:00 2001
+From cd4cc88811e190d0ffc0a34c988a2bc321bf869f Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Sun, 20 Nov 2022 15:25:58 +0200
-Subject: [PATCH backport 6.1.42 52/85] regmap: debugfs: FT: Enable writing to
- the regmap debugfs registers
+Subject: =?UTF-8?q?From=206f0440c456b35296046dfdc5625e8c3661e21fc9=20Mon?=
+ =?UTF-8?q?=20Sep=2017=2000:00:00=202001=0ASubject:=20[PATCH=20backport=20?=
+ =?UTF-8?q?6.1.42=2052/85]=20regmap:=20debugfs:=20FT:=20Enable=20writing?=
+ =?UTF-8?q?=20to=0A=20the=20regmap=20debugfs=20registers?=
 
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 Reviewed-by: Michael Shych <michaelsh@nvidia.com>
@@ -11,7 +13,7 @@ Reviewed-by: Michael Shych <michaelsh@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/base/regmap/regmap-debugfs.c b/drivers/base/regmap/regmap-debugfs.c
-index 817eda2075aa..e90007f1aeeb 100644
+index 1e3d205ce..c88aa23c0 100644
 --- a/drivers/base/regmap/regmap-debugfs.c
 +++ b/drivers/base/regmap/regmap-debugfs.c
 @@ -290,7 +290,7 @@ static ssize_t regmap_map_read_file(struct file *file, char __user *user_buf,
@@ -24,5 +26,5 @@ index 817eda2075aa..e90007f1aeeb 100644
  /*
   * This can be dangerous especially when we have clients such as
 -- 
-2.20.1
+2.44.0
 

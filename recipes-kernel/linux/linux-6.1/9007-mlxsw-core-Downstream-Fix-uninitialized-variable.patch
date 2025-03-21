@@ -1,8 +1,11 @@
-From 8a9e2ce4897336d413cc3f6f87065d651080cda6 Mon Sep 17 00:00:00 2001
+From 3ce9d0ae3bbd4521281d9daeca8d3d45a4827bd6 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Mon, 18 Nov 2024 17:57:43 +0200
-Subject: [PATCH hw-mgmt 1/1] mlxsw: core: Downstream: Fix uninitialized
- variable
+Subject: =?UTF-8?q?From=208a9e2ce4897336d413cc3f6f87065d651080cda6=20Mon?=
+ =?UTF-8?q?=20Sep=2017=2000:00:00=202001=0ASubject:=20[PATCH=20hw-mgmt=201?=
+ =?UTF-8?q?/1]=20mlxsw:=20core:=20Downstream:=20Fix=20uninitialized=0A=20v?=
+ =?UTF-8?q?ariable=0AMIME-Version:=201.0=0AContent-Type:=20text/plain;=20c?=
+ =?UTF-8?q?harset=3DUTF-8=0AContent-Transfer-Encoding:=208bit?=
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -30,7 +33,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/mellanox/mlxsw/core.c b/drivers/net/ethernet/mellanox/mlxsw/core.c
-index e2a985ec2c76..352b81f521fa 100644
+index f36a416ff..a60454c6c 100644
 --- a/drivers/net/ethernet/mellanox/mlxsw/core.c
 +++ b/drivers/net/ethernet/mellanox/mlxsw/core.c
 @@ -3255,7 +3255,7 @@ int mlxsw_cmd_exec(struct mlxsw_core *mlxsw_core, u16 opcode, u8 opcode_mod,

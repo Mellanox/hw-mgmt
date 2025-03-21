@@ -1,8 +1,10 @@
-From 1c6a3cb0ccbc410bc9197578f8039b6545e354cc Mon Sep 17 00:00:00 2001
+From 25c3a01f7b9fb2b35189996b4eac4dc22a2ce763 Mon Sep 17 00:00:00 2001
 From: Michael Shych <michaelsh@nvidia.com>
 Date: Thu, 8 Sep 2022 13:26:04 +0300
-Subject: [PATCH backport 6.1.42 85/85] iio: pressure: icp20100: OPT: add
- driver for InvenSense ICP-201xx
+Subject: =?UTF-8?q?From=201c6a3cb0ccbc410bc9197578f8039b6545e354cc=20Mon?=
+ =?UTF-8?q?=20Sep=2017=2000:00:00=202001=0ASubject:=20[PATCH=20backport=20?=
+ =?UTF-8?q?6.1.42=2085/85]=20iio:=20pressure:=20icp20100:=20OPT:=20add=0A?=
+ =?UTF-8?q?=20driver=20for=20InvenSense=20ICP-201xx?=
 
 InvenSense ICP-201xx sensors are a family of barometric pressure
 and temperature sensor.
@@ -28,7 +30,7 @@ Signed-off-by: Michael Shych <michaelsh@nvidia.com>
  create mode 100755 drivers/iio/pressure/icp201xx_i2c.h
 
 diff --git a/drivers/iio/pressure/Kconfig b/drivers/iio/pressure/Kconfig
-index c9453389e4f7..127889bbec2f 100644
+index c9453389e..127889bbe 100644
 --- a/drivers/iio/pressure/Kconfig
 +++ b/drivers/iio/pressure/Kconfig
 @@ -111,6 +111,21 @@ config ICP10100
@@ -54,7 +56,7 @@ index c9453389e4f7..127889bbec2f 100644
  	tristate
  
 diff --git a/drivers/iio/pressure/Makefile b/drivers/iio/pressure/Makefile
-index 083ae87ff48f..7c4c9df30c38 100644
+index 083ae87ff..7c4c9df30 100644
 --- a/drivers/iio/pressure/Makefile
 +++ b/drivers/iio/pressure/Makefile
 @@ -15,6 +15,8 @@ obj-$(CONFIG_IIO_CROS_EC_BARO) += cros_ec_baro.o
@@ -68,7 +70,7 @@ index 083ae87ff48f..7c4c9df30c38 100644
  obj-$(CONFIG_MPL115_SPI) += mpl115_spi.o
 diff --git a/drivers/iio/pressure/icp201xx.c b/drivers/iio/pressure/icp201xx.c
 new file mode 100755
-index 000000000000..47986530e273
+index 000000000..47986530e
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx.c
 @@ -0,0 +1,731 @@
@@ -805,7 +807,7 @@ index 000000000000..47986530e273
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/iio/pressure/icp201xx.h b/drivers/iio/pressure/icp201xx.h
 new file mode 100755
-index 000000000000..de65ad1cd07c
+index 000000000..de65ad1cd
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx.h
 @@ -0,0 +1,128 @@
@@ -939,7 +941,7 @@ index 000000000000..de65ad1cd07c
 +#endif
 diff --git a/drivers/iio/pressure/icp201xx_core.c b/drivers/iio/pressure/icp201xx_core.c
 new file mode 100755
-index 000000000000..6f8e4c00a30c
+index 000000000..6f8e4c00a
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx_core.c
 @@ -0,0 +1,551 @@
@@ -1496,7 +1498,7 @@ index 000000000000..6f8e4c00a30c
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/iio/pressure/icp201xx_core.h b/drivers/iio/pressure/icp201xx_core.h
 new file mode 100755
-index 000000000000..b0fc4ddbcb08
+index 000000000..b0fc4ddbc
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx_core.h
 @@ -0,0 +1,506 @@
@@ -2008,7 +2010,7 @@ index 000000000000..b0fc4ddbcb08
 +
 diff --git a/drivers/iio/pressure/icp201xx_i2c.c b/drivers/iio/pressure/icp201xx_i2c.c
 new file mode 100755
-index 000000000000..269696f8d711
+index 000000000..269696f8d
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx_i2c.c
 @@ -0,0 +1,158 @@
@@ -2172,7 +2174,7 @@ index 000000000000..269696f8d711
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/iio/pressure/icp201xx_i2c.h b/drivers/iio/pressure/icp201xx_i2c.h
 new file mode 100755
-index 000000000000..c077d167d21c
+index 000000000..c077d167d
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx_i2c.h
 @@ -0,0 +1,64 @@
@@ -2241,5 +2243,5 @@ index 000000000000..c077d167d21c
 +
 +
 -- 
-2.20.1
+2.44.0
 
