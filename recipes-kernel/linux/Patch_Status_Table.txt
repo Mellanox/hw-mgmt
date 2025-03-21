@@ -710,6 +710,7 @@ Kernel-6.1
 |8009-hwmon-mlxsw-Downstream-Allow-fan-speed-setting-granu.patch  |                    | Downstream accepted                      |            | Fix for mlxminimal cooling level granularity   |
 |8010-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
 |8011-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream accepted                      |            |                                                |
+|0098-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                          |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
@@ -717,7 +718,6 @@ Kernel-6.1
 |9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9007-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
-|0098-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
