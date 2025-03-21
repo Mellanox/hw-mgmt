@@ -172,10 +172,6 @@ atttrib_list = {
                 }
         },
 
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 36}
-        },
-        
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}     
     ],
@@ -186,14 +182,9 @@ atttrib_list = {
          "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
                     "asic1": {"fin": "/sys/module/sx_core/asic0/"},
                     "asic2": {"fin": "/sys/module/sx_core/asic1/"},
-                    "asic3": {"fin": "/sys/module/sx_core/asic3/"}
+                    "asic3": {"fin": "/sys/module/sx_core/asic2/"}
                 }
         },
-
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 54}
-        },
-        
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}   
     ],
