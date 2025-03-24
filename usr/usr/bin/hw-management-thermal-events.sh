@@ -1,7 +1,8 @@
 #!/bin/bash
 
-###########################################################################
-# Copyright (c) 2018, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+########################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -1034,6 +1035,17 @@ if [ "$1" == "add" ]; then
 		# PSU FW VER
 		mfr=$(grep MFR_NAME $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
 		cap=$(grep CAPACITY $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
+
+		if [[ "$cap" == "1100" && $mfr == "DELTA" ]]; then
+			out_crit=$(<"$thermal_path"/"$psu_name"_volt_out_crit)
+			out_lcrit=$(((out_crit*662)/1000))
+			out_min=$(((out_crit*745)/1000))
+			out_max=$(((out_crit*952)/1000))
+			echo $out_max > "$power_path"/"$psu_name"_volt_out_max
+			echo $out_min > "$power_path"/"$psu_name"_volt_out_min
+			echo $out_lcrit > "$power_path"/"$psu_name"_volt_out_lcrit
+		fi
+
 		if echo $mfr | grep -iq "Murata"; then
 			# Support FW update only for specific Murata PSU capacities
 			fw_ver="N/A"
