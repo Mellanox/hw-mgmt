@@ -1226,8 +1226,6 @@ if [ "$1" == "add" ]; then
 				hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
 			fi
 			# Get PSU FAN direction
-			set -x
-			exec 3>&1 4>&2 >>/tmp/log 2>&1
 			get_fan_direction_by_vpd $eeprom_path/"$fan_prefix"_data
 			echo $? > $thermal_path/"${fan_prefix}"_dir
 			;;
