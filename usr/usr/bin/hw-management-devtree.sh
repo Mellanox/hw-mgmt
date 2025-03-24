@@ -331,6 +331,7 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["stts751_1"]="stts751 0x4b 7 swb_asic2" \
 					   	["24c512_0"]="24c512 0x51 11 swb_info")
 
+
 declare -A gb3000_swb_alternatives=(["mp29816_0"]="mp29816 0x66 5 voltmon1" \
 						["mp29816_1"]="mp29816 0x68 5 voltmon2" \
 						["mp29816_2"]="mp29816 0x6c 5 voltmon3" \
@@ -343,7 +344,12 @@ declare -A gb3000_swb_alternatives=(["mp29816_0"]="mp29816 0x66 5 voltmon1" \
 						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
 						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
 						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-						["24c512_0"]="24c512 0x51 11 swb_info")
+						["24c512_0"]="24c512 0x51 11 swb_info" \
+						["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+				   		["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+						["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
+				   		["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" )
+
 
 declare -A gb200hd_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
@@ -402,7 +408,12 @@ declare -A bmc_gb300_swb_alternatives=(["mp29816_0"]="mp29816 0x66 17 voltmon1" 
 						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
 						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
 						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
-						["24c512_0"]="24c512 0x51 36 swb_info")
+						["24c512_0"]="24c512 0x51 36 swb_info" \
+						["raa228004_0"]="raa228004 0x60 18 pwr_conv1" \
+				   		["mp29502_0"]="mp29502 0x2e 18 pwr_conv1" \
+				   		["lm5066i_0"]="lm5066i 0x12 18 pdb_hotswap1" \
+				  		["lm5066_0"]="lm5066i 0x12 18 pdb_hotswap1" \
+				   		["mp5926_0"]="mp5926 0x12 18 pdb_hotswap1" )
 
 declare -A bmc_gb200hd_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" \
 						["mp2891_1"]="mp2891 0x68 17 voltmon2" \

@@ -795,7 +795,6 @@
 	"labels_HI176_rev1_array" : {
 		"swb_asic1" : "SWB+ASIC1+PCB+Temp",
 		"swb_asic2" : "SWB+ASIC2+PCB+Temp",
-		"pdb_mos_amb" : "Ambient+MOS+Temp",
 		"fpga" : "FPGA+Temp",
 		"voltmon1_in1" : "PMIC-1+12V_VDD_ASIC1+Vol+In+1",
 		"voltmon1_in2" : "PMIC-1+ASIC1_VDD+Vol+Out+1",
