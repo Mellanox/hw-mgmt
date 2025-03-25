@@ -2335,19 +2335,21 @@ n51xxld_specific()
 	echo 20 > $config_path/global_wp_timeout
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
 
+	cpld_num=4
+	max_tachos=8
+    leakage_count=4
+	erot_count=3
+
 	case $sku in
 		HI162)	# power-on
-			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
 		HI166|HI169)	# TTM, ARIEL
-			max_tachos=8
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
 		;;
 		HI167|HI170)	# NSO, NSO no NCI, DGX, MSFT
-			max_tachos=8
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
 		;;
@@ -2356,8 +2358,7 @@ n51xxld_specific()
 			echo 0 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 			leakage_count=2
-			erot_count=3
-			echo 3 > $config_path/cpld_num
+			cpld_num=3
 		;;
 		HI177)	# Kyber
 			max_tachos=0
@@ -2366,19 +2367,16 @@ n51xxld_specific()
 			lm_sensors_config="$lm_sensors_configs_path/n5240ld_sensors.conf"
 			leakage_count=2
 			erot_count=4
-			echo 2 > $config_path/cpld_num
+			cpld_num=3
 		;;
 		*)
-			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
-			leakage_count=4
-			erot_count=3
 			echo 2 > $config_path/clk_brd_num
-			echo 4 > $config_path/cpld_num
 		;;
 	esac
 
+	echo $cpld_num > $config_path/cpld_num
 	psu_count=0
 	hotplug_fans=0
 	hotplug_pwrs=0
