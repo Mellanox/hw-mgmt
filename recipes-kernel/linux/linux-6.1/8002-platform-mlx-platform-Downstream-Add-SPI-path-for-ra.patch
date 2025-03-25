@@ -1,4 +1,4 @@
-From bebcb59ddbedc8eb9fe5274453a2188b3f52f24c Mon Sep 17 00:00:00 2001
+From 3c81b9ab64bfbf723877bfb5561b42d30d074343 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 2 Aug 2023 07:58:51 +0000
 Subject: [PATCH v6.1 03/16] platform: mlx-platform: Downstream: Add SPI path
@@ -13,7 +13,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  2 files changed, 18 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 2c893410bd4d..bb2a683788cb 100644
+index d2dfdac34..dacb42492 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -19,6 +19,7 @@
@@ -24,7 +24,7 @@ index 2c893410bd4d..bb2a683788cb 100644
  
  #define MLX_PLAT_DEVICE_NAME		"mlxplat"
  
-@@ -3324,6 +3325,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
+@@ -3570,6 +3571,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT,
  };
  
@@ -41,7 +41,7 @@ index 2c893410bd4d..bb2a683788cb 100644
  /* Platform led default data */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
  	{
-@@ -7474,6 +7485,7 @@ static struct mlxreg_core_platform_data
+@@ -8286,6 +8297,7 @@ static struct mlxreg_core_platform_data
  	*mlxplat_wd_data[MLXPLAT_CPLD_WD_MAX_DEVS];
  static struct mlxreg_core_data *mlxplat_dpu_data[MLXPLAT_CPLD_DPU_MAX_DEVS];
  static const struct regmap_config *mlxplat_regmap_config;
@@ -49,7 +49,7 @@ index 2c893410bd4d..bb2a683788cb 100644
  static struct pci_dev *lpc_bridge;
  static struct pci_dev *i2c_bridge;
  static struct pci_dev *jtag_bridge;
-@@ -7796,6 +7808,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
+@@ -8660,6 +8672,7 @@ static int __init mlxplat_dmi_rack_switch_matched(const struct dmi_system_id *dm
  		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
  	mlxplat_i2c = &mlxplat_mlxcpld_i2c_ng_data;
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
@@ -57,7 +57,7 @@ index 2c893410bd4d..bb2a683788cb 100644
  
  	return mlxplat_register_platform_device();
  }
-@@ -7840,6 +7853,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -8725,6 +8738,7 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
  	pm_power_off = mlxplat_poweroff;
  	mlxplat_reboot_nb = &mlxplat_reboot_default_nb;
@@ -65,7 +65,7 @@ index 2c893410bd4d..bb2a683788cb 100644
  
  	return mlxplat_register_platform_device();
  }
-@@ -8390,6 +8404,9 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+@@ -9333,6 +9347,9 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
  		}
  	}
  
@@ -76,10 +76,10 @@ index 2c893410bd4d..bb2a683788cb 100644
  	err = mlxplat_mlxcpld_check_wd_capability(priv->regmap);
  	if (err)
 diff --git a/drivers/spi/spi.c b/drivers/spi/spi.c
-index 5f9aedd1f0b6..fd22406b701d 100644
+index df774fb14..c2d55f09d 100644
 --- a/drivers/spi/spi.c
 +++ b/drivers/spi/spi.c
-@@ -867,6 +867,7 @@ int spi_register_board_info(struct spi_board_info const *info, unsigned n)
+@@ -889,6 +889,7 @@ int spi_register_board_info(struct spi_board_info const *info, unsigned n)
  
  	return 0;
  }
@@ -88,5 +88,5 @@ index 5f9aedd1f0b6..fd22406b701d 100644
  /*-------------------------------------------------------------------------*/
  
 -- 
-2.20.1
+2.44.0
 
