@@ -688,6 +688,9 @@ function restore_i2c_bus_frequency_default()
 			chipup_test_time=5
 		fi
 		;;
+	VMOD0014)
+			chipup_test_time=5
+		;;
 	*)
 		chipup_test_time=2
 		;;
