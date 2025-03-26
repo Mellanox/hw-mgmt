@@ -2403,7 +2403,7 @@ sn5640_specific()
 	hotplug_pwrs=4
 	hotplug_psus=4
 	psu_count=4
-	#minimal_unsupported=1
+	minimal_unsupported=1
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
 
