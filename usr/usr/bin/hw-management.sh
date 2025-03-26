@@ -2748,6 +2748,7 @@ set_config_data()
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $leakage_count > $config_path/leakage_counter
+	echo $erot_count > $config_path/erot_counter
 }
 
 connect_platform()
