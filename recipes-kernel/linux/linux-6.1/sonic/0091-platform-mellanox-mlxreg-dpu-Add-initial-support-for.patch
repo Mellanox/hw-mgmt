@@ -68,7 +68,7 @@ index ba56485cbe8c..e86723b44c2e 100644
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
 new file mode 100644
-index 000000000..b7685012d
+index 000000000..c6cfbee55
 --- /dev/null
 +++ b/drivers/platform/mellanox/mlxreg-dpu.c
 @@ -0,0 +1,626 @@
@@ -252,7 +252,7 @@ index 000000000..b7685012d
 +	},
 +	{
 +		.label = "boot_progress",
-+		.reg = MLXREG_DPU_REG_GP0_OFFSET,
++		.reg = MLXREG_DPU_REG_GP1_OFFSET,
 +		.mask = GENMASK(3, 0),
 +		.mode = 0444,
 +	},
