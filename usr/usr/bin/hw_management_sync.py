@@ -221,10 +221,11 @@ atttrib_list = {
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
     "HI171|HI172": [
-        {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",   "arg" : ["asic1"],   "poll": 3, "ts": 0},
-	    {"fin": "/sys/module/sx_core/asic0/temperature/input",
-         "fn": "asic_temp_populate",   "arg" : ["asic"],  "poll": 3, "ts": 0},
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
+                 }
+        },
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {  "module1": {"fin": "/sys/module/sx_core/asic0/module0/"},
                     "module2": {"fin": "/sys/module/sx_core/asic0/module1/"},
