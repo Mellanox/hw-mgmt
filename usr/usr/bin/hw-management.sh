@@ -1345,17 +1345,20 @@ mqmxxx_msn37x_msn34x_specific()
 	case $sku in
 		HI136)
 			# msn3700C-S
+			minimal_unsupported=1
 			connect_table+=(${msn37xx_secured_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
 		HI112|MSN3700)
 			# msn3700
+			minimal_unsupported=1
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
 		;;
 		HI116|MSN3700C)
-			# mmsn3700C
+			# msn3700C
+			minimal_unsupported=1
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
@@ -1387,10 +1390,10 @@ mqmxxx_msn37x_msn34x_specific()
 sn3750sx_specific()
 {
 	connect_table+=(${sn3750sx_secured_connect_table[@]})
-
 	add_cpu_board_to_connection_table
 
 	max_tachos=12
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 25000 > $config_path/psu_fan_max
@@ -1408,6 +1411,7 @@ msn3420_specific()
 
 	max_tachos=10
 	hotplug_fans=5
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -1617,6 +1621,7 @@ msn3510_specific()
 	add_cpu_board_to_connection_table
 
 	max_tachos=12
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
