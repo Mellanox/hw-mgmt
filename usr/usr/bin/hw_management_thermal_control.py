@@ -241,7 +241,7 @@ SENSOR_DEF_CONFIG = {
                          "refresh_attr_period": 1 * 60
                         },
     r'module\d+':       {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000, "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_ARRAY_WEGHT,
                          "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
@@ -1574,6 +1574,7 @@ class thermal_sensor(system_device):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
+
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
 
@@ -1669,11 +1670,15 @@ class thermal_module_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
-        if self.val_max != 0:
-            self.val_min = self.val_max - 20
+        val_min_offset = self.sensors_config.get("val_min_offset", 0)
+        val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
+        if val_max != 0:
+            self.val_min = val_max + val_min_offset / self.scale
+            self.val_max = val_max + val_max_offset / self.scale
         else:
-            self.val_min = self.val_max
+            self.val_max = 0
+            self.val_min = 0
 
     # ----------------------------------------------------------------------
     def get_fault(self):
@@ -1804,9 +1809,9 @@ class thermal_module_sensor(system_device):
         return info_str
 
 
-class thermal_asic_sensor(thermal_module_sensor):
+class thermal_asic_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
-        thermal_module_sensor.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.asic_fault_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
