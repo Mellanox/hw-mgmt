@@ -3001,6 +3001,9 @@ class ThermalManagement(hw_management_file_op):
         self.obj_init_continue = True
         self.emergency = False
 
+        self.pwm_level_array = [0] * 10
+        self.pwm_timestump_array = [0] * 10
+
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
         """
@@ -3226,6 +3229,27 @@ class ThermalManagement(hw_management_file_op):
                 psu_obj.set_pwm(pwm)
 
     # ----------------------------------------------------------------------
+    def _get_pwm_avg(self):
+        pwm_total = 0
+        time_total = 0
+        current_time = current_milli_time()
+        for idx in range(0, len(self.pwm_level_array)-2):
+            if self.pwm_timestump_array[idx] == 0:
+                break
+            
+            # print("current_time : {}".format(current_time))
+            time_diff = current_time - self.pwm_timestump_array[idx]
+            time_total += time_diff
+            pwm_total += self.pwm_level_array[idx] * time_diff
+            current_time = self.pwm_timestump_array[idx]
+
+        if time_total != 0:
+            pwm_avg = pwm_total / time_total
+        else:
+            pwm_avg = 0
+        return pwm_avg
+
+    # ----------------------------------------------------------------------
     def _update_chassis_fan_speed(self, pwm_val, force=False):
         """
         @summary:
@@ -3241,6 +3265,14 @@ class ThermalManagement(hw_management_file_op):
         if not self.is_pwm_exists():
             self.log.warn("Missing PWM link {}".format(pwm_val))
             return
+
+        for idx in range(len(self.pwm_level_array)-1, 0, -1 ):
+            self.pwm_level_array[idx] = self.pwm_level_array[idx-1]
+            self.pwm_timestump_array[idx] = self.pwm_timestump_array[idx-1]
+
+        self.pwm_level_array[0] = pwm_val
+        self.pwm_timestump_array[0] = current_milli_time()
+
         for drwr_idx in range(1, self.fan_drwr_num + 1):
             fan_obj = self._get_dev_obj("drwr{}.*".format(drwr_idx))
             if fan_obj:
@@ -4052,7 +4084,7 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("Thermal periodic report")
         self.log.info("================================")
         self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
-        self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
+        self.log.info("Cooling(%) {} (max pwm source:{}) avg:{}".format(self.pwm_target, self.pwm_change_reason, round(self._get_pwm_avg(), 2 )))
         self.log.info("dir:{}".format(flow_dir))
         self.log.info("================================")
         for dev_obj in self.dev_obj_list:
