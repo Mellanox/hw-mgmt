@@ -141,6 +141,7 @@ class CONST(object):
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     AMB_TEMP_ERR_VAL = 255
+    TEMP_NA_VAL = 0
 
     # Max/min PWM value - global for all system
     PWM_MIN = 20
@@ -204,6 +205,11 @@ class CONST(object):
     MLXREG_SET_CMD_STR = "yes |  mlxreg -d  {pcidev} --reg_name MFSC --indexes \"pwm=0x0\" --set \"pwm_duty_cycle={pwm}\""
     MLXREG_GET_CMD_STR = "mlxreg -d {pcidev} --reg_name MFSC --get --indexes \"pwm=0x0\" | grep pwm | head -n 1 | cut -d '|' -f 2"
 
+    # Value averege formula type
+    VAL_AVG_INTEGRAL = 1
+    VAL_AVG_ARRAY = 2
+    VAL_AVG_ARRAY_WEGHT = 3
+
 """
 Default sensor  configuration.
 Defined per sensor name. Sensor name can be defined with the regexp mask.
@@ -237,17 +243,18 @@ SENSOR_DEF_CONFIG = {
     r'module\d+':       {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
-                         "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
+                         "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_ARRAY_WEGHT,
+                         "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
-                         "val_lcrit": 5, "val_hcrit": 150000,  "poll_tme": 6,
+                         "val_lcrit": 5, "val_hcrit": 150000, "poll_tme": 6,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
                         },
     r'asic\d*':         {"type": "thermal_asic_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
-                         "value_hyst": 2, "input_smooth_level": 1
+                         "value_hyst": 2
                         },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor",
                                 "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "90000",
@@ -267,9 +274,9 @@ SENSOR_DEF_CONFIG = {
     r'comex_amb':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
                         },
-    r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, 
+    r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000,
                          "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
-                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0, "input_smooth_level": 1
+                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor",
                          "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
@@ -285,7 +292,7 @@ SENSOR_DEF_CONFIG = {
                         },
     r'ibc\d+':          {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60, 
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60,
                          "input_suffix": "_input"
                         },
     r'ctx_amb\d*':      {"type": "thermal_sensor",
@@ -294,10 +301,10 @@ SENSOR_DEF_CONFIG = {
                         },
     r'hotswap\d+_temp': {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30, 
+                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30,
                          "input_suffix": "_input"
                         },
-    r'bmc_temp':     {"type": "thermal_sensor",
+    r'bmc_temp':        {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                         },
@@ -306,11 +313,11 @@ SENSOR_DEF_CONFIG = {
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list" : []
                         },
     r'dpu\d+_cx_amb':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3},
     r'dpu\d+_cpu':      {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", 
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_smooth_level": 1
+                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000",
+                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3
                         },
     r'dpu\d+_sodimm\d+': {"type": "thermal_sensor",
                           "pwm_min": 30, "pwm_max": 70
@@ -320,7 +327,7 @@ SENSOR_DEF_CONFIG = {
                           "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60
                          },
     r'dpu\d+_voltmon\d+_temp': {"type": "thermal_sensor",
-                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", 
+                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                                 "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_suffix": "_input"
                                },
 }
@@ -1118,8 +1125,8 @@ class system_device(hw_managemet_file_op):
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
         self.pwm_min = CONST.PWM_MIN
         self.pwm_max = CONST.PWM_MAX
-        self.value = CONST.TEMP_INIT_VAL_DEF
-        self.value_acc = self.value * self.input_smooth_level
+        self.value = CONST.TEMP_NA_VAL
+        self.value_acc = 0
         self.last_value = self.value
         self.pwm = CONST.PWM_MIN
         self.last_pwm = self.pwm
@@ -1128,13 +1135,14 @@ class system_device(hw_managemet_file_op):
         self.fread_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
         self.refresh_attr_period = 0
         self.refresh_timeout = 0
-
+        self.pwm_regulator = pwm_regulator_simple(None, name, self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.system_flow_dir = CONST.UNKNOWN
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
         self.value_trend = 0
-        self.value_hyst = int(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
+        self.value_hyst = float(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
+        self.smooth_formula = int(self.sensors_config.get("smooth_formula", CONST.VAL_AVG_INTEGRAL))
         self.clear_fault_list()
 
         # ==================
@@ -1149,7 +1157,6 @@ class system_device(hw_managemet_file_op):
         self.fault_list_dynamic_filtered = []
         self.fault_list_dynamic = []
         self.dynamic_filter_ena = False
-
 
     # ----------------------------------------------------------------------
     def start(self):
@@ -1176,9 +1183,11 @@ class system_device(hw_managemet_file_op):
         self.update_pwm_flag = 1
         self.value_last_update = 0
         self.value_last_update_trend = 0
+        self.value_items_lst = None
+        self.value = CONST.TEMP_NA_VAL
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.enable = int(self.sensors_config.get("enable", 1))
-        self.value_acc = self.value * self.input_smooth_level
+        self.value_acc = 0
         self.fread_err.reset_all()
         self.sensor_configure()
         self.update_timestump(1000)
@@ -1262,6 +1271,51 @@ class system_device(hw_managemet_file_op):
         self.update_pwm_flag = 1
 
     # ----------------------------------------------------------------------
+    def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_INTEGRAL):
+        # Value a,verege formula type
+        if formula_type == CONST.VAL_AVG_INTEGRAL:
+            input_smooth_level = self.input_smooth_level + 1
+            # first time init
+            if self.value == CONST.TEMP_NA_VAL:
+                self.value_acc = value * input_smooth_level
+
+            # integral filter for smoothing temperature change
+            self.value_acc -= self.value_acc / input_smooth_level
+            self.value_acc += value
+
+            result = round(self.value_acc / input_smooth_level, 3)
+            if abs(result - value) < 0.25:
+                result = value
+
+            return result
+        elif formula_type == CONST.VAL_AVG_ARRAY:
+            input_smooth_level = self.input_smooth_level + 1
+
+            if self.value == CONST.TEMP_NA_VAL:
+                self.value_items_lst = [value] * input_smooth_level
+
+            self.value_items_lst = [value] + self.value_items_lst[:-1]
+            return sum(self.value_items_lst)/input_smooth_level
+
+        elif formula_type == CONST.VAL_AVG_ARRAY_WEGHT:
+            input_smooth_level = self.input_smooth_level + 1
+            if self.value == CONST.TEMP_NA_VAL:
+                self.value_items_lst = [value] * input_smooth_level
+                
+                # Init weight coef.
+                self.value_items_weght = [0] * input_smooth_level
+                self.value_items_weght[0] = 0.5+(1/input_smooth_level)
+                for idx in range(1, input_smooth_level-1):
+                    self.value_items_weght[idx] = (1 - sum(self.value_items_weght[0:idx])) / 2
+                self.value_items_weght[self.input_smooth_level] = self.value_items_weght[self.input_smooth_level-1]
+
+            self.value_items_lst = [value] + self.value_items_lst[:-1]
+            result = [a * b for a, b in zip(self.value_items_lst, self.value_items_weght)]
+            return sum(result)
+        else:
+            return value
+
+    # ----------------------------------------------------------------------
     def update_value(self, value=None):
         """
         @summary: Update sensor value. Value type depends from sensor type and can be: Celsius degree, rpm, ...
@@ -1281,14 +1335,7 @@ class system_device(hw_managemet_file_op):
         self.last_value = value
         prev_value = self.value
 
-        # integral filter for soothing temperature change
-        self.value_acc -= self.value_acc / input_smooth_level
-        self.value_acc += value
-
-        result = round(self.value_acc / input_smooth_level, 3)
-        if abs(result - value) < 0.25:
-            result = value
-        self.value = result
+        self.value = self._update_value_formula(value, formula_type=self.smooth_formula)
 
         if self.value > prev_value:
             value_trend = 1
