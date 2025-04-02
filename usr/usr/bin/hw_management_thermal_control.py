@@ -1109,6 +1109,166 @@ class iterate_err_counter():
 
     # ----------------------------------------------------------------------
 
+class pwm_regulator_simple():
+    """
+    @summary: PWM regulator class.
+            Calculating PWM based on formula:
+            PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+    """
+    def __init__(self, logger, name, val_min, val_max, pwm_min, pwm_max):
+        self.log = logger   
+        self.name = name
+        self.pwm_min = CONST.PWM_MIN
+        self.pwm_max = CONST.PWM_MAX
+        self.val_min = CONST.TEMP_MIN_MAX["val_min"]
+        self.val_max = CONST.TEMP_MIN_MAX["val_max"]
+        self.update_param(val_min, val_max, pwm_min, pwm_max)
+        self.pwm = self.pwm_min
+        if self.log:
+            self.log.info("regulator:{} INIT".format(self.name))
+
+    # ----------------------------------------------------------------------
+    def _calculate_pwm_formula(self, val_min, val_max, pwm_min, pwm_max, value):
+        """
+        @summary: Calculate PWM by formula
+        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+        @return: PWM value rounded to nearest value
+        """
+        if val_max == val_min:
+            return pwm_min
+
+        pwm = pwm_min + (float(value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
+        if pwm > pwm_max:
+            pwm = pwm_max
+
+        if pwm < pwm_min:
+            pwm = pwm_min
+        return pwm
+
+    # ----------------------------------------------------------------------
+    def update_param(self, val_min, val_max, pwm_min, pwm_max):
+        """
+        @summary: update parameters
+        """
+        self.pwm_min = pwm_min
+        self.pwm_max = pwm_max
+        self.val_min = val_min
+        self.val_max = val_max
+        if self.log:
+            self.log.debug("regulator:{} update param: val_min:{} val_max:{} pwm_min:{} pwm_max:{}".format(self.name, val_min, val_max, pwm_min, pwm_max))
+
+    # ----------------------------------------------------------------------
+    def tick(self, value):
+        """
+        @summary: tick function
+        """
+        self.pwm = self._calculate_pwm_formula(self.val_min, self.val_max, self.pwm_min, self.pwm_max, value)
+        if self.log:
+            self.log.debug("regulator:{} tick: value:{} pwm: {}".format(self.name, value, self.pwm))
+
+    # ----------------------------------------------------------------------
+    def get_pwm(self):
+        """
+        @summary: get PWM value
+        """
+        return self.pwm
+
+    def __str__(self):
+        return "{}: min:{} max:{} pwm_min:{} pwm_max:{}".format(self.name, 
+                                                                self.val_min, 
+                                                                self.val_max, 
+                                                                self.pwm_min, 
+                                                                self.pwm_max)
+
+
+class pwm_regulator_dynamic(pwm_regulator_simple):
+    def __init__(self, logger, name, val_min, val_max, pwm_min, pwm_max, extra_param):
+        pwm_regulator_simple.__init__(self, logger, name, val_min, val_max, pwm_min, pwm_max)
+
+        # threshold for value in comparation with current temperature
+        self.val_up_trh = extra_param.get("val_up_trh", 1)
+        self.val_down_trh = extra_param.get("val_down_trh", 3)
+
+        # multiplier for Iterm
+        self.increase_step = extra_param.get("increase_step", 5)
+        self.decrease_step = extra_param.get("decrease_step", 0.1)
+
+        # threshold for Iterm. If Iterm is below this value, it will be decreased
+        self.Iterm_down_trh = extra_param.get("Iterm_down_trh", 10)
+
+        # subtrahend for value in case of temp lower then (val_max - val_down_trh)
+        self.range = extra_param.get("range", 3)
+    
+        self.Iterm = 0
+        self.pwm_max_dynamic = pwm_max
+
+    # ----------------------------------------------------------------------
+    def _calculate_pwm_formula(self, val_min, val_max, pwm_min, pwm_max, value):
+        """
+        @summary: Calculate PWM by formula
+        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+        @return: PWM value rounded to nearest value
+        """
+        if val_max == val_min:
+            return pwm_min
+
+        pwm = pwm_min + (float(value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
+
+        if pwm < pwm_min:
+            pwm = pwm_min
+        return pwm
+
+    # ----------------------------------------------------------------------
+    def update_param(self, val_min, val_max, pwm_min, pwm_max):
+        """
+        @summary: update parameters
+        """
+        if pwm_max != self.pwm_max:
+            self.pwm_max_dynamic = pwm_max
+        pwm_regulator_simple.update_param(self, val_min, val_max, pwm_min, pwm_max)
+
+    # ----------------------------------------------------------------------
+    def tick(self, value):
+        """
+        @summary: Update PWM based on temperature value
+        
+        This method implements a dynamic PWM control algorithm:
+        - When temperature exceeds upper threshold, increases PWM
+        - When temperature drops below lower threshold, decreases PWM
+        - Uses integral term (Iterm) for smooth transitions
+        
+        @param value: Current temperature value (float)
+        """
+        if value >= self.val_max - self.val_up_trh:
+            temp_diff = value - self.val_max
+            self.Iterm = temp_diff + 1
+            old_pwm = self.pwm_max_dynamic
+            self.pwm_max_dynamic += self.increase_step * self.Iterm
+            self.pwm_max_dynamic = min(self.pwm_max_dynamic, 100)
+            if old_pwm != self.pwm_max_dynamic and self.log:
+                self.log.info("pwm_max_dynamic increased from {} to {}".format(old_pwm, self.pwm_max_dynamic))
+        elif value < self.val_max - self.val_down_trh:
+            self.Iterm -= self.val_max - value - self.range
+            if self.Iterm < self.Iterm_down_trh:
+                old_pwm = self.pwm_max_dynamic
+                self.pwm_max_dynamic += self.decrease_step * self.Iterm
+                self.pwm_max_dynamic = max(self.pwm_max_dynamic, self.pwm_max)
+                if old_pwm != self.pwm_max_dynamic and self.log:
+                    self.log.info("pwm_max_dynamic decreased from {} to {}".format(old_pwm, self.pwm_max_dynamic))
+                self.Iterm = 0
+        else:
+            self.Iterm = 0
+
+        self.pwm = self._calculate_pwm_formula(self.val_min, self.val_max, self.pwm_min, self.pwm_max_dynamic, value)
+
+    # ----------------------------------------------------------------------
+    def __str__(self):
+        """
+        @summary: return string representation of the class
+        """
+        return "I:{: <4}, pwm_max_dyn:{}".format(round(self.Iterm, 1), round(self.pwm_max_dynamic, 1))
+
+
 class system_device(hw_management_file_op):
     """
     @summary: base class for system sensors
@@ -1146,6 +1306,7 @@ class system_device(hw_management_file_op):
         self.fread_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
         self.refresh_attr_period = 0
         self.refresh_timeout = 0
+        self.pwm_regulator = pwm_regulator_simple(None, name, self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.system_flow_dir = CONST.UNKNOWN
         self.update_pwm_flag = 1
         self.value_last_update = 0
@@ -1178,6 +1339,7 @@ class system_device(hw_management_file_op):
         self.log.info("Staring {}".format(self.name))
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
         if self.refresh_attr_period:
             self.refresh_timeout = current_milli_time() + self.refresh_attr_period * 1000
@@ -1376,24 +1538,6 @@ class system_device(hw_management_file_op):
         @return: None
         """
         self.system_flow_dir = flow_dir
-
-    # ----------------------------------------------------------------------
-    def calculate_pwm_formula(self):
-        """
-        @summary: Calculate PWM by formula
-        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
-        @return: PWM value rounded to nearest value
-        """
-        if self.val_max == self.val_min:
-            return self.pwm_min
-
-        pwm = self.pwm_min + (float(self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
-        if pwm > self.pwm_max:
-            pwm = self.pwm_max
-
-        if pwm < self.pwm_min:
-            pwm = self.pwm_min
-        return pwm
 
     # ----------------------------------------------------------------------
     def read_val_min_max(self, filename, trh_type, scale=1):
@@ -1598,6 +1742,7 @@ class thermal_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("{}_min".format(self.base_file_name), "val_min", self.scale)
         self.val_max = self.read_val_min_max("{}_max".format(self.base_file_name), "val_max", self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1634,8 +1779,10 @@ class thermal_sensor(system_device):
             except BaseException:
                 self.log.warn("Wrong value reading from file: {}".format(self.file_input))
                 self.fread_err.handle_err(self.file_input)
-        pwm = self.calculate_pwm_formula()
-        self.pwm = pwm
+
+        self.pwm_regulator.tick(self.value)
+        self.pwm = self.pwm_regulator.get_pwm()
+
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -1671,6 +1818,14 @@ class thermal_module_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.pwm_prev = self.pwm
+        self.pwm_regulator = pwm_regulator_dynamic(tc_logger, 
+                                                   name, 
+                                                   self.val_min, 
+                                                   self.val_max, 
+                                                   self.pwm_min, 
+                                                   self.pwm_max, 
+                                                   self.sensors_config.get("reg_extra_param", {}))
+
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
@@ -1683,6 +1838,8 @@ class thermal_module_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
+        self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         val_min_offset = self.sensors_config.get("val_min_offset", 0)
         val_max_offset = self.sensors_config.get("val_max_offset", 0)
         val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
@@ -1692,6 +1849,7 @@ class thermal_module_sensor(system_device):
         else:
             self.val_max = 0
             self.val_min = 0
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def get_fault(self):
@@ -1765,7 +1923,8 @@ class thermal_module_sensor(system_device):
         # check if module have temperature reading interface
         if self.get_temp_support_status():
             # calculate PWM based on formula
-            pwm = max(self.calculate_pwm_formula(), pwm)
+            self.pwm_regulator.tick(self.value)
+            pwm = max(self.pwm_regulator.get_pwm(), pwm)
         self.pwm = pwm
 
     # ----------------------------------------------------------------------
@@ -1812,10 +1971,11 @@ class thermal_module_sensor(system_device):
         else:
             sign = '' # no change
         self.pwm_prev = self.pwm
-        info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, faults:[{}], pwm: {}{}, {}".format(self.name,
+        info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, [{}], faults:[{}], pwm: {}{}, {}".format(self.name,
                                                                                           round(value,2),
                                                                                           self.val_min,
                                                                                           self.val_max,
+                                                                                          str(self.pwm_regulator),
                                                                                           self.get_fault_list_str(),
                                                                                           round(self.pwm, 2), sign,
                                                                                           self.state)
@@ -1839,6 +1999,7 @@ class thermal_asic_sensor(system_device):
         # Disable kernel control for this thermal zone
         self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -1885,8 +2046,8 @@ class thermal_asic_sensor(system_device):
                 self.fread_err.handle_err(temp_read_file)
 
         # calculate PWM based on formula
-        pwm = max(self.calculate_pwm_formula(), pwm)
-        self.pwm = pwm
+        self.pwm_regulator.tick(self.value)
+        self.pwm = max(self.pwm_regulator.get_pwm(), pwm)
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -1921,6 +2082,7 @@ class psu_fan_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("thermal/{}_fan_min".format(self.base_file_name), "val_min")
         self.val_max = self.read_val_min_max("thermal/{}_fan_max".format(self.base_file_name), "val_max")
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.refresh_attr()
         self.pwm_last = CONST.PWM_MIN
 
@@ -2513,6 +2675,7 @@ class ambiant_thermal_sensor(system_device):
         """
         self.val_min = self.read_val_min_max("", "val_min", self.scale)
         self.val_max = self.read_val_min_max("", "val_max", self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
     def set_flow_dir(self, flow_dir):
@@ -2588,7 +2751,8 @@ class ambiant_thermal_sensor(system_device):
         elif self.value < self.val_min:
             self.log.debug("{} value {} less min({})".format(self.name, self.value, self.val_min))
 
-        self.pwm = self.calculate_pwm_formula()
+        self.pwm_regulator.tick(self.value)
+        self.pwm = self.pwm_regulator.get_pwm()
 
     # ----------------------------------------------------------------------
     def collect_err(self):
