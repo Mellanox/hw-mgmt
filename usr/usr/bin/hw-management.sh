@@ -2405,6 +2405,7 @@ n51xxld_specific()
 	asic_control=0
 	health_events_count=0
 	pwr_events_count=1
+	minimal_unsupported=1
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
