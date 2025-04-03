@@ -154,7 +154,7 @@ SYSFS_MONITOR_PID_FILE="/tmp/sysfs_monitor.pid"
 
 # hw-mngmt-fast-sysfs-monitor GLOBALS
 FAST_SYSFS_MONITOR_INTERVAL=1  # 1 seconds
-FAST_SYSFS_MONITOR_TIMEOUT=120   # 2 minutes
+FAST_SYSFS_MONITOR_TIMEOUT=300   # 5 minutes
 FAST_SYSFS_MONITOR_LABELS_JSON="/etc/hw-management-fast-sysfs-monitor/fast_sysfs_labels.json"
 FAST_SYSFS_MONITOR_PID_FILE="/tmp/fast_sysfs_monitor.pid"
 FAST_SYSFS_MONITOR_RDY_FILE=$hw_management_path/fast_sysfs_labels_rdy
@@ -268,7 +268,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI170" ] || 
         [ "$ui_tree_sku" = "HI173" ] ||
         [ "$ui_tree_sku" = "HI174" ] ||
-        [ "$ui_tree_sku" = "HI175" ]) &&
+        [ "$ui_tree_sku" = "HI175" ] ||
+        [ "$ui_tree_sku" = "HI178" ]) &&
         ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
     else

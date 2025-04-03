@@ -629,6 +629,44 @@ function handle_hotplug_dpu_event()
     fi
 }
 
+function handle_hotplug_psu_event()
+{
+	local psu_name=$1
+	local event=$2
+	local psu_num
+	local psu_i2c_bus
+	local psu_i2c_addr
+	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
+
+	if [ ${dummy_psus_supported} -eq 1 ]; then
+		case ${sku} in
+		HI157)
+			psu_i2c_bus=(4 4 4 4)
+			psu_i2c_addr=(59 58 5b 5a)
+			;;
+		HI158)
+			psu_i2c_bus=(4 4 3 3 3 3 4 4)
+			psu_i2c_addr=(59 58 5b 5a 5d 5c 5e 5f)
+			;;
+		*)
+			;;
+		esac
+
+		psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
+		psu_num=${psu_name#psu}
+
+		if [ $event -eq 1 ]; then
+			psu_bus=${psu_i2c_bus[$((psu_num-1))]}
+			psu_addr=${psu_i2c_addr[$((psu_num-1))]}
+			if [ ! -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
+				touch ${config_path}/${psu_name}_is_dummy
+			fi
+		else
+			rm -f ${config_path}/${psu_name}_is_dummy
+		fi
+	fi
+}
+
 function handle_hotplug_event()
 {
 	local attribute
@@ -693,6 +731,9 @@ function handle_hotplug_event()
 				disconnect_underlying_devices "$bus"
 			fi
 		fi
+		;;
+	psu*)
+		handle_hotplug_psu_event "$attribute" "$event"
 		;;
 	*)
 		;;
@@ -1226,8 +1267,6 @@ if [ "$1" == "add" ]; then
 				hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
 			fi
 			# Get PSU FAN direction
-			set -x
-			exec 3>&1 4>&2 >>/tmp/log 2>&1
 			get_fan_direction_by_vpd $eeprom_path/"$fan_prefix"_data
 			echo $? > $thermal_path/"${fan_prefix}"_dir
 			;;

@@ -149,7 +149,7 @@ atttrib_list = {
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
-    "HI171|HI172": [
+    "HI171|HI172|HI144|HI147|HI148|HI174": [
         {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
          "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
                     "asic1": {"fin": "/sys/module/sx_core/asic0/"}
@@ -158,6 +158,60 @@ atttrib_list = {
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 66}
         }        
+    ],
+    "HI122": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 32}
+        }
+    ],
+    "HI123|HI124": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 64}
+        }
+    ],
+    "HI160": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 28}
+        }
+    ],
+    "HI157": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 37}
+        }
+    ],
+    "HI158": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic2": {"fin": "/sys/module/sx_core/asic1/"},
+                    "asic3": {"fin": "/sys/module/sx_core/asic2/"},
+                    "asic4": {"fin": "/sys/module/sx_core/asic3/"}
+                }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 73}
+        }
     ],
     "HI175": [
        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
@@ -170,6 +224,16 @@ atttrib_list = {
         },
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 91}
+        }
+    ],
+    "HI178": [
+       {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
+                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
+                 }
+        },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 24}
         }
     ],
     "def": [

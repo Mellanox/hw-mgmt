@@ -100,7 +100,7 @@ do_start_fast_sysfs_monitor()
     (( ELAPSED += FAST_SYSFS_MONITOR_INTERVAL ))
     done
     log_info "Timeout reached. Not all files were found."
-    exit 1
+    exit 0
 }
 
 do_stop_fast_sysfs_monitor()
