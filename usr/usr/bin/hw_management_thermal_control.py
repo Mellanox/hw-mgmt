@@ -1301,6 +1301,10 @@ class system_device(hw_managemet_file_op):
             return self.pwm_min
 
         pwm = self.pwm_min + (float(self.value - self.val_min) / (self.val_max - self.val_min)) * (self.pwm_max - self.pwm_min)
+
+        if pwm > CONST.PWM_MAX:
+            pwm = CONST.PWM_MAX
+
         if pwm > self.pwm_max:
             pwm = self.pwm_max
 
