@@ -1214,6 +1214,9 @@ class pwm_regulator_dynamic(pwm_regulator_simple):
 
         pwm = pwm_min + (float(value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
 
+        if pwm > CONST.PWM_MAX:
+            pwm = CONST.PWM_MAX
+
         if pwm < pwm_min:
             pwm = pwm_min
         return pwm
