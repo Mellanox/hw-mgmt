@@ -119,6 +119,7 @@ n51xx_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
 minimal_unsupported=0
+dummy_psus_supported=0
 
 mctp_bus=""
 mctp_addr=""
@@ -687,6 +688,9 @@ function restore_i2c_bus_frequency_default()
 			chipup_test_time=5
 		fi
 		;;
+	VMOD0014)
+			chipup_test_time=5
+		;;
 	*)
 		chipup_test_time=2
 		;;
@@ -1020,7 +1024,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# Systems without A2D on COMEx
-				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175)
+				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175|HI178)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
@@ -1552,6 +1556,7 @@ msn47xx_specific()
 	fi
 
 	max_tachos=12
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -1599,6 +1604,7 @@ msn46xx_specific()
 
 	max_tachos=3
 	hotplug_fans=3
+	minimal_unsupported=1
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
@@ -2096,7 +2102,8 @@ sn5600d_specific()
 
 sn_spc4_common()
 {
-	# ToDo Meantime same for all SPC4 systems.
+	minimal_unsupported=1
+
 	case $sku in
 		HI144)	# SN5600
 			sn5x00_specific
@@ -2205,6 +2212,7 @@ qm3xxx_specific()
 	fi
 	i2c_comex_mon_bus_default=$((xdr_cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((xdr_cpu_bus_offset+6))
+	minimal_unsupported=1
 
 	if [ "$sku" == "HI157" ]; then
 		# Set according to front fan max.
@@ -2227,6 +2235,8 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3200.json"
 		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
+		psu_i2c_map=(4 59 4 58 4 5b 4 5a)
+		dummy_psus_supported=1
 	elif [ "$sku" == "HI158" ]; then
 		# Set according to front fan max.
 		echo 21800 > $config_path/fan_max_speed
@@ -2248,7 +2258,9 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
-	elif [ "$sku" == "HI175" ]; then
+		psu_i2c_map=(4 59 4 58 3 5b 3 5a 3 5d 3 5c 4 5e 4 5f)
+		dummy_psus_supported=1
+	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
 		# Set according to front fan max.
 		echo 13800 > $config_path/fan_max_speed
 		# Set as 30% of max speed
@@ -2261,7 +2273,6 @@ qm3xxx_specific()
 		hotplug_pwrs=0
 		hotplug_psus=0
 		psu_count=0
-		minimal_unsupported=1
 		echo 7 > $config_path/cpld_num
 		lm_sensors_config="$lm_sensors_configs_path/q3450_sensors.conf"
 		lm_sensors_labels="$lm_sensors_configs_path/q3450_sensors_labels.json"
@@ -2284,7 +2295,7 @@ qm_qm3_common()
 		HI158)	# Q3400
 			qm3xxx_specific
 		;;
-		HI175)	# Q3450
+		HI175|HI178)	# Q3450/Q3451
 			qm3xxx_specific
 		;;
 		*)
@@ -2307,6 +2318,7 @@ smart_switch_common()
 	named_busses+=(${smart_switch_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	max_tachos=4
+	minimal_unsupported=1
 	echo 11000 > $config_path/fan_max_speed
 	echo 3100 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -2393,6 +2405,7 @@ n51xxld_specific()
 	asic_control=0
 	health_events_count=0
 	pwr_events_count=1
+	minimal_unsupported=1
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
 	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
@@ -2965,7 +2978,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI178)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -3037,7 +3050,7 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI175)
+	HI175|HI178)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
@@ -3183,7 +3196,7 @@ pre_devtr_init()
 		;;
 	VMOD0018)
 		case $sku in
-		HI158|HI175)
+		HI158|HI175|HI178)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
 			;;
@@ -3256,6 +3269,34 @@ map_asic_pci_to_i2c_bus()
 	return 255
 }
 
+map_dummy_psus()
+{
+	local psu_bus
+	local psu_addr
+	local psu_num
+	local psu_present
+	local psu_dev_path
+
+	if [ ! -f "${config_path}/dummy_psus_supported" ]; then
+		echo ${dummy_psus_supported} > "${config_path}/dummy_psus_supported"
+	fi
+
+	if [ ${dummy_psus_supported} -eq 0 ]; then
+		return
+	fi
+
+	for ((i=0; i < "${#psu_i2c_map[@]}"; i+=2)); do
+		psu_bus=${psu_i2c_map[$i]}
+		psu_addr=${psu_i2c_map[$i+1]}
+		psu_num=$(((i/2)+1))
+		psu_present=$(< $thermal_path/psu${psu_num}_status)
+		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
+		if [ ${psu_present} -eq 1 ] && [ ! -d ${psu_dev_path} ]; then
+			touch ${config_path}/psu${psu_num}_is_dummy
+		fi
+	done
+}
+
 do_start()
 {
 	init_sysfs_monitor_timestamp_files
@@ -3290,6 +3331,7 @@ do_start()
 	enable_vpd_wp
 	echo 0 > $config_path/events_ready
 	/usr/bin/hw-management-start-post.sh
+	map_dummy_psus
 
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
