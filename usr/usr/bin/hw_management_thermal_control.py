@@ -1203,6 +1203,22 @@ class pwm_regulator_dynamic(pwm_regulator_simple):
         self.pwm_max_dynamic = pwm_max
 
     # ----------------------------------------------------------------------
+    def _calculate_pwm_formula(self, val_min, val_max, pwm_min, pwm_max, value):
+        """
+        @summary: Calculate PWM by formula
+        PWM = pwm_min + ((value - value_min)/(value_max-value_min)) * (pwm_max - pwm_min)
+        @return: PWM value rounded to nearest value
+        """
+        if val_max == val_min:
+            return pwm_min
+
+        pwm = pwm_min + (float(value - val_min) / (val_max - val_min)) * (pwm_max - pwm_min)
+
+        if pwm < pwm_min:
+            pwm = pwm_min
+        return pwm
+
+    # ----------------------------------------------------------------------
     def update_param(self, val_min, val_max, pwm_min, pwm_max):
         """
         @summary: update parameters
