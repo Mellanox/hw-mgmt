@@ -2258,7 +2258,7 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
-		psu_i2c_map=(4 59 4 58 3 5b 3 5a 3 5d 3 5c 4 5e 4 5f)
+		psu_i2c_map=(4 59 4 58 3 5b 3 5a 4 5d 4 5c 3 5e 3 5f)
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
 		# Set according to front fan max.
