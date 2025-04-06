@@ -33,8 +33,8 @@
 
 ### BEGIN INIT INFO
 # Provides: hw-management
-# Required-Start: $local_fs $remote_fs $syslog
-# Required-Stop: $local_fs $remote_fs $syslog
+# Required-Start: $local_fs $remote_fs $syslog hw-management-fast-sysfs-monitor
+# Required-Stop: $local_fs $remote_fs $syslog hw-management-fast-sysfs-monitor
 # Default-Start: 2 3 4 5
 # Default-Stop:  0 1 6
 # Short-Description: <Chassis Hardware management of Mellanox systems>
