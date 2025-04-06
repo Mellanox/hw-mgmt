@@ -31,6 +31,20 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+### BEGIN INIT INFO
+# Provides: hw-management-fast-sysfs-monitor
+# Required-Start: $local_fs $remote_fs $syslog
+# Required-Stop: $local_fs $remote_fs $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: <HW management Fast Lables Monitor>
+# Description: <Monitors Fast hardware label changes in sysfs>
+### END INIT INFO
+# Available options:
+# start	- start monitoring fast sysfs lables creation.
+# stop	- stop monitoring fast sysfs lables creation.
+#
+
 . /lib/lsb/init-functions
 
 EXECUTABLE=hw-management-fast-sysfs-monitor.sh
