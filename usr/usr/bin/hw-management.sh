@@ -2473,10 +2473,10 @@ sn5640_specific()
 		connect_table+=(${sn5640_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	# Set according to front fan max.
+	# Set according to front (inlet) fan max, 21800
 	echo 21800 > $config_path/fan_max_speed
-	# Set at 30% PWM
-	echo 6540 > $config_path/fan_min_speed
+	# Set at 30% of rear (outlet) fan max, 20500 (according to fan vendor table)
+	echo 6468 > $config_path/fan_min_speed
 	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
@@ -2491,7 +2491,7 @@ sn5640_specific()
 	minimal_unsupported=1
 	echo 4 > $config_path/cpld_num
 	lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
-	
+
 	case $sku in
 		HI172)	# Gaur
 			thermal_control_config="$thermal_control_configs_path/tc_config_sn5610.json"
