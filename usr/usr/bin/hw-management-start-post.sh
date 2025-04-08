@@ -102,3 +102,27 @@ case $sku in
 	*)
 		# Do nothing
 esac
+
+# update Thermal Control service to use correct executable revision
+service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
+if [ -f $service_file_path ]; then
+	md5sum_orig=$(md5sum $service_file_path | awk '{print $1}')
+	case $sku in
+		HI172)	# Systems allowed to use new hw-management-tc
+			tc_version="2.5"
+			tc_executable="hw_management_thermal_control_2_5.py"
+			;;
+		*)
+			tc_version="2.0"
+			tc_executable="hw_management_thermal_control.py"
+			;;
+	esac
+	sed -i "s/hw_management_thermal_control.py/$tc_executable/g" $service_file_path
+	sed -i "s/ver 2.0/ver $tc_version/g" $service_file_path
+	md5sum_new=$(md5sum $service_file_path | awk '{print $1}')
+	if [ "$md5sum_orig" != "$md5sum_new" ]; then
+		log_info "Thermal Control service updated"
+		systemctl daemon-reload
+		systemctl restart hw-management-tc.service
+	fi
+fi
