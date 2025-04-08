@@ -82,7 +82,7 @@ index 3737af0d3..37d4c02c1 100644
 +			data->wmark_low_ts = jiffies;
 +
 +		data->wmark_low_cntr++;
-+		if (data->wmark_low_cntr == MLXREG_HOTPLUG_WM_COUNTER - 1) {
++		if (data->wmark_low_cntr >= MLXREG_HOTPLUG_WM_COUNTER - 1) {
 +			data->wmark_high_ts = jiffies;
 +			wmark_low_ts_window = data->wmark_low_ts +
 +					      msecs_to_jiffies(MLXREG_HOTPLUG_WM_WINDOW);
