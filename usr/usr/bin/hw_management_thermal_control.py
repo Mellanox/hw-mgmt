@@ -205,9 +205,12 @@ class CONST(object):
     MLXREG_GET_CMD_STR = "mlxreg -d {pcidev} --reg_name MFSC --get --indexes \"pwm=0x0\" | grep pwm | head -n 1 | cut -d '|' -f 2"
 
     # Value averege formula type
-    VAL_AVG_INTEGRAL = 1
-    VAL_AVG_ARRAY = 2
-    VAL_AVG_ARRAY_WEGHT = 3
+    # exponential moving average
+    VAL_AVG_EMA = 1
+    # simple moving average
+    VAL_AVG_SMA = 2
+    # weighted moving average
+    VAL_AVG_WMA = 3
 
 """
 Default sensor  configuration.
@@ -242,7 +245,7 @@ SENSOR_DEF_CONFIG = {
     r'module\d+':       {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000, "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
-                         "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_ARRAY_WEGHT,
+                         "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_WMA,
                          "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
@@ -275,7 +278,7 @@ SENSOR_DEF_CONFIG = {
                         },
     r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000,
                          "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
-                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0
+                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}
                         },
     r'psu\d+_temp':     {"type": "thermal_sensor",
                          "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
@@ -473,14 +476,13 @@ def g_get_range_val(line, in_value):
 
 
 # ----------------------------------------------------------------------
-def g_get_dmin(thermal_table, temp, path, interpolated=False):
+def g_get_dmin(thermal_table, temp, path):
     """
     @summary: Searching PWM value in dmin table based on input temperature
     @param thermal_table: dict with thermal table for the current system
     @param temp:  temperature
     @param patch: array with thermal cause path.
     Example: ["C2P": "trusted"] or ["C2P": "psu_err", "present']
-    @param interpolated: Use linear interpolation for soothing PWM jumps
     @return: PWM value
     """
     line = get_dict_val_by_path(thermal_table, path)
@@ -488,27 +490,8 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
     if not line:
         return CONST.PWM_MIN
     # get current range
-    dmin, range_min, range_max = g_get_range_val(line, round(temp))
-    if not interpolated:
-        return float(dmin)
-
-    # get range of next step
-    dmin_next, range_min_next, _ = g_get_range_val(line, range_max + 1)
-    # reached maximum range
-    if dmin_next is None:
-        return dmin
-
-    # calculate smooth step
-    start_smooth_change_position = range_min_next - (dmin_next - dmin) / CONST.DMIN_PWM_STEP_MIN
-    if temp < start_smooth_change_position:
-        return dmin
-    elif start_smooth_change_position < range_min:
-        step = float(dmin_next - dmin) / float(range_max + 1 - range_min)
-    else:
-        step = CONST.DMIN_PWM_STEP_MIN
-    dmin = dmin_next - ((range_min_next - temp) * step)
-    return dmin
-
+    dmin, _, _ = g_get_range_val(line, round(temp))
+    return float(dmin)
 
 # ----------------------------------------------------------------------
 def add_missing_to_dict(dict_base, dict_new):
@@ -1269,7 +1252,7 @@ class pwm_regulator_dynamic(pwm_regulator_simple):
         """
         @summary: return string representation of the class
         """
-        return "I:{: <4}, pwm_max_dyn:{}".format(round(self.Iterm, 1), round(self.pwm_max_dynamic, 1))
+        return "I:{: <3}, pwm_dmax:{}".format(round(self.Iterm, 1), round(self.pwm_max_dynamic))
 
 
 class system_device(hw_management_file_op):
@@ -1316,7 +1299,7 @@ class system_device(hw_management_file_op):
         self.value_last_update_trend = 0
         self.value_trend = 0
         self.value_hyst = float(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
-        self.smooth_formula = int(self.sensors_config.get("smooth_formula", CONST.VAL_AVG_INTEGRAL))
+        self.smooth_formula = int(self.sensors_config.get("smooth_formula", CONST.VAL_AVG_EMA))
 
         # ==================
         self.clear_fault_list()
@@ -1441,9 +1424,9 @@ class system_device(hw_management_file_op):
         self.update_pwm_flag = 1
 
     # ----------------------------------------------------------------------
-    def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_INTEGRAL):
+    def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_EMA):
         # Value a,verege formula type
-        if formula_type == CONST.VAL_AVG_INTEGRAL:
+        if formula_type == CONST.VAL_AVG_EMA:
             input_smooth_level = self.input_smooth_level + 1
             # first time init
             if self.value == CONST.TEMP_NA_VAL:
@@ -1458,7 +1441,7 @@ class system_device(hw_management_file_op):
                 result = value
 
             return result
-        elif formula_type == CONST.VAL_AVG_ARRAY:
+        elif formula_type == CONST.VAL_AVG_SMA:
             input_smooth_level = self.input_smooth_level + 1
 
             if self.value == CONST.TEMP_NA_VAL:
@@ -1467,7 +1450,7 @@ class system_device(hw_management_file_op):
             self.value_items_lst = [value] + self.value_items_lst[:-1]
             return sum(self.value_items_lst)/input_smooth_level
 
-        elif formula_type == CONST.VAL_AVG_ARRAY_WEGHT:
+        elif formula_type == CONST.VAL_AVG_WMA:
             input_smooth_level = self.input_smooth_level + 1
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_items_lst = [value] * input_smooth_level
@@ -1715,11 +1698,11 @@ class system_device(hw_management_file_op):
         else:
             value = self.value
         info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], pwm: {}, {}".format(self.name,
-                                                                                          value,
-                                                                                          self.val_min,
-                                                                                          self.val_max,
+                                                                                          round(value,1),
+                                                                                          round(self.val_min,1),
+                                                                                          round(self.val_max,1),
                                                                                           self.get_fault_list_str(),
-                                                                                          round(self.pwm, 2),
+                                                                                          round(self.pwm, 1),
                                                                                           self.state)
         return info_str
 
@@ -1975,12 +1958,12 @@ class thermal_module_sensor(system_device):
             sign = '' # no change
         self.pwm_prev = self.pwm
         info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, [{}], faults:[{}], pwm: {}{}, {}".format(self.name,
-                                                                                          round(value,2),
-                                                                                          self.val_min,
-                                                                                          self.val_max,
+                                                                                          round(value,1),
+                                                                                          round(self.val_min,1),
+                                                                                          round(self.val_max,1),
                                                                                           str(self.pwm_regulator),
                                                                                           self.get_fault_list_str(),
-                                                                                          round(self.pwm, 2), sign,
+                                                                                          round(self.pwm, 1), sign,
                                                                                           self.state)
         return info_str
 
@@ -2265,7 +2248,7 @@ class psu_fan_sensor(system_device):
                                                                       int(self.value),
                                                                       self.fan_dir,
                                                                       self.get_fault_list_str(),
-                                                                      round(self.pwm, 2),
+                                                                      round(self.pwm, 1),
                                                                       self.state)
 
 
@@ -2649,11 +2632,11 @@ class fan_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        info_str = "\"{}\" rpm:{}, dir:{} faults:[{}] pwm {} {}".format(self.name,
+        info_str = "\"{: <14}\" rpm:{}, dir:{} faults:[{}] pwm {} {}".format(self.name,
                                                                         self.value,
                                                                         self.fan_dir,
                                                                         self.get_fault_list_str(),
-                                                                        round(self.pwm, 2),
+                                                                        round(self.pwm, 1),
                                                                         self.state)
         return info_str
 
@@ -2796,7 +2779,7 @@ class ambiant_thermal_sensor(system_device):
                                                                           round(self.value_dict[sensor_name_min], 1),
                                                                           self.flow_dir,
                                                                           self.get_fault_list_str(),
-                                                                          round(self.pwm, 2),
+                                                                          round(self.pwm, 1),
                                                                           self.state)
         return info_str
 
@@ -2964,7 +2947,7 @@ class ThermalManagement(hw_management_file_op):
             self.pwm_worker_poll_time = pwm_update_period
         else:
             self.pwm_worker_poll_time = CONST.PWM_UPDATE_TIME_DEF
-        self.log.notice("PWM update time: {} sec".format(self.pwm_worker_poll_time))
+        self.log.info("PWM update time: {} sec".format(self.pwm_worker_poll_time))
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
@@ -3614,15 +3597,13 @@ class ThermalManagement(hw_management_file_op):
 
         # 6. Init ASIC config
         if CONST.SYS_CONF_ASIC_PARAM not in sys_config:
-            self.log.info("ASIC specific parameters table missing in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
 
         if CONST.SYS_CONF_SENSOR_LIST_PARAM not in sys_config:
-            self.log.info("Static sensor list missing in system_config. Init it from local")
+            self.log.warn("Static sensor list missing orempty in tc_config")
             sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = []
 
         if CONST.SYS_CONF_ERR_MASK not in sys_config:
-            self.log.info("Dmin mask not defined in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ERR_MASK] = []
 
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
@@ -4086,8 +4067,8 @@ class ThermalManagement(hw_management_file_op):
 
         self.log.info("Thermal periodic report")
         self.log.info("================================")
-        self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
-        self.log.info("Cooling(%) {} (max pwm source:{}) avg:{}".format(self.pwm_target, self.pwm_change_reason, round(self._get_pwm_avg(), 2 )))
+        self.log.info("Temperature(C):{} amb:{}".format(asic_info, amb_tmp))
+        self.log.info("Cooling(%):{} (max pwm source:{}), avg:{}".format(self.pwm_target, self.pwm_change_reason, round(self._get_pwm_avg(),1)))
         self.log.info("dir:{}".format(flow_dir))
         self.log.info("================================")
         for dev_obj in self.dev_obj_list:
