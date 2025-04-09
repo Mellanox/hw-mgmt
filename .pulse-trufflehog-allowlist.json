@@ -1,6 +1,11 @@
 {
-    "/usr/usr/bin/hw_management_redfish_client.py": {
-        "Password" : ["\"pa*****************\""]
+    "usr/usr/bin/hw_management_redfish_client.py": {
+        "Password" : ["\"pa*****************\"", "\"password\" : \"******\""]
+    },
+    "recipes-kernel/linux/linux-6.1/0103-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch": {
+        "Github": ["4b17e10a22771fcd2dbb4754c43200af2fc69425"]
+    },
+    "recipes-kernel/linux/linux-5.10/0292-platform-mellanox-mlx-platform-Add-support-for-new-X.patch": {
+        "Github": ["f194151e386cb26826766dcfe8a2a0c5fba2799e", "92a3877be169c1083cf2ccdbe2e25a4591ed89aa", "f25ad1918eb613aa315805717603a0960f42e6df"]
     }
 }
-
