@@ -97,42 +97,7 @@ atttrib_list = {
         },
 
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {  "module1": {"fin": "/sys/module/sx_core/asic0/module0/"},
-                    "module2": {"fin": "/sys/module/sx_core/asic0/module1/"},
-                    "module3": {"fin": "/sys/module/sx_core/asic0/module2/"},
-                    "module4": {"fin": "/sys/module/sx_core/asic0/module3/"},
-                    "module5": {"fin": "/sys/module/sx_core/asic0/module4/"},
-                    "module6": {"fin": "/sys/module/sx_core/asic0/module5/"},
-                    "module7": {"fin": "/sys/module/sx_core/asic0/module6/"},
-                    "module8": {"fin": "/sys/module/sx_core/asic0/module7/"},
-                    "module9": {"fin": "/sys/module/sx_core/asic0/module8/"},
-                    "module10": {"fin": "/sys/module/sx_core/asic0/module9/"},
-                    "module11": {"fin": "/sys/module/sx_core/asic0/module10/"},
-                    "module12": {"fin": "/sys/module/sx_core/asic0/module11/"},
-                    "module13": {"fin": "/sys/module/sx_core/asic0/module12/"},
-                    "module14": {"fin": "/sys/module/sx_core/asic0/module13/"},
-                    "module15": {"fin": "/sys/module/sx_core/asic0/module14/"},
-                    "module16": {"fin": "/sys/module/sx_core/asic0/module15/"},
-                    "module17": {"fin": "/sys/module/sx_core/asic0/module16/"},
-                    "module18": {"fin": "/sys/module/sx_core/asic0/module17/"},
-                    "module19": {"fin": "/sys/module/sx_core/asic0/module18/"},
-                    "module20": {"fin": "/sys/module/sx_core/asic0/module19/"},
-                    "module21": {"fin": "/sys/module/sx_core/asic0/module20/"},
-                    "module22": {"fin": "/sys/module/sx_core/asic0/module21/"},
-                    "module23": {"fin": "/sys/module/sx_core/asic0/module22/"},
-                    "module24": {"fin": "/sys/module/sx_core/asic0/module23/"},
-                    "module25": {"fin": "/sys/module/sx_core/asic0/module24/"},
-                    "module26": {"fin": "/sys/module/sx_core/asic0/module25/"},
-                    "module27": {"fin": "/sys/module/sx_core/asic0/module26/"},
-                    "module28": {"fin": "/sys/module/sx_core/asic0/module27/"},
-                    "module29": {"fin": "/sys/module/sx_core/asic0/module28/"},
-                    "module30": {"fin": "/sys/module/sx_core/asic0/module29/"},
-                    "module31": {"fin": "/sys/module/sx_core/asic0/module30/"},
-                    "module32": {"fin": "/sys/module/sx_core/asic0/module31/"},
-                    "module33": {"fin": "/sys/module/sx_core/asic0/module32/"},
-                    "module34": {"fin": "/sys/module/sx_core/asic0/module33/"},
-                    "module35": {"fin": "/sys/module/sx_core/asic0/module34/"},
-                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"} }
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 36}
         },
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
@@ -178,49 +143,20 @@ atttrib_list = {
                     "asic2": {"fin": "/sys/module/sx_core/asic1/"}
                 }
         },
-
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {  "module1": {"fin": "/sys/module/sx_core/asic0/module0/"},
-                    "module2": {"fin": "/sys/module/sx_core/asic0/module1/"},
-                    "module3": {"fin": "/sys/module/sx_core/asic0/module2/"},
-                    "module4": {"fin": "/sys/module/sx_core/asic0/module3/"},
-                    "module5": {"fin": "/sys/module/sx_core/asic0/module4/"},
-                    "module6": {"fin": "/sys/module/sx_core/asic0/module5/"},
-                    "module7": {"fin": "/sys/module/sx_core/asic0/module6/"},
-                    "module8": {"fin": "/sys/module/sx_core/asic0/module7/"},
-                    "module9": {"fin": "/sys/module/sx_core/asic0/module8/"},
-                    "module10": {"fin": "/sys/module/sx_core/asic0/module9/"},
-                    "module11": {"fin": "/sys/module/sx_core/asic0/module10/"},
-                    "module12": {"fin": "/sys/module/sx_core/asic0/module11/"},
-                    "module13": {"fin": "/sys/module/sx_core/asic0/module12/"},
-                    "module14": {"fin": "/sys/module/sx_core/asic0/module13/"},
-                    "module15": {"fin": "/sys/module/sx_core/asic0/module14/"},
-                    "module16": {"fin": "/sys/module/sx_core/asic0/module15/"},
-                    "module17": {"fin": "/sys/module/sx_core/asic0/module16/"},
-                    "module18": {"fin": "/sys/module/sx_core/asic0/module17/"},
-                    "module19": {"fin": "/sys/module/sx_core/asic0/module18/"},
-                    "module20": {"fin": "/sys/module/sx_core/asic0/module19/"},
-                    "module21": {"fin": "/sys/module/sx_core/asic0/module20/"},
-                    "module22": {"fin": "/sys/module/sx_core/asic0/module21/"},
-                    "module23": {"fin": "/sys/module/sx_core/asic0/module22/"},
-                    "module24": {"fin": "/sys/module/sx_core/asic0/module23/"},
-                    "module25": {"fin": "/sys/module/sx_core/asic0/module24/"},
-                    "module26": {"fin": "/sys/module/sx_core/asic0/module25/"},
-                    "module27": {"fin": "/sys/module/sx_core/asic0/module26/"},
-                    "module28": {"fin": "/sys/module/sx_core/asic0/module27/"},
-                    "module29": {"fin": "/sys/module/sx_core/asic0/module28/"},
-                    "module30": {"fin": "/sys/module/sx_core/asic0/module29/"},
-                    "module31": {"fin": "/sys/module/sx_core/asic0/module30/"},
-                    "module32": {"fin": "/sys/module/sx_core/asic0/module31/"},
-                    "module33": {"fin": "/sys/module/sx_core/asic0/module32/"},
-                    "module34": {"fin": "/sys/module/sx_core/asic0/module33/"},
-                    "module35": {"fin": "/sys/module/sx_core/asic0/module34/"},
-                    "module36": {"fin": "/sys/module/sx_core/asic0/module35/"} }
+         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 36}
         },
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
-    "def": [],
+    "def": [
+         {"fin": "/var/run/hw-management/config/thermal_enforced_full_spped",
+         "fn": "run_cmd",
+         "arg": ["if [[ -f /var/run/hw-management/config/thermal_enforced_full_spped && "
+                 "$(</var/run/hw-management/config/thermal_enforced_full_spped) == \"1\" ]]; then "
+                 "/usr/bin/hw-management-user-dump; fi"],
+         "poll": 5, "ts": 0},
+    ],
     "test": [
          {"fin": "/tmp/power_button_clr",
          "fn": "run_power_button_event",
@@ -424,7 +360,7 @@ def is_asic_ready(asic_name, asic_attr):
 def asic_temp_reset(asic_name, f_asic_src_path):
     # Default temperature values
     file_paths = {
-        "": 0,
+        "": "",
         "_temp_norm": "",
         "_temp_crit": "",
         "_temp_emergency": "",
@@ -441,6 +377,7 @@ def asic_temp_populate(arg_list, arg):
     @summary: Update asic attributes
     """
     asic_chipup_completed = 0
+    asic_src_list = []
     for asic_name, asic_attr in arg_list.items():
         f_asic_src_path = asic_attr["fin"]
         # ASIC not ready (SDK is not started)
@@ -448,7 +385,9 @@ def asic_temp_populate(arg_list, arg):
             asic_temp_reset(asic_name, f_asic_src_path)
             continue
 
-        asic_chipup_completed += 1
+        if f_asic_src_path not in asic_src_list:
+            asic_src_list.append(f_asic_src_path)
+            asic_chipup_completed += 1
 
         # If link to asic temperatule already exists - nothing to do
         f_dst_name = "/var/run/hw-management/thermal/{}".format(asic_name)
@@ -470,7 +409,7 @@ def asic_temp_populate(arg_list, arg):
             temperature_fault = CONST.ASIC_TEMP_FAULT_DEF
             temperature_crit = CONST.ASIC_TEMP_CRIT_DEF
         except:
-            temperature = "0"
+            temperature = ""
             temperature_min = ""
             temperature_max = ""
             temperature_fault = ""
@@ -515,14 +454,17 @@ def asic_temp_populate(arg_list, arg):
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, _dummy):
     ''
-    total_module_count = 0
-    for module_name, module_attr in arg_list.items():
-        total_module_count += 1
+    fin = arg_list["fin"]
+    module_count = arg_list["module_count"]
+    offset = arg_list["fout_idx_offset"]
+    host_management_mode = None
+    for idx in range(module_count):
+        module_name = "module{}".format(idx+offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
             continue
 
-        f_src_path = module_attr["fin"]
+        f_src_path = fin.format(idx)
         module_present = 0
 
         # Check if module is present
@@ -542,7 +484,10 @@ def module_temp_populate(arg_list, _dummy):
 
         if module_present:
             # If control mode is FW, skip temperature reading (independent mode)
-            if is_module_host_management_mode(f_src_path):
+            if host_management_mode is None:
+                host_management_mode = is_module_host_management_mode(f_src_path)
+
+            if host_management_mode:
                 continue
 
             f_src_input = os.path.join(f_src_path, "temperature/input")
@@ -566,8 +511,8 @@ def module_temp_populate(arg_list, _dummy):
                         val = f.read()
                     temperature_max = sdk_temp2degree(int(val))
                 else:
-                     temperature_max = "75000"
-                temperature_crit = "120000"
+                    temperature_max = CONST.MODULE_TEMP_MAX_DEF
+                temperature_crit = CONST.MODULE_TEMP_CRIT_DEF
             except:
                 pass
 
@@ -586,7 +531,7 @@ def module_temp_populate(arg_list, _dummy):
                 f.write("{}\n".format(value))
 
     with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
-        f.write("{}\n".format(total_module_count))
+        f.write("{}\n".format(module_count))
     return
 
 # ----------------------------------------------------------------------
@@ -657,11 +602,6 @@ def main():
         if re.match(key, product_sku):
             sys_attr.extend(val)
             break
-
-    if not sys_attr:
-        print("Not supported product SKU: {}".format(product_sku))
-        while True:
-            time.sleep(10)
 
     for attr in sys_attr:
         init_attr(attr)
