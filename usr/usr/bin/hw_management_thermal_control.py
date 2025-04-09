@@ -3303,7 +3303,8 @@ class ThermalManagement(hw_managemet_file_op):
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.PSU_ERR])
         err_mask = None
         if exclusion_conf:
-            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : 2, "curr_err_cnt" : 0}
+            min_err_cnt = int(exclusion_conf.get("min_err_cnt", 2))
+            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : min_err_cnt, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.PSU_ERR_LIST
@@ -3318,7 +3319,8 @@ class ThermalManagement(hw_managemet_file_op):
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.FAN_ERR])
         err_mask = None
         if exclusion_conf:
-            self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": "drwr\d+", "min_err_cnt" : 2, "curr_err_cnt": 0}
+            min_err_cnt = int(exclusion_conf.get("min_err_cnt", 2))
+            self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": "drwr\d+", "min_err_cnt" : min_err_cnt, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.DRWR_ERR_LIST
