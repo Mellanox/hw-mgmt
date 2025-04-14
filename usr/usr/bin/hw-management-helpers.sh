@@ -269,6 +269,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI173" ] ||
         [ "$ui_tree_sku" = "HI174" ] ||
         [ "$ui_tree_sku" = "HI175" ] ||
+        [ "$ui_tree_sku" = "HI176" ] ||
+        [ "$ui_tree_sku" = "HI177" ] ||
         [ "$ui_tree_sku" = "HI178" ]) &&
         ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
@@ -891,8 +893,8 @@ get_ui_tree_archive_file()
 	[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 
 	# Validate label archive file.
-	case $board_type in
-	VMOD0021)
+	case $ui_tree_sku in
+	HI162|HI166|HI167|HI169|HI170|HI175)
 		# Check if raa228000 converter present on expected i2c addr 12-0060
 		# if 'yes' - we should use special ui file
 		i2cdetect -y -a -r 12 0x60 0x60 | grep -q -- "--"

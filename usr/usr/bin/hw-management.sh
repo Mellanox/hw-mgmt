@@ -1345,17 +1345,20 @@ mqmxxx_msn37x_msn34x_specific()
 	case $sku in
 		HI136)
 			# msn3700C-S
+			minimal_unsupported=1
 			connect_table+=(${msn37xx_secured_connect_table[@]})
 			voltmon_connection_table=(${mqm8700_voltmon_connect_table[@]})
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
 		HI112|MSN3700)
 			# msn3700
+			minimal_unsupported=1
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700.json"
 		;;
 		HI116|MSN3700C)
-			# mmsn3700C
+			# msn3700C
+			minimal_unsupported=1
 			connect_msn3700
 			thermal_control_config="$thermal_control_configs_path/tc_config_msn3700C.json"
 		;;
@@ -1387,10 +1390,10 @@ mqmxxx_msn37x_msn34x_specific()
 sn3750sx_specific()
 {
 	connect_table+=(${sn3750sx_secured_connect_table[@]})
-
 	add_cpu_board_to_connection_table
 
 	max_tachos=12
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 25000 > $config_path/psu_fan_max
@@ -1408,6 +1411,7 @@ msn3420_specific()
 
 	max_tachos=10
 	hotplug_fans=5
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -1617,6 +1621,7 @@ msn3510_specific()
 	add_cpu_board_to_connection_table
 
 	max_tachos=12
+	minimal_unsupported=1
 	echo 25000 > $config_path/fan_max_speed
 	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
@@ -2347,18 +2352,30 @@ n51xxld_specific()
 		HI166)	# Juliet SO.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
 			;;
 		HI169)	# Juliet Ariel.
 			add_i2c_dynamic_bus_dev_connection_table "${ariel_cartridge_eeprom_connect_table[@]}"
 			echo -n "${ariel_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 2 > $config_path/cartridge_counter
 			;;
-		HI167|HI170)	# Juliet NSO.
+		HI167|HI170)	# Juliet NSO
 			add_i2c_dynamic_bus_dev_connection_table "${nso_cartridge_eeprom_connect_table[@]}"
 			echo -n "${nso_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
+			;;
+		HI176)	# gb300
+			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
+			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
+			;;
+		HI177)	# Kyber
+			echo 0 > $config_path/cartridge_counter
 			;;
 		*)	# According Juliet SO.
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+			echo 4 > $config_path/cartridge_counter
 			;;
 		esac
 		# Add VPD explicitly.
@@ -2367,11 +2384,16 @@ n51xxld_specific()
 			echo ${n5110ld_virtual_vpd_connect_table[0]} ${n5110ld_virtual_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/new_device
 		fi
 	fi
+	
 	asic_i2c_buses=(11 21)
 	echo 1 > $config_path/global_wp_wait_step
 	echo 20 > $config_path/global_wp_timeout
-	echo 4 > $config_path/cpld_num
-	echo 2 > $config_path/clk_brd_num
+	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
+
+	cpld_num=4
+	max_tachos=8
+    leakage_count=4
+	erot_count=3
 
 	case $sku in
 		HI162)	# power-on
@@ -2379,36 +2401,48 @@ n51xxld_specific()
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
-		HI166|HI169|HI170)	# TTM, ARIEL, MSFT
-			max_tachos=8
+		HI166|HI169)	# TTM, ARIEL
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld_ttm.json"
 		;;
 		HI167|HI170)	# NSO, NSO no NCI, DGX, MSFT
-			max_tachos=8
 			echo 4 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5100ld.json"
 		;;
+		HI176)	# gb300
+			max_tachos=0
+			echo 0 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			leakage_count=2
+			cpld_num=3
+		;;
+		HI177)	# Kyber
+			max_tachos=0
+			echo 0 > $config_path/fan_drwr_num
+			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			lm_sensors_config="$lm_sensors_configs_path/n5240ld_sensors.conf"
+			leakage_count=2
+			erot_count=4
+			cpld_num=3
+		;;
 		*)
-			max_tachos=8
 			echo 6 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_n5110ld.json"
 		;;
 	esac
 
+	echo 2 > $config_path/clk_brd_num
+	echo $cpld_num > $config_path/cpld_num
 	psu_count=0
 	hotplug_fans=0
-	leakage_count=4
 	hotplug_pwrs=0
 	hotplug_psus=0
-	erot_count=3
 	asic_control=0
 	health_events_count=0
 	pwr_events_count=1
 	minimal_unsupported=1
 	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
 	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
-	lm_sensors_config="$lm_sensors_configs_path/n51xxld_sensors.conf"
 	lm_sensors_labels="$lm_sensors_configs_path/n51xxld_sensors_labels.json"
 	echo C2P > $config_path/system_flow_capability
 	named_busses+=(${n5110ld_named_busses[@]})
@@ -2416,9 +2450,10 @@ n51xxld_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
-	echo 33000 > $config_path/fan_max_speed
-	echo 6000 > $config_path/fan_min_speed
-	
+	if [ $max_tachos -ne 0 ]; then
+		echo 33000 > $config_path/fan_max_speed
+		echo 6000 > $config_path/fan_min_speed
+	fi
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
@@ -2742,7 +2777,7 @@ load_modules()
 	esac
 
 	case $sku in
-		HI162|HI166|HI167|HI169|HI170)	# Juliet
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# Juliet
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
@@ -2762,7 +2797,10 @@ set_config_data()
 		echo $fan_command > $config_path/fan_command
 		echo $fan_config_command > $config_path/fan_config_command
 	fi
-	echo $fan_speed_units > $config_path/fan_speed_units
+	if [ $max_tachos -ne 0 ]; then
+		echo $fan_speed_units > $config_path/fan_speed_units
+		echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
+	fi
 	echo 35 > $config_path/thermal_delay
 	echo $chipup_delay_default > $config_path/chipup_delay
 	echo 0 > $config_path/chipdown_delay
@@ -2772,7 +2810,7 @@ set_config_data()
 	echo $hotplug_fans > $config_path/hotplug_fans
 	echo $hotplug_linecards > $config_path/hotplug_linecards
 	echo $fan_speed_tolerance > $config_path/fan_speed_tolerance
-	echo $leakage_count > $config_path/leakage_num
+	echo $leakage_count > $config_path/leakage_counter
 	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
 		cp $thermal_control_config $config_path/tc_config.json
 	else
@@ -2978,7 +3016,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI178)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -3005,12 +3043,21 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170)
+	HI131|HI141|HI142|HI152|HI162|HI166|HI167|HI169|HI170|HI176)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic2_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
+		;;
+	HI177)
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $1}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo 3 > "$config_path"/asic_num
 		;;
 	HI143)
 		asic1_pci_bus_id=`echo $asics | awk '{print $1}'`
@@ -3219,7 +3266,7 @@ pre_devtr_init()
 		;;
 	VMOD0021)
 		case $sku in
-		HI162|HI166|HI167|HI169|HI170)
+		HI162|HI166|HI167|HI169|HI170|HI176|HI177)
 			echo 55 > $config_path/cpu_brd_bus_offset
 			;;
 		*)
@@ -3344,6 +3391,11 @@ do_start()
 		ln -sf $lm_sensors_config $config_path/lm_sensors_config
 	else
 		ln -sf /etc/sensors3.conf $config_path/lm_sensors_config
+	fi
+	if [ -v "thermal_control_config" ] && [ -f $thermal_control_config ]; then
+		cp $thermal_control_config $config_path/tc_config.json
+	else
+		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
 	log_info "Init completed."
 }
