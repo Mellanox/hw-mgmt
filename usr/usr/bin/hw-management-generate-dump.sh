@@ -39,6 +39,7 @@ HW_MGMT_FOLDER="/var/run/hw-management/"
 board_type=`cat /sys/devices/virtual/dmi/id/board_name`
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
 REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
+CPLD_IOREG_RANGE=256
 dump_process_pid=$$
 
 MODE=$1
@@ -64,8 +65,10 @@ arch=$(uname -m)
 if [ "$arch" = "aarch64" ]; then
 	regmap_plat_path=/sys/kernel/debug/regmap/MLNXBF49:00
 	REGMAP_FILE=${REGMAP_FILE_ARM64}
+	CPLD_IOREG_RANGE=512
 else
 	regmap_plat_path=/sys/kernel/debug/regmap/mlxplat
+	CPLD_IOREG_RANGE=256
 fi
 
 dump_cmd "sensors" "sensors" "20"
@@ -112,6 +115,7 @@ VMOD0014)
 	;;
 esac
 
+dump_cmd "iorw -b 0x2500 -r -l$CPLD_IOREG_RANGE" "cpld_reg_direct_dump" "5"
 dump_cmd "dmesg" "dmesg" "10"
 dump_cmd "dmidecode -t1 -t2 -t11 -t15" "dmidecode" "3"
 dump_cmd "lsmod" "lsmod" "3"
