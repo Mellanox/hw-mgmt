@@ -9,7 +9,6 @@ StartLimitBurst=5
 [Service]
 ExecStart=/bin/sh -c "/usr/bin/hw-management-fast-sysfs-monitor.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management-fast-sysfs-monitor.sh stop"
-TimeoutStopSec=1
 
 Restart=on-failure
 RestartSec=60s
