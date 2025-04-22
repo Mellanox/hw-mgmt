@@ -72,12 +72,10 @@ do_start_fast_sysfs_monitor()
             file_name=${DEVTREE_ENTRIES[i+3]}
             # Check if file_name is in monitored devices and also hasn't been added yet.
             if [[ " ${DEV_FILES[@]} " =~ " $file_name " && -z "${DEVICE_ADDED[$file_name]}" ]]; then
-                if [ ! -d /sys/bus/i2c/devices/$bus-00"${address#0x}" ] && [ ! -d /sys/bus/i2c/devices/$bus-000"${address#0x}" ]; then
-                    log_info "Adding device: $driver_name $address $bus $file_name"
-                    echo "$driver_name $address" > "/sys/bus/i2c/devices/i2c-$bus/new_device"
-                    sleep 1 # Let the filesystem relax.
-                    DEVICE_ADDED[$file_name]=1
-                fi
+                log_info "Adding device: $driver_name $address $bus $file_name"
+                echo "$driver_name $address" > "/sys/bus/i2c/devices/i2c-$bus/new_device"
+                sleep 1 # Let the filesystem relax.
+                DEVICE_ADDED[$file_name]=1
             fi
         done
     fi
