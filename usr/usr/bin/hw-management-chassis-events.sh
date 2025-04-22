@@ -1249,10 +1249,8 @@ if [ "$1" == "add" ]; then
 		fi
 		drv_name=$(< "$busdir"/name)
 		if [[ $drv_name == *"24c"* ]]; then
-			if [ ! -L "$eeprom_path/$eeprom_name" ]; then
-				check_n_link "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
-				chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
-			fi
+			ln -sf "$3""$4"/eeprom $eeprom_path/$eeprom_name 2>/dev/null
+			chmod 400 $eeprom_path/$eeprom_name 2>/dev/null
 		else
 			return
 		fi
