@@ -38,8 +38,8 @@ index 8a08b8102..0f466f321 100644
 --- a/drivers/hwmon/pmbus/Kconfig
 +++ b/drivers/hwmon/pmbus/Kconfig
 @@ -221,6 +221,16 @@ config SENSORS_MAX8688
- 	  This driver can also be built as a module. If so, the module will
- 	  be called max8688.
+	  This driver can also be built as a module. If so, the module will
+	  be called max8688.
  
 +config SENSORS_MP2855
 +	tristate "MPS MP2855"

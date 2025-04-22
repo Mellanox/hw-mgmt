@@ -893,8 +893,8 @@ get_ui_tree_archive_file()
 	[ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 
 	# Validate label archive file.
-	case $ui_tree_sku in
-	HI162|HI166|HI167|HI169|HI170|HI175)
+	case $board_type in
+	VMOD0021)
 		# Check if raa228000 converter present on expected i2c addr 12-0060
 		# if 'yes' - we should use special ui file
 		i2cdetect -y -a -r 12 0x60 0x60 | grep -q -- "--"
