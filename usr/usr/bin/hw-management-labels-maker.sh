@@ -200,10 +200,6 @@ make_labels()
 		subfolder="temperature"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;	
-	pwr_conv1_power*|pwr_conv2_power*|pwr_conv3_power*|pwr_conv4_power*)
-		subfolder="power"
-		read folder key attr_file < <(get_label_files1 $attr_name)
-		;;	
 	pdb_pwr_conv1_in*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files3 $attr_name)
@@ -219,21 +215,13 @@ make_labels()
 	pdb_pwr_conv1_power*)
 		subfolder="power"
 		read folder key attr_file < <(get_label_files3 $attr_name)
-		;;
+		;;		
 	pdb_hotswap1_in*|pdb_hotswap2_in*|pdb_hotswap3_in*|pdb_hotswap4_in*)
 		subfolder="voltage"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
 	pdb_hotswap1_curr*|pdb_hotswap2_curr*|pdb_hotswap3_curr*|pdb_hotswap4_curr*)
 		subfolder="current"
-		read folder key attr_file < <(get_label_files1 $attr_name)
-		;;
-	pdb_hotswap1_pwr*|pdb_hotswap2_pwr*|pdb_hotswap3_pwr*|pdb_hotswap4_pwr*)
-		subfolder="power"
-		read folder key attr_file < <(get_label_files1 $attr_name)
-		;;
-	pdb_hotswap1_power*|pdb_hotswap2_power*|pdb_hotswap3_power*|pdb_hotswap4_power*)
-		subfolder="power"
 		read folder key attr_file < <(get_label_files1 $attr_name)
 		;;
 	pdb_hotswap1_pwr*|pdb_hotswap2_pwr*|pdb_hotswap3_pwr*|pdb_hotswap4_pwr*)
