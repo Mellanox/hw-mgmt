@@ -136,7 +136,7 @@ class CONST(object):
 
     # Default sensor configuration if not 0configured other value
     SENSOR_POLL_TIME_DEF = 30
-    TEMP_INIT_VAL_DEF = 25.0
+    TEMP_INIT_VAL_DEF = 25
     TEMP_SENSOR_SCALE = 1000.0
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
@@ -482,7 +482,7 @@ def g_get_dmin(thermal_table, temp, path, interpolated=False):
     if not line:
         return CONST.PWM_MIN
     # get current range
-    dmin, range_min, range_max = g_get_range_val(line, round(temp))
+    dmin, range_min, range_max = g_get_range_val(line, temp)
     if not dmin:
         dmin, _, _ = g_get_range_val(line, 100)
         return dmin
@@ -845,19 +845,6 @@ class hw_managemet_file_op(object):
         return int(val)
 
     # ----------------------------------------------------------------------
-    def read_file_float(self, filename, scale=1, round_digits=3):
-        """
-        @summary:
-            read file from hw-management/ tree.
-        @param filename: file to read from {hw-management-folder}/filename
-        @param round_digits: precision after the decimal point
-        @return: float value from file
-        """
-        val = self.read_file(filename)
-        val = float(val) / scale
-        return round(val, round_digits)
-
-    # ----------------------------------------------------------------------
     def thermal_read_file_int(self, filename, scale=1):
         """
         @summary:
@@ -866,18 +853,6 @@ class hw_managemet_file_op(object):
         @return: int value from file
         """
         val = self.read_file_int(os.path.join("thermal", filename), scale)
-        return val
-
-    # ----------------------------------------------------------------------
-    def thermal_read_file_float(self, filename, scale=1, round_digits=3):
-        """
-        @summary:
-            read file from hw-management/thermal tree.
-        @param filename: file to read from {hw-management-folder}/thermal/filename
-        @param round_digits: precision after the decimal point
-        @return: float value from file
-        """
-        val = self.read_file_float(os.path.join("thermal", filename), scale=scale, round_digits=round_digits)
         return val
 
     # ----------------------------------------------------------------------
@@ -1282,13 +1257,9 @@ class system_device(hw_managemet_file_op):
         prev_value = self.value
 
         # integral filter for soothing temperature change
-        self.value_acc -= self.value_acc / input_smooth_level
+        self.value_acc -= self.value_acc / self.input_smooth_level
         self.value_acc += value
-
-        result = round(self.value_acc / input_smooth_level, 3)
-        if abs(result - value) < 0.25:
-            result = value
-        self.value = result
+        self.value = int(round(float(self.value_acc) / self.input_smooth_level))
 
         if self.value > prev_value:
             value_trend = 1
@@ -1350,18 +1321,18 @@ class system_device(hw_managemet_file_op):
         @param filename: file to be read
         @param trh_type: "min" or "max". this string will be added to filename
         @param scale: scale for read value
-        @return: float min/max value
+        @return: int min/max value
         """
         default_val = self.sensors_config.get(trh_type, CONST.TEMP_MIN_MAX[trh_type])
         try:
             if str(default_val)[0] == "!":
                 # Use config value instead of device parameter reading
                 default_val = default_val[1:]
-                val = float(default_val) / CONST.TEMP_SENSOR_SCALE
+                val = int(default_val) / CONST.TEMP_SENSOR_SCALE
             else:
-                val = self.get_file_val(filename, float(default_val) / CONST.TEMP_SENSOR_SCALE, scale)
+                val = self.get_file_val(filename, int(default_val) / CONST.TEMP_SENSOR_SCALE, scale)
         except:
-            val = None
+            val = None 
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
         return val
 
@@ -1550,7 +1521,7 @@ class thermal_sensor(system_device):
             self.fread_err.handle_err(self.file_input)
         else:
             try:
-                value = self.read_file_float(self.file_input, self.scale)
+                value = self.read_file_int(self.file_input, self.scale)
                 if self.val_hcrit != None and value >= self.val_hcrit:
                     self.log.warn("{} value({}) >= hcrit({})".format(self.name,
                                                                      value,
@@ -1593,7 +1564,7 @@ class thermal_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(sensor_err, self.pwm)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
 
@@ -1675,7 +1646,7 @@ class thermal_module_sensor(system_device):
             self.fread_err.handle_err(temp_read_file)
         else:
             try:
-                value = self.read_file_float(temp_read_file, self.scale)
+                value = self.read_file_int(temp_read_file, self.scale)
                 self.log.debug("{} value:{}".format(self.name, value))
                 self.fread_err.handle_err(temp_read_file, reset=True)
                 # handle case if cable was replsed by the other cable with the sensor
@@ -1720,7 +1691,7 @@ class thermal_module_sensor(system_device):
             self.append_fault(CONST.SENSOR_READ_ERR)
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(sensor_err, self.pwm)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR], interpolated=False)
             self.pwm = max(pwm, self.pwm)
 
@@ -1988,7 +1959,7 @@ class psu_fan_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(sensor_err, self.pwm)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
             pwm_new = max(pwm, pwm_new)
 
@@ -2002,7 +1973,7 @@ class psu_fan_sensor(system_device):
         @summary: returning info about device state.
         """
         return "\"{}\" rpm:{}, dir:{} faults:[{}] pwm: {}, {}".format(self.name,
-                                                                      int(self.value),
+                                                                      self.value,
                                                                       self.fan_dir,
                                                                       self.get_fault_list_str(),
                                                                       self.pwm,
@@ -2171,7 +2142,7 @@ class fan_sensor(system_device):
                 rpm_max = self.val_max_def
 
             rpm_tolerance = float(fan_param.get("rpm_tolerance", CONST.FAN_RPM_TOLERANCE)) / 100
-            pwm_min = fan_param["pwm_min"]
+            pwm_min = int(fan_param["pwm_min"])
             self.log.debug("Real:{} min:{} max:{}".format(rpm_real, rpm_min, rpm_max))
             # 1. Check fan speed in range with tolerance
             if rpm_real < rpm_min * (1 - rpm_tolerance) or rpm_real > rpm_max * (1 + rpm_tolerance):
@@ -2187,7 +2158,7 @@ class fan_sensor(system_device):
                 # if FAN spped stabilized after the last change
                 if self.rpm_relax_timestump <= current_milli_time() and pwm_curr == self.pwm_set:
                     # claculate speed
-                    slope = fan_param["slope"]
+                    slope = int(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
                     rpm_calcuated = slope * pwm_curr + b
                     rpm_diff = abs(rpm_real - rpm_calcuated)
@@ -2462,7 +2433,7 @@ class ambiant_thermal_sensor(system_device):
                 self.fread_err.handle_err(sens_file_name)
             else:
                 try:
-                    value = self.read_file_float(sens_file_name, self.scale)
+                    value = self.read_file_int(sens_file_name, self.scale)
                     if self.val_hcrit != None and value >= self.val_hcrit:
                         self.log.warn("{} value({}) >= hcrit({})".format(self.name,
                                                                          value,
@@ -2512,7 +2483,7 @@ class ambiant_thermal_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
-            self.pwm = max(float(sensor_err), self.pwm)
+            self.pwm = max(int(sensor_err), self.pwm)
             pwm = g_get_dmin(thermal_table, self.value, [self.flow_dir, CONST.SENSOR_READ_ERR])
             self.pwm = max(pwm, self.pwm)
         self._update_pwm()
@@ -2780,11 +2751,11 @@ class ThermalManagement(hw_managemet_file_op):
                                                             stderr=subprocess.PIPE, 
                                                             text=True)
         # Get the output
-        mst_dev = result.stdout
+        mst_dev = result.stdout 
         if "_pciconf0" in mst_dev:
             self.asic_pcidev = mst_dev.strip()
         else:
-            self.asic_pcidev = None
+            self.asic_pcidev = None       
 
         # Collect FAN DRWR sensors
         try:
