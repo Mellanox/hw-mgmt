@@ -636,6 +636,7 @@ function handle_hotplug_psu_event()
 	local psu_num
 	local psu_i2c_bus
 	local psu_i2c_addr
+	local psu_is_dummy
 	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
 
 	if [ ${dummy_psus_supported} -eq 1 ]; then
@@ -658,7 +659,15 @@ function handle_hotplug_psu_event()
 		if [ $event -eq 1 ]; then
 			psu_bus=${psu_i2c_bus[$((psu_num-1))]}
 			psu_addr=${psu_i2c_addr[$((psu_num-1))]}
-			if [ ! -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
+			psu_is_dummy=1
+			for ((i=0; i<5; i++)); do
+				if [ -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
+					psu_is_dummy=0
+					break
+				fi
+				sleep 1
+			done
+			if [ ${psu_is_dummy} -eq 1 ]; then
 				touch ${config_path}/${psu_name}_is_dummy
 			fi
 		else
