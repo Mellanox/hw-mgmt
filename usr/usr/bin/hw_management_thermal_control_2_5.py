@@ -97,6 +97,7 @@ class CONST(object):
     SYS_CONF_REDUNDANCY_PARAM = "redundancy"
     SYS_CONF_GENERAL_CONFIG_PARAM = "general_config"
     SYS_CONF_PWM_UPDATE_PERIOD_PARAM = "pwm_update_period"
+    SYS_CONF_USER_CONFIG_PARAM = "user_config"
 
     # *************************
     # Folders definition
@@ -935,7 +936,7 @@ class hw_management_file_op(object):
             ret = False
 
         if validate:
-            pwm_get = self.read_pwm()
+            pwm_get = self.read_pwm(0)
             ret = abs(pwm - pwm_get) < 1
         return ret
 
@@ -3400,14 +3401,30 @@ class ThermalManagement(hw_management_file_op):
         if extra_config:
             add_missing_to_dict(sensors_config[sensor_name], extra_config)
 
-        # 1. Add missing keys from system_conf->sensors_config to sensor_conf
+        # 1. Add user_config parameters to sensors_config
+        if self.sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM]:
+            user_config = self.sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM]
+            # 1.1 Add sensor specific config
+            if CONST.SYS_CONF_SENSORS_CONF in user_config:
+                if sensor_name in user_config[CONST.SYS_CONF_SENSORS_CONF]:
+                    sensors_config[sensor_name].update(user_config[CONST.SYS_CONF_SENSORS_CONF][sensor_name])
+            
+            # 1.2  missing keys from user_config->sensors_config to sensor_conf
+            if CONST.SYS_CONF_DEV_PARAM in user_config:
+                dev_param = user_config[CONST.SYS_CONF_DEV_PARAM]
+                for name_mask, val in dev_param.items():
+                    if re.match(name_mask, sensor_name):
+                        add_missing_to_dict(sensors_config[sensor_name], val)
+                        break
+
+        # 2. Add missing keys from system_conf->sensors_config to sensor_conf
         dev_param = self.sys_config[CONST.SYS_CONF_DEV_PARAM]
         for name_mask, val in dev_param.items():
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
 
-        # 2. Add missing keys from def config to sensor_conf
+        # 3. Add missing keys from def config to sensor_conf
         dev_param = SENSOR_DEF_CONFIG
         for name_mask, val in dev_param.items():
             if re.match(name_mask, sensor_name):
@@ -3524,6 +3541,20 @@ class ThermalManagement(hw_management_file_op):
             os._exit(0)
 
     # ----------------------------------------------------------------------
+    def load_user_configuration(self, user_config_file_name):
+        """
+        @summary: Load user configuration file and merge it with system configuration
+        """
+        user_config = {}
+        with open(user_config_file_name) as f:
+            self.log.info("Loading user config from {}".format(user_config_file_name))
+            try:
+                user_config = json.load(f)
+            except Exception:
+                self.log.error("User config file {} broken.".format(user_config_file_name), 1)
+        return user_config
+    
+    # ----------------------------------------------------------------------
     def load_configuration(self):
         """
         @summary: Init configuration table.
@@ -3610,6 +3641,17 @@ class ThermalManagement(hw_management_file_op):
 
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
+
+        user_config = {}
+        user_config_file_name = config_file_name.replace(".json", "_user.json")
+        if os.path.exists(user_config_file_name):
+            try:
+                user_config = self.load_user_configuration(user_config_file_name)
+            except:
+                self.log.error("User config file {} broken. Skip it".format(user_config_file_name), 1) 
+                pass
+
+        sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
 
         self.sys_config = sys_config
 
