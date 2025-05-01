@@ -2817,6 +2817,9 @@ set_config_data()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
+	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
+		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
+	fi
 }
 
 connect_platform()
