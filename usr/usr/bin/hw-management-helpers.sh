@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -329,6 +329,18 @@ check_simx()
 	else
 		return 1
 	fi
+}
+
+# This function checks if ThermalControl supports current platform
+check_tc_support()
+{
+    sys_sku=$(<$sku_file)
+    if ([ "$sys_sku" = "HI166" ] ||
+        [ "$sys_sku" = "HI167" ]); then
+        return 1
+    else
+        return 0
+    fi
 }
 
 # This function create or cleans sysfs monitor helper files.

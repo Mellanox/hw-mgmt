@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -52,27 +52,6 @@ fi
 
 if [ -d /var/run/hw-management ]; then
 	rm -fr /var/run/hw-management
-fi
-
-# If the BSP emulation is not available for the platforms that run in the SimX
-# environment, TC need to be stopped. Otherwise enabling TC.
-if check_simx; then
-    if ! check_if_simx_supported_platform; then
-	    if systemctl is-enabled --quiet hw-management-tc; then
-		    echo "Stopping and disabling hw-management-tc on SimX"
-		    systemctl stop hw-management-tc
-		    systemctl disable hw-management-tc
-	    fi
-	    echo "Start Chassis HW management service."
-	    logger -t hw-management -p daemon.notice "Start Chassis HW management service."
-	    exit 0
-    else
-	    if ! systemctl is-enabled --quiet hw-management-tc; then
-		    echo "Enabling and starting hw-management-tc"
-		    systemctl enable hw-management-tc
-		    systemctl start hw-management-tc
-	    fi
-    fi
 fi
 
 case $board_type in
