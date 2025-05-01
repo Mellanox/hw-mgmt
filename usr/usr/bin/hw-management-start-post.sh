@@ -127,15 +127,33 @@ if [ -f $service_file_path ]; then
 	fi
 fi
 
+# If the BSP emulation is not available for the platforms that run in the SimX
+# environment, TC need to be stopped. Otherwise enabling TC.
+if check_simx; then
+    if ! check_if_simx_supported_platform; then
+	    if systemctl is-enabled --quiet hw-management-tc; then
+		    echo "Stopping and disabling hw-management-tc on SimX"
+		    systemctl stop hw-management-tc
+		    systemctl disable hw-management-tc
+	    fi
+	    echo "Start Chassis HW management service."
+	    logger -t hw-management -p daemon.notice "Start Chassis HW management service."
+	    exit 0
+    else
+	    if ! systemctl is-enabled --quiet hw-management-tc; then
+		    echo "Enabling and starting hw-management-tc"
+		    if check_tc_support; then
+			    systemctl enable hw-management-tc
+			    nohup systemctl start hw-management-tc &
+			fi
+	    fi
+    fi
+fi
+
 ## Checking if system doesn't require TC
-case $sku in
-	HI176|HI177)
-		# disable TC
-		log_info "Disabe Thermal Control for this system: $sku"
-		systemctl stop hw-management-tc.service
-		systemctl disable hw-management-tc.service  
-		;;
-	*)
-		# Do nothing
-esac
+if ! check_tc_support; then
+	log_info "Disabe Thermal Control for current platform: $sku"
+	systemctl stop hw-management-tc.service
+	systemctl disable hw-management-tc.service  
+fi
 
