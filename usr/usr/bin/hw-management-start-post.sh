@@ -76,7 +76,7 @@ fi
 if check_simx; then
         if check_if_simx_supported_platform; then
                 case $sku in
-                        HI166)
+                        HI166|HI176)
                                 process_simx_links
                                 ;;
                         *)
