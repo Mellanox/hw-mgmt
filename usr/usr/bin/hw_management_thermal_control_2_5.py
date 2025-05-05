@@ -234,6 +234,37 @@ input_smooth_level - soothing level for sensor input value reading. Formula to c
     avg = ang_acc / input_smooth_level
 """
 
+SENSOR_PARAM_RANGE = {
+    r'module\d+': {
+        "val_min_offset" : {
+            "min" : -30000,
+            "max" : -5000,
+        },
+        "val_max_offset" : {
+            "min" : -30000,
+            "max" : 1000,
+        },
+        "pwm_min" : {
+            "min" : 20,
+            "max" : 100,
+        },
+        "pwm_max" : {
+            "min" : 30,
+            "max" : 100,
+        }
+    },
+    r'.*': {
+        "pwm_min" : {
+            "min" : 20,
+            "max" : 100,
+        },
+        "pwm_max" : {
+            "min" : 30,
+            "max" : 100,
+        }
+    }
+}
+
 SENSOR_DEF_CONFIG = {
     r'psu\d+_fan':      {"type": "psu_fan_sensor",
                          "val_min": 4500, "val_max": 20000, "poll_time": 5,
@@ -1326,6 +1357,13 @@ class system_device(hw_management_file_op):
         self.log.info("Staring {}".format(self.name))
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        if not self.validate_sensor_param("val_min", self.val_min):
+            self.log.error("{}: val_min incorect value ({})".format(self.name, self.val_min), 1)
+            raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
+        if not self.validate_sensor_param("pwm_max", self.pwm_max):
+            self.log.error("{}: pwm_max incorect value ({})".format(self.name, self.pwm_max), 1)
+            raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
+
         self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
         self.refresh_attr_period = self.sensors_config.get("refresh_attr_period", 0)
         if self.refresh_attr_period:
@@ -1547,6 +1585,37 @@ class system_device(hw_management_file_op):
             val = None
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
         return val
+
+    # ----------------------------------------------------------------------
+    def validate_sensor_param(self, param_name, param_value):
+        """
+        @summary: Validate sensor parameter value
+        """
+        if not isinstance(param_value, (int, float)):
+            self.log.error("{}: {} value({}) is not a number".format(self.name, param_name, param_value), 1)
+            return False
+        param_value = float(param_value)
+        for sensor_name_mask, sensor_param_list in SENSOR_PARAM_RANGE.items():
+            if re.match(sensor_name_mask, self.name):
+                if param_name in sensor_param_list:
+                    param_value_range = sensor_param_list[param_name]
+                    if "min" in param_value_range:
+                        if param_value < param_value_range["min"]:
+                            self.log.info("{}: {} value({}) is out of range({}-{})".format(self.name, 
+                                                                                          param_name, 
+                                                                                          param_value, 
+                                                                                          param_value_range["min"], 
+                                                                                          param_value_range["max"]))
+                            return False
+                    if "max" in param_value_range:
+                        if param_value > param_value_range["max"]:
+                            self.log.info("{}: {} value({}) is out of range({}-{})".format(self.name, 
+                                                                                          param_name, 
+                                                                                          param_value, 
+                                                                                          param_value_range["min"], 
+                                                                                          param_value_range["max"]))
+                            return False
+        return True
 
     # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
@@ -1817,6 +1886,25 @@ class thermal_module_sensor(system_device):
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
+
+        self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        if not self.validate_sensor_param("pwm_min", self.pwm_min):
+            self.log.error("{}: pwm_min incorect value ({})".format(self.name, self.pwm_min), 1)
+            raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
+        if not self.validate_sensor_param("pwm_max", self.pwm_max):
+            self.log.error("{}: pwm_max incorect value ({})".format(self.name, self.pwm_max), 1)
+            raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
+
+        self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
+        self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+        if not self.validate_sensor_param("val_min_offset", self.val_min_offset):
+            self.log.error("{}: val_min_offset incorect value ({})".format(self.name, self.val_min_offset), 1)
+            raise ValueError("Incorrect value of val_min_offset {}".format(self.val_min_offset))
+        if not self.validate_sensor_param("val_max_offset", self.val_max_offset):
+            self.log.error("{}: val_max_offset incorect value ({})".format(self.name, self.val_max_offset), 1)
+            raise ValueError("Incorrect value of val_max_offset {}".format(self.val_max_offset))
+
         self.refresh_attr()
 
     # ----------------------------------------------------------------------
@@ -1825,14 +1913,10 @@ class thermal_module_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
-        self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
-        self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
-        val_min_offset = self.sensors_config.get("val_min_offset", 0)
-        val_max_offset = self.sensors_config.get("val_max_offset", 0)
         val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         if val_max != 0:
-            self.val_min = val_max + val_min_offset / self.scale
-            self.val_max = val_max + val_max_offset / self.scale
+            self.val_max = val_max + self.val_max_offset / self.scale
+            self.val_min = self.val_max + self.val_min_offset / self.scale
         else:
             self.val_max = 0.0
             self.val_min = 0.0
@@ -3401,7 +3485,7 @@ class ThermalManagement(hw_management_file_op):
         if extra_config:
             add_missing_to_dict(sensors_config[sensor_name], extra_config)
 
-        # 1. Add user_config parameters to sensors_config
+        # 1. Add parameters from optional user_config to sensors_config
         if self.sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM]:
             user_config = self.sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM]
             # 1.1 Add sensor specific config
@@ -3409,7 +3493,7 @@ class ThermalManagement(hw_management_file_op):
                 if sensor_name in user_config[CONST.SYS_CONF_SENSORS_CONF]:
                     sensors_config[sensor_name].update(user_config[CONST.SYS_CONF_SENSORS_CONF][sensor_name])
             
-            # 1.2  missing keys from user_config->sensors_config to sensor_conf
+            # 1.2 Merge missing keys from user_config->sensors_config to sensor_conf
             if CONST.SYS_CONF_DEV_PARAM in user_config:
                 dev_param = user_config[CONST.SYS_CONF_DEV_PARAM]
                 for name_mask, val in dev_param.items():
