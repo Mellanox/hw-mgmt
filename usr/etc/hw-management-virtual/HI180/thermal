@@ -1,0 +1,23 @@
+sodimm1_temp_crit 95000
+sodimm1_temp_crit_alarm 0
+sodimm1_temp_crit_hyst 89000
+sodimm1_temp_input 32000
+sodimm1_temp_max 85000
+sodimm1_temp_max_alarm 0
+sodimm1_temp_max_hyst 79000
+sodimm1_temp_min 0
+sodimm1_temp_min_alarm 0
+
+pdb_hotswap1_temp1_crit 255937
+pdb_hotswap1_temp1_input 30000
+pdb_hotswap1_temp1_max 255937
+
+comex_voltmon1_temp1_crit 120000
+comex_voltmon1_temp1_input 42000
+comex_voltmon2_temp1_crit 115000
+comex_voltmon2_temp1_input 43000
+comex_voltmon2_temp1_max 105000
+
+cpu_pack 42625
+cpu_pack_crit 100000
+cpu_pack_max 95000
