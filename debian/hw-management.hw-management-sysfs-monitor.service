@@ -8,6 +8,7 @@ StartLimitIntervalSec=1200
 StartLimitBurst=5
 
 [Service]
+Type=oneshot
 ExecStart=/bin/sh -c "/usr/bin/hw-management-sysfs-monitor.sh start"
 ExecStop=/bin/sh -c "/usr/bin/hw-management-sysfs-monitor.sh stop"
 
