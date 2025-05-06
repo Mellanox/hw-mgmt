@@ -53,6 +53,12 @@ if [ -d /var/run/hw-management ]; then
 	rm -fr /var/run/hw-management
 fi
 
+#TEMPORARY hw-management mockup values for simx
+if [ check_simx ] && [ "$product_sku" == "HI180" ]; then
+	echo "Rosalind emulation, exiting"
+	exit 0
+fi
+
 case $board_type in
 VMOD0014)
 	if [ ! -d /sys/devices/pci0000:00/0000:00:1f.0/NVSN2201:00/mlxreg-hotplug/hwmon ]; then
