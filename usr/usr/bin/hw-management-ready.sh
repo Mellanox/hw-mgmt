@@ -53,6 +53,13 @@ if [ -d /var/run/hw-management ]; then
 	rm -fr /var/run/hw-management
 fi
 
+#TEMPORARY hw-management mockup values for simx
+if [ check_simx ] && [ "$product_sku" == "HI180" ]; then
+	echo "Rosalind emulation, exiting"
+	exit 0
+fi
+
+
 # If the BSP emulation is not available for the platforms that run in the SimX
 # environment, TC need to be stopped. Otherwise enabling TC.
 if check_simx; then
