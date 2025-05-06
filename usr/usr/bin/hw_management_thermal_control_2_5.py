@@ -141,6 +141,7 @@ class CONST(object):
     TEMP_SENSOR_SCALE = 1000.0
     TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
+    MODULE_MAX_COOLING_LVL = 960
     AMB_TEMP_ERR_VAL = 255
     TEMP_NA_VAL = 0
 
@@ -279,6 +280,11 @@ SENSOR_DEF_CONFIG = {
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "smooth_formula" : CONST.VAL_AVG_WMA,
                          "input_smooth_level": 3, "value_hyst": 2, "refresh_attr_period": 1 * 60
+                        },
+    r'module\d+_tec':   {"type": "thermal_module_tec_sensor",
+                         "pwm_min": 20, "pwm_max": 100, "val_min": 0, "val_max": 960,
+                         "val_lcrit": 0, "val_hcrit": 961, "poll_time": 20,
+                         "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
@@ -1165,10 +1171,14 @@ class pwm_regulator_simple():
         """
         @summary: update parameters
         """
-        self.pwm_min = pwm_min
-        self.pwm_max = pwm_max
-        self.val_min = val_min
-        self.val_max = val_max
+        if val_min:
+            val_min = self.val_min
+        if val_max:
+            val_max = self.val_max
+        if pwm_min:
+            pwm_min = self.pwm_min
+        if pwm_max:
+            pwm_max = self.pwm_max
         if self.log:
             self.log.debug("regulator:{} update param: val_min:{} val_max:{} pwm_min:{} pwm_max:{}".format(self.name, val_min, val_max, pwm_min, pwm_max))
 
@@ -1466,7 +1476,7 @@ class system_device(hw_management_file_op):
     def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_EMA):
         # Value a,verege formula type
         if formula_type == CONST.VAL_AVG_EMA:
-            input_smooth_level = self.input_smooth_level + 1
+            input_smooth_level = self.input_smooth_level
             # first time init
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_acc = value * input_smooth_level
@@ -1874,12 +1884,12 @@ class thermal_module_sensor(system_device):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.pwm_prev = self.pwm
-        self.pwm_regulator = pwm_regulator_dynamic(tc_logger, 
-                                                   name, 
-                                                   self.val_min, 
-                                                   self.val_max, 
-                                                   self.pwm_min, 
-                                                   self.pwm_max, 
+        self.pwm_regulator = pwm_regulator_dynamic(tc_logger,
+                                                   name,
+                                                   self.val_min,
+                                                   self.val_max,
+                                                   self.pwm_min,
+                                                   self.pwm_max,
                                                    self.sensors_config.get("reg_extra_param", {}))
 
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
@@ -1921,26 +1931,6 @@ class thermal_module_sensor(system_device):
             self.val_max = 0.0
             self.val_min = 0.0
         self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
-
-    # ----------------------------------------------------------------------
-    def get_fault(self):
-        """
-        @summary: Get module sensor fault status
-        @return: True - in case if sensor is readeble and have consistent values
-            False - if module is in 'faulty' state
-        """
-        status = False
-        fault_filename = "thermal/{}_temp_fault".format(self.base_file_name)
-        if self.check_file(fault_filename):
-            try:
-                fault_status = int(self.read_file(fault_filename))
-                if fault_status:
-                    status = True
-            except BaseException:
-                self.log.error("{}- Incorrect value in the file: {} ({})".format(self.name, fault_filename, BaseException))
-                status = True
-
-        return status
 
     # ----------------------------------------------------------------------
     def get_temp_support_status(self):
@@ -2048,9 +2038,146 @@ class thermal_module_sensor(system_device):
                                                                                           round(self.val_max,1),
                                                                                           str(self.pwm_regulator),
                                                                                           self.get_fault_list_str(),
-                                                                                          round(self.pwm, 1), sign,
+                                                                                          round(float(self.pwm), 1), sign,
                                                                                           self.state)
         return info_str
+
+
+class thermal_module_tec_sensor(system_device):
+    """
+    @summary: class for TEC-cooled modules sensor
+    """
+
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        self.pwm_prev = self.pwm
+        self.val_lcrit = self.read_val_min_max(None, "val_lcrit")
+        self.val_hcrit = self.read_val_min_max(None, "val_hcrit")
+        self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        self.val_min = self.sensors_config.get("val_min", 0)
+        self.cooling_level = 0
+        self.max_cooling_level = 0
+        self.temperature = 0
+        self.refresh_attr()
+
+    # ----------------------------------------------------------------------
+    def refresh_attr(self):
+        """
+        @summary: this function calling on sensor start after initialization or resume
+        """
+        if self.max_cooling_level == 0:
+            self.max_cooling_level = self.sensors_config.get("val_max", CONST.MODULE_MAX_COOLING_LVL)
+        self.pwm_regulator.update_param(None, self.max_cooling_level, None, None)
+
+    # ----------------------------------------------------------------------
+    def handle_input(self, thermal_table, flow_dir, amb_tmp):
+        """
+        @summary: handle sensor input
+        """
+        pwm = self.pwm_min
+
+        required_files = {
+            'cooling_level': "thermal/{}_cooling_level".format(self.base_file_name),
+            'max_cooling_level': "thermal/{}_max_cooling_level".format(self.base_file_name),
+            'temperature': "thermal/{}".format(self.file_input)
+        }
+
+        # Check if all required files exist
+        missing_files = [fname for fname, fpath in required_files.items() 
+                        if not self.check_file(fpath)]
+        if missing_files:
+            for fname in missing_files:
+                self.log.info("Missing file: {}.".format(required_files[fname]))
+                self.fread_err.handle_err(required_files[fname])
+            return
+
+        # Read cooling level and max cooling level
+        for fname, fpath in required_files.items():
+            try:
+                value = self.read_file_int(fpath)
+                setattr(self, fname, value)
+                if fname != 'cooling_level':
+                    self.fread_err.handle_err(fpath, reset=True)
+                self.log.debug("{} {}:{}".format(self.name, fname, value))
+            except BaseException:
+                self.log.warn("Error reading {} from file: {}".format(fname, fpath))
+                self.fread_err.handle_err(fpath)
+                return
+
+        # validate cooling_level
+        if ((self.val_hcrit is not None and self.cooling_level >= self.val_hcrit) or
+            (self.val_lcrit is not None and self.cooling_level <= self.val_lcrit)):
+            self.log.warn("{} cooling_level({}) outside critical range (lcrit:{}, hcrit:{})".format(
+                                                                                            self.name, 
+                                                                                            self.cooling_level, 
+                                                                                            self.val_lcrit, 
+                                                                                            self.val_hcrit))
+            self.fread_err.handle_err(required_files['cooling_level'])
+            return
+        else:
+            self.fread_err.handle_err(required_files['cooling_level'], reset=True)
+            self.refresh_attr()
+            self.update_value(self.cooling_level)
+
+        # calculate PWM value
+        self.pwm_regulator.tick(self.get_value())
+        self.pwm= max(self.pwm_regulator.get_pwm(), pwm)
+
+    # ----------------------------------------------------------------------
+    def collect_err(self):
+        self.clear_fault_list()
+
+        if self.fread_err.check_err():
+            self.append_fault(CONST.SENSOR_READ_ERR)
+
+    # ----------------------------------------------------------------------
+    def handle_err(self, thermal_table, flow_dir, amb_tmp):
+        """
+        @summary: handle sensor errors
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        if CONST.SENSOR_READ_ERR in fault_list:
+            self.append_fault(CONST.SENSOR_READ_ERR)
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(float(sensor_err), self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
+            self.pwm = max(pwm, self.pwm)
+
+        self._update_pwm()
+        return None
+
+    # ----------------------------------------------------------------------
+    def __str__(self):
+        """
+        @summary: returning info about current device state. Can be overridden in child class
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        temperature = self.temperature
+        cooling_level = self.cooling_level
+        max_cooling_level = self.max_cooling_level
+
+        if self.pwm > self.pwm_prev:
+            sign = u'\u2191' # up arrow
+        elif self.pwm < self.pwm_prev:
+            sign = u'\u2193' # down arrow
+        else:
+            sign = '' # no change
+        self.pwm_prev = self.pwm
+        value_str = "temp:{: <4}, cooling_lvl:{: <3}, max_cooling_lvl:{: <3}".format( round(temperature,1),
+                                                                                      round(cooling_level,1),
+                                                                                      round(max_cooling_level,1))
+        
+        info_str = "\"{: <8}\" {: <54}, faults:[{}], pwm: {}{}, {}".format( self.name,
+                                                                            value_str,
+                                                                            self.get_fault_list_str(),
+                                                                            round(self.pwm, 1), sign,
+                                                                            self.state)
+        return info_str
+
 
 
 class thermal_asic_sensor(system_device):
@@ -3504,6 +3631,8 @@ class ThermalManagement(hw_management_file_op):
         # 2. Add missing keys from system_conf->sensors_config to sensor_conf
         dev_param = self.sys_config[CONST.SYS_CONF_DEV_PARAM]
         for name_mask, val in dev_param.items():
+            if not name_mask.endswith("$"):
+                name_mask = name_mask + "$"
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
@@ -3511,6 +3640,8 @@ class ThermalManagement(hw_management_file_op):
         # 3. Add missing keys from def config to sensor_conf
         dev_param = SENSOR_DEF_CONFIG
         for name_mask, val in dev_param.items():
+            if not name_mask.endswith("$"):
+                name_mask = name_mask + "$"
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
@@ -3582,7 +3713,13 @@ class ThermalManagement(hw_management_file_op):
             for idx in range(1, CONST.MODULE_COUNT_MAX):
                 module_name = "module{}".format(idx)
                 if self.check_file("thermal/{}_temp_input".format(module_name)):
-                    self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_name})
+                    # check if module is TEC-cooled
+                    if self.check_file("thermal/{}_cooling_level".format(module_name)):
+                        self._sensor_add_config("thermal_module_tec_sensor", module_name + "_tec", {"base_file_name": module_name})
+                        module_name = module_name + "_tec"
+                    else:
+                        self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_name})
+
                     self._add_dev_obj(module_name)
                     module_counter += 1
                 else:
