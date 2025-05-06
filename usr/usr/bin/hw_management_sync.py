@@ -636,6 +636,8 @@ def module_temp_populate(arg_list, _dummy):
         temperature_max = "0"
         temperature_fault = "0"
         temperature_crit = "0"
+        cooling_level_input = None
+        max_cooling_level_input = None
 
         if module_present:
             # If control mode is FW, skip temperature reading (independent mode)
@@ -648,6 +650,23 @@ def module_temp_populate(arg_list, _dummy):
             f_src_input = os.path.join(f_src_path, "temperature/input")
             f_src_min = os.path.join(f_src_path, "temperature/threshold_lo")
             f_src_max = os.path.join(f_src_path, "temperature/threshold_hi")
+            f_src_hcrit = os.path.join(f_src_path, "temperature/threshold_critical_hi")
+            f_src_cooling_level_input = os.path.join(f_src_path, "temperature/tec/cooling_level")
+            f_src_max_cooling_level_input = os.path.join(f_src_path, "temperature/tec/max_cooling_level")
+
+            if os.path.isfile(f_src_cooling_level_input):
+                try:
+                    with open(f_src_cooling_level_input, 'r') as f:
+                        cooling_level_input = f.read()
+                except:
+                    pass
+
+            if os.path.isfile(f_src_max_cooling_level_input):
+                try:
+                    with open(f_src_max_cooling_level_input, 'r') as f:
+                        max_cooling_level_input = f.read()
+                except:
+                    pass
 
             try:
                 with open(f_src_input, 'r') as f:
@@ -667,7 +686,14 @@ def module_temp_populate(arg_list, _dummy):
                     temperature_max = sdk_temp2degree(int(val))
                 else:
                     temperature_max = CONST.MODULE_TEMP_MAX_DEF
-                temperature_crit = CONST.MODULE_TEMP_CRIT_DEF
+
+                if os.path.isfile(f_src_hcrit):
+                    with open(f_src_hcrit, 'r') as f:
+                        val = f.read()
+                    temperature_crit = sdk_temp2degree(int(val))
+                else:
+                    temperature_crit = CONST.MODULE_TEMP_CRIT_DEF
+
             except:
                 pass
 
@@ -677,13 +703,16 @@ def module_temp_populate(arg_list, _dummy):
             "_temp_crit": temperature_min,
             "_temp_emergency": temperature_max,
             "_temp_fault": temperature_fault,
-            "_temp_trip_crit": temperature_crit
+            "_temp_trip_crit": temperature_crit,
+            "_cooling_level_input": cooling_level_input,
+            "_max_cooling_level_input": max_cooling_level_input
         }
 
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
-            with open(f_name, 'w', encoding="utf-8") as f:
-                f.write("{}\n".format(value))
+            if value is not None:
+                with open(f_name, 'w', encoding="utf-8") as f:
+                    f.write("{}\n".format(value))
 
     with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
         f.write("{}\n".format(module_count))
