@@ -3304,7 +3304,7 @@ class ThermalManagement(hw_managemet_file_op):
         err_mask = None
         if exclusion_conf:
             min_err_cnt = int(exclusion_conf.get("min_err_cnt", 2))
-            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : min_err_cnt, "curr_err_cnt" : 0}
+            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : min_err_cnt, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.PSU_ERR_LIST
