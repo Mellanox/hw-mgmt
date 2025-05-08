@@ -1544,7 +1544,7 @@ class system_device(hw_managemet_file_op):
             self.collect_err()
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state. Can be overridden in child class
         """
@@ -1656,6 +1656,7 @@ class thermal_module_sensor(system_device):
 
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        self.pwm_prev = self.pwm
         scale_value = self.get_file_val(self.base_file_name + "_scale", def_val=1, scale=1)
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
@@ -1703,8 +1704,8 @@ class thermal_module_sensor(system_device):
         """
         status = True
 
-        if self.last_value == 0 and self.val_max == 0 and self.val_min == 0:
-            self.log.debug("Module not supporting temp reading val:{} max:{}".format(self.value, self.val_max))
+        if self.val_max == 0:
+            self.log.debug("{} does not support temp reading max:{}".format(self.name, self.val_max))
             status = False
 
         return status
@@ -1774,6 +1775,34 @@ class thermal_module_sensor(system_device):
         self._update_pwm()
         return None
 
+        # ----------------------------------------------------------------------
+    def __str__(self):
+        """
+        @summary: returning info about current device state. Can be overridden in child class
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        if CONST.SENSOR_READ_ERR in fault_list:
+            value = "N/A"
+        else:
+            value = self.value
+
+        if self.pwm > self.pwm_prev:
+            sign = u'\u2191' # up arrow
+        elif self.pwm < self.pwm_prev:
+            sign = u'\u2193' # down arrow
+        else:
+            sign = '' # no change
+        self.pwm_prev = self.pwm
+        info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, faults:[{}], pwm: {}{}, {}".format(self.name,
+                                                                                          round(value,2),
+                                                                                          self.val_min,
+                                                                                          self.val_max,
+                                                                                          self.get_fault_list_str(),
+                                                                                          round(self.pwm, 2), sign,
+                                                                                          self.state)
+        return info_str
+
 
 class thermal_asic_sensor(thermal_module_sensor):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
@@ -1783,12 +1812,13 @@ class thermal_asic_sensor(thermal_module_sensor):
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
-        
+
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
+        # Disable kernel control for this thermal zone
         self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
 
@@ -2044,7 +2074,7 @@ class psu_fan_sensor(system_device):
         return
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2432,7 +2462,7 @@ class fan_sensor(system_device):
         return
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2566,7 +2596,7 @@ class ambiant_thermal_sensor(system_device):
         return None
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about device state.
         """
@@ -2639,7 +2669,7 @@ class dpu_module(system_device):
                 child_obj.enable = False
 
     # ----------------------------------------------------------------------
-    def info(self):
+    def __str__(self):
         """
         @summary: returning info about current device state.
         """
@@ -2653,7 +2683,7 @@ Controlling devices states and calculation PWM based on this information.
 """
 
 
-class ThermalManagement(hw_managemet_file_op):
+class ThermalManagement(hw_management_file_op):
     """
         @summary:
             Main class of thermal algorithm.
@@ -2693,7 +2723,7 @@ class ThermalManagement(hw_managemet_file_op):
             Init  thermal algorithm
         @param params: global thermal configuration
         """
-        hw_managemet_file_op.__init__(self, cmd_arg)
+        hw_management_file_op.__init__(self, cmd_arg)
         self.log = tc_logger
         self.log.notice("Preinit thermal control ver {}".format(VERSION), 1)
         try:
@@ -2821,10 +2851,10 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.error("Missing max tachos config.", 1)
             sys.exit(1)
         # Find ASIC pci device fio
-        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True, 
-                                                            check=False, 
-                                                            stdout=subprocess.PIPE, 
-                                                            stderr=subprocess.PIPE, 
+        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True,
+                                                            check=False,
+                                                            stdout=subprocess.PIPE,
+                                                            stderr=subprocess.PIPE,
                                                             text=True)
         # Get the output
         mst_dev = result.stdout
@@ -3635,7 +3665,8 @@ class ThermalManagement(hw_managemet_file_op):
     def stop(self, reason=""):
         """
         @summary: Stop sensor service and set PWM to PWM-MAX.
-        Used when suspend mode was de-asserted or when kill signal was revived
+        Used when suspend mode was de-asserted or when kill signal was received
+        @param reason: Reason for stopping the service
         """
         if self.state != CONST.STOPPED:
             if self.pwm_worker_timer:
@@ -3646,6 +3677,7 @@ class ThermalManagement(hw_managemet_file_op):
                 self.periodic_report_worker_timer.stop()
                 self.periodic_report_worker_timer = None
 
+            # Stop all devices gracefully
             for dev_obj in self.dev_obj_list:
                 if dev_obj.enable:
                     dev_obj.stop()
@@ -3842,9 +3874,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.info("================================")
         for dev_obj in self.dev_obj_list:
             if dev_obj.enable:
-                obj_info_str = dev_obj.info()
-                if obj_info_str:
-                    self.log.info(obj_info_str)
+                self.log.info(str(dev_obj))
         self.log.info("================================")
 
 
