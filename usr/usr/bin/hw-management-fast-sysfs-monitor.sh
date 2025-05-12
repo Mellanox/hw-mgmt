@@ -61,7 +61,7 @@ do_start_fast_sysfs_monitor()
     log_info "Monitoring ${TOTAL_FILES} files..."
     while (( ELAPSED < FAST_SYSFS_MONITOR_TIMEOUT )); do
     # Check and add missing devices from devtree_file.
-    if [ -e "$devtree_file" ] && [[ ${#DEVICE_ADDED[@]} -lt ${#DEV_FILES[@]} ]]; then
+    if [ -e "$devtree_file" ] && [ -d "$eeprom_path" ] && [[ ${#DEVICE_ADDED[@]} -lt ${#DEV_FILES[@]} ]]; then
         # Read the entire content into an array (space-separated tokens).
         read -ra DEVTREE_ENTRIES < "$devtree_file"
         # Process every 4 tokens as one device entry
