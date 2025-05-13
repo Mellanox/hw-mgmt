@@ -87,6 +87,24 @@ def mfr_model_is_acbel(mfr_model):
     else:
         return False
 
+def mfr_model_is_acbel_1100(mfr_model):
+    """
+    @summary: Check if PSU model is Acbel 1100
+    """
+    if mfr_model.startswith(MFR_MODEL_ACBEL_1100_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_1100_REV):
+        return True
+    else:
+        return False
+
+def mfr_model_is_acbel_2000(mfr_model):
+    """
+    @summary: Check if PSU model is Acbel 2000.
+    """
+    if mfr_model.startswith(MFR_MODEL_ACBEL_2000_FWD) or mfr_model.startswith(MFR_MODEL_ACBEL_2000_REV):
+        return True
+    else:
+        return False
+
 def mfr_model_is_acbel_460(mfr_model):
     """
     @summary: Check if PSU model is Acbel 460.
@@ -103,7 +121,7 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
     mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
     if mfr_model.startswith(MFR_MODEL_500AB):
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FW_REVISION, 8)
-    elif mfr_model_is_acbel(mfr_model):
+    elif mfr_model_is_acbel_1100(mfr_model):
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FW_REVISION_ACBEL, 4)
         if ret != '' and len(ret) > 3 and ret[:2] == '0x':
             int_list = ret.split()
@@ -119,6 +137,8 @@ def read_mfr_fw_revision(i2c_bus, i2c_addr):
             ver_list = [int_list[1], int_list[0], int_list[3], int_list[2]]
             ascii_str = '.'.join(str(int(i, 16)) for i in ver_list)
             return ascii_str
+    elif mfr_model_is_acbel_2000(mfr_model):
+        ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FW_REVISION_ACBEL, 6)
     else:
         ret = psu_upd_cmn.pmbus_read(i2c_bus, i2c_addr, MFR_FW_REVISION, 6)
     if ret != '' and len(ret) > 3 and ret[:2] == '0x':
