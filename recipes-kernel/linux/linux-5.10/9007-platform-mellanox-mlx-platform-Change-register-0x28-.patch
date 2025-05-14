@@ -1,7 +1,8 @@
-From 61b5d56ae93d68c12a66822add15864e774baab5 Mon Sep 17 00:00:00 2001
+From f5e18518ee52c9f17d033fd2a3cc899558ba4e07 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 12:49:33 +0200
-Subject: platform: mellanox: mlx-platform: Change register 0x28 name
+Subject: [PATCH 4/5] platform: mellanox: mlx-platform: Change register 0x28
+ name
 
 Register 0x28 was repurposed on new systems. Change its name
 to correctly reflect the new functionality.
@@ -13,7 +14,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index c0d2d0378..6767e58f4 100644
+index f33aca457..86a69e726 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -53,7 +53,7 @@
@@ -25,7 +26,7 @@ index c0d2d0378..6767e58f4 100644
  #define MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION	0x2a
  #define MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET	0x2b
  #define MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET	0x2d
-@@ -8066,7 +8066,6 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
+@@ -8463,7 +8463,6 @@ static bool mlxplat_mlxcpld_writeable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -33,7 +34,7 @@ index c0d2d0378..6767e58f4 100644
  	case MLXPLAT_CPLD_LPC_REG_GP0_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP_RST_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GP1_OFFSET:
-@@ -8198,7 +8197,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8595,7 +8594,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -42,7 +43,7 @@ index c0d2d0378..6767e58f4 100644
  	case MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION:
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
-@@ -8398,7 +8397,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8795,7 +8794,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_LED6_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED7_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_LED8_OFFSET:
@@ -52,5 +53,5 @@ index c0d2d0378..6767e58f4 100644
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
 -- 
-2.34.1
+2.20.1
 
