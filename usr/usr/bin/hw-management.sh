@@ -116,6 +116,7 @@ smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
+sed_pba_guid=0d1d8ac9-9958-4e34-aae6-5236e3232bb5
 
 mctp_bus=""
 mctp_addr=""
@@ -3059,6 +3060,25 @@ map_asic_pci_to_i2c_bus()
 	return 255
 }
 
+report_sed_pba_ver()
+{
+    if command -v sedutil-cli &> /dev/null; then
+        if sedutil-cli --query /dev/nvme0 | grep -q "MBREnabled = Y"; then
+            if [ -f /sys/firmware/efi/efivars/SedPbaVer-"$sed_pba_guid" ]; then
+                sed_pba_ver=$(efivar -p -n "$sed_pba_guid"-SedPbaVer | \
+                awk '/Value:/ {found=1; next} found {split($0, a, "|"); split(a[2], b, " "); print b[1]; found=0}')
+            else
+                sed_pba_ver="N/A"
+            fi
+        else
+            sed_pba_ver="N/A"
+        fi
+    else
+        sed_pba_ver="N/A"
+    fi
+    echo "$sed_pba_ver" > "$system_path"/sed_pba_ver
+}
+
 do_start()
 {
 	create_symbolic_links
@@ -3096,6 +3116,7 @@ do_start()
 	if [ -f $config_path/max_tachos ]; then
 		max_tachos=$(<$config_path/max_tachos)
 	fi
+	report_sed_pba_ver
 
 	if [ -v "lm_sensors_config_lc" ] && [ -f $lm_sensors_config_lc ]; then
 		ln -sf $lm_sensors_config_lc $config_path/lm_sensors_config_lc
