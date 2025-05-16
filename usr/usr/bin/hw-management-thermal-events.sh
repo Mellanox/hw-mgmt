@@ -355,7 +355,7 @@ if [ "$1" == "add" ]; then
 
 			if [ "$name" == "mlxsw" ]; then
 				case $sku in
-					HI157|HI158)
+					HI157|HI158|HI179)
 						# Mapping of ASIC I2C bus to ASIC index
 						asic_indices=([2]=1 [18]=2 [34]=3 [50]=4)
 						asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
@@ -441,7 +441,7 @@ if [ "$1" == "add" ]; then
 									fi
 									;;
 								# All modules are accessible via ASIC1
-								HI158)
+								HI158|HI179)
 									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
 									asic_bus=$(echo $4 | cut -d/ -f7 | cut -d- -f2)
 									if [ ${asic_bus} -ne ${asic1_bus} ]; then
