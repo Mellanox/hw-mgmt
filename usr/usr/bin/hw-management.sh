@@ -140,6 +140,7 @@ mctp_addr=""
 ndr_cpu_bus_offset=18
 ng800_cpu_bus_offset=34
 xdr_cpu_bus_offset=66
+q3401_cpu_bus_offset=67
 smart_switch_cpu_bus_offset=34
 
 connect_table=()
@@ -396,6 +397,11 @@ mqm97xx_pdb_connect_table=( raa228000 0x61 4 pdb_pwr_conv1 \
 			tmp451 0x4c 4 pdb_mos_amb \
 			tmp1075 0x4e 4 pdb_intel_amb \
 			24c02 0x50 4 pdb_eeprpm )
+
+q3401_pdb_connect_table=( raa228004 0x60 5 pdb_pwr_conv1 \
+			lm5066i	0x12 5 pdb_hotswap1 \
+			tmp451 0x4c 5 pdb_mos_amb \
+			24c02 0x50 5 pdb_eeprpm )
 	   
 e3597_base_connect_table=(    max11603 0x6d 5 \
 			tmp102 0x49 7 \
@@ -634,6 +640,7 @@ p4262_named_busses=( pdb 4 ts 7 vpd 8 erot1 15 erot2 16 vr1 26 vr2 29 )
 p4300_named_busses=( ts 7 vpd 8 erot1 15 vr1 26 vr2 29 )
 q3200_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vpd 8 )
 q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
+q3401_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
@@ -1028,7 +1035,7 @@ add_cpu_board_to_connection_table()
 		$CFL_CPU)
 			case $sku in
 				# Systems without A2D on COMEx
-				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175|HI178)
+				HI130|HI142|HI152|HI157|HI158|HI159|HI173|HI174|HI175|HI178|HI179)
 					cpu_connection_table=( ${cpu_type2_connection_table[@]} )
 					cpu_voltmon_connection_table=( ${cpu_type2_mps_voltmon_connection_table[@]} )
 					;;
@@ -2319,6 +2326,53 @@ qm3xxx_specific()
 	echo 0 > "$config_path"/labels_ready
 }
 
+qm3xx1_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		connect_table+=(${q3400_base_connect_table[@]})
+		add_cpu_board_to_connection_table $q3401_cpu_bus_offset
+		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
+	fi
+	i2c_comex_mon_bus_default=$((q3401_cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((q3401_cpu_bus_offset+6))
+	minimal_unsupported=1
+
+	# Set according to front fan max.
+	echo 13500 > $config_path/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 2741 > $config_path/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 13500 > $config_path/fan_front_max_speed
+	echo 2842 > $config_path/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 12603 > $config_path/fan_rear_max_speed
+	echo 2741 > $config_path/fan_rear_min_speed
+
+	# Set FAN speed tolerance based on spec +-10%
+	fan_speed_tolerance=10
+
+	echo C2P > $config_path/system_flow_capability
+
+	max_tachos=16
+	hotplug_fans=8
+	hotplug_pwrs=0
+	hotplug_psus=0
+	psu_count=0
+	hotplug_pdbs=1
+	echo 6 > $config_path/cpld_num
+	lm_sensors_config="$lm_sensors_configs_path/q3401_sensors.conf"
+	lm_sensors_labels="$lm_sensors_configs_path/q3401_sensors_labels.json"
+	thermal_control_config="$thermal_control_configs_path/tc_config_q3401.json"
+	named_busses+=(${q3401_named_busses[@]})
+	asic_i2c_buses=(2 18 34 50)
+	add_come_named_busses $xdr_cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo 0 > "$config_path"/labels_ready
+}
+
 qm_qm3_common()
 {
 	case $sku in
@@ -2330,6 +2384,9 @@ qm_qm3_common()
 		;;
 		HI175|HI178)	# Q3450/Q3451
 			qm3xxx_specific
+		;;
+		HI179)	# Q3401
+			qm3xx1_specific
 		;;
 		*)
 			qm3xxx_specific
@@ -3061,7 +3118,7 @@ set_asic_pci_id()
 			asic_pci_id=$nv4_rev_a1_pci_id
 		fi
 		;;
-	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178)
+	HI157|HI162|HI166|HI167|HI169|HI170|HI175|HI176|HI177|HI178|HI179)
 		asic_pci_id=${quantum3_pci_id}
 		;;
 	HI158)
@@ -3129,7 +3186,7 @@ set_asic_pci_id()
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo 2 > "$config_path"/asic_num
 		;;
-	HI158)
+	HI158|HI179)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $3}'`
@@ -3288,7 +3345,7 @@ pre_devtr_init()
 		;;
 	VMOD0018)
 		case $sku in
-		HI158|HI175|HI178)
+		HI158|HI175|HI178|HI179)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
 			;;

@@ -89,7 +89,7 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178)
+	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI179)
 		ui_tree_archive_file="$(get_ui_tree_archive_file)"
 		if [ -e "$ui_tree_archive_file" ]; then
 			# Extract the ui_tree archive to /var/run/hw-management
@@ -109,7 +109,7 @@ service_file_path=$(systemctl status hw-management-tc.service | grep hw-manageme
 if [ -f $service_file_path ]; then
 	md5sum_orig=$(md5sum $service_file_path | awk '{print $1}')
 	case $sku in
-		HI172|HI171)	# Systems allowed to use new hw-management-tc
+		HI172|HI171|HI179)	# Systems allowed to use new hw-management-tc
 			tc_version="2.5"
 			tc_executable="hw_management_thermal_control_2_5.py"
 			;;
