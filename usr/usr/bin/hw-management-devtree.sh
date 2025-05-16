@@ -507,7 +507,9 @@ declare -A fan_type0_alternatives=(["tmp102_0"]="tmp102 0x49 7 fan_amb" \
 
 declare -A fan_type1_alternatives=(["tmp102_0"]="tmp102 0x49 6 fan_amb" \
 				   ["adt75_0"]="adt75 0x49 6 fan_amb" \
-				   ["stts751_0"]="stts751 0x49 6 fan_amb")
+				   ["stts751_0"]="stts751 0x49 6 fan_amb" \
+				   ["lm5066i_0"]="lm5066i 0x14 6 fan_hotswap1"
+				   )
 
 # Currently system can have just multiple clock boards.
 declare -A clk_type0_alternatives=(["24c128_0"]="24c128 0x54 5 clk_eeprom1" \
@@ -570,6 +572,23 @@ declare -A pwr_type4_alternatives=( \
 				   ["lm5066_1"]="lm5066i 0x14 4 pdb_hotswap2" \
 				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
 				   ["tmp1075_0"]="tmp1075 0x4e 4 pdb_intel_amb" \
+				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
+
+declare -A q3401_pwr_alternatives=( \
+				   ["raa228004_0"]="raa228004 0x60 4 pdb_pwr_conv1" \
+				   ["raa228004_1"]="raa228004 0x61 4 pdb_pwr_conv2" \
+				   ["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+				   ["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
+				   ["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" \
+				   ["lm5066i_1"]="lm5066i 0x14 4 pdb_hotswap2" \
+				   ["lm5066_1"]="lm5066i 0x14 4 pdb_hotswap2" \
+				   ["mp5926_1"]="mp5926 0x14 4 pdb_hotswap2" \
+				   ["tmp1075_0"]="tmp1075 0x4c 4 pdb_mos_amb" \
+				   ["tmp411_0"]="tmp411 0x4c 4 pdb_mos_amb" \
+				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
+				   ["tmp1075_1"]="tmp1075 0x4e 4 pdb_brd_amb" \
+				   ["tmp411_1"]="tmp411 0x4e 4 pdb_brd_amb" \
+				   ["tmp451_1"]="tmp451 0x4e 4 pdb_brd_amb" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
 
 # P*HaEaOfTk
@@ -980,6 +999,26 @@ devtr_check_supported_system_init_alternatives()
 					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
 				done
 				;;
+			HI179)
+				for key in "${!q3400_alternatives[@]}"; do
+					swb_alternatives["$key"]="${q3400_alternatives["$key"]}"
+				done
+
+				for key in "${!platform_type1_alternatives[@]}"; do
+					platform_alternatives["$key"]="${platform_type1_alternatives["$key"]}"
+				done
+
+				for key in "${!q3401_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${q3401_pwr_alternatives["$key"]}"
+				done
+
+				for key in "${!fan_type1_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type1_alternatives["$key"]}"
+				done
+
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
+				done
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
 				return 1
