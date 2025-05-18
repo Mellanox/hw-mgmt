@@ -1,4 +1,34 @@
 ================================================================================
+- V.7.0040.4011
+- Sun, 18 May 2025
+--------------------------------------------------------------------------------
+
+- New features 
+    o #4184551: SN5610 | Thermal Algo optimization by improving Fans control Granularity | flow optimization
+
+- Bug fixes
+    o #4439383: [SN5610] hw-management ready after >5min 
+    o #4404746: [sensors] | incorrect output for sensors command
+    o #4389689: hw-management-sysfs-monitor/hw-management-fast-sysfs-monitor status is "Down" after a successful run
+    o #4184551: SN5610 | Thermal Algo optimization by improving Fans control Granularity
+    o #4406920: i2c i2c-8: Failed to register i2c client 24c512 at 0x51 (-16)
+    o #4406833: hw-management-sysfs-monitor.service: Failed with result 'timeout'
+    o #4414265: Minimal driver disabling is broken on ARM platform
+    o #4406930: Mismatch system names in tc-json:q3200 and expected:q3200_ra 
+    o #4327816: Mgmt port - the green LED stays on a fixed green and doesn't blink
+    o #4404266: SN2201, hw-management service init failure, missing /var/run/hw-management/config/i2c_gpiobase
+
+    o For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0040.4000
 - Thu , 3 Apr 2025
 --------------------------------------------------------------------------------
