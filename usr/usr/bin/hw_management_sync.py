@@ -303,10 +303,10 @@ class CONST(object):
     ASIC_TEMP_FAULT_DEF = 105000
     ASIC_TEMP_CRIT_DEF = 120000
     #
-    MODULE_TEMP_MIN_DEF = 70000
     MODULE_TEMP_MAX_DEF = 75000
     MODULE_TEMP_FAULT_DEF = 105000
     MODULE_TEMP_CRIT_DEF = 120000
+    MODULE_TEMP_EMERGENCY_OFFSET = 10000
 
 REDFISH_OBJ = None
 
@@ -604,9 +604,9 @@ def module_temp_populate(arg_list, _dummy):
 
         # Default temperature values
         temperature = "0"
-        temperature_min = "0"
-        temperature_max = "0"
+        temperature_emergency = "0"
         temperature_fault = "0"
+        temperature_trip_crit = "0"
         temperature_crit = "0"
 
         if module_present:
@@ -618,38 +618,41 @@ def module_temp_populate(arg_list, _dummy):
                 continue
 
             f_src_input = os.path.join(f_src_path, "temperature/input")
-            f_src_min = os.path.join(f_src_path, "temperature/threshold_lo")
-            f_src_max = os.path.join(f_src_path, "temperature/threshold_hi")
+            f_src_crit = os.path.join(f_src_path, "temperature/threshold_hi")
+            f_src_hcrit = os.path.join(f_src_path, "temperature/threshold_critical_hi")
 
             try:
                 with open(f_src_input, 'r') as f:
                     val = f.read()
                 temperature = sdk_temp2degree(int(val))
 
-                if os.path.isfile(f_src_min):
-                    with open(f_src_min, 'r') as f:
+                if os.path.isfile(f_src_crit):
+                    with open(f_src_crit, 'r') as f:
                         val = f.read()
-                    temperature_min = sdk_temp2degree(int(val))
+                    temperature_crit = sdk_temp2degree(int(val))
                 else:
-                    temperature_min = CONST.MODULE_TEMP_MIN_DEF
+                    temperature_crit = CONST.MODULE_TEMP_MAX_DEF
 
-                if os.path.isfile(f_src_max):
-                    with open(f_src_max, 'r') as f:
+                if temperature_crit != 0:
+                    temperature_emergency = temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
+
+                if os.path.isfile(f_src_hcrit):
+                    with open(f_src_hcrit, 'r') as f:
                         val = f.read()
-                    temperature_max = sdk_temp2degree(int(val))
+                    temperature_trip_crit = sdk_temp2degree(int(val))
                 else:
-                    temperature_max = CONST.MODULE_TEMP_MAX_DEF
-                temperature_crit = CONST.MODULE_TEMP_CRIT_DEF
+                    temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
+
             except:
                 pass
 
         # Write the temperature data to files
         file_paths = {
             "_temp_input": temperature,
-            "_temp_crit": temperature_min,
-            "_temp_emergency": temperature_max,
+            "_temp_crit": temperature_crit,
+            "_temp_emergency": temperature_emergency,
             "_temp_fault": temperature_fault,
-            "_temp_trip_crit": temperature_crit
+            "_temp_trip_crit": temperature_trip_crit
         }
 
         for suffix, value in file_paths.items():
