@@ -1,4 +1,4 @@
-From 096bb1c6a760152601a2680b547da192755a55c1 Mon Sep 17 00:00:00 2001
+From 974ee125f14f1e98ff13113fff00bb1eb40c875f Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 17:02:32 +0200
 Subject: [PATCH 6/6] platform: mellanox: mlx-platform: Add support for
@@ -24,7 +24,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 294 insertions(+), 28 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 76dd284ff922..56aa3640c755 100644
+index deb80d3dd619..828bed662ff7 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -38,6 +38,7 @@
@@ -392,7 +392,7 @@ index 76dd284ff922..56aa3640c755 100644
      {
  		.label = "leakage_status_clear",
  		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
-@@ -8626,6 +8858,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8644,6 +8876,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_VER_OFFSET:
@@ -400,7 +400,7 @@ index 76dd284ff922..56aa3640c755 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -8638,6 +8871,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8656,6 +8889,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN1_OFFSET:
@@ -408,7 +408,7 @@ index 76dd284ff922..56aa3640c755 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -8772,6 +9006,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8790,6 +9024,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
@@ -416,7 +416,7 @@ index 76dd284ff922..56aa3640c755 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -8826,6 +9061,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8844,6 +9079,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_VER_OFFSET:
@@ -424,7 +424,7 @@ index 76dd284ff922..56aa3640c755 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -8838,6 +9074,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8856,6 +9092,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN1_OFFSET:
@@ -432,7 +432,7 @@ index 76dd284ff922..56aa3640c755 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -8964,6 +9201,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8982,6 +9219,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
@@ -440,7 +440,7 @@ index 76dd284ff922..56aa3640c755 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9882,6 +10120,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9900,6 +10138,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -468,7 +468,7 @@ index 76dd284ff922..56aa3640c755 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -10088,6 +10347,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -10106,6 +10365,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
  		},
  	},
