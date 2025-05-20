@@ -204,6 +204,7 @@ class CONST(object):
     MLXREG_SET_CMD_STR = "yes |  mlxreg -d  {pcidev} --reg_name MFSC --indexes \"pwm=0x0\" --set \"pwm_duty_cycle={pwm}\""
     MLXREG_GET_CMD_STR = "mlxreg -d {pcidev} --reg_name MFSC --get --indexes \"pwm=0x0\" | grep pwm | head -n 1 | cut -d '|' -f 2"
 
+    MIN_SMOOTH_LEVEL = 1
     # Value averege formula type
     # exponential moving average
     VAL_AVG_EMA = 1
@@ -1271,9 +1272,9 @@ class system_device(hw_management_file_op):
         self.base_file_name = self.sensors_config.get("base_file_name", None)
         self.file_input = "{}{}".format(self.base_file_name, self.sensors_config.get("input_suffix", ""))
         self.enable = bool(self.sensors_config.get("enable", 1))
-        self.input_smooth_level = self.sensors_config.get("input_smooth_level", 1)
-        if self.input_smooth_level < 1:
-            self.input_smooth_level = 1
+        self.input_smooth_level = self.sensors_config.get("input_smooth_level", CONST.MIN_SMOOTH_LEVEL)
+        self.input_smooth_level = min(self.input_smooth_level, CONST.MIN_SMOOTH_LEVEL)
+
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.update_timestump(1000)
         self.scale = CONST.TEMP_SENSOR_SCALE
@@ -1427,7 +1428,7 @@ class system_device(hw_management_file_op):
     def _update_value_formula(self, value, formula_type=CONST.VAL_AVG_EMA):
         # Value a,verege formula type
         if formula_type == CONST.VAL_AVG_EMA:
-            input_smooth_level = self.input_smooth_level + 1
+            input_smooth_level = self.input_smooth_level
             # first time init
             if self.value == CONST.TEMP_NA_VAL:
                 self.value_acc = value * input_smooth_level
