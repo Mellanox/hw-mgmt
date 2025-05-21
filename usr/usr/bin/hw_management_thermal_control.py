@@ -1686,7 +1686,6 @@ class thermal_module_sensor(system_device):
         fault_list = self.get_fault_list_filtered()
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
-            self.append_fault(CONST.SENSOR_READ_ERR)
             # get special error case for sensor missing
             sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
             self.pwm = max(int(sensor_err), self.pwm)
@@ -1771,6 +1770,23 @@ class thermal_asic_sensor(thermal_module_sensor):
 
         if self.asic_fault_err.check_err():
             self.append_fault(CONST.EMERGENCY)
+
+    # ----------------------------------------------------------------------
+    def handle_err(self, thermal_table, flow_dir, amb_tmp):
+        """
+        @summary: handle sensor errors
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        if CONST.SENSOR_READ_ERR in fault_list:
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(int(sensor_err), self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
+            self.pwm = max(pwm, self.pwm)
+
+        self._update_pwm()
+        return None
 
 class psu_fan_sensor(system_device):
     """
