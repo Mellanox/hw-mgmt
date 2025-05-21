@@ -1315,7 +1315,6 @@ class system_device(hw_management_file_op):
         self.file_input = "{}{}".format(self.base_file_name, self.sensors_config.get("input_suffix", ""))
         self.enable = bool(self.sensors_config.get("enable", 1))
         self.input_smooth_level = self.sensors_config.get("input_smooth_level", CONST.MIN_SMOOTH_LEVEL)
-        self.input_smooth_level = min(self.input_smooth_level, CONST.MIN_SMOOTH_LEVEL)
 
         self.poll_time = int(self.sensors_config.get("poll_time", CONST.SENSOR_POLL_TIME_DEF))
         self.update_timestump(1000)
@@ -1510,7 +1509,8 @@ class system_device(hw_management_file_op):
                 self.value_items_weght[0] = 0.5+(1/input_smooth_level)
                 for idx in range(1, input_smooth_level-1):
                     self.value_items_weght[idx] = (1 - sum(self.value_items_weght[0:idx])) / 2
-                self.value_items_weght[self.input_smooth_level] = self.value_items_weght[self.input_smooth_level-1]
+                if input_smooth_level > 2:
+                    self.value_items_weght[self.input_smooth_level] = self.value_items_weght[self.input_smooth_level-1]
 
             self.value_items_lst = [value] + self.value_items_lst[:-1]
             result = [a * b for a, b in zip(self.value_items_lst, self.value_items_weght)]
