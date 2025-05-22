@@ -1294,7 +1294,7 @@ if [ "$1" == "add" ]; then
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
 		cable_cartridge*_eeprom*)
-			if [ "$board_type" == "VMOD0021" ]; then
+			if [ "$board_type" == "VMOD0021" ] || [ "$board_type" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
 				fi
@@ -1313,7 +1313,7 @@ if [ "$1" == "add" ]; then
 			fi
 			;;
 		swb_info)
-			if [ "$board_type" == "VMOD0021" ]; then
+			if [ "$board_type" == "VMOD0021" ] || [ "$board_type" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/swb_data
 				fi
