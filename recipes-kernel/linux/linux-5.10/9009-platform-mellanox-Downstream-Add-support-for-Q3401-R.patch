@@ -1,0 +1,154 @@
+From e8206b2e7099901e29ca6d4e780cbddaa03590cc Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Thu, 22 May 2025 19:31:38 +0300
+Subject: [PATCH] platform: mellanox: Downstream: Add support for Q3401-RD
+ Nvidia XDR DGX flavor switch.
+
+This system is based on Nvidia Q3400 Nvidia Quantum-3 36x800Gb/s Switch, with the
+following key changes:
+
+Key changes:
+- New Power Supply: AC/DC PSUs power repaced by rack busbar input power ORv3 DC 48V-54V.
+- Dimensions MGX/DGX 1U compliance Tool-less top cover (fast cover opening with no screw)
+- Air Cooled: 7 + 1 redundant fan units C2P not reversable 80x80mm 48V (instead of 9 +1 60x60mm)
+
+Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 102 ++++++++++++++++++++++-
+ 1 file changed, 98 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+index 8ef8c9121..0ca2789e8 100644
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -2183,6 +2183,82 @@ static struct mlxreg_core_item mlxplat_mlxcpld_xdr_items[] = {
+ 	},
+ };
+ 
++static struct mlxreg_core_item mlxplat_mlxcpld_xdr_dgx_items[] = {
++	{
++		.data = mlxplat_mlxcpld_dgx_psu_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PSU_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.mask = MLXPLAT_CPLD_PSU_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_dgx_psu_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_dgx_pwr_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PWR_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = MLXPLAT_CPLD_PWR_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_dgx_pwr_items_data),
++		.inversed = 0,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_xdr_fan_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
++		.mask = MLXPLAT_CPLD_FAN_XDR_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_FAN_DRW_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_FAN_CAP_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_fan_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_xdr_asic1_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_XDR_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_ASIC_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_ASIC_CAP_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_asic1_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++	{
++		.data = mlxplat_mlxcpld_xdr_asic2_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC2_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_XDR_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_ASIC_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_ASIC_CAP_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_asic2_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++	{
++		.data = mlxplat_mlxcpld_xdr_asic3_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC3_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_XDR_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_ASIC_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_ASIC_CAP_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_asic3_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++	{
++		.data = mlxplat_mlxcpld_xdr_asic4_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC4_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_XDR_MASK,
++		.capability = MLXPLAT_CPLD_LPC_REG_ASIC_CAP_OFFSET,
++		.capability_mask = MLXPLAT_CPLD_ASIC_CAP_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_xdr_asic4_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++};
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_leakage_items_data[] = {
+ 	{
+ 		.label = "leakage1",
+@@ -2350,6 +2426,17 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_xdr_liq_data = {
+ 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_FRU | MLXPLAT_CPLD_LOW_AGGR_MASK_MULTI_ASICS,
+ };
+ 
++static
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_xdr_dgx_data = {
++	.items = mlxplat_mlxcpld_xdr_dgx_items,
++	.counter = ARRAY_SIZE(mlxplat_mlxcpld_xdr_dgx_items),
++	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
++	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
++	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
++	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_FRU | MLXPLAT_CPLD_LOW_AGGR_MASK_MULTI_ASICS,
++};
++
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
+ 	{
+ 		.label = "pwr1",
+@@ -10091,15 +10178,22 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+ 			mlxplat_mlxcpld_xdr_pwr_items_data[i].hpdev.nr =
+ 			mlxplat_mlxcpld_xdr_pwr_nr_fixup[i];
+ 	}
++	if (!strcmp(sku, "HI179")) {
++		mlxplat_hotplug = &mlxplat_mlxcpld_xdr_dgx_data;
++		mlxplat_hotplug->deferred_nr =
++			mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
++		mlxplat_regs_io = &mlxplat_dgx_ng_regs_io_data;
++	} else {
++		mlxplat_hotplug = &mlxplat_mlxcpld_xdr_data;
++		mlxplat_hotplug->deferred_nr =
++			mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
++		mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
++	}
+ 
+ 	mlxplat_max_adap_num = MLXPLAT_CPLD_MAX_PHYS_ADAPTER_NUM;
+ 	mlxplat_mux_num = ARRAY_SIZE(mlxplat_xdr_mux_data);
+ 	mlxplat_mux_data = mlxplat_xdr_mux_data;
+-	mlxplat_hotplug = &mlxplat_mlxcpld_xdr_data;
+-	mlxplat_hotplug->deferred_nr =
+-		mlxplat_msn21xx_channels[MLXPLAT_CPLD_GRP_CHNL_NUM - 1];
+ 	mlxplat_led = &mlxplat_xdr_led_data;
+-	mlxplat_regs_io = &mlxplat_default_ng_regs_io_data;
+ 	mlxplat_fan = &mlxplat_xdr_fan_data;
+ 	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
+ 		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
+-- 
+2.20.1
+
