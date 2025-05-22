@@ -142,8 +142,9 @@ BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
 ARMv7_CPU=0xC07
 amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
-n5110_mctp_bus="0"
-n5110_mctp_addr="1040"
+n5110_mctp_bus=0
+n5110_mctp_addr=1040
+n61xx_mctp_bus=4
 
 # hw-mngmt-sysfs-monitor GLOBALS
 SYSFS_MONITOR_TIMEOUT=20 # Total Sysfs T/O.
@@ -298,7 +299,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI175" ] ||
         [ "$ui_tree_sku" = "HI176" ] ||
         [ "$ui_tree_sku" = "HI177" ] ||
-        [ "$ui_tree_sku" = "HI178" ]) &&
+        [ "$ui_tree_sku" = "HI178" ] ||
+        [ "$ui_tree_sku" = "HI180" ]) &&
         ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
     else
