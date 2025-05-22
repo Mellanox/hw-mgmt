@@ -1,3 +1,5 @@
+
+
 #!/bin/bash
 ################################################################################
 # Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -101,6 +103,7 @@ spc4_pci_id=cf80
 spc5_pci_id=cf82
 quantum2_pci_id=d2f2
 quantum3_pci_id=d2f4
+quantum4_pci_id=d2f8
 nv3_pci_id=1af1
 nv4_pci_id=22a3
 nv4_rev_a1_pci_id=22a4
@@ -618,6 +621,12 @@ nso_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 
 ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 	24c02 0x50 50 cable_cartridge2_eeprom)
+
+n6100ld_cartridge_eeprom_connect_table=( \
+	24c02 0x50 64 cable_cartridge1_eeprom \
+	24c02 0x50 65 cable_cartridge2_eeprom \
+	24c02 0x50 66 cable_cartridge3_eeprom \
+	24c02 0x50 67 cable_cartridge4_eeprom)
 
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
@@ -2469,8 +2478,60 @@ n51xxld_specific_cleanup()
 	if check_simx; then
 		echo ${n5110ld_virtual_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/delete_device
 	fi
+}
 
+n61xxld_specific()
+{
+	local cpu_bus_offset=55
 
+	case $sku in
+	# Rosalind N6100_LD
+	HI180)
+		add_i2c_dynamic_bus_dev_connection_table "${n6100ld_cartridge_eeprom_connect_table[@]}"
+		echo -n "${n6100ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		echo 4 > $config_path/cartridge_counter
+
+		asic_i2c_buses=(2 18 34 50)
+		echo 1 > $config_path/global_wp_wait_step
+		echo 20 > $config_path/global_wp_timeout
+		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+		cpld_num=2
+		leakage_count=2
+		erot_count=1
+		;;
+	esac
+
+	# Add SIMX VPD
+	if check_simx; then
+		echo ${n5110ld_virtual_vpd_connect_table[0]} ${n5110ld_virtual_vpd_connect_table[1]} > \
+		/sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/new_device
+	fi
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	pwr_events_count=1
+	minimal_unsupported=1
+	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
+	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
+	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
+	named_busses+=(${n6110ld_named_busses[@]})
+	add_come_named_busses $cpu_bus_offset
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo -n "${l1_power_events[@]}" > "$power_events_file"
+	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
+	mctp_bus="$n5110_mctp_bus"
+	mctp_addr="$n5110_mctp_addr"
+	ln -sf /dev/i2c-2 /dev/i2c-8
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 sn5640_specific()
@@ -2521,7 +2582,7 @@ sn5640_specific()
 system_cleanup_specific()
 {
 	case $board_type in
-	VMOD0021)
+	VMOD0021|VMOD0023)
 		n51xxld_specific_cleanup
 		;;
 	*)
@@ -2586,6 +2647,9 @@ check_system()
 			;;
 		VMOD0022)
 			sn5640_specific
+			;;
+		VMOD0023)
+			n61xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3032,6 +3096,9 @@ set_asic_pci_id()
 	HI172)
 		asic_pci_id=$spc4_pci_id
 		;;
+	HI180)
+		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
@@ -3102,6 +3169,19 @@ set_asic_pci_id()
 		echo 4 > "$config_path"/asic_num
 		;;
 	HI175|HI178)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
+	HI180)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
 		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
