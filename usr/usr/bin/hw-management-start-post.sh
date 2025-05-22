@@ -89,7 +89,7 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178)
+	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI180)
 		ui_tree_archive_file="$(get_ui_tree_archive_file)"
 		if [ -e "$ui_tree_archive_file" ]; then
 			# Extract the ui_tree archive to /var/run/hw-management
