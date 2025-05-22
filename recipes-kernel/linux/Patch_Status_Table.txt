@@ -402,6 +402,7 @@ Kernel-5.10
 |9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9007-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9008-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+|9009-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream accepted; skip[sonic,cumulus] |            | Q3401-RD                                       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Kernel-5.14
@@ -738,6 +739,7 @@ Kernel-6.1
 |9007-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
 |9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+|9010-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream accepted; skip[sonic,cumulus] |            | Q3401-RD                                       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
