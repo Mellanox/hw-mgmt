@@ -3081,6 +3081,7 @@ report_sed_pba_ver()
 
 do_start()
 {
+	show_hw_info
 	create_symbolic_links
 	check_cpu_type
 	pre_devtr_init
