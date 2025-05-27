@@ -521,10 +521,6 @@ def asic_temp_populate(arg_list, arg):
         if os.path.islink(f_dst_name):
             continue
 
-        # If independent mode - skip temperature reading
-        if is_module_host_management_mode(os.path.join(f_asic_src_path, "module0")):
-            continue
-
         # Default temperature values
         try:
             f_src_input = os.path.join(f_asic_src_path, "temperature/input")
@@ -619,7 +615,6 @@ def module_temp_populate(arg_list, _dummy):
 
             f_src_input = os.path.join(f_src_path, "temperature/input")
             f_src_crit = os.path.join(f_src_path, "temperature/threshold_hi")
-            f_src_hcrit = os.path.join(f_src_path, "temperature/threshold_critical_hi")
 
             try:
                 with open(f_src_input, 'r') as f:
@@ -636,12 +631,7 @@ def module_temp_populate(arg_list, _dummy):
                 if temperature_crit != 0:
                     temperature_emergency = temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
 
-                if os.path.isfile(f_src_hcrit):
-                    with open(f_src_hcrit, 'r') as f:
-                        val = f.read()
-                    temperature_trip_crit = sdk_temp2degree(int(val))
-                else:
-                    temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
+                temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
 
             except:
                 pass
