@@ -3304,6 +3304,7 @@ map_dummy_psus()
 
 do_start()
 {
+	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
 	check_cpu_type
