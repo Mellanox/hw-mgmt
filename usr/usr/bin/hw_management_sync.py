@@ -394,10 +394,6 @@ def asic_temp_populate(arg_list, arg):
         if os.path.islink(f_dst_name):
             continue
 
-        # If independent mode - skip temperature reading
-        if is_module_host_management_mode(os.path.join(f_asic_src_path, "module0")):
-            continue
-
         # Default temperature values
         try:
             f_src_input = os.path.join(f_asic_src_path, "temperature/input")
