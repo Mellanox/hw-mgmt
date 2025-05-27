@@ -175,6 +175,20 @@ trace_udev_events()
 	return 0
 }
 
+show_hw_info()
+{
+	arch=$(uname -m)
+	if [ "$arch" = "aarch64" ]; then
+		CPLD_IOREG_RANGE=512
+	else
+		CPLD_IOREG_RANGE=256
+	fi
+
+	log_info "== cpld reg dump start =="
+    iorw -b 0x2500 -r -l $CPLD_IOREG_RANGE | expand | logger
+	log_info "== cpld reg dump end =="
+}
+
 check_cpu_type()
 {
 	if [ ! -f $config_path/cpu_type ]; then
