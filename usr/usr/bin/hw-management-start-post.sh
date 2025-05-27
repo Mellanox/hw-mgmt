@@ -150,7 +150,8 @@ if check_simx; then
 fi
 
 ## Checking if system doesn't require TC
-if ! check_tc_support; then
+check_tc_is_supported
+if [ $? -eq 0 ]; then
 	log_info "Disabe Thermal Control for current platform: $sku"
 	systemctl stop hw-management-tc.service
 	systemctl disable hw-management-tc.service  

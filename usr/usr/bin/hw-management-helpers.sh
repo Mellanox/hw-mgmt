@@ -304,15 +304,14 @@ check_simx()
 }
 
 # This function checks if ThermalControl supports current platform
-check_tc_support()
+# Returns 1 if TC is supported, 0 otherwise.
+check_tc_is_supported()
 {
-    sys_sku=$(<$sku_file)
-    if ([ "$sys_sku" = "HI166" ] ||
-        [ "$sys_sku" = "HI167" ]); then
-        return 1
-    else
-        return 0
-    fi
+	if grep -q '"platform_support" : 0' $config_path/tc_config.json; then
+		return 1
+	else
+		return 0
+	fi
 }
 
 # This function create or cleans sysfs monitor helper files.
