@@ -68,6 +68,8 @@ import pdb
 
 VERSION = "2.5.0"
 
+# TODO: enable TEC support after pass all tests
+TEC_SUPPORT_ENABLED = False
 #############################
 # Local const
 #############################
@@ -1173,13 +1175,13 @@ class pwm_regulator_simple():
         @summary: update parameters
         """
         if val_min:
-            val_min = self.val_min
+            self.val_min = val_min
         if val_max:
-            val_max = self.val_max
+            self.val_max = val_max
         if pwm_min:
-            pwm_min = self.pwm_min
+            self.pwm_min = pwm_min
         if pwm_max:
-            pwm_max = self.pwm_max
+            self.pwm_max = pwm_max
         if self.log:
             self.log.debug("regulator:{} update param: val_min:{} val_max:{} pwm_min:{} pwm_max:{}".format(self.name, val_min, val_max, pwm_min, pwm_max))
 
@@ -3648,8 +3650,9 @@ class ThermalManagement(hw_management_file_op):
         # 2. Add missing keys from system_conf->sensors_config to sensor_conf
         dev_param = self.sys_config[CONST.SYS_CONF_DEV_PARAM]
         for name_mask, val in dev_param.items():
-            if not name_mask.endswith("$"):
-                name_mask = name_mask + "$"
+            if TEC_SUPPORT_ENABLED:
+                if not name_mask.endswith("$"):
+                    name_mask = name_mask + "$"
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
@@ -3657,8 +3660,9 @@ class ThermalManagement(hw_management_file_op):
         # 3. Add missing keys from def config to sensor_conf
         dev_param = SENSOR_DEF_CONFIG
         for name_mask, val in dev_param.items():
-            if not name_mask.endswith("$"):
-                name_mask = name_mask + "$"
+            if TEC_SUPPORT_ENABLED:
+                if not name_mask.endswith("$"):
+                    name_mask = name_mask + "$"
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
@@ -3731,9 +3735,12 @@ class ThermalManagement(hw_management_file_op):
                 module_name = "module{}".format(idx)
                 if self.check_file("thermal/{}_temp_input".format(module_name)):
                     # check if module is TEC-cooled
-                    if self.check_file("thermal/{}_cooling_level".format(module_name)):
-                        self._sensor_add_config("thermal_module_tec_sensor", module_name + "_tec", {"base_file_name": module_name})
-                        module_name = module_name + "_tec"
+                    if TEC_SUPPORT_ENABLED
+                        if self.check_file("thermal/{}_cooling_level".format(module_name)):
+                            self._sensor_add_config("thermal_module_tec_sensor", module_name + "_tec", {"base_file_name": module_name})
+                            module_name = module_name + "_tec"
+                        else:
+                            self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_name})
                     else:
                         self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_name})
 
