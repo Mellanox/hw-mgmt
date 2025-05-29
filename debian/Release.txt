@@ -1,4 +1,28 @@
 ================================================================================
+- V.7.0040.2300
+- Thu , 29 May 2025 
+--------------------------------------------------------------------------------
+
+- Bug fixes
+	#4327816:	hw-mgmt: kernel: config: Enable Marvell Alaska PHY driver to properly configure MGMT port LED
+	#4404746:	hw-mgmt: sensors: Fix MP2891 current labels for SN5610/SN5640
+	#4452224:	hw-mgmgt:thermal: Fix module temp_crit
+	#4280981, #4297741:	hw-mgmgt: scripts: Fix ASIC attributes sync
+	#4281195, #3651819:	hw-mgmt: thermal: Add FAN direction by FAN VPD.
+
+- Kernel Version Supported: 5.10.218, 6.1.94, 5.14.21, 6.1.123
+
+    o  For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.2300/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0040.2000
 - Tue , 1 Oct 2024 
 --------------------------------------------------------------------------------
