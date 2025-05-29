@@ -439,6 +439,10 @@ DMIN_TABLE_DEFAULT = {
 
 ASIC_CONF_DEFAULT = {"1":  {"pwm_control": False, "fan_control": False}}
 
+def natural_key(obj):
+    name = obj.name.strip()
+    # Break the string into text and number chunks
+    return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', name)]
 
 # ----------------------------------------------------------------------
 def str2bool(val):
@@ -4359,7 +4363,9 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("Cooling(%):{} (max pwm source:{}), avg:{}".format(self.pwm_target, self.pwm_change_reason, round(self._get_pwm_avg(),1)))
         self.log.info("dir:{}".format(flow_dir))
         self.log.info("================================")
-        for dev_obj in self.dev_obj_list:
+
+        dev_obj_sorted = sorted(self.dev_obj_list, key=natural_key)
+        for dev_obj in dev_obj_sorted:
             if dev_obj.enable:
                 self.log.info(str(dev_obj))
         self.log.info("================================")
