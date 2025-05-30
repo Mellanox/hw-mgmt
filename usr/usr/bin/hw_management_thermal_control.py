@@ -96,6 +96,7 @@ class CONST(object):
     SYS_CONF_ERR_MASK = "error_mask"
     SYS_CONF_REDUNDANCY_PARAM = "redundancy"
     SYS_CONF_GENERAL_CONFIG_PARAM = "general_config"
+    SYS_CONF_TEC_MODULE_SUPPORTED_PARAM = "tec_module_supported"
     SYS_CONF_FAN_STEADY_STATE_DELAY = "fan_steady_state_delay"
     SYS_CONF_FAN_STEADY_STATE_PWM = "fan_steady_state_pwm"
     SYS_CONF_FAN_STEADY_ATTENTION_ITEMS = "attention_fans"
@@ -246,6 +247,11 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
+                        },
+    r'module\d+_tec':   {"type": "thermal_module_tec_sensor",
+                         "pwm_min": 0, "pwm_max": 100, "val_min": 0, "val_max": 100,
+                         "val_lcrit": 0, "val_hcrit": 1000, "poll_time": 20,
+                         "input_suffix": "_temp_input"
                         },
     r'gearbox\d+':      {"type": "thermal_module_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
@@ -1718,6 +1724,129 @@ class thermal_module_sensor(system_device):
         return None
 
 
+class thermal_module_tec_sensor(system_device):
+    """
+    @summary: class for TEC-cooled modules sensor
+    """
+
+    def __init__(self, cmd_arg, sys_config, name, tc_logger):
+        system_device.__init__(self, cmd_arg, sys_config, name, tc_logger)
+        self.scale = self.sensors_config.get("scale", 1)
+        self.val_lcrit = self.sensors_config.get("val_lcrit", CONST.TEMP_MIN_MAX["val_lcrit"])
+        self.val_hcrit = self.sensors_config.get("val_hcrit", CONST.TEMP_MIN_MAX["val_hcrit"])
+        self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
+        self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
+        self.val_min = self.sensors_config.get("val_min", 0)
+        self.val_max = self.sensors_config.get("val_max", 100)
+        self.cooling_level = 0
+        self.cooling_level_max = 0
+        self.temperature = 0
+
+    # ----------------------------------------------------------------------
+    def handle_input(self, thermal_table, flow_dir, amb_tmp):
+        """
+        @summary: handle sensor input
+        """
+        pwm = self.pwm_min
+
+        required_files = {
+            'cooling_level': "thermal/{}_cooling_level_input".format(self.base_file_name),
+            'cooling_level_max': "thermal/{}_cooling_level_warning".format(self.base_file_name),
+            'temperature': "thermal/{}_temp_input".format(self.base_file_name)
+        }
+
+        # Read cooling level and cooling level warning
+        for fname, fpath in required_files.items():
+            if not self.check_file(fpath):
+                self.log.info("Missing file: {}.".format(fpath))
+                self.fread_err.handle_err(fpath)
+                return
+            else:
+                try:
+                    if fname == 'temperature':
+                        value = self.read_file_int(fpath, 1000)
+                    else:
+                        value = self.read_file_int(fpath)
+                    setattr(self, fname, value)
+                    self.log.debug("{} {}:{}".format(self.name, fname, value))
+                except BaseException:
+                    self.log.warn("Error reading {} from file: {}".format(fname, fpath))
+                    self.fread_err.handle_err(fpath)
+                    return
+
+        # validate cooling_level
+        if ((self.val_hcrit is not None and self.cooling_level > self.val_hcrit) or
+                (self.val_lcrit is not None and self.cooling_level < self.val_lcrit)):
+            self.log.warn("{} cooling_level({}) not in range (lcrit:{}, hcrit:{})".format(
+                self.name,
+                self.cooling_level,
+                self.val_lcrit,
+                self.val_hcrit))
+            self.fread_err.handle_err(required_files['cooling_level'])
+            return
+
+        try:
+            cooling_level_norm = int(self.cooling_level * 100 / self.cooling_level_max)
+        except BaseException:
+            self.fread_err.handle_err(required_files['cooling_level_max'])
+            self.log.error("{} cooling_level_max is 0".format(self.name))
+            return
+
+        self.update_value(cooling_level_norm)
+        for fname, fpath in required_files.items():
+            self.fread_err.handle_err(fpath, reset=True)
+
+        # calculate PWM value
+        pwm = self.calculate_pwm_formula()
+        self.pwm = pwm
+
+    # ----------------------------------------------------------------------
+    def collect_err(self):
+        self.clear_fault_list()
+
+        if self.fread_err.check_err():
+            self.append_fault(CONST.SENSOR_READ_ERR)
+
+    # ----------------------------------------------------------------------
+    def handle_err(self, thermal_table, flow_dir, amb_tmp):
+        """
+        @summary: handle sensor errors
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        if CONST.SENSOR_READ_ERR in fault_list:
+            # get special error case for sensor missing
+            sensor_err = self.sensors_config.get(CONST.SENSOR_READ_ERR, 0)
+            self.pwm = max(sensor_err, self.pwm)
+            pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.SENSOR_READ_ERR])
+            self.pwm = max(pwm, self.pwm)
+
+        self._update_pwm()
+        return None
+
+    # ----------------------------------------------------------------------
+    def __str__(self):
+        """
+        @summary: returning info about current device state. Can be overridden in child class
+        """
+        fault_list = self.get_fault_list_filtered()
+        # sensor error reading counter
+        temperature = self.temperature
+        cooling_level = self.cooling_level
+        cooling_level_max = self.cooling_level_max
+
+        value_str = "temp:{: <4}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(temperature,
+                                                                                     cooling_level,
+                                                                                     cooling_level_max)
+
+        info_str = "\"{: <8}\" {: <54}, faults:[{}], pwm: {}, {}".format(self.name,
+                                                                         value_str,
+                                                                         self.get_fault_list_str(),
+                                                                         self.pwm,
+                                                                         self.state)
+        return info_str
+
+
 class thermal_asic_sensor(thermal_module_sensor):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         thermal_module_sensor.__init__(self, cmd_arg, sys_config, name, tc_logger)
@@ -2932,6 +3061,12 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.info("Sensors enabled on system: {}".format(sensor_list))
         self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = sensor_list
 
+        self.tec_module_supported = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_TEC_MODULE_SUPPORTED_PARAM])
+        if self.tec_module_supported:
+            self.log.info("TEC supported")
+        else:
+            self.log.info("TEC not supported")
+
     # ----------------------------------------------------------------------
     def _get_dev_obj(self, name_mask):
         """
@@ -3290,13 +3425,25 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.info("Module counter changed {} -> {}".format(self.module_counter, module_count))
             module_counter = 0
             for idx in range(1, CONST.MODULE_COUNT_MAX):
-                module_name = "module{}".format(idx)
-                if self.check_file("thermal/{}_temp_input".format(module_name)):
-                    self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_name})
+                module_fname = "module{}".format(idx)
+                if self.check_file("thermal/{}_temp_input".format(module_fname)):
+                    # check if module is TEC-cooled
+                    if self.tec_module_supported:
+                        if self.check_file("thermal/{}_cooling_level_input".format(module_fname)):
+                            module_name = "module{}_tec".format(idx)
+                            self._sensor_add_config("thermal_module_tec_sensor", module_name, {"base_file_name": module_fname})
+                        else:
+                            module_name = "module{}".format(idx)
+                            self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_fname})
+                    else:
+                        module_name = "module{}".format(idx)
+                        self._sensor_add_config("thermal_module_sensor", module_name, {"base_file_name": module_fname})
+
                     self._add_dev_obj(module_name)
                     module_counter += 1
                 else:
-                    self._rm_dev_obj(module_name)
+                    module_name_regex = "module{}[a-z_]*$".format(idx)
+                    self._rm_dev_obj(module_name_regex)
 
             self.log.info("Modules added {} of {}".format(module_counter, module_count))
             self.module_counter = module_counter
