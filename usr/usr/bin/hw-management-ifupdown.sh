@@ -42,7 +42,7 @@ fi
 
 if [ ! -e /sys/class/net/${INTERFACE} ] ||
    [ ! -e /etc/network/interfaces ] ||
-   ! grep -q ${INTERFACE} /etc/network/interfaces; then
+   ! ifquery -l --allow=hotplug | grep -q ${INTERFACE}; then
 	exit 0
 fi
 
