@@ -87,6 +87,7 @@ fi
 [ -f /var/log/tc_log ] && cp /var/log/tc_* $DUMP_FOLDER/
 [ -f /var/log/chipup_i2c_trace_log ] && cp /var/log/chipup_i2c_trace_* $DUMP_FOLDER/
 [ -f /var/log/udev_events.log ] && cp -a /var/log/udev* $DUMP_FOLDER/
+[ -f /var/log/hw_mgmt_cpldreg.log ] && cp /var/log/hw_mgmt_cpldreg.log $DUMP_FOLDER/
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
 cp /usr/bin/hw?management* $DUMP_FOLDER/bin/
