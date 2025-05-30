@@ -307,6 +307,20 @@ class HW_Mgmt_Logger(object):
             except Exception as e:
                 print(f"Warning: Failed to write to syslog: {e}")
 
+    def close_log_handler(self):
+        """
+        @summary:
+            Close log handlers
+        """
+        handler_list = self.logger.handlers[:]
+        for handler in handler_list:
+            try:
+                handler.flush()
+                handler.close()
+            except (ValueError, IOError):
+                pass  # Handler might already be closed
+            self.logger.removeHandler(handler)
+
     def stop(self):
         """
         @summary:
@@ -316,14 +330,7 @@ class HW_Mgmt_Logger(object):
 
         # Clean up only this logger's handlers (don't shutdown all logging)
         self.suspend()
-        handler_list = self.logger.handlers[:]
-        for handler in handler_list:
-            try:
-                handler.flush()
-                handler.close()
-            except (ValueError, IOError):
-                pass  # Handler might already be closed
-            self.logger.removeHandler(handler)
+        self.close_log_handler()
 
         with self._syslog_hash_lock:
             self.syslog_hash.clear()

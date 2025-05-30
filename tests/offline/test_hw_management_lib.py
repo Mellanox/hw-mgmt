@@ -130,8 +130,8 @@ class TestLoggerInitialization:
         logger = HW_Mgmt_Logger()
         assert logger is not None
         assert logger.logger is not None
-        assert logger.log_repeat == 0
-        assert logger.syslog_repeat == 0
+        assert logger.log_repeat == HW_Mgmt_Logger.LOG_REPEAT_UNLIMITED
+        assert logger.syslog_repeat == HW_Mgmt_Logger.LOG_REPEAT_UNLIMITED
         logger.stop()
 
     def test_simple_with_ident(self):
@@ -146,7 +146,6 @@ class TestLoggerInitialization:
             log_file=log_file,
             log_level=HW_Mgmt_Logger.DEBUG
         )
-        assert logger.logger_fh is not None
         assert os.path.exists(log_file)
         logger.stop()
 
@@ -180,7 +179,6 @@ class TestLoggerInitialization:
             log_repeat=5,
             syslog_repeat=3
         )
-        assert logger.logger_fh is not None
         assert logger.log_repeat == 5
         assert logger.syslog_repeat == 3
         mock_syslog['openlog'].assert_called_once()
@@ -228,7 +226,7 @@ class TestSetParam:
         """Simple: Change log level"""
         logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.WARNING)
         logger.set_param(log_file=log_file, log_level=HW_Mgmt_Logger.DEBUG)
-        assert logger.logger_fh.level == HW_Mgmt_Logger.DEBUG
+        assert logger.logger.level == HW_Mgmt_Logger.DEBUG
         logger.stop()
 
     def test_medium_change_log_file(self, temp_dir):
@@ -276,14 +274,15 @@ class TestSetParam:
 
         # Test stdout
         logger.set_param(log_file="stdout", log_level=HW_Mgmt_Logger.INFO)
-        assert logger.logger_fh is not None
+
         import logging
-        assert isinstance(logger.logger_fh, logging.StreamHandler)
+        assert logger.logger.handlers[0] is not None
+        assert isinstance(logger.logger.handlers[0], logging.StreamHandler)
 
         # Test stderr
         logger.set_param(log_file="stderr", log_level=HW_Mgmt_Logger.INFO)
-        assert logger.logger_fh is not None
-        assert isinstance(logger.logger_fh, logging.StreamHandler)
+        assert logger.logger.handlers[1] is not None
+        assert isinstance(logger.logger.handlers[1], logging.StreamHandler)
 
         logger.stop()
 
@@ -496,7 +495,7 @@ class TestPushLogHash:
 
     def test_simple_no_repeat(self, basic_logger):
         """Simple: Message with no repeat (repeat=0)"""
-        msg, should_emit = basic_logger.push_log_hash(basic_logger.log_hash, "Test", None, 0)
+        msg, should_emit = basic_logger.push_log_hash(basic_logger.log_hash, "Test", None, HW_Mgmt_Logger.LOG_REPEAT_UNLIMITED)
         assert msg == "Test"
         assert should_emit is True
 
@@ -635,7 +634,7 @@ class TestResourceManagement:
         logger.stop()
 
         # After stop, handler should be cleaned up
-        assert logger.logger_fh is None
+        assert logger.logger.handlers == []
         assert len(logger.log_hash) == 0
         assert len(logger.syslog_hash) == 0
 
@@ -648,10 +647,10 @@ class TestResourceManagement:
     def test_medium_close_log_handler(self, log_file):
         """Medium: close_log_handler() method"""
         logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
-        assert logger.logger_fh is not None
+        assert logger.logger.handlers != []
 
         logger.close_log_handler()
-        assert logger.logger_fh is None
+        assert logger.logger.handlers == []
 
         logger.stop()
 

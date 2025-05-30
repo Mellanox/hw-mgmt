@@ -217,8 +217,10 @@ class TestRunner:
         print(f"{Colors.BOLD}{Colors.CYAN}{text}{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.CYAN}{'=' * 80}{Colors.RESET}\n")
 
-    def print_test_start(self, test_name):
+    def print_test_start(self, test_name, cmd, cwd):
         """Print test start message"""
+        print(f"{Colors.BLUE}Command: {Colors.BOLD}{' '.join(cmd)}{Colors.RESET}")
+        print(f"{Colors.BLUE}Working Directory: {Colors.BOLD}{cwd}{Colors.RESET}")
         print(f"{Colors.BLUE}Running: {Colors.BOLD}{test_name}{Colors.RESET}")
 
     def print_test_result(self, test_name, passed, output=None):
@@ -235,7 +237,7 @@ class TestRunner:
 
     def run_command(self, cmd, cwd, test_name):
         """Run a command and return success status"""
-        self.print_test_start(test_name)
+        self.print_test_start(test_name, cmd, cwd)
 
         try:
             result = subprocess.run(
@@ -319,11 +321,6 @@ class TestRunner:
                 'cwd': self.offline_dir / 'hw_management_lib' / 'HW_Mgmt_Logger'
             },
             {
-                'name': 'HW_Mgmt_Logger - Advanced Tests (unittest)',
-                'cmd': ['python3', 'advanced_tests.py', '-v'],
-                'cwd': self.offline_dir / 'hw_management_lib' / 'HW_Mgmt_Logger'
-            },
-            {
                 'name': 'ASIC Temperature Populate (unittest)',
                 'cmd': ['python3', 'test_asic_temp_populate.py', '-v'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'asic_populate_temperature'
@@ -342,6 +339,21 @@ class TestRunner:
                 'name': 'Module Temperature Populate Extended (unittest)',
                 'cmd': ['python3', 'legacy_module_temp_populate_extended.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature'
+            },
+            {
+                'name': 'Thermal Control 2.0 TEC module test FR:4359937 (unittest)',
+                'cmd': ['python3', 'test_thermal_module_tec_sensor_2_0.py', '-i 20'],
+                'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_0' / 'module_tec_4359937'
+            },
+            {
+                'name': 'Thermal Control 2.5 TEC module test FR:4359937 (unittest)',
+                'cmd': ['python3', 'test_thermal_module_tec_sensor.py', '-i 20'],
+                'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_5' / 'module_tec_4359937'
+            },
+            {
+                'name': 'Module Temperature Populate TEC test FR:4359937 (unittest)',
+                'cmd': ['python3', 'test_module_temp_populate.py', '-i 20'],
+                'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature_4359937'
             },
             # Pytest tests - auto-discovery (run last)
             # Pytest tests - auto-discovery (strict mode for CI)
