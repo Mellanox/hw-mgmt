@@ -73,6 +73,7 @@ ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
+cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -162,9 +163,21 @@ show_hw_info()
 		CPLD_IOREG_RANGE=256
 	fi
 
+	io_dump=$(iorw -b 0x2500 -r -l  $CPLD_IOREG_RANGE | expand)
 	log_info "== cpld reg dump start =="
-    iorw -b 0x2500 -r -l $CPLD_IOREG_RANGE | expand | logger
+    echo "$io_dump" | logger
 	log_info "== cpld reg dump end =="
+		
+	# Append the new cpldreg dump entry
+ 	timestamp=$(date +"%d_%m_%y %H:%M:%S")
+	echo "====== $timestamp cpldreg dump ======" >> "$cpldreg_log_file"
+	echo "$io_dump" >> "$cpldreg_log_file"
+	echo "================================" >> "$cpldreg_log_file"
+	echo "" >> "$cpldreg_log_file"
+
+	N_REC=100
+	dump_max_lines=$(($N_REC * ($CPLD_IOREG_RANGE / 16 + 4)))
+	tail -n $dump_max_lines "$cpldreg_log_file" > "${cpldreg_log_file}.tmp" && mv "${cpldreg_log_file}.tmp" "$cpldreg_log_file"
 }
 
 check_cpu_type()
