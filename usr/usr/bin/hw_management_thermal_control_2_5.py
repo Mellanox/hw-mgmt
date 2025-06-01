@@ -3739,7 +3739,7 @@ class ThermalManagement(hw_management_file_op):
                 module_name = "module{}".format(idx)
                 if self.check_file("thermal/{}_temp_input".format(module_name)):
                     # check if module is TEC-cooled
-                    if TEC_SUPPORT_ENABLED
+                    if TEC_SUPPORT_ENABLED:
                         if self.check_file("thermal/{}_cooling_level".format(module_name)):
                             self._sensor_add_config("thermal_module_tec_sensor", module_name + "_tec", {"base_file_name": module_name})
                             module_name = module_name + "_tec"
