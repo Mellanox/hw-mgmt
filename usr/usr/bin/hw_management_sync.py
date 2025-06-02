@@ -696,7 +696,8 @@ def module_temp_populate(arg_list, _dummy):
             "_temp_fault": temperature_fault,
             "_temp_trip_crit": temperature_trip_crit,
             "_cooling_level_input": cooling_level_input,
-            "_max_cooling_level_input": max_cooling_level_input
+            "_max_cooling_level_input": max_cooling_level_input,
+            "_status": module_present
         }
 
         for suffix, value in file_paths.items():
