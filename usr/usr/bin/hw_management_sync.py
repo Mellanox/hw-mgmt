@@ -522,6 +522,7 @@ def module_temp_populate(arg_list, _dummy):
             "_temp_emergency": temperature_emergency,
             "_temp_fault": temperature_fault,
             "_temp_trip_crit": temperature_trip_crit,
+            "_status": module_present
         }
 
         for suffix, value in file_paths.items():
