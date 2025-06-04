@@ -1,0 +1,33 @@
+From fe14e8794d6bdf200c420cc188a9a10d02f6bd66 Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Wed, 4 Jun 2025 17:04:08 +0300
+Subject: Changing MDC frequency to 2.1 MHz
+
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/net/ethernet/amd/xgbe/xgbe-dev.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-dev.c b/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
+index 4030d619e..b8de46ad2 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
+@@ -1318,6 +1318,7 @@ static int xgbe_write_ext_mii_regs(struct xgbe_prv_data *pdata, int addr,
+ 	mdio_sccd = 0;
+ 	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, DATA, val);
+ 	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, CMD, 1);
++	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, CR, 5);
+ 	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, BUSY, 1);
+ 	XGMAC_IOWRITE(pdata, MAC_MDIOSCCDR, mdio_sccd);
+ 
+@@ -1341,6 +1342,7 @@ static int xgbe_read_ext_mii_regs(struct xgbe_prv_data *pdata, int addr,
+ 
+ 	mdio_sccd = 0;
+ 	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, CMD, 3);
++	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, CR, 5);
+ 	XGMAC_SET_BITS(mdio_sccd, MAC_MDIOSCCDR, BUSY, 1);
+ 	XGMAC_IOWRITE(pdata, MAC_MDIOSCCDR, mdio_sccd);
+ 
+-- 
+2.34.1
+
