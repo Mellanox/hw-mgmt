@@ -1264,8 +1264,10 @@ msn27xx_msb_msx_specific()
 		*)
 			max_tachos=8
 			hotplug_fans=4
-			echo 25000 > $config_path/fan_max_speed
-			echo 1500 > $config_path/fan_min_speed
+			echo 21000 > $config_path/fan_front_max_speed
+			echo 6300 > $config_path/fan_front_min_speed
+			echo 18000 > $config_path/fan_rear_max_speed
+			echo 5400 > $config_path/fan_rear_min_speed
 			echo 18000 > $config_path/psu_fan_max
 			echo 2000 > $config_path/psu_fan_min
 			echo "7 8 5 6 3 4 1 2" > $config_path/fan_inversed
@@ -1379,8 +1381,10 @@ mqmxxx_msn37x_msn34x_specific()
 	add_cpu_board_to_connection_table
 
 	max_tachos=12
-	echo 25000 > $config_path/fan_max_speed
-	echo 4500 > $config_path/fan_min_speed
+	echo 23000 > $config_path/fan_front_max_speed
+	echo 5400 > $config_path/fan_front_min_speed
+	echo 20500 > $config_path/fan_rear_max_speed
+	echo 4800 > $config_path/fan_rear_min_speed
 	echo 25000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
