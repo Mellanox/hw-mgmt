@@ -598,6 +598,47 @@ psu_set_fan_speed()
 	i2cset -f -y "$bus" "$addr" "$fan_command" "${speed}" wp
 }
 
+# set fan min/max speed based on FAN number in drawer and FAN direaction
+# $1 - FAN name in hw-mgmt. fan1, fan2, etc.
+set_fan_speed_limits()
+{
+	local fan_name=$1
+
+	# If fan not ready - nothing to do, return
+	if [ ! -f $thermal_path/"$fan_name"_speed_get ]; then
+		return
+	fi
+
+	local fan_drwr_num=$(< $config_path/fan_drwr_num) 
+	local max_tachos=$(< $config_path/max_tachos)
+	local fan_min_fname fan_max_fname
+
+	# If fan drwr num and max tachos are ready, set fan speed limits
+	if [ -n "$fan_drwr_num" ] && [ -n "$max_tachos"  ] && [ "$fan_drwr_num" -ne 0 ]; then
+		local fan_idx="${fan_name//[!0-9]/}"
+		local fan_num_in_drwr=$((max_tachos / fan_drwr_num))
+		local fan_in_drwr_pos=$(((fan_idx-1) % fan_num_in_drwr))
+		local fan_drwr_idx=$(((fan_idx+1) / fan_num_in_drwr ))
+
+		if [  $fan_in_drwr_pos -eq 0 ]; then
+			fan_min_fname="fan_front_min_speed"
+			fan_max_fname="fan_front_max_speed"
+		else
+			fan_min_fname="fan_rear_min_speed"
+			fan_max_fname="fan_rear_max_speed"
+		fi
+	fi
+
+	# Set fan speed limits. Check if exists separate Front/Rear fan speed limits.
+	if [ -f "$config_path/$fan_min_fname" ] && [ -f "$config_path/$fan_max_fname" ]; then
+		check_n_link "$config_path"/"$fan_min_fname" "$thermal_path"/"$fan_name"_min
+		check_n_link "$config_path"/"$fan_max_fname" "$thermal_path"/"$fan_name"_max
+	else
+		check_n_link "$config_path"/fan_min_speed "$thermal_path"/"$fan_name"_min
+		check_n_link "$config_path"/fan_max_speed "$thermal_path"/"$fan_name"_max
+	fi
+}
+
 is_virtual_machine()
 {
     if [ -n "$(lspci -vvv | grep SimX)" ]; then
