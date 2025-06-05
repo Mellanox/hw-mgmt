@@ -2884,6 +2884,9 @@ load_modules()
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
 		;;
+		HI180) # Rosalind
+			modprobe i2c_asf
+		;;
 		*)
 		;;
 	esac
