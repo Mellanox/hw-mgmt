@@ -29,6 +29,8 @@ override_dh_auto_install:
 	cp usr/etc/modules-load.d/05-hw-management-modules.conf debian/$(pname)/etc/modules-load.d
 	dh_installdirs -p$(pname) usr/bin
 	cp usr/usr/bin/* debian/$(pname)/usr/bin
+	dh_installdirs -p$(pname) usr/local/bin
+	cp usr/usr//local/bin/* debian/$(pname)/usr/local/bin
 	dh_installdirs -p$(pname) etc/logrotate.d
 	cp usr/etc/logrotate.d/* debian/$(pname)/etc/logrotate.d
 ifeq ($(DEB_HOST_ARCH),arm64)
@@ -55,6 +57,7 @@ override_dh_installinit:
 	dh_installinit --name=hw-management-sync
 	dh_installinit --name=hw-management-sysfs-monitor
 	dh_installinit --name=hw-management-fast-sysfs-monitor
+	dh_installinit --name=hw-management-blacklist-generator
 
 override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management
@@ -62,6 +65,7 @@ override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management-sync
 	dh_systemd_enable --name=hw-management-sysfs-monitor
 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
+	dh_systemd_enable --name=hw-management-blacklist-generator
 
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management
@@ -69,6 +73,7 @@ override_dh_systemd_start:
 	dh_systemd_start --name=hw-management-sync
 	dh_systemd_start --name=hw-management-sysfs-monitor
 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
+	dh_systemd_start --name=hw-management-blacklist-generator
 
 override_dh_strip_nondeterminism:
 
