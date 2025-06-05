@@ -21,22 +21,28 @@ Provides:      hw-management(x86-64) = %{version}
 %post
 %systemd_post %{name}.service
 %systemd_post %{name}-tc.service
+%systemd_post %{name}-blacklist-generator.service
 systemctl enable %{name}.service
 systemctl enable %{name}-tc.service
+systemctl enable %{name}-blacklist-generator.service
 systemctl start %{name}.service
 systemctl start %{name}-tc.service
+systemctl start %{name}-blacklist-generator.service
 
 %preun
 systemctl stop %{name}.service
 systemctl disable %{name}.service
 systemctl stop %{name}-tc.service
 systemctl disable %{name}-tc.service
+systemctl stop %{name}-blacklist-generator.service
+systemctl disable %{name}-blacklist-generator.service
 %systemd_preun %{name}.service
 %systemd_preun %{name}-tc.service
 
 %postun
 %systemd_postun_with_restart %{name}.service
 %systemd_postun_with_restart %{name}-tc.service
+%systemd_postun_with_restart %{name}-blacklist-generator.service
 
 
 %description
@@ -53,6 +59,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/modules-load.d
 mkdir -p $RPM_BUILD_ROOT/etc/modprobe.d
 mkdir -p $RPM_BUILD_ROOT/etc/hw-management-thermal
 mkdir -p $RPM_BUILD_ROOT/usr/bin
+mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 mkdir -p $RPM_BUILD_ROOT/lib/udev/rules.d
 mkdir -p $RPM_BUILD_ROOT/lib/systemd/system
 mkdir -p $RPM_BUILD_ROOT/usr/share/doc/hw-management
@@ -136,9 +143,11 @@ install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/
 install -m 0755 usr/usr/bin/iorw $RPM_BUILD_ROOT/usr/bin/iorw
 install -m 0755 usr/usr/bin/iorw.sh $RPM_BUILD_ROOT/usr/bin/iorw.sh
 install -m 0755 usr/usr/bin/sxd_read_cpld_ver.py $RPM_BUILD_ROOT/usr/bin/sxd_read_cpld_ver.py
+install -m 0755 usr/usr/local/bin/hw-management-process-blacklist.sh $RPM_BUILD_ROOT/usr/local/bin/hw-management-process-blacklist.sh
 
 install -m 0755 debian/hw-management.hw-management.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management.service
 install -m 0755 debian/hw-management.hw-management-tc.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-tc.service
+install -m 0755 debian/hw-management.hw-management-blacklist-generator.service $RPM_BUILD_ROOT/lib/systemd/system/hw-management-blacklist-generator.service
 
 install -m 0644 debian/copyright $RPM_BUILD_ROOT/usr/share/doc/hw-management/copyright
 cp doc/man/hw-management.1 $RPM_BUILD_ROOT/usr/share/man/man1/hw-management.1
@@ -243,8 +252,10 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control.py"
 %attr(0755, root, root) "/usr/bin/hw_management_independent_mode_update.py"
 %attr(0755, root, root) "/usr/bin/hw_management_dpu_thermal_update.py"
+%attr(0755, root, root) "/usr/local/bin/hw-management-process-blacklist.sh"
 %attr(0755, root, root) "/lib/systemd/system/hw-management.service"
 %attr(0755, root, root) "/lib/systemd/system/hw-management-tc.service"
+%attr(0755, root, root) "/lib/systemd/system/hw-management-blacklist-generator.service"
 #%dir %attr(0755, root, root) "/usr/share"
 #%dir %attr(0755, root, root) "/usr/share/doc"
 %dir %attr(0755, root, root) "/usr/share/doc/hw-management"
