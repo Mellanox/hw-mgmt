@@ -2483,10 +2483,18 @@ sn5640_specific()
 		connect_table+=(${sn5640_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	# Set according to front (inlet) fan max, 21800
-	echo 21800 > $config_path/fan_max_speed
-	# Set at 30% of rear (outlet) fan max, 20500 (according to fan vendor table)
-	echo 6468 > $config_path/fan_min_speed
+		
+	# Set FAN front (inlet) speed limits
+	echo 21800 > $config_path/fan_front_max_speed
+	echo 6879 > $config_path/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 20500 > $config_path/fan_rear_max_speed
+	echo 6468 > $config_path/fan_rear_min_speed
+	
+	# Set FAN speed tolerance based on spec +-10%
+	fan_speed_tolerance=10
+	
 	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
