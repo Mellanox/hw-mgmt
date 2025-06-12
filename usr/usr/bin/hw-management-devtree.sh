@@ -491,11 +491,11 @@ declare -A n61xxld_swb_alternatives=(\
 						["xdpe1a2g7_15"]="xdpe1a2g7 0x6e 53 voltmon16" \
 						["24c512_0"]="24c512 0x51 11 swb_info" \
 						["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
-						["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" )
-						["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
-						["raa228004_1"]="raa228004 0x61 4 pwr_conv2" \
-						["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" \
-						["mp29502_1"]="mp29502 0x2c 4 pwr_conv1")
+						["mp5926_0"]="mp5926 0x12 4 pdb_hotswap1" \
+						["raa228004_0"]="raa228004 0x60 4 pdb_pwr_conv1" \
+						["raa228004_1"]="raa228004 0x61 4 pdb_pwr_conv2" \
+						["mp29502_0"]="mp29502 0x2e 4 pdb_pwr_conv1" \
+						["mp29502_1"]="mp29502 0x2c 4 pdb_pwr_conv2")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
