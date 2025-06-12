@@ -3,18 +3,34 @@
 	"labels_HI180_alternativies" : {
 		"pdb_pwr_conv1": {
 			"mp29502" : {
-				"in1": {"name": "PDB+PwrConv+Vol+In+1"},
-				"in3": {"name": "PDB+PwrConv+Vol+Out+1"},
-				"curr1": {"name": "PDB+PwrConv+Curr+In+1"},
-				"curr2": {"name": "PDB-PwrConv+Curr+Out+1"},
-				"temp2": {"name": "PDB+PwrConv+Temp"}
+				"in1": {"name": "PDB+PwrConv1+Vol+In+1"},
+				"in3": {"name": "PDB+PwrConv1+Vol+Out+1"},
+				"curr1": {"name": "PDB+PwrConv1+Curr+In+1"},
+				"curr2": {"name": "PDB-PwrConv1+Curr+Out+1"},
+				"temp2": {"name": "PDB+PwrConv1+Temp"}
 			},
 			"raa228004" : {
-				"in1": {"name": "PDB+PwrConv+Vol+In+1"},
-				"in3": {"name": "PDB+PwrConv+Vol+Out+1"},
-				"curr1": {"name": "PDB+PwrConv+Curr+In+1"},
-				"curr2": {"name": "PDB+PwrConv+Curr+Out+1"},
-				"temp2": {"name": "PDB+PwrConv+Temp"},
+				"in1": {"name": "PDB+PwrConv1+Vol+In+1"},
+				"in3": {"name": "PDB+PwrConv1+Vol+Out+1"},
+				"curr1": {"name": "PDB+PwrConv1+Curr+In+1"},
+				"curr2": {"name": "PDB+PwrConv1+Curr+Out+1"},
+				"temp2": {"name": "PDB+PwrConv1+Temp"},
+			}
+		},
+		"pdb_pwr_conv2": {
+			"mp29502" : {
+				"in1": {"name": "PDB+PwrConv2+Vol+In+1"},
+				"in3": {"name": "PDB+PwrConv2+Vol+Out+1"},
+				"curr1": {"name": "PDB+PwrConv2+Curr+In+1"},
+				"curr2": {"name": "PDB-PwrConv2+Curr+Out+1"},
+				"temp2": {"name": "PDB+PwrConv2+Temp"}
+			},
+			"raa228004" : {
+				"in1": {"name": "PDB+PwrConv2+Vol+In+1"},
+				"in3": {"name": "PDB+PwrConv2+Vol+Out+1"},
+				"curr1": {"name": "PDB+PwrConv2+Curr+In+1"},
+				"curr2": {"name": "PDB+PwrConv2+Curr+Out+1"},
+				"temp2": {"name": "PDB+PwrConv2+Temp"},
 			}
 		},
 		"pdb_hotswap1": {
