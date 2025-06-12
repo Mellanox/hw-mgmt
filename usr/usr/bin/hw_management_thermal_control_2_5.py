@@ -107,6 +107,10 @@ class CONST(object):
 
     # default hw-management folder
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
+
+    # second source hw-management user config folder
+    HW_MGMT_USER_CONFIG_SECOND_SOURCE = "/etc/hw-management-thermal/tc_config_user.json"
+
     # Link to thermal data
     SYSTEM_CONFIG_FILE = "config/tc_config.json"
     # File which defined current level filename.
@@ -246,7 +250,7 @@ SENSOR_PARAM_RANGE = {
         },
         "val_max_offset" : {
             "min" : -30000,
-            "max" : 1000,
+            "max" : 0,
         },
         "pwm_min" : {
             "min" : 20,
@@ -3641,6 +3645,8 @@ class ThermalManagement(hw_management_file_op):
             # 1.1 Add sensor specific config
             if CONST.SYS_CONF_SENSORS_CONF in user_config:
                 if sensor_name in user_config[CONST.SYS_CONF_SENSORS_CONF]:
+                    self.log.info("{} update from user_config -> {}".format(sensor_name, 
+                                                                           user_config[CONST.SYS_CONF_SENSORS_CONF][sensor_name]))
                     sensors_config[sensor_name].update(user_config[CONST.SYS_CONF_SENSORS_CONF][sensor_name])
             
             # 1.2 Merge missing keys from user_config->sensors_config to sensor_conf
@@ -3893,15 +3899,21 @@ class ThermalManagement(hw_management_file_op):
 
         user_config = {}
         user_config_file_name = config_file_name.replace(".json", "_user.json")
-        if os.path.exists(user_config_file_name):
-            try:
-                user_config = self.load_user_configuration(user_config_file_name)
-            except:
-                self.log.error("User config file {} broken. Skip it".format(user_config_file_name), 1) 
-                pass
-
-        sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
-
+        user_config_file_list = [user_config_file_name, CONST.HW_MGMT_USER_CONFIG_SECOND_SOURCE]
+        for user_config_file_name in user_config_file_list:
+            if os.path.exists(user_config_file_name):
+                try:
+                    self.log.info("Found user config in:{}. Loading it...".format(user_config_file_name), 1)
+                    user_config = self.load_user_configuration(user_config_file_name)
+                    self.log.info("User config loaded successfully",1)
+                    break
+                except:
+                    self.log.error("User config file {} load failed. Skip it".format(user_config_file_name), 1) 
+                    pass
+        if user_config:
+            sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
+        else:
+            self.log.warn("User config not defined", 1)
         self.sys_config = sys_config
 
     # ----------------------------------------------------------------------
