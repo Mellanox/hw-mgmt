@@ -580,7 +580,7 @@ def module_temp_populate(arg_list, _dummy):
     fin = arg_list["fin"]
     module_count = arg_list["module_count"]
     offset = arg_list["fout_idx_offset"]
-    host_management_mode = None
+    module_updated = False
     for idx in range(module_count):
         module_name = "module{}".format(idx+offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
@@ -588,9 +588,12 @@ def module_temp_populate(arg_list, _dummy):
             continue
 
         f_src_path = fin.format(idx)
-        module_present = 0
+        # If control mode is SW - skip temperature reading (independent mode) 
+        if is_module_host_management_mode(f_src_path):
+            continue
 
         # Check if module is present
+        module_present = 0
         f_src_present = os.path.join(f_src_path, "present")
         try:
             with open(f_src_present, 'r') as f:
@@ -606,13 +609,6 @@ def module_temp_populate(arg_list, _dummy):
         temperature_crit = "0"
 
         if module_present:
-            # If control mode is FW, skip temperature reading (independent mode)
-            if host_management_mode is None:
-                host_management_mode = is_module_host_management_mode(f_src_path)
-
-            if host_management_mode:
-                continue
-
             f_src_input = os.path.join(f_src_path, "temperature/input")
             f_src_crit = os.path.join(f_src_path, "temperature/threshold_hi")
 
@@ -649,9 +645,11 @@ def module_temp_populate(arg_list, _dummy):
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
             with open(f_name, 'w', encoding="utf-8") as f:
                 f.write("{}\n".format(value))
+        module_updated = True
 
-    with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
-        f.write("{}\n".format(module_count))
+    if module_updated:
+        with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
+            f.write("{}\n".format(module_count))
     return
 
 # ----------------------------------------------------------------------
