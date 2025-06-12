@@ -41,8 +41,14 @@ if [ -z "${ACTION}" ] || [ -z "${INTERFACE}" ]; then
 fi
 
 if [ ! -e /sys/class/net/${INTERFACE} ] ||
-   [ ! -e /etc/network/interfaces ] ||
-   ! ifquery -l --allow=hotplug | grep -q ${INTERFACE}; then
+   [ ! -e /etc/network/interfaces ]; then
+	exit 0
+fi
+
+AUTO=$(ifquery -l 2>/dev/null)
+HOTPLUG=$(ifquery -l --allow=hotplug 2>/dev/null)
+
+if ! echo $AUTO $HOTPLUG | grep -q ${INTERFACE}; then
 	exit 0
 fi
 
