@@ -3888,7 +3888,7 @@ class ThermalManagement(hw_management_file_op):
         if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_REDUNDANCY_PARAM] = {}
 
-        if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
+        if CONST.SYS_CONF_GENERAL_CONFIG_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
 
         user_config = {}
