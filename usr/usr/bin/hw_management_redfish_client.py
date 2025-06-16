@@ -368,7 +368,6 @@ class BMCAccessor(object):
     BMC_DEFAULT_PASSWORD = '0penBmc'
     BMC_NOS_ACCOUNT = 'yormnAnb' # used for communication between NOS and BMC
     BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51" # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
-    BMC_ROOT_PASSWORD = "ABYX12#14artb" # root pwd which should be patched to
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
