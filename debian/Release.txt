@@ -1,14 +1,10 @@
 ================================================================================
-- V.7.0040.4000
 - Thu , 3 Apr 2025
---------------------------------------------------------------------------------
 
 - New features 
-    o Add support for SN5600D platform - GA Level
     o Add support for SN5640 platform - ES Level
     o Add support for Q3450 platform - ES Level
     o Add support for removal of minimal driver
-        o SN5610/SN5640 platforms
         o SN5600/SN5400/SN5600d platforms
         o SN4600/SN4600C/SN4410/SN4700/SN4280 platforms
         o Q3200/Q3400 platforms
@@ -16,14 +12,11 @@
 - Bug fixes
     o #4240777, 4242848 hw-mgmt: thermal: Fix TC temporary Rise of PWM
     o #4281195, 3651819 hw-mgmt: thermal: Add FAN direction resolve by FAN VPD.
-    o #4219397 hw-mgmt: script: fix update asic temp independent mode
     o #4248463 hw-mgmt: thermal: Fix tc config files
     o #4184688 hw-mgmt: script: Fix CPU VR Vcore out of range problem.
     o #4256275 hw-mgmt: thermal: TC fix blacklist not working issue
-    o #4248739 hw-mgmt: scripts: Fix SN5610/SN5640 minimal fan speed
     o #4264364 hw-mgmt: sensor: Fix for unexpected negative vout_min on lm5066i
     o #4150586 hw-mgmt: attributes: Fix PSU attributes
-    o #4278493 hw-mgmt: patches: Disable tmp401 driver in kernel config CONFIG_SENSORS_TMP401
     o #4326709 hw-mgmt: sensors: Add chassis fans descriptions for SN5610/SN5640 systems
     o #4354380 hw-mgmt: sensors: Fix missing pwr_conv sensor in SN5600D system
     o #3874682 hw-mgmt: sensors: Fix PSU vout min/max atriburtes
