@@ -988,7 +988,11 @@ if [ "$1" == "add" ]; then
 				psu_eeprom_type=$(< "$config_path"/psu_eeprom_type)
 			fi
 			echo "$psu_eeprom_type" 0x"$psu_eeprom_addr" > /sys/class/i2c-dev/i2c-"$bus"/device/new_device
-			ln -sf "$eeprom_file" "$eeprom_path"/"$eeprom_name" 2>/dev/null
+			for ((i=0; i<2; i++)); do
+				[ -f "$eeprom_file" ] && break
+				sleep 0.5
+			done
+			check_n_link "$eeprom_file" "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			chmod 400 "$eeprom_path"/"$eeprom_name" 2>/dev/null
 			echo 1 > $config_path/"$psu_name"_eeprom_us
 		else
