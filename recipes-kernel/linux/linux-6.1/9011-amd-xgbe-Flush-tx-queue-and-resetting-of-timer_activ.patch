@@ -1,0 +1,66 @@
+From b430ce5ca464acb0f69d34ed5768d6fd59486453 Mon Sep 17 00:00:00 2001
+From: gnandiba <gnandiba>
+Date: Wed, 23 Oct 2024 18:05:29 +0530
+Subject: [PATCH 1/1] amd-xgbe: Flush tx queue and resetting of timer_active
+ flag  is needed during xgbe stop
+
+During a port restart, there is a possibility that timer is scheduled
+but not executed (and the flag is set) is cancelled by xgbe_stop().
+xgbe_start create the timer again, then if the flag is not reset,
+it will not be scheduled ever and cause timeout.
+
+Normally, this cause a tx timeout warning message but sometimes this cause
+kernel crash. This happens when the queue is full.
+FIFO flush is required to avoid the crash.
+
+xgbe_tx_poll also added in xgbe_stop to freeup transmitted packets.
+
+Signed-off-by: gnandiba <gnandiba>
+---
+ drivers/net/ethernet/amd/xgbe/xgbe-dev.c | 6 ++++++
+ drivers/net/ethernet/amd/xgbe/xgbe-drv.c | 5 +++++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-dev.c b/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
+index 255ea6dc1377..5e7dfcffe443 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
+@@ -3313,6 +3313,12 @@ static void xgbe_enable_tx(struct xgbe_prv_data *pdata)
+ static void xgbe_disable_tx(struct xgbe_prv_data *pdata)
+ {
+ 	unsigned int i;
++	int ret;
++
++	/* Flush Tx queues */
++	ret = xgbe_flush_tx_queues(pdata);
++	if (ret)
++		netdev_err(pdata->netdev, "error flushing TX queues\n");
+ 
+ 	/* Prepare for Tx DMA channel stop */
+ 	for (i = 0; i < pdata->tx_q_count; i++)
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+index 85712d6c4299..c42a6319afbf 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+@@ -157,6 +157,7 @@ MODULE_PARM_DESC(ecc_ded_period, " ECC detected error period (in seconds)");
+ static int xgbe_one_poll(struct napi_struct *, int);
+ static int xgbe_all_poll(struct napi_struct *, int);
+ static void xgbe_stop(struct xgbe_prv_data *);
++static int xgbe_tx_poll(struct xgbe_channel *channel);
+ 
+ static void *xgbe_alloc_node(size_t size, int node)
+ {
+@@ -1403,6 +1404,10 @@ static void xgbe_stop(struct xgbe_prv_data *pdata)
+ 
+ 	xgbe_napi_disable(pdata, 1);
+ 
++	for (i = 0; i < pdata->tx_q_count; i++) {
++		channel = pdata->channel[i];
++		xgbe_tx_poll(channel);
++	}
+ 	hw_if->exit(pdata);
+ 
+ 	for (i = 0; i < pdata->channel_count; i++) {
+-- 
+2.34.1
+
