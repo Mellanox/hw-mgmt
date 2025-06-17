@@ -1,4 +1,32 @@
 ================================================================================
+- V.7.0040.4239
+- Tue, 17 Jun 2025
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    - Bug fixes
+    o #4499238, #4452224, #4452512, #4486155 hw-mgmt: thermal sensor, fans and TC fixes
+    o #4494119, hw-mgmt: scripts: Fix module temperature sync conflict in SW mode, 16f5cf8
+    o #4491046, #4472264 hw-mgmt: usb0 bug fixes
+    o #4458180, hw-mgmgt: scripts: Add cpld registers dump to cyclic rotating log file, ebdfa2a
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4239/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0040.4000
 - Thu , 3 Apr 2025
 --------------------------------------------------------------------------------
