@@ -41,10 +41,11 @@ ERROR_READ_THERMAL_DATA = 254000
 
 BASE_PATH = "/var/run/hw-management"
 
+
 def get_dpu_count():
     """
     @summary: Function gets DPU count from "{BASE_PATH}/config/dpu_num.
-    @return: # of dpus:in case of succesful read, 
+    @return: # of dpus:in case of succesful read,
              -1       :if path does not exist, or cannot be read
     """
     dpu_count_file = os.path.join(BASE_PATH, "config", "dpu_num")
@@ -59,12 +60,13 @@ def get_dpu_count():
         print(f"Error: Could not read DPU count from {dpu_count_file}")
         return -1
 
+
 def check_dpu_index(dpu_index):
     """
     @summary: Function checks dpu index boundary.
     @param dpu_index: the index of the dpu , should be 1- dpu_count
-    @return: False:if # of dpu in system is unreadable or 
-                   dpu index is out of range (1-dpu_count), 
+    @return: False:if # of dpu in system is unreadable or
+                   dpu index is out of range (1-dpu_count),
              True :otherwise
     """
     dpu_count = get_dpu_count()
@@ -78,6 +80,7 @@ def check_dpu_index(dpu_index):
     print(f"dpu_index {dpu_index} is out of bound 1..DPU count")
     return False
 
+
 def remove_file_safe(file_path):
     """
     @summary: Function Safely removes a file if it exists.
@@ -90,11 +93,12 @@ def remove_file_safe(file_path):
         except Exception as e:
             print(f"file path didn't exist {str(file_path)}: {str(e)}")
 
+
 def create_path_safe(path):
     """
     @summary: Function Safely create a path if it doesn't exist.
     @param path:  path to create
-    @return: True :if path already exist or if created correctly, 
+    @return: True :if path already exist or if created correctly,
              False:creation of path failed.
     """
     if os.path.exists(path) is False:
@@ -106,39 +110,40 @@ def create_path_safe(path):
 
     return True
 
+
 def thermal_data_dpu_cpu_core_set(dpu_index, temperature, warning_threshold=None, critical_temperature=None, fault=0):
     """
     @summary: Function sets dpu's cpu core thermal data
-    @param dpu_index:  dpu index 
-    @param temperature:  tempreture input   
+    @param dpu_index:  dpu index
+    @param temperature:  tempreture input
     @param warning_threshold:  tempreture warning threshold input
     @param critical_temperature:  critical temperature threshold input
-    @param fault: fault input   
-    @return: False:in case dpu_index is out of bound or 
-                   path to dpu{x} does not exist or cannot be created or 
+    @param fault: fault input
+    @return: False:in case dpu_index is out of bound or
+                   path to dpu{x} does not exist or cannot be created or
                    or input files cannot be created under the path or they cannot be updated.
              True: otherwise - writing to input files is succesful
     """
     if not check_dpu_index(dpu_index):
         return False
 
-    file_path = os.path.join(BASE_PATH,  f"dpu{dpu_index}")
+    file_path = os.path.join(BASE_PATH, f"dpu{dpu_index}")
     file_path_status = create_path_safe(file_path)
     if file_path_status is False:
         return False
 
-    file_path = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal")
+    file_path = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal")
     file_path_status = create_path_safe(file_path)
     if file_path_status is False:
         return False
 
     # Define file paths based on dpu_index
-    temp_input_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack")
-    temp_fault_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack_fault")
+    temp_input_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack")
+    temp_fault_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack_fault")
     if warning_threshold is not None:
-        temp_warning_threshold_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack_max")
+        temp_warning_threshold_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack_max")
     if critical_temperature is not None:
-        temp_critical_temperature_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack_crit")
+        temp_critical_temperature_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack_crit")
 
     # Create the files if they don't exist and write the values
     try:
@@ -157,39 +162,40 @@ def thermal_data_dpu_cpu_core_set(dpu_index, temperature, warning_threshold=None
         print(f"Error setting thermal data for DPU CPU {dpu_index}: {str(e)}")
         return False
 
+
 def thermal_data_dpu_ddr_set(dpu_index, temperature, warning_threshold=None, critical_temperature=None, fault=0):
     """
     @summary: Function sets dpu's ddr thermal data.
-    @param dpu_index:  dpu index 
-    @param temperature:  tempreture input   
+    @param dpu_index:  dpu index
+    @param temperature:  tempreture input
     @param warning_threshold:  tempreture warning threshold input
     @param critical_temperature:  critical temperature threshold input
-    @param fault: fault input   
-    @return: False:in case dpu_index is out of bound or 
-                   path to dpu{x} does not exist or cannot be created or 
+    @param fault: fault input
+    @return: False:in case dpu_index is out of bound or
+                   path to dpu{x} does not exist or cannot be created or
                    or input files cannot be created under the path or they cannot be updated.
              True: otherwise - writing to input files is succesful
     """
     if not check_dpu_index(dpu_index):
         return False
 
-    file_path = os.path.join(BASE_PATH,  f"dpu{dpu_index}")
+    file_path = os.path.join(BASE_PATH, f"dpu{dpu_index}")
     file_path_status = create_path_safe(file_path)
     if file_path_status is False:
         return False
 
-    file_path = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal")
+    file_path = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal")
     file_path_status = create_path_safe(file_path)
     if file_path_status is False:
         return False
 
     # Define file paths based on dpu_index
-    temp_input_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_input")
-    temp_fault_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_fault")
+    temp_input_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_input")
+    temp_fault_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_fault")
     if warning_threshold is not None:
-        temp_warning_threshold_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_max")
+        temp_warning_threshold_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_max")
     if critical_temperature is not None:
-        temp_critical_temperature_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_crit")
+        temp_critical_temperature_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_crit")
 
     # Create the files if they don't exist and write the values
     try:
@@ -208,39 +214,40 @@ def thermal_data_dpu_ddr_set(dpu_index, temperature, warning_threshold=None, cri
         print(f"Error setting thermal data for DPU DDR {dpu_index}: {str(e)}")
         return False
 
+
 def thermal_data_dpu_drive_set(dpu_index, temperature, warning_threshold=None, critical_temperature=None, fault=0):
     """
     @summary: Function sets dpu's drive NVME thermal data.
-    @param dpu_index:  dpu index 
-    @param temperature:  tempreture input   
+    @param dpu_index:  dpu index
+    @param temperature:  tempreture input
     @param warning_threshold:  tempreture warning threshold input
     @param critical_temperature:  critical temperature threshold input
-    @param fault: fault input   
-    @return: False:in case dpu_index is out of bound or 
-                   path to dpu{x} does not exist or cannot be created or 
+    @param fault: fault input
+    @return: False:in case dpu_index is out of bound or
+                   path to dpu{x} does not exist or cannot be created or
                    or input files cannot be created under the path or they cannot be updated.
              True: otherwise - writing to input files is succesful
     """
     if not check_dpu_index(dpu_index):
         return False
 
-    file_path = os.path.join(BASE_PATH,  f"dpu{dpu_index}")
+    file_path = os.path.join(BASE_PATH, f"dpu{dpu_index}")
     file_path_status = create_path_safe(file_path)
     if file_path_status is False:
         return False
 
-    file_path = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal")
+    file_path = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal")
     file_path_status = create_path_safe(file_path)
     if file_path_status is False:
         return False
 
     # Define file paths based on dpu_index
-    temp_input_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp")
-    temp_fault_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp_fault")
+    temp_input_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp")
+    temp_fault_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp_fault")
     if warning_threshold is not None:
-        temp_warning_threshold_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp_max")
+        temp_warning_threshold_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp_max")
     if critical_temperature is not None:
-        temp_critical_temperature_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp_crit")
+        temp_critical_temperature_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp_crit")
 
     # Create the files if they don't exist and write the values
     try:
@@ -259,13 +266,13 @@ def thermal_data_dpu_drive_set(dpu_index, temperature, warning_threshold=None, c
         print(f"Error setting thermal data for DPU drive {dpu_index}: {str(e)}")
         return False
 
-def thermal_data_dpu_cpu_core_clear(dpu_index):
 
+def thermal_data_dpu_cpu_core_clear(dpu_index):
     """
     @summary: Function cleans dpu's cpu core thermal data.
     @param dpu_index: the index of the dpu , should be 1- dpu_count
-    @return: False:if # of dpu in system is unreadable or 
-                   dpu index is out of range (1-dpu_count),or
+    @return: False:if # of dpu in system is unreadable or
+                   dpu index is out of range (1-dpu_count), or
                    the erase of any of the relevant files failed
              True :otherwise
     """
@@ -273,10 +280,10 @@ def thermal_data_dpu_cpu_core_clear(dpu_index):
         return False
 
     # Define file paths
-    temp_input_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack")
-    temp_warning_threshold_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack_max")
-    temp_critical_temperature_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack_crit")
-    temp_fault_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/cpu_pack_fault")
+    temp_input_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack")
+    temp_warning_threshold_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack_max")
+    temp_critical_temperature_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack_crit")
+    temp_fault_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/cpu_pack_fault")
     # Remove the files if they exist
     try:
         remove_file_safe(temp_input_file)
@@ -288,12 +295,13 @@ def thermal_data_dpu_cpu_core_clear(dpu_index):
         print(f"Error cleaning thermal data for DPU CPU {dpu_index}: {str(e)}")
         return False
 
+
 def thermal_data_dpu_ddr_clear(dpu_index):
     """
     @summary: Function cleans dpu's ddr thermal data.
     @param dpu_index: the index of the dpu , should be 1- dpu_count
-    @return: False:if # of dpu in system is unreadable or 
-                   dpu index is out of range (1-dpu_count),or
+    @return: False:if # of dpu in system is unreadable or
+                   dpu index is out of range (1-dpu_count), or
                    the erase of any of the relevant files failed
              True :otherwise
     """
@@ -301,10 +309,10 @@ def thermal_data_dpu_ddr_clear(dpu_index):
         return False
 
     # Define file paths
-    temp_input_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_input")
-    temp_warning_threshold_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_max")
-    temp_critical_temperature_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_crit")
-    temp_fault_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/sodimm_temp_fault")
+    temp_input_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_input")
+    temp_warning_threshold_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_max")
+    temp_critical_temperature_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_crit")
+    temp_fault_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/sodimm_temp_fault")
     # Remove the files if they exist
     try:
         remove_file_safe(temp_input_file)
@@ -316,12 +324,13 @@ def thermal_data_dpu_ddr_clear(dpu_index):
         print(f"Error cleaning thermal data for DPU DDR {dpu_index}: {str(e)}")
         return False
 
+
 def thermal_data_dpu_drive_clear(dpu_index):
     """
     @summary: Function cleans dpu's drive NVME thermal data.
     @param dpu_index: the index of the dpu , should be 1- dpu_count
-    @return: False:if # of dpu in system is unreadable or 
-                   dpu index is out of range (1-dpu_count),or
+    @return: False:if # of dpu in system is unreadable or
+                   dpu index is out of range (1-dpu_count), or
                    the erase of any of the relevant files failed
              True :otherwise
     """
@@ -329,10 +338,10 @@ def thermal_data_dpu_drive_clear(dpu_index):
         return False
 
     # Define file paths
-    temp_input_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp")
-    temp_warning_threshold_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp_max")
-    temp_critical_temperature_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp_crit")
-    temp_fault_file = os.path.join(BASE_PATH,  f"dpu{dpu_index}","thermal/drivetemp_fault")
+    temp_input_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp")
+    temp_warning_threshold_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp_max")
+    temp_critical_temperature_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp_crit")
+    temp_fault_file = os.path.join(BASE_PATH, f"dpu{dpu_index}", "thermal/drivetemp_fault")
     # Remove the files if they exist
     try:
         remove_file_safe(temp_input_file)
@@ -344,7 +353,7 @@ def thermal_data_dpu_drive_clear(dpu_index):
         print(f"Error cleaning thermal data for DPU drive {dpu_index}: {str(e)}")
         return False
 
-#def main():
+# def main():
 #    """Function main."""
 #    dpu_count = get_dpu_count()
 #    print(f"DPU count {dpu_count}")
@@ -363,5 +372,5 @@ def thermal_data_dpu_drive_clear(dpu_index):
 #    thermal_data_dpu_cpu_core_clear(3)
 #    thermal_data_dpu_ddr_clear(3)
 #    thermal_data_dpu_drive_clear(3)
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #    main()
