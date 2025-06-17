@@ -149,169 +149,7 @@ atttrib_list = {
         {"fin": None,
          "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
-    "HI171|HI172|HI144|HI147|HI148|HI174": [
-        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
-         "arg": [], "poll": 1, "ts": 0},
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 66}
-        }        
-    ],
-    "HI112|HI116|HI136": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 32}
-        }
-    ],
-    "HI120": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 60}
-        }
-    ],
-    "HI121": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 54}
-        }
-    ],
-    "HI122|HI156": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 32}
-        }
-    ],
-    "HI123|HI124": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 64}
-        }
-    ],
-    "HI146": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 32}
-        }
-    ],
-    "HI160": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 28}
-        }
-    ],
-    "HI157": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 37}
-        }
-    ],
-    "HI158": [
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic2": {"fin": "/sys/module/sx_core/asic1/"},
-                    "asic3": {"fin": "/sys/module/sx_core/asic2/"},
-                    "asic4": {"fin": "/sys/module/sx_core/asic3/"}
-                }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 73}
-        }
-    ],
-    "HI175": [
-       {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic2": {"fin": "/sys/module/sx_core/asic1/"},
-                    "asic3": {"fin": "/sys/module/sx_core/asic2/"},
-                    "asic4": {"fin": "/sys/module/sx_core/asic3/"}
-                 }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 91}
-        }
-    ],
-    "HI176": [
-        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
-         "arg": [], "poll": 1, "ts": 0},
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic2": {"fin": "/sys/module/sx_core/asic1/"}
-                }
-        },
-
-        {"fin": None,
-         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}     
-    ],
-    "HI177": [
-        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
-         "arg": [], "poll": 1, "ts": 0},
-        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic2": {"fin": "/sys/module/sx_core/asic1/"},
-                    "asic3": {"fin": "/sys/module/sx_core/asic2/"}
-                }
-        },
-        {"fin": None,
-         "fn": "redfish_get_sensor", "arg" : ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}   
-    ],
-    "HI178": [
-       {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
-         "arg" : {  "asic":  {"fin": "/sys/module/sx_core/asic0/"},
-                    "asic1": {"fin": "/sys/module/sx_core/asic0/"},
-                 }
-        },
-        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
-         "arg" : {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 24}
-        }
-    ],
-    "def": [
-         {"fin": "/var/run/hw-management/config/thermal_enforced_full_spped",
-         "fn": "run_cmd",
-         "arg": ["if [[ -f /var/run/hw-management/config/thermal_enforced_full_spped && "
-                 "$(</var/run/hw-management/config/thermal_enforced_full_spped) == \"1\" ]]; then "
-                 "/usr/bin/hw-management-user-dump; fi"],
-         "poll": 5, "ts": 0},
-    ],
+    "def": [],
     "test": [
          {"fin": "/tmp/power_button_clr",
          "fn": "run_power_button_event",
@@ -331,10 +169,10 @@ class CONST(object):
     ASIC_TEMP_FAULT_DEF = 105000
     ASIC_TEMP_CRIT_DEF = 120000
     #
+    MODULE_TEMP_MIN_DEF = 70000
     MODULE_TEMP_MAX_DEF = 75000
     MODULE_TEMP_FAULT_DEF = 105000
     MODULE_TEMP_CRIT_DEF = 120000
-    MODULE_TEMP_EMERGENCY_OFFSET = 10000
 
 REDFISH_OBJ = None
 
@@ -635,7 +473,6 @@ def module_temp_populate(arg_list, _dummy):
         temperature_min = "0"
         temperature_max = "0"
         temperature_fault = "0"
-        temperature_trip_crit = "0"
         temperature_crit = "0"
 
         if module_present:
@@ -647,48 +484,44 @@ def module_temp_populate(arg_list, _dummy):
                 continue
 
             f_src_input = os.path.join(f_src_path, "temperature/input")
-            f_src_crit = os.path.join(f_src_path, "temperature/threshold_hi")
-            f_src_hcrit = os.path.join(f_src_path, "temperature/threshold_critical_hi")
+            f_src_min = os.path.join(f_src_path, "temperature/threshold_lo")
+            f_src_max = os.path.join(f_src_path, "temperature/threshold_hi")
 
             try:
                 with open(f_src_input, 'r') as f:
                     val = f.read()
                 temperature = sdk_temp2degree(int(val))
 
-                if os.path.isfile(f_src_crit):
-                    with open(f_src_crit, 'r') as f:
+                if os.path.isfile(f_src_min):
+                    with open(f_src_min, 'r') as f:
                         val = f.read()
-                    temperature_crit = sdk_temp2degree(int(val))
+                    temperature_min = sdk_temp2degree(int(val))
                 else:
-                    temperature_crit = CONST.MODULE_TEMP_MAX_DEF
+                    temperature_min = CONST.MODULE_TEMP_MIN_DEF
 
-                if temperature_crit != 0:
-                    temperature_emergency = temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
-
-                if os.path.isfile(f_src_hcrit):
-                    with open(f_src_hcrit, 'r') as f:
+                if os.path.isfile(f_src_max):
+                    with open(f_src_max, 'r') as f:
                         val = f.read()
-                    temperature_trip_crit = sdk_temp2degree(int(val))
+                    temperature_max = sdk_temp2degree(int(val))
                 else:
-                    temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
-
+                    temperature_max = CONST.MODULE_TEMP_MAX_DEF
+                temperature_crit = CONST.MODULE_TEMP_CRIT_DEF
             except:
                 pass
 
         # Write the temperature data to files
         file_paths = {
             "_temp_input": temperature,
-            "_temp_crit": temperature_crit,
-            "_temp_emergency": temperature_emergency,
+            "_temp_crit": temperature_min,
+            "_temp_emergency": temperature_max,
             "_temp_fault": temperature_fault,
-            "_temp_trip_crit": temperature_trip_crit
+            "_temp_trip_crit": temperature_crit
         }
 
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
-            if value is not None:
-                with open(f_name, 'w', encoding="utf-8") as f:
-                    f.write("{}\n".format(value))
+            with open(f_name, 'w', encoding="utf-8") as f:
+                f.write("{}\n".format(value))
 
     with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
         f.write("{}\n".format(module_count))
