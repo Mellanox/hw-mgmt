@@ -3910,10 +3910,9 @@ class ThermalManagement(hw_management_file_op):
                 except:
                     self.log.error("User config file {} load failed. Skip it".format(user_config_file_name), 1) 
                     pass
-        if user_config:
-            sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
-        else:
+        if not user_config:
             self.log.warn("User config not defined", 1)
+        sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
         self.sys_config = sys_config
 
     # ----------------------------------------------------------------------
