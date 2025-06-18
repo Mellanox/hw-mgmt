@@ -1,5 +1,5 @@
 [Unit]
-Description=Thermal control service (ver 2.0) of Mellanox systems
+Description=Thermal control service (ver 2.0) of Nvidia systems
 After=hw-management.service
 Requires=hw-management.service
 PartOf=hw-management.service
