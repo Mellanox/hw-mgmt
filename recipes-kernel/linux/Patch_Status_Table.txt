@@ -736,6 +736,7 @@ Kernel-6.1
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
 |9010-Changing-MDC-frequency-to-2.1-MHz.patch                     |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 |9011-amd-xgbe-Flush-tx-queue-and-resetting-of-timer_activ.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9012-changes-for-accessing-MII-management-bus-from-usersp.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:

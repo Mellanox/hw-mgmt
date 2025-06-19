@@ -1,0 +1,53 @@
+From b5803097bbc3811d1274f74e80f4c96526e63da4 Mon Sep 17 00:00:00 2001
+From: Sunil Uttarwar <Sunilprakashrao.uttarwar@amd.com>
+Date: Mon, 17 Aug 2020 16:24:21 +0530
+Subject: [PATCH] changes for accessing MII management bus from userspace
+
+---
+ drivers/net/ethernet/amd/xgbe/xgbe-drv.c    | 3 ++-
+ drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c | 1 +
+ drivers/net/ethernet/amd/xgbe/xgbe.h        | 2 ++
+ 3 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+index 372139bbcf95..9d428b87f654 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+@@ -2127,7 +2127,8 @@ static int xgbe_ioctl(struct net_device *netdev, struct ifreq *ifreq, int cmd)
+ 		break;
+ 
+ 	default:
+-		ret = -EOPNOTSUPP;
++//		ret = -EOPNOTSUPP;
++		return phy_mii_ioctl(pdata->phydev, ifreq, cmd);
+ 	}
+ 
+ 	return ret;
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c b/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
+index 3ceb4f95ca7c..37362a0e4124 100755
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
+@@ -1031,6 +1031,7 @@ static int xgbe_phy_find_phy_device(struct xgbe_prv_data *pdata)
+ 		return ret;
+ 	}
+ 	phy_data->phydev = phydev;
++	pdata->phydev = phydev;
+ 
+ 	xgbe_phy_external_phy_quirks(pdata);
+ 
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgbe/xgbe.h
+index 47bcbcf58048..dabac9382f61 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe.h
++++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
+@@ -1295,6 +1295,8 @@ struct xgbe_prv_data {
+ 
+ 	bool debugfs_an_cdr_workaround;
+ 	bool debugfs_an_cdr_track_early;
++
++	struct phy_device	*phydev;
+ };
+ 
+ /* Function prototypes*/
+-- 
+2.17.1
+
