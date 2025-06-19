@@ -1948,7 +1948,7 @@ class thermal_module_sensor(system_device):
         if CONST.SENSOR_READ_ERR in fault_list:
             value = "N/A"
         else:
-            value = self.value
+            value = round(self.value,1)
 
         if self.pwm > self.pwm_prev:
             sign = u'\u2191' # up arrow
@@ -1958,7 +1958,7 @@ class thermal_module_sensor(system_device):
             sign = '' # no change
         self.pwm_prev = self.pwm
         info_str = "\"{: <8}\" temp:{: <5}, tmin:{: <5}, tmax:{: <5}, [{}], faults:[{}], pwm: {}{}, {}".format(self.name,
-                                                                                          round(value,1),
+                                                                                          value,
                                                                                           round(self.val_min,1),
                                                                                           round(self.val_max,1),
                                                                                           str(self.pwm_regulator),
