@@ -275,6 +275,33 @@ function get_psu_eeprom_type()
 	echo $eeprom_type
 }
 
+# Set ASIC ready state
+# $1 - sysfs path of PCI device
+# $2 - ASIC ready state (0 or 1)
+# return none
+function set_asic_ready()
+{
+	sysfs_picdev_path=$1
+	state=$2
+	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
+	if [ $asic_num -gt 1 ]; then
+		pci_bus="${sysfs_picdev_path: -7}"
+		for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
+			bus=$(< $config_path/asic"$asic_id"_pci_bus_id)
+			if [ "$bus" == "$pci_bus" ]; then
+				echo $state > $config_path/asic"$asic_id"_ready
+				if [ $asic_id -eq 1 ]; then
+					echo $state > $config_path/asic_ready
+				fi
+				break
+			fi
+		done
+	else
+		echo $state > $config_path/asic1_ready
+		echo $state > $config_path/asic_ready
+	fi
+}
+
 # Don't process udev events until service is started and directories are created
 if [ ! -f ${udev_ready} ]; then
 	exit 0
@@ -1142,6 +1169,7 @@ if [ "$1" == "add" ]; then
 			modprobe mlxsw_minimal
 		fi
 		/usr/bin/hw-management.sh chipup 0 "$4/$5"
+		set_asic_ready "$4/$5" 1
 	fi
 	if [ "$2" == "nvme_temp" ]; then
 		dev_name=$(cat "$3""$4"/name)
@@ -1496,6 +1524,7 @@ else
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
+		set_asic_ready "$4/$5" 0
 	fi
 	if [ "$2" == "dpu" ]; then
 		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
