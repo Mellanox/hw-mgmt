@@ -5,14 +5,12 @@
 			"mp29502" : {
 				"in1": {"name": "PDB+PwrConv1+Vol+In+1"},
 				"in3": {"name": "PDB+PwrConv1+Vol+Out+1"},
-				"curr1": {"name": "PDB+PwrConv1+Curr+In+1"},
 				"curr2": {"name": "PDB-PwrConv1+Curr+Out+1"},
 				"temp2": {"name": "PDB+PwrConv1+Temp"}
 			},
 			"raa228004" : {
 				"in1": {"name": "PDB+PwrConv1+Vol+In+1"},
 				"in3": {"name": "PDB+PwrConv1+Vol+Out+1"},
-				"curr1": {"name": "PDB+PwrConv1+Curr+In+1"},
 				"curr2": {"name": "PDB+PwrConv1+Curr+Out+1"},
 				"temp2": {"name": "PDB+PwrConv1+Temp"},
 			}
@@ -21,14 +19,12 @@
 			"mp29502" : {
 				"in1": {"name": "PDB+PwrConv2+Vol+In+1"},
 				"in3": {"name": "PDB+PwrConv2+Vol+Out+1"},
-				"curr1": {"name": "PDB+PwrConv2+Curr+In+1"},
 				"curr2": {"name": "PDB-PwrConv2+Curr+Out+1"},
 				"temp2": {"name": "PDB+PwrConv2+Temp"}
 			},
 			"raa228004" : {
 				"in1": {"name": "PDB+PwrConv2+Vol+In+1"},
 				"in3": {"name": "PDB+PwrConv2+Vol+Out+1"},
-				"curr1": {"name": "PDB+PwrConv2+Curr+In+1"},
 				"curr2": {"name": "PDB+PwrConv2+Curr+Out+1"},
 				"temp2": {"name": "PDB+PwrConv2+Temp"},
 			}
@@ -36,14 +32,14 @@
 		"pdb_hotswap1": {
 			"lm5066i" : {
 				"in1": {"name": "PDB+HSC+VinDC+Volt+In"},
-				"in2": {"name": "PDB+HSC+VinDC+Volt+Out"},
+				"in3": {"name": "PDB+HSC+VinDC+Volt+Out"},
 				"curr1": {"name": "PDB+HSC+VinDC+Curr+In"},
 				"power1": {"name": "PDB+HSC+VinDC+Pwr+In"},
 				"temp1": {"name": "PDB+HSC+VinDC+Temp"}
 			},
 			"mp5926" : {
 				"in1": {"name": "PDB+HSC+VinDC+Volt+In"},
-				"in2": {"name": "PDB+HSC+VinDC+Volt+Out"},
+				"in3": {"name": "PDB+HSC+VinDC+Volt+Out"},
 				"curr1": {"name": "PDB+HSC+VinDC+Curr+In"},
 				"curr2": {"name": "PDB+HSC+VinDC+Pwr+In"},
 				"power1": {"name": "PDB+HSC+VinDC+Pwr+In"},
@@ -212,11 +208,9 @@
 		"comex_voltmon1_in2" : "PMIC-17+CPU+Vol+Out+1",
 		"comex_voltmon1_in3" : "PMIC-17+SOC+Vol+Out+2",
 		"comex_voltmon1_temp1" : "PMIC-17+Temp+1",
-		"comex_voltmon1_power1" : "PMIC-17+12V_MAIN+Pwr+In+1",
-		"comex_voltmon1_power2" : "PMIC-17+CEX_VDD+Pwr+Out+1",
+		"comex_voltmon1_temp1" : "PMIC-17+Temp+2",
 		"comex_voltmon1_curr1" : "PMIC-17+12V_MAIN+Curr+In+1",
 		"comex_voltmon1_curr2" : "PMIC-17+CPU+Curr+Out+1",
-		"comex_voltmon1_curr3" : "PMIC-17+SOC+Curr+Out+2",
 		"comex_voltmon2_in1" : "PMIC-18+COMEX_VDD_MEM+Vol+In+1",
 		"comex_voltmon2_in2" : "PMIC-18+COMEX_VDD_MEM+Vol+Out+1",
 		"comex_voltmon2_power1" : "PMIC-18+COMEX_VDD_MEM+Pwr+In+1",
