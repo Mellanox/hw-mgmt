@@ -55,7 +55,7 @@ fi
 
 #TEMPORARY hw-management mockup values for simx
 if [ check_simx ] && [ "$product_sku" == "HI180" ]; then
-	echo "Rosalind emulation, exiting"
+	echo "HI180 emulation, exiting"
 	exit 0
 fi
 
