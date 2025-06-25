@@ -427,7 +427,8 @@ class BMCAccessor(object):
 
     def get_login_password(self):
         try:
-            platform_name = open('/sys/devices/virtual/dmi/id/product_name').read().strip()
+            with open('/sys/devices/virtual/dmi/id/product_name') as f:
+                platform_name = f.read().strip()
             if any(p in platform_name.upper() for p in PLATFORM_LEGACY_LIST):
                 pass_len = 13
                 attempt = 1
@@ -501,6 +502,8 @@ class BMCAccessor(object):
         except subprocess.CalledProcessError as e:
             #print(f"Error executing TPM command: {e}")
             raise Exception("Failed to communicate with TPM")
+        except (FileNotFoundError, PermissionError) as e:
+            raise Exception("no platform name found")
         except Exception as e:
             #print(f"Error: {e}")
             raise
