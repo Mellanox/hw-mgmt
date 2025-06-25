@@ -2392,7 +2392,7 @@ n51xxld_specific()
 
 	cpld_num=4
 	max_tachos=8
-    leakage_count=4
+	leakage_count=6
 	erot_count=3
 
 	case $sku in
