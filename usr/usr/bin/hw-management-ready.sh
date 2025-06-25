@@ -54,7 +54,7 @@ if [ -d /var/run/hw-management ]; then
 fi
 
 #TEMPORARY hw-management mockup values for simx
-if [ check_simx ] && [ "$product_sku" == "HI180" ]; then
+if check_simx && [ "$product_sku" == "HI180" ]; then
 	echo "HI180 emulation, exiting"
 	exit 0
 fi
