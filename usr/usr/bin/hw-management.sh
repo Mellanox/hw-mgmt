@@ -1,5 +1,3 @@
-
-
 #!/bin/bash
 ################################################################################
 # Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -3730,7 +3728,7 @@ case $ACTION in
 			exit 1
 		fi
 		#TEMPORARY hw-management mockup values for Rosalind in simx
-		if [ check_simx ] && [ "$sku" == "HI180" ]; then
+		if check_simx && [ "$product_sku" == "HI180" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
