@@ -1068,7 +1068,7 @@ if [ "$1" == "add" ]; then
 		fi
 
 		if [[ "$cap" == "1100" && $mfr == "DELTA" ]]; then
-			out_crit=$(<"$thermal_path"/"$psu_name"_volt_out_crit)
+			out_crit=$(<"$power_path"/"$psu_name"_volt_out_crit)
 			out_lcrit=$(((out_crit*662)/1000))
 			out_min=$(((out_crit*745)/1000))
 			out_max=$(((out_crit*952)/1000))
