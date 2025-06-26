@@ -2278,7 +2278,7 @@ n51xxld_specific()
 
 	psu_count=0
 	hotplug_fans=0
-	leakage_count=4
+	leakage_count=6
 	hotplug_pwrs=0
 	hotplug_psus=0
 	erot_count=3

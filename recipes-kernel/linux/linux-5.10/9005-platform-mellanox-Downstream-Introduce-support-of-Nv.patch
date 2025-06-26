@@ -745,7 +745,7 @@ index ecbcc1893..5e73226ad 100644
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_main_5v",
++		.label = "reset_main_51v",
 +		.reg = MLXPLAT_CPLD_LPC_REG_RST_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(6),
 +		.mode = 0444,
