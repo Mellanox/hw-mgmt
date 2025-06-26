@@ -1,0 +1,229 @@
+From 1c2a04c83a338857d3c8e9dde579e4f611021ea7 Mon Sep 17 00:00:00 2001
+From: Raju Rangoju <Raju.Rangoju@amd.com>
+Date: Tue, 24 Jun 2025 11:31:59 +0530
+Subject: [PATCH 1/1] amd-xgbe: Fix Network bond issue
+
+Upon detecting a link drop, stop all transmit queues and set the carrier
+state to down. This prevents transmission attempts when the carrier is
+unavailable and avoids the buildup of stale data in the TX queues.
+Additionally, flush the TX and RX queues and perform a reset to handle
+abrupt cable removal scenarios.
+
+Ensure to stop the DMA engine first before preparing to stop/read
+the TX queues. Also, skip to read the TX queue status when the link is down
+
+- Fixes bonding issue
+
+Signed-off-by: Raju Rangoju <Raju.Rangoju@amd.com>
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/net/ethernet/amd/xgbe/xgbe-common.h |  4 +++
+ drivers/net/ethernet/amd/xgbe/xgbe-dev.c    | 23 ++++++++-------
+ drivers/net/ethernet/amd/xgbe/xgbe-drv.c    | 31 +++++++++++++++++++--
+ drivers/net/ethernet/amd/xgbe/xgbe-mdio.c   | 14 ++++++----
+ drivers/net/ethernet/amd/xgbe/xgbe.h        |  3 +-
+ 5 files changed, 55 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-common.h b/drivers/net/ethernet/amd/xgbe/xgbe-common.h
+index 466273b22..034780993 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-common.h
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-common.h
+@@ -419,6 +419,10 @@
+ #define MAC_ISR_SMI_WIDTH		1
+ #define MAC_ISR_TSIS_INDEX		12
+ #define MAC_ISR_TSIS_WIDTH		1
++#define MAC_ISR_LS_INDEX		24
++#define MAC_ISR_LS_WIDTH		2
++#define MAC_ISR_LSI_INDEX		0
++#define MAC_ISR_LSI_WIDTH		1
+ #define MAC_MACA1HR_AE_INDEX		31
+ #define MAC_MACA1HR_AE_WIDTH		1
+ #define MAC_MDIOIER_SNGLCOMPIE_INDEX	12
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-dev.c b/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
+index b8de46ad2..d7fc7204d 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-dev.c
+@@ -3228,7 +3228,11 @@ static void xgbe_txq_prepare_tx_stop(struct xgbe_prv_data *pdata,
+ 	/* The Tx engine cannot be stopped if it is actively processing
+ 	 * packets. Wait for the Tx queue to empty the Tx fifo.  Don't
+ 	 * wait forever though...
++	 * Also, note to skip this check when link status is not up
+ 	 */
++	if (pdata->ls)
++		return;
++
+ 	tx_timeout = jiffies + (XGBE_DMA_STOP_TIMEOUT * HZ);
+ 	while (time_before(jiffies, tx_timeout)) {
+ 		tx_status = XGMAC_MTL_IOREAD(pdata, queue, MTL_Q_TQDR);
+@@ -3312,25 +3316,24 @@ static void xgbe_enable_tx(struct xgbe_prv_data *pdata)
+ static void xgbe_disable_tx(struct xgbe_prv_data *pdata)
+ {
+ 	unsigned int i;
++	/* Disable each Tx DMA channel */
++	for (i = 0; i < pdata->channel_count; i++) {
++		if (!pdata->channel[i]->tx_ring)
++			break;
++
++		XGMAC_DMA_IOWRITE_BITS(pdata->channel[i], DMA_CH_TCR, ST, 0);
++	}
+ 
+ 	/* Prepare for Tx DMA channel stop */
+ 	for (i = 0; i < pdata->tx_q_count; i++)
+ 		xgbe_prepare_tx_stop(pdata, i);
+ 
+-	/* Disable MAC Tx */
+-	XGMAC_IOWRITE_BITS(pdata, MAC_TCR, TE, 0);
+-
+ 	/* Disable each Tx queue */
+ 	for (i = 0; i < pdata->tx_q_count; i++)
+ 		XGMAC_MTL_IOWRITE_BITS(pdata, i, MTL_Q_TQOMR, TXQEN, 0);
+ 
+-	/* Disable each Tx DMA channel */
+-	for (i = 0; i < pdata->channel_count; i++) {
+-		if (!pdata->channel[i]->tx_ring)
+-			break;
+-
+-		XGMAC_DMA_IOWRITE_BITS(pdata->channel[i], DMA_CH_TCR, ST, 0);
+-	}
++	/* Disable MAC Tx */
++	XGMAC_IOWRITE_BITS(pdata, MAC_TCR, TE, 0);
+ }
+ 
+ static void xgbe_prepare_rx_stop(struct xgbe_prv_data *pdata,
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+index 6b73648b3..ece25c174 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
+@@ -539,6 +539,23 @@ static void xgbe_isr_task(struct tasklet_struct *t)
+ 	if (XGMAC_GET_BITS(dma_isr, DMA_ISR, MACIS)) {
+ 		mac_isr = XGMAC_IOREAD(pdata, MAC_ISR);
+ 
++		/* Upon detecting a link drop, Set carrier state to down
++		 * and stop all transmit queues. This prevents transmission
++		 * attempts when the carrier is unavailable and avoids
++		 * the buildup of stale data in the TX queues
++		 */
++		if (XGMAC_GET_BITS(mac_isr, MAC_ISR, LSI)) {
++			pdata->ls = XGMAC_GET_BITS(mac_isr, MAC_ISR, LS);
++
++			if (pdata->ls) {
++				netif_carrier_off(pdata->netdev);
++				netif_tx_stop_all_queues(pdata->netdev);
++			} else {
++				netif_carrier_on(pdata->netdev);
++				netif_tx_wake_all_queues(pdata->netdev);
++			}
++		}
++
+ 		netif_dbg(pdata, intr, pdata->netdev, "MAC_ISR=%#010x\n",
+ 			  mac_isr);
+ 
+@@ -673,10 +690,18 @@ static void xgbe_tx_timer(struct timer_list *t)
+ static void xgbe_service(struct work_struct *work)
+ {
+ 	struct xgbe_prv_data *pdata = container_of(work,
+-						   struct xgbe_prv_data,
+-						   service_work);
++			struct xgbe_prv_data,
++			service_work);
++
++	int new_state;
+ 
+-	pdata->phy_if.phy_status(pdata);
++	new_state = pdata->phy_if.phy_status(pdata);
++
++	/* Flush Tx and Rx queues and perform reset to handle abrupt
++	 * cable removal scenarios
++	 */
++	if (new_state && !pdata->phy.link)
++		schedule_work(&pdata->restart_work);
+ }
+ 
+ static void xgbe_service_timer(struct timer_list *t)
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-mdio.c b/drivers/net/ethernet/amd/xgbe/xgbe-mdio.c
+index 60be836b2..54be52f93 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe-mdio.c
++++ b/drivers/net/ethernet/amd/xgbe/xgbe-mdio.c
+@@ -1104,7 +1104,7 @@ static void xgbe_phy_print_status(struct xgbe_prv_data *pdata)
+ 		netdev_info(pdata->netdev, "Link is Down\n");
+ }
+ 
+-static void xgbe_phy_adjust_link(struct xgbe_prv_data *pdata)
++static int xgbe_phy_adjust_link(struct xgbe_prv_data *pdata)
+ {
+ 	int new_state = 0;
+ 
+@@ -1142,6 +1142,8 @@ static void xgbe_phy_adjust_link(struct xgbe_prv_data *pdata)
+ 
+ 	if (new_state && netif_msg_link(pdata))
+ 		xgbe_phy_print_status(pdata);
++
++	return new_state;
+ }
+ 
+ static bool xgbe_phy_valid_speed(struct xgbe_prv_data *pdata, int speed)
+@@ -1368,7 +1370,7 @@ static bool xgbe_phy_status_result(struct xgbe_prv_data *pdata)
+ 	return true;
+ }
+ 
+-static void xgbe_phy_status(struct xgbe_prv_data *pdata)
++static int xgbe_phy_status(struct xgbe_prv_data *pdata)
+ {
+ 	unsigned int link_aneg;
+ 	int an_restart;
+@@ -1392,11 +1394,11 @@ static void xgbe_phy_status(struct xgbe_prv_data *pdata)
+ 	if (pdata->phy.link) {
+ 		if (link_aneg && !xgbe_phy_aneg_done(pdata)) {
+ 			xgbe_check_link_timeout(pdata);
+-			return;
++			return 0;
+ 		}
+ 
+ 		if (xgbe_phy_status_result(pdata))
+-			return;
++			return 0;
+ 
+ 		if (test_bit(XGBE_LINK_INIT, &pdata->dev_state))
+ 			clear_bit(XGBE_LINK_INIT, &pdata->dev_state);
+@@ -1407,7 +1409,7 @@ static void xgbe_phy_status(struct xgbe_prv_data *pdata)
+ 			xgbe_check_link_timeout(pdata);
+ 
+ 			if (link_aneg)
+-				return;
++				return 0;
+ 		}
+ 
+ 		xgbe_phy_status_result(pdata);
+@@ -1416,7 +1418,7 @@ static void xgbe_phy_status(struct xgbe_prv_data *pdata)
+ 	}
+ 
+ adjust_link:
+-	xgbe_phy_adjust_link(pdata);
++	return xgbe_phy_adjust_link(pdata);
+ }
+ 
+ static void xgbe_phy_stop(struct xgbe_prv_data *pdata)
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgbe/xgbe.h
+index 7a41367c4..6794b3f24 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe.h
++++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
+@@ -934,7 +934,7 @@ struct xgbe_phy_if {
+ 	void (*phy_stop)(struct xgbe_prv_data *);
+ 
+ 	/* For PHY support while device is up */
+-	void (*phy_status)(struct xgbe_prv_data *);
++	int (*phy_status)(struct xgbe_prv_data *pdata);
+ 	int (*phy_config_aneg)(struct xgbe_prv_data *);
+ 
+ 	/* For PHY settings validation */
+@@ -1105,6 +1105,7 @@ struct xgbe_prv_data {
+ 	unsigned int desc_ded_count;
+ 	unsigned int desc_sec_count;
+ 
++	int ls;
+ 	int dev_irq;
+ 	int ecc_irq;
+ 	int i2c_irq;
+-- 
+2.34.1
+

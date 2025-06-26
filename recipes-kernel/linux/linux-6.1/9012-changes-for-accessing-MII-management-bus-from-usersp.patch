@@ -1,8 +1,9 @@
-From b5803097bbc3811d1274f74e80f4c96526e63da4 Mon Sep 17 00:00:00 2001
+From 4c327f895fe907f0a4bbe10bb236b58b2a38b124 Mon Sep 17 00:00:00 2001
 From: Sunil Uttarwar <Sunilprakashrao.uttarwar@amd.com>
 Date: Mon, 17 Aug 2020 16:24:21 +0530
 Subject: [PATCH] changes for accessing MII management bus from userspace
 
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
 ---
  drivers/net/ethernet/amd/xgbe/xgbe-drv.c    | 3 ++-
  drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c | 1 +
@@ -10,10 +11,10 @@ Subject: [PATCH] changes for accessing MII management bus from userspace
  3 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
-index 372139bbcf95..9d428b87f654 100644
+index ece25c174..10fd18e17 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe-drv.c
-@@ -2127,7 +2127,8 @@ static int xgbe_ioctl(struct net_device *netdev, struct ifreq *ifreq, int cmd)
+@@ -2077,7 +2077,8 @@ static int xgbe_ioctl(struct net_device *netdev, struct ifreq *ifreq, int cmd)
  		break;
  
  	default:
@@ -24,10 +25,10 @@ index 372139bbcf95..9d428b87f654 100644
  
  	return ret;
 diff --git a/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c b/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
-index 3ceb4f95ca7c..37362a0e4124 100755
+index c731a0473..9bf0a7655 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe-phy-v2.c
-@@ -1031,6 +1031,7 @@ static int xgbe_phy_find_phy_device(struct xgbe_prv_data *pdata)
+@@ -1046,6 +1046,7 @@ static int xgbe_phy_find_phy_device(struct xgbe_prv_data *pdata)
  		return ret;
  	}
  	phy_data->phydev = phydev;
@@ -36,10 +37,10 @@ index 3ceb4f95ca7c..37362a0e4124 100755
  	xgbe_phy_external_phy_quirks(pdata);
  
 diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgbe/xgbe.h
-index 47bcbcf58048..dabac9382f61 100644
+index 6794b3f24..0b18fabe2 100644
 --- a/drivers/net/ethernet/amd/xgbe/xgbe.h
 +++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
-@@ -1295,6 +1295,8 @@ struct xgbe_prv_data {
+@@ -1312,6 +1312,8 @@ struct xgbe_prv_data {
  
  	bool debugfs_an_cdr_workaround;
  	bool debugfs_an_cdr_track_early;
@@ -49,5 +50,5 @@ index 47bcbcf58048..dabac9382f61 100644
  
  /* Function prototypes*/
 -- 
-2.17.1
+2.34.1
 

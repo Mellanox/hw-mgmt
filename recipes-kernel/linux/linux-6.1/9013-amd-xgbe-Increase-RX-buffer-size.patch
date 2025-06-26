@@ -1,0 +1,26 @@
+From ff5ed4faf69e87053ce9f7686987eccaf0434f1d Mon Sep 17 00:00:00 2001
+From: Ciju Rajan K <crajank@nvidia.com>
+Date: Thu, 26 Jun 2025 22:43:15 +0300
+Subject: amd-xgbe: Increase RX buffer size
+
+Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
+---
+ drivers/net/ethernet/amd/xgbe/xgbe.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/amd/xgbe/xgbe.h b/drivers/net/ethernet/amd/xgbe/xgbe.h
+index 0b18fabe2..1560fab97 100644
+--- a/drivers/net/ethernet/amd/xgbe/xgbe.h
++++ b/drivers/net/ethernet/amd/xgbe/xgbe.h
+@@ -141,7 +141,7 @@
+ #define XGBE_TX_DESC_CNT	512
+ #define XGBE_TX_DESC_MIN_FREE	(XGBE_TX_DESC_CNT >> 3)
+ #define XGBE_TX_DESC_MAX_PROC	(XGBE_TX_DESC_CNT >> 1)
+-#define XGBE_RX_DESC_CNT	512
++#define XGBE_RX_DESC_CNT	4096
+ 
+ #define XGBE_TX_DESC_CNT_MIN	64
+ #define XGBE_TX_DESC_CNT_MAX	4096
+-- 
+2.34.1
+
