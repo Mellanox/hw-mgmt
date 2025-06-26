@@ -3447,6 +3447,27 @@ class ThermalManagement(hw_management_file_op):
         return pref_dir
 
     # ----------------------------------------------------------------------
+    def _run_fan_smart_start(self):
+        """
+        @summary:
+            Initialize fan smart start
+        """
+        #1. Stop PWM worker
+        if self.pwm_worker_timer:
+            self.pwm_worker_timer.stop()
+        #2. Set PWM to PWM_ss
+        pwm_old = self.pwm
+        self._update_chassis_fan_speed(self.pwm_ss, force=True)
+        #3. Sleep delay_ss
+        time.sleep(self.delay_ss)
+        #4. Set PWM to normal PWM
+        self.pwm = pwm_old
+        self._update_chassis_fan_speed(self.pwm, force=True)
+        #5. Start PWM worker
+        if self.pwm_worker_timer:
+            self.pwm_worker_timer.start(True)
+
+    # ----------------------------------------------------------------------
     def _update_psu_fan_speed(self, pwm):
         """
         @summary:
@@ -3544,7 +3565,7 @@ class ThermalManagement(hw_management_file_op):
             self.pwm_target = pwm
             if self.pwm_worker_timer:
                 self.pwm_worker_timer.start(True)
-            else:
+            else: 
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
         elif current_milli_time() > self.pwm_validate_timeout:

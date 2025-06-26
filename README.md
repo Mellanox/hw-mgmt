@@ -1,4 +1,4 @@
-# Mellanox Hardware Management package
+# Mellanox Hardware Management package 
 This package supports thermal control and hardware management for Mellanox switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
 
 The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.
