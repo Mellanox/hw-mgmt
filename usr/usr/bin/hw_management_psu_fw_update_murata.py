@@ -122,7 +122,7 @@ upgrade_status_dict = {
     0x16: "POLL_STATUS_DATA_ERROR",
     # Data not recognized.
     0x10: "POLL_STATUS_INVALID_RECORD_TYPE"
-    }
+}
 
 
 def poll_upgrade_status(i2c_bus, i2c_addr):
@@ -163,7 +163,7 @@ bootloader_status_dict = {
     1 << 5: "BO0TLOADING_SECONDARY_COMPLETED",
     1 << 6: "RESET_PRIMARY_COMPLETED",
     1 << 7: "RESET_FLOATING_COMPLETED",
-    }
+}
 
 
 def bootloader_status(i2c_bus, i2c_addr):
@@ -204,7 +204,7 @@ def burn_fw_file(i2c_bus, i2c_addr, fw_filename):
     with open(fw_filename) as fp:
         lines = fp.readlines()
         for number, line in enumerate(lines):
-            psu_upd_cmn.progress_bar(((number+1)*100)/len(lines), 100)
+            psu_upd_cmn.progress_bar(((number + 1) * 100) / len(lines), 100)
             if "[data]" in line:
                 data_flag = 1
                 continue
@@ -224,7 +224,7 @@ microtype_dict = {
     "MICROTYPE_PRIMARY": 0x50,
     "MICROTYPE_SECONDARY": 0x53,
     "MICROTYPE_FLOATING": 0x46,
-    }
+}
 
 
 def enter_bootload_mode(i2c_bus, i2c_addr, primary):
@@ -251,7 +251,7 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
     """
     current_fw_rev = ""
     # If coninue_update skip entering to boot_mode.
-    if continue_update != True:
+    if not continue_update:
         # 1. Read current firmware revision using command the READ_MFG_FW_REVISION.
         current_fw_rev = read_murata_fw_revision(i2c_bus, i2c_addr, primary)
         print(current_fw_rev)
@@ -262,13 +262,13 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
         enter_bootload_mode(i2c_bus, i2c_addr, primary)
 
         # 3. When the command is received.
-            # a. The Power supply will enter a power down state, shutting down main power conversion.
-                # i. Power Supply will respond POWER_DOWN.
-            # b. Upon successful power down, the power supply enters Bootload Mode.
-            # c. The power supply will change the PMBus address to 0x60 and erase the targeted microcontroller.
-                # i. Power Supply will respond BUSY during the erase the process.
-            # d. Wait for host to initiate data transfer.
-                # i. Power Supply will respond SUCCESS while waiting for data.
+        # a. The Power supply will enter a power down state, shutting down main power conversion.
+        # i. Power Supply will respond POWER_DOWN.
+        # b. Upon successful power down, the power supply enters Bootload Mode.
+        # c. The power supply will change the PMBus address to 0x60 and erase the targeted microcontroller.
+        # i. Power Supply will respond BUSY during the erase the process.
+        # d. Wait for host to initiate data transfer.
+        # i. Power Supply will respond SUCCESS while waiting for data.
 
         # 4. Wait typically for 1 second to allow the Power Supply to enter Bootload Mode.
         time.sleep(1)
@@ -297,11 +297,11 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
     time.sleep(2)
 
     # 10. Send the POLL_UPGRADE_STATUS command for a successful transaction.
-        # 10a. The target microcontroller will do a soft reset and conducts a checksum test of the upgraded firmware.
-        # 10b. If the checksum test passes, the target microcontroller will leave BOOTLOAD Mode and will respond NOT_ACTIVE.
-        # 10c. If the checksum test fails, the target microcontroller remains in BOOTLOAD Mode and will response
-        #     SUCCESS. The SUCCESS response refers to successfully entering BOOTLOAD Mode. (Read Section: What to
-        #     do if IN-SYSTEM PROGRAMMING fails).
+    # 10a. The target microcontroller will do a soft reset and conducts a checksum test of the upgraded firmware.
+    # 10b. If the checksum test passes, the target microcontroller will leave BOOTLOAD Mode and will respond NOT_ACTIVE.
+    # 10c. If the checksum test fails, the target microcontroller remains in BOOTLOAD Mode and will response
+    #     SUCCESS. The SUCCESS response refers to successfully entering BOOTLOAD Mode. (Read Section: What to
+    #     do if IN-SYSTEM PROGRAMMING fails).
 
     if poll_upgrade_status(i2c_bus, BOOTLOADER_I2C_ADDR) == "POLL_STATUS_NOTACTIVE":
         print("checksum test passes, the target microcontroller will leave BOOTLOAD Mode")
@@ -310,22 +310,22 @@ def murata_update(i2c_bus, i2c_addr, continue_update, fw_filename, primary):
         exit(1)
 
     if args.skip_redundancy_check:
-         print("Not checking FW version after update. Use -v option after power cycle.")
-         exit(0)
+        print("Not checking FW version after update. Use -v option after power cycle.")
+        exit(0)
 
     # 11. Repeat steps 1-9 to upgrade remaining microcontrollers.
     # Now we updating only secondary, so nothing todo here.
     # 12. Upgrading is complete, send the POWER_SUPPLY_RESET command.
     power_supply_reset(i2c_bus, BOOTLOADER_I2C_ADDR)
-        # 12a. The Power Supply will send all microcontrollers a soft reset command. This will allow all the
-        #    microcontrollers to restart together.
-        # 12b. The Power Supply will leave Bootload Mode and change its PMBus address back to the address for Normal Operation.
-        # 12c. After restart, the power supply will begin to deliver power again.
+    # 12a. The Power Supply will send all microcontrollers a soft reset command. This will allow all the
+    #    microcontrollers to restart together.
+    # 12b. The Power Supply will leave Bootload Mode and change its PMBus address back to the address for Normal Operation.
+    # 12c. After restart, the power supply will begin to deliver power again.
     time.sleep(2)
     # 13. To confirm the Power Supply is running upgraded firmware, send the READ_MFG_FW_REVISION command.
     new_fw_rev = read_murata_fw_revision(i2c_bus, i2c_addr, primary)
     print(new_fw_rev)
-    
+
     if new_fw_rev != current_fw_rev:
         print("FW Update successful.")
         exit(0)
@@ -353,6 +353,7 @@ def detect_address_60(i2c_bus, proceed):
     else:
         print("proceed update.")
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     required = parser.add_argument_group('required arguments')
@@ -373,7 +374,7 @@ if __name__ == '__main__':
                         const=True, default=False)
     args = parser.parse_args()
 
-    #print('Input args "', args.input_file, args.i2c_bus, args.i2c_addr)
+    # print('Input args "', args.input_file, args.i2c_bus, args.i2c_addr)
     # read_mfr_id(i2c_bus, i2c_adr)
     # read_mfr_model(i2c_bus, i2c_adr)
     # read_mfr_revision(i2c_bus, i2c_adr)
