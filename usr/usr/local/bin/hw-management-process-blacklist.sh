@@ -32,7 +32,7 @@
 
 __default_blacklist="
 ##################################################################################
-# Copyright (c) 2018 - 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 options at24 io_limit=32
 options gpio_ich gpiobase=0
@@ -55,26 +55,31 @@ BLACKLIST_FILE="/etc/modprobe.d/hw-management.conf"
 # Function to process blacklist.
 process_blacklist()
 {
+	# Check if running as root
+	if [ "$(id -u)" != "0" ]; then
+		echo "This script must be run as root" 1>&2
+		exit 1
+	fi
+
 	# Copy all common records to $BLACKLIST_FILE.
 	echo "$__default_blacklist" > $BLACKLIST_FILE
 
 	# Extend with system specific records.
 	case $SKU in
 	HI180)
-		echo blacklist i2c_asf >> $BLACKLIST_FILE
+		# Neither Designware nor ASF I2C controller drivers should be blackisted.
+		# This gurantees that Designware driver is loaded by ACPI before platform driver.
+		# Platform driver relies on the existence of i2c-1 bus created by Designware driver.
+		# Designware is also guaranteed to be loaded before ASF.
+		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
 		;;
 	*)
+		# Blacklist Designware and ASF I2C controller drivers
 		echo blacklist i2c_designware_platform >> $BLACKLIST_FILE
 		echo blacklist i2c_designware_core >> $BLACKLIST_FILE
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		;;
 	esac
-
-	# Check if running as root
-	if [ "$(id -u)" != "0" ]; then
-   		echo "This script must be run as root" 1>&2
-   		exit 1
-	fi
 }
 
 # Process blacklist
