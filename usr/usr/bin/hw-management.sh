@@ -2526,9 +2526,8 @@ n61xxld_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
-	mctp_bus="$n5110_mctp_bus"
-	mctp_addr="$n5110_mctp_addr"
-	ln -sf /dev/i2c-2 /dev/i2c-8
+	mctp_bus=${n61xx_mctp_bus}
+	mctp_addr=${n5110_mctp_addr}
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
