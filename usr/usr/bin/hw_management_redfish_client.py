@@ -372,12 +372,7 @@ class BMCAccessor(object):
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
-    PLATFORM_LEGACY_LIST = {
-        "N5100_LD", "N5101_LD", "N5110_LD", "N5112_LD", "N5113_LD",
-        "N5200_LD", "N5201_LD", "N5210_LD", "N5212_LD", "N5240_LD",
-        "N5300_LD", "N5400_LD", "N5500_LD", "N5503_LD", "N5513_LD",
-        "N5600_LD", "N5700_LD"
-    }
+
 
     def __init__(self):
         # TBD: Token persistency.
@@ -429,7 +424,9 @@ class BMCAccessor(object):
         try:
             with open('/sys/devices/virtual/dmi/id/product_name') as f:
                 platform_name = f.read().strip()
-            if any(p in platform_name.upper() for p in PLATFORM_LEGACY_LIST):
+            # Check if platform contains N5***_LD pattern (where *** are any 3 digits)
+            legacy_pattern = r'N5\d{3}_LD'
+            if re.search(legacy_pattern, platform_name.upper()):
                 pass_len = 13
                 attempt = 1
                 max_attempts = 100
