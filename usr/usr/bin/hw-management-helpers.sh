@@ -203,44 +203,31 @@ find_i2c_bus()
     # Find physical bus number of Mellanox I2C controller. The default
     # number is 1, but it could be assigned to others id numbers on
     # systems with different CPU types.
-    if [ -f $config_path/i2c_bus_offset ]; then
-        i2c_bus_offset=$(< $config_path/i2c_bus_offset)
-        return
-    fi
+	if [ -f $config_path/i2c_bus_offset ]; then
+		i2c_bus_offset=$(< $config_path/i2c_bus_offset)
+		return
+	fi
 
-	case "$ui_tree_sku" in
-	VMOD0021)
-		bus_min=$bmc_i2c_bus_min
-		bus_max=$bmc_i2c_bus_max
-		;;
-	*)
-		bus_min=$i2c_bus_min
-		bus_max=$i2c_bus_max
-		;;
-	esac
+	if i2cdetect -l | grep -q "i2c-mlxcpld"; then
+		mlxcpld_bus=$(i2cdetect -l | grep "i2c-mlxcpld" | awk '{print $1}' | awk -F- '{print $2}')
+		i2c_bus_offset=$((mlxcpld_bus-1))
+		case $sku in
+			HI151|HI156)
+				i2c_bus_offset=$((i2c_bus_offset-2))
+				;;
+			default)
+				;;
+		esac
+	elif i2cdetect -l | grep -q "mux"; then
+		first_mux_bus=$(i2cdetect -l | grep "mux" | head -n 1 | awk '{print $1}' | awk -F- '{print $2}')
+		i2c_bus_offset=$((first_mux_bus-2))
+	else
+		log_err "I2C infrastructure is not created"
+		exit 0
+	fi
 
-    for ((i="$bus_min"; i<"$bus_max"; i++)); do
-        folder=/sys/bus/i2c/devices/i2c-$i
-        if [ -d $folder ]; then
-            name=$(cut $folder/name -d' ' -f 1)
-            if [ "$name" == "i2c-mlxcpld" ]; then
-                i2c_bus_offset=$((i-1))
-                case $sku in
-                    HI151|HI156)
-                        i2c_bus_offset=$((i2c_bus_offset-1))
-                    ;;
-                    default)
-                    ;;
-                esac
-
-                echo $i2c_bus_offset > $config_path/i2c_bus_offset
-                return
-            fi
-        fi
-    done
-
-    log_err "I2C infrastructure is not created"
-    exit 0
+	echo $i2c_bus_offset > $config_path/i2c_bus_offset
+	return
 }
 
 lock_service_state_change()
