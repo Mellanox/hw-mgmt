@@ -833,8 +833,16 @@ set_jtag_gpio()
 			jtag_tdo=89
 			;;
 		$AMD_SNW_CPU)
-			echo 0x2094 > $config_path/jtag_rw_reg
-			echo 0x2095 > $config_path/jtag_ro_reg
+			case $sku in
+			HI180)
+				echo 0x2025 > $config_path/jtag_rw_reg
+				echo 0x2026 > $config_path/jtag_ro_reg
+				;;
+			*)
+				echo 0x2094 > $config_path/jtag_rw_reg
+				echo 0x2095 > $config_path/jtag_ro_reg
+				;;
+			esac
 			;;
 		*)
 			return 0
