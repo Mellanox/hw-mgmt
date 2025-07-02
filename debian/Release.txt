@@ -1,4 +1,35 @@
 ================================================================================
+- V.7.0040.4242
+- Wed, 02 Jul 2025
+--------------------------------------------------------------------------------
+
+- New features
+    o #4458180, hw-mgmgt: scripts: Add cpld registers dump to cyclic rotating log file, ebdfa2a
+
+- Bug fixes
+    o #4486391, hw-mgmt: kernel: patch: Modify reset cause add leak attributes for NVL systems family, 1c4e2f3
+    o #4502817, hw-mgmt: thermal: TC fix module periodic report log, 2a423ec
+    o #4499238, hw-mgmt: thermal: thermal control fix misprint in config load fuction, a3b3027
+    o #4494119, hw-mgmt: scripts: Fix module temperature sync conflict in SW mode, 16f5cf8
+    o #4491046, hw-mgmt: scripts: Adjust the check of usb0 interface configuration, bee3ae7
+    o #4472264, hw-mgmt: scripts: Fix the check for usb0 interface configuration, f453d2b
+    o #4486155, hw-mgmgt: scripts: Fix FAN debounce function error, 7407696
+
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4242/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0040.4241
 - Wed, 25 Jun 2025
 --------------------------------------------------------------------------------
