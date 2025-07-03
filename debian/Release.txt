@@ -1,4 +1,24 @@
 ================================================================================
+- V.7.0040.2303
+- Thu, 03 Jul 2025
+--------------------------------------------------------------------------------
+
+- Bug fixes
+
+    #4512069 [Bobcat] Invalid GPIO 0 error after boot
+    #4506153 Integrate HW-MGMT Version 7.0040.4016 CONFIG_ conflict
+
+    o For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator"
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0040.2302
 - Wed, 18 Jun 2025
 --------------------------------------------------------------------------------
