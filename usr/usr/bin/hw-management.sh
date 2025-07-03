@@ -2485,6 +2485,8 @@ sn5640_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 	echo 0 > "$config_path"/labels_ready
+	echo 10 > "$config_path"/fan_steady_state_delay
+	echo 50 > "$config_path"/fan_steady_state_pwm
 }
 
 system_cleanup_specific()
