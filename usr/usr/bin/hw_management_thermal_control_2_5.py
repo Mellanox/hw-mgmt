@@ -176,6 +176,8 @@ class CONST(object):
     FAN_DRWR_COUNT_DEF = 6
     FAN_TACHO_COUNT_DEF = 6
     MODULE_COUNT_MAX = 128
+    FAN_STEADY_STATE_DELAY = 0
+    FAN_STEADY_STATE_PWM = 50
 
     # Consistent file read  errors for set error state
     SENSOR_FREAD_FAIL_TIMES = 3
@@ -2923,6 +2925,12 @@ class ThermalManagement(hw_management_file_op):
         self.pwm_change_reason = "tc start"
         self.system_flow_dir = CONST.UNKNOWN
 
+        self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_DELAY
+        self.fan_steady_state_pwm = CONST.FAN_STEADY_STATE_PWM
+        self.corner_fans = [1, CONST.FAN_DRWR_COUNT_DEF]
+        self.fan_event_files = {}
+        self.fan_prev_events = {}
+
         if self.check_file(CONST.PERIODIC_REPORT_FILE):
             self.periodic_report_time = int(self.read_file(CONST.PERIODIC_REPORT_FILE))
             self.rm_file(CONST.PERIODIC_REPORT_FILE)
@@ -3062,6 +3070,19 @@ class ThermalManagement(hw_management_file_op):
 
         if self.fan_drwr_num:
             self.fan_drwr_capacity = int(self.max_tachos / self.fan_drwr_num)
+
+        # Platform specific delay and pwm values for fan re-insertion
+        self.fan_steady_state_delay = self._get_fan_steady_state_delay()
+        self.fan_steady_state_pwm = self._get_fan_steady_state_pwm()
+
+        # Identify the current fan events
+        self.corner_fans = [1, self.fan_drwr_num]
+        for fan_idx in self.corner_fans:
+            self.fan_event_files[fan_idx] = "events/fan{}".format(fan_idx)
+
+        # Read the current availability of corner fans
+        for fan_idx in self.fan_event_files:
+            self.fan_prev_events[fan_idx] = int(self.read_file(self.fan_event_files[fan_idx]))
 
         # Collect PSU sensors
         try:
@@ -3451,6 +3472,64 @@ class ThermalManagement(hw_management_file_op):
             except:
                 self.log("Unaplicable pwm:{} for:{}".format(val, key))
         return pwm_max, name
+
+    # ----------------------------------------------------------------------
+    def _get_fan_steady_state_delay(self):
+        """
+        """
+        val = CONST.FAN_STEADY_STATE_DELAY
+        fan_delay_filename = "config/fan_steady_state_delay"
+        if not self.check_file(fan_delay_filename):
+            self.log.info("Missing file: {}".format(fan_delay_filename))
+        else:
+            try:
+                val = int(self.read_file(fan_delay_filename))
+            except BaseException:
+                self.log.error("Value reading from file: {}".format(fan_delay_filename))
+        return val
+
+    # ----------------------------------------------------------------------
+    def _get_fan_steady_state_pwm(self):
+        """
+        """
+        val = CONST.FAN_STEADY_STATE_PWM
+        fan_start_pwm_filename = "config/fan_steady_state_pwm"
+        if not self.check_file(fan_start_pwm_filename):
+            self.log.info("Missing file: {}".format(fan_start_pwm_filename))
+        else:
+            try:
+                val = int(self.read_file(fan_start_pwm_filename))
+            except BaseException:
+                self.log.error("Value reading from file: {}".format(fan_start_pwm_filename))
+        return val
+
+    # ----------------------------------------------------------------------
+    def check_for_corner_fan_insertion(self):
+        """
+        @summary: Check if the newly inserted fan is located in a corner.
+        @param:   None
+        @return:  Return True if it's a corner fan, False otherwise.
+        """
+
+        tacho_1_fault = 0
+        tacho_2_fault = 0
+        if not self.fan_steady_state_delay:
+            return False
+        for fan_idx, file_path in self.fan_event_files.items():
+            new_fan_event = int(self.read_file(self.fan_event_files[fan_idx]))
+            # Detect transition from '0' (removed) to '1' (inserted)
+            if self.fan_prev_events[fan_idx] == 0 and new_fan_event == 1:
+                self.fan_prev_events[fan_idx] = new_fan_event
+                if self.max_tachos == self.fan_drwr_num:
+                    tacho_1_fault = int(self.read_file("thermal/fan{}_fault".format(fan_idx)))
+                else:
+                    fan_tacho_idx = 2 * fan_idx
+                    tacho_1_fault = int(self.read_file("thermal/fan{}_fault".format(fan_tacho_idx - 1)))
+                    tacho_2_fault = int(self.read_file("thermal/fan{}_fault".format(fan_tacho_idx)))
+                if tacho_1_fault == 1 or tacho_2_fault == 1:
+                    return True
+            self.fan_prev_events[fan_idx] = new_fan_event
+        return False
 
     # ----------------------------------------------------------------------
     def is_pwm_exists(self):
@@ -3934,6 +4013,16 @@ class ThermalManagement(hw_management_file_op):
                 self.stop(reason="Missing FANs")
                 self.exit.wait(5)
                 continue
+
+            if self.check_for_corner_fan_insertion():
+                self._set_emergency_pwm(self.fan_steady_state_pwm)
+                self.log.notice("Corner fan insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), 1)
+                self.log.info("Waiting {}s for newly inserted fan to stabilize".format(self.fan_steady_state_delay))
+                timeout = current_milli_time() + 1000 * self.fan_steady_state_delay
+                while timeout > current_milli_time():
+                    self.exit.wait(2)
+                self.log.info("Resuming normal operation: Setting pwm back to {}%".format(pwm))
+                self._set_emergency_pwm(pwm)
 
             if not self.is_pwm_exists():
                 self.stop(reason="Missing PWM")
