@@ -97,6 +97,9 @@ class CONST(object):
     SYS_CONF_REDUNDANCY_PARAM = "redundancy"
     SYS_CONF_GENERAL_CONFIG_PARAM = "general_config"
     SYS_CONF_PWM_UPDATE_PERIOD_PARAM = "pwm_update_period"
+    SYS_CONF_FAN_STEADY_STATE_DELAY = "fan_steady_state_delay"
+    SYS_CONF_FAN_STEADY_STATE_PWM = "fan_steady_state_pwm"
+    SYS_CONF_FAN_STEADY_CORNER_ITEMS = "corner_fans"
 
     # *************************
     # Folders definition
@@ -212,6 +215,10 @@ class CONST(object):
     VAL_AVG_SMA = 2
     # weighted moving average
     VAL_AVG_WMA = 3
+
+    # corner fan insertion recovery defaults
+    FAN_STEADY_STATE_DELAY_DEF = 0
+    FAN_STEADY_STATE_PWM_DEF = 50
 
 """
 Default sensor  configuration.
@@ -2304,8 +2311,12 @@ class fan_sensor(system_device):
         self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
         self.pwm_set = self.read_pwm(CONST.PWM_MIN)
-
         self.rpm_valid_state = True
+
+        self.insert_status = 0
+        self.insert_event_ts = 0
+        self.insert_failed = False
+        self.insert_event = False
 
     # ----------------------------------------------------------------------
     def sensor_configure(self):
@@ -2324,6 +2335,11 @@ class fan_sensor(system_device):
         self.drwr_param = self._get_fan_drwr_param()
         self.fan_shutdown(False)
         self.pwm_set = self.read_pwm(CONST.PWM_MIN)
+
+        self.insert_status = 0
+        self.insert_event_ts = 0
+        self.insert_failed = False
+        self.insert_event = False
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -2386,6 +2402,42 @@ class fan_sensor(system_device):
             except BaseException:
                 self.log.error("Value reading from file: {}".format(status_filename))
         return status
+
+    # ----------------------------------------------------------------------
+    def update_insert_state(self):
+        """
+        @summary: Update insert state
+        """
+        status = self._get_status()
+        if status:
+            if not self.insert_status:
+                self.insert_event_ts = self.get_timestump()
+                self.insert_event = True
+        else:
+            self.insert_event = 0
+            self.insert_failed = False
+        self.insert_status = status
+        
+    # ----------------------------------------------------------------------
+    def is_insert_failed(self):
+        """
+        @summary: Check if insert failed
+        """
+        if self.insert_event:
+            if self.insert_event_ts  + CONST.FAN_RELAX_TIME * 1000 <= self.get_timestump():
+                fan_fault_list = self._get_fault()
+                if any(x == 1 for x in fan_fault_list):
+                    self.insert_failed = True
+                self.insert_event = False 
+        
+        return self.insert_failed;
+
+    # ----------------------------------------------------------------------
+    def reset_insert_failed_state(self):
+        """
+        @summary: Reset insert failed state
+        """
+        self.insert_failed = False
 
     # ----------------------------------------------------------------------
     def _get_fault(self):
@@ -2959,6 +3011,18 @@ class ThermalManagement(hw_management_file_op):
                 self.exit.wait(10)
             self.log.notice("PWM control activated", 1)
 
+        self.corner_fans_lst = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_CORNER_ITEMS])
+        if self.corner_fans_lst:            
+            self.fan_steady_state_delay = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_STATE_DELAY])
+            if not self.fan_steady_state_delay:
+                self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_DELAY_DEF
+            self.fan_steady_state_pwm = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_STATE_PWM])
+            if not self.fan_steady_state_pwm:
+                self.fan_steady_state_delay = CONST.FAN_STEADY_STATE_PWM_DEF
+            self.log.info("Fan {} insertion recovery enabled: delay {}s, pwm {}%".format(self.corner_fans_lst, 
+                                                                                self.fan_steady_state_delay,
+                                                                                self.fan_steady_state_pwm))
+
         pwm_update_period = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_PWM_UPDATE_PERIOD_PARAM])
         if pwm_update_period:
             self.pwm_worker_poll_time = pwm_update_period
@@ -3219,6 +3283,30 @@ class ThermalManagement(hw_management_file_op):
 
         return pref_dir
 
+    # ---------------------------------------------------------------------
+    def _is_corner_fan_insertion_fail(self):
+        fan_insert_failed = False
+        for fan_obj in self.corner_fans:
+            fan_obj.update_insert_state()
+            if fan_obj.is_insert_failed():
+                self.log.notice("{} fan not started after insertion".format(fan_obj.name))
+                fan_obj.reset_insert_failed_state()
+                fan_insert_failed = True
+                break
+        return fan_insert_failed
+
+    # ---------------------------------------------------------------------
+    def _corner_fan_insertion_recovery(self):
+        pwm = self.read_pwm(100)
+        self.log.notice("Corner fan not started after insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), 1)
+        self._update_chassis_fan_speed(self.fan_steady_state_pwm, force=True)
+        self.log.info("Waiting {}s for newly inserted fan to stabilize".format(self.fan_steady_state_delay))
+        timeout = current_milli_time() + 1000 * self.fan_steady_state_delay
+        while timeout > current_milli_time():
+            self.exit.wait(1)
+        self.log.info("Resuming normal operation: Setting pwm back to {}%".format(pwm))
+        self._update_chassis_fan_speed(pwm, force=True)
+    
     # ----------------------------------------------------------------------
     def _update_psu_fan_speed(self, pwm):
         """
@@ -3837,6 +3925,16 @@ class ThermalManagement(hw_management_file_op):
 
         self.dev_obj_list.sort(key=lambda x: x.name)
         self.write_file(CONST.PERIODIC_REPORT_FILE, self.periodic_report_time)
+        
+        self.corner_fans = []
+        if self.corner_fans_lst:    
+            for fan_drwr_name in self.corner_fans_lst:
+                    fan_drwr_obj = self._get_dev_obj(fan_drwr_name)
+                    if not fan_drwr_obj:
+                        self.log.warn("Dev name {} missing in system_config".format(fan_drwr_name))
+                        continue
+                    self.corner_fans.append(fan_drwr_obj)
+                    self.log.info("{} added to corner_fans".format(fan_drwr_name))
 
     # ----------------------------------------------------------------------
     def start(self, reason=""):
@@ -3943,6 +4041,11 @@ class ThermalManagement(hw_management_file_op):
             if self._is_i2c_control_with_bmc():
                 self.stop(reason="BMC has taken over i2c bus")
                 self.exit.wait(30)
+                continue
+
+            if self._is_corner_fan_insertion_fail():
+                self.log.info("Corner fan insertion failed, trying to recover")
+                self._corner_fan_insertion_recovery()
                 continue
 
             if self._is_suspend():
