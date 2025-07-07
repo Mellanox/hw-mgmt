@@ -235,15 +235,30 @@ def load_patch_table(path, k_version):
 # ----------------------------------------------------------------------
 
 
+def is_version_greater(v1, v2):
+    def parse_version(v):
+        v = v.replace('v', '')
+        if not v.replace('.', '').isdigit():
+            raise ValueError("Invalid version format: {}".format(v))
+        return list(map(int, v.split('.')))
+
+    parts1 = parse_version(v1)
+    parts2 = parse_version(v2)
+
+    # Pad shorter list with zeros so lengths match
+    max_len = max(len(parts1), len(parts2))
+    parts1.extend([0] * (max_len - len(parts1)))
+    parts2.extend([0] * (max_len - len(parts2)))
+
+    return parts1 >= parts2
+
+# ----------------------------------------------------------------------
+
+
 def copy_to_accepted_filter(patch, accepted_folder, candidate_folder, kver):
     ret = accepted_folder
     if patch[CONST.SUBVERSION]:
-        patch_kver_lst = patch[CONST.SUBVERSION].split('.')
-        target_kver_lst = kver.split('.')
-        if len(patch_kver_lst) != 3:
-            print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-            ret = None
-        elif int(patch_kver_lst[2]) <= int(target_kver_lst[2]):
+        if is_version_greater(kver, patch[CONST.SUBVERSION]):
             ret = None
     patch[CONST.PATCH_DST] = CONST.PATCH_ACCEPTED
     return ret
@@ -254,12 +269,7 @@ def copy_to_accepted_filter(patch, accepted_folder, candidate_folder, kver):
 def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
     ret = candidate_folder
     if patch[CONST.SUBVERSION]:
-        patch_kver_lst = patch[CONST.SUBVERSION].split('.')
-        target_kver_lst = kver.split('.')
-        if len(patch_kver_lst) != 3:
-            print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-            ret = None
-        elif int(patch_kver_lst[2]) <= int(target_kver_lst[2]):
+        if is_version_greater(kver, patch[CONST.SUBVERSION]):
             ret = None
     patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return ret
@@ -268,13 +278,9 @@ def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
 
 
 def copy_to_accepted_ver_filter(patch, accepted_folder, candidate_folder, kver):
-    ret = None
-    patch_kver_lst = patch[CONST.SUBVERSION].split('.')
-    target_kver_lst = kver.split('.')
-    if len(patch_kver_lst) != 3:
-        print("Err: patch {} subversion {} not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-    elif int(patch_kver_lst[2]) > int(target_kver_lst[2]):
-        ret = accepted_folder
+    ret = candidate_folder
+    if is_version_greater(kver, patch[CONST.SUBVERSION]):
+        ret = None
     patch[CONST.PATCH_DST] = CONST.PATCH_ACCEPTED
     return ret
 
@@ -282,13 +288,9 @@ def copy_to_accepted_ver_filter(patch, accepted_folder, candidate_folder, kver):
 
 
 def copy_to_candidate_ver_filter(patch, accepted_folder, candidate_folder, kver):
-    ret = None
-    patch_kver_lst = patch[CONST.SUBVERSION].split('.')
-    target_kver_lst = kver.split('.')
-    if len(patch_kver_lst) != 3:
-        print("Err: patch {} subversion \"{}\" not in x.xx.xxx format".format(patch[CONST.PATCH_NAME], patch[CONST.SUBVERSION]))
-    elif patch_kver_lst[2] > target_kver_lst[2]:
-        ret = candidate_folder
+    ret = candidate_folder
+    if is_version_greater(kver, patch[CONST.SUBVERSION]):
+        ret = None
     patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return ret
 
