@@ -117,6 +117,7 @@ chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=17
+n61xx_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
 minimal_unsupported=0
@@ -620,11 +621,11 @@ nso_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 	24c02 0x50 50 cable_cartridge2_eeprom)
 
-n6100ld_cartridge_eeprom_connect_table=( \
-	24c02 0x50 64 cable_cartridge1_eeprom \
-	24c02 0x50 65 cable_cartridge2_eeprom \
-	24c02 0x50 66 cable_cartridge3_eeprom \
-	24c02 0x50 67 cable_cartridge4_eeprom)
+n61xxld_cartridge_eeprom_connect_table=( \
+	24c02 0x50 68 cable_cartridge1_eeprom \
+	24c02 0x50 69 cable_cartridge2_eeprom \
+	24c02 0x50 70 cable_cartridge3_eeprom \
+	24c02 0x50 71 cable_cartridge4_eeprom)
 
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
@@ -642,6 +643,7 @@ q3200_named_busses=( asic1 2 asic2 18 pwr 4 vr1 5 vr2 21 fan-amb 6 port-amb 7 vp
 q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 21 vr3 37 vr4 53 fan-amb 6 port-amb 7 vpd 8 )
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
+n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cart1 68 cart2 69 cart3 70 cart4 71 cpu-vr 6 cpu-vpd 0)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 
 ACTION=$1
@@ -2493,13 +2495,14 @@ n61xxld_specific()
 	case $sku in
 	# Rosalind N6100_LD
 	HI180)
-		add_i2c_dynamic_bus_dev_connection_table "${n6100ld_cartridge_eeprom_connect_table[@]}"
-		echo -n "${n6100ld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
+		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
+		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 		echo 4 > $config_path/cartridge_counter
 
-		asic_i2c_buses=(2 18 34 50)
+		asic_i2c_buses=(5 21 37 53)
 		echo 1 > $config_path/global_wp_wait_step
 		echo 20 > $config_path/global_wp_timeout
+		echo 0 > $config_path/i2c_bus_offset
 		lm_sensors_config="$lm_sensors_configs_path/n61xxld_sensors.conf"
 		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
@@ -2508,12 +2511,6 @@ n61xxld_specific()
 		erot_count=1
 		;;
 	esac
-
-	# Add SIMX VPD
-	if check_simx; then
-		echo ${n5110ld_virtual_vpd_connect_table[0]} ${n5110ld_virtual_vpd_connect_table[1]} > \
-		/sys/bus/i2c/devices/i2c-${n5110ld_virtual_vpd_connect_table[2]}/new_device
-	fi
 
 	echo $cpld_num > $config_path/cpld_num
 	echo 0 > $config_path/fan_drwr_num
@@ -2526,14 +2523,13 @@ n61xxld_specific()
 	health_events_count=0
 	pwr_events_count=1
 	minimal_unsupported=1
-	i2c_comex_mon_bus_default=$((cpu_bus_offset+5))
-	i2c_bus_def_off_eeprom_cpu=$((cpu_bus_offset+6))
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
 	lm_sensors_labels="$lm_sensors_configs_path/n61xxld_sensors_labels.json"
-	named_busses+=(${n6110ld_named_busses[@]})
-	add_come_named_busses $cpu_bus_offset
+	named_busses+=(${n61xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
-	echo "$n51xx_reset_attr_num" > $config_path/reset_attr_num
+	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
 	mctp_bus=${n61xx_mctp_bus}
 	mctp_addr=${n5110_mctp_addr}
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
