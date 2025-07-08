@@ -1,4 +1,45 @@
 ================================================================================
+- V.7.0050.1000
+- Thu , 7 July 2025
+--------------------------------------------------------------------------------
+
+- New features
+	o Add support for N5500_LD
+	o Add support for N5503_LD
+	o Add support for N5700_LD
+	o Add support for injection of leakage indication
+	o Add Optimization for Thermal Algorithm
+
+- Bug fixes
+    o #4468363: hw-mgmt:Thermal MSN2700/3700 - Min/Max FANs speed setting in hw-mgmt
+    o #4238116: hw-mgmt:Thermal Asic temp update
+    o #4065992: hw-mgmt:Thermal ASIC1: Invalid temperature data
+    o #4449649: hw-mgmt:Thermal fansX/2 are running below the MIN Speed
+    o #4176785: hw-mgmt:AQ3400 PSU dummy alert when real one plugged in
+
+- Kernel Patches for New Features:
+    o #4486012 3bdec02 hw-mgmt: kernel: patch: Modify reset cause add leak attributes for NVL systems family 
+		recipes-kernel/linux/linux-5.10/9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch
+		recipes-kernel/linux/linux-5.10/9007-platform-mellanox-mlx-platform-Change-register-0x28-.patch
+		recipes-kernel/linux/linux-5.10/9008-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch
+		recipes-kernel/linux/linux-6.1/9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch
+		recipes-kernel/linux/linux-6.1/9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch
+		recipes-kernel/linux/linux-6.1/9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch
+    o #4385404 4486238 Kernel patches: interrupt storm handling patches
+		recipes-kernel/linux/linux-5.10/0308-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch
+		recipes-kernel/linux/linux-6.1/0102-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch
+
+    o For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.1000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0040.4000
 - Thu , 3 Apr 2025
 --------------------------------------------------------------------------------
