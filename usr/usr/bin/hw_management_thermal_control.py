@@ -1636,8 +1636,8 @@ class thermal_module_sensor(system_device):
         """
         status = True
 
-        if self.last_value == 0 and self.val_max == 0 and self.val_min == 0:
-            self.log.debug("Module not supporting temp reading val:{} max:{}".format(self.value, self.val_max))
+        if self.val_max == 0:
+            self.log.debug("{} does not support temp reading max:{}".format(self.name, self.val_max))
             status = False
 
         return status
@@ -1665,13 +1665,25 @@ class thermal_module_sensor(system_device):
                                                                                                                   self.val_min,
                                                                                                                   self.val_max))
                     self.refresh_attr()
-                self.update_value(value)
 
                 if self.get_temp_support_status():
-                    if self.value > self.val_max:
-                        self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
-                    elif self.value < self.val_min:
-                        self.log.debug("{} value {}".format(self.name, self.value))
+                    if self.val_hcrit is not None and value >= self.val_hcrit:
+                        self.log.warn("{} value({}) >= hcrit({})".format(self.name,
+                                                                         value,
+                                                                         self.val_hcrit))
+                        self.fread_err.handle_err(self.file_input)
+                    elif self.val_lcrit is not None and value <= self.val_lcrit:
+                        self.log.warn("{} value({}) <= lcrit({})".format(self.name,
+                                                                         value,
+                                                                         self.val_lcrit))
+                        self.fread_err.handle_err(self.file_input)
+                    else:
+                        self.fread_err.handle_err(self.file_input, reset=True)
+                        self.update_value(value)
+                        if self.value > self.val_max:
+                            self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
+                        elif self.value < self.val_min:
+                            self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
                 self.log.warn("value reading from file: {}".format(self.base_file_name))
                 self.fread_err.handle_err(temp_read_file)
