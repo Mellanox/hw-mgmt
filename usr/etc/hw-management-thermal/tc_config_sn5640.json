@@ -11,7 +11,7 @@
 				"present": {"-127:120": 30},
 				"direction": {"-127:120": 30}
 			},
-			"sensor_read_error" : {"-127:120": 80}
+			"sensor_read_error" : {"-127:120": 70}
 		},
 		"P2C": {
 			"fan_err": {
