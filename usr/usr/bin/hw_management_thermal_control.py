@@ -95,6 +95,7 @@ class CONST(object):
     SYS_CONF_SENSOR_LIST_PARAM = "sensor_list"
     SYS_CONF_ERR_MASK = "error_mask"
     SYS_CONF_REDUNDANCY_PARAM = "redundancy"
+    SYS_CONF_GENERAL_CONFIG_PARAM = "general_config"
 
     # *************************
     # Folders definition
@@ -3307,8 +3308,8 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.info("Dmin mask not defined in system_config. Init it from local")
             sys_config[CONST.SYS_CONF_ERR_MASK] = []
 
-        if CONST.SYS_CONF_REDUNDANCY_PARAM not in sys_config:
-            sys_config[CONST.SYS_CONF_REDUNDANCY_PARAM] = {}
+        if CONST.SYS_CONF_GENERAL_CONFIG_PARAM not in sys_config:
+            sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
 
         self.sys_config = sys_config
 
