@@ -35,19 +35,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-try:
-    import os
-    import sys
-    import time
-    import json
-    import re
-    import pdb
-    import logging
-    import tempfile
+import os
+import sys
+import time
+import json
+import re
+import pdb
+import logging
+import tempfile
 
-    from hw_management_redfish_client import RedfishClient, BMCAccessor
-except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+from hw_management_redfish_client import RedfishClient, BMCAccessor
+
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger("hw_management_sync")
 
 atttrib_list = {
     "HI162": [
@@ -578,7 +578,6 @@ def asic_temp_populate(arg_list, arg):
 
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, _dummy):
-    ''
     fin = arg_list["fin"]
     module_count = arg_list["module_count"]
     offset = arg_list["fout_idx_offset"]
@@ -586,6 +585,7 @@ def module_temp_populate(arg_list, _dummy):
     for idx in range(module_count):
         module_name = "module{}".format(idx+offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
+        f_src_path = fin.format(idx)
         if os.path.islink(f_dst_name):
             # Check if symlink is valid
             real_path = os.readlink(f_dst_name)
@@ -759,9 +759,6 @@ def main():
 
     for attr in sys_attr:
         init_attr(attr)
-
-    logging.basicConfig(level=logging.WARNING)
-    logger = logging.getLogger("hw_management_sync")
 
     while True:
         for attr in sys_attr:
