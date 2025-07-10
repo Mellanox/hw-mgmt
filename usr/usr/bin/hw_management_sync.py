@@ -35,17 +35,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-try:
-    import os
-    import sys
-    import time
-    import json
-    import re
-    import pdb
+import os
+import sys
+import time
+import json
+import re
+import pdb
 
-    from hw_management_redfish_client import RedfishClient, BMCAccessor
-except ImportError as e:
-    raise ImportError(str(e) + "- required module not found")
+from hw_management_redfish_client import RedfishClient, BMCAccessor
 
 atttrib_list = {
     "HI162": [
@@ -519,6 +516,7 @@ def asic_temp_populate(arg_list, arg):
         # If link to asic temperatule already exists - nothing to do
         f_dst_name = "/var/run/hw-management/thermal/{}".format(asic_name)
         if os.path.islink(f_dst_name):
+            # Note: This script should not remove files from filesystem
             continue
 
         # Default temperature values
@@ -576,7 +574,6 @@ def asic_temp_populate(arg_list, arg):
 
 # ----------------------------------------------------------------------
 def module_temp_populate(arg_list, _dummy):
-    ''
     fin = arg_list["fin"]
     module_count = arg_list["module_count"]
     offset = arg_list["fout_idx_offset"]
@@ -585,10 +582,12 @@ def module_temp_populate(arg_list, _dummy):
         module_name = "module{}".format(idx+offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
+            # Note: Symlink validation removed - this script should not remove files from filesystem
             continue
 
         f_src_path = fin.format(idx)
         # If control mode is SW - skip temperature reading (independent mode) 
+        # Note: SW control mode cleanup is handled by another script, not our responsibility
         if is_module_host_management_mode(f_src_path):
             continue
 
@@ -598,7 +597,8 @@ def module_temp_populate(arg_list, _dummy):
         try:
             with open(f_src_present, 'r') as f:
                 module_present = int(f.read().strip())
-        except:
+        except (IOError, OSError, ValueError) as e:
+            # Module present file read failed - module may not be present or file inaccessible
             pass  # Module is not present or file reading failed
 
         # Default temperature values
@@ -629,10 +629,13 @@ def module_temp_populate(arg_list, _dummy):
 
                 temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
 
-            except:
+            except (IOError, OSError, ValueError) as e:
+                # Temperature or threshold file read failed - module may be in error state
                 pass
 
         # Write the temperature data to files
+        # Note: Using direct file writes for performance on embedded system
+        # This script is the only one touching these files, so no race conditions exist
         file_paths = {
             "_temp_input": temperature,
             "_temp_crit": temperature_crit,
@@ -647,6 +650,7 @@ def module_temp_populate(arg_list, _dummy):
                 f.write("{}\n".format(value))
         module_updated = True
 
+    # Only update module counter if modules were actually updated
     if module_updated:
         with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
             f.write("{}\n".format(module_count))
