@@ -58,7 +58,7 @@ import types
 import importlib.util
 
 # Mock the hw_management_redfish_client module
-mock_spec = importlib.util.spec_from_file_location("hw_management_redfish_client", "tests/mock_hw_management_redfish_client.py")
+mock_spec = importlib.util.spec_from_file_location("hw_management_redfish_client", "unittest/mock_hw_management_redfish_client.py")
 mock_mod = importlib.util.module_from_spec(mock_spec)
 mock_spec.loader.exec_module(mock_mod)
 sys.modules["hw_management_redfish_client"] = mock_mod
