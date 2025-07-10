@@ -42,6 +42,8 @@ try:
     import json
     import re
     import pdb
+    import logging
+    import tempfile
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
 except ImportError as e:
@@ -585,11 +587,29 @@ def module_temp_populate(arg_list, _dummy):
         module_name = "module{}".format(idx+offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
-            continue
+            # Check if symlink is valid
+            real_path = os.readlink(f_dst_name)
+            if not os.path.exists(real_path):
+                try:
+                    os.remove(f_dst_name)
+                    logger.warning(f"Removed invalid symlink: {f_dst_name} -> {real_path}")
+                except (IOError, OSError) as e:
+                    logger.warning(f"Failed to remove invalid symlink {f_dst_name}: {e}")
+            else:
+                continue
 
-        f_src_path = fin.format(idx)
         # If control mode is SW - skip temperature reading (independent mode) 
         if is_module_host_management_mode(f_src_path):
+            # Remove temperature files if they exist
+            temp_suffixes = ["_temp_input", "_temp_crit", "_temp_emergency", "_temp_fault", "_temp_trip_crit"]
+            for suffix in temp_suffixes:
+                f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
+                try:
+                    if os.path.exists(f_name):
+                        os.remove(f_name)
+                        logger.warning(f"Removed stale temperature file for SW control mode: {f_name}")
+                except (IOError, OSError) as e:
+                    logger.warning(f"Failed to remove temperature file {f_name}: {e}")
             continue
 
         # Check if module is present
@@ -598,7 +618,8 @@ def module_temp_populate(arg_list, _dummy):
         try:
             with open(f_src_present, 'r') as f:
                 module_present = int(f.read().strip())
-        except:
+        except (IOError, OSError, ValueError) as e:
+            logger.warning(f"Failed to read module present file {f_src_present}: {e}")
             pass  # Module is not present or file reading failed
 
         # Default temperature values
@@ -629,7 +650,8 @@ def module_temp_populate(arg_list, _dummy):
 
                 temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
 
-            except:
+            except (IOError, OSError, ValueError) as e:
+                logger.warning(f"Failed to read temperature or threshold file for {f_src_path}: {e}")
                 pass
 
         # Write the temperature data to files
@@ -643,13 +665,27 @@ def module_temp_populate(arg_list, _dummy):
 
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
-            with open(f_name, 'w', encoding="utf-8") as f:
-                f.write("{}\n".format(value))
+            try:
+                dir_name = os.path.dirname(f_name)
+                with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False, encoding="utf-8") as tf:
+                    tf.write("{}\n".format(value))
+                    temp_name = tf.name
+                os.replace(temp_name, f_name)
+            except (IOError, OSError) as e:
+                logger.warning(f"Failed to write temperature file {f_name}: {e}. Writing fallback value.")
+                try:
+                    dir_name = os.path.dirname(f_name)
+                    with tempfile.NamedTemporaryFile('w', dir=dir_name, delete=False, encoding="utf-8") as tf:
+                        tf.write("N/A\n")
+                        temp_name = tf.name
+                    os.replace(temp_name, f_name)
+                except Exception as e2:
+                    logger.error(f"Failed to write fallback value to {f_name}: {e2}")
         module_updated = True
 
-    if module_updated:
-        with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
-            f.write("{}\n".format(module_count))
+    # Always update the module counter file, even if no modules were updated
+    with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
+        f.write("{}\n".format(module_count))
     return
 
 # ----------------------------------------------------------------------
@@ -723,6 +759,9 @@ def main():
 
     for attr in sys_attr:
         init_attr(attr)
+
+    logging.basicConfig(level=logging.WARNING)
+    logger = logging.getLogger("hw_management_sync")
 
     while True:
         for attr in sys_attr:
