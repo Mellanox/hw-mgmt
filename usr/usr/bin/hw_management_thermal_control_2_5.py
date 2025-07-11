@@ -587,6 +587,21 @@ class Logger(object):
     """
     Logger class provide functionality to log messages.
     It can log to several places in parallel
+
+    Level       When to Use
+
+    DEBUG   For detailed diagnostic info. Only useful for developers 
+                during debugging.
+
+    INFO    For normal runtime events. High-level messages showing the 
+                system is working as expected. 
+
+    NOTICE  For important but non-critical events. More significant than `INFO`,
+                but not a problem.
+
+    WARNING For unexpected events that *didn`t* cause a failure, but might. 
+
+    ERROR   For serious issues that caused part of the system to fail. 
     """
 
     def __init__(self, use_syslog=False, log_file=None, verbosity=20):
@@ -597,15 +612,16 @@ class Logger(object):
             value 1-enable/0-disable
         @param log_file: log to user specified file. Set '' if no log needed
         """
-        self.logger = None
         logging.basicConfig(level=logging.DEBUG)
         logging.addLevelName(logging.INFO + 5, "NOTICE")
         SysLogHandler.priority_map["NOTICE"] = "notice"
+
         self.logger = logging.getLogger("main")
         self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
         self.logger_fh = None
         self.logger_emit = True
+        self.syslog_hash = {}    # hash array of the message and count of message display in syslog
 
         self.set_param(use_syslog, log_file, verbosity)
 
@@ -641,7 +657,7 @@ class Logger(object):
             facility = SysLogHandler.LOG_SYSLOG
             try:
                 syslog_handler = SysLogHandler(address=address, facility=facility)
-                syslog_handler.setLevel(logging.INFO + 5)
+                syslog_handler.setLevel(logging.INFO)
 
                 syslog_handler.setFormatter(logging.Formatter("hw-management-tc: %(levelname)s - %(message)s"))
                 syslog_handler.addFilter(SyslogFilter("syslog"))
@@ -686,95 +702,194 @@ class Logger(object):
             return
         self.logger_emit = False
 
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
+        msg_prefix = "@syslog " if syslog else ""
         try:
-            if self.logger:
-                self.logger.debug(msg_prefix + msg)
-        except BaseException:
+            self.logger.debug(msg_prefix + msg)
+        except (IOError, OSError, ValueError) as e:
             pass
-        self.logger_emit = True
+        finally:
+            self.logger_emit = True
 
-    def info(self, msg="", syslog=0):
+    def info(self, msg="", id=None, repeat=0):
         """
         @summary:
-            Log "info" message.
-        @param msg: message to save to log
+            Log "info" message to tc_log and syslog.
+            Always log message to tc_log.
+            if repeat is not 0 log message to syslog only repeat times.
+                if id == None just print syslog
+                if id != None then store meaasge for log start/stop event
+            if repeat is 0 stop syslog emmit
+                if id == None stop syslog emmit
+                if id != None syslog emmit log with "finish message"
+        @param msg: message to log
+        @param id: id used as key for message display in syslog calculation
+        @param repeat: max count of the message to display in syslog
         """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
+        msg, syslog_emit = self.push_syslog(msg, id, repeat)
 
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
+        if msg:
+            if not self.logger_emit:
+                return
+            self.logger_emit = False
+
+            msg_prefix = "@syslog " if syslog_emit else ""
+            try:
                 self.logger.info(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
+            except (IOError, OSError, ValueError) as e:
+                pass
+            finally:
+                self.logger_emit = True
 
-    def notice(self, msg="", syslog=0):
+    def notice(self, msg="", id=None, repeat=0):
         """
         @summary:
-            Log "notice" message.
-        @param msg: message to save to log
+            Log "notice" message to tc_log and syslog.
+            Always log message to tc_log.
+            if repeat is not 0 log message to syslog only repeat times.
+                if id == None just print syslog
+                if id != None then store meaasge for log start/stop event
+            if repeat is 0 stop syslog emmit
+                if id == None stop syslog emmit
+                if id != None syslog emmit log with "finish message"
+        @param msg: message to log
+        @param id: id used as key for message display in syslog calculation
+        @param repeat: max count of the message to display in syslog
         """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
+        msg, syslog_emit = self.push_syslog(msg, id, repeat)
 
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
+        if msg:
+            if not self.logger_emit:
+                return
+            self.logger_emit = False
+
+            msg_prefix = "@syslog " if syslog_emit else ""
+            try:
                 self.logger.log(logging.INFO + 5, msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
+            except (IOError, OSError, ValueError) as e:
+                pass
+            finally:
+                self.logger_emit = True
 
-    def warn(self, msg="", syslog=0):
+    def warn(self, msg="", id=None, repeat=0):
         """
         @summary:
-            Log "warn" message.
-        @param msg: message to save to log
+            Log "warn" message to tc_log and syslog.
+            Always log message to tc_log.
+            if repeat is not 0 log message to syslog only repeat times.
+                if id == None just print syslog
+                if id != None then store meaasge for log start/stop event
+            if repeat is 0 stop syslog emmit
+                if id == None stop syslog emmit
+                if id != None syslog emmit log with "finish message"
+        @param msg: message to log
+        @param id: id used as key for message display in syslog calculation
+        @param repeat: max count of the message to display in syslog
         """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
+        msg, syslog_emit = self.push_syslog(msg, id, repeat)
 
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
+        if msg:
+            if not self.logger_emit:
+                return
+            self.logger_emit = False
+
+            msg_prefix = "@syslog " if syslog_emit else ""
+            try:
                 self.logger.warning(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
+            except (IOError, OSError, ValueError) as e:
+                pass
+            finally:
+                self.logger_emit = True
 
-    def error(self, msg="", syslog=0):
+    def error(self, msg="", id=None, repeat=0):
+        """
+        @summary: Log "error" message to tc_log and syslog.
+        @param msg: message to log
+        @param id: id used as key for message display in syslog calculation
+        @param repeat: max count of the message to display in syslog
+
+        @description
+            Always log message to tc_log.
+            if repeat is not 0 log message to syslog only 'repeat' times.
+                if id == None just print syslog
+                if id != None then store meaasge for log start/stop event
+            if 'repeat' is 0 stop syslog emmit
+                if id == None stop syslog emmit and remove message from hash
+                if id != None syslog emmit log with "finish message"
+        """
+        msg, syslog_emit = self.push_syslog(msg, id, repeat)
+
+        if msg:
+            if not self.logger_emit:
+                return
+            self.logger_emit = False
+
+            msg_prefix = "@syslog " if syslog_emit else ""
+            try:
+                self.logger.error(msg_prefix + msg)
+            except (IOError, OSError, ValueError) as e:
+                pass
+            finally:
+                self.logger_emit = True
+
+    def critical(self, msg=""):
         """
         @summary:
-            Log "error" message.
-        @param msg: message to save to log
+            Log "critical" message to tc_log and syslog.
+        @param msg: message to log
         """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
+        if msg:
+            if not self.logger_emit:
+                return
+            self.logger_emit = False
+            
+            try:
+                self.logger.critical("@syslog " + msg)
+            except (IOError, OSError, ValueError) as e:
+                pass
+            finally:
+                self.logger_emit = True
 
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
-                self.logger.error(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
+
+    def push_syslog(self, msg="", id=None, repeat=0):
+        """
+        @summary:
+        @param msg: message to save to log
+        @param id: id used as key for message display in syslog calculation
+        @param repeat: max count of the message to display in syslog
+        @return: message to log, syslog_emit flag
+        """
+
+        syslog_emit = False
+        id_hash = hash(id) if id else None
+
+        if repeat > 0:
+            syslog_emit = True
+            if id_hash:
+                if id_hash in self.syslog_hash:
+                    self.syslog_hash[id_hash]["count"] += 1
+                    self.syslog_hash[id_hash]["msg"] = msg
+                else:
+                    self.syslog_hash[id_hash] = {"count": 1, "msg": msg}
+
+                if self.syslog_hash[id_hash]["count"] > 1:
+                    msg = msg + " (repeated {} times)".format(self.syslog_hash[id_hash]["count"])
+
+                if self.syslog_hash[id_hash]["count"] > repeat:
+                    syslog_emit = False
+        else:
+            # message in hash - print to syslog last time
+            if id_hash in self.syslog_hash:
+                # new mesage not defined - use message from hash
+                if not msg:
+                    msg = self.syslog_hash[id_hash]["msg"]
+                    # add "finalization" mark to message
+                    if self.syslog_hash[id_hash]["count"]:
+                        msg = msg + " (clear)"
+
+                # remove message from hash
+                del self.syslog_hash[id_hash]
+                syslog_emit = True
+        return msg, syslog_emit
 
 
 class RepeatedTimer(object):
@@ -1123,10 +1238,13 @@ class iterate_err_counter():
                 err_cnt = 1
 
             if print_log and err_cnt < err_level:
-                self.log.warn("{}: {} error {} times".format(self.name, err_name, err_cnt))
+                self.log.warn("{}: {} error".format(self.name, err_name),
+                              id="{} error {}".format(self.name, err_name),
+                              repeat=3)
         else:
             if err_cnt and err_cnt != 0 and print_log:
-                self.log.notice("{}: {} OK".format(self.name, err_name))
+                self.log.info("{}: {} read recovered".format(self.name, err_name),
+                              id="{} error {}".format(self.name, err_name))
             err_cnt = 0
         self.err_counter_dict[err_name] = err_cnt
 
@@ -1141,7 +1259,9 @@ class iterate_err_counter():
             if val >= self.err_max:
                 # to reduse log: print err message first 5 times and then only each 10's message
                 if val <= (self.err_max + 5) or divmod(val, 100)[1] == 0:
-                    self.log.error("{}: err on {} count {}".format(self.name, key, val))
+                    self.log.error("{}: {} read error".format(self.name, key),
+                                   id="{} error {}".format(self.name, key),
+                                   repeat=1)
                 err_keys.append(key)
         return err_keys
 
@@ -1394,10 +1514,10 @@ class system_device(hw_management_file_op):
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         if not self.validate_sensor_param("val_min", self.val_min):
-            self.log.error("{}: val_min incorect value ({})".format(self.name, self.val_min), 1)
+            self.log.critical("{}: val_min incorrect value ({})".format(self.name, self.val_min))
             raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
         if not self.validate_sensor_param("pwm_max", self.pwm_max):
-            self.log.error("{}: pwm_max incorect value ({})".format(self.name, self.pwm_max), 1)
+            self.log.critical("{}: pwm_max incorrect value ({})".format(self.name, self.pwm_max))
             raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
 
         self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
@@ -1629,7 +1749,7 @@ class system_device(hw_management_file_op):
         @summary: Validate sensor parameter value
         """
         if not isinstance(param_value, (int, float)):
-            self.log.error("{}: {} value({}) is not a number".format(self.name, param_name, param_value), 1)
+            self.log.notice("{}: {} value({}) is not a number".format(self.name, param_name, param_value))
             return False
         param_value = float(param_value)
         for sensor_name_mask, sensor_param_list in SENSOR_PARAM_RANGE.items():
@@ -1638,7 +1758,7 @@ class system_device(hw_management_file_op):
                     param_value_range = sensor_param_list[param_name]
                     if "min" in param_value_range:
                         if param_value < param_value_range["min"]:
-                            self.log.info("{}: {} value({}) is out of range({}-{})".format(self.name,
+                            self.log.notice("{}: {} value({}) is out of range({}-{})".format(self.name,
                                                                                            param_name,
                                                                                            param_value,
                                                                                            param_value_range["min"],
@@ -1646,7 +1766,7 @@ class system_device(hw_management_file_op):
                             return False
                     if "max" in param_value_range:
                         if param_value > param_value_range["max"]:
-                            self.log.info("{}: {} value({}) is out of range({}-{})".format(self.name,
+                            self.log.notice("{}: {} value({}) is out of range({}-{})".format(self.name,
                                                                                            param_name,
                                                                                            param_value,
                                                                                            param_value_range["min"],
@@ -1844,34 +1964,41 @@ class thermal_sensor(system_device):
         """
         pwm = self.pwm_min
         value = self.value
-        if not self.check_file(self.file_input):
-            self.log.info("Missing file: {}".format(self.file_input))
-            self.fread_err.handle_err(self.file_input)
+        val_read_file = self.file_input
+        if not self.check_file(val_read_file):
+            self.log.warn("{} Missing file: {}".format(self.name, val_read_file))
+            self.fread_err.handle_err(val_read_file)
         else:
             try:
-                value = self.read_file_float(self.file_input, self.scale)
-                if self.val_hcrit is not None and value >= self.val_hcrit:
-                    self.log.warn("{} value({}) >= hcrit({})".format(self.name,
-                                                                     value,
-                                                                     self.val_hcrit))
-                    self.fread_err.handle_err(self.file_input)
-                elif self.val_lcrit is not None and value <= self.val_lcrit:
-                    self.log.warn("{} value({}) <= lcrit({})".format(self.name,
-                                                                     value,
-                                                                     self.val_lcrit))
-                    self.fread_err.handle_err(self.file_input)
+                value = self.read_file_float(val_read_file, self.scale)
+                if ((self.val_hcrit is not None and value >= self.val_hcrit) or
+                    (self.val_lcrit is not None and value <= self.val_lcrit)):
+                    self.log.error("{} value({}) not in range (lcrit:{}..hcrit:{})".format(
+                                                                                    self.name,
+                                                                                    value,
+                                                                                    self.val_lcrit,
+                                                                                    self.val_hcrit),
+                                    id="{} not in lcrit..hcrit".format(self.name), 
+                                    repeat=1)
+                    self.fread_err.handle_err(val_read_file)
                 else:
-                    self.fread_err.handle_err(self.file_input, reset=True)
+                    self.log.info(None, id="{} not in lcrit..hcrit".format(self.name))
+                    self.fread_err.handle_err(val_read_file, reset=True)
                     self.update_value(value)
                     if self.value > self.val_max:
-                        self.log.warn("{} value({}) > max({})".format(self.name,
-                                                                      self.value,
-                                                                      self.val_max))
-                    elif self.value < self.val_min:
-                        self.log.debug("{} value {}".format(self.name, self.value))
+                        self.log.warn("{} value({}) > ({})".format(self.name, self.value, self.val_max),
+                                    id="{} value > max".format(self.name),
+                                    repeat=1)
+                    else:
+                        self.log.info(None, id="{} value > max".format(self.name))
+
+                    if self.value < self.val_min:
+                            self.log.debug("{} value({}) < min({})".format(self.name,
+                                                                           self.value,
+                                                                           self.val_min))
             except BaseException:
-                self.log.warn("Wrong value reading from file: {}".format(self.file_input))
-                self.fread_err.handle_err(self.file_input)
+                self.log.warn("{}: Wrong value reading from file: {}".format(self.name, val_read_file))
+                self.fread_err.handle_err(val_read_file)
 
         self.pwm_regulator.tick(self.value)
         self.pwm = self.pwm_regulator.get_pwm()
@@ -1926,19 +2053,19 @@ class thermal_module_sensor(system_device):
         self.pwm_min = float(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = float(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         if not self.validate_sensor_param("pwm_min", self.pwm_min):
-            self.log.error("{}: pwm_min incorect value ({})".format(self.name, self.pwm_min), 1)
+            self.log.critical("{}: pwm_min incorrect value ({})".format(self.name, self.pwm_min))
             raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
         if not self.validate_sensor_param("pwm_max", self.pwm_max):
-            self.log.error("{}: pwm_max incorect value ({})".format(self.name, self.pwm_max), 1)
+            self.log.critical("{}: pwm_max incorrect value ({})".format(self.name, self.pwm_max))
             raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
 
         self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
         self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
         if not self.validate_sensor_param("val_min_offset", self.val_min_offset):
-            self.log.error("{}: val_min_offset incorect value ({})".format(self.name, self.val_min_offset), 1)
+            self.log.critical("{}: val_min_offset incorrect value ({})".format(self.name, self.val_min_offset))
             raise ValueError("Incorrect value of val_min_offset {}".format(self.val_min_offset))
         if not self.validate_sensor_param("val_max_offset", self.val_max_offset):
-            self.log.error("{}: val_max_offset incorect value ({})".format(self.name, self.val_max_offset), 1)
+            self.log.critical("{}: val_max_offset incorrect value ({})".format(self.name, self.val_max_offset))
             raise ValueError("Incorrect value of val_max_offset {}".format(self.val_max_offset))
 
         self.refresh_attr()
@@ -1980,15 +2107,15 @@ class thermal_module_sensor(system_device):
         """
         pwm = self.pwm_min
 
-        temp_read_file = "thermal/{}".format(self.file_input)
-        if not self.check_file(temp_read_file):
-            self.log.info("Missing file: {}.".format(temp_read_file))
-            self.fread_err.handle_err(temp_read_file)
+        val_read_file = "thermal/{}".format(self.file_input)
+        if not self.check_file(val_read_file):
+            self.log.warn("{} Missing file: {}".format(self.name, val_read_file))
+            self.fread_err.handle_err(val_read_file)
         else:
             try:
-                value = self.read_file_float(temp_read_file, self.scale)
+                value = self.read_file_float(val_read_file, self.scale)
                 self.log.debug("{} value:{}".format(self.name, value))
-                self.fread_err.handle_err(temp_read_file, reset=True)
+                self.fread_err.handle_err(val_read_file, reset=True)
                 # handle case if cable was replsed by the other cable with the sensor
                 if value != 0 and self.val_min == 0 and self.val_max == 0:
                     self.log.info("{} refreshing min/max arttribures by the rule: val({}) min({}) max({})".format(self.name,
@@ -1998,26 +2125,32 @@ class thermal_module_sensor(system_device):
                     self.refresh_attr()
 
                 if self.get_temp_support_status():
-                    if self.val_hcrit is not None and value >= self.val_hcrit:
-                        self.log.warn("{} value({}) >= hcrit({})".format(self.name,
-                                                                         value,
-                                                                         self.val_hcrit))
-                        self.fread_err.handle_err(self.file_input)
-                    elif self.val_lcrit is not None and value <= self.val_lcrit:
-                        self.log.warn("{} value({}) <= lcrit({})".format(self.name,
-                                                                         value,
-                                                                         self.val_lcrit))
-                        self.fread_err.handle_err(self.file_input)
+                    if ((self.val_hcrit is not None and value >= self.val_hcrit) or
+                        (self.val_lcrit is not None and value <= self.val_lcrit)):
+                        self.log.error("{} value({}) not in range (lcrit:{}..hcrit:{})".format(
+                                                                                        self.name,
+                                                                                        value,
+                                                                                        self.val_lcrit,
+                                                                                        self.val_hcrit),
+                                        id="{} not in lcrit..hcrit".format(self.name), 
+                                        repeat=1)
+                        self.fread_err.handle_err(val_read_file)
                     else:
-                        self.fread_err.handle_err(self.file_input, reset=True)
+                        self.log.info(None, id="{} not in lcrit..hcrit".format(self.name))
+                        self.fread_err.handle_err(val_read_file, reset=True)
                         self.update_value(value)
                         if self.value > self.val_max:
-                            self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
-                        elif self.value < self.val_min:
+                            self.log.warn("{} value({}) > ({})".format(self.name, self.value, self.val_max),
+                                      id="{} value > max".format(self.name),
+                                      repeat=1)
+                        else:
+                            self.log.info(None, id="{} value > max".format(self.name), repeat=0)
+
+                        if self.value < self.val_min:
                             self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
-                self.log.warn("value reading from file: {}".format(self.base_file_name))
-                self.fread_err.handle_err(temp_read_file)
+                self.log.warn("{}: Wrong value reading from file: {}".format(self.name, val_read_file))
+                self.fread_err.handle_err(val_read_file)
 
         # check if module have temperature reading interface
         if self.get_temp_support_status():
@@ -2125,7 +2258,7 @@ class thermal_module_tec_sensor(system_device):
                          if not self.check_file(fpath)]
         if missing_files:
             for fname in missing_files:
-                self.log.info("Missing file: {}.".format(required_files[fname]))
+                self.log.warn("Missing file: {}.".format(required_files[fname]))
                 self.fread_err.handle_err(required_files[fname])
             return
 
@@ -2145,15 +2278,16 @@ class thermal_module_tec_sensor(system_device):
         # validate cooling_level
         if ((self.val_hcrit is not None and self.cooling_level >= self.val_hcrit) or
                 (self.val_lcrit is not None and self.cooling_level <= self.val_lcrit)):
-            self.log.warn("{} cooling_level({}) outside critical range (lcrit:{}, hcrit:{})".format(
+            self.log.error("{} cooling_level({}) outside critical range (lcrit:{}, hcrit:{})".format(
                 self.name,
                 self.cooling_level,
                 self.val_lcrit,
-                self.val_hcrit))
+                self.val_hcrit),  id="{} value not in lcrit..hcrit".format(self.name), repeat=1)
             self.fread_err.handle_err(required_files['cooling_level'])
             return
         else:
             self.fread_err.handle_err(required_files['cooling_level'], reset=True)
+            self.log.info(None, id="{} value not in lcrit..hcrit".format(self.name))
             self.refresh_attr()
             self.update_value(self.cooling_level)
 
@@ -2229,7 +2363,6 @@ class thermal_asic_sensor(system_device):
         """
         @summary: this function calling on sensor start after initialization or suspend off
         """
-        # Disable kernel control for this thermal zone
         self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
         self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
@@ -2240,43 +2373,49 @@ class thermal_asic_sensor(system_device):
         @summary: handle sensor input
         """
         pwm = self.pwm_min
-        temp_read_file = "thermal/{}".format(self.file_input)
-        if not self.check_file(temp_read_file):
-            self.log.info("Missing file: {}.".format(temp_read_file))
-            self.fread_err.handle_err(temp_read_file)
+        val_read_file = "thermal/{}".format(self.file_input)
+        if not self.check_file(val_read_file):
+            self.log.warn("{} Missing file: {}.".format(self.name, val_read_file))
+            self.fread_err.handle_err(val_read_file)
         else:
             try:
-                value = self.read_file_float(temp_read_file, self.scale)
+                value = self.read_file_float(val_read_file, self.scale)
                 if value == 0:
                     self.log.error("{} Incorrect value: {} in the file: {}). Emergency error!".format(self.name,
                                                                                                       value,
-                                                                                                      temp_read_file))
-                    self.asic_fault_err.handle_err(temp_read_file)
+                                                                                                      val_read_file), 
+                                    id="{} Incorrect value in the file: {}".format(self.name, val_read_file), repeat=1)
+                    self.asic_fault_err.handle_err(val_read_file)
                 else:
-                    self.asic_fault_err.handle_err(temp_read_file, reset=True)
+                    self.asic_fault_err.handle_err(val_read_file, reset=True)
+                    self.log.info(None, id="{} Incorrect value in the file: {}".format(self.name, val_read_file))
 
-                if self.val_hcrit is not None and value >= self.val_hcrit:
-                    self.log.warn("{} value({}) >= hcrit({})".format(self.name,
-                                                                     value,
-                                                                     self.val_hcrit))
-                    self.fread_err.handle_err(temp_read_file)
-                elif self.val_lcrit is not None and value <= self.val_lcrit:
-                    self.log.warn("{} value({}) =< lcrit({})".format(self.name,
-                                                                     value,
-                                                                     self.val_lcrit))
-                    self.fread_err.handle_err(temp_read_file)
+                if ((self.val_hcrit is not None and value >= self.val_hcrit) or
+                    (self.val_lcrit is not None and value <= self.val_lcrit)):
+                        self.log.error("{} value({}) not in range (lcrit:{}..hcrit:{})".format(
+                                                                                        self.name,
+                                                                                        value,
+                                                                                        self.val_lcrit,
+                                                                                        self.val_hcrit),
+                                        id="{} not in lcrit..hcrit".format(self.name), 
+                                        repeat=1)
+                        self.fread_err.handle_err(val_read_file)
                 else:
-                    self.fread_err.handle_err(temp_read_file, reset=True)
+                    self.log.info(None, id="{} not in lcrit..hcrit".format(self.name))
+                    self.fread_err.handle_err(val_read_file, reset=True)
                     self.update_value(value)
                     if self.value > self.val_max:
-                        self.log.warn("{} value({}) >= max({})".format(self.name,
-                                                                       self.value,
-                                                                       self.val_max))
-                    elif self.value < self.val_min:
+                        self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max),
+                                    id="{} value > max".format(self.name),
+                                    repeat=1)
+                    else:
+                        self.log.info(None, id="{} value > max".format(self.name))
+
+                    if self.value < self.val_min:
                         self.log.debug("{} value {}".format(self.name, self.value))
-            except BaseException:
-                self.log.warn("value reading from file: {}".format(self.base_file_name))
-                self.fread_err.handle_err(temp_read_file)
+            except BaseException as e:
+                self.log.warn("{}: value reading from file: {}".format(self.name, val_read_file))
+                self.fread_err.handle_err(val_read_file)
 
         # calculate PWM based on formula
         self.pwm_regulator.tick(self.value)
@@ -2368,12 +2507,19 @@ class psu_fan_sensor(system_device):
         psu_status_filename = "thermal/{}_status".format(self.base_file_name)
         psu_status = 0
         if not self.check_file(psu_status_filename):
-            self.log.info("Missing file: {}".format(psu_status_filename))
+            self.log.error("Missing file: {}".format(psu_status_filename),
+                           id="{} Missing file {}".format(self.name, psu_status_filename),
+                           repeat=1)
         else:
+            self.log.info(None, id="{} Missing file {}".format(self.name, psu_status_filename))
             try:
                 psu_status = int(self.read_file(psu_status_filename))
             except BaseException:
-                self.log.info("Can't read {}".format(psu_status_filename))
+                self.log.info("Can't read {}".format(psu_status_filename),
+                              id="{} Can't read {}".format(self.name, psu_status_filename),
+                              repeat=1)
+            else:
+                self.log.info(None, id="{} Can't read {}".format(self.name, psu_status_filename))
         return psu_status
 
     # ----------------------------------------------------------------------
@@ -2388,7 +2534,7 @@ class psu_fan_sensor(system_device):
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
                 psu_pwm, _, _ = g_get_range_val(self.pwm_decode, round(pwm))
                 if not psu_pwm:
-                    self.log.info("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
+                    self.log.notice("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
 
                 if psu_pwm == -1:
                     self.log.debug("{} PWM value {}. It means PWM should not be changed".format(self.name, pwm))
@@ -2412,8 +2558,11 @@ class psu_fan_sensor(system_device):
                 i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm)
                 self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
                 subprocess.call(i2c_cmd, shell=True)
+                self.log.info(None, id="{} set PWM {}".format(self.name, pwm))
         except BaseException:
-            self.log.error("{} set PWM error".format(self.name), 1)
+            self.log.error("{} set PWM error".format(self.name), id="{} set PWM error".format(self.name), repeat=3)
+        else:
+            self.log.info(None, id="{} set PWM {}".format(self.name, pwm))
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -2490,7 +2639,11 @@ class psu_fan_sensor(system_device):
             if CONST.DIRECTION not in self.mask_fault_list:
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.PSU_ERR, CONST.DIRECTION])
                 pwm_new = max(pwm, pwm_new)
-                self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
+                self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm),
+                              id="{} dir error".format(self.name),
+                              repeat=1)
+        else:
+            self.log.info(None, id="{} dir error".format(self.name))
 
         # sensor error reading file
         if CONST.SENSOR_READ_ERR in fault_list:
@@ -2537,7 +2690,8 @@ class fan_sensor(system_device):
         if self.tacho_cnt > len(self.drwr_param):
             self.log.warn("{} tacho per FAN modlue mismatch: get {}, defined in config {}".format(self.name,
                                                                                                   self.tacho_cnt,
-                                                                                                  len(self.drwr_param)))
+                                                                                                  len(self.drwr_param)),
+                                                                                                  repeat=1)
             self.log.info("{} init tacho_cnt from config: {}".format(self.name,
                                                                      len(self.drwr_param)))
             self.tacho_cnt = len(self.drwr_param)
@@ -2606,8 +2760,11 @@ class fan_sensor(system_device):
             else:
                 self.log.error("{} dir \"{}\" unsupported in configuration. Using default: {}".format(self.name,
                                                                                                       fan_dir,
-                                                                                                      fan_dir_def))
+                                                                                                      fan_dir_def),
+                               id="{} dir".format(self.name), repeat=1)
             fan_dir = fan_dir_def
+        else:
+            self.log.info(None, id="{} dir".format(self.name))
 
         param = self.fan_param[fan_dir]
         return param
@@ -2637,11 +2794,16 @@ class fan_sensor(system_device):
         status = 0
         if not self.check_file(status_filename):
             self.log.info("Missing file: {}".format(status_filename))
+            self.fread_err.handle_err(status_filename)
         else:
             try:
                 status = int(self.read_file(status_filename))
             except BaseException:
-                self.log.error("Value reading from file: {}".format(status_filename))
+                self.log.warn("{} value reading from file: {}".format(self.name, status_filename))
+                self.fread_err.handle_err(status_filename)
+            else:
+                self.fread_err.handle_err(status_filename, reset=True)
+
         return status
 
     # ----------------------------------------------------------------------
@@ -2689,12 +2851,16 @@ class fan_sensor(system_device):
             fan_fault_filename = "thermal/fan{}_fault".format(tacho_idx)
             if not self.check_file(fan_fault_filename):
                 self.log.info("Missing file: {}".format(fan_fault_filename))
+                self.fread_err.handle_err(fan_fault_filename)
             else:
                 try:
                     val = int(self.read_file(fan_fault_filename))
                     fan_fault.append(val)
                 except BaseException:
-                    self.log.error("Value reading from file: {}".format(fan_fault_filename))
+                    self.log.warn("{} value reading from file: {}".format(self.name, fan_fault_filename))
+                    self.fread_err.handle_err(fan_fault_filename)
+                else:
+                    self.fread_err.handle_err(fan_fault_filename, reset=True)
         return fan_fault
 
     # ----------------------------------------------------------------------
@@ -2703,8 +2869,11 @@ class fan_sensor(system_device):
         """
         pwm_curr = self.read_pwm()
         if not pwm_curr:
-            self.log.error("Read PWM error")
+            self.log.warn("Read PWM error", id="Read PWM error", repeat=5)
+            self.fread_err.handle_err("pwm")
             return False
+        else:
+            self.fread_err.handle_err("pwm", reset=True)
 
         for tacho_idx in range(self.tacho_cnt):
             fan_param = self.drwr_param[str(tacho_idx)]
@@ -2857,13 +3026,16 @@ class fan_sensor(system_device):
             value = 0
             rpm_file_name = "thermal/fan{}_speed_get".format(self.tacho_idx + tacho_id)
             if not self.check_file(rpm_file_name):
-                self.log.warn("Missing file {}".format(rpm_file_name))
+                self.log.warn("{} Missing file: {}.".format(self.name, rpm_file_name))
+                self.fread_err.handle_err(rpm_file_name)
             else:
                 try:
                     value = int(self.read_file(rpm_file_name))
                     self.log.debug("{} value {}".format(self.name, self.value))
+                    self.fread_err.handle_err(rpm_file_name, reset=True)
                 except BaseException:
-                    self.log.error("Value reading from file: {}".format(rpm_file_name))
+                    self.log.warn("Value reading from file: {}".format(rpm_file_name))
+                    self.fread_err.handle_err(rpm_file_name)
             self.value[tacho_id] = value
         return
 
@@ -2920,9 +3092,13 @@ class fan_sensor(system_device):
             # do not update pwm if error in "masked" list
             if CONST.DIRECTION not in self.mask_fault_list:
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.FAN_ERR, CONST.DIRECTION])
-                self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm))
+                self.log.warn("{} dir error. Set PWM {}".format(self.name, pwm),
+                              id="{} dir error".format(self.name),
+                              repeat=1)
                 pwm_new = max(pwm, pwm_new)
                 self.fan_shutdown(False)
+        else:
+            self.log.info(None, id="{} dir error".format(self.name))
 
         # sensor error reading counter
         if CONST.SENSOR_READ_ERR in fault_list:
@@ -3010,32 +3186,34 @@ class ambiant_thermal_sensor(system_device):
         """
         # reading all amb sensors
         for _, file_name in self.base_file_name.items():
-            sens_file_name = "thermal/{}".format(file_name)
-            if not self.check_file(sens_file_name):
-                self.log.info("Missing file: {}".format(sens_file_name))
-                self.fread_err.handle_err(sens_file_name)
+            val_read_file = "thermal/{}".format(file_name)
+            if not self.check_file(val_read_file):
+                self.log.warn("{} Missing file: {}.".format(self.name, val_read_file))
+                self.fread_err.handle_err(val_read_file)
             else:
                 try:
-                    value = self.read_file_float(sens_file_name, self.scale)
-                    if self.val_hcrit is not None and value >= self.val_hcrit:
-                        self.log.warn("{} value({}) >= hcrit({})".format(self.name,
-                                                                         value,
-                                                                         self.val_hcrit))
-                        self.fread_err.handle_err(sens_file_name)
-                    elif self.val_lcrit is not None and value <= self.val_lcrit:
-                        self.log.warn("{} value({}) <= lcrit({})".format(self.name,
-                                                                         value,
-                                                                         self.val_lcrit))
-                        self.fread_err.handle_err(sens_file_name)
+                    value = self.read_file_float(val_read_file, self.scale)
+                    if ((self.val_hcrit is not None and value >= self.val_hcrit) or
+                        (self.val_lcrit is not None and value <= self.val_lcrit)):
+                        self.log.error("{} value({}) not in range (lcrit:{}..hcrit:{})".format(
+                                                                                        self.name,
+                                                                                        value,
+                                                                                        self.val_lcrit,
+                                                                                        self.val_hcrit),
+                                        id="{} not in lcrit..hcrit".format(self.name), 
+                                        repeat=1)
+                        self.fread_err.handle_err(val_read_file)
                     else:
-                        self.fread_err.handle_err(sens_file_name, reset=True)
+                        self.fread_err.handle_err(val_read_file, reset=True)
+                        self.log.info(None, id="{} not in lcrit..hcrit".format(self.name))
+
                         self.value_dict[file_name] = value
-                        self.log.debug("{} {} value {}".format(self.name, sens_file_name, value))
+                        self.log.debug("{} {} value {}".format(self.name, val_read_file, value))
                 except BaseException:
-                    self.log.error("Error value reading from file: {}".format(sens_file_name))
-                    self.fread_err.handle_err(sens_file_name)
+                    self.log.warn("{} value reading from file: {}".format(self.name, val_read_file))
+                    self.fread_err.handle_err(val_read_file)
             # in case of file reading error - set sesor to ignore
-            if sens_file_name in self.fread_err.check_err():
+            if val_read_file in self.fread_err.check_err():
                 self.value_dict[file_name] = CONST.AMB_TEMP_ERR_VAL
 
         value = min(self.value_dict.values())
@@ -3043,9 +3221,9 @@ class ambiant_thermal_sensor(system_device):
             self.update_value(value)
 
         if self.value > self.val_max:
-            self.log.debug("{} value({}) above max({})".format(self.name, self.value, self.val_max))
+            self.log.warn("{} value({}) > max({})".format(self.name, self.value, self.val_max))
         elif self.value < self.val_min:
-            self.log.debug("{} value {} less min({})".format(self.name, self.value, self.val_min))
+            self.log.debug("{} value({}) < min({})".format(self.name, self.value, self.val_min))
 
         self.pwm_regulator.tick(self.value)
         self.pwm = self.pwm_regulator.get_pwm()
@@ -3083,7 +3261,9 @@ class ambiant_thermal_sensor(system_device):
         for key, val in self.value_dict.items():
             if val == CONST.AMB_TEMP_ERR_VAL:
                 val = "N/A"
-            sens_val += "{}:{} ".format(key, round(val, 1))
+            else:
+                val = round(val, 1)
+            sens_val += "{}:{} ".format(key, val)
         info_str = "\"{}\" {}({}), dir:{}, faults:[{}] pwm:{}, {}".format(self.name,
                                                                           sens_val,
                                                                           round(self.value_dict[sensor_name_min], 1),
@@ -3128,7 +3308,8 @@ class dpu_module(system_device):
         ""
         dps_ready_filename = self.file_input
         if not self.check_file(dps_ready_filename):
-            self.log.info("Missing file: {}".format(dps_ready_filename))
+            self.log.warn("{} Missing file: {}.".format(self.name, dps_ready_filename))
+            self.fread_err.handle_err(dps_ready_filename)
         else:
             try:
                 self.ready = bool(self.read_file_int(dps_ready_filename))
@@ -3136,7 +3317,10 @@ class dpu_module(system_device):
                                                        dps_ready_filename,
                                                        self.ready))
             except BaseException:
-                self.log.error("Error value reading from file: {}".format(dps_ready_filename))
+                self.log.warn("{} value reading from file: {}".format(self.name, dps_ready_filename))
+                self.fread_err.handle_err(dps_ready_filename)
+            else:
+                self.fread_err.handle_err(dps_ready_filename, reset=True)
 
         for child_obj in self.child_obj_list:
             if self.ready:
@@ -3203,7 +3387,7 @@ class ThermalManagement(hw_management_file_op):
         """
         hw_management_file_op.__init__(self, cmd_arg)
         self.log = tc_logger
-        self.log.notice("Preinit thermal control ver {}".format(VERSION), 1)
+        self.log.notice("Preinit thermal control ver {}".format(VERSION), repeat=1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
         except BaseException:
@@ -3240,17 +3424,17 @@ class ThermalManagement(hw_management_file_op):
 
         self.load_configuration()
         if not str2bool(self.sys_config.get("platform_support", 1)):
-            self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), 1)
+            self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), repeat=1)
             self.log.notice("Set TC to idle.")
             while True:
                 self.exit.wait(60)
 
         if not self.is_pwm_exists():
-            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for ASIC init", 1)
+            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is required for TC run\nWaiting for ASIC init", repeat=1)
             while not self.is_pwm_exists():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
-            self.log.notice("PWM control activated", 1)
+            self.log.notice("PWM control activated", repeat=1)
 
         self.attention_fans_lst = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_ATTENTION_ITEMS])
         if self.attention_fans_lst:
@@ -3272,29 +3456,29 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("PWM update time: {} sec".format(self.pwm_worker_poll_time))
 
         # Set PWM to the default state while we are waiting for system configuration
-        self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
+        self.log.notice("Set FAN PWM {}".format(self.pwm_target), repeat=1)
         if not self.write_pwm(self.pwm_target, validate=True):
             self.log.warn("PWM write validation mismatch set:{} get:{}".format(self.pwm_target, self.read_pwm()))
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
-            self.log.notice("Additional delay defined in ./config/thermal_delay ({} sec).".format(thermal_delay), 1)
+            self.log.notice("Additional delay defined in ./config/thermal_delay ({} sec).".format(thermal_delay), repeat=1)
             timeout = current_milli_time() + 1000 * thermal_delay
             while timeout > current_milli_time():
                 if not self.write_pwm(self.pwm_target):
-                    self.log.info("Set PWM failed. Possible SDK is not started")
+                    self.log.info("Set PWM failed. Possible SDK is not started", repeat=1)
                     self.exit.wait(2)
                 else:
                     self.log.info("Set PWM successful")
                     break
 
         if not self.is_fan_tacho_init():
-            self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for ASIC init", 1)
+            self.log.notice("Missing FAN tacho (probably ASIC not initialised yet). FANs is required for TC run\nWaiting for ASIC init", repeat=1)
             while not self.is_fan_tacho_init():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
 
-        self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
+        self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), repeat=1)
         timeout = current_milli_time() + 1000 * CONST.THERMAL_WAIT_FOR_CONFIG
         while timeout > current_milli_time():
             if not self.write_pwm(self.pwm_target):
@@ -3334,14 +3518,14 @@ class ThermalManagement(hw_management_file_op):
         try:
             self.asic_counter = int(self.read_file("config/asic_num"))
         except BaseException:
-            self.log.error("Missing ASIC num config.", 1)
+            self.log.error("Missing ASIC num config.", repeat=1)
             sys.exit(1)
 
         try:
             self.max_tachos = int(self.read_file("config/max_tachos"))
             self.log.info("Fan tacho:{}".format(self.max_tachos))
         except BaseException:
-            self.log.error("Missing max tachos config.", 1)
+            self.log.error("Missing max tachos config.", repeat=1)
             sys.exit(1)
         # Find ASIC pci device fio
         result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True,
@@ -3362,7 +3546,7 @@ class ThermalManagement(hw_management_file_op):
             for drwr_idx in range(1, self.fan_drwr_num + 1):
                 sensor_list.append("drwr{}".format(drwr_idx))
         except BaseException:
-            self.log.error("Missing fan_drwr_num config.", 1)
+            self.log.error("Missing fan_drwr_num config.", repeat=1)
             sys.exit(1)
 
         if self.fan_drwr_num:
@@ -3374,13 +3558,13 @@ class ThermalManagement(hw_management_file_op):
             for psu_idx in range(1, self.psu_count + 1):
                 sensor_list.append("psu{}".format(psu_idx))
         except BaseException:
-            self.log.error("Missing hotplug_psus config.", 1)
+            self.log.error("Missing hotplug_psus config.", repeat=1)
             sys.exit(1)
 
         try:
             self.psu_pwr_count = int(self.read_file("config/hotplug_pwrs"))
         except BaseException:
-            self.log.error("Missing hotplug_pwrs config.", 1)
+            self.log.error("Missing hotplug_pwrs config.", repeat=1)
             sys.exit(1)
 
         # Collect voltmon sensors
@@ -3459,12 +3643,12 @@ class ThermalManagement(hw_management_file_op):
         try:
             dev_class_ = globals()[dev_class_name]
         except Exception as err:
-            self.log.error("Unknown dev class {}".format(err.message))
+            self.log.error("Unknown dev class {}".format(err.message), repeat=1)
             return None
 
         dev_obj = dev_class_(self.cmd_arg, self.sys_config, dev_name, self.log)
         if not dev_obj:
-            self.log.error("{} create failed".format(dev_name))
+            self.log.error("{} create failed".format(dev_name), repeat=1)
             return None
 
         self.dev_obj_list.append(dev_obj)
@@ -3538,7 +3722,7 @@ class ThermalManagement(hw_management_file_op):
     # ---------------------------------------------------------------------
     def _attention_fan_insertion_recovery(self):
         pwm = self.read_pwm(100)
-        self.log.notice("Attention fan not started after insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), 1)
+        self.log.notice("Attention fan not started after insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), repeat=1)
         self._update_chassis_fan_speed(self.fan_steady_state_pwm, force=True)
         self.log.info("Waiting {}s for newly inserted fan to stabilize".format(self.fan_steady_state_delay))
         timeout = current_milli_time() + 1000 * self.fan_steady_state_delay
@@ -3612,7 +3796,7 @@ class ThermalManagement(hw_management_file_op):
     # ----------------------------------------------------------------------
     def _set_emergency_pwm(self, pwm):
         ""
-        self.log.notice("Set emergency PWM {}".format(pwm))
+        self.log.notice("Set emergency PWM {}".format(pwm), repeat=1)
         if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
             self.write_pwm_mlxreg(pwm)
         else:
@@ -3626,10 +3810,13 @@ class ThermalManagement(hw_management_file_op):
         """
         pwm = round(pwm, 2)
         if self.state == CONST.UNCONFIGURED:
-            self.log.info("TC is not configureed. Try to force set PWM1 {}%".format(pwm))
+            self.log.info("TC is not configureed. Try to force set PWM1 {}%".format(pwm), repeat=1)
             if not self.write_pwm(pwm, validate=True):
-                self.log.warn("PWM write validation mismatch set:{} get:{}".format(pwm, self.read_pwm()))
-
+                self.log.warn("PWM write validation mismatch set:{} get:{}".format(pwm, self.read_pwm()),
+                              id="PWM write validation mismatch",
+                              repeat=3)
+            else:
+                self.log.info(None, id="PWM write validation mismatch")
             return
 
         if pwm > CONST.PWM_MAX:
@@ -3652,11 +3839,11 @@ class ThermalManagement(hw_management_file_op):
             self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
             pwm_real = self.read_pwm()
             if not pwm_real:
-                self.log.warn("Read PWM error. Possible hw-management is not running", 1)
+                self.log.warn("Read PWM error. Possible hw-management is not running", repeat=1)
                 return
 
             if abs(pwm_real - self.pwm) > 1:
-                self.log.warn("Unexpected pwm value {}. Force set to {}".format(pwm_real, self.pwm))
+                self.log.warn("Unexpected pwm value {}. Force set to {}".format(pwm_real, self.pwm), repeat=1)
                 self._update_chassis_fan_speed(self.pwm, True)
 
     # ----------------------------------------------------------------------
@@ -3665,11 +3852,11 @@ class ThermalManagement(hw_management_file_op):
         if self.pwm_target == self.pwm:
             pwm_real = self.read_pwm()
             if not pwm_real:
-                self.log.warn("Read PWM error. Possible hw-management is not running", 1)
+                self.log.warn("Read PWM error. Possible hw-management is not running", repeat=1)
                 return
 
             if abs(pwm_real - self.pwm) > 1:
-                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm))
+                self.log.warn("Unexpected pwm1 value {}. Force set to {}".format(pwm_real, self.pwm), repeat=1)
                 self._update_chassis_fan_speed(self.pwm, True)
             self.pwm_worker_timer.stop()
             return
@@ -3801,7 +3988,7 @@ class ThermalManagement(hw_management_file_op):
                 elif val == pwm_max and "total_err_cnt" in key:
                     name = key
             except BaseException:
-                self.log("Unaplicable pwm:{} for:{}".format(val, key))
+                self.log.warn("Unaplicable pwm:{} for:{}".format(val, key))
         return pwm_max, name
 
     # ----------------------------------------------------------------------
@@ -3830,7 +4017,7 @@ class ThermalManagement(hw_management_file_op):
                     tacho_cnt = self.read_file("config/max_tachos")
                     ret = bool(int(tacho_cnt))
                 except BaseException:
-                    self.log.notice("Can't read config/max_tachos. None-numeric value: {}".format(tacho_cnt))
+                    self.log.notice("Can't read config/max_tachos. None-numeric value: {}".format(tacho_cnt), repeat=1)
                     ret = False
         return ret
 
@@ -3909,11 +4096,12 @@ class ThermalManagement(hw_management_file_op):
         """
         user_config = {}
         with open(user_config_file_name) as f:
-            self.log.info("Loading user config from {}".format(user_config_file_name))
+            self.log.info("Loading user config from {}".format(user_config_file_name), repeat=1)
             try:
                 user_config = json.load(f)
             except Exception:
-                self.log.error("User config file {} broken.".format(user_config_file_name), 1)
+                self.log.error("User config file {} broken.".format(user_config_file_name), repeat=1)
+                raise Exception("User config file {} broken.".format(user_config_file_name))
         return user_config
 
     # ----------------------------------------------------------------------
@@ -3947,19 +4135,19 @@ class ThermalManagement(hw_management_file_op):
 
         if os.path.exists(config_file_name):
             with open(config_file_name) as f:
-                self.log.info("Loading system config from {}".format(config_file_name))
+                self.log.notice("Loading system config from {}".format(config_file_name), repeat=1)
                 try:
                     sys_config = json.load(f)
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
                 except Exception:
-                    self.log.error("System config file {} broken.".format(config_file_name), 1)
-                    sys_config["platform_support"] = 0
+                    self.log.critical("System config file {} broken.".format(config_file_name))
+                    raise Exception("System config file {} broken.".format(config_file_name))
         else:
             self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
                                                                                                              self.board_type,
                                                                                                              self.sku,
-                                                                                                             self.system_ver), 1)
+                                                                                                             self.system_ver), repeat=1)
             sys_config["platform_support"] = 0
 
         # 1. Init dmin table
@@ -3992,7 +4180,7 @@ class ThermalManagement(hw_management_file_op):
             sys_config[CONST.SYS_CONF_ASIC_PARAM] = ASIC_CONF_DEFAULT
 
         if CONST.SYS_CONF_SENSOR_LIST_PARAM not in sys_config:
-            self.log.warn("Static sensor list missing orempty in tc_config")
+            self.log.warn("Static sensor list missing or empty in tc_config")
             sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = []
 
         if CONST.SYS_CONF_ERR_MASK not in sys_config:
@@ -4010,15 +4198,15 @@ class ThermalManagement(hw_management_file_op):
         for user_config_file_name in user_config_file_list:
             if os.path.exists(user_config_file_name):
                 try:
-                    self.log.info("Found user config in:{}. Loading it...".format(user_config_file_name), 1)
+                    self.log.info("Found user config in:{}. Loading it...".format(user_config_file_name), repeat=1)
                     user_config = self.load_user_configuration(user_config_file_name)
-                    self.log.info("User config loaded successfully", 1)
+                    self.log.info("User config loaded successfully", repeat=1)
                     break
                 except BaseException:
-                    self.log.error("User config file {} load failed. Skip it".format(user_config_file_name), 1)
-                    pass
+                    self.log.error("User config file {} load failed. Skip it".format(user_config_file_name), repeat=1)
+                    raise Exception("User config file {} load failed. Skip it".format(user_config_file_name))
         if not user_config:
-            self.log.warn("User config not defined", 1)
+            self.log.notice("User config not defined", repeat=1)
         sys_config[CONST.SYS_CONF_USER_CONFIG_PARAM] = user_config
         self.sys_config = sys_config
 
@@ -4204,9 +4392,9 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: Init thermal-control main
         """
-        self.log.notice("********************************", 1)
-        self.log.notice("Init thermal control ver: v.{}".format(VERSION), 1)
-        self.log.notice("********************************", 1)
+        self.log.notice("********************************", repeat=1)
+        self.log.notice("Init thermal control ver: v.{}".format(VERSION), repeat=1)
+        self.log.notice("********************************", repeat=1)
 
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
@@ -4221,7 +4409,7 @@ class ThermalManagement(hw_management_file_op):
             for key, _ in sys_config.items():
                 dev_obj = self._add_dev_obj(key)
                 if not dev_obj:
-                    self.log.error("{} create failed".format(key))
+                    self.log.error("{} create failed".format(key), repeat=1)
                     sys.exit(1)
         self.module_scan()
         self._init_child_obj()
@@ -4247,7 +4435,7 @@ class ThermalManagement(hw_management_file_op):
         """
 
         if self.state != CONST.RUNNING:
-            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason), 1)
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason), repeat=1)
             self.state = CONST.RUNNING
             self.emergency = False
 
@@ -4301,10 +4489,10 @@ class ThermalManagement(hw_management_file_op):
                 if dev_obj.enable:
                     dev_obj.stop()
 
-            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), 1)
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), repeat=1)
             self.state = CONST.STOPPED
             self._set_pwm(CONST.PWM_MAX, reason="TC stop")
-            self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
+            self.log.notice("Set FAN PWM {}".format(self.pwm_target), repeat=1)
 
     # ----------------------------------------------------------------------
     def run(self):
@@ -4313,9 +4501,9 @@ class ThermalManagement(hw_management_file_op):
         """
         fault_cnt_old = 0
         fault_cnt = 0
-        self.log.notice("********************************", 1)
-        self.log.notice("Thermal control is running", 1)
-        self.log.notice("********************************", 1)
+        self.log.notice("********************************", repeat=1)
+        self.log.notice("Thermal control is running", repeat=1)
+        self.log.notice("********************************", repeat=1)
         module_scan_timeout = 0
         # main loop
         while not self.exit.is_set() or not self.exit_flag:
@@ -4565,7 +4753,7 @@ if __name__ == '__main__':
         thermal_management.start(reason="init")
         thermal_management.run()
     except BaseException as e:
-        logger.info(traceback.format_exc())
+        logger.error(traceback.format_exc())
         if thermal_management:
             thermal_management.stop(reason="crash ({})".format(str(e)))
         sys.exit(1)
