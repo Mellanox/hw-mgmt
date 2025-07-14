@@ -992,11 +992,11 @@ class hw_managemet_file_op(object):
         try:
             mlxreg_get_cmd = CONST.MLXREG_GET_CMD_STR.format(pcidev=self.asic_pcidev)
             self.log.debug("get mlxreg pwm cmd:{}".format(mlxreg_get_cmd))
-            result =subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True,
-                           check=False,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           text=True)
+            result = subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True,
+                                    check=False,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    text=True)
             ret = result.stdout
             pwm = int(ret.strip(), 16)
             pwm_out = int(pwm / 2.55 + 0.5)
