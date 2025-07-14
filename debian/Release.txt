@@ -8,6 +8,7 @@
 
 - Bug fixes
     o #4486661, hw-mgmt: thermal: Add fan state validation after re-insertion, and attention_fans config for SN5610/5640, d4a3149
+    o #4486661, hw-mgmt: thermal: Add fan state validation after re-insertion, and attention_fans config for SN4280, f5a618c3
 
 - Kernel Patches for New Features:
     o 
