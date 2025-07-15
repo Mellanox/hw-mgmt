@@ -924,7 +924,7 @@ if [ "$1" == "add" ]; then
 			busfolder=$(basename "$busdir")
 			bus="${busfolder:0:${#busfolder}-5}"
 			# Verify if this is not COMEX device
-			if [ "$bus" != "$comex_bus" ]; then
+			if [ "$bus" != "$comex_bus" ] && platform_has_comex_board; then
 				exit 0
 			fi
 		else
@@ -1464,7 +1464,7 @@ else
 			busfolder=$(basename "$busdir")
 			bus="${busfolder:0:${#busfolder}-5}"
 			# Verify if this is not COMEX device
-			if [ "$bus" != "$comex_bus" ]; then
+			if [ "$bus" != "$comex_bus" ] && platform_has_comex_board; then
 				exit 0
 			fi
 		else
