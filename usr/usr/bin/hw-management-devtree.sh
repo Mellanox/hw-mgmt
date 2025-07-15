@@ -601,8 +601,8 @@ declare -A platform_type1_alternatives=(["24c512_0"]="24c512 0x51 8 vpd_info")
 
 # Devices located on N61XX_LD platform board
 declare -A n61xxld_platform_alternatives=( \
-	["24c512_0"]="24c512 0x50 0 cpu_info" \
-	["24c512_0"]="24c512 0x51 1 vpd_info" \
+	["24c128_0"]="24c128 0x50 3 cpu_info" \
+	["24c512_1"]="24c512 0x51 1 vpd_info" \
 	["mp2855_0"]="mp2855 0x69 6 comex_voltmon1" \
 	["mp2975_1"]="mp2975 0x6a 6 comex_voltmon2")
 
