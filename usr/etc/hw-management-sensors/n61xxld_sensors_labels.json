@@ -12,7 +12,7 @@
 				"in1": {"name": "PwrConv1+Vol+In+1"},
 				"in3": {"name": "PwrConv1+Vol+Out+1"},
 				"curr2": {"name": "PwrConv1+Curr+Out+1"},
-				"temp2": {"name": "PwrConv1+Temp"},
+				"temp2": {"name": "PwrConv1+Temp"}
 			}
 		},
 		"pwr_conv2": {
@@ -26,7 +26,7 @@
 				"in1": {"name": "PwrConv2+Vol+In+1"},
 				"in3": {"name": "PwrConv2+Vol+Out+1"},
 				"curr2": {"name": "PwrConv2+Curr+Out+1"},
-				"temp2": {"name": "PwrConv2+Temp"},
+				"temp2": {"name": "PwrConv2+Temp"}
 			}
 		},
 		"hotswap1": {
@@ -249,5 +249,5 @@
 		"drivetemp" : "SSD+Temp"
 	},
 	"labels_scale_HI180_rev1_array" : {
-	},
+	}
 }
