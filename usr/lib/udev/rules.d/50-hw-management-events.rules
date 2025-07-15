@@ -637,6 +637,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
 
+# any voltmon on AMD CPU systems without i2c_mlxcpld driver
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
+
 # Wolf voltmon
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0022/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0022/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
