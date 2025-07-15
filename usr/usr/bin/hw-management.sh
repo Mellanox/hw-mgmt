@@ -2583,7 +2583,7 @@ sn5640_specific()
 system_cleanup_specific()
 {
 	case $board_type in
-	VMOD0021|VMOD0023)
+	VMOD0021)
 		n51xxld_specific_cleanup
 		;;
 	*)
