@@ -67,11 +67,12 @@ process_blacklist()
 	# Extend with system specific records.
 	case $SKU in
 	HI180)
-		# Neither Designware nor ASF I2C controller drivers should be blackisted.
+		# Designware I2C controller driver should not be blackisted.
 		# This gurantees that Designware driver is loaded by ACPI before platform driver.
-		# Platform driver relies on the existence of i2c-1 bus created by Designware driver.
-		# Designware is also guaranteed to be loaded before ASF.
+		# Platform driver relies on the existence of i2c-0 bus created by Designware driver.
+		# ASF driver should be blacklisted to guarantee that Designware is loaded before ASF.
 		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
+		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		;;
 	*)
 		# Blacklist Designware and ASF I2C controller drivers
