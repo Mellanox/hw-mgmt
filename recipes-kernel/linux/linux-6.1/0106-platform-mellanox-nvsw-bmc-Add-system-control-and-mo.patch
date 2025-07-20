@@ -2763,7 +2763,7 @@ index 000000000..c8c8bbd3c
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "graseful_pwr_off",
++		.label = "graceful_pwr_off",
 +		.reg = NVSW_REG_GP7_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0644,
