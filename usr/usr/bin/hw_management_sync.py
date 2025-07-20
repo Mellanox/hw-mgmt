@@ -165,9 +165,7 @@ atttrib_list = {
         {"fin": None,
          "fn": "redfish_get_sensor", "arg": ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
     ],
-    "HI171|HI172|HI144|HI147|HI148|HI174": [
-        {"fin": "/var/run/hw-management/system/graseful_pwr_off", "fn": "run_power_button_event",
-         "arg": [], "poll": 1, "ts": 0},
+    "HI144|HI174": [
         {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
          "arg": {"asic": {"fin": "/sys/module/sx_core/asic0/"},
                  "asic1": {"fin": "/sys/module/sx_core/asic0/"}
@@ -175,6 +173,16 @@ atttrib_list = {
          },
         {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
          "arg": {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 65}
+         }
+    ],
+    "HI147|HI171|HI172": [
+        {"fin": None, "fn": "asic_temp_populate", "poll": 3, "ts": 0,
+         "arg": {"asic": {"fin": "/sys/module/sx_core/asic0/"},
+                 "asic1": {"fin": "/sys/module/sx_core/asic0/"}
+                 }
+         },
+        {"fin": None, "fn": "module_temp_populate", "poll": 20, "ts": 0,
+         "arg": {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 66}
          }
     ],
     "HI112|HI116|HI136": [
