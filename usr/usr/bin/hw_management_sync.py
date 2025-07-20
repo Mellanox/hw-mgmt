@@ -320,6 +320,22 @@ atttrib_list = {
          "arg": {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 24}
          }
     ],
+   "HI180": [
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1",
+         "fn": "run_cmd",
+         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"],
+         "poll": 2, "ts": 0},
+        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2",
+         "fn": "run_cmd",
+         "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"],
+         "poll": 2, "ts": 0},
+        {"fin": "/var/run/hw-management/system/graceful_pwr_off",
+         "fn": "run_power_button_event",
+         "arg": [],
+         "poll": 1, "ts": 0},
+        {"fin": None,
+         "fn": "redfish_get_sensor", "arg": ["/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP", "bmc", 1000], "poll": 30, "ts": 0}
+    ],
     "def": [
         {"fin": "/var/run/hw-management/config/thermal_enforced_full_speed",
          "fn": "run_cmd",
