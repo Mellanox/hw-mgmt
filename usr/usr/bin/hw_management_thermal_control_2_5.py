@@ -1292,7 +1292,6 @@ class system_device(hw_management_file_op):
         @param val_read_file: file from which value was obtained
         @return: True if value is in critical range, False otherwise (value check passed
         """
-        err_flag = False
         if ((self.val_hcrit is not None and value >= self.val_hcrit) or
                 (self.val_lcrit is not None and value <= self.val_lcrit)):
             # fmt: off
@@ -1305,12 +1304,11 @@ class system_device(hw_management_file_op):
                             repeat=1)
             # fmt: on
             self.fread_err.handle_err(val_read_file)
-            err_flag = True
+            return True
         else:
             self.fread_err.handle_err(val_read_file, reset=True)
             self.log.info(None, id="{} crit".format(self.name))
-            err_flag = False
-        return err_flag
+            return False
 
     # ----------------------------------------------------------------------
     def validate_value_in_min_max_range(self):
@@ -1318,12 +1316,10 @@ class system_device(hw_management_file_op):
         @summary:
             Validate value against min/max thresholds and log error if value is out of range
         """
-        err_flag = False
         if self.value > self.val_max:
             self.log.warn("{} value({}) > ({})".format(self.name, self.value, self.val_max),
                           id="{} value > max".format(self.name),
                           repeat=1)
-            err_flag = True
         else:
             self.log.info(None, id="{} value > max".format(self.name))
 
@@ -1331,7 +1327,6 @@ class system_device(hw_management_file_op):
             self.log.debug("{} value({}) < min({})".format(self.name,
                                                            self.value,
                                                            self.val_min))
-        return err_flag
 
     # ----------------------------------------------------------------------
     def check_sensor_blocked(self, name=None):
