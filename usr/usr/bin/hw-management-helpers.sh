@@ -310,7 +310,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI181)
 			return 0
 			;;
 
@@ -403,6 +403,23 @@ refresh_sysfs_monitor_timestamps()
         # Write the current time to the less recently updated file (A).
         echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_A"
     fi
+}
+
+
+# In some platforms, platform emulation drivers may not be available. In that situation
+# just provide the static attributes
+create_simx_links()
+{
+	local dir_list
+
+	# Create the attributes in thermal, environment, alarm  directories of hw-management.
+        dir_list="thermal environment alarm"
+        for i in $dir_list; do
+                while IFS=' ' read -r filename value; do
+                        [ -z "$filename" ] && continue
+                        echo "$value" > "$hw_management_path"/"$i"/"$filename"
+                done < "$vm_vpd_path"/"$i"
+        done
 }
 
 # Create the missed out links due to lack of emulation

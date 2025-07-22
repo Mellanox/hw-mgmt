@@ -79,6 +79,9 @@ if check_simx; then
                         HI166|HI176)
                                 process_simx_links
                                 ;;
+                        HI181)
+				create_simx_links
+				;;
                         *)
                                 ;;
                 esac
