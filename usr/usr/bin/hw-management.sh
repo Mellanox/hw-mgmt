@@ -837,8 +837,8 @@ set_jtag_gpio()
 		$AMD_SNW_CPU)
 			case $sku in
 			HI180)
-				echo 0x2025 > $config_path/jtag_rw_reg
-				echo 0x2026 > $config_path/jtag_ro_reg
+				echo 0x20e5 > $config_path/jtag_rw_reg
+				echo 0x20e6 > $config_path/jtag_ro_reg
 				;;
 			*)
 				echo 0x2094 > $config_path/jtag_rw_reg
@@ -2514,10 +2514,8 @@ n51xxld_specific_cleanup()
 
 n61xxld_specific()
 {
-	local cpu_bus_offset=55
-
 	case $sku in
-	# Rosalind N6100_LD
+	# N6100_LD
 	HI180)
 		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
 		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
