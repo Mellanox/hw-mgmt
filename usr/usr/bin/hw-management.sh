@@ -2554,8 +2554,6 @@ n61xxld_specific()
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo -n "${l1_power_events[@]}" > "$power_events_file"
 	echo "$n61xx_reset_attr_num" > $config_path/reset_attr_num
-	mctp_bus=${n61xx_mctp_bus}
-	mctp_addr=${n5110_mctp_addr}
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
@@ -2883,9 +2881,6 @@ load_modules()
 		HI162|HI166|HI167|HI169|HI170|HI176|HI177)	# Juliet
 			modprobe i2c_asf
 			modprobe i2c_designware_platform
-		;;
-		HI180) # Rosalind
-			modprobe i2c_asf
 		;;
 		*)
 		;;
