@@ -57,16 +57,16 @@ System Thermal control tool
 #######################################################################
 import os
 import sys
+import time
 import traceback
 import argparse
 import subprocess
 import signal
-from hw_management_lib import tc_logger as Logger
-from hw_management_lib import RepeatedTimer as RepeatedTimer
-from hw_management_lib import str2bool, current_milli_time
+import logging
+from logging.handlers import RotatingFileHandler, SysLogHandler
 import json
 import re
-from threading import Event
+from threading import Timer, Event
 import pdb
 
 #############################
@@ -460,6 +460,42 @@ DMIN_TABLE_DEFAULT = {
 }
 
 ASIC_CONF_DEFAULT = {"1": {"pwm_control": False, "fan_control": False}}
+
+
+def natural_key(obj):
+    name = obj.name.strip()
+    # Break the string into text and number chunks
+    return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', name)]
+
+# ----------------------------------------------------------------------
+
+
+def str2bool(val):
+    """
+    @summary:
+        Convert input val value (y/n, true/false, 1/0, y/n) to bool
+    @param val: input value.
+    @return: True or False
+    """
+    if isinstance(val, bool):
+        return val
+    elif isinstance(val, int):
+        return bool(val)
+    elif val.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif val.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    return None
+
+
+# ----------------------------------------------------------------------
+def current_milli_time():
+    """
+    @summary:
+        get current time in milliseconds
+    @return: int value time in milliseconds
+    """
+    return round(time.clock_gettime(1) * 1000)
 
 
 # ----------------------------------------------------------------------
