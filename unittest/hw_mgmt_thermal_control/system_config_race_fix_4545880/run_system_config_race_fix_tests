@@ -1,0 +1,207 @@
+#!/bin/bash
+#
+# Test runner for system config race condition fix (Bug 4545880)
+#
+# This script runs all unit tests for the thermal control initialization 
+# and signal handling fixes implemented in commit:
+# "hw-mgmt: thermal: Fix TC init/close flow issue"
+#
+# Usage:
+#   ./run_system_config_race_fix_tests [options]
+#
+# Options:
+#   --help, -h              Show this help message
+#   --category, -c <cat>    Run specific test category
+#   --list-tests, -l        List all available tests
+#   --verbose, -v           Run with verbose output
+#   --no-buffer             Disable test output buffering
+#
+# Test Categories:
+#   early_termination       Tests for early termination scenarios
+#   config_failures         Tests for configuration loading failures  
+#   signal_handler          Tests for signal handler behavior
+#   logger_optimization     Tests for logger close optimization
+#   integration             Integration tests
+#
+
+set -e  # Exit on any error
+
+# Script directory and test directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_DIR="$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Function to show help
+show_help() {
+    cat << EOF
+System Config Race Fix Test Runner (Bug 4545880)
+
+This script runs unit tests for thermal control initialization and signal handling fixes.
+
+USAGE:
+    $0 [OPTIONS]
+
+OPTIONS:
+    -h, --help              Show this help message
+    -c, --category <cat>    Run specific test category  
+    -l, --list-tests        List all available tests
+    -v, --verbose           Run with verbose output
+    --no-buffer             Disable test output buffering
+
+TEST CATEGORIES:
+    early_termination       Tests for early termination scenarios
+    config_failures         Tests for configuration loading failures
+    signal_handler          Tests for signal handler behavior  
+    logger_optimization     Tests for logger close optimization
+    integration             Integration tests
+
+EXAMPLES:
+    $0                                      # Run all tests
+    $0 --category early_termination        # Run early termination tests
+    $0 --list-tests                        # List available tests
+    $0 --verbose                           # Run with verbose output
+
+EOF
+}
+
+# Parse command line arguments
+CATEGORY=""
+VERBOSE=""
+LIST_TESTS=""
+NO_BUFFER=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -c|--category)
+            CATEGORY="$2"
+            shift 2
+            ;;
+        -l|--list-tests)
+            LIST_TESTS="true"
+            shift
+            ;;
+        -v|--verbose)
+            VERBOSE="--verbose"
+            shift
+            ;;
+        --no-buffer)
+            NO_BUFFER="--no-buffer"
+            shift
+            ;;
+        *)
+            print_error "Unknown option: $1"
+            echo "Use --help for usage information."
+            exit 1
+            ;;
+    esac
+done
+
+# Check if test directory exists
+if [[ ! -d "$TEST_DIR" ]]; then
+    print_error "Test directory not found: $TEST_DIR"
+    print_error "Please ensure the test files are properly installed."
+    exit 1
+fi
+
+# Check if Python 3 is available
+if ! command -v python3 &> /dev/null; then
+    print_error "Python 3 is required but not found."
+    print_error "Please install Python 3 to run the tests."
+    exit 1
+fi
+
+# Change to project root directory for proper module imports
+cd "$PROJECT_ROOT"
+
+# Add test directory to Python path
+export PYTHONPATH="$TEST_DIR:$PYTHONPATH"
+
+print_status "Running System Config Race Fix Tests (Bug 4545880)"
+print_status "Test Directory: $TEST_DIR"
+print_status "Project Root: $PROJECT_ROOT"
+echo
+
+# Build the python command
+PYTHON_CMD="python3 $TEST_DIR/run_simple_race_tests.py"
+
+# Add options
+if [[ -n "$CATEGORY" ]]; then
+    PYTHON_CMD="$PYTHON_CMD --category $CATEGORY"
+fi
+
+if [[ -n "$LIST_TESTS" ]]; then
+    PYTHON_CMD="$PYTHON_CMD --list-tests"
+fi
+
+if [[ -n "$VERBOSE" ]]; then
+    PYTHON_CMD="$PYTHON_CMD $VERBOSE"
+fi
+
+# Execute the tests
+print_status "Executing: $PYTHON_CMD"
+echo
+
+if [[ -n "$LIST_TESTS" ]]; then
+    # Just list tests and exit
+    eval "$PYTHON_CMD"
+    exit $?
+fi
+
+# Run the actual tests
+START_TIME=$(date +%s)
+
+if eval "$PYTHON_CMD"; then
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    echo
+    print_success "All tests completed successfully in ${DURATION} seconds!"
+    echo
+    print_status "Test Summary:"
+    echo "  ✓ Early termination scenarios tested"
+    echo "  ✓ Configuration loading failures tested"  
+    echo "  ✓ Signal handler behavior tested"
+    echo "  ✓ Logger optimization tested"
+    echo "  ✓ Integration scenarios tested"
+    echo
+    print_success "Race condition fix (Bug 4545880) validation: PASSED"
+    exit 0
+else
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    echo
+    print_error "Some tests failed after ${DURATION} seconds!"
+    echo
+    print_warning "Please review the test output above for details."
+    print_warning "Consider running with --verbose for more detailed output."
+    echo
+    print_error "Race condition fix (Bug 4545880) validation: FAILED"
+    exit 1
+fi
