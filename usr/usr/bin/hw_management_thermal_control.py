@@ -623,7 +623,6 @@ class Logger(object):
 
     def close_tc_log_handler(self):
         if self.logger_fh:
-            self.logger_fh.flush()
             self.logger_fh.close()
             self.logger.removeHandler(self.logger_fh)
 
@@ -2724,6 +2723,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.info("periodic report {} sec".format(self.periodic_report_time))
 
         self.dev_obj_list = []
+        self.sys_config = {}
 
         self.pwm_max_reduction = CONST.PWM_MAX_REDUCTION
         self.pwm_worker_poll_time = CONST.PWM_WORKER_POLL_TIME
@@ -2733,13 +2733,19 @@ class ThermalManagement(hw_managemet_file_op):
         self.is_fault_state = False
         self.fan_drwr_num = 0
 
+        # Load configuration
+        try:
+            self.sys_config = self.load_configuration()
+        except Exception as e:
+            self.log.error("Failed to load configuration: {}".format(e), 1)
+            sys.exit(1)
+
         signal.signal(signal.SIGTERM, self.sig_handler)
         signal.signal(signal.SIGINT, self.sig_handler)
         signal.signal(signal.SIGHUP, self.sig_handler)
         self.exit = Event()
         self.exit_flag = False
 
-        self.load_configuration()
         if not str2bool(self.sys_config.get("platform_support", 1)):
             self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), 1)
             self.log.notice("Set TC to idle.")
@@ -3418,7 +3424,7 @@ class ThermalManagement(hw_managemet_file_op):
         if CONST.SYS_CONF_GENERAL_CONFIG_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
 
-        self.sys_config = sys_config
+        return sys_config
 
     # ----------------------------------------------------------------------
     def add_psu_sensor(self, name):
