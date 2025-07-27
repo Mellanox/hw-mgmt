@@ -2368,6 +2368,7 @@ n51xxld_specific()
 			add_i2c_dynamic_bus_dev_connection_table "${so_cartridge_eeprom_connect_table[@]}"
 			echo -n "${so_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
 			echo 4 > $config_path/cartridge_counter
+			echo 2 > $config_path/cpld_num
 			;;
 		HI177)	# Kyber
 			echo 0 > $config_path/cartridge_counter
