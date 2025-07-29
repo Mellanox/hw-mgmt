@@ -1,0 +1,7 @@
+drivetemp 43850
+drivetemp_crit 109850
+drivetemp_max 99850
+drivetemp_min -150
+cpu_pack 37750
+cpu_pack_crit 100000
+cpu_pack_max 95000
