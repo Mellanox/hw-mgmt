@@ -1,5 +1,6 @@
 /*
- * Copyright (C) Mellanox Technologies, Ltd. 2001-2020 ALL RIGHTS RESERVED.
+ * SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+ * Copyright (c) 2001-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * This software product is a proprietary product of Mellanox Technologies, Ltd.
  * (the "Company") and all right, title, and interest in and to the software product,
