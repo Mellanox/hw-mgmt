@@ -755,6 +755,7 @@ SODIMM_TEMP_HYST=6000
 
 set_sodimm_temp_limits()
 {
+	local s_list=""
 	# SODIMM temp reading is not supported on Broadwell-DE Comex
 	# and on BF# Comex.
 	# Broadwell-DE Comex can be installed interchangeably with new
@@ -781,7 +782,8 @@ set_sodimm_temp_limits()
 		fi
 	fi
 
-	if find /sys/bus/i2c/drivers/jc42/[0-9]*/ | grep -q hwmon ; then
+	s_list=`find /sys/bus/i2c/drivers/jc42/[0-9]*/`
+	if echo $s_list | grep -q hwmon ; then
 		for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*; do
 			echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
 			echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
