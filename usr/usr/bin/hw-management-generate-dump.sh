@@ -118,7 +118,7 @@ esac
 
 dump_cmd "iorw -b 0x2500 -r -l$CPLD_IOREG_RANGE" "cpld_reg_direct_dump" "5"
 dump_cmd "dmesg" "dmesg" "10"
-dump_cmd "dmidecode -t1 -t2 -t11 -t15" "dmidecode" "3"
+dump_cmd "dmidecode" "dmidecode" "5"
 dump_cmd "lsmod" "lsmod" "3"
 dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
