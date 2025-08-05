@@ -4014,8 +4014,8 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
-		# TEMPORARY hw-management mockup values for HI180/HI181/HI185 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181"  -o "$sku" == "HI185" ]; then
+		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193 in simx
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
@@ -4112,6 +4112,12 @@ case $ACTION in
 	restart|force-reload)
 		do_stop
 		sleep 3
+		# TEMPORARY hw-management mockup values for SIMX
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
+			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			log_info "Created mock hw management tree, exiting."
+			exit 0
+		fi
 		do_start
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
