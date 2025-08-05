@@ -318,7 +318,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI193)
 			return 0
 			;;
 
@@ -434,7 +434,7 @@ process_simx_links()
 	local dir_list
 
 	# Create the attributes in thermal and environment directories of hw-management.
-        dir_list="thermal environment"
+        dir_list="thermal environment alarm"
         for i in $dir_list; do
                 while IFS=' ' read -r filename value; do
                         [ -z "$filename" ] && continue
