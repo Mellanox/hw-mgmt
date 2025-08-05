@@ -4,13 +4,13 @@
 		"pwr_conv1": {
 			"mp29502" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
-				"in3": {"name": "PDB-1+Conv+Vol+Out+1"},
+				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-1+Conv+Curr+Out+1"},
 				"temp2": {"name": "PDB-1+Conv+Temp"}
 			},
 			"raa228004" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
-				"in3": {"name": "PDB-1+Conv+Vol+Out+1"},
+				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-1+Conv+Curr+Out+1"},
 				"temp2": {"name": "PDB-1+Conv+Temp"}
 			}
@@ -18,32 +18,32 @@
 		"pwr_conv2": {
 			"mp29502" : {
 				"in1": {"name": "PDB-2+Conv+Vol+In+1"},
-				"in3": {"name": "PDB-2+Conv+Vol+Out+1"},
+				"in2": {"name": "PDB-2+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-2+Conv+Curr+Out+1"},
 				"temp2": {"name": "PDB-2+Conv+Temp"}
 			},
 			"raa228004" : {
 				"in1": {"name": "PDB-2+Conv+Vol+In+1"},
-				"in3": {"name": "PDB-2+Conv+Vol+Out+1"},
+				"in2": {"name": "PDB-2+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-2+Conv+Curr+Out+1"},
 				"temp2": {"name": "PDB-2+Conv+Temp"}
 			}
 		},
 		"pdb_hotswap1": {
 			"lm5066i" : {
-				"in1": {"name": "PDB+HSC+VinDC+Volt+In"},
-				"in3": {"name": "PDB+HSC+VinDC+Volt+Out"},
-				"curr1": {"name": "PDB+HSC+VinDC+Curr+In"},
-				"power1": {"name": "PDB+HSC+VinDC+Pwr+In"},
-				"temp1": {"name": "PDB+HSC+VinDC+Temp"}
+				"in1": {"name": "HSC+VinDC+Volt+In"},
+				"in2": {"name": "HSC+VinDC+Volt+Out"},
+				"curr1": {"name": "HSC+VinDC+Curr+In"},
+				"power1": {"name": "HSC+VinDC+Pwr+In"},
+				"temp1": {"name": "HSC+VinDC+Temp"}
 			},
 			"mp5926" : {
-				"in1": {"name": "PDB+HSC+VinDC+Volt+In"},
-				"in3": {"name": "PDB+HSC+VinDC+Volt+Out"},
-				"curr1": {"name": "PDB+HSC+VinDC+Curr+In"},
-				"curr2": {"name": "PDB+HSC+VinDC+Pwr+In"},
-				"power1": {"name": "PDB+HSC+VinDC+Pwr+In"},
-				"temp1": {"name": "PDB+HSC+VinDC+Temp"}
+				"in1": {"name": "HSC+VinDC+Volt+In"},
+				"in2": {"name": "HSC+VinDC+Volt+Out"},
+				"curr1": {"name": "HSC+VinDC+Curr+In"},
+				"curr2": {"name": "HSC+VinDC+Pwr+In"},
+				"power1": {"name": "HSC+VinDC+Pwr+In"},
+				"temp1": {"name": "HSC+VinDC+Temp"}
 			}
 		}
 	},
