@@ -3689,6 +3689,13 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
+		# TEMPORARY hw-management mockup values for HI183 in simx
+		if check_simx && [ "$sku" == "HI183" ]; then
+			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			process_simx_links
+			log_info "Finished creating static hw-management tree with mock values, exiting.."
+			exit 0
+		fi
 		do_start
 	;;
 	stop)
@@ -3773,6 +3780,13 @@ case $ACTION in
 	restart|force-reload)
 		do_stop
 		sleep 3
+		# TEMPORARY hw-management mockup values for HI183 in simx
+		if check_simx && [ "$sku" == "HI183" ]; then
+			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			process_simx_links
+			log_info "Finished creating static hw-management tree with mock values, exiting.."
+			exit 0
+		fi
 		do_start
 	;;
 	reset-cause)
