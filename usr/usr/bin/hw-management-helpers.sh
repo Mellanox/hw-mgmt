@@ -336,9 +336,9 @@ check_simx()
 check_tc_is_supported()
 {
 	if grep -q '"platform_support" : 0' $config_path/tc_config.json; then
-		return 1
-	else
 		return 0
+	else
+		return 1
 	fi
 }
 
