@@ -1,7 +1,7 @@
-hw-management (1.mlnx.7.0050.1002) stable; urgency=low
+hw-management (1.mlnx.7.0050.1003) unstable; urgency=low
   [ MLNX ] 
 
- -- NBU BSP <NBU-System-SW-BSP@exchange.nvidia.com> Mon, 14 Jul 2025 11:11:57 +0300
+ -- NBU BSP <NBU-System-SW-BSP@exchange.nvidia.com> Thu, 07 Aug 2025 08:50:08 +0300
 
 
 
