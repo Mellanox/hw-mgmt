@@ -890,3 +890,6 @@ SUBSYSTEM=="pci", DRIVERS=="sx_core", ACTION=="offline", RUN+="/usr/bin/hw-manag
 # DPU
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add dpu %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm dpu %S %p"
+
+# TPM - disable TPM runtime power management
+SUBSYSTEM=="tpm", KERNEL=="tpm0", ATTR{power/control}="on"
