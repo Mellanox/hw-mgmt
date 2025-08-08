@@ -541,12 +541,12 @@ declare -A q3401_pwr_alternatives=( \
 				   ["lm5066i_1"]="lm5066i 0x14 4 pdb_hotswap2" \
 				   ["lm5066_1"]="lm5066i 0x14 4 pdb_hotswap2" \
 				   ["mp5926_1"]="mp5926 0x14 4 pdb_hotswap2" \
-				   ["tmp1075_0"]="tmp1075 0x4c 4 pdb_mos_amb" \
-				   ["tmp411_0"]="tmp411 0x4c 4 pdb_mos_amb" \
-				   ["tmp451_0"]="tmp451 0x4c 4 pdb_mos_amb" \
-				   ["tmp1075_1"]="tmp1075 0x4e 4 pdb_brd_amb" \
-				   ["tmp411_1"]="tmp411 0x4e 4 pdb_brd_amb" \
-				   ["tmp451_1"]="tmp451 0x4e 4 pdb_brd_amb" \
+				   ["tmp1075_0"]="tmp1075 0x4e 4 pdb_brd_amb" \
+				   ["tmp411_0"]="tmp411 0x4e 4 pdb_brd_amb" \
+				   ["tmp451_0"]="tmp451 0x4e 4 pdb_brd_amb" \
+				   ["tmp1075_1"]="tmp1075 0x4c 4 pdb_mos_amb" \
+				   ["tmp411_1"]="tmp411 0x4c 4 pdb_mos_amb" \
+				   ["tmp451_1"]="tmp451 0x4c 4 pdb_mos_amb" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
 
 # P*HaEaOfTk
@@ -971,6 +971,7 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!port_type0_alternatives[@]}"; do
 					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
 				done
+				;;
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
 				return 1
