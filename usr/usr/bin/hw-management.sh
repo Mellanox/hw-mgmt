@@ -3341,15 +3341,21 @@ pre_devtr_init()
 		echo $ndr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	VMOD0018)
+		cpu_bus_offset=$xdr_cpu_bus_offset
 		case $sku in
-		HI158|HI175|HI178|HI179)
+		HI158|HI175|HI178)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
 			;;
+		HI179)
+			echo 2 > "$config_path"/swb_brd_num
+			echo 32 > "$config_path"/swb_brd_bus_offset
+			cpu_bus_offset=$q3401_cpu_bus_offset
+			;;	
 		*)
 			;;
 		esac
-		echo $xdr_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+		echo $cpu_bus_offset > $config_path/cpu_brd_bus_offset
 		;;
 	VMOD0019)
 		case $sku in
