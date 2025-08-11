@@ -62,9 +62,12 @@ optional arguments:
 import sys
 import argparse
 import os.path
+import subprocess
 import struct
 import binascii
 import zlib
+import tempfile
+import shutil
 
 
 #############################
@@ -566,7 +569,7 @@ def parse_fru_mlnx_bin(data, FRU_ITEMS, verbose=False):
         sanity_str = ""
     if sanity_str != "MLNX":
         printv("MLNX Sanitiy check fail", verbose)
-        return fru_dict
+        return None
     printv("Sanitiy check is OK", verbose)
     out_str = ""
     base_pos = hdr_size + 4
@@ -613,7 +616,7 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
         tlv_header = bin_decode(fru_dict['tlv_header'])
     except BaseException:
         tlv_header = ""
-    if 'TlvInfo' not in tlv_header and fru_dict['ver'] not in SUPPORTED_FRU_VER:
+    if 'TlvInfo' not in tlv_header or fru_dict['ver'] not in SUPPORTED_FRU_VER:
         return None
 
     fru_dict['items'] = []
@@ -645,6 +648,41 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
     return fru_dict
 
 
+def parse_ipmi_fru_bin(data, verbose):
+    retcode = 1
+    ipmi_fru_exec_path_list = ["/usr/sbin/ipmi-fru", "/usr/bin/ipmi-fru"]
+    # Create a binary temporary file, read/write, not deleted automatically
+    with tempfile.NamedTemporaryFile(mode='w+b') as tmp:
+        # Write some binary data
+        tmp.write(data)
+        # Move cursor to the beginning for reading
+        tmp.seek(0)
+        ipmi_fru_path = shutil.which("ipmi-fru")
+        if not ipmi_fru_path:
+            for path in ipmi_fru_exec_path_list:
+                if os.path.exists(path):
+                    ipmi_fru_path = path
+                    break
+        print("ipmi_fru_path: {}".format(ipmi_fru_path))
+        if ipmi_fru_path:
+            cmd = [ipmi_fru_path, "--fru-file={}".format(tmp.name)]
+            print("cmd: {}".format(cmd))
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                output_str = result.stdout.strip()   # Command's standard output
+                retcode = result.returncode          # Command's return code
+                print("output_str: {}".format(output_str))
+            except Exception as e:
+                return None
+
+    if not retcode:
+        output_str = output_str.split("\n")[2:]
+        output_str = "\n".join(output_str)
+        return {'items': [["", output_str]]}
+    else:
+        return None
+
+
 def parse_fru_bin(data, VPD_TYPE, verbose):
     res = None
     if VPD_TYPE in globals().keys():
@@ -662,6 +700,9 @@ def parse_fru_bin(data, VPD_TYPE, verbose):
         res = parse_fru_onie_bin(data, SYSTEM_VPD, verbose)
         if not res:
             res = parse_fru_mlnx_bin(data, MLNX_VENDOR_BLK, verbose)
+        if not res:
+            res = parse_ipmi_fru_bin(data, verbose)
+
     return res
 
 
