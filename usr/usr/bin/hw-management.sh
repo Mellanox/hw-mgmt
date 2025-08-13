@@ -502,6 +502,20 @@ sn5640_base_connect_table=( \
 	tmp102 0x4a 7 \
 	24c512 0x51 8 )
 
+sn5810_base_connect_table=( \
+        mp2891 0x62 5 \
+        mp2891 0x63 5 \
+        mp2891 0x64 5 \
+        mp2891 0x65 5 \
+        mp2891 0x66 5 \
+        mp2891 0x67 5 \
+        mp2891 0x68 5 \
+        mp2891 0x69 5 \
+        mp2891 0x6a 5 \
+        mp2891 0x6c 5 \
+        mp2891 0x6e 5 \
+        24c512 0x51 0 )
+
 p2317_connect_table=(	24c512 0x51 8)
 
 # 6 TS are temporary for BU and will be removed later.
@@ -623,6 +637,8 @@ ariel_cartridge_eeprom_connect_table=( 24c02 0x50 47 cable_cartridge1_eeprom \
 n5110ld_vpd_connect_table=(24c512 0x51 2 vpd_info)
 n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 
+sn5810_vpd_connect_table=(24c512 0x51 0 vpd_info)
+
 # I2C busses naming.
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
@@ -637,6 +653,7 @@ q3400_named_busses=( asic1 2 asic2 18 asic3 34 asic4 50 pwr1 4 pwr2 3 vr1 5 vr2 
 smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu3 19 dpu4 20)
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
+sn5810_named_busses=( asic1 2 pwr 4 vr1 5 vpd 0 )
 
 ACTION=$1
 
@@ -2558,11 +2575,54 @@ sn5640_specific()
 	echo 0 > "$config_path"/labels_ready
 }
 
+sn5810_specific()
+{
+        if [ ! -e "$devtree_file" ]; then
+                connect_table+=(${sn5810_base_connect_table[@]})
+                add_cpu_board_to_connection_table $ng800_cpu_bus_offset
+        fi
+
+        i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
+        i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
+        max_tachos=0
+        hotplug_fans=0
+        hotplug_pwrs=0
+        hotplug_psus=0
+        psu_count=0
+        minimal_unsupported=1
+        echo 4 > $config_path/cpld_num
+        lm_sensors_config="$lm_sensors_configs_path/sn5640_sensors.conf"
+        named_busses+=(${sn5810_named_busses[@]})
+        add_come_named_busses $ng800_cpu_bus_offset
+        echo -n "${named_busses[@]}" > $config_path/named_busses
+        echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+        echo 0 > "$config_path"/labels_ready
+	case $sku in
+		HI181)	# SN5810_LD
+			echo ${sn5810_vpd_connect_table[0]} ${sn5810_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${sn5810_vpd_connect_table[2]}/new_device
+			# ln -sf /dev/i2c-0 /dev/i2c-8
+        		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
+			;;
+		*)
+			;;
+	esac
+}
+
+sn5810_specific_cleanup()
+{
+	# unlink /dev/i2c-8
+	# Remove VPD explicitly.
+	echo ${sn5810_vpd_connect_table[1]} > /sys/bus/i2c/devices/i2c-${sn5810_vpd_connect_table[2]}/delete_device
+}
+
 system_cleanup_specific()
 {
 	case $board_type in
 	VMOD0021)
 		n51xxld_specific_cleanup
+		;;
+	VMOD0024)
+		sn5810_specific_cleanup
 		;;
 	*)
 		;;
@@ -2626,6 +2686,9 @@ check_system()
 			;;
 		VMOD0022)
 			sn5640_specific
+			;;
+		VMOD0024)
+			sn5810_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3320,6 +3383,15 @@ pre_devtr_init()
 	VMOD0022)
 		case $sku in
 		HI171|HI172)
+			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
+			;;
+		*)
+			;;
+		esac
+		;;
+	VMOD0024)
+		case $sku in
+		HI181)
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
 		*)
