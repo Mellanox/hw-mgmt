@@ -116,6 +116,7 @@ chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
+q3401_reset_attr_num=17
 chipup_retry_count=3
 fan_speed_tolerance=15
 minimal_unsupported=0
@@ -2321,6 +2322,7 @@ qm3xxx_specific()
 	add_come_named_busses $xdr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo 0 > "$config_path"/labels_ready
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 qm3xx1_specific()
@@ -2368,6 +2370,7 @@ qm3xx1_specific()
 	add_come_named_busses $xdr_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo 0 > "$config_path"/labels_ready
+	echo $q3401_reset_attr_num > $config_path/reset_attr_num
 }
 
 qm_qm3_common()
@@ -2389,7 +2392,6 @@ qm_qm3_common()
 			qm3xxx_specific
 		;;
 	esac
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 smart_switch_common()
