@@ -215,6 +215,30 @@ declare -A sn5640_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
+declare -A sn5810_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
+				["mp2891_1"]="mp2891 0x63 5 voltmon2" \
+				["mp2891_2"]="mp2891 0x64 5 voltmon3" \
+				["mp2891_3"]="mp2891 0x65 5 voltmon4" \
+				["mp2891_4"]="mp2891 0x66 5 voltmon5" \
+				["mp2891_5"]="mp2891 0x67 5 voltmon6" \
+				["mp2891_6"]="mp2891 0x68 5 voltmon7" \
+				["mp2891_7"]="mp2891 0x69 5 voltmon8" \
+				["mp2891_8"]="mp2891 0x6a 5 voltmon9" \
+				["mp2891_9"]="mp2891 0x6c 5 voltmon10" \
+				["mp2891_10"]="mp2891 0x6e 5 voltmon11" \
+				["xdpe1a2g7_0"]="xdpe1a2g7 0x62 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7 0x63 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7 0x64 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7 0x65 5 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7 0x66 5 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x67 5 voltmon6" \
+				["xdpe1a2g7_6"]="xdpe1a2g7 0x68 5 voltmon7" \
+				["xdpe1a2g7_7"]="xdpe1a2g7 0x69 5 voltmon8" \
+				["xdpe1a2g7_8"]="xdpe1a2g7 0x6a 5 voltmon9" \
+				["xdpe1a2g7_9"]="xdpe1a2g7 0x6c 5 voltmon10" \
+				["xdpe1a2g7_10"]="xdpe1a2g7 0x6e 5 voltmon11" \
+				["24c512_0"]="24c512 0x51 0 vpd_info")
+
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
 			       ["tmp75_1"]="tmp75 0x49 7 port_temp2" \
@@ -1020,6 +1044,19 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!clk_type0_alternatives[@]}"; do
 					clk_alternatives["$key"]="${clk_type0_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
+		VMOD0024)
+			case $sku in
+			HI181)
+				for key in "${!sn5810_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn5810_alternatives["$key"]}"
 				done
 				;;
 			*)
