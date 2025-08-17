@@ -29,7 +29,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
+source hw-management-helpers.sh
 declare -A leakage_map
 # Format: leakage_map[ID]="address:offset"
 # 0 = leakage detected
@@ -53,19 +53,36 @@ Valid leakage ids: ${!leakage_map[@]}
 EOF
 }
 
-function clear_all_leakage () {
+function is_system_supported () 
+{
+    local nvl_rgx="N[5-9]+_LD"
+    local gb200_rgx="N5[0-4][0-9]+_LD"
+    pn=$(cat $pn_file)
+    if [[ $pn =~ $nvl_rgx ]]; then
+        # if [[ $pn =~ $gb200_rgx ]]; then
+            #TODO: check MGMT CPLD version >= 0900
+            # true
+        # fi
+        true
+    fi
+    false
+}
+
+function clear_all_leakage () 
+{
     echo "Clearing all leakage"
     for leakage_id in "${!leakage_map[@]}"; do
         unmock_leakage "$leakage_id"
     done
 }
 
-function mock_leakage () {
+function mock_leakage () 
+{
     local leakage_id=$1
     local entry=${leakage_map[$leakage_id]}
     if [[ -z "$entry" ]]; then
         echo "Unknown leakage sensor ID: $leakage_id"
-        return 1
+        exit 1
     fi
     local address=${entry%%:*}
     local bit_offset=${entry##*:}
@@ -79,12 +96,13 @@ function mock_leakage () {
     iorw -w -b $address -l 1 -v $hex_val
 }
 
-function unmock_leakage () {
+function unmock_leakage () 
+{
     local leakage_id=$1
     local entry=${leakage_map[$leakage_id]}
     if [[ -z "$entry" ]]; then
         echo "Unknown leakage sensor ID: $leakage_id"
-        return 1
+        exit 1
     fi
     local address=${entry%%:*}
     local bit_offset=${entry##*:}
@@ -98,9 +116,14 @@ function unmock_leakage () {
     iorw -w -b $address -l 1 -v $hex_val
 }
 
-main() {
+main() 
+{
     if [[ $# -eq 0 ]]; then
         usage
+        exit 1
+    fi
+    if ! is_system_supported; then
+        echo "System not supported"
         exit 1
     fi
     while getopts "s:r:ch" opt; do
