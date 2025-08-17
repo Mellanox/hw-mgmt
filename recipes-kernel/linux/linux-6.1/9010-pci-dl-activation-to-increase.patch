@@ -1,0 +1,16 @@
+--- a/drivers/pci/pci.c	2025-08-17 14:07:57.807894701 +0300
++++ b/drivers/pci/pci.c	2025-08-17 14:10:22.648571238 +0300
+@@ -5080,11 +5080,12 @@
+ 		pci_dbg(dev, "waiting %d ms for downstream link\n", delay);
+ 		msleep(delay);
+ 	} else {
++		delay = 2000; // Debug wait 2000 msec for link ready
+ 		pci_dbg(dev, "waiting %d ms for downstream link, after activation\n",
+ 			delay);
+ 		if (!pcie_wait_for_link_delay(dev, true, delay)) {
+ 			/* Did not train, no need to wait any further */
+-			pci_info(dev, "Data Link Layer Link Active not set in 1000 msec\n");
++			pci_info(dev, "Data Link Layer Link Active not set in 2000 msec\n");
+ 			return -ENOTTY;
+ 		}
+ 	}
