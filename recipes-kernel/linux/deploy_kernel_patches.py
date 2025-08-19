@@ -2,7 +2,8 @@
 # pylint: disable=line-too-long
 # pylint: disable=C0103
 ########################################################################
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -55,16 +56,17 @@ import pdb
 
 VERSION = "0.9.0"
 
+
 class CONST(object):
     # Patch table string const
     PATCH_TABLE_NAME = "Patch_Status_Table.txt"
     PATCH_TABLE_DELIMITER = "----------------------"
-    PATCH_OS_SUBFOLDERS = {"default" : "./linux-{kver}",
-                           "sonic" : "./linux-{kver}/sonic",
-                           "opt" : "./linux-{kver}/opt",
-                           "cumulus" : "./linux-{kver}/cumulus",
-                           "nvos" : "./linux-{kver}/nvos",
-                           "dvs" : "./linux-{kver}/dvs"}
+    PATCH_OS_SUBFOLDERS = {"default": "./linux-{kver}",
+                           "sonic": "./linux-{kver}/sonic",
+                           "opt": "./linux-{kver}/opt",
+                           "cumulus": "./linux-{kver}/cumulus",
+                           "nvos": "./linux-{kver}/nvos",
+                           "dvs": "./linux-{kver}/dvs"}
     PATCH_NAME = "patch name"
     SUBVERSION = "subversion"
     PATCH_DST = "dst_type"
@@ -89,23 +91,28 @@ class CONST(object):
 # Local const
 #############################
 
-PATCH_RULES = {"feature upstream": {CONST.FILTER : "copy_to_accepted_filter"},
-               "feature accepted": {CONST.FILTER : "copy_to_accepted_filter"},
-               "feature pending":  {CONST.FILTER : "copy_to_accepted_filter"},
-               "downstream":       {CONST.FILTER : "copy_to_candidate_filter"},
-               "downstream accepted": {CONST.FILTER : "copy_to_accepted_filter"},
-               "bugfix upstream":  {CONST.FILTER : "copy_to_accepted_filter"},
-               "bugfix accepted" : {CONST.FILTER : "copy_to_accepted_filter"},
-               "bugfix pending":   {CONST.FILTER : "copy_to_accepted_filter"},
-               "rejected":         {CONST.FILTER : "skip_patch_filter"}
-              }
+
+PATCH_RULES = {"feature upstream": {CONST.FILTER: "copy_to_accepted_filter"},
+               "feature accepted": {CONST.FILTER: "copy_to_accepted_filter"},
+               "feature pending": {CONST.FILTER: "copy_to_accepted_filter"},
+               "downstream": {CONST.FILTER: "copy_to_candidate_filter"},
+               "downstream accepted": {CONST.FILTER: "copy_to_accepted_filter"},
+               "bugfix upstream": {CONST.FILTER: "copy_to_accepted_filter"},
+               "bugfix accepted": {CONST.FILTER: "copy_to_accepted_filter"},
+               "bugfix pending": {CONST.FILTER: "copy_to_accepted_filter"},
+               "rejected": {CONST.FILTER: "skip_patch_filter"}
+               }
 
 # ----------------------------------------------------------------------
+
+
 def trim_array_str(str_list):
     ret = [elem.strip() for elem in str_list]
     return ret
 
 # ----------------------------------------------------------------------
+
+
 def get_line_elements(line):
     columns_raw = line.split("|")
     if len(columns_raw) < 3:
@@ -116,6 +123,8 @@ def get_line_elements(line):
     return columns
 
 # ----------------------------------------------------------------------
+
+
 def parse_status(line, patch_name):
     """
     parse patch status.
@@ -132,7 +141,7 @@ def parse_status(line, patch_name):
     status = line_arr[0].lower()
     if status not in PATCH_RULES.keys():
         return None
-    status_dict = {CONST.STATUS : status}
+    status_dict = {CONST.STATUS: status}
     status_dict.update(PATCH_RULES[status])
     # parse status line
     if len(line_arr) > 1:
@@ -141,7 +150,7 @@ def parse_status(line, patch_name):
             rule = rule.strip()
             try:
                 ret = re.match(r'(\S+)\[(.*)\]', rule)
-            except:
+            except BaseException:
                 print("Incompatible status {} for {}".format(line, patch_name))
                 return None
             if not ret or len(ret.groups()) < 2:
@@ -151,6 +160,8 @@ def parse_status(line, patch_name):
     return status_dict
 
 # ----------------------------------------------------------------------
+
+
 def load_patch_table(path, k_version):
     patch_table_filename = os.path.join(path, CONST.PATCH_TABLE_NAME)
 
@@ -176,7 +187,7 @@ def load_patch_table(path, k_version):
             break
 
     # if kernel version not found
-    if table_ofset >= len(patch_table_lines)-5:
+    if table_ofset >= len(patch_table_lines) - 5:
         print("Err: kernel version {} not found in {}".format(k_version, patch_table_filename))
         return None
 
@@ -212,8 +223,8 @@ def load_patch_table(path, k_version):
                 patch_status = parse_status(patch_status_line, table_line[CONST.PATCH_NAME])
                 if not patch_status:
                     print("Err: can't parse patch {} line #{} status: \"{}\"".format(table_line[CONST.PATCH_NAME],
-                                                                                idx,
-                                                                                patch_status_line))
+                                                                                     idx,
+                                                                                     patch_status_line))
                     return None
                 table_line[CONST.STATUS] = patch_status
                 table_line[CONST.PATCH_DST] = None
@@ -222,6 +233,8 @@ def load_patch_table(path, k_version):
     return table
 
 # ----------------------------------------------------------------------
+
+
 def copy_to_accepted_filter(patch, accepted_folder, candidate_folder, kver):
     ret = accepted_folder
     if patch[CONST.SUBVERSION]:
@@ -236,6 +249,8 @@ def copy_to_accepted_filter(patch, accepted_folder, candidate_folder, kver):
     return ret
 
 # ----------------------------------------------------------------------
+
+
 def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
     ret = candidate_folder
     if patch[CONST.SUBVERSION]:
@@ -250,6 +265,8 @@ def copy_to_candidate_filter(patch, accepted_folder, candidate_folder, kver):
     return ret
 
 # ----------------------------------------------------------------------
+
+
 def copy_to_accepted_ver_filter(patch, accepted_folder, candidate_folder, kver):
     ret = None
     patch_kver_lst = patch[CONST.SUBVERSION].split('.')
@@ -262,6 +279,8 @@ def copy_to_accepted_ver_filter(patch, accepted_folder, candidate_folder, kver):
     return ret
 
 # ----------------------------------------------------------------------
+
+
 def copy_to_candidate_ver_filter(patch, accepted_folder, candidate_folder, kver):
     ret = None
     patch_kver_lst = patch[CONST.SUBVERSION].split('.')
@@ -274,11 +293,15 @@ def copy_to_candidate_ver_filter(patch, accepted_folder, candidate_folder, kver)
     return ret
 
 # ----------------------------------------------------------------------
+
+
 def skip_patch_filter(patch, accepted_folder, candidate_folder, kver):
     patch[CONST.PATCH_DST] = CONST.PATCH_CANDIDATE
     return None
 
 # ----------------------------------------------------------------------
+
+
 def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder, kver, nos=None):
     kver_major = ".".join(kver.split('.')[0:2])
 
@@ -309,7 +332,7 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         elif "ALL" in take_list:
             if not dst_folder:
                 dst_folder = candidate_folder
-        elif "ALL" in skip_list or dst_folder == None:
+        elif "ALL" in skip_list or dst_folder is None:
             continue
 
         patch_src_folder = src_folder + os_folder.format(kver=kver_major)
@@ -317,15 +340,21 @@ def filter_patch_list(patch_list, src_folder, accepted_folder, candidate_folder,
         patch[CONST.DST] = "{}/{}".format(dst_folder, patch[CONST.PATCH_NAME])
 
 # ----------------------------------------------------------------------
+
+
 def os_cmd(cmd):
     return os.system(cmd)
 
 # ----------------------------------------------------------------------
+
+
 def print_patch_all(patch_list):
     for patch_ent in patch_list:
         print("{} -> {}".format(patch_ent.get(CONST.SRC, "None"), patch_ent.get(CONST.DST, "Skip")))
 
 # ----------------------------------------------------------------------
+
+
 def process_patch_list(patch_list):
     files_copyed = 0
     for patch in patch_list:
@@ -338,6 +367,8 @@ def process_patch_list(patch_list):
     return True
 
 # ----------------------------------------------------------------------
+
+
 def update_series(patch_list, series_path, delimiter="", dst_type=None):
     # Load seried file
     if not os.path.isfile(series_path):
@@ -373,6 +404,8 @@ def update_series(patch_list, series_path, delimiter="", dst_type=None):
     return 0
 
 # ----------------------------------------------------------------------
+
+
 def parse_config_line(config_option_line):
     option = None
     status = None
@@ -392,8 +425,10 @@ def parse_config_line(config_option_line):
     return None, None
 
 # ----------------------------------------------------------------------
+
+
 def produce_config_line(option, status):
-    if status == None:
+    if status is None:
         config_option_line = "# {} is not set".format(option)
     else:
         config_option_line = "{}={}".format(option, status)
@@ -401,6 +436,8 @@ def produce_config_line(option, status):
     return config_option_line
 
 # ----------------------------------------------------------------------
+
+
 def load_config_to_dict(config_path, section):
 
     if not os.path.isfile(config_path):
@@ -425,6 +462,8 @@ def load_config_to_dict(config_path, section):
     return config_dict
 
 # ----------------------------------------------------------------------
+
+
 def process_config(ref_cfg_filename, dst_cfg, delimiter="", arch="amd64", sub_type=""):
     # Load src config file
     ref_config = load_config_to_dict(ref_cfg_filename, "{}:{}".format(arch, sub_type))
@@ -467,11 +506,14 @@ def process_config(ref_cfg_filename, dst_cfg, delimiter="", arch="amd64", sub_ty
 
     return dst_config_lines
 
+
 def get_tool_path():
     tool_path = os.path.dirname(os.path.abspath(__file__))
     return tool_path + "/"
 
 # ----------------------------------------------------------------------
+
+
 def get_hw_mgmt_ver():
     ver = ""
     tool_path = get_tool_path()
@@ -484,15 +526,18 @@ def get_hw_mgmt_ver():
     return ver
 
 # ----------------------------------------------------------------------
+
+
 class RawTextArgumentDefaultsHelpFormatter(
-        argparse.ArgumentDefaultsHelpFormatter,
-        argparse.RawTextHelpFormatter
-    ):
+    argparse.ArgumentDefaultsHelpFormatter,
+    argparse.RawTextHelpFormatter
+):
     """
         @summary:
             Formatter class for pretty print ArgumentParser help
     """
     pass
+
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
@@ -576,7 +621,7 @@ if __name__ == '__main__':
 
     print("-> Process patches")
     patch_table = load_patch_table(src_folder, k_version_major)
-    if patch_table == None:
+    if patch_table is None:
         print("Can't load patch table from folder {}".format(src_folder))
         sys.exit(1)
 
