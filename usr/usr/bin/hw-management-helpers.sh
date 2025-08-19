@@ -227,7 +227,7 @@ check_cpu_type()
 
 find_i2c_bus()
 {
-    # Find physical bus number of Mellanox I2C controller. The default
+    # Find physical bus number of Nvidia I2C controller. The default
     # number is 1, but it could be assigned to others id numbers on
     # systems with different CPU types.
     if [ -f $config_path/i2c_bus_offset ]; then
