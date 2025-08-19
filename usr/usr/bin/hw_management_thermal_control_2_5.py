@@ -3300,7 +3300,7 @@ class ThermalManagement(hw_management_file_op):
                 self.log.notice("Wait...")
                 self.exit.wait(10)
 
-        self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
+        self.log.notice("Nvidia thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
         timeout = current_milli_time() + 1000 * CONST.THERMAL_WAIT_FOR_CONFIG
         while timeout > current_milli_time():
             if not self.write_pwm(self.pwm_target):

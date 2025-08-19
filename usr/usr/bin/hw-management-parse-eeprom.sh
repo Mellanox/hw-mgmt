@@ -133,7 +133,7 @@ function do_conv ( )
 					# Sanity ok.
 					continue
 				else
-					echo Mellanox sanity checker fail
+					echo Nvidia sanity checker fail
 					exit 1;
 				fi
 		fi
