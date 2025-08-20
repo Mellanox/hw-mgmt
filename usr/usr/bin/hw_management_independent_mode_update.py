@@ -4,7 +4,8 @@
 # pylint: disable=W0718
 # pylint: disable=R0913:
 ########################################################################
-# Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,6 +42,7 @@ ERROR_READ_THERMAL_DATA = 254000
 
 BASE_PATH = "/var/run/hw-management"
 
+
 def get_asic_count():
     """Function gets ASIC count from "{BASE_PATH}/config/asic_num."""
     asic_count_file = os.path.join(BASE_PATH, "config", "asic_num")
@@ -70,6 +72,7 @@ def get_module_count():
         print(f"Error: Could not read module count from {module_count_file}")
         return False
 
+
 def check_asic_index(asic_index):
     """Function checks asic index boundry."""
     asic_count = get_asic_count()
@@ -78,6 +81,7 @@ def check_asic_index(asic_index):
     print(f"asic_index {asic_index} is out of bound 0..ASIC")
     return False
 
+
 def check_module_index(asic_index, module_index):
     """Function checks module index boundry."""
     module_count = get_module_count()
@@ -85,6 +89,7 @@ def check_module_index(asic_index, module_index):
         return True
     print(f"module_index {module_index}of asic {asic_index} is out of bound 1..n")
     return False
+
 
 def module_data_set_module_counter(module_counter):
     """Function sets module counter."""
@@ -100,6 +105,7 @@ def module_data_set_module_counter(module_counter):
     except Exception as e:
         print(f"Error setting module counter: {str(e)}")
         return False
+
 
 def thermal_data_set_asic(asic_index, temperature, warning_threshold, critical_threshold, fault=0):
     """Function sets asic data."""
@@ -133,6 +139,7 @@ def thermal_data_set_asic(asic_index, temperature, warning_threshold, critical_t
         print(f"Error setting thermal data for ASIC {asic_index}: {str(e)}")
         return False
 
+
 def thermal_data_set_module(asic_index,
                             module_index,
                             temperature,
@@ -164,6 +171,7 @@ def thermal_data_set_module(asic_index,
         print(f"Error setting thermal data for Module {module_index}: {str(e)}")
         return False
 
+
 def thermal_data_clean_asic(asic_index):
     """Function cleans asic data."""
     if not check_asic_index(asic_index):
@@ -191,6 +199,7 @@ def thermal_data_clean_asic(asic_index):
     except Exception as e:
         print(f"Error cleaning thermal data for ASIC {asic_index}: {str(e)}")
         return False
+
 
 def thermal_data_clean_module(asic_index, module_index):
     """Function cleans module data."""

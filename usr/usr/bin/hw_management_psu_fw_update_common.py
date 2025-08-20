@@ -2,7 +2,8 @@
 # pylint: disable=line-too-long
 # pylint: disable=C0103
 ########################################################################
-# Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -48,6 +49,7 @@ import os
 import time
 
 PMBUS_DELAY = 0.1
+
 
 def calc_crc8(data):
     """
@@ -102,7 +104,7 @@ def pmbus_write(i2c_bus, i2c_addr, data):
     data_for_crc = [i2c_addr_sh]
     data_for_crc.extend(data)
     pec = calc_crc8(data_for_crc)
-    data_str = "".join("0x{:02x} ".format(x) for x in  data)
+    data_str = "".join("0x{:02x} ".format(x) for x in data)
     # print("i2ctransfer -f -y {0:d} w{1:d}@0x{2:02X} {3}
     #        0x{4:02X}".format(i2c_bus, cmd_len, i2c_addr, data_str, pec))
     ret = os.popen("i2ctransfer -f -y {0:d} w{1:d}@0x{2:02X} {3} 0x{4:02X}"
@@ -116,7 +118,7 @@ def pmbus_write_nopec(i2c_bus, i2c_addr, data):
     @summary: Write pmbus command without PEC.
     """
     cmd_len = len(data)
-    data_str = "".join("0x{:02x} ".format(x) for x in  data)
+    data_str = "".join("0x{:02x} ".format(x) for x in data)
     ret = os.popen("i2ctransfer -f -y {0:d} w{1:d}@0x{2:02X} {3}"
                    .format(i2c_bus, cmd_len, i2c_addr, data_str)).read()
     time.sleep(PMBUS_DELAY)
@@ -170,6 +172,7 @@ def pmbus_read_mfr_id(i2c_bus, i2c_addr):
         return ascii_str
     return ''
 
+
 def pmbus_read_mfr_model(i2c_bus, i2c_addr):
     """
     @summary: Read MFR_MODEL.
@@ -179,6 +182,7 @@ def pmbus_read_mfr_model(i2c_bus, i2c_addr):
         ascii_str = ''.join(chr(int(i, 16)) for i in ret.split())[1:]
         return ascii_str
     return ''
+
 
 def pmbus_read_mfr_revision(i2c_bus, i2c_addr):
     """
@@ -190,18 +194,20 @@ def pmbus_read_mfr_revision(i2c_bus, i2c_addr):
         return ascii_str
     return ''
 
+
 def progress_bar(progress, total):
     """
     @summary: print progress bar.
     """
-    print('\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 /total), progress), end=(''))
+    print('\r[{0:20}]{1:>2}%'.format('#' * int(progress * 20 / total), progress), end=(''))
+
 
 def check_psu_redundancy(proceed, ignore_addr):
     """
     @summary: Check PSU redundancy.
     """
     psu_num = os.popen("cat /var/run/hw-management/config/hotplug_psus").read()
-    for i in range(1, int(psu_num)+1):
+    for i in range(1, int(psu_num) + 1):
         psu_dc = os.popen("cat /var/run/hw-management/thermal/psu{}_pwr_status".format(i)).read()
         psu_i2c_addr = os.popen("cat /var/run/hw-management/config/psu{}_i2c_addr".format(i)).read()
         if int(psu_dc) != 1:
