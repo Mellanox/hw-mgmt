@@ -1,4 +1,10 @@
 # Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +41,8 @@ import os
 '''
 cURL wrapper for Redfish client access
 '''
+
+
 class RedfishClient:
 
     DEFAULT_GET_TIMEOUT = 3
@@ -65,7 +73,7 @@ class RedfishClient:
         self.__user = user
         self.__password = password
         self.__token = None
-       
+
     def get_token(self):
         return self.__token
 
@@ -77,20 +85,20 @@ class RedfishClient:
     '''
     Build the POST command to get bearer token
     '''
-    def __build_login_cmd(self, password, timeout = DEFAULT_GET_TIMEOUT):
+    def __build_login_cmd(self, password, timeout=DEFAULT_GET_TIMEOUT):
         cmd = f'{self.__curl_path} -m {timeout} -k ' \
-              f'-H "Content-Type: application/json" ' \
-              f'-X POST https://{self.__svr_ip}/login ' \
-              f'-d \'{{"username" : "{self.__user}", "password" : "{password}"}}\''
+            f'-H "Content-Type: application/json" ' \
+            f'-X POST https://{self.__svr_ip}/login ' \
+            f'-d \'{{"username" : "{self.__user}", "password" : "{password}"}}\''
         return cmd
 
     '''
     Build the GET command
     '''
-    def __build_get_cmd(self, uri, timeout = DEFAULT_GET_TIMEOUT):
+    def __build_get_cmd(self, uri, timeout=DEFAULT_GET_TIMEOUT):
         cmd = f'{self.__curl_path} -m {timeout} -k ' \
-              f'-H "X-Auth-Token: {self.__token}" --request GET ' \
-              f'--location https://{self.__svr_ip}{uri}'
+            f'-H "X-Auth-Token: {self.__token}" --request GET ' \
+            f'--location https://{self.__svr_ip}{uri}'
         return cmd
 
     '''
@@ -98,9 +106,9 @@ class RedfishClient:
     '''
     def __build_fw_update_cmd(self, fw_image):
         cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-H "Content-Type: application/octet-stream" -X POST ' \
-              f'https://{self.__svr_ip}' \
-              f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE} -T {fw_image}'
+            f'-H "Content-Type: application/octet-stream" -X POST ' \
+            f'https://{self.__svr_ip}' \
+            f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE} -T {fw_image}'
         return cmd
 
     '''
@@ -108,10 +116,10 @@ class RedfishClient:
     '''
     def __build_change_password_cmd(self, new_password):
         cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-H "Content-Type: application/json" -X PATCH ' \
-              f'https://{self.__svr_ip}' \
-              f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user} ' \
-              f'-d \'{{"Password" : "{new_password}"}}\''
+            f'-H "Content-Type: application/json" -X PATCH ' \
+            f'https://{self.__svr_ip}' \
+            f'{RedfishClient.REDFISH_URI_ACCOUNTS}/{self.__user} ' \
+            f'-d \'{{"Password" : "{new_password}"}}\''
         return cmd
 
     def _build_change_user_password_cmd(self, user, new_password):
@@ -144,20 +152,20 @@ class RedfishClient:
     def __build_set_force_update_cmd(self, force):
         value = 'true' if force else 'false'
         cmd = f'{self.__curl_path} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-X PATCH -d \'{{"HttpPushUriOptions":{{"ForceUpdate":{value}}}}}\' ' \
-              f'https://{self.__svr_ip}' \
-              f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE}'
+            f'-X PATCH -d \'{{"HttpPushUriOptions":{{"ForceUpdate":{value}}}}}\' ' \
+            f'https://{self.__svr_ip}' \
+            f'{RedfishClient.REDFISH_URI_UPDATE_SERVICE}'
         return cmd
 
     '''
     Build generic POST command
     '''
-    def __build_post_cmd(self, uri, data_dict, timeout = DEFAULT_GET_TIMEOUT):
+    def __build_post_cmd(self, uri, data_dict, timeout=DEFAULT_GET_TIMEOUT):
         data_str = json.dumps(data_dict)
         cmd = f'{self.__curl_path} -m {timeout} -k -H "X-Auth-Token: {self.__token}" ' \
-              f'-H "Content-Type: application/json" ' \
-              f'-X POST https://{self.__svr_ip}{uri} ' \
-              f'-d \'{data_str}\''
+            f'-H "Content-Type: application/json" ' \
+            f'-X POST https://{self.__svr_ip}{uri} ' \
+            f'-d \'{data_str}\''
         return cmd
 
     '''
@@ -177,8 +185,8 @@ class RedfishClient:
         pattern = r'"token": "[^"]*"'
         replacement = '"token": "******"'
         obfuscation_response = re.sub(pattern,
-                                        replacement,
-                                        response)
+                                      replacement,
+                                      response)
         return obfuscation_response
 
     '''
@@ -227,20 +235,20 @@ class RedfishClient:
         output_str = output.decode('utf-8')
         error_str = error.decode('utf-8')
         ret = process.returncode
-        #print ("Curl send:{}\n".format(cmd))
-        #print ("Curl rcv: err:{}\nout:{}".format(error_str, output_str))
+        # print ("Curl send:{}\n".format(cmd))
+        # print ("Curl rcv: err:{}\nout:{}".format(error_str, output_str))
 
         if (ret > 0):
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
 
-        if (ret == 0): # cURL retuns ok
+        if (ret == 0):  # cURL retuns ok
             if login_cmd:
                 obfuscation_output_str = \
                     self.__obfuscate_token_response(output_str)
             else:
                 obfuscation_output_str = output_str
 
-        else: # cURL returns error
+        else:  # cURL returns error
             # Extract cURL command failure reason
             match = re.search(r'curl: \([0-9]+\) (.*)', error_str)
             if match:
@@ -250,7 +258,7 @@ class RedfishClient:
 
     def __get_http_request_type(self, cmd):
 
-        patterns = ( r'-X[ \t]+([A-Z]+)', r'--request[ \t]+([A-Z]+)')
+        patterns = (r'-X[ \t]+([A-Z]+)', r'--request[ \t]+([A-Z]+)')
 
         for pattern in patterns:
             match = re.search(pattern, cmd)
@@ -306,7 +314,7 @@ class RedfishClient:
     '''
     Login Redfish server and get bearer token
     '''
-    def login(self, password = None):
+    def login(self, password=None):
         if self.has_login():
             return RedfishClient.ERR_CODE_OK
 
@@ -317,7 +325,7 @@ class RedfishClient:
         # print(f'cmd:{cmd}')
         ret, response, error = self.exec_curl_cmd(cmd)
 
-        if (ret != 0): # cURL execution error
+        if (ret != 0):  # cURL execution error
             ret = RedfishClient.ERR_CODE_CURL_FAILURE
         else:
             # Note that 'curl' returns 0 and empty response
@@ -351,9 +359,10 @@ class RedfishClient:
 
     def build_get_cmd(self, uri):
         return self.__build_get_cmd(uri)
-    
+
     def build_post_cmd(self, uri, data_dict):
         return self.__build_post_cmd(uri, data_dict)
+
 
 '''
 BMCAccessor encapsulates BMC details such as IP address, credential management.
@@ -361,14 +370,16 @@ It also acts as wrapper of RedfishClient. For each memmber function
 RedfishClient.redfish_api_func(), there will be a wrapper member function
 BMCAccessor.func() implicitly defined.
 '''
+
+
 class BMCAccessor(object):
     CURL_PATH = '/usr/bin/curl'
     BMC_INTERNAL_IP_ADDR = '10.0.1.1'
     BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
-    BMC_NOS_ACCOUNT = 'yormnAnb' # used for communication between NOS and BMC
-    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51" # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
-    BMC_ROOT_PASSWORD = "ABYX12#14artb" # root pwd which should be patched to
+    BMC_NOS_ACCOUNT = 'yormnAnb'  # used for communication between NOS and BMC
+    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51"  # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    BMC_ROOT_PASSWORD = "ABYX12#14artb"  # root pwd which should be patched to
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
@@ -430,14 +441,14 @@ class BMCAccessor(object):
             cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
             subprocess.run(cmd, shell=True, check=True)
 
-            tpm_command = ["tpm2_createprimary", "-C", "o", "-u",  f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
+            tpm_command = ["tpm2_createprimary", "-C", "o", "-u", f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
             result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
 
             while attempt <= max_attempts:
                 if attempt > 1:
                     const = f"1300NVOS-BMC-USER-Const-{attempt}"
                     mess = f"Password did not meet criteria; retrying with const: {const}"
-                    #print(mess)
+                    # print(mess)
                     tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
                     result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
 
@@ -448,21 +459,21 @@ class BMCAccessor(object):
                     raise Exception("Symmetric cipher not found in TPM output")
 
                 # BMC dictates a password of 13 characters. Random from TPM is used with an append of A!
-                symcipher_part = symcipher_match.group(1)[:pass_len-2]
+                symcipher_part = symcipher_match.group(1)[:pass_len - 2]
                 if symcipher_part.isdigit():
-                    symcipher_value = symcipher_part[:pass_len-3] + 'vA!'
+                    symcipher_value = symcipher_part[:pass_len - 3] + 'vA!'
                 elif symcipher_part.isalpha() and symcipher_part.islower():
-                    symcipher_value = symcipher_part[:pass_len-3] + '9A!'
+                    symcipher_value = symcipher_part[:pass_len - 3] + '9A!'
                 else:
                     symcipher_value = symcipher_part + 'A!'
-                if len (symcipher_value) != pass_len:
+                if len(symcipher_value) != pass_len:
                     raise Exception("Bad cipher length from TPM output")
-                
+
                 # check for monotonic
                 monotonic_check = True
-                for i in range(len(symcipher_value) - 3): 
-                    seq = symcipher_value[i:i+4] 
-                    increments = [ord(seq[j+1]) - ord(seq[j]) for j in range(3)]
+                for i in range(len(symcipher_value) - 3):
+                    seq = symcipher_value[i:i + 4]
+                    increments = [ord(seq[j + 1]) - ord(seq[j]) for j in range(3)]
                     if increments == [1, 1, 1] or increments == [-1, -1, -1]:
                         monotonic_check = False
                         break
@@ -490,11 +501,11 @@ class BMCAccessor(object):
             raise Exception("Failed to generate a valid password after maximum retries.")
 
         except subprocess.CalledProcessError as e:
-            #print(f"Error executing TPM command: {e}")
+            # print(f"Error executing TPM command: {e}")
             raise Exception("Failed to communicate with TPM")
 
         except Exception as e:
-            #print(f"Error: {e}")
+            # print(f"Error: {e}")
             raise
 
     def create_user(self, user, password):
@@ -503,7 +514,7 @@ class BMCAccessor(object):
             "Password": password,
             "RoleId": "Administrator"
         })
-        
+
         # print(f'cmd:{cmd}')
         ret, output, error = self.rf_client.exec_curl_cmd(cmd)
         return ret
@@ -512,7 +523,7 @@ class BMCAccessor(object):
         if not self.rf_client.has_login():
             return RedfishClient.ERR_CODE_NOT_LOGIN
 
-        cmd = self.rf_client._build_change_user_password_cmd(user, password) 
+        cmd = self.rf_client._build_change_user_password_cmd(user, password)
         # print(f'cmd:{cmd}')
         ret, output_str, error_str = self.rf_client.exec_curl_cmd(cmd)
         return ret
@@ -522,17 +533,17 @@ class BMCAccessor(object):
         ret = self.rf_client.login()
         return ret
 
-    def login(self, password = None):
+    def login(self, password=None):
         print("Login to BMC")
         cp = []
         try:
-            cp.append("A") # try with BMC_NOS_ACCOUNT and TPM password")
+            cp.append("A")  # try with BMC_NOS_ACCOUNT and TPM password")
             ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
             if ret == RedfishClient.ERR_CODE_OK:
                 cp.append("Z1")
                 return ret
 
-            cp.append("B") # try with BMC_NOS_ACCOUNT and bmc account default password")
+            cp.append("B")  # try with BMC_NOS_ACCOUNT and bmc account default password")
             ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
             if ret == RedfishClient.ERR_CODE_OK:
                 cp.append("Z2")
@@ -543,16 +554,16 @@ class BMCAccessor(object):
                     cp.append("Z'1")
                 return ret
 
-            cp.append("C") # login as admin and tpm pwd")
+            cp.append("C")  # login as admin and tpm pwd")
             ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, self.get_login_password())
             if ret != RedfishClient.ERR_CODE_OK:
-                cp.append("C1") # login as admin and default pwd")
+                cp.append("C1")  # login as admin and default pwd")
                 ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
                 if ret != RedfishClient.ERR_CODE_OK:
                     cp.append("Z'2")
                     return ret
 
-            cp.append("D") # add BMC_NOS_ACCOUNT with tpm pwd")
+            cp.append("D")  # add BMC_NOS_ACCOUNT with tpm pwd")
             self.rf_client.update_credentials(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
             ret = self.rf_client.login()
 
