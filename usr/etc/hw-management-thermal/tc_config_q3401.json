@@ -7,33 +7,28 @@
 				"direction": {"-127:120": 30},
 				"present": {"-127:120": 30}
 			},
-			"psu_err":  {
-				"present": {"-127:120": 30},
-				"direction": {"-127:120": 30}
-			},
 			"sensor_read_error" : {"-127:120": 70}
 		}
 	},
-	"psu_fan_pwm_decode" : {"0:100": -1},
 	"fan_trend" : {
         "C2P": {
-			"0" : {"rpm_min":6879, "rpm_max":21800, "slope": 213.2, "pwm_min" : 30, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":5650, "rpm_max":20500, "slope": 200.4, "pwm_min" : 30, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
+			"0" : {"rpm_min":2842, "rpm_max":13500, "slope": 133.2, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
+			"1" : {"rpm_min":2741, "rpm_max":12603, "slope": 123.3, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
 			}
 	}, 
 	"dev_parameters" : {
 		"asic\\d*":       {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
-		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"module\\d+":     {"pwm_min": 30, "pwm_max" : 100, "val_min":60000, "val_max":80000, "val_min_offset": -10000, "poll_time": 20,
+						   "reg_extra_param": {"increase_step" : 0, "decrease_step": 0}},
 		"sensor_amb":     {"pwm_min": 30, "pwm_max" : 50, "val_min": 30000, "val_max": 55000, "poll_time": 30},
 		"swb\\d+_voltmon\\d+_temp":{"pwm_min": 30, "pwm_max" : 100, "val_min": "!85000", "val_max": "!125000", "poll_time": 60},
 		"sodimm\\d_temp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time":  60},
 		"drivetemp" :{"pwm_min": 30, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60}
 	},
-	"error_mask" : {"psu_err" : ["direction", "present"]},
 	"sensor_list" : ["asic1", "asic2", "asic3", "asic4", "cpu",
-					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "drwr8", "drwr9", "drwr10",
-					"psu1", "psu2", "psu3", "psu4", "psu5", "psu6", "psu7", "psu8", "sodimm1", "sodimm2",
+					"drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "drwr7", "drwr8",
+					"sodimm1", "sodimm2",
 					"swb1_voltmon1", "swb1_voltmon2", "swb1_voltmon3", "swb1_voltmon4", "swb1_voltmon5", "swb1_voltmon6", 
 					"swb2_voltmon1", "swb2_voltmon2", "swb2_voltmon3", "swb2_voltmon4", "swb2_voltmon5", "swb2_voltmon6"
 					]
