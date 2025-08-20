@@ -1,4 +1,23 @@
-#test_bmcaccessor_login
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
+# test_bmcaccessor_login
+from hw_management_redfish_client import BMCAccessor, RedfishClient
 import unittest
 import json
 import socket
@@ -10,7 +29,6 @@ import subprocess
 print(sys.path)
 sys.path.append(os.path.abspath("../usr/usr/bin"))
 
-from hw_management_redfish_client import BMCAccessor, RedfishClient
 
 class TestBMCAccessorLogin(unittest.TestCase):
     bmc_ip_arg = None
@@ -34,7 +52,7 @@ class TestBMCAccessorLogin(unittest.TestCase):
         server = self.bmc_ip
         print(f'sleeping/pinging for {seconds} seconds')
         start_time = time.time()
-        
+
         while time.time() - start_time < seconds:
             response = subprocess.run(['ping', '-c', '1', server], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if response.returncode == 0:
@@ -62,11 +80,11 @@ class TestBMCAccessorLogin(unittest.TestCase):
             else:
                 # print(f"Server {self.bmc_ip} is unreachable. Continuing to ping...")
                 pass
-            
+
             if time.time() - start_time > timeout_seconds:
                 print(f"Timeout of {timeout_minutes} minutes reached. Exiting...")
                 return RedfishClient.ERR_CODE_TIMEOUT
-        
+
             time.sleep(1)
 
     def ping_until_unreachable_with_timeout(self):
@@ -93,9 +111,9 @@ class TestBMCAccessorLogin(unittest.TestCase):
 
     def wait_for_bmc_ready(self):
         start_time = time.time()
-        timeout = 300 # seconds
-        interval = 2 # seconds
-        
+        timeout = 300  # seconds
+        interval = 2  # seconds
+
         print(f'wait_for_bmc_ready...')
         cmd = self.rf_client.build_get_cmd(RedfishClient.REDFISH_URI_UPDATE_SERVICE)
         while time.time() - start_time < timeout:
@@ -111,7 +129,7 @@ class TestBMCAccessorLogin(unittest.TestCase):
                     print("BMC is ready!")
                     return True
                 print("BMC not ready yet. Retrying...")
-            
+
             except Exception as e:
                 print(f"An error occurred: {e}")
             time.sleep(interval)
@@ -160,51 +178,51 @@ class TestBMCAccessorLogin(unittest.TestCase):
         return ret
 
     def simulate_factory_of_old_bmc(self):
-        # there are several cases here: we would like to simulate factory where after it we have only admin and root, 
+        # there are several cases here: we would like to simulate factory where after it we have only admin and root,
         # however on the new bmc we have also yormnAnb account
         # cases:
         # flow1: new bmc, after factory, root with 0penbmc pwd, yormnAnb exists
-            # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
-            # steps:
-                # fail to login with root and ABYX12#14artb
-                # patch root
+        # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
+        # steps:
+        # fail to login with root and ABYX12#14artb
+        # patch root
 
-                # run factory
-                # patch root
-                # login with root
-                # delete anyway yormAnb
-                # ready
+        # run factory
+        # patch root
+        # login with root
+        # delete anyway yormAnb
+        # ready
         # flow2: new bmc, boot2, root with ABYX12#14artb, yormnAnb exists
-            # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
-            # steps
-                # login with root and ABYX12#14artb
+        # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
+        # steps
+        # login with root and ABYX12#14artb
 
-                # run factory
-                # patch root
-                # login with root
-                # delete anyway yormAnb
-                # ready
+        # run factory
+        # patch root
+        # login with root
+        # delete anyway yormAnb
+        # ready
         # flow3: old bmc, after factory, root with 0penbmc pwd
-            # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
-            # steps
-                # fail to login with root and ABYX12#14artb
-                # patch root
+        # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
+        # steps
+        # fail to login with root and ABYX12#14artb
+        # patch root
 
-                # run factory
-                # patch root
-                # login with root
-                # delete anyway yormAnb
-                # ready
-        #flow4: old bmc, boot2, root with ABYX12#14artb
-            # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
-            # steps
-                # login root with ABYX12#14artb
+        # run factory
+        # patch root
+        # login with root
+        # delete anyway yormAnb
+        # ready
+        # flow4: old bmc, boot2, root with ABYX12#14artb
+        # target: after factory, root with ABYX12#14artb, admin with 0penBmc, yormnAnb not exists
+        # steps
+        # login root with ABYX12#14artb
 
-                # run factory
-                # patch root
-                # login with root
-                # delete anyway yormAnb
-                # ready
+        # run factory
+        # patch root
+        # login with root
+        # delete anyway yormAnb
+        # ready
         print(f'Login as root:{self.root_pwd}')
         self.rf_client.update_credentials(self.root, self.root_pwd)
         ret = self.rf_client.login()
@@ -222,7 +240,7 @@ class TestBMCAccessorLogin(unittest.TestCase):
         print(f'perform factory RF')
         self.reset_defaults()
         # self.assertEqual(ret, RedfishClient.ERR_CODE_OK, "Root login should succeed")
- 
+
         self.ping_until_unreachable_with_timeout()
         time.sleep(50)
         response = subprocess.run(['ifup', 'usb0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -287,7 +305,7 @@ class TestBMCAccessorLogin(unittest.TestCase):
 
         print(f'perform factory redfish')
         self.reset_defaults()
- 
+
         self.ping_until_unreachable_with_timeout()
         time.sleep(50)
         response = subprocess.run(['ifup', 'usb0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -386,7 +404,6 @@ class TestBMCAccessorLogin(unittest.TestCase):
         ret = self.rf_client.login()
         self.assertEqual(ret, RedfishClient.ERR_CODE_OK, "user yormnAnb should exist")
 
-
     def test_flow1_factory_old_bmc(self):
         print(f'-- test_flow1_factory_old_bmc')
         self.simulate_factory_of_old_bmc()
@@ -435,6 +452,7 @@ class TestBMCAccessorLogin(unittest.TestCase):
         ret = self.bmc_accessor.login()
         self.assertEqual(ret, RedfishClient.ERR_CODE_OK, "Login as yormnAnb should succeed")
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run BMC accessor tests.")
     parser.add_argument("bmc_ip", help="The IP address of the BMC.")
@@ -451,4 +469,3 @@ if __name__ == '__main__':
     runner = unittest.TextTestRunner()
     runner.run(suite)
     # unittest.main()
-    

@@ -1,11 +1,30 @@
 #!/usr/bin/python3
+#
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
 import os
 import argparse
 import json
 import pickle
 import re
 
-HW_MGMT_PATH="/var/run/hw-management/"
+HW_MGMT_PATH = "/var/run/hw-management/"
+
 
 def load_json(json_file):
     # Load JSON file contents
@@ -13,9 +32,10 @@ def load_json(json_file):
         data = json.load(file)
     return data
 
+
 def process_BOM_dictionary(dictionary, bom_filename, sku):
     if not sku:
-       return dictionary 
+        return dictionary
     alternativies_label_name = f"labels_{sku}_alternativies"
     if alternativies_label_name not in dictionary:
         return dictionary
@@ -32,7 +52,7 @@ def process_BOM_dictionary(dictionary, bom_filename, sku):
             bom_file_array = bom_file_data.split()
 
         for i in range(0, len(bom_file_array), 4):
-            component_lines = bom_file_array[i:i+4]
+            component_lines = bom_file_array[i:i + 4]
 
             # example : voltmon1
             component_name = component_lines[3]
@@ -48,23 +68,26 @@ def process_BOM_dictionary(dictionary, bom_filename, sku):
                 for comp_attr, val in comp_attr_dict.items():
                     label_name = f"{component_name}_{comp_attr}"
                     labels_dict[label_name] = val["name"]
-                    label_scale = val.get("scale", None) 
+                    label_scale = val.get("scale", None)
                     if label_scale:
                         labels_scale_dict[label_name] = label_scale
-    except:
+    except BaseException:
         pass
     return dictionary
+
 
 def save_dictionary(dictionary, dictionary_file):
     # Save the dictionary to a file using pickle
     with open(dictionary_file, 'wb') as file:
         pickle.dump(dictionary, file)
 
+
 def load_dictionary(dictionary_file):
     # Load the dictionary from the file
     with open(dictionary_file, 'rb') as file:
         dictionary = pickle.load(file)
     return dictionary
+
 
 def retrieve_value(dictionary, label, key):
     # Retrieve value for the given key from the dictionary
@@ -73,6 +96,7 @@ def retrieve_value(dictionary, label, key):
             if re.match(element, key):
                 return dictionary[label][element]
     return None
+
 
 def main():
     parser = argparse.ArgumentParser(description='JSON Dictionary')
@@ -108,6 +132,7 @@ def main():
 
     else:
         parser.print_help()
+
 
 if __name__ == '__main__':
     main()
