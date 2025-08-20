@@ -25,9 +25,9 @@ index 18e0206..b4e506c 100644
  };
  
 +/* Platform hotplug dgx data */
-+static struct mlxreg_core_data mlxplat_mlxcpld_dgx_psu_items_data[] = {
++static struct mlxreg_core_data mlxplat_mlxcpld_dgx_pdb_items_data[] = {
 +	{
-+		.label = "psu1",
++		.label = "pdb1",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
 +		.mask = BIT(0),
 +		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
@@ -59,11 +59,11 @@ index 18e0206..b4e506c 100644
  
 +static struct mlxreg_core_item mlxplat_mlxcpld_ext_dgx_items[] = {
 +	{
-+		.data = mlxplat_mlxcpld_dgx_psu_items_data,
++		.data = mlxplat_mlxcpld_dgx_pdb_items_data,
 +		.aggr_mask = MLXPLAT_CPLD_AGGR_PSU_MASK_DEF,
 +		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
 +		.mask = MLXPLAT_CPLD_PSU_MASK,
-+		.count = ARRAY_SIZE(mlxplat_mlxcpld_dgx_psu_items_data),
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_dgx_pdb_items_data),
 +		.inversed = 1,
 +		.health = false,
 +	},
