@@ -986,7 +986,6 @@ if [ "$1" == "add" ]; then
 			if [[ $sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
 				prefix="voltmon6"
 			fi
-
 			# Creating links for only temp1 attribute. Skipping temp2 and others
 			check_n_link "$3""$4"/temp1_input $thermal_path/"$prefix"_temp1_input
 			check_n_link "$3""$4"/temp1_max $thermal_path/"$prefix"_temp1_max
