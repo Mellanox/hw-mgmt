@@ -1289,7 +1289,7 @@ if [ "$1" == "add" ]; then
 		cpu_info)
 			hw-management-vpd-parser.py -t MLNX_CPU_VPD -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/cpu_data
 			;;
-		pdb_eeprom)
+		pdb_eeprom*)
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
 		cable_cartridge*_eeprom*)
