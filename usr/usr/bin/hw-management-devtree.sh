@@ -84,6 +84,12 @@ declare -A comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 15 comex_voltmo
 declare -A bmc_comex_amd_snw_alternatives=(["mp2855_0"]="mp2855 0x69 17 comex_voltmon1" \
 				   ["mp2975_1"]="mp2975 0x6a 17 comex_voltmon2")
 
+declare -A sn58xxld_comex_amd_snw_alternatives=(\
+				["mp2855_0"]="mp2855 0x69 69 comex_voltmon1" \
+				["mp2975_1"]="mp2975 0x6a 69 comex_voltmon2" \
+				["24c128_0"]="24c128 0x50 70 cpu_info" \
+				["24c512_0"]="24c512 0x50 70 cpu_info")
+
 declare -A mqm8700_alternatives=(["max11603_0"]="max11603 0x64 5 swb_a2d" \
 				 ["tps53679_0"]="tps53679 0x70 5 voltmon1" \
 				 ["tps53679_1"]="tps53679 0x71 5 voltmon2" \
@@ -213,6 +219,30 @@ declare -A sn5640_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
+
+declare -A sn58xxld_swb_alternatives=(\
+				["mp2891_0"]="mp2891 0x62 9 voltmon1" \
+				["mp2891_1"]="mp2891 0x63 9 voltmon2" \
+				["mp2891_2"]="mp2891 0x64 9 voltmon3" \
+				["mp2891_3"]="mp2891 0x65 9 voltmon4" \
+				["mp2891_4"]="mp2891 0x66 9 voltmon5" \
+				["mp2891_5"]="mp2891 0x67 9 voltmon6" \
+				["mp2891_6"]="mp2891 0x68 9 voltmon7" \
+				["mp2891_7"]="mp2891 0x69 9 voltmon8" \
+				["mp2891_8"]="mp2891 0x6a 9 voltmon9" \
+				["mp2891_9"]="mp2891 0x6c 9 voltmon10" \
+				["mp2891_10"]="mp2891 0x6e 9 voltmon11" \
+				["xdpe1a2g7_0"]="xdpe1a2g7 0x62 9 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7 0x63 9 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7 0x64 9 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7 0x65 9 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7 0x66 9 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7 0x67 9 voltmon6" \
+				["xdpe1a2g7_6"]="xdpe1a2g7 0x68 9 voltmon7" \
+				["xdpe1a2g7_7"]="xdpe1a2g7 0x69 9 voltmon8" \
+				["xdpe1a2g7_8"]="xdpe1a2g7 0x6a 9 voltmon9" \
+				["xdpe1a2g7_9"]="xdpe1a2g7 0x6c 9 voltmon10" \
+				["xdpe1a2g7_10"]="xdpe1a2g7 0x6e 9 voltmon11" )
 
 declare -A p4262_alternatives=(["tmp75_0"]="tmp75 0x48 7 port_temp1" \
 			       ["adt75_0"]="adt75 0x48 7 port_temp2" \
@@ -530,6 +560,13 @@ declare -A pwr_type4_alternatives=( \
 				   ["tmp1075_0"]="tmp1075 0x4e 4 pdb_intel_amb" \
 				   ["24c02_0"]="24c02 0x50 4 pdb_eeprom")
 
+declare -A sn58xxld_pwr_alternatives=( \
+				   ["raa228004_0"]="raa228004 0x60 7 pwr_conv1" \
+				   ["mp29502_0"]="mp29502 0x60 7 pwr_conv1" \
+				   ["lm5066i_0"]="lm5066i 0x12 7 hotswap1" \
+				   ["mp5926_0"]="mp5926 0x12 7 hotswap1" \
+				   ["tmp451_0"]="tmp451 0x4c 7 pdb_mosfet_amb1" \
+				   ["24c02_0"]="24c02 0x50 7 pdb_eeprom1")
 # P*HaEaOfTk
 declare -A gb300_pwr_type1_alternatives=(["raa228004_0"]="raa228004 0x60 4 pwr_conv1" \
 				   ["mp29502_0"]="mp29502 0x2e 4 pwr_conv1" \
@@ -557,6 +594,9 @@ declare -A platform_type0_alternatives=(["max11603_0"]="max11603 0x6d 15 carrier
 
 # System EEPROM located on platform board
 declare -A platform_type1_alternatives=(["24c512_0"]="24c512 0x51 8 vpd_info")
+
+declare -A platform_type2_alternatives=( \
+				["24c512_0"]="24c512 0x51 1 vpd_info")
 
 # Port ambient sensor located on a separate module board
 declare -A port_type0_alternatives=(["tmp102_0"]="tmp102 0x4a 7 port_amb" \
@@ -674,18 +714,28 @@ devtr_check_supported_system_init_alternatives()
 			fi
 			;;
 		$AMD_SNW_CPU)
-			if [ -e "$config_path"/cpu_brd_bus_offset ]; then
-				cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
-				for key in "${!comex_amd_snw_alternatives[@]}"; do
-					curr_component=(${comex_amd_snw_alternatives["$key"]})
-					curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
-					comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
+			sku=$(< $sku_file)
+			case "$sku" in
+			HI181|HI182)
+				for key in "${!sn58xxld_comex_amd_snw_alternatives[@]}"; do
+						comex_alternatives["$key"]="${sn58xxld_comex_amd_snw_alternatives["$key"]}"
 				done
-			else
-				for key in "${!comex_amd_snw_alternatives[@]}"; do
-					comex_alternatives["$key"]="${comex_amd_snw_alternatives["$key"]}"
-				done
-			fi
+				;;
+			*)
+				if [ -e "$config_path"/cpu_brd_bus_offset ]; then
+					cpu_brd_bus_offset=$(< $config_path/cpu_brd_bus_offset)
+					for key in "${!comex_amd_snw_alternatives[@]}"; do
+						curr_component=(${comex_amd_snw_alternatives["$key"]})
+						curr_component[2]=$((curr_component[2]-base_cpu_bus_offset+cpu_brd_bus_offset))
+						comex_alternatives["$key"]="${curr_component[0]} ${curr_component[1]} ${curr_component[2]} ${curr_component[3]}"
+					done
+				else
+					for key in "${!comex_amd_snw_alternatives[@]}"; do
+						comex_alternatives["$key"]="${comex_amd_snw_alternatives["$key"]}"
+					done
+				fi
+				;;
+			esac
 			;;
 		$DNV_CPU)
 			# Silent exit
@@ -1027,6 +1077,27 @@ devtr_check_supported_system_init_alternatives()
 				;;
 			esac
 			;;
+		VMOD0024)
+			case $sku in
+			HI181|HI182)
+				for key in "${!sn58xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn58xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!platform_type2_alternatives[@]}"; do
+					platform_alternatives["$key"]="${platform_type2_alternatives["$key"]}"
+				done
+
+				for key in "${!sn58xxld_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${sn58xxld_pwr_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
 		*)
 			log_info "SMBIOS BOM info: unsupported board_type: ${board_type}"
 			return 1
@@ -1039,6 +1110,11 @@ devtr_check_board_components()
 	local board_str=$1
 	local board_num=1
 	local board_bus_offset=0
+	local board_vr_num=
+	local board_pwr_conv_num=
+	local board_hotswap_num=
+	local board_eeprom_num=
+	local board_temp_sens_num=
 	local board_name_pfx=
 	local board_type=static
 #	local board_addr_offset=0
@@ -1082,6 +1158,9 @@ devtr_check_board_components()
 			if [ -e "$config_path"/swb_brd_bus_offset ]; then
 				board_bus_offset=$(< $config_path/swb_brd_bus_offset)
 			fi
+			if [ -e "$config_path"/swb_brd_vr_num ]; then
+				board_vr_num=$(< $config_path/swb_brd_vr_num)
+			fi
 			for key in "${!swb_alternatives[@]}"; do
 				board_alternatives["$key"]="${swb_alternatives["$key"]}"
 			done
@@ -1092,6 +1171,26 @@ devtr_check_board_components()
 			done
 			;;
 		P)	# Power board
+			# There can be several power boards (e.g on sn58xxld)
+			if [ -e "$config_path"/pwr_brd_num ]; then
+				board_num=$(< $config_path/pwr_brd_num)
+				board_name_pfx=pdb
+			fi
+			if [ -e "$config_path"/pwr_brd_bus_offset ]; then
+				board_bus_offset=$(< $config_path/pwr_brd_bus_offset)
+			fi
+			if [ -e "$config_path"/pwr_brd_pwr_conv_num ]; then
+				board_pwr_conv_num=$(< $config_path/pwr_brd_pwr_conv_num)
+			fi
+			if [ -e "$config_path"/pwr_brd_hotswap_num ]; then
+				board_hotswap_num=$(< $config_path/pwr_brd_hotswap_num)
+			fi
+			if [ -e "$config_path"/pwr_brd_eeprom_num ]; then
+				board_eeprom_num=$(< $config_path/pwr_brd_eeprom_num)
+			fi
+			if [ -e "$config_path"/pwr_brd_temp_sens_num ]; then
+				board_temp_sens_num=$(< $config_path/pwr_brd_temp_sens_num)
+			fi
 			for key in "${!pwr_alternatives[@]}"; do
 				board_alternatives["$key"]="${pwr_alternatives["$key"]}"
 			done
@@ -1174,7 +1273,13 @@ devtr_check_board_components()
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
-						curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						if [ -z "${board_temp_sens_num}" ]; then
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						else
+							sens_name=$(echo ${curr_component[3]} | grep -o '[^0-9]\+')
+							sens_num=$(echo ${curr_component[3]} | grep -o '[0-9]\+')
+							curr_component[3]=${sens_name}$((sens_num+brd*board_temp_sens_num))
+						fi
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then
@@ -1206,14 +1311,21 @@ devtr_check_board_components()
 				fi
 				component_name=${regulator_arr[$component_key]}
 				alternative_key="${component_name}_${r_cnt}"
-				# q3400 system has 2 switch boards. Just VRs are accessed on these boards.
+				# Q3400 and Q3450 systems have 2 switch boards, each with multiple VRs
+				# SN5800 systems have 4 switch boards, each with multiple VRs
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					if [ $board_bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
-						curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						if [ -z "${board_vr_num}" ]; then
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						else
+							vr_name=$(echo ${curr_component[3]} | grep -o '[^0-9]\+')
+							vr_num=$(echo ${curr_component[3]} | grep -o '[0-9]\+')
+							curr_component[3]=${vr_name}$((vr_num+brd*board_vr_num))
+						fi
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then
@@ -1245,7 +1357,8 @@ devtr_check_board_components()
 				fi
 				component_name=${eeprom_arr[$component_key]}
 				alternative_key="${component_name}_${e_cnt}"
-				# SN5600 system has 2 Clock boards. Just EEPROM is accessed on these boards.
+				# SN5600 system has 2 clock boards, each one with 1 EEPROM
+				# SN5800 system has 4 power boards, each one with 1 EEPROM
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 # There is no currently address offset. Leave commented just for possible future use
@@ -1257,6 +1370,16 @@ devtr_check_board_components()
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
 						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
 					fi
+					if [ ! -z "${board_name_pfx}" ]; then
+						if [ -z "${board_eeprom_num}" ]; then
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						else
+							eeprom_name=$(echo ${curr_component[3]} | grep -o '[^0-9]\+')
+							eeprom_num=$(echo ${curr_component[3]} | grep -o '[0-9]\+')
+							curr_component[3]=${eeprom_name}$((eeprom_num+brd*board_eeprom_num))
+						fi
+					fi
+
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then
 						log_info "SMBIOS BOM info: component not defined in layout/ignored: ${board_name} ${category}, category key: ${category_key}, device code: ${component_key}, num: ${e_cnt}"
@@ -1320,12 +1443,19 @@ devtr_check_board_components()
 				fi
 				component_name=${pwr_conv_arr[$component_key]}
 				alternative_key="${component_name}_${o_cnt}"
-				# q3450 have 2 switch boards, each with 1 power converter
+				# Q3450 system has 2 switch boards, each with 1 power converter
+				# SN5800 system has 4 power boards, each with 1 power converter
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					curr_component[2]=$((curr_component[2]+brd))
 					if [ ! -z "${board_name_pfx}" ]; then
-						curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						if [ -z "${board_pwr_conv_num}" ]; then
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						else
+							pwr_conv_name=$(echo ${curr_component[3]} | grep -o '[^0-9]\+')
+							pwr_conv_num=$(echo ${curr_component[3]} | grep -o '[0-9]\+')
+							curr_component[3]=${pwr_conv_name}$((pwr_conv_num+brd*board_pwr_conv_num))
+						fi
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then
@@ -1357,12 +1487,20 @@ devtr_check_board_components()
 				fi
 				component_name=${hotswap_arr[$component_key]}
 				alternative_key="${component_name}_${h_cnt}"
-				# q3450 have 2 switch boards, each with 1 hot-swap controller
+				# Q3450 system has 2 switch boards, each with 1 hot-swap controller
+				# SN5800 system has 4 power boards, each with 1 hot-swap controller
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					curr_component[2]=$((curr_component[2]+brd))
 					if [ ! -z "${board_name_pfx}" ]; then
-						curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						if [ -z "${board_hotswap_num}" ]; then
+							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
+						else
+							hotswap_name=$(echo ${curr_component[3]} | grep -o '[^0-9]\+')
+							hotswap_num=$(echo ${curr_component[3]} | grep -o '[0-9]\+')
+							hotswap_num=$((hotswap_num+brd*board_hotswap_num))
+							curr_component[3]=${hotswap_name}$((hotswap_num+brd*board_hotswap_num))
+						fi
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then
