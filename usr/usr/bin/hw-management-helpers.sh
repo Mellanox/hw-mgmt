@@ -987,14 +987,3 @@ get_ui_tree_archive_file()
 	esac
 	echo $ui_tree_archive
 }
-
-platform_has_comex_board()
-{
-	local sku=$(<$sku_file)
-
-	if [ $sku = HI180 ]; then
-		return 1
-	fi
-
-	return 0
-}
