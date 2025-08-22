@@ -1,4 +1,4 @@
-From 44ad23bd90a9bdd749f22addd158cbfee48485f4 Mon Sep 17 00:00:00 2001
+From c1bbf1f3fbf49cc80324e13fb929550797d11e1e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -23,9 +23,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Makefile            |    2 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2747 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  622 ++++
- drivers/platform/mellanox/nvsw-host-l1.c      |  746 +++++
+ drivers/platform/mellanox/nvsw-host-l1.c      |  704 +++++
  drivers/platform/mellanox/nvsw.h              |  259 ++
- 7 files changed, 4399 insertions(+), 4 deletions(-)
+ 7 files changed, 4357 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -81,16 +81,17 @@ index 14c14c9c2..be7ad38fe 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on HWMON && I2C
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index 7d11503dd..e1caab428 100644
+index 2b774cdf4..270b4bcf3 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -12,4 +12,6 @@ obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
+@@ -11,5 +11,7 @@ obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
 +obj-$(CONFIG_NVSW_BMC_HID162) += nvsw-bmc-hid162.o nvsw-core.o
 +obj-$(CONFIG_NVSW_HOST_L1) += nvsw-host-l1.o nvsw-core.o
  obj-$(CONFIG_NVSW_SN2201) += nvsw-sn2201.o
+ obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mellanox/nvsw-bmc-hid162.c
 new file mode 100644
 index 000000000..442253bc7
@@ -3474,10 +3475,10 @@ index 000000000..778977f17
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
 new file mode 100644
-index 000000000..59ee6f2ff
+index 000000000..c32f44590
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,746 @@
+@@ -0,0 +1,704 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3716,12 +3717,6 @@ index 000000000..59ee6f2ff
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "cartridge_status_clear",
-+		.reg = NVSW_REG_FRU1_EVENT_OFFSET,
-+		.bit = GENMASK(3, 0),
-+		.mode = 0644,
-+	},
-+	{
 +		.label = "leakage1",
 +		.reg = NVSW_REG_LEAK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -3732,12 +3727,6 @@ index 000000000..59ee6f2ff
 +		.reg = NVSW_REG_LEAK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(1),
 +		.mode = 0444,
-+	},
-+	{
-+		.label = "leakage_status_clear",
-+		.reg = NVSW_REG_LEAK_EVENT_OFFSET,
-+		.bit = GENMASK(1, 0),
-+		.mode = 0644,
 +	},
 +	{
 +		.label = "asic_reset",
@@ -3915,30 +3904,6 @@ index 000000000..59ee6f2ff
 +		.mode = 0644,
 +	},
 +	{
-+		.label = "config1",
-+		.reg = NVSW_REG_CONFIG1_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "config2",
-+		.reg = NVSW_REG_CONFIG2_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "config3",
-+		.reg = NVSW_REG_CONFIG3_OFFSET,
-+		.bit = GENMASK(7, 0),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "sgmii_phy",
-+		.reg = NVSW_REG_BRD1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(5),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "graceful_pwr_off",
 +		.reg = NVSW_REG_GP7_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
@@ -3955,12 +3920,6 @@ index 000000000..59ee6f2ff
 +		.reg = NVSW_REG_PWRB_MASK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~NVSW_PWR_BUTTON_MASK,
 +		.mode = 0644,
-+	},
-+	{
-+		.label = "amb_sens",
-+		.reg = NVSW_REG_PWRB_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(1),
-+		.mode = 0444,
 +	},
 +};
 +
