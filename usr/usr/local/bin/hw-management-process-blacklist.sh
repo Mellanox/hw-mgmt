@@ -73,6 +73,7 @@ process_blacklist()
 		# ASF driver should be blacklisted to guarantee that Designware is loaded before ASF.
 		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
+		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
 		;;
 	*)
 		# Blacklist Designware and ASF I2C controller drivers
