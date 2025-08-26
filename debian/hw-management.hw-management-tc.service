@@ -6,7 +6,7 @@ PartOf=hw-management.service
 Documentation=man:hw-management-tc.service(8)
 
 StartLimitIntervalSec=1200
-StartLimitBurst=5
+StartLimitBurst=15
 
 [Service]
 ExecStart=/bin/sh -c "/usr/bin/hw_management_thermal_control.py"
