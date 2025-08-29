@@ -766,29 +766,28 @@ def module_temp_populate(arg_list, _dummy):
                 else:
                     temperature_crit = CONST.MODULE_TEMP_MAX_DEF
 
-                if temperature_crit != 0:
-                    temperature_emergency = temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
-
                 if os.path.isfile(f_src_hcrit):
                     with open(f_src_hcrit, 'r') as f:
                         val = f.read()
-                    temperature_trip_crit = sdk_temp2degree(int(val))
+                        temperature_emergency = sdk_temp2degree(int(val))
                 else:
-                    temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
+                    temperature_emergency = temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
+
+                temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
 
             except BaseException:
                 pass
 
         # Write the temperature data to files
         file_paths = {
-            "_temp_input": temperature,
-            "_temp_crit": temperature_crit,
-            "_temp_emergency": temperature_emergency,
+            "_temp_input": temperature,  # SDK sysfs temperature/input
+            "_temp_crit": temperature_crit,  # SDK sysfs temperature/threshold_hi, CMIS bytes 132-133 TempMonHighWarningTreshold
+            "_temp_emergency": temperature_emergency,  # SDK sysfs temperature/threshold_critical_hi, CMIS bytes 128-129 TempMonHighAlarmTreshold
             "_temp_fault": temperature_fault,
             "_temp_trip_crit": temperature_trip_crit,
-            "_cooling_level_input": cooling_level_input,
-            "_max_cooling_level_input": max_cooling_level_input,
-            "_status": module_present
+            "_cooling_level_input": cooling_level_input,  # SDK sysfs temperature/tec/cooling_level
+            "_max_cooling_level_input": max_cooling_level_input,  # SDK sysfs temperature/tec/max_cooling_level
+            "_status": module_present  # SDK sysfs moduleX/present
         }
 
         for suffix, value in file_paths.items():
