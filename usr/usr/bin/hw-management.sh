@@ -3388,7 +3388,7 @@ pre_devtr_init()
 			echo 1 >  "$config_path"/pwr_brd_num
 			echo 11 > "$config_path"/swb_brd_vr_num
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
-			echo 1 >  "$config_path"/pwr_brd_hostwap_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
 			echo 1 >  "$config_path"/pwr_brd_eeprom_num
 			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
 			;;
@@ -3399,7 +3399,7 @@ pre_devtr_init()
 			echo 16 > "$config_path"/pwr_brd_bus_offset
 			echo 11 > "$config_path"/swb_brd_vr_num
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
-			echo 1 >  "$config_path"/pwr_brd_hostwap_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
 			echo 1 >  "$config_path"/pwr_brd_eeprom_num
 			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
 			;;
