@@ -2518,6 +2518,7 @@ n51xxld_specific()
 			max_tachos=0
 			echo 0 > $config_path/fan_drwr_num
 			thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+			lm_sensors_config="$lm_sensors_configs_path/n5500ld_sensors.conf"
 			leakage_count=2
 			cpld_num=3
 		;;
