@@ -1,6 +1,7 @@
 #!/bin/bash
 ################################################################################
-# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -74,6 +75,16 @@ process_blacklist()
 		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
+		;;
+	HI176)
+		# Blacklist Designware, ASF I2C controller drivers and ipmi
+		echo blacklist i2c_designware_platform >> $BLACKLIST_FILE
+		echo blacklist i2c_designware_core >> $BLACKLIST_FILE
+		echo blacklist i2c_asf >> $BLACKLIST_FILE
+		echo blacklist ipmi_si >> $BLACKLIST_FILE
+		echo blacklist ipmi_ssif >> $BLACKLIST_FILE
+		echo blacklist ipmi_devintf >> $BLACKLIST_FILE
+		echo blacklist ipmi_msghandler >> $BLACKLIST_FILE
 		;;
 	*)
 		# Blacklist Designware and ASF I2C controller drivers
