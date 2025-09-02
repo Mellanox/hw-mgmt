@@ -43,10 +43,15 @@ try:
     import json
     import re
     import pdb
+    import argparse
+    import logging
+    from logging.handlers import RotatingFileHandler, SysLogHandler
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+VERSION = "1.0.0"
 
 atttrib_list = {
     "HI162": [
@@ -352,7 +357,6 @@ atttrib_list = {
     ]
 }
 
-
 class CONST(object):
     # inde1pendent mode - module reading temperature via SDK sysfs
     SDK_FW_CONTROL = 0
@@ -371,6 +375,7 @@ class CONST(object):
 
 
 REDFISH_OBJ = None
+LOGGER = None
 
 """
 Key:
@@ -800,22 +805,66 @@ def init_attr(attr_prop):
             attr_prop["hwmon"] = ""
 
 
+def logger_init(log_file=None, verbosity=20):
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(level=logging.DEBUG)
+    logging.addLevelName(logging.INFO + 5, "NOTICE")
+
+    logger = logging.getLogger("main")
+    logger.setLevel(logging.DEBUG)
+
+    if log_file:
+        if any(std_file in log_file for std_file in ["stdout", "stderr"]):
+            logger_fh = logging.StreamHandler()
+        else:
+            logger_fh = RotatingFileHandler(log_file, maxBytes=(10 * 1024) * 1024, backupCount=3)
+
+        logger_fh.setFormatter(formatter)
+        logger_fh.setLevel(verbosity)
+        logger.addHandler(logger_fh)
+
+    return logger
+
+
 def main():
     """
     @summary: Update attributes
     arg1: system type
     """
 
-    args = len(sys.argv) - 1
+    CMD_PARSER = argparse.ArgumentParser(description="HW Management Sync Tool")
+    CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
+    CMD_PARSER.add_argument("-l", "--log_file",
+                            dest="log_file",
+                            help="Add output also to log file. Pass file name here",
+                            default="/var/log/tc_log")
+    
+    # Note: set logging to 50 on release
+    CMD_PARSER.add_argument("-v", "--verbosity",
+                            dest="verbosity",
+                            help="""Set log verbosity level.
+                        CRITICAL = 50
+                        ERROR = 40
+                        WARNING = 30
+                        INFO = 20
+                        DEBUG = 10
+                        NOTSET = 0
+                        """,
+                            type=int, default=20)
+    CMD_PARSER.add_argument("-s", "--system_type", nargs='?', help="System type (optional) for custom system emulation.")
+    
+    args = vars(CMD_PARSER.parse_args())
+    global LOGGER
+    LOGGER = logger_init(args["log_file"], args["verbosity"])
 
-    if args < 1:
+    if args["system_type"] is None:
         try:
             f = open("/sys/devices/virtual/dmi/id/product_sku", "r")
             product_sku = f.read()
         except Exception as e:
             product_sku = ""
     else:
-        product_sku = sys.argv[1]
+        product_sku = args["system_type"]
     product_sku = product_sku.strip()
 
     sys_attr = atttrib_list["def"]
