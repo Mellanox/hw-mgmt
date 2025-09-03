@@ -2444,6 +2444,24 @@ smart_switch_common()
 
 n51xxld_specific()
 {
+	# Report I2C bus ownership for VMOD0021 systems at early initialization
+	bmc_to_cpu_ctrl_path=$(ls /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl 2>/dev/null | head -n1)
+	if [ -f "$bmc_to_cpu_ctrl_path" ]; then
+		bus_ownership=$(< "$bmc_to_cpu_ctrl_path")
+		if [ "$bus_ownership" = "0" ]; then
+			log_info "I2C bus ownership: CPU (bmc_to_cpu_ctrl=0)"
+		elif [ "$bus_ownership" = "1" ]; then
+			log_info "I2C bus ownership: BMC (bmc_to_cpu_ctrl=1)"
+			# Try to enforce ownership to CPU
+			echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+		else
+			# Should never happen as driver represents CPLD bit
+			log_err "I2C bus ownership: Unknown value (bmc_to_cpu_ctrl=$bus_ownership)"
+		fi
+	else
+		log_err "I2C bus ownership: bmc_to_cpu_ctrl file not found"
+	fi
+
 	local cpu_bus_offset=55
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${n5110ld_base_connect_table[@]})
@@ -2563,7 +2581,6 @@ n51xxld_specific()
 	mctp_bus="$n5110_mctp_bus"
 	mctp_addr="$n5110_mctp_addr"
 	ln -sf /dev/i2c-2 /dev/i2c-8
-	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 n51xxld_specific_cleanup()
