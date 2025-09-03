@@ -44,8 +44,8 @@ try:
     import re
     import pdb
     import argparse
-    import logging
-    from logging.handlers import RotatingFileHandler, SysLogHandler
+    import traceback
+    from hw_management_lib import HW_Mgmt_Logger as Logger
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
 except ImportError as e:
@@ -373,6 +373,15 @@ class CONST(object):
     MODULE_TEMP_CRIT_DEF = 120000
     MODULE_TEMP_EMERGENCY_OFFSET = 10000
 
+    # *************************
+    # Folders definition
+    # *************************
+    # default hw-management folder
+    HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
+    # File which defined current level filename.
+    # User can dynamically change loglevel without svc restarting.
+    LOG_LEVEL_FILENAME = "config/log_level"
+
 
 REDFISH_OBJ = None
 LOGGER = None
@@ -575,6 +584,7 @@ def is_asic_ready(asic_name, asic_attr):
 
 def asic_temp_reset(asic_name, f_asic_src_path):
     # Default temperature values
+    LOGGER.info("asic_temp_reset: {}".format(asic_name))
     file_paths = {
         "": "",
         "_temp_norm": "",
@@ -597,11 +607,15 @@ def asic_temp_populate(arg_list, arg):
     asic_chipup_completed = 0
     asic_src_list = []
     for asic_name, asic_attr in arg_list.items():
+        LOGGER.info("{} temp_populate".format(asic_name))
         f_asic_src_path = asic_attr["fin"]
-        # ASIC not ready (SDK is not started)
+        # Check if ASIC not ready (SDK is not started)
         if not is_asic_ready(asic_name, asic_attr):
+            LOGGER.notice("{} not ready".format(asic_name), id="{} not_ready".format(asic_name), repeat=1)
             asic_temp_reset(asic_name, f_asic_src_path)
             continue
+        else:
+            LOGGER.notice(None, id="{} ready".format(asic_name))
 
         if f_asic_src_path not in asic_src_list:
             asic_src_list.append(f_asic_src_path)
@@ -610,11 +624,17 @@ def asic_temp_populate(arg_list, arg):
         # If link to asic temperatule already exists - nothing to do
         f_dst_name = "/var/run/hw-management/thermal/{}".format(asic_name)
         if os.path.islink(f_dst_name):
+            LOGGER.notice("{} link exists".format(asic_name), id="{} asic_link_exists".format(asic_name), repeat=1)
             continue
+        else:
+            LOGGER.notice(None, id="{} asic_link_exists".format(asic_name))
 
         # If independent mode - skip temperature reading
         if is_module_host_management_mode(os.path.join(f_asic_src_path, "module0")):
+            LOGGER.notice("{} independent mode".format(asic_name), id="asic_independent_mode", repeat=1)
             continue
+        else:
+            LOGGER.notice(None, id="asic_independent_mode")
 
         # Default temperature values
         try:
@@ -626,12 +646,17 @@ def asic_temp_populate(arg_list, arg):
             temperature_max = CONST.ASIC_TEMP_MAX_DEF
             temperature_fault = CONST.ASIC_TEMP_FAULT_DEF
             temperature_crit = CONST.ASIC_TEMP_CRIT_DEF
-        except BaseException:
+        except Exception as e:
+            error_message = str(e)
+            LOGGER.warning("{} {}".format(error_message), id="{} read fail".format(asic_name), repeat=1)
             temperature = ""
             temperature_min = ""
             temperature_max = ""
             temperature_fault = ""
             temperature_crit = ""
+            pass
+        else:
+            LOGGER.notice(None, id="{} read fail".format(asic_name))
 
         file_paths = {
             "": temperature,
@@ -646,6 +671,7 @@ def asic_temp_populate(arg_list, arg):
             f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
             with open(f_name, 'w', encoding="utf-8") as f:
                 f.write("{}\n".format(value))
+                LOGGER.info(f"Write {asic_name}{suffix}: {value}")
 
     asic_chipup_completed_fname = os.path.join("/var/run/hw-management/config", "asic_chipup_completed")
     asic_num_fname = os.path.join("/var/run/hw-management/config", "asic_num")
@@ -655,8 +681,12 @@ def asic_temp_populate(arg_list, arg):
         with open(asic_num_fname, 'r', encoding="utf-8") as f:
             asic_num = f.read().rstrip('\n')
             asic_num = int(asic_num)
-    except BaseException:
+    except BaseException as e:
+        error_message = str(e)
+        LOGGER.warning("{} {}".format(asic_num_fname, error_message),  id="{} asic_num_read_fail".format(asic_name), repeat=1)
         asic_num = 255
+    else:
+        LOGGER.notice(None, id="{} asic_num_read_fail".format(asic_name))
 
     if asic_chipup_completed >= asic_num:
         asics_init_done = 1
@@ -678,16 +708,23 @@ def module_temp_populate(arg_list, _dummy):
     module_count = arg_list["module_count"]
     offset = arg_list["fout_idx_offset"]
     module_updated = False
+    LOGGER.info("module_temp_populate")
     for idx in range(module_count):
         module_name = "module{}".format(idx + offset)
         f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
+            LOGGER.notice("skip link: {}".format(module_name), id="{} link_exists".format(module_name), repeat=1)
             continue
+        else:
+            LOGGER.notice(None, id="{} link_exists".format(module_name))
 
         f_src_path = fin.format(idx)
         # If control mode is SW - skip temperature reading (independent mode)
         if is_module_host_management_mode(f_src_path):
+            LOGGER.notice("{} independent mode".format(module_name), id="{} independent_mode".format(module_name), repeat=1)
             continue
+        else:
+            LOGGER.notice(None, id="{} independent_mode".format(module_name))
 
         # Check if module is present
         module_present = 0
@@ -695,9 +732,13 @@ def module_temp_populate(arg_list, _dummy):
         try:
             with open(f_src_present, 'r') as f:
                 module_present = int(f.read().strip())
-        except BaseException:
-            pass  # Module is not present or file reading failed
-
+        except BaseException as e:
+            error_message = str(e)
+            LOGGER.warning("{} {}".format(f_src_present, error_message), id="{} present_read_fail".format(module_name), repeat=1)
+            pass
+        else:
+            LOGGER.notice(None, id="{} present_read_fail".format(module_name))
+     
         # Default temperature values
         temperature = "0"
         temperature_emergency = "0"
@@ -731,9 +772,12 @@ def module_temp_populate(arg_list, _dummy):
                     temperature_trip_crit = sdk_temp2degree(int(val))
                 else:
                     temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
-
-            except BaseException:
+            except BaseException as e:
+                error_message = str(e)
+                LOGGER.warning("{} {}".format(f_src_input, error_message), id="{} read_fail".format(module_name), repeat=1)
                 pass
+        else:
+            LOGGER.notice(None, id="{} read_fail".format(module_name))
 
         # Write the temperature data to files
         file_paths = {
@@ -749,9 +793,11 @@ def module_temp_populate(arg_list, _dummy):
             if value is not None:
                 with open(f_name, 'w', encoding="utf-8") as f:
                     f.write("{}\n".format(value))
+                    LOGGER.info(f"Write {module_name}{suffix}: {value}")
         module_updated = True
 
     if module_updated:
+        LOGGER.info("{} module_counter ({}) updated".format(module_name, module_count))
         with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
             f.write("{}\n".format(module_count))
     return
@@ -795,6 +841,7 @@ def update_attr(attr_prop):
 
 
 def init_attr(attr_prop):
+    LOGGER.info("init_attr: {}".format(attr_prop))
     if "hwmon" in str(attr_prop["fin"]):
         path = attr_prop["fin"].split("hwmon")[0]
         try:
@@ -803,28 +850,6 @@ def init_attr(attr_prop):
             attr_prop["hwmon"] = hwmon_name[0]
         except Exception as e:
             attr_prop["hwmon"] = ""
-
-
-def logger_init(log_file=None, verbosity=20):
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    logging.basicConfig(level=logging.DEBUG)
-    logging.addLevelName(logging.INFO + 5, "NOTICE")
-
-    logger = logging.getLogger("main")
-    logger.setLevel(logging.DEBUG)
-
-    if log_file:
-        if any(std_file in log_file for std_file in ["stdout", "stderr"]):
-            logger_fh = logging.StreamHandler()
-        else:
-            logger_fh = RotatingFileHandler(log_file, maxBytes=(10 * 1024) * 1024, backupCount=3)
-
-        logger_fh.setFormatter(formatter)
-        logger_fh.setLevel(verbosity)
-        logger.addHandler(logger_fh)
-
-    return logger
-
 
 def main():
     """
@@ -837,13 +862,14 @@ def main():
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest="log_file",
                             help="Add output also to log file. Pass file name here",
-                            default="/var/log/tc_log")
+                            default="/var/log/hw_management_sync_log")
     
     # Note: set logging to 50 on release
     CMD_PARSER.add_argument("-v", "--verbosity",
                             dest="verbosity",
                             help="""Set log verbosity level.
                         CRITICAL = 50
+ 
                         ERROR = 40
                         WARNING = 30
                         INFO = 20
@@ -855,7 +881,9 @@ def main():
     
     args = vars(CMD_PARSER.parse_args())
     global LOGGER
-    LOGGER = logger_init(args["log_file"], args["verbosity"])
+    LOGGER = Logger(use_syslog=False, log_file=args["log_file"], log_level=args["verbosity"], syslog_prefix="hw-management-sync")
+
+    LOGGER.notice("Starting hw-management-sync", repeat=1)
 
     if args["system_type"] is None:
         try:
@@ -867,18 +895,33 @@ def main():
         product_sku = args["system_type"]
     product_sku = product_sku.strip()
 
+    LOGGER.notice("hw-management-sync: load config", repeat=1)
     sys_attr = atttrib_list["def"]
     for key, val in atttrib_list.items():
         if re.match(key, product_sku):
             sys_attr.extend(val)
             break
 
+    LOGGER.notice("hw-management-sync: init attributes", repeat=1)
     for attr in sys_attr:
         init_attr(attr)
 
+    LOGGER.notice("hw-management-sync: start main loop", repeat=1)
     while True:
         for attr in sys_attr:
             update_attr(attr)
+        try:
+            log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
+            if os.path.isfile(log_level_filename):
+                with open(log_level_filename, 'r', encoding="utf-8") as f:
+                    log_level = f.read().rstrip('\n')
+                    log_level = int(log_level)
+                    LOGGER.set_loglevel(log_level)
+        except BaseException:
+            LOGGER.error("Crash in main loop", repeat=1)
+            LOGGER.notice(traceback.format_exc())
+            pass
+
         time.sleep(1)
 
 
