@@ -2565,12 +2565,14 @@ sn58xxld_specific()
 		cpld_num=4
 		leakage_count=2
 		i2c_asic_bus_default=6
+		hotplug_pdbs=1
 		;;
 	# SN5800_LD
 	HI182)
 		cpld_num=10
 		leakage_count=5
 		asic_i2c_buses=(6 22 38 54)
+		hotplug_pdbs=4
 		;;
 	esac
 
