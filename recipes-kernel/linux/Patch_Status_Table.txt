@@ -763,6 +763,7 @@ Kernel-6.12
 |0021-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
 |0022-i2c-mux-Add-register-map-based-mux-driver.patch             | b04d17a            | Feature upstream                         | 6.15.1     |                                                |
 |0023-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream accepted                      |            |                                                |
+|0024-1-platform-x86-Fix-initialization-order-for-firmware_a.patch|                    | Feature upstream                         | 6.12.41    |                                                |
 |0024-mellanox-Relocate-mlx-platform-driver.patch                 | 8c03f64            | Feature upstream                         | 6.15.1     |                                                |
 |0025-platform-mellanox-mlx-platform-Cosmetic-changes.patch       | 749d3e0            | Feature upstream                         | 6.15.1     |                                                |
 |0026-platform-mellanox-Rename-field-to-improve-code-reada.patch  | 9815278            | Feature upstream                         | 6.15.1     |                                                |
