@@ -1,4 +1,4 @@
-From 220dbbb8b60b0e7daccd1a31a3e9828ad611d0b2 Mon Sep 17 00:00:00 2001
+From 97d0f52276e5eabcf03514c483e99fa5c8f5a6bb Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -24,9 +24,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2747 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  672 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  746 +++++
- drivers/platform/mellanox/nvsw-host-spc5.c    |  932 ++++++
+ drivers/platform/mellanox/nvsw-host-spc5.c    |  914 ++++++
  drivers/platform/mellanox/nvsw.h              |  289 ++
- 8 files changed, 5422 insertions(+), 4 deletions(-)
+ 8 files changed, 5404 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -4290,10 +4290,10 @@ index 000000000..59ee6f2ff
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc5.c b/drivers/platform/mellanox/nvsw-host-spc5.c
 new file mode 100644
-index 000000000..287652e9d
+index 000000000..1ca7be7c1
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc5.c
-@@ -0,0 +1,932 @@
+@@ -0,0 +1,914 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -4764,7 +4764,7 @@ index 000000000..287652e9d
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_aux_pwr_or_fu",
++		.label = "reset_aux_pwr_or_reload",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
@@ -4776,7 +4776,7 @@ index 000000000..287652e9d
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_sw_reset",
++		.label = "reset_platform",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
@@ -4794,33 +4794,15 @@ index 000000000..287652e9d
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_aux_pwr_or_reload",
-+		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(2),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "reset_comex_pwr_fail",
 +		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_platform",
-+		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(4),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "reset_soc",
 +		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "reset_from_carrier",
-+		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
 +	{
