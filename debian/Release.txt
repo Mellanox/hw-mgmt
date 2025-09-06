@@ -1,18 +1,19 @@
 ================================================================================
-- V.7.0050.1930
-- Sun, 31 Aug 2025
+- V.7.0050.1931
+- Fri, 5 Sep 2025
 --------------------------------------------------------------------------------
 
 - New features
     o tag before branch out to rel br V.7.0050.2000_BR
 
 - Bug fixes
-    o 
+    o #4601092: The DPU3 sensor name appears among the DPU4 sensors in the array
+    o #4611676: PSU "error_mask" in tc_config not consistent
 
 - Kernel Patches for New Features:
     o 
 
-- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.1930/recipes-kernel/linux/Patch_Status_Table.txt
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.1931/recipes-kernel/linux/Patch_Status_Table.txt
 
 - Known issues and limitations:
     o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
