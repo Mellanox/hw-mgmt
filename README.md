@@ -36,27 +36,16 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN5600
 - SGN2410
 - SN2201
-- SN4280
-- SN5610
-- SN5640
 - E3597
 - P4697
 - P2317
 - P4262
 - P4300-A00
-- Q3401-RD
-- Q3450
-- Q3451
-- QM3400
-- QM3000
-- N61XX_LD
-- GB300
-- XH3000
 
 ## Supported Kernel versions:
 - 5.10.103, 5.10.140, 5.10.179, 5.10.218, 5.10.226
 - 5.14 all up to 5.14.21
-- 6.1.38, 6.1.90, 6.1.94, 6.1.119, 6.1.123
+- 6.1.38, 6.1.90, ,6.1.94, 6.1.119, 6.1.123
 - 6.12.38
 
 ## Sysfs attributes:
@@ -158,8 +147,6 @@ CONFIG_SENSORS_XDPE122=m
 CONFIG_SENSORS_MP2975=m
 CONFIG_SENSORS_MP2888=m
 CONFIG_SENSORS_MP2891=m
-CONFIG_SENSORS_MP2869=m
-CONFIG_SENSORS_MP29502=m
 CONFIG_GPIO_ICH=m
 CONFIG_LPC_ICH=m
 CONFIG_CPU_THERMAL=y
@@ -286,8 +273,6 @@ CONFIG_SENSORS_XDPE122=m
 CONFIG_SENSORS_MP2975=m
 CONFIG_SENSORS_MP2888=m
 CONFIG_SENSORS_MP2891=m
-CONFIG_SENSORS_MP2869=m
-CONFIG_SENSORS_MP29502=m
 CONFIG_SENSORS_MP2855=m
 CONFIG_IGB=m
 CONFIG_IGB_HWMON=y
@@ -348,21 +333,21 @@ sudo apt-get install devscripts build-essential lintian
 - To build for ARM64 architecture, run `debuild -us -uc -b -aarm64`
 - To build without lm_sensor dependecy (for Sonic-based OS) run 'debuild --set-envvar=LM_DEPENDS=0 -us -uc -b'
 or 'export LM_DEPENDS=0 && dpkg-buildpackage -us -uc -b'
-- Find in upper folder the built `.deb` package (for example `hw-management_7.0050.1930_amd64.deb`).
+- Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
 **For converting .deb package to .rpm package:**
 - On a Debian-based system, install the `alien` program: `sudo apt-get install alien`
-- `alien --to-rpm hw-management_7.0050.1930_amd64.deb`
-- Find `hw-management-7.0050.1930-2.x86_64.rpm`
+- `alien --to-rpm hw-management_1.mlnx.18.12.2018_amd64.deb`
+- Find `hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
 
 ## Installation from local file and de-installation
 1. Copy deb or rpm package to the system, for example to `/tmp`.
 2. For deb package:
-   * install with: `dpkg -i /tmp/hw-management_7.0050.1930_amd64.deb`
+   * install with: `dpkg -i /tmp/ hw-management_1.mlnx.18.12.2018_amd64.deb`
    * remove with: `dpkg --purge hw-management`
 3. For rpm package:
-   * install with: `yum localinstall /tmp/hw-management-7.0050.1930-2.x86_64.rpm`
-     <br>or `rpm -ivh --force /tmp/hw-management-7.0050.1930-2.x86_64.rpm`
+   * install with: `yum localinstall /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
+     <br>or `rpm -ivh --force /tmp/hw-management-1.mlnx.18.12.2018-2.x86_64.rpm`
    * remove with: `yum remove hw-management` or `rpm -e hw-management`
 
 ## Activation, de-activation and reading status
@@ -370,8 +355,8 @@ hw-management package from release 7.0010.1300 contains 2 separate services:
 one-shot hw-management and hw-management-tc thermal control service. hw-management-tc 
 is new service starting from 7.0010.1300. In older version TC was part of hw-management service.
 
-If you had TC disabled in previous release (by commenting out TC activation in hw-management.sh)
-Please refer to the below in order to disable TC using systemctl command 
+If you had TC disabled in previouse release (by commeting out TC activation in hw-management.sh)
+Please reffer to the below in order to disable TC using systemctl command 
 
 hw-management services can be initialized and de-initialized by systemd commands.          
 The next command could be used in order to configure persistent initialization and 
