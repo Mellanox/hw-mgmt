@@ -37,7 +37,7 @@
 '''
 Created on June 15, 2021
 
-Author: Mykola Kostenok <c_mykolak@nvidia.com>
+Author: Mykola Kostenok <c_mykolak@mellanox.com>
 Version: 1.0
 
 Description:

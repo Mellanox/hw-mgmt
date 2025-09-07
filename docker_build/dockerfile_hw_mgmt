@@ -1,5 +1,5 @@
 FROM debian:bullseye
-MAINTAINER Oleksandr Shamray <oleksandrs@mellanox.com>
+MAINTAINER Oleksandr Shamray <oleksandrs@nvidia.com>
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
                build-essential \
