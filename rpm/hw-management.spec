@@ -1,7 +1,7 @@
 Name: hw-management
 Version: %{version}
 Release: 1
-Summary: Thermal control and chassis management for Mellanox systems
+Summary: Thermal control and chassis management for NVIDIA systems
 License: see /usr/share/doc/hw-management/copyright
 Distribution: Centos
 Group: Converted/utils

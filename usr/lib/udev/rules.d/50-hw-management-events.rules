@@ -31,7 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# The below rules contains sysfs attributes, related to Mellanox thermal
+# The below rules contains sysfs attributes, related to NVIDIA thermal
 # control. These rules are supposed to catch the following attributes,
 # related to the next components: ASIC and port thermal zone mode, cooling
 # device current state,  statues of hot-pluggable devices, FAN faults, port

@@ -37,7 +37,7 @@
 '''
 Created on June 10, 2021
 
-Author: Mykola Kostenok <c_mykolak@nvidia.com>
+Author: Mykola Kostenok <c_mykolak@mellanox.com>
 
 Description:
 Delta and Acbel PSU FW update tool.

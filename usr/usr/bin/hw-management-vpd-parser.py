@@ -56,7 +56,7 @@
 '''
 Created on Nov 05, 2020
 
-Author: Oleksandr Shamray <oleksandrs@mellanox.com>
+Author: Oleksandr Shamray <oleksandrs@nvidia.com>
 Version: 1.0
 
 Description: This util converting FRU data file and saving it to file
@@ -622,7 +622,7 @@ def parse_fru_onie_bin(data, FRU_ITEMS, verbose=False):
                          ['MFGDate', '123456789abcdefghij'],
                          ['device_sw_id', 0],
                          ['device_hw_revision', 0],
-                         ['Manufacturer', 'Mellanox'],
+                         ['Manufacturer', 'NVIDIA'],
                          ['max_power', '10000000'],
                          ['CRC32', '0x78563412']],
             'tlv_header': 'TlvInfo',
