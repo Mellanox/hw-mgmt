@@ -1,5 +1,5 @@
 From 890ffa911705403d5f56ec57bf92f74b65758c87 Mon Sep 17 00:00:00 2001
-From: Mykola Kostenok <c_mykolak@nvidia.com>
+From: Mykola Kostenok <c_mykolak@mellanox.com>
 Date: Tue, 8 Jun 2021 15:44:13 +0300
 Subject: [PATCH backport 5.10 018/182] mlxsw: thermal: Add function for
  reading module temperature and thresholds
@@ -13,7 +13,7 @@ Currently, the sole caller of the function is only using it to read the
 module's temperature. The next patch will also use it to query the
 module's temperature thresholds.
 
-Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Signed-off-by: Mykola Kostenok <c_mykolak@mellanox.com>
 Acked-by: Vadim Pasternak <vadimp@nvidia.com>
 Signed-off-by: Ido Schimmel <idosch@nvidia.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>

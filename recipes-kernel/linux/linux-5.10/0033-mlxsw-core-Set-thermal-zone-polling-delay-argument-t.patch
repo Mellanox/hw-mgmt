@@ -1,5 +1,5 @@
 From 31780a1a30b26ffc6f2551e43d7d4593cec8599c Mon Sep 17 00:00:00 2001
-From: Mykola Kostenok <c_mykolak@nvidia.com>
+From: Mykola Kostenok <c_mykolak@mellanox.com>
 Date: Sun, 6 Jun 2021 11:24:32 +0300
 Subject: [PATCH backport v5.10.43 33/67] mlxsw: core: Set thermal zone polling
  delay argument to real value at init
@@ -17,7 +17,7 @@ thus, the relevant thermal zones will perform thermal monitoring.
 Cc: Andrzej Pietrasiewicz <andrzej.p@collabora.com>
 Fixes: 5d7bd8aa7c35 ("thermal: Simplify or eliminate unnecessary set_mode() methods")
 Fixes: 1ee14820fd8e ("thermal: remove get_mode() operation of drivers")
-Signed-off-by: Mykola Kostenok <c_mykolak@nvidia.com>
+Signed-off-by: Mykola Kostenok <c_mykolak@mellanox.com>
 Acked-by: Vadim Pasternak <vadimp@nvidia.com>
 Reviewed-by: Jiri Pirko <jiri@nvidia.com>
 Signed-off-by: Ido Schimmel <idosch@nvidia.com>

@@ -1,13 +1,21 @@
-.TH HW-MANAGEMENT-TC "8" "June 2020" "hw-management-tc " "hw-management"
+.TH HW-MANAGEMENT-TC "8" "September 2025" "hw-management-tc " "hw-management"
 .SH NAME
-hw-management-tc.service \- service used to run hw-management-thermal-control.sh
+hw-management-tc.service \- service used to run hw_management_thermal_control.py
 .SH SYNOPSIS
-Thermal control for Mellanox systems.
-A method for performing switch or router system thermal control monitoring, such as that employed
-for complex system's configuration with a single FAN control and with multi-points of temperature
-measure is disclosed. The technique referred to as the Optimized Thermal Monitoring Algorithm
-(OTMA) approach, periodically re-calculates the highest temperature score of all thermal zones
-and enforce thermal control to following the thermal zone with the highest score.
+Thermal control for NVIDIA systems.
+The thermal control service provides advanced thermal management for NVIDIA switch systems.
+It implements the Optimized Thermal Monitoring Algorithm (OTMA) that periodically
+re-calculates the highest temperature score of all thermal zones and enforces thermal
+control following the thermal zone with the highest score.
+
+The service supports multiple thermal control versions:
+- TC v2.0: Standard thermal control implementation
+- TC v2.5: Enhanced thermal control with improved algorithms for newer systems
+
+The service automatically selects the appropriate thermal control version based on
+the hardware platform and runs the corresponding Python script:
+- /usr/bin/hw_management_thermal_control.py (TC v2.0)
+- /usr/bin/hw_management_thermal_control_2_5.py (TC v2.5)
 .SH OPTIONS
 .TP
 start

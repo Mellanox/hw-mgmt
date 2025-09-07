@@ -1,5 +1,5 @@
-# Mellanox Hardware Management package
-This package supports thermal control and hardware management for Mellanox switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
+# NVIDIA Hardware Management package
+This package supports thermal control and hardware management for NVIDIA switches by using a virtual file system provided by the Linux Kernel called `sysfs`.  
 
 The major advantage of working with sysfs is that it makes HW hierarchy easy to understand and control without having to learn about HW component location and the buses through which they are connected.
 For detailed information, see the documentation [here](https://github.com/Mellanox/hw-mgmt/tree/master/Documentation).
@@ -17,25 +17,60 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - MSN2740
 - MSN2100
 - MSN2410
+- MSN24102
 - MSN2700
 - MSN2700-A1
+- MSN27002
 - MSN2010
 - MQMB7800
 - MSN3420
+- MSN3510
 - MSN3700
 - MSN3700C
 - MSN3700S
 - MSN3750SX
 - MSN3800
+- MSN38XX
 - MSN4410
-- MSN4700
-- MSN4600C
 - MSN4600
-- MQM9700
+- MSN4600C
+- MSN46XX
+- MSN4700
+- MSN47XX
 - MSN4800
 - MSN5600
+- MSN5600d
+- MSN5700
+- MQM8700
+- MQM87XX
+- MQM9700
+- MQM97XX
+- MSB78002
+- MSB87XX
+- MSX87XX
 - SGN2410
 - SN2201
+- SN4280
+- SN5400
+- SN5600
+- SN5610
+- SN5640
+- SN5700
+- N5100LD
+- N5101LD
+- N5110LD
+- N5112LD
+- N5200LD
+- N5240LD
+- N5300LD
+- N5500LD
+- N61XX_LD
+- Q3200
+- Q3400
+- Q3401
+- Q3450
+- Q3451
+- XH3000
 - E3597
 - P4697
 - P2317
@@ -322,7 +357,7 @@ The package depends on the next packages:
 
 Package contains the folder Debian, with the rules for Debian package build.
 Location: `https://github.com/Mellanox/hw-mgmt`
-To get package sources: `git clone https://mellanoxbsp@github.com/Mellanox/hw-mgmt`
+To get package sources: `git clone https://github.com/Mellanox/hw-mgmt`
 
 **For Debian package build:**
 On a debian-based system, install the following programs:
@@ -388,4 +423,4 @@ This project is Licensed under the GNU General Public License Version 2.
 
 ## Acknowledgments
 
-* Mellanox Low-Level Team.
+* NVIDIA Low-Level Team.
