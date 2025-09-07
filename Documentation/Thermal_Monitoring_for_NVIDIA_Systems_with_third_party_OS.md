@@ -1,7 +1,7 @@
 # Thermal Monitoring for NVIDIA Systems with Third Party OS
 
 **Version:** 2.8  
-**Last Updated:** September 2024  
+**Last Updated:** September 2025  
 **Document Type:** Technical Documentation
 
 ---
@@ -46,35 +46,35 @@ This document provides comprehensive guidance for thermal monitoring and managem
 
 ### Current Generation Systems
 
-| System | Thermal Zones | Sensors | Kernel Support | Notes |
-|--------|---------------|---------|----------------|-------|
-| **QM3400** | 8 | 24 | 6.1, 6.12 | Blackmamba - ES level |
-| **QM3000** | 6 | 18 | 6.1, 6.12 | ES level quality |
-| **SN4280** | 6 | 18 | 6.1, 6.12 | SmartSwitch Bobcat - ES level |
-| **SN5610** | 12 | 36 | 6.1, 6.12 | Production ready |
-| **SN5640** | 10 | 30 | 6.1, 6.12 | Production ready |
-| **Q3401-RD** | 4 | 12 | 6.1, 6.12 | Reference design |
-| **Q3450** | 6 | 18 | 6.1, 6.12 | Production ready |
-| **Q3451** | 6 | 18 | 6.1, 6.12 | Production ready |
-| **N61XX_LD** | 8 | 24 | 6.1, 6.12 | Juliet Scaleout PO + TTM |
-| **GB300** | 4 | 12 | 6.1, 6.12 | Production ready |
-| **XH3000** | 6 | 18 | 6.1, 6.12 | Production ready |
+| System | Thermal Zones | Sensors | Kernel Support | TC Version | Notes |
+|--------|---------------|---------|----------------|------------|-------|
+| **SN5610** | 12 | 36 | 6.1, 6.12 | **TC v2.5** | Production ready |
+| **SN5640** | 10 | 30 | 6.1, 6.12 | **TC v2.5** | Production ready |
+| **Q3401-RD** | 4 | 12 | 6.1, 6.12 | **TC v2.5** | Reference design |
+| **QM3400** | 8 | 24 | 6.1, 6.12 | TC v2.0 | ES level |
+| **QM3000** | 6 | 18 | 6.1, 6.12 | TC v2.0 | ES level |
+| **SN4280** | 6 | 18 | 6.1, 6.12 | TC v2.0 | ES level |
+| **Q3450** | 6 | 18 | 6.1, 6.12 | TC v2.0 | Production ready |
+| **Q3451** | 6 | 18 | 6.1, 6.12 | TC v2.0 | Production ready |
+| **N61XX_LD** | 8 | 24 | 6.1, 6.12 | TC v2.0 | Production ready |
+| **N5500LD** | 4 | 12 | 6.1, 6.12 | TC v2.0 | Production ready |
+| **XH3000** | 6 | 18 | 6.1, 6.12 | TC v2.0 | Production ready |
 
 ### Legacy Systems
 
-| System | Thermal Zones | Sensors | Kernel Support | Status |
-|--------|---------------|---------|----------------|--------|
-| MSN2740 | 4 | 12 | 5.10, 5.14, 6.1 | Supported |
-| MSN2100 | 3 | 9 | 5.10, 5.14, 6.1 | Supported |
-| MSN2410 | 3 | 9 | 5.10, 5.14, 6.1 | Supported |
-| MSN2700 | 4 | 12 | 5.10, 5.14, 6.1 | Supported |
-| MSN3420 | 6 | 18 | 5.10, 5.14, 6.1 | Supported |
-| MSN3700 | 8 | 24 | 5.10, 5.14, 6.1 | Supported |
-| MSN3800 | 8 | 24 | 5.10, 5.14, 6.1 | Supported |
-| MSN4410 | 10 | 30 | 5.10, 5.14, 6.1 | Supported |
-| MSN4700 | 12 | 36 | 5.10, 5.14, 6.1 | Supported |
-| MSN4800 | 12 | 36 | 5.10, 5.14, 6.1 | Supported |
-| MSN5600 | 12 | 36 | 5.10, 5.14, 6.1 | Supported |
+| System | Thermal Zones | Sensors | Kernel Support | TC Version | Status |
+|--------|---------------|---------|----------------|------------|--------|
+| MSN2740 | 4 | 12 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN2100 | 3 | 9 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN2410 | 3 | 9 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN2700 | 4 | 12 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN3420 | 6 | 18 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN3700 | 8 | 24 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN3800 | 8 | 24 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN4410 | 10 | 30 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN4700 | 12 | 36 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN4800 | 12 | 36 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
+| MSN5600 | 12 | 36 | 5.10, 5.14, 6.1 | TC v2.0 | Supported |
 
 ---
 
@@ -82,22 +82,38 @@ This document provides comprehensive guidance for thermal monitoring and managem
 
 ### System Overview
 
-The thermal management system consists of several key components:
+The thermal management system consists of two main architectural layers:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Thermal Management System                │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
-│  │   Sensors   │    │ Thermal     │    │ Fan Control │     │
-│  │             │    │ Control     │    │             │     │
-│  │ • Temperature│    │ Service     │    │ • PWM Control│    │
-│  │ • Voltage   │    │ (TC v2.5)   │    │ • Speed     │     │
-│  │ • Current   │    │             │    │ • Direction │     │
-│  └─────────────┘    └─────────────┘    └─────────────┘     │
-│         │                   │                   │           │
-│         └───────────────────┼───────────────────┘           │
-│                             │                               │
+│                    Data Collection Layer                    │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │            hw-management-sync Service                   │ │
+│  │              (Data Collector)                          │ │
+│  │  • Fan status monitoring                              │ │
+│  │  • ASIC temperature collection                        │ │
+│  │  • Module temperature monitoring                      │ │
+│  │  • Power event detection                              │ │
+│  │  • Leakage sensor monitoring                          │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Thermal Control Layer                    │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │        hw-management-thermal-control Service            │ │
+│  │              (Core Engine)                             │ │
+│  │  • PWM calculation algorithms                         │ │
+│  │  • Multi-sensor fusion                                │ │
+│  │  • Fan speed control                                  │ │
+│  │  • Thermal policy enforcement                         │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Hardware Control Interface                  │
 │  ┌─────────────────────────────────────────────────────────┐ │
 │  │                Sysfs Interface                         │ │
 │  │  /var/run/hw-management/                              │ │
@@ -106,6 +122,66 @@ The thermal management system consists of several key components:
 │  │  └── thermal/      (thermal zones)                    │ │
 │  └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
+```
+
+### **Architectural Roles**
+
+#### **Data Collection Layer (Sync Service)**
+- **Role**: Data Collector
+- **Purpose**: Gathers raw hardware data from various sources
+- **Function**: Monitors sensors, detects changes, triggers events
+- **Output**: Provides clean, processed data to thermal control
+
+#### **Thermal Control Layer (Core Engine)**
+- **Role**: Core Decision Engine
+- **Purpose**: Makes intelligent decisions based on collected data
+- **Function**: Calculates PWM, manages fan speeds, enforces policies
+- **Input**: Uses data from sync service to make thermal decisions
+
+### Thermal Control Algorithm
+
+The thermal control system uses a sophisticated multi-sensor algorithm:
+
+#### **Core Algorithm Components**
+
+1. **Sensor Data Collection**
+   - Polls temperature sensors at configurable intervals (3-60 seconds)
+   - Applies smoothing filters to reduce noise
+   - Implements hysteresis to prevent oscillation
+
+2. **PWM Calculation**
+   - **Basic Formula**: `PWM = pwm_min + ((temp - temp_min)/(temp_max - temp_min)) * (pwm_max - pwm_min)`
+   - **Dynamic Adjustment**: TC v2.5 systems use adaptive PWM limits
+   - **Integral Control**: Smooth transitions with I-term for stability
+
+3. **Multi-Sensor Fusion**
+   - Each sensor calculates its required PWM
+   - System selects the **maximum PWM** from all sensors
+   - Prevents thermal runaway by ensuring adequate cooling
+
+#### **Algorithm Flow**
+
+```
+Sensor Reading → Smoothing Filter → Hysteresis Check → PWM Calculation
+     ↓                    ↓                ↓                    ↓
+Temperature → Moving Average → Trend Analysis → Linear Interpolation
+     ↓                    ↓                ↓                    ↓
+Value Update → Noise Reduction → Oscillation Prevention → Fan Speed
+```
+
+#### **Dynamic PWM Control (TC v2.5)**
+
+For systems with TC v2.5, the algorithm includes advanced features:
+
+- **Adaptive PWM Limits**: Dynamically adjusts maximum PWM based on temperature trends
+- **Integral Term (I-term)**: Prevents temperature overshoot and undershoot
+- **Threshold-based Control**: Different behavior for temperature increases vs decreases
+
+```
+Temperature Control Logic:
+├── Above Upper Threshold → Increase PWM (with I-term)
+├── Below Lower Threshold → Decrease PWM (with I-term)  
+└── Within Range → Maintain Current PWM
 ```
 
 ### Thermal Zones
@@ -183,6 +259,34 @@ temp2_input:
 
 ## Thermal Control Service
 
+### Thermal Control Versions
+
+The hw-management package supports two versions of thermal control:
+
+#### **TC v2.5 (New Generation)**
+**Only 3 systems currently use TC v2.5:**
+- **SN5610**
+- **SN5640**  
+- **Q3401-RD**
+
+**Key Features:**
+- Enhanced blacklist functionality
+- Improved PWM calculations for multi-sensor systems
+- Service reload on crash scenario
+- Better multi-ASIC support
+- Advanced thermal zone management
+
+#### **TC v2.0 (Legacy)**
+**All other systems use TC v2.0:**
+- All MSN series (MSN2700, MSN3700, MSN4700, etc.)
+- All MQM series (MQM8700, MQM9700, etc.)
+- All other current and legacy systems
+
+**Features:**
+- Standard thermal control
+- Basic fan management
+- Traditional sensor monitoring
+
 ### TC v2.5 Features
 
 The Thermal Control service (TC) provides intelligent thermal management:
@@ -221,30 +325,86 @@ systemctl disable hw-management-tc
 | **sensors.conf** | Sensor calibration | `/usr/etc/hw-management-sensors/` |
 | **fast_sysfs_labels.json** | Fast monitoring | `/usr/etc/hw-management-fast-sysfs-monitor/` |
 
+### Thermal Algorithm Parameters
+
+#### **Core Parameters**
+
+| Parameter | Description | Range | Default |
+|-----------|-------------|-------|---------|
+| **pwm_min** | Minimum fan speed (%) | 0-100 | 30 |
+| **pwm_max** | Maximum fan speed (%) | 0-100 | 100 |
+| **val_min** | Minimum temperature (°C) | -40 to 125 | 70°C |
+| **val_max** | Maximum temperature (°C) | -40 to 125 | 105°C |
+| **poll_time** | Sensor polling interval (seconds) | 1-60 | 3 |
+| **input_smooth_level** | Smoothing filter level | 1-10 | 3 |
+| **value_hyst** | Hysteresis threshold (°C) | 0-10 | 1 |
+
+#### **Advanced Parameters (TC v2.5)**
+
+| Parameter | Description | Range | Default |
+|-----------|-------------|-------|---------|
+| **increase_step** | PWM increase rate | 0.1-10 | 5 |
+| **decrease_step** | PWM decrease rate | 0.1-10 | 0.1 |
+| **val_up_trh** | Upper threshold (°C) | 0-5 | 1 |
+| **val_down_trh** | Lower threshold (°C) | 1-10 | 3 |
+| **Iterm_down_trh** | Integral term threshold | -20 to 0 | -10 |
+
+#### **Error Handling Parameters**
+
+| Parameter | Description | Range | Default |
+|-----------|-------------|-------|---------|
+| **sensor_read_error** | PWM on sensor error (%) | 0-100 | 100 |
+| **fan_err** | PWM on fan error (%) | 0-100 | 30 |
+| **psu_err** | PWM on PSU error (%) | 0-100 | 30 |
+| **total_err_cnt** | Max errors before emergency | 1-10 | 2 |
+
 ### Thermal Policies
 
-#### Default Policy
+#### **Default Policy (TC v2.0)**
 
 ```json
 {
   "thermal_policy": {
-    "fan_min_speed": 25,
+    "fan_min_speed": 30,
     "fan_max_speed": 100,
     "temp_critical": 105,
     "temp_high": 85,
-    "temp_low": 45,
-    "hysteresis": 5
+    "temp_low": 70,
+    "hysteresis": 1,
+    "poll_time": 3
   }
 }
 ```
 
-#### Custom Policies
+#### **Advanced Policy (TC v2.5)**
 
-Systems can have custom thermal policies based on their specific requirements:
+```json
+{
+  "thermal_policy": {
+    "fan_min_speed": 30,
+    "fan_max_speed": 100,
+    "temp_critical": 105,
+    "temp_high": 85,
+    "temp_low": 70,
+    "hysteresis": 1,
+    "poll_time": 3,
+    "dynamic_pwm": true,
+    "increase_step": 5,
+    "decrease_step": 0.1,
+    "val_up_trh": 1,
+    "val_down_trh": 3
+  }
+}
+```
 
-- **High-performance systems**: Lower temperature thresholds
-- **Quiet systems**: Higher temperature thresholds with slower fan response
+#### **System-Specific Policies**
+
+Different systems have optimized parameters:
+
+- **High-performance systems**: Lower temperature thresholds, faster response
+- **Quiet systems**: Higher temperature thresholds, slower fan response
 - **Multi-ASIC systems**: Independent policies per ASIC
+- **Module systems**: Special handling for optical modules with TEC cooling
 
 ---
 
@@ -368,6 +528,316 @@ For high-frequency monitoring, use the fast sysfs monitor:
 ```
 
 ---
+
+## Thermal Algorithm Implementation
+
+### **Algorithm Details**
+
+#### **Sensor Data Processing**
+
+1. **Value Smoothing**
+   ```
+   value_acc -= value_acc / smooth_level
+   value_acc += raw_value
+   smoothed_value = value_acc / smooth_level
+   ```
+
+2. **Hysteresis Implementation**
+   ```
+   if (current_value > previous_value + hysteresis) OR
+      (trend_direction == current_trend):
+       update_pwm()
+   ```
+
+3. **PWM Calculation Formula**
+   ```
+   PWM = pwm_min + ((temperature - temp_min) / (temp_max - temp_min)) * (pwm_max - pwm_min)
+   ```
+
+#### **Dynamic PWM Control (TC v2.5)**
+
+The advanced algorithm includes integral control for smooth operation:
+
+1. **Temperature Above Upper Threshold**
+   ```
+   temp_diff = current_temp - temp_max
+   Iterm = temp_diff + 1
+   pwm_max_dynamic += increase_step * Iterm
+   ```
+
+2. **Temperature Below Lower Threshold**
+   ```
+   Iterm -= (temp_max - current_temp - range)
+   if Iterm < Iterm_down_trh:
+       pwm_max_dynamic += decrease_step * Iterm
+   ```
+
+3. **Within Normal Range**
+   ```
+   Iterm = 0  // Reset integral term
+   ```
+
+#### **Error Handling**
+
+The system implements comprehensive error handling:
+
+1. **Sensor Read Errors**
+   - Counts consecutive read failures
+   - Sets PWM to maximum after threshold exceeded
+   - Implements blacklist for faulty sensors
+
+2. **Fan Errors**
+   - Monitors fan tachometer readings
+   - Detects missing or failed fans
+   - Adjusts PWM based on available fans
+
+3. **Emergency Conditions**
+   - Triggers when total error count exceeds limit
+   - Sets all fans to maximum speed
+   - Logs emergency condition
+
+#### **Multi-Sensor Fusion**
+
+The system processes multiple sensors simultaneously:
+
+1. **Individual PWM Calculation**
+   - Each sensor calculates its required PWM
+   - Based on temperature and configured parameters
+
+2. **Maximum PWM Selection**
+   - System selects highest PWM from all sensors
+   - Ensures adequate cooling for hottest component
+
+3. **Priority Handling**
+   - Critical sensors (ASIC, CPU) have higher priority
+   - Secondary sensors (ambient, modules) have lower priority
+
+### **Performance Optimization**
+
+#### **Polling Strategy**
+- **Critical sensors**: 3-second intervals (ASIC, CPU)
+- **Secondary sensors**: 20-60 second intervals (modules, ambient)
+- **Adaptive polling**: Adjusts based on temperature trends
+
+#### **Resource Management**
+- **CPU usage**: Minimal impact with efficient algorithms
+- **Memory usage**: Bounded by sensor count and history
+- **I/O operations**: Optimized sysfs access patterns
+
+## Hardware Management Sync Service
+
+### **Service Overview**
+
+The `hw-management-sync` service serves as the **data collection layer** of the thermal management system. It acts as a centralized data collector that continuously monitors hardware sensors and synchronizes sensor data across the system. This service provides the essential data foundation that the thermal control core engine relies upon for making intelligent thermal management decisions.
+
+#### **Key Functions**
+
+1. **Fan Status Synchronization**
+   - Monitors fan presence and status
+   - Updates thermal fan status files
+   - Triggers chassis events for fan changes
+
+2. **ASIC Temperature Management**
+   - Populates ASIC temperature data
+   - Handles ASIC readiness checks
+   - Manages temperature thresholds and emergency states
+
+3. **Module Temperature Monitoring**
+   - Monitors optical module temperatures
+   - Handles TEC (Thermo-Electric Cooler) cooling levels
+   - Manages module presence detection
+
+4. **Power Management Events**
+   - Handles power button events
+   - Manages graceful power-off requests
+   - Triggers system shutdown procedures
+
+5. **Leakage Detection**
+   - Monitors liquid leakage sensors
+   - Triggers chassis events for leakage detection
+   - Provides early warning system
+
+### **Service Architecture**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                hw-management-sync Service                  │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │   Fan       │    │   ASIC      │    │   Module    │     │
+│  │   Sync      │    │   Temp      │    │   Temp      │     │
+│  │             │    │   Populate  │    │   Populate  │     │
+│  └─────────────┘    └─────────────┘    └─────────────┘     │
+│         │                   │                   │           │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐     │
+│  │   Power     │    │   Leakage   │    │   Redfish   │     │
+│  │   Events    │    │   Detection │    │   Sensors   │     │
+│  │             │    │             │    │             │     │
+│  └─────────────┘    └─────────────┘    └─────────────┘     │
+│         │                   │                   │           │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │                Event Processing Loop                   │ │
+│  │  • Polls sensors at configurable intervals            │ │
+│  │  • Triggers chassis events on state changes          │ │
+│  │  • Updates thermal management files                  │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### **Configuration Parameters**
+
+#### **Polling Intervals**
+
+| Component | Polling Interval | Description |
+|-----------|------------------|-------------|
+| **Fan Status** | 5 seconds | Fan presence and status monitoring |
+| **ASIC Temperature** | 3 seconds | Critical temperature monitoring |
+| **Module Temperature** | 20 seconds | Optical module temperature |
+| **Power Events** | 1 second | Power button and shutdown events |
+| **Leakage Detection** | 2 seconds | Liquid leakage sensor monitoring |
+| **Redfish Sensors** | 30 seconds | BMC temperature via Redfish API |
+
+#### **System-Specific Configuration**
+
+The service uses different configurations based on system SKU:
+
+- **HI162**: 6 fans, leakage detection, power events
+- **HI163**: 6 fans, leakage detection, power events, ASIC temperature
+- **HI164**: 6 fans, leakage detection, power events, ASIC temperature, modules
+- **HI165**: 6 fans, leakage detection, power events, ASIC temperature, modules
+- **Default**: Thermal enforcement monitoring
+
+### **Event Processing**
+
+#### **Fan Status Events**
+
+```python
+def sync_fan(fan_id, val):
+    if int(val) == 0:
+        status = 1  # Fan present
+    else:
+        status = 0  # Fan absent
+    
+    # Update thermal status file
+    echo {status} > /var/run/hw-management/thermal/fan{fan_id}_status
+    
+    # Trigger chassis event
+    hw-management-chassis-events.sh hotplug-event FAN{fan_id} {status}
+```
+
+#### **ASIC Temperature Population**
+
+```python
+def asic_temp_populate(asic_list, _dummy):
+    for asic_name, asic_attr in asic_list.items():
+        if is_asic_ready(asic_name, asic_attr):
+            # Read temperature from ASIC
+            # Update thermal files
+            # Set thresholds and emergency values
+        else:
+            # Reset to default values
+            asic_temp_reset(asic_name, asic_attr["fin"])
+```
+
+#### **Module Temperature Management**
+
+```python
+def module_temp_populate(module_config, _dummy):
+    for module_idx in range(module_count):
+        module_name = "module{}".format(module_idx + offset)
+        
+        if is_module_host_management_mode(module_path):
+            continue  # Skip independent mode modules
+        
+        if module_present:
+            # Read temperature and cooling levels
+            # Update thermal files
+            # Handle TEC cooling
+        else:
+            # Set default values
+```
+
+### **Service Management**
+
+#### **Systemd Integration**
+
+```ini
+[Unit]
+Description=Hw-management events sync service of Nvidia systems
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+
+[Service]
+ExecStart=/bin/sh -c "/usr/bin/hw_management_sync.py"
+Restart=on-failure
+RestartSec=10s
+```
+
+#### **Service Control**
+
+```bash
+# Start service
+systemctl start hw-management-sync
+
+# Stop service
+systemctl stop hw-management-sync
+
+# Check status
+systemctl status hw-management-sync
+
+# View logs
+journalctl -u hw-management-sync -f
+```
+
+### **Error Handling**
+
+The service implements robust error handling:
+
+1. **File Access Errors**: Gracefully handles missing files
+2. **Permission Errors**: Continues operation with reduced functionality
+3. **Service Restart**: Automatic restart on failure with exponential backoff
+4. **Logging**: Comprehensive logging for troubleshooting
+
+### **Data Flow Integration**
+
+#### **Data Collection → Thermal Control Flow**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Data Collection Process                  │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │            hw-management-sync Service                   │ │
+│  │              (Data Collector)                          │ │
+│  │                                                         │ │
+│  │  1. Polls hardware sensors (fans, ASIC, modules)       │ │
+│  │  2. Detects state changes and events                   │ │
+│  │  3. Updates thermal status files                       │ │
+│  │  4. Triggers chassis events                            │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Thermal Control Process                  │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │        hw-management-thermal-control Service            │ │
+│  │              (Core Engine)                             │ │
+│  │                                                         │ │
+│  │  1. Reads updated sensor data from sync service        │ │
+│  │  2. Applies thermal algorithms and policies            │ │
+│  │  3. Calculates required PWM for each sensor            │ │
+│  │  4. Selects maximum PWM and controls fan speeds        │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### **Integration Points**
+
+- **Thermal Control**: Provides temperature data for thermal management
+- **Chassis Events**: Triggers hardware change notifications
+- **Power Management**: Handles system shutdown requests
+- **BMC Integration**: Communicates with BMC via Redfish API
 
 ## Troubleshooting
 
@@ -568,7 +1038,7 @@ if __name__ == "__main__":
 
 ## Changelog
 
-### Version 2.8 (September 2024)
+### Version 2.8 (September 2025)
 
 #### New Features
 - **New system support**: QM3400, QM3000, SN4280, SN5610, SN5640, Q3401-RD, Q3450, Q3451, N61XX_LD, GB300, XH3000
@@ -591,9 +1061,9 @@ if __name__ == "__main__":
 ### Version 2.7 (June 2024)
 
 #### New Features
-- **QM3400 Blackmamba** support (ES level)
-- **SN4280 SmartSwitch Bobcat** support (ES level)
-- **N5110_LD Juliet Scaleout** support (ES level)
+- **QM3400** support (ES level)
+- **SN4280** support (ES level)
+- **N5110_LD** support (ES level)
 - **VPD parser** support for System VPD vendor specific SSD SED PSID block
 
 #### Bug Fixes
@@ -635,4 +1105,4 @@ This documentation is provided under the GNU General Public License Version 2.
 
 ---
 
-*© 2024 NVIDIA Corporation. All rights reserved. NVIDIA, the NVIDIA logo, and other NVIDIA marks are trademarks and/or registered trademarks of NVIDIA Corporation in the United States and other countries.*
+*© 2025 NVIDIA Corporation. All rights reserved. NVIDIA, the NVIDIA logo, and other NVIDIA marks are trademarks and/or registered trademarks of NVIDIA Corporation in the United States and other countries.*

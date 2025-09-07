@@ -20,10 +20,10 @@
 """
 
 @copyright:
-     Copyright (C) Mellanox Technologies Ltd. 2001-2020.  ALL RIGHTS RESERVED.
+     Copyright (C) NVIDIA CORPORATION & AFFILIATES 2001-2025.  ALL RIGHTS RESERVED.
 
-    This software product is a proprietary product of Mellanox Technologies
-    Ltd. (the "Company") and all right, title, and interest in and to the
+    This software product is a proprietary product of NVIDIA CORPORATION & AFFILIATES
+    (the "Company") and all right, title, and interest in and to the
     software product, including all associated intellectual property rights,
     are and shall remain exclusively with the Company.
 
