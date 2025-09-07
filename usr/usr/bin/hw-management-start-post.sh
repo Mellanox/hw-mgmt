@@ -158,3 +158,17 @@ if [ $? -eq 0 ]; then
 	systemctl disable hw-management-tc.service  
 fi
 
+# Initialize fan direction files for existing fans
+if [ -f $config_path/max_tachos ]; then
+	max_tachos=$(<$config_path/max_tachos)
+	for ((i=1; i<=max_tachos; i+=1)); do
+		if [ -f $thermal_path/fan"$i"_status ]; then
+			status=$(< $thermal_path/fan"$i"_status)
+			if [ "$status" -eq 1 ]; then
+				# Source chassis events to get set_fan_direction function
+				source hw-management-chassis-events.sh
+				set_fan_direction fan"${i}" 1
+			fi
+		fi
+	done
+fi

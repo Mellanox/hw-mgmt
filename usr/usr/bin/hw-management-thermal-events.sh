@@ -34,6 +34,7 @@
 #
 
 source hw-management-helpers.sh
+source hw-management-chassis-events.sh
 board_type=$(< $board_type_file)
 sku=$(< $sku_file)
 
@@ -607,6 +608,8 @@ if [ "$1" == "add" ]; then
 				event=$(< $thermal_path/fan"$i"_status)
 				if [ "$event" -eq 1 ]; then
 					echo 1 > $events_path/fan"$i"
+					# Create fan direction file when fan is present
+					set_fan_direction fan"$i" 1
 				fi
 				(( fan_drwr_num++ ))
 			fi
