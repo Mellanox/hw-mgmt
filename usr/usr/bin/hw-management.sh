@@ -3552,10 +3552,21 @@ map_dummy_psus()
 report_sed_pba_ver()
 {
     if command -v sedutil-cli &> /dev/null; then
-        if sedutil-cli --query /dev/nvme0 | grep -q "MBREnabled = Y"; then
-            if [ -f /sys/firmware/efi/efivars/SedPbaVer-"$sed_pba_guid" ]; then
-                sed_pba_ver=$(efivar -p -n "$sed_pba_guid"-SedPbaVer | \
-                awk '/Value:/ {found=1; next} found {split($0, a, "|"); split(a[2], b, " "); print b[1]; found=0}')
+		# Scan for OPAL2 compliant drives
+		opal_drive=$(sedutil-cli --scan 2>/dev/null | \
+		awk '/^\/dev\/(sda|nvme[0-9]+)/ && $2 == "2" {print $1; exit}')
+
+		if [ -n "$opal_drive" ]; then
+			# Check if MBREnabled is Y for the detected OPAL2 drive
+			if sedutil-cli --query "$opal_drive" 2>/dev/null | grep -q "MBREnabled = Y"; then
+				if [ -f "/sys/firmware/efi/efivars/SedPbaVer-$sed_pba_guid" ]; then
+					# Use dd to directly read variable data, skipping first 4 bytes (attributes)
+					raw_data=$(dd if="/sys/firmware/efi/efivars/SedPbaVer-$sed_pba_guid" bs=1 skip=4 2>/dev/null | tr -d '\0')
+					# Extract just version without build date
+					sed_pba_ver=$(echo "$raw_data" | awk '{print $1}')
+				else
+					sed_pba_ver="N/A"
+				fi
             else
                 sed_pba_ver="N/A"
             fi
