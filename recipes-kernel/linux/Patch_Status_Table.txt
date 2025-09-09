@@ -729,6 +729,7 @@ Kernel-6.1
 |8010-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
 |8011-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream accepted                      |            |                                                |
 |8012-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
+|8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
