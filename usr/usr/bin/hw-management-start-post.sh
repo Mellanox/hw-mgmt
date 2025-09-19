@@ -65,6 +65,13 @@ case $board in
 			modprobe nvidia_drm
 		fi
 		;;
+	VMOD0019)
+		# Trying to re-instatiate mlxreg-dpu driver for smart switch if there
+		# was a problem during initialization
+		if [ "$sku" == "HI160" ]; then
+			check_and_recreate_dpu_devices
+		fi
+		;;
 	*)
 		;;
 esac
