@@ -933,3 +933,22 @@ get_ui_tree_archive_file()
 	esac
 	echo $ui_tree_archive
 }
+
+# Due to a very rare race condition in the kernel, mlxreg-dpu devices fail
+# to instantiate during the kernel initialization. This function will try
+# to re-instantiate if there was a failure. Needs to be invoked from
+# hw-management-start-post.sh
+check_and_recreate_dpu_devices()
+{
+	for bus in {18..21}; do
+		if ! ls /sys/bus/i2c/devices/${bus}-0068/mlxreg-io* >/dev/null 2>&1; then
+			log_info "Device mlxreg-io* not found on i2c-$bus. Recreating device..."
+			# Delete the device on this bus with address 0x68
+			echo 0x68 > /sys/bus/i2c/devices/i2c-${bus}/delete_device >/dev/null 2>&1
+			# Create the device again
+			echo "mlxreg-dpu 0x68" > /sys/bus/i2c/devices/i2c-${bus}/new_device >/dev/null 2>&1
+		else
+			log_info "Found mlxreg-io on i2c-$bus"
+		fi
+	done
+}
