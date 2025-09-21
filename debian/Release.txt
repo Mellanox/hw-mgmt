@@ -1,4 +1,29 @@
 ================================================================================
+- V.7.0040.4032
+- Sun, 21 Sep 2025
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4603973, hw-mgmt: scripts: Add hw-mgmt tree dump to sysfs monitor service, 0d974e8
+    o #4501831, hwmon: pmbus: mp2975: Clear interrupts at probe, 3aad7ea
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4032/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0040.4031
 - Wed, 17 Sep 2025
 --------------------------------------------------------------------------------
