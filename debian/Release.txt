@@ -1,5 +1,36 @@
 ================================================================================
 - V.7.0050.1934
+- Sun, 21 Sep 2025
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4540628, hw-mgmt: scripts: Correct dependency for systemd startup, af7ead6
+    o #5360318, hw-mgmt: kernel: 6.1: mp2975: Clear interrupts at probe, 9c287ba
+    o #4410461, hw-mgmt: scripts: change BMC password to be platform based, 0b6b254
+    o #4601092, hw-mgmt: scripts: Fix SN4280 sensors config, 7fcde9d
+    o #4611676, hw-mgmt: thermal: Fix misprint in Q3450 thermal config, 98666cd
+    o #4582500, hw-mgmt: thermal: Increase TC service max reload, b568aa9
+    o #4577722, hw-mgmt: topo: Fix reset_ready not set for Q3401-RD system, 81001c2
+    o #N/A, hw-mgmt: scripts: Post BU fixes for BM DGX (Q3401-RD), a995602
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.1934/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
+- V.7.0050.1934
 - Wed, 17 Sep 2025
 --------------------------------------------------------------------------------
 
