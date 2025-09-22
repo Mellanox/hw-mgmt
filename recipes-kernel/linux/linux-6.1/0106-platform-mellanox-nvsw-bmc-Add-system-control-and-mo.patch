@@ -1,4 +1,4 @@
-From c1bbf1f3fbf49cc80324e13fb929550797d11e1e Mon Sep 17 00:00:00 2001
+From 73228c8023e1a3ef0939843cad4e7a091bd4d88d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -21,11 +21,11 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  .../devicetree/bindings/trivial-devices.yaml  |    8 +-
  drivers/platform/mellanox/Kconfig             |   19 +
  drivers/platform/mellanox/Makefile            |    2 +
- drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2747 +++++++++++++++++
- drivers/platform/mellanox/nvsw-core.c         |  622 ++++
- drivers/platform/mellanox/nvsw-host-l1.c      |  704 +++++
- drivers/platform/mellanox/nvsw.h              |  259 ++
- 7 files changed, 4357 insertions(+), 4 deletions(-)
+ drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
+ drivers/platform/mellanox/nvsw-core.c         |  626 ++++
+ drivers/platform/mellanox/nvsw-host-l1.c      |  692 ++++
+ drivers/platform/mellanox/nvsw.h              |  262 ++
+ 7 files changed, 4436 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -94,10 +94,10 @@ index 2b774cdf4..270b4bcf3 100644
  obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
 diff --git a/drivers/platform/mellanox/nvsw-bmc-hid162.c b/drivers/platform/mellanox/nvsw-bmc-hid162.c
 new file mode 100644
-index 000000000..442253bc7
+index 000000000..96908494c
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-@@ -0,0 +1,2747 @@
+@@ -0,0 +1,2831 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -140,6 +140,15 @@ index 000000000..442253bc7
 +	0x32, 0x33, 0x34, 0x35, 0x24, 0x0a, 0x22,
 +};
 +
++static int nvsw_bmc_hid180_chan1[] = {
++	0x01, 0x11, 0x21, 0x31, 0x09, 0x02, 0x03, 0x04, 0x14, 0x24, 0x34, 0x05, 0x06, 0x40, 0x41,
++	0x42, 0x43, 0x0a, 0x0b, 0x1b,
++};
++
++static int nvsw_bmc_hid180_chan2[] = {
++	0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
++};
++
 +/* Mux configuration. */
 +static struct i2c_mux_regmap_platform_data nvsw_bmc_hid162_mux_data[] = {
 +	{
@@ -157,6 +166,23 @@ index 000000000..442253bc7
 +		.chan_ids = nvsw_bmc_hid176_chan1,
 +		.num_adaps = ARRAY_SIZE(nvsw_bmc_hid176_chan1),
 +		.sel_reg_addr = NVSW_REG_MUX1_OFFSET,
++		.reg_size = 1,
++	},
++};
++
++static struct i2c_mux_regmap_platform_data nvsw_bmc_hid180_mux_data[] = {
++	{
++		.parent = 14,
++		.chan_ids = nvsw_bmc_hid180_chan1,
++		.num_adaps = ARRAY_SIZE(nvsw_bmc_hid180_chan1),
++		.sel_reg_addr = NVSW_REG_MUX1_OFFSET,
++		.reg_size = 1,
++	},
++	{
++		.parent = 14,
++		.chan_ids = nvsw_bmc_hid180_chan2,
++		.num_adaps = ARRAY_SIZE(nvsw_bmc_hid180_chan2),
++		.sel_reg_addr = NVSW_REG_MUX2_OFFSET,
 +		.reg_size = 1,
 +	},
 +};
@@ -1992,6 +2018,30 @@ index 000000000..442253bc7
 +		.mode = 0644,
 +	},
 +	{
++		.label = "graceful_power_off",
++		.reg = NVSW_REG_GP7_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
++	},
++	{
++		.label = "bmc_perst_en",
++		.reg = NVSW_REG_GP7_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0200,
++	},
++	{
++		.label = "bmc_shutdown_unlock",
++		.reg = NVSW_REG_GP7_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0200,
++	},
++	{
++		.label = "stby_pwr_en_unmask",
++		.reg = NVSW_REG_GP7_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0200,
++	},
++	{
 +		.label = "cpu_mctp_ready",
 +		.reg = NVSW_REG_GP0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(1),
@@ -2029,16 +2079,22 @@ index 000000000..442253bc7
 +		.mode = 0644,
 +	},
 +	{
++		.label = "pwr_button_halt",
++		.reg = NVSW_REG_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0644,
++	},
++	{
 +		.label = "pwr_cycle",
 +		.reg = NVSW_REG_GP1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
-+		.mode = 0244,
++		.mode = 0200,
 +	},
 +	{
 +		.label = "pwr_down",
 +		.reg = NVSW_REG_GP1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0200,
++		.mode = 0644,
 +	},
 +	{
 +		.label = "aux_pwr_cycle",
@@ -2072,7 +2128,7 @@ index 000000000..442253bc7
 +		.mode = 0644,
 +	},
 +	{
-+		.label = "cpu_erot_reset",
++		.label = "erot_cpu_reset",
 +		.reg = NVSW_REG_RESET_GP2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0644,
@@ -2086,8 +2142,26 @@ index 000000000..442253bc7
 +	{
 +		.label = "mcu2_reset",
 +		.reg = NVSW_REG_RESET_GP2_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0644,
++	},
++	{
++		.label = "platform_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0200,
++	},
++	{
++		.label = "cpld_phy_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0200,
++	},
++	{
++		.label = "tpm_reset",
++		.reg = NVSW_REG_RESET_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0200,
 +	},
 +	{
 +		.label = "reset_long_pb",
@@ -2339,12 +2413,6 @@ index 000000000..442253bc7
 +		.reg = NVSW_REG_CONFIG3_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
-+	},
-+	{
-+		.label = "graseful_pwr_off",
-+		.reg = NVSW_REG_GP7_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0644,
 +	},
 +};
 +
@@ -2651,6 +2719,19 @@ index 000000000..442253bc7
 +	return 0;
 +}
 +
++static int nvsw_bmc_hid162_mux_access_grant(void *handle)
++{
++	struct nvsw_core *nvsw_core = handle;
++	u32 regval;
++	int err;
++
++	err = regmap_read(nvsw_core->regmap, NVSW_REG_GP1_OFFSET, &regval);
++	if (err)
++		return err;
++
++	return regval & NVSW_MASTER_MASK;
++}
++
 +static int nvsw_bmc_hid162_platform_data_init(struct nvsw_core *nvsw_core)
 +{
 +	int i;
@@ -2662,6 +2743,7 @@ index 000000000..442253bc7
 +		mux_data[i] = &nvsw_bmc_hid162_mux_data[i];
 +		mux_data[i]->handle = nvsw_core;
 +		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
++		mux_data[i]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
 +		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
 +		mux_brdinfo[i]->platform_data = mux_data[i];
 +	}
@@ -2688,6 +2770,7 @@ index 000000000..442253bc7
 +		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
 +		mux_data[i]->handle = nvsw_core;
 +		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
++		mux_data[i]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
 +		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
 +		mux_brdinfo[i]->platform_data = mux_data[i];
 +	}
@@ -2713,6 +2796,7 @@ index 000000000..442253bc7
 +		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
 +		mux_data[i]->handle = nvsw_core;
 +		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
++		mux_data[i]->mux_access_grant = nvsw_bmc_hid162_mux_access_grant;
 +		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
 +		mux_brdinfo[i]->platform_data = mux_data[i];
 +	}
@@ -2732,10 +2816,10 @@ index 000000000..442253bc7
 +	int i;
 +
 +	/* Set system configuration. */
-+	nvsw_core->hid = HID177;
-+	nvsw_core->mux_num = ARRAY_SIZE(nvsw_bmc_hid176_mux_data);
++	nvsw_core->hid = HID180;
++	nvsw_core->mux_num = ARRAY_SIZE(nvsw_bmc_hid180_mux_data);
 +	for (i = 0; i < nvsw_core->mux_num; i++) {
-+		mux_data[i] = &nvsw_bmc_hid176_mux_data[i];
++		mux_data[i] = &nvsw_bmc_hid180_mux_data[i];
 +		mux_data[i]->handle = nvsw_core;
 +		mux_data[i]->completion_notify = nvsw_bmc_hid162_completion_notify;
 +		mux_brdinfo[i] = &nvsw_bmc_hid162_mux_brdinfo;
@@ -2847,10 +2931,10 @@ index 000000000..442253bc7
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
 new file mode 100644
-index 000000000..778977f17
+index 000000000..078c17924
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-core.c
-@@ -0,0 +1,622 @@
+@@ -0,0 +1,626 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -2879,6 +2963,7 @@ index 000000000..778977f17
 +	case NVSW_REG_PG3_EVENT_OFFSET:
 +	case NVSW_REG_PG3_MASK_OFFSET:
 +	case NVSW_REG_PG4_EVENT_OFFSET:
++	case NVSW_REG_PG4_MASK_OFFSET:
 +	case NVSW_REG_RESET_GP1_OFFSET:
 +	case NVSW_REG_FIELD_UPGRADE:
 +	case NVSW_REG_GP0_OFFSET:
@@ -2935,6 +3020,7 @@ index 000000000..778977f17
 +	case NVSW_REG_PWM1_OFFSET:
 +	case NVSW_REG_MUX0_OFFSET:
 +	case NVSW_REG_MUX1_OFFSET:
++	case NVSW_REG_MUX2_OFFSET:
 +		return true;
 +	}
 +	return false;
@@ -3070,6 +3156,7 @@ index 000000000..778977f17
 +	case NVSW_REG_WD3_ACT_OFFSET:
 +	case NVSW_REG_MUX0_OFFSET:
 +	case NVSW_REG_MUX1_OFFSET:
++	case NVSW_REG_MUX2_OFFSET:
 +	case NVSW_REG_UFM_VERSION_OFFSET:
 +		return true;
 +	}
@@ -3206,6 +3293,7 @@ index 000000000..778977f17
 +	case NVSW_REG_WD3_ACT_OFFSET:
 +	case NVSW_REG_MUX0_OFFSET:
 +	case NVSW_REG_MUX1_OFFSET:
++	case NVSW_REG_MUX2_OFFSET:
 +	case NVSW_REG_UFM_VERSION_OFFSET:
 +		return true;
 +	}
@@ -3475,10 +3563,10 @@ index 000000000..778977f17
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
 new file mode 100644
-index 000000000..c32f44590
+index 000000000..06b2c38f3
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,704 @@
+@@ -0,0 +1,692 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3753,7 +3841,7 @@ index 000000000..c32f44590
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_aux_pwr_or_fu",
++		.label = "reset_aux_pwr_or_reload",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(2),
 +		.mode = 0444,
@@ -3762,6 +3850,12 @@ index 000000000..c32f44590
 +		.label = "reset_swb_dc_dc_pwr_fail",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_platform",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
 +	},
 +	{
@@ -3783,21 +3877,15 @@ index 000000000..c32f44590
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_comex_pwr_fail",
-+		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0444,
-+	},
-+	{
-+		.label = "reset_platform",
-+		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(4),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "reset_soc",
 +		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_erot",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
 +		.mode = 0444,
 +	},
 +	{
@@ -3813,13 +3901,13 @@ index 000000000..c32f44590
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_comex_thermal",
++		.label = "reset_cpu_thermal",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_comex_power",
++		.label = "reset_cpu_pwr_fail",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(4),
 +		.mode = 0444,
@@ -3907,18 +3995,6 @@ index 000000000..c32f44590
 +		.label = "graceful_pwr_off",
 +		.reg = NVSW_REG_GP7_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "power_button_evt",
-+		.reg = NVSW_REG_PWRB_EVENT_OFFSET,
-+		.mask = GENMASK(7, 0) & ~NVSW_PWR_BUTTON_MASK,
-+		.mode = 0644,
-+	},
-+	{
-+		.label = "power_button_mask",
-+		.reg = NVSW_REG_PWRB_MASK_OFFSET,
-+		.mask = GENMASK(7, 0) & ~NVSW_PWR_BUTTON_MASK,
 +		.mode = 0644,
 +	},
 +};
@@ -4185,10 +4261,10 @@ index 000000000..c32f44590
 +
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 new file mode 100644
-index 000000000..dd6b931db
+index 000000000..055506168
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw.h
-@@ -0,0 +1,259 @@
+@@ -0,0 +1,262 @@
 +/* SPDX-License-Identifier: GPL-2.0+
 + *
 + * Nvidia BMC platform driver
@@ -4304,6 +4380,7 @@ index 000000000..dd6b931db
 +#define NVSW_REG_WD3_ACT_OFFSET		0x25d3
 +#define NVSW_REG_MUX0_OFFSET		0x25da
 +#define NVSW_REG_MUX1_OFFSET		0x25db
++#define NVSW_REG_MUX2_OFFSET		0x25dc
 +#define NVSW_REG_CPLD1_MVER_OFFSET	0x25de
 +#define NVSW_REG_CPLD2_MVER_OFFSET	0x25df
 +#define NVSW_REG_CPLD3_MVER_OFFSET	0x25e0
@@ -4369,6 +4446,8 @@ index 000000000..dd6b931db
 +#define NVSW_UART_SEL_MASK		GENMASK(7, 6)
 +#define NVSW_BIOS_STATUS_MASK		GENMASK(3, 1)
 +#define NVSW_REG_RESET_MASK		BIT(1)
++#define NVSW_MASTER_MASK                BIT(5)
++
 +#define NVSW_FU_CAP_MASK		GENMASK(1, 0)
 +#define NVSW_WD_RESET_ACT_MASK		GENMASK(7, 1)
 +#define NVSW_WD_FAN_ACT_MASK		(GENMASK(7, 0) & ~BIT(4))
