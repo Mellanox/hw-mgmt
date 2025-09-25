@@ -75,6 +75,10 @@ do_start_sysfs_monitor()
             log_info "sysfs monitor done!"
             # Write the current time into the sysfs ready file.
             echo "$current_time" > "$SYSFS_MONITOR_RDY_FILE"
+
+            # Run post-init fixup hook
+            run_fixup_script post
+
             # Exit the sysfs monitor.
             exit 0
         fi
