@@ -79,6 +79,8 @@ do_start_sysfs_monitor()
             # Generate debug dump of hw-mgmt tree
             find -L $hw_management_path -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' \
                ! -name '*.sh' ! -name '*.py' ! -name 'led_*_state' -exec ls -la {} \; -exec cat {} \; > /var/log/hw-mgmt-val.log 2>/dev/null
+            # Run post-init fixup hook
+            run_fixup_script post
             # Exit the sysfs monitor.
             exit 0
         fi

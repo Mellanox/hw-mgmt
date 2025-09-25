@@ -80,6 +80,7 @@ udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
+fixup_hook_script=/usr/local/bin/hw-management-fixup.sh
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -988,4 +989,17 @@ get_ui_tree_archive_file()
 		;;
 	esac
 	echo $ui_tree_archive
+}
+
+run_fixup_script()
+{
+	local status
+	local stage=$1
+
+	if [ -x ${fixup_hook_script} ] && [ -s ${fixup_hook_script} ]; then
+		${fixup_hook_script} $stage
+		status=$?
+		log_info "${stage}-init fixup hook completed with exit status $status"
+		echo $status > ${config_path}/fixup-status-${stage}
+	fi
 }
