@@ -94,6 +94,7 @@ fi
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
 cp /usr/bin/hw?management* $DUMP_FOLDER/bin/
+cp /usr/local/bin/hw?management* $DUMP_FOLDER/bin/
 cat /etc/os-release >> $DUMP_FOLDER/sys_version
 cat /proc/interrupts > $DUMP_FOLDER/interrupts
 case $board_type in
