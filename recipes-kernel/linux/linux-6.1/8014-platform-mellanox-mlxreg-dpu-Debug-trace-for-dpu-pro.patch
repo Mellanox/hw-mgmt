@@ -20,7 +20,7 @@ index c79531481..1074c4853 100644
  	data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr);
 -	if (!data->hpdev.adapter)
 +	if (!data->hpdev.adapter) {
-+		dev_err(&pdev->dev, "Failed to get adapter for %d. Will try a defered probing\n",
++		dev_info(&pdev->dev, "Will try a defered probing for %d\n",
 +			data->hpdev.nr);
  		return -EPROBE_DEFER;
 +	}
