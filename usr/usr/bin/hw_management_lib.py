@@ -141,7 +141,7 @@ class HW_Mgmt_Logger(object):
         self._log_hash_lock = Lock()      # Thread safety for log_hash
 
         self.set_param(ident, log_file, log_level, syslog_level)
-        for level in ("debug", "info", "notice", "warn", "error", "critical"):
+        for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
             setattr(self, level, self._make_log_level(level))
 
     def __del__(self):
