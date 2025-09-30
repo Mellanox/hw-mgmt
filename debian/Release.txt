@@ -1,4 +1,44 @@
 ================================================================================
+- V.7.0050.2000
+- Tue, 30 Sep 2025
+--------------------------------------------------------------------------------
+
+- New features
+    o Add support for Q3401-RD
+    o Add support for new kernel version 6.12.43
+
+- Bug fixes
+    o #4545880: Thermal control might crash if stopped immediately after start
+    o #4432197: Disable IPMI module, which is not in use for system n5500ld
+    o #4601092: Fix SN4280 sensors config where a DPU sensor name appears among other DPU sensors in the array
+    o #4542714: Fix a case where bmc upgrade might fail due to TPM runtime power management.
+    o #4567911: On some systems, Thermal Control is not enabled by default
+    o #4520864: Bad asic temp reading in systems with incorrect SMBIOS SKU field MSN3700/MSN3700C/MSN4700
+    o #4520864: Fix cpu core sensor read in SN5640 virtual sensor
+    o #4540295: Counter shows incorrect number for SN5400/SN5600/SN5610/SN5640
+    o #4521169: Fan reinsertion might cause the fan not to spin
+
+
+- Kernel Patches for New Features:
+    o #4412220: Add support for new kernel version 6.12.43
+    o #4501831: kernel 6.1, PSU COMEX sensor alarm might falsely trigger which caused test_sensors failure
+        recipes-kernel/linux/linux-6.1/8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch
+        recipes-kernel/linux/linux-6.12/8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch
+    o #4260291: Add support for system Q3401-RD
+        recipes-kernel/linux/linux-5.10/9009-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch
+        recipes-kernel/linux/linux-6.1/9010-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch
+
+    o For detailed patch list: Please view:  https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.2000_BR/recipes-kernel/linux/Patch_Status_Table.txt
+
+ - Known issues and limitations:
+
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: â€¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq".
+
+================================================================================
 - V.7.0050.1935
 - Mon, 29 Sep 2025
 --------------------------------------------------------------------------------
