@@ -38,13 +38,13 @@
 
 try:
     import os
-    import sys
     import time
     import json
     import re
     import argparse
     import traceback
     from hw_management_lib import HW_Mgmt_Logger as Logger
+    from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
 except ImportError as e:
@@ -373,6 +373,8 @@ class CONST(object):
     MODULE_TEMP_CRIT_DEF = 120000
     MODULE_TEMP_EMERGENCY_OFFSET = 10000
 
+    ASIC_READ_ERR_RETRY_COUNT = 3
+
     # *************************
     # Folders definition
     # *************************
@@ -606,15 +608,26 @@ def asic_temp_populate(arg_list, arg):
     asic_chipup_completed = 0
     asic_src_list = []
     for asic_name, asic_attr in arg_list.items():
+        cntrs_obj = asic_attr.get("counters")
+        if not cntrs_obj:
+            cntrs_obj = Counter()
+            asic_attr["counters"] = cntrs_obj
+
         LOGGER.debug("{} temp_populate".format(asic_name))
         f_asic_src_path = asic_attr["fin"]
         # Check if ASIC not ready (SDK is not started)
         if not is_asic_ready(asic_name, asic_attr):
             LOGGER.notice("{} not ready".format(asic_name), id="{} not_ready".format(asic_name))
-            asic_temp_reset(asic_name, f_asic_src_path)
+            cntrs_obj["ASIC_NOT_READY"] += 1
+            if cntrs_obj["ASIC_NOT_READY"] >= CONST.ASIC_READ_ERR_RETRY_COUNT:
+                LOGGER.warning("{} ASIC_NOT_READY".format(asic_name),
+                               id="{} ASIC_NOT_READY".format(asic_name))
+                asic_temp_reset(asic_name, f_asic_src_path)
             continue
         else:
-            LOGGER.notice(None, id="{} not ready".format(asic_name))
+            cntrs_obj["ASIC_NOT_READY"] = 0
+            LOGGER.info(None, id="{} not_ready".format(asic_name))
+            LOGGER.info(None, id="{} ASIC_NOT_READY".format(asic_name))
 
         if f_asic_src_path not in asic_src_list:
             asic_src_list.append(f_asic_src_path)
@@ -644,15 +657,17 @@ def asic_temp_populate(arg_list, arg):
             temperature_crit = CONST.ASIC_TEMP_CRIT_DEF
         except Exception as e:
             error_message = str(e)
-            LOGGER.warning("{} {}".format(error_message), id="{} read fail".format(asic_name))
-            temperature = ""
-            temperature_min = ""
-            temperature_max = ""
-            temperature_fault = ""
-            temperature_crit = ""
-            pass
+            LOGGER.notice("{} {}".format(f_src_input, error_message), id="{} read fail".format(asic_name))
+            cntrs_obj["ASIC_READ_ERROR"] += 1
+            if cntrs_obj["ASIC_READ_ERROR"] >= CONST.ASIC_READ_ERR_RETRY_COUNT:
+                LOGGER.warning("{} ASIC_READ_ERROR".format(asic_name),
+                               id="{} ASIC_READ_ERROR".format(asic_name))
+                asic_temp_reset(asic_name, f_asic_src_path)
+            continue
         else:
-            LOGGER.notice(None, id="{} read fail".format(asic_name))
+            cntrs_obj["ASIC_READ_ERROR"] = 0
+            LOGGER.info(None, id="{} read fail".format(asic_name))
+            LOGGER.info(None, id="{} ASIC_READ_ERROR".format(asic_name))
 
         file_paths = {
             "": temperature,
@@ -888,7 +903,7 @@ def main():
         product_sku = args["system_type"]
     product_sku = product_sku.strip()
 
-    LOGGER.notice("hw-management-sync: load config ({}".format(product_sku))
+    LOGGER.notice("hw-management-sync: load config ({})".format(product_sku))
     sys_attr = atttrib_list["def"]
     for key, val in atttrib_list.items():
         if re.match(key, product_sku):
