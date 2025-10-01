@@ -5,7 +5,7 @@ Requires=hw-management.service
 PartOf=hw-management.service
 
 StartLimitIntervalSec=1200
-StartLimitBurst=5
+StartLimitBurst=10
 
 [Service]
 Type=oneshot
