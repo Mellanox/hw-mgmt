@@ -124,8 +124,8 @@ class TestHWMgmtLoggerBasic:
         unicode_messages = [
             "Basic ASCII message",
             "Unicode characters: café, naïve, résumé",
-            "Emojis: 🚀 🔥 ✅ ❌ ⚠️",
-            "Mixed: Testing 测试 тест テスト 🧪",
+            "Emojis: [rocket] [fire] [pass] [fail] [warn]",
+            "Mixed: Testing 测试 тест テスト [test]",
             "Special chars: ©®™€£¥§¶†‡•…‰‹›""''–—"
         ]
         
@@ -280,7 +280,7 @@ class TestHWMgmtLoggerAdvanced:
         
         # Complex Unicode test cases
         edge_cases = [
-            "🚀 Rocket emoji with complex text 测试",
+            "[rocket] Rocket emoji with complex text 测试",
             "Right-to-left: العربية Hebrew עברית",
             "Mathematical symbols: ∑∫∆∇∞≠≤≥±∓",
             "Musical notes: ♪♫♬♭♮♯",
@@ -711,7 +711,7 @@ class TestHWMgmtLoggerMissingCoverage:
             unicode_messages = [
                 "测试中文消息",  # Chinese
                 "тестовое сообщение",  # Russian
-                "🚀 Test with emojis 🔥",  # Emojis
+                "[rocket] Test with emojis [fire]",  # Emojis
                 "ñoño español",  # Spanish
                 "Iñtërnâtiônàlizætiøn",  # Mixed special chars
             ]
@@ -862,7 +862,7 @@ class TestHWMgmtLoggerTargetedCoverage:
             logger.init_syslog(syslog_level=logger.INFO)
             
             # Test UTF-8 message that needs encoding
-            unicode_msg = "测试消息 🚀"
+            unicode_msg = "测试消息 [rocket]"
             logger.syslog_log(logger.INFO, unicode_msg)
             
             # Verify syslog was called

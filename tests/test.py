@@ -44,17 +44,17 @@ class Colors:
     RESET = '\033[0m'
 
 class Icons:
-    PASS = f"{Colors.GREEN}✅{Colors.RESET}"
-    FAIL = f"{Colors.RED}❌{Colors.RESET}"
-    SKIP = f"{Colors.YELLOW}⏭️{Colors.RESET}"
-    INFO = f"{Colors.BLUE}ℹ️{Colors.RESET}"
-    WARNING = f"{Colors.YELLOW}⚠️{Colors.RESET}"
-    HARDWARE = f"{Colors.MAGENTA}🖥️{Colors.RESET}"
-    OFFLINE = f"{Colors.CYAN}💻{Colors.RESET}"
-    INSTALL = f"{Colors.BLUE}📦{Colors.RESET}"
-    CHECK = f"{Colors.CYAN}🔍{Colors.RESET}"
-    COVERAGE = f"{Colors.GREEN}📊{Colors.RESET}"
-    ROCKET = f"{Colors.BLUE}🚀{Colors.RESET}"
+    PASS = f"{Colors.GREEN}[PASS]{Colors.RESET}"
+    FAIL = f"{Colors.RED}[FAIL]{Colors.RESET}"
+    SKIP = f"{Colors.YELLOW}[SKIP]{Colors.RESET}"
+    INFO = f"{Colors.BLUE}[INFO]{Colors.RESET}"
+    WARNING = f"{Colors.YELLOW}[WARN]{Colors.RESET}"
+    HARDWARE = f"{Colors.MAGENTA}[HW]{Colors.RESET}"
+    OFFLINE = f"{Colors.CYAN}[OFFLINE]{Colors.RESET}"
+    INSTALL = f"{Colors.BLUE}[INSTALL]{Colors.RESET}"
+    CHECK = f"{Colors.CYAN}[CHECK]{Colors.RESET}"
+    COVERAGE = f"{Colors.GREEN}[COVERAGE]{Colors.RESET}"
+    ROCKET = f"{Colors.BLUE}[RUN]{Colors.RESET}"
 
 
 class TestResult:
@@ -237,7 +237,7 @@ class HWMgmtTestRunner:
         
     def list_tests(self) -> Dict[str, Any]:
         """List all available tests"""
-        print(f"\n{Colors.BOLD}{Colors.BLUE}📋 Available Test Suites{Colors.RESET}")
+        print(f"\n{Colors.BOLD}{Colors.BLUE}Available Test Suites{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.BLUE}{'='*50}{Colors.RESET}")
         
         # Discover tests using pytest
@@ -287,7 +287,7 @@ class HWMgmtTestRunner:
         import shutil
         import glob
         
-        print(f"\n{Colors.CYAN}🧹 Cleaning test environment...{Colors.RESET}")
+        print(f"\n{Colors.CYAN}Cleaning test environment...{Colors.RESET}")
         
         items_cleaned = []
         
@@ -367,10 +367,22 @@ class HWMgmtTestRunner:
         # Build pytest command
         cmd = [sys.executable, "-m", "pytest"]
         
+        # Handle legacy tests separately (they don't use pytest)
+        if test_type == "legacy":
+            return self.run_legacy_tests()
+        
         # Add paths based on test type
         if test_type == "offline":
-            cmd.append("offline/")
-            cmd.extend(["-m", "offline"])
+            # Run pytest offline tests first, then legacy tests
+            pytest_result = self._run_pytest_offline(cmd, verbose, coverage, html_report, stop_on_failure, markers)
+            legacy_result = self.run_legacy_tests()
+            
+            # Combine results
+            combined_result = TestResult()
+            combined_result.exit_code = pytest_result.exit_code or legacy_result.exit_code
+            combined_result.summary = f"Pytest: {pytest_result.summary}, Legacy: {legacy_result.summary}"
+            combined_result.execution_time = pytest_result.execution_time + legacy_result.execution_time
+            return combined_result
         elif test_type == "hardware":
             cmd.append("hardware/")
             cmd.extend(["-m", "hardware"])
@@ -380,7 +392,16 @@ class HWMgmtTestRunner:
             cmd.append("integration/")
             cmd.extend(["-m", "integration"])
         elif test_type == "all":
-            cmd.append(".")
+            # Run pytest tests first, then legacy tests
+            pytest_result = self._run_pytest_all(cmd, verbose, coverage, html_report, stop_on_failure, markers)
+            legacy_result = self.run_legacy_tests()
+            
+            # Combine results
+            combined_result = TestResult()
+            combined_result.exit_code = pytest_result.exit_code or legacy_result.exit_code
+            combined_result.summary = f"Pytest: {pytest_result.summary}, Legacy: {legacy_result.summary}"
+            combined_result.execution_time = pytest_result.execution_time + legacy_result.execution_time
+            return combined_result
         else:
             raise ValueError(f"Unknown test type: {test_type}")
             
@@ -429,7 +450,7 @@ class HWMgmtTestRunner:
         # Run tests
         try:
             log_file = self._get_log_file(test_type)
-            print(f"\n{Colors.CYAN}🔬 Executing tests...{Colors.RESET}")
+            print(f"\n{Colors.CYAN}Executing tests...{Colors.RESET}")
             print(f"{Icons.INFO} Logging to: {log_file}")
             
             # Run pytest and capture output for logging while showing in real-time
@@ -509,6 +530,177 @@ class HWMgmtTestRunner:
             test_result.execution_time = time.time() - start_time
             test_result.exit_code = 1  # Generic error exit code
             return test_result
+    
+    def run_legacy_tests(self) -> TestResult:
+        """Run legacy tests using the original unittest structure"""
+        print(f"\n{Icons.INFO} {Colors.CYAN}Running Legacy Test Suite...{Colors.RESET}")
+        
+        start_time = time.time()
+        
+        try:
+            # Import and run legacy runner
+            import sys
+            from pathlib import Path
+            legacy_runner_path = Path(__file__).parent / "legacy_runner.py"
+            spec = importlib.util.spec_from_file_location("legacy_runner", legacy_runner_path)
+            legacy_runner_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(legacy_runner_module)
+            LegacyTestRunner = legacy_runner_module.LegacyTestRunner
+            
+            legacy_runner = LegacyTestRunner()
+            success = legacy_runner.run_all_legacy_tests()
+            
+            # Create result object
+            test_result = TestResult()
+            test_result.execution_time = time.time() - start_time
+            test_result.exit_code = 0 if success else 1
+            
+            # Get summary from legacy runner
+            if hasattr(legacy_runner, 'result'):
+                legacy_result = legacy_runner.result
+                test_result.summary = f"Legacy: {legacy_result.get_summary()}"
+            else:
+                test_result.summary = f"Legacy: {'PASSED' if success else 'FAILED'}"
+                
+            return test_result
+            
+        except ImportError as e:
+            print(f"{Icons.FAIL} Failed to import legacy_runner: {e}")
+            test_result = TestResult()
+            test_result.execution_time = time.time() - start_time
+            test_result.exit_code = 1
+            test_result.summary = "Legacy: Import Failed"
+            return test_result
+        except Exception as e:
+            print(f"{Icons.FAIL} Error running legacy tests: {e}")
+            test_result = TestResult()
+            test_result.execution_time = time.time() - start_time
+            test_result.exit_code = 1
+            test_result.summary = f"Legacy: Error - {e}"
+            return test_result
+    
+    def _run_pytest_offline(self, cmd, verbose, coverage, html_report, stop_on_failure, markers):
+        """Run pytest offline tests only"""
+        # Configure for offline tests
+        cmd.append("offline/")
+        cmd.extend(["-m", "offline"])
+        
+        # Add options
+        if verbose:
+            cmd.append("-v")
+        else:
+            cmd.append("-q")
+            
+        if stop_on_failure:
+            cmd.append("-x")
+            
+        if markers:
+            cmd.extend(["-m", markers])
+            
+        # Add coverage options
+        if coverage:
+            cmd.extend([
+                f"--cov={self.hw_mgmt_bin_dir}",
+                "--cov-branch", 
+                "--cov-report=term-missing",
+                "--cov-report=json:coverage.json"
+            ])
+            
+            if html_report:
+                cmd.extend(["--cov-report=html:coverage_html_report"])
+        
+        # Run pytest
+        start_time = time.time()
+        
+        try:
+            print(f"\n{Icons.INFO} {Colors.CYAN}Running Modern Pytest Tests...{Colors.RESET}")
+            # Run pytest and show output to user
+            result = subprocess.run(cmd, text=True, cwd=self.base_dir)
+            
+            execution_time = time.time() - start_time
+            
+            # Create result object
+            test_result = TestResult()
+            test_result.execution_time = execution_time
+            test_result.exit_code = result.returncode
+            
+            # Since we're showing output directly, just show a simple summary
+            if result.returncode == 0:
+                test_result.summary = "Pytest: All tests passed"
+                print(f"\n{Icons.PASS} {Colors.GREEN}Modern pytest tests completed successfully{Colors.RESET}")
+            else:
+                test_result.summary = "Pytest: Some tests failed" 
+                print(f"\n{Icons.FAIL} {Colors.RED}Some modern pytest tests failed{Colors.RESET}")
+                
+            return test_result
+            
+        except Exception as e:
+            test_result = TestResult()
+            test_result.execution_time = time.time() - start_time
+            test_result.exit_code = 1
+            test_result.summary = f"Pytest: Error - {e}"
+            return test_result
+    
+    def _run_pytest_all(self, cmd, verbose, coverage, html_report, stop_on_failure, markers):
+        """Run pytest for all tests"""
+        # Configure for all tests
+        cmd.append(".")
+        
+        # Add options
+        if verbose:
+            cmd.append("-v")
+        else:
+            cmd.append("-q")
+            
+        if stop_on_failure:
+            cmd.append("-x")
+            
+        if markers:
+            cmd.extend(["-m", markers])
+            
+        # Add coverage options
+        if coverage:
+            cmd.extend([
+                f"--cov={self.hw_mgmt_bin_dir}",
+                "--cov-branch", 
+                "--cov-report=term-missing",
+                "--cov-report=json:coverage.json"
+            ])
+            
+            if html_report:
+                cmd.extend(["--cov-report=html:coverage_html_report"])
+        
+        # Run pytest
+        start_time = time.time()
+        
+        try:
+            print(f"\n{Icons.INFO} {Colors.CYAN}Running Modern Pytest Tests...{Colors.RESET}")
+            # Run pytest and show output to user
+            result = subprocess.run(cmd, text=True, cwd=self.base_dir)
+            
+            execution_time = time.time() - start_time
+            
+            # Create result object
+            test_result = TestResult()
+            test_result.execution_time = execution_time
+            test_result.exit_code = result.returncode
+            
+            # Since we're showing output directly, just show a simple summary
+            if result.returncode == 0:
+                test_result.summary = "Pytest: All tests passed"
+                print(f"\n{Icons.PASS} {Colors.GREEN}Modern pytest tests completed successfully{Colors.RESET}")
+            else:
+                test_result.summary = "Pytest: Some tests failed"
+                print(f"\n{Icons.FAIL} {Colors.RED}Some modern pytest tests failed{Colors.RESET}") 
+                
+            return test_result
+            
+        except Exception as e:
+            test_result = TestResult()
+            test_result.execution_time = time.time() - start_time
+            test_result.exit_code = 1
+            test_result.summary = f"Pytest: Error - {e}"
+            return test_result
 
 
 def main():
@@ -527,8 +719,10 @@ def main():
                       help="Run hardware tests only (requires real hardware)")
     group.add_argument("--integration", action="store_true",
                       help="Run integration tests only") 
+    group.add_argument("--legacy", action="store_true",
+                      help="Run original legacy tests (ALL original unittest files from master)")
     group.add_argument("--all", action="store_true",
-                      help="Run all tests (verbose by default)")
+                      help="Run all tests including legacy (verbose by default)")
     group.add_argument("--list", action="store_true",
                       help="List available tests without running them")
     group.add_argument("--clean", action="store_true",
@@ -562,7 +756,7 @@ def main():
     runner = HWMgmtTestRunner()
     
     # Print banner
-    print(f"{Colors.BOLD}{Colors.GREEN}🚀 NVIDIA HW-MGMT Test Runner{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.GREEN}NVIDIA HW-MGMT Test Runner{Colors.RESET}")
     print(f"{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.RESET}")
     
     # Handle clean command
@@ -600,6 +794,8 @@ def main():
         test_type = "hardware"
     elif args.integration:
         test_type = "integration"
+    elif args.legacy:
+        test_type = "legacy"
     elif args.all:
         test_type = "all"
     else:

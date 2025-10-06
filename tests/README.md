@@ -2,30 +2,33 @@
 
 Modern, cross-platform test infrastructure for the NVIDIA Hardware Management package.
 
-## 🚀 Quick Start
+## Quick Start
+
+**🎯 IMPORTANT**: We preserve ALL original test functionality! Choose your approach:
 
 ```bash
-# Run offline tests (no hardware required)
-python3 test.py --offline
+# 🎯 NEW: Modern pytest-based tests (enhanced infrastructure)
+python3 test.py --offline          # Modern offline tests
+python3 test.py --hardware         # Modern hardware tests
 
-# Run hardware tests (requires real hardware)  
-python3 test.py --hardware
+# 🏛️ LEGACY: Run ALL original unittest files from master (100% preserved)
+python3 test.py --legacy           # ALL original teammate work preserved!
 
-# Run all tests
-python3 test.py --all
+# 🚀 COMPREHENSIVE: Run everything (modern + legacy)
+python3 test.py --all              # Both modern AND legacy tests
 
-# Install dependencies only
-python3 test.py --clean
-
-# List available tests
-python3 test.py --list
+# 🧹 UTILITIES
+python3 test.py --clean            # Clean logs and cache
+python3 test.py --list             # List available tests
 ```
+
+**Zero Risk Approach**: The `--legacy` option runs ALL original unittest files exactly as they were in master branch - zero modifications, zero risk of lost functionality!
 
 ## 📁 Directory Structure
 
 ```
 tests/                              # Modern pytest-based test suite
-├── test.py                         # 🎯 MAIN TEST RUNNER (Python - replaces shell scripts)
+├── test.py                         # MAIN TEST RUNNER (Python - replaces shell scripts)
 ├── conftest.py                     # Global pytest configuration
 ├── pytest.ini                     # Pytest settings & markers
 ├── requirements.txt                # Test dependencies 
@@ -54,7 +57,7 @@ tests/                              # Modern pytest-based test suite
     └── run_coverage.sh             # Legacy shell script (optional)
 ```
 
-## 🎯 Python Test Runner (`test.py`)
+## Python Test Runner (`test.py`)
 
 **The main test runner replaces all shell scripts with a unified Python interface.**
 
@@ -107,7 +110,7 @@ python3 test.py --all --parallel                # Fast parallel execution
 python3 test.py --offline --no-auto-install     # Skip dependency install
 ```
 
-## 🏗️ Standard Pytest Commands  
+## Standard Pytest Commands  
 
 You can also use standard pytest commands directly:
 
@@ -132,13 +135,13 @@ pytest offline/ -v --tb=short       # Verbose with short traceback
 pytest offline/ -x                  # Stop on first failure
 ```
 
-## 📊 Test Categories
+## Test Categories
 
-### 🔬 Offline Tests (`tests/offline/`)
-- ✅ **~96 individual tests** across multiple files
-- ✅ **100% pass rate** achievable
-- 🎯 No hardware dependencies
-- 🚀 Safe for CI/CD pipelines
+### Offline Tests (`tests/offline/`)
+- **~96 individual tests** across multiple files
+- **100% pass rate** achievable
+- No hardware dependencies
+- Safe for CI/CD pipelines
 - ⚡ Fast execution (< 3 seconds)
 
 **Coverage:**
@@ -148,18 +151,18 @@ pytest offline/ -x                  # Stop on first failure
 - ASIC temperature management (mocked): Multiple tests
 - Module population logic: Multiple tests
 
-### 🖥️ Hardware Tests (`tests/hardware/`)
-- 🔧 Requires actual hardware
+### Hardware Tests (`tests/hardware/`)
+- Requires actual hardware
 - 🌐 BMC communication tests
 - 🔐 TPM integration tests  
-- 📊 Live sensor validation
+- Live sensor validation
 
 ### 🔗 Integration Tests (`tests/integration/`)
 - 🎭 End-to-end workflows
 - 🔄 Service interaction tests
-- ⚙️ System-level validation
+- System-level validation
 
-## ⚙️ Configuration
+## Configuration
 
 ### Pytest Configuration (`pytest.ini`)
 - Test discovery paths
@@ -181,7 +184,7 @@ Core test dependencies automatically managed:
 - `colorama` - Colored output
 - `termcolor` - Terminal colors
 
-## 🎛️ Fixtures & Markers
+## Fixtures & Markers
 
 ### Available Fixtures
 - `hw_mgmt_logger`: Pre-configured logger instance
@@ -204,9 +207,9 @@ Core test dependencies automatically managed:
 
 ### Pre-commit Hook
 The repository includes a pre-commit hook that:
-- ✅ Runs offline tests automatically before commits
-- ✅ Ensures 100% pass rate using `python3 test.py --offline`
-- ✅ Fast feedback loop (< 3 seconds)
+- Runs offline tests automatically before commits
+- Ensures 100% pass rate using `python3 test.py --offline`
+- Fast feedback loop (< 3 seconds)
 
 ### GitHub Actions / CI
 ```yaml
@@ -219,7 +222,7 @@ The repository includes a pre-commit hook that:
     python3 test.py --all --parallel --no-auto-install
 ```
 
-## 🎯 Development Workflow
+## Development Workflow
 
 ### Adding New Tests
 
@@ -271,15 +274,15 @@ class TestNewModule:
             pass
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
 1. **Import Errors**
    ```bash
    # Python path automatically configured by test.py
-   python3 test.py --offline  # ✅ Works
-   pytest offline/            # ❌ May have import issues
+   python3 test.py --offline  # Works
+   pytest offline/            # May have import issues
    ```
 
 2. **Missing Dependencies**
@@ -303,19 +306,19 @@ pytest --fixtures                   # Available fixtures
 pytest --markers                    # Available markers
 ```
 
-## 🚀 Migration from Old Structure
+## Migration from Old Structure
 
 The tests have been migrated from the previous custom structure to industry-standard pytest. Key improvements:
 
-- ✅ **Standard pytest directory structure** (`tests/` with proper naming)
-- ✅ **Python test runner** replaces shell scripts for cross-platform compatibility
-- ✅ **Proper naming conventions** (all files follow `test_*.py`)
-- ✅ **Flat, logical organization** (offline/hardware/integration separation)
-- ✅ **Rich fixture ecosystem** (proper setup/teardown)
-- ✅ **Industry-standard tooling** (pytest, coverage, markers)
-- ✅ **CI/CD ready** (proper separation and dependency management)
+- **Standard pytest directory structure** (`tests/` with proper naming)
+- **Python test runner** replaces shell scripts for cross-platform compatibility
+- **Proper naming conventions** (all files follow `test_*.py`)
+- **Flat, logical organization** (offline/hardware/integration separation)
+- **Rich fixture ecosystem** (proper setup/teardown)
+- **Industry-standard tooling** (pytest, coverage, markers)
+- **CI/CD ready** (proper separation and dependency management)
 
-This structure is maintainable, scalable, and follows pytest best practices! 🎉
+This structure is maintainable, scalable, and follows pytest best practices!
 
 ## 📈 Performance & Metrics
 
@@ -333,4 +336,39 @@ This structure is maintainable, scalable, and follows pytest best practices! �
 
 ---
 
-**🎯 The test infrastructure is now production-ready with modern tooling and cross-platform Python support!**
+## 🏛️ Legacy Test Suite (100% Original Functionality Preserved)
+
+**CRITICAL**: We have preserved ALL original unittest functionality from the master branch!
+
+### What's in the Legacy Suite?
+
+The `tests/legacy/` directory contains an exact copy of the original `unittest/` folder from master:
+
+- **Original BOM Decoder CLI**: Complete functionality preserved
+- **Original BMC Accessor Tests**: Hardware login flows unchanged  
+- **Original Logger Tests**: All basic + advanced test scenarios
+- **Original ASIC Tests**: Complete ASIC temperature populate test suite (2,043 lines)
+- **Original Module Tests**: Complete module functionality tests (1,264 lines)
+- **Original Shell Scripts**: All run_tests.sh files work exactly as before
+
+### Running Legacy Tests
+
+```bash
+# Run ALL original unittest files exactly as they were in master
+python3 test.py --legacy
+
+# Run modern tests + legacy tests together  
+python3 test.py --all
+```
+
+### Why This Approach?
+
+1. **Zero Risk**: Original teammate work is 100% preserved with zero modifications
+2. **No Complaints**: Anyone can verify their exact original tests still work
+3. **Gradual Migration**: Teams can migrate at their own pace
+4. **Full Coverage**: We maintain the ~3,300 lines of original comprehensive tests
+5. **Diplomatic Solution**: Modern infrastructure + complete backward compatibility
+
+---
+
+**The test infrastructure preserves ALL original functionality while providing modern enhancements!**
