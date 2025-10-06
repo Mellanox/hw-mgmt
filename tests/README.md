@@ -54,8 +54,7 @@ tests/
 ├── conftest.py                  # Shared pytest fixtures
 │
 ├── offline/                     # Offline tests (no hardware required)
-│   ├── test_template.py         # Template for new pytest tests
-│   ├── test_example_pytest.py   # Example pytest tests
+│   ├── test_example_pytest.py   # Example pytest tests (use as template)
 │   │
 │   ├── hw_management_lib/       # hw_management_lib.py tests
 │   │   └── HW_Mgmt_Logger/
@@ -157,12 +156,12 @@ Add it to `test.py` to include in the test suite.
 
 ### Option 2: Pytest Test (Recommended for New Tests)
 
-Use the pytest template:
+Use the pytest example as a template:
 
 ```bash
 cd tests/offline
-cp test_template.py test_my_feature.py
-# Edit test_my_feature.py
+cp test_example_pytest.py test_my_feature.py
+# Edit test_my_feature.py - remove examples, add your tests
 pytest test_my_feature.py -v
 ```
 
@@ -461,9 +460,7 @@ The test runner automatically cleans Python cache:
 
 ## Additional Resources
 
-- **PYTEST_GUIDE.md** - Comprehensive pytest documentation
-- **test_template.py** - Template for new pytest tests
-- **test_example_pytest.py** - Working examples
+- **test_example_pytest.py** - Working examples and template for new tests
 - [Pytest Documentation](https://docs.pytest.org/)
 - [unittest Documentation](https://docs.python.org/3/library/unittest.html)
 
