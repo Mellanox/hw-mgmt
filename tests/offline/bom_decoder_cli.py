@@ -385,7 +385,7 @@ class BOMDecoder:
             print(f"  Board String: {board.board_string}")
             print(f"  Components:")
             for j, comp in enumerate(board.components, 1):
-                status = "✓" if comp.is_populated else "✗"
+                status = "Y" if comp.is_populated else "N"
                 print(f"    {j}. [{status}] {comp.category}: {comp.type} (cat:{comp.category_char},type:{comp.type_char})")
 
 

@@ -61,7 +61,7 @@ class TestBOMDecoderCLI:
             
     def test_bom_cli_execution(self):
         """Test BOM decoder CLI execution"""
-        bom_cli_path = Path(__file__).parent.parent / 'tools' / 'bom_decoder_cli.py'
+        bom_cli_path = Path(__file__).parent / 'bom_decoder_cli.py'
         
         if not bom_cli_path.exists():
             pytest.skip("bom_decoder_cli.py not found")
@@ -84,7 +84,7 @@ class TestBOMDecoderCLI:
             
     def test_bom_cli_help(self):
         """Test BOM decoder CLI help functionality"""
-        bom_cli_path = Path(__file__).parent.parent / 'tools' / 'bom_decoder_cli.py'
+        bom_cli_path = Path(__file__).parent / 'bom_decoder_cli.py'
         
         if not bom_cli_path.exists():
             pytest.skip("bom_decoder_cli.py not found")
@@ -105,7 +105,7 @@ class TestBOMDecoderCLI:
             
     def test_bom_cli_invalid_input(self):
         """Test BOM decoder CLI with invalid input"""
-        bom_cli_path = Path(__file__).parent.parent / 'tools' / 'bom_decoder_cli.py'
+        bom_cli_path = Path(__file__).parent / 'bom_decoder_cli.py'
         
         if not bom_cli_path.exists():
             pytest.skip("bom_decoder_cli.py not found")

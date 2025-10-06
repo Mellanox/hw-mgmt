@@ -106,10 +106,10 @@ def bom_decoder_module():
     import sys
     from pathlib import Path
     
-    # Add the tools directory to Python path to import bom_decoder_cli
-    tools_dir = Path(__file__).parent.parent / "tools"
-    if str(tools_dir) not in sys.path:
-        sys.path.insert(0, str(tools_dir))
+    # Add the offline directory to Python path to import bom_decoder_cli
+    offline_dir = Path(__file__).parent
+    if str(offline_dir) not in sys.path:
+        sys.path.insert(0, str(offline_dir))
         
     try:
         import bom_decoder_cli

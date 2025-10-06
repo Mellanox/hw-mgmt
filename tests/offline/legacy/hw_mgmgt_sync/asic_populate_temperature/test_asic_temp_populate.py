@@ -326,10 +326,10 @@ class AsicTestResultData:
 
         if category in ['temperature_validation', 'conversion_testing', 'normal_operation']:
             relevant.update({
-                'ASIC_TEMP_MIN_DEF': f"{self.hw_constants['ASIC_TEMP_MIN_DEF']}mC (75°C)",
-                'ASIC_TEMP_MAX_DEF': f"{self.hw_constants['ASIC_TEMP_MAX_DEF']}mC (85°C)",
-                'ASIC_TEMP_FAULT_DEF': f"{self.hw_constants['ASIC_TEMP_FAULT_DEF']}mC (105°C)",
-                'ASIC_TEMP_CRIT_DEF': f"{self.hw_constants['ASIC_TEMP_CRIT_DEF']}mC (120°C)"
+                'ASIC_TEMP_MIN_DEF': f"{self.hw_constants['ASIC_TEMP_MIN_DEF']}mC (75C)",
+                'ASIC_TEMP_MAX_DEF': f"{self.hw_constants['ASIC_TEMP_MAX_DEF']}mC (85C)",
+                'ASIC_TEMP_FAULT_DEF': f"{self.hw_constants['ASIC_TEMP_FAULT_DEF']}mC (105C)",
+                'ASIC_TEMP_CRIT_DEF': f"{self.hw_constants['ASIC_TEMP_CRIT_DEF']}mC (120C)"
             })
 
         if category in ['asic_readiness', 'error_handling', 'reset_functionality']:
@@ -713,7 +713,7 @@ class AsicTempPopulateTestSuite:
 
                     self.result.add_pass(
                         f"Normal Condition Iteration {iteration + 1}",
-                        f"Temp: {test_temp} -> {expected_temp} milli°C, ASICs: {len(asic_config)}",
+                        f"Temp: {test_temp} -> {expected_temp} milliC, ASICs: {len(asic_config)}",
                         execution_time=execution_time,
                         input_params=input_params,
                         category="normal_operation"

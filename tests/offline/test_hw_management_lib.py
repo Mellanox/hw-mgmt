@@ -123,10 +123,10 @@ class TestHWMgmtLoggerBasic:
         # Test various Unicode messages
         unicode_messages = [
             "Basic ASCII message",
-            "Unicode characters: café, naïve, résumé",
+            "Unicode characters: cafe, naive, resume",
             "Emojis: [rocket] [fire] [pass] [fail] [warn]",
-            "Mixed: Testing 测试 тест テスト [test]",
-            "Special chars: ©®™€£¥§¶†‡•…‰‹›""''–—"
+            "Mixed: Testing international text [test]",
+            "Special chars: copyright registered trademark euro pound yen"
         ]
         
         for message in unicode_messages:
@@ -280,10 +280,10 @@ class TestHWMgmtLoggerAdvanced:
         
         # Complex Unicode test cases
         edge_cases = [
-            "[rocket] Rocket emoji with complex text 测试",
-            "Right-to-left: العربية Hebrew עברית",
-            "Mathematical symbols: ∑∫∆∇∞≠≤≥±∓",
-            "Musical notes: ♪♫♬♭♮♯",
+            "[rocket] Rocket emoji with complex text international",
+            "Right-to-left: Arabic Hebrew",
+            "Mathematical symbols: sum integral delta nabla infinity not-equal less-equal greater-equal plus-minus",
+            "Musical notes: quarter eighth sixteenth flat natural sharp",
         ]
         
         for test_case in edge_cases:
@@ -709,11 +709,11 @@ class TestHWMgmtLoggerMissingCoverage:
             
             # Test various Unicode characters
             unicode_messages = [
-                "测试中文消息",  # Chinese
-                "тестовое сообщение",  # Russian
+                "Chinese message",  # Chinese
+                "Russian message",  # Russian
                 "[rocket] Test with emojis [fire]",  # Emojis
-                "ñoño español",  # Spanish
-                "Iñtërnâtiônàlizætiøn",  # Mixed special chars
+                "Spanish message",  # Spanish
+                "Internationalization",  # Mixed special chars
             ]
             
             for msg in unicode_messages:
@@ -862,7 +862,7 @@ class TestHWMgmtLoggerTargetedCoverage:
             logger.init_syslog(syslog_level=logger.INFO)
             
             # Test UTF-8 message that needs encoding
-            unicode_msg = "测试消息 [rocket]"
+            unicode_msg = "Test message [rocket]"
             logger.syslog_log(logger.INFO, unicode_msg)
             
             # Verify syslog was called

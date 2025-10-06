@@ -18,8 +18,7 @@ def setup_python_path():
         str(hw_mgmt_bin_dir),
         str(tests_dir),  # tests directory
         str(tests_dir / "offline"),
-        str(tests_dir / "hardware"),
-        str(tests_dir / "integration")
+        str(tests_dir / "hardware")
     ]
     
     for path in paths_to_add:
