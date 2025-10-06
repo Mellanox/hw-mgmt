@@ -234,23 +234,23 @@ class TestModuleTempPopulate(unittest.TestCase):
     def test_normal_condition_all_files_present(self):
         """Test 1.1: Normal condition with all files created and filled with values"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 1.1: NORMAL CONDITION - ALL FILES PRESENT")
+        print("[TEST] TEST 1.1: NORMAL CONDITION - ALL FILES PRESENT")
         print("=" * 80)
-        print("📋 Description: Testing normal operation when all temperature attribute files")
+        print("[LIST] Description: Testing normal operation when all temperature attribute files")
         print("   are present and readable. All output files should be created with correct")
         print("   temperature values converted using sdk_temp2degree() function.")
         print()
-        print("🔧 Configuration:")
-        print(f"   • Module count: {self.arg_list['module_count']}")
-        print(f"   • Index offset: {self.arg_list['fout_idx_offset']}")
-        print(f"   • Input path template: {self.arg_list['fin']}")
-        print(f"   • Output path: /var/run/hw-management/thermal/")
+        print("[CONFIG] Configuration:")
+        print(f"   * Module count: {self.arg_list['module_count']}")
+        print(f"   * Index offset: {self.arg_list['fout_idx_offset']}")
+        print(f"   * Input path template: {self.arg_list['fin']}")
+        print(f"   * Output path: /var/run/hw-management/thermal/")
         print()
 
         # Configure modules with all files present and no errors
         # Note: function uses 0-based idx for source, but 1-based for output (with offset)
         test_modules = [0, 4, 9, 14, 19]  # Test subset for focused testing (0-based source indices)
-        print(f"📊 Testing subset of modules: {test_modules} (source indices)")
+        print(f"[STATS] Testing subset of modules: {test_modules} (source indices)")
         print(f"   Output modules will be: {[idx + self.arg_list['fout_idx_offset'] for idx in test_modules]}")
         print()
 
@@ -272,7 +272,7 @@ class TestModuleTempPopulate(unittest.TestCase):
                 'cooling_level_read_error': False,
                 'max_cooling_level_read_error': False
             }
-            print(f"   🔧 Creating module{source_idx} with:")
+            print(f"   [CONFIG] Creating module{source_idx} with:")
             print(f"      - Present: {config['present']} (module is inserted)")
             print(f"      - Control mode: {config['control_mode']} (FW_CONTROL)")
             print(f"      - Temperature input: {config['temp_input']} (SDK format)")
@@ -282,9 +282,9 @@ class TestModuleTempPopulate(unittest.TestCase):
             print(f"      - Max cooling level: {config['max_cooling_level']}")
             self._create_module_files(source_idx, config)
 
-        print("\n🔄 Executing module_temp_populate function...")
-        print("   • Setting up file operation mocks")
-        print("   • Redirecting file I/O to temporary test directories")
+        print("\n[LOOP] Executing module_temp_populate function...")
+        print("   * Setting up file operation mocks")
+        print("   * Redirecting file I/O to temporary test directories")
 
         # Mock file operations
         mock_open_func, mock_islink_func, mock_isfile_func = self._mock_file_operations()
@@ -294,16 +294,16 @@ class TestModuleTempPopulate(unittest.TestCase):
                 patch('os.path.isfile', side_effect=mock_isfile_func):
 
             # Call function under test
-            print("   • Calling module_temp_populate with test configuration")
+            print("   * Calling module_temp_populate with test configuration")
             self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
-            print("   • Function execution completed")
+            print("   * Function execution completed")
 
-            print("\n🔍 Verifying output files and values...")
+            print("\n[SEARCH] Verifying output files and values...")
             # Verify output files for each test module
             for source_idx in test_modules:
                 # Output module name is source_idx + offset
                 module_name = f"module{source_idx + self.arg_list['fout_idx_offset']}"
-                print(f"\n   📂 Checking {module_name} output files:")
+                print(f"\n   [DIR] Checking {module_name} output files:")
 
                 # Expected values
                 expected_temp = self.hw_mgmt_module.sdk_temp2degree(500)
@@ -311,10 +311,10 @@ class TestModuleTempPopulate(unittest.TestCase):
                 expected_emergency = self.hw_mgmt_module.sdk_temp2degree(700)
                 expected_trip_crit = MockCONST.MODULE_TEMP_CRIT_DEF
 
-                print(f"      📊 Expected temperature conversions:")
-                print(f"         - Input: 500 → {expected_temp} millidegrees")
-                print(f"         - Critical: 600 → {expected_crit} millidegrees")
-                print(f"         - Emergency: 700 → {expected_emergency} millidegrees")
+                print(f"      [STATS] Expected temperature conversions:")
+                print(f"         - Input: 500 -> {expected_temp} millidegrees")
+                print(f"         - Critical: 600 -> {expected_crit} millidegrees")
+                print(f"         - Emergency: 700 -> {expected_emergency} millidegrees")
                 print(f"         - Trip critical: {expected_trip_crit} millidegrees")
 
                 # Verify all output files exist and contain correct values
@@ -337,35 +337,35 @@ class TestModuleTempPopulate(unittest.TestCase):
                         actual_value = f.read().strip()
                         self.assertEqual(actual_value, expected_value,
                                          f"File {filename} should contain '{expected_value}', got '{actual_value}'")
-                        print(f"         ✅ {filename}: {actual_value}")
+                        print(f"         [OK] {filename}: {actual_value}")
 
-        print("\n🎯 RESULT: All temperature files created successfully with correct values!")
-        print("✅ Normal condition test passed")
+        print("\n[TARGET] RESULT: All temperature files created successfully with correct values!")
+        print("[OK] Normal condition test passed")
 
     def test_input_read_error_default_values(self):
         """Test 1.2: Default temperature values when input read error occurs"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 1.2: INPUT READ ERROR - DEFAULT VALUES")
+        print("[TEST] TEST 1.2: INPUT READ ERROR - DEFAULT VALUES")
         print("=" * 80)
-        print("📋 Description: Testing behavior when the main temperature input file")
+        print("[LIST] Description: Testing behavior when the main temperature input file")
         print("   cannot be read. All temperature values should default to '0'.")
         print("   This simulates hardware sensor failures or permission issues.")
         print()
-        print("🎯 Expected Behavior:")
-        print("   • Module present file readable (module is inserted)")
-        print("   • Temperature input file NOT readable (simulated failure)")
-        print("   • All temperature output files should contain '0' (default)")
-        print("   • Status file should still be created with '1' (present)")
+        print("[TARGET] Expected Behavior:")
+        print("   * Module present file readable (module is inserted)")
+        print("   * Temperature input file NOT readable (simulated failure)")
+        print("   * All temperature output files should contain '0' (default)")
+        print("   * Status file should still be created with '1' (present)")
         print()
 
         # Configure module with input read error
         source_idx = 4  # Will create output for module5 (4+1)
         module_name = f"module{source_idx + self.arg_list['fout_idx_offset']}"
-        print(f"🔧 Test Configuration:")
-        print(f"   • Testing module: source_idx={source_idx} → {module_name}")
-        print(f"   • Module present: 1 (inserted)")
-        print(f"   • Control mode: 0 (FW_CONTROL)")
-        print(f"   • Simulated failure: temperature/input file unreadable")
+        print(f"[CONFIG] Test Configuration:")
+        print(f"   * Testing module: source_idx={source_idx} -> {module_name}")
+        print(f"   * Module present: 1 (inserted)")
+        print(f"   * Control mode: 0 (FW_CONTROL)")
+        print(f"   * Simulated failure: temperature/input file unreadable")
         print()
 
         config = {
@@ -382,19 +382,19 @@ class TestModuleTempPopulate(unittest.TestCase):
             'threshold_critical_hi_read_error': False
         }
 
-        print("📁 Creating test module files:")
-        print("   • control → '0' (FW_CONTROL mode)")
-        print("   • present → '1' (module inserted)")
-        print("   • temperature/input → NOT CREATED (simulates read error)")
-        print("   • temperature/threshold_hi → '600' (readable)")
-        print("   • temperature/threshold_critical_hi → '700' (readable)")
+        print("[FOLDER] Creating test module files:")
+        print("   * control -> '0' (FW_CONTROL mode)")
+        print("   * present -> '1' (module inserted)")
+        print("   * temperature/input -> NOT CREATED (simulates read error)")
+        print("   * temperature/threshold_hi -> '600' (readable)")
+        print("   * temperature/threshold_critical_hi -> '700' (readable)")
 
         self._create_module_files(source_idx, config)
 
-        print("\n🔄 Executing module_temp_populate function...")
-        print("   • Function should detect input file read failure")
-        print("   • Function should use default temperature values")
-        print("   • Function should still create all output files")
+        print("\n[LOOP] Executing module_temp_populate function...")
+        print("   * Function should detect input file read failure")
+        print("   * Function should use default temperature values")
+        print("   * Function should still create all output files")
 
         # Mock file operations
         mock_open_func, mock_islink_func, mock_isfile_func = self._mock_file_operations()
@@ -406,7 +406,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Call function under test
             self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
 
-            print("\n🔍 Verifying default temperature values...")
+            print("\n[SEARCH] Verifying default temperature values...")
             # Verify default values are used when input read fails
 
             # When input read fails, temperature values should be "0" (default)
@@ -420,7 +420,7 @@ class TestModuleTempPopulate(unittest.TestCase):
                 f"{module_name}_status": "1"
             }
 
-            print(f"   📂 Checking {module_name} output files:")
+            print(f"   [DIR] Checking {module_name} output files:")
             for filename, expected_value in expected_files.items():
                 file_path = os.path.join(self.thermal_output_dir, filename)
                 self.assertTrue(os.path.exists(file_path), f"File {filename} should exist")
@@ -429,38 +429,38 @@ class TestModuleTempPopulate(unittest.TestCase):
                     actual_value = f.read().strip()
                     self.assertEqual(actual_value, expected_value,
                                      f"File {filename} should contain '{expected_value}', got '{actual_value}'")
-                    print(f"      ✅ {filename}: {actual_value} (default value)")
+                    print(f"      [OK] {filename}: {actual_value} (default value)")
 
-        print("\n🎯 RESULT: Input read error handled correctly - all values defaulted to '0'!")
-        print("✅ Input read error test passed")
+        print("\n[TARGET] RESULT: Input read error handled correctly - all values defaulted to '0'!")
+        print("[OK] Input read error test passed")
 
     def test_other_attributes_read_error(self):
         """Test 1.3: Temperature values when other attributes read error occurs"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 1.3: OTHER ATTRIBUTES READ ERROR - PARTIAL DEFAULTS")
+        print("[TEST] TEST 1.3: OTHER ATTRIBUTES READ ERROR - PARTIAL DEFAULTS")
         print("=" * 80)
-        print("📋 Description: Testing behavior when threshold and cooling level files")
+        print("[LIST] Description: Testing behavior when threshold and cooling level files")
         print("   cannot be read, but the main temperature input is OK. The function")
         print("   should process the input temperature correctly but use defaults for")
         print("   failed attributes. This simulates partial sensor failures.")
         print()
-        print("🎯 Expected Behavior:")
-        print("   • Temperature input file readable → converted value")
-        print("   • Threshold files NOT readable → use default values")
-        print("   • Cooling level files NOT readable → not created")
-        print("   • Emergency temperature calculated from default critical + offset")
+        print("[TARGET] Expected Behavior:")
+        print("   * Temperature input file readable -> converted value")
+        print("   * Threshold files NOT readable -> use default values")
+        print("   * Cooling level files NOT readable -> not created")
+        print("   * Emergency temperature calculated from default critical + offset")
         print()
 
         # Configure module with other attribute read errors
         source_idx = 9  # Will create output for module10 (9+1)
         module_name = f"module{source_idx + self.arg_list['fout_idx_offset']}"
-        print(f"🔧 Test Configuration:")
-        print(f"   • Testing module: source_idx={source_idx} → {module_name}")
-        print(f"   • Module present: 1 (inserted)")
-        print(f"   • Control mode: 0 (FW_CONTROL)")
-        print(f"   • Temperature input: readable (500 SDK format)")
-        print(f"   • Threshold files: NOT readable (simulated failures)")
-        print(f"   • Cooling level files: NOT readable (simulated failures)")
+        print(f"[CONFIG] Test Configuration:")
+        print(f"   * Testing module: source_idx={source_idx} -> {module_name}")
+        print(f"   * Module present: 1 (inserted)")
+        print(f"   * Control mode: 0 (FW_CONTROL)")
+        print(f"   * Temperature input: readable (500 SDK format)")
+        print(f"   * Threshold files: NOT readable (simulated failures)")
+        print(f"   * Cooling level files: NOT readable (simulated failures)")
         print()
 
         config = {
@@ -479,13 +479,13 @@ class TestModuleTempPopulate(unittest.TestCase):
             'cooling_level_read_error': True  # This will cause cooling_level read to fail
         }
 
-        print("📁 Creating test module files:")
-        print("   • control → '0' (FW_CONTROL mode)")
-        print("   • present → '1' (module inserted)")
-        print("   • temperature/input → '500' (READABLE - will be processed)")
-        print("   • temperature/threshold_hi → NOT CREATED (simulates read error)")
-        print("   • temperature/threshold_critical_hi → NOT CREATED (simulates read error)")
-        print("   • temperature/tec/cooling_level → NOT CREATED (simulates read error)")
+        print("[FOLDER] Creating test module files:")
+        print("   * control -> '0' (FW_CONTROL mode)")
+        print("   * present -> '1' (module inserted)")
+        print("   * temperature/input -> '500' (READABLE - will be processed)")
+        print("   * temperature/threshold_hi -> NOT CREATED (simulates read error)")
+        print("   * temperature/threshold_critical_hi -> NOT CREATED (simulates read error)")
+        print("   * temperature/tec/cooling_level -> NOT CREATED (simulates read error)")
 
         self._create_module_files(source_idx, config)
 
@@ -494,16 +494,16 @@ class TestModuleTempPopulate(unittest.TestCase):
         expected_emergency = expected_crit + MockCONST.MODULE_TEMP_EMERGENCY_OFFSET
         expected_trip_crit = MockCONST.MODULE_TEMP_CRIT_DEF
 
-        print("\n📊 Expected value calculations:")
-        print(f"   • Input temperature: 500 → {expected_temp} millidegrees (SDK conversion)")
-        print(f"   • Critical threshold: {expected_crit} millidegrees (MODULE_TEMP_MAX_DEF)")
-        print(f"   • Emergency threshold: {expected_emergency} millidegrees (critical + {MockCONST.MODULE_TEMP_EMERGENCY_OFFSET} offset)")
-        print(f"   • Trip critical: {expected_trip_crit} millidegrees (MODULE_TEMP_CRIT_DEF)")
+        print("\n[STATS] Expected value calculations:")
+        print(f"   * Input temperature: 500 -> {expected_temp} millidegrees (SDK conversion)")
+        print(f"   * Critical threshold: {expected_crit} millidegrees (MODULE_TEMP_MAX_DEF)")
+        print(f"   * Emergency threshold: {expected_emergency} millidegrees (critical + {MockCONST.MODULE_TEMP_EMERGENCY_OFFSET} offset)")
+        print(f"   * Trip critical: {expected_trip_crit} millidegrees (MODULE_TEMP_CRIT_DEF)")
 
-        print("\n🔄 Executing module_temp_populate function...")
-        print("   • Function should read temperature input successfully")
-        print("   • Function should detect threshold file read failures")
-        print("   • Function should use default values for failed attributes")
+        print("\n[LOOP] Executing module_temp_populate function...")
+        print("   * Function should read temperature input successfully")
+        print("   * Function should detect threshold file read failures")
+        print("   * Function should use default values for failed attributes")
 
         # Mock file operations
         mock_open_func, mock_islink_func, mock_isfile_func = self._mock_file_operations()
@@ -515,7 +515,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Call function under test
             self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
 
-            print("\n🔍 Verifying mixed values (real input + default thresholds)...")
+            print("\n[SEARCH] Verifying mixed values (real input + default thresholds)...")
             # Verify temperature values when other attributes fail
 
             # Input should work, but thresholds should use defaults
@@ -528,7 +528,7 @@ class TestModuleTempPopulate(unittest.TestCase):
                 f"{module_name}_status": "1"
             }
 
-            print(f"   📂 Checking {module_name} output files:")
+            print(f"   [DIR] Checking {module_name} output files:")
             for filename, expected_value in expected_files.items():
                 file_path = os.path.join(self.thermal_output_dir, filename)
                 self.assertTrue(os.path.exists(file_path), f"File {filename} should exist")
@@ -538,30 +538,30 @@ class TestModuleTempPopulate(unittest.TestCase):
                     self.assertEqual(actual_value, expected_value,
                                      f"File {filename} should contain '{expected_value}', got '{actual_value}'")
                     if "temp_input" in filename:
-                        print(f"      ✅ {filename}: {actual_value} (processed from input)")
+                        print(f"      [OK] {filename}: {actual_value} (processed from input)")
                     elif "status" in filename:
-                        print(f"      ✅ {filename}: {actual_value} (module present)")
+                        print(f"      [OK] {filename}: {actual_value} (module present)")
                     else:
-                        print(f"      ✅ {filename}: {actual_value} (default value)")
+                        print(f"      [OK] {filename}: {actual_value} (default value)")
 
-        print("\n🎯 RESULT: Partial read errors handled correctly - input processed, thresholds defaulted!")
-        print("✅ Other attributes read error test passed")
+        print("\n[TARGET] RESULT: Partial read errors handled correctly - input processed, thresholds defaulted!")
+        print("[OK] Other attributes read error test passed")
 
     def test_error_handling_no_crash(self):
         """Test that function doesn't crash on various error conditions"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 1.4: ERROR HANDLING - NO CRASH CONDITIONS")
+        print("[TEST] TEST 1.4: ERROR HANDLING - NO CRASH CONDITIONS")
         print("=" * 80)
-        print("📋 Description: Testing that the function handles various error conditions")
+        print("[LIST] Description: Testing that the function handles various error conditions")
         print("   gracefully without crashing. This includes missing files, invalid values,")
         print("   corrupted data, and filesystem errors. The function should be robust")
         print("   enough to handle real-world deployment scenarios.")
         print()
-        print("🎯 Expected Behavior:")
-        print("   • Function completes without exceptions for all error scenarios")
-        print("   • No crashes regardless of input file conditions")
-        print("   • Graceful degradation when files are missing or corrupted")
-        print("   • Defensive programming against unexpected file contents")
+        print("[TARGET] Expected Behavior:")
+        print("   * Function completes without exceptions for all error scenarios")
+        print("   * No crashes regardless of input file conditions")
+        print("   * Graceful degradation when files are missing or corrupted")
+        print("   * Defensive programming against unexpected file contents")
         print()
 
         # Test various error scenarios
@@ -574,7 +574,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             {"name": "Invalid temperature value", "temp_value": "not_a_number"}
         ]
 
-        print("🔧 Creating error test scenarios:")
+        print("[CONFIG] Creating error test scenarios:")
         for i, scenario in enumerate(error_scenarios):
             module_idx = 20 + i
             print(f"   {i + 1}. {scenario['name']} (module{module_idx})")
@@ -587,34 +587,34 @@ class TestModuleTempPopulate(unittest.TestCase):
             if scenario.get("control_file", True):
                 with open(os.path.join(module_dir, "control"), 'w') as f:
                     f.write(scenario.get("control_value", "0"))
-                    print(f"      • control file: '{scenario.get('control_value', '0')}'")
+                    print(f"      * control file: '{scenario.get('control_value', '0')}'")
             else:
-                print("      • control file: MISSING")
+                print("      * control file: MISSING")
 
             if scenario.get("present_file", True):
                 with open(os.path.join(module_dir, "present"), 'w') as f:
                     f.write(scenario.get("present_value", "1"))
-                    print(f"      • present file: '{scenario.get('present_value', '1')}'")
+                    print(f"      * present file: '{scenario.get('present_value', '1')}'")
             else:
-                print("      • present file: MISSING")
+                print("      * present file: MISSING")
 
             if scenario.get("temp_dir", True):
                 os.makedirs(temp_dir, exist_ok=True)
                 if scenario.get("temp_value"):
                     with open(os.path.join(temp_dir, "input"), 'w') as f:
                         f.write(scenario["temp_value"])
-                    print(f"      • temperature input: '{scenario['temp_value']}'")
+                    print(f"      * temperature input: '{scenario['temp_value']}'")
                 else:
                     with open(os.path.join(temp_dir, "input"), 'w') as f:
                         f.write("500")
-                    print("      • temperature input: '500' (valid)")
+                    print("      * temperature input: '500' (valid)")
             else:
-                print("      • temperature directory: MISSING")
+                print("      * temperature directory: MISSING")
 
-        print(f"\n🔄 Executing module_temp_populate with {len(error_scenarios)} error scenarios...")
-        print("   • Function should handle all errors gracefully")
-        print("   • No exceptions should be raised")
-        print("   • Function should complete normally despite errors")
+        print(f"\n[LOOP] Executing module_temp_populate with {len(error_scenarios)} error scenarios...")
+        print("   * Function should handle all errors gracefully")
+        print("   * No exceptions should be raised")
+        print("   * Function should complete normally despite errors")
 
         # Mock file operations
         mock_open_func, mock_islink_func, mock_isfile_func = self._mock_file_operations()
@@ -626,32 +626,32 @@ class TestModuleTempPopulate(unittest.TestCase):
             # This should not crash regardless of error conditions
             try:
                 self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
-                print("\n🔍 Function execution completed successfully!")
-                print("   ✅ No exceptions were raised")
-                print("   ✅ Function handled all error conditions gracefully")
-                print("   ✅ Robust error handling confirmed")
-                print("\n🎯 RESULT: Function demonstrates excellent error resilience!")
-                print("✅ Error handling test passed - no crashes occurred")
+                print("\n[SEARCH] Function execution completed successfully!")
+                print("   [OK] No exceptions were raised")
+                print("   [OK] Function handled all error conditions gracefully")
+                print("   [OK] Robust error handling confirmed")
+                print("\n[TARGET] RESULT: Function demonstrates excellent error resilience!")
+                print("[OK] Error handling test passed - no crashes occurred")
             except Exception as e:
-                print(f"\n❌ Function crashed with error: {e}")
+                print(f"\n[FAIL] Function crashed with error: {e}")
                 self.fail(f"Function crashed with error: {e}")
 
     def test_random_module_configuration(self):
         """Test random configuration of all 36 modules"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 1.5: RANDOM MODULE CONFIGURATION - FULL SCALE TEST")
+        print("[TEST] TEST 1.5: RANDOM MODULE CONFIGURATION - FULL SCALE TEST")
         print("=" * 80)
-        print("📋 Description: Testing all 36 modules with randomized configurations")
+        print("[LIST] Description: Testing all 36 modules with randomized configurations")
         print("   to simulate real-world deployment scenarios. Each module has random")
         print("   combinations of presence, control mode, file availability, and values.")
         print("   This comprehensive test validates function robustness at scale.")
         print()
-        print("🎯 Expected Behavior:")
-        print("   • Function processes all 36 modules without errors")
-        print("   • SW_CONTROL modules are skipped (no output files)")
-        print("   • FW_CONTROL modules create appropriate output files")
-        print("   • Module counter file created with correct count")
-        print("   • Random error conditions handled gracefully")
+        print("[TARGET] Expected Behavior:")
+        print("   * Function processes all 36 modules without errors")
+        print("   * SW_CONTROL modules are skipped (no output files)")
+        print("   * FW_CONTROL modules create appropriate output files")
+        print("   * Module counter file created with correct count")
+        print("   * Random error conditions handled gracefully")
         print()
 
         # Analyze random configurations
@@ -660,21 +660,21 @@ class TestModuleTempPopulate(unittest.TestCase):
         present_count = sum(1 for config in self.module_configs if config.get('present') == 1)
         absent_count = sum(1 for config in self.module_configs if config.get('present') == 0)
 
-        print("📊 Random configuration analysis:")
-        print(f"   • Total modules: {self.arg_list['module_count']}")
-        print(f"   • FW_CONTROL modules: {fw_control_count}")
-        print(f"   • SW_CONTROL modules: {sw_control_count}")
-        print(f"   • Present modules: {present_count}")
-        print(f"   • Absent modules: {absent_count}")
+        print("[STATS] Random configuration analysis:")
+        print(f"   * Total modules: {self.arg_list['module_count']}")
+        print(f"   * FW_CONTROL modules: {fw_control_count}")
+        print(f"   * SW_CONTROL modules: {sw_control_count}")
+        print(f"   * Present modules: {present_count}")
+        print(f"   * Absent modules: {absent_count}")
         print()
 
-        print("🔧 Creating randomized module files:")
+        print("[CONFIG] Creating randomized module files:")
         # Create all 36 modules with random configurations
         for i in range(self.arg_list["module_count"]):
             config = self.module_configs[i]
             status = "present" if config.get('present') else "absent"
             control = "FW" if config.get('control_mode') == 0 else "SW"
-            print(f"   • module{i}: {status}, {control}_CONTROL", end="")
+            print(f"   * module{i}: {status}, {control}_CONTROL", end="")
 
             # Show error conditions if any
             errors = []
@@ -692,11 +692,11 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             self._create_module_files(i, config)
 
-        print(f"\n🔄 Executing module_temp_populate with {self.arg_list['module_count']} randomized modules...")
-        print("   • Function should process all modules appropriately")
-        print("   • SW_CONTROL modules should be skipped")
-        print("   • Error conditions should be handled gracefully")
-        print("   • Module counter should be updated")
+        print(f"\n[LOOP] Executing module_temp_populate with {self.arg_list['module_count']} randomized modules...")
+        print("   * Function should process all modules appropriately")
+        print("   * SW_CONTROL modules should be skipped")
+        print("   * Error conditions should be handled gracefully")
+        print("   * Module counter should be updated")
 
         # Mock file operations
         mock_open_func, mock_islink_func, mock_isfile_func = self._mock_file_operations()
@@ -709,7 +709,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             try:
                 self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
 
-                print("\n🔍 Verifying results...")
+                print("\n[SEARCH] Verifying results...")
 
                 # Verify module_counter file is created
                 counter_file = os.path.join(self.config_output_dir, "module_counter")
@@ -719,7 +719,7 @@ class TestModuleTempPopulate(unittest.TestCase):
                     counter_value = f.read().strip()
                     self.assertEqual(counter_value, str(self.arg_list["module_count"]),
                                      f"module_counter should be {self.arg_list['module_count']}")
-                    print(f"   ✅ Module counter file: {counter_value}")
+                    print(f"   [OK] Module counter file: {counter_value}")
 
                 # Count how many modules were processed
                 processed_modules = 0
@@ -732,30 +732,30 @@ class TestModuleTempPopulate(unittest.TestCase):
                     else:
                         skipped_modules += 1
 
-                print(f"   ✅ Processed modules: {processed_modules}")
-                print(f"   ✅ Skipped modules (SW_CONTROL): {skipped_modules}")
-                print(f"   ✅ Total modules handled: {processed_modules + skipped_modules}")
+                print(f"   [OK] Processed modules: {processed_modules}")
+                print(f"   [OK] Skipped modules (SW_CONTROL): {skipped_modules}")
+                print(f"   [OK] Total modules handled: {processed_modules + skipped_modules}")
 
-                print("\n🎯 RESULT: Large-scale random testing successful!")
-                print(f"✅ Random configuration test passed - processed {processed_modules} modules")
+                print("\n[TARGET] RESULT: Large-scale random testing successful!")
+                print(f"[OK] Random configuration test passed - processed {processed_modules} modules")
 
             except Exception as e:
-                print(f"\n❌ Random configuration test failed with error: {e}")
+                print(f"\n[FAIL] Random configuration test failed with error: {e}")
                 self.fail(f"Random configuration test failed with error: {e}")
 
     def test_sdk_temp2degree_function(self):
         """Test the sdk_temp2degree temperature conversion function"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 2.1: SDK_TEMP2DEGREE FUNCTION - TEMPERATURE CONVERSION")
+        print("[TEST] TEST 2.1: SDK_TEMP2DEGREE FUNCTION - TEMPERATURE CONVERSION")
         print("=" * 80)
-        print("📋 Description: Testing the temperature conversion function that translates")
+        print("[LIST] Description: Testing the temperature conversion function that translates")
         print("   SDK temperature format to millidegrees Celsius. This function is critical")
         print("   for converting raw hardware sensor values to standard thermal units.")
         print()
-        print("🔢 Conversion Algorithm:")
-        print("   • Positive values: temperature = value * 125")
-        print("   • Negative values: temperature = 0xffff + value + 1")
-        print("   • Output unit: millidegrees Celsius")
+        print("[NUM] Conversion Algorithm:")
+        print("   * Positive values: temperature = value * 125")
+        print("   * Negative values: temperature = 0xffff + value + 1")
+        print("   * Output unit: millidegrees Celsius")
         print()
 
         # Test cases for temperature conversion
@@ -770,9 +770,9 @@ class TestModuleTempPopulate(unittest.TestCase):
             (600, 75000, "High temperature value")
         ]
 
-        print("🔍 Testing conversion cases:")
+        print("[SEARCH] Testing conversion cases:")
         for input_val, expected_output, description in test_cases:
-            print(f"   • {description}: {input_val} → {expected_output}")
+            print(f"   * {description}: {input_val} -> {expected_output}")
             actual_output = self.hw_mgmt_module.sdk_temp2degree(input_val)
             self.assertEqual(actual_output, expected_output,
                              f"sdk_temp2degree({input_val}) should return {expected_output}, got {actual_output}")
@@ -780,89 +780,89 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Additional verification message
             if input_val >= 0:
                 calculated = input_val * 125
-                print(f"     ✅ Calculation: {input_val} × 125 = {calculated} (matches)")
+                print(f"     [OK] Calculation: {input_val} × 125 = {calculated} (matches)")
             else:
                 calculated = 0xffff + input_val + 1
-                print(f"     ✅ Calculation: 0x{0xffff:x} + {input_val} + 1 = 0x{calculated:x} ({calculated}) (matches)")
+                print(f"     [OK] Calculation: 0x{0xffff:x} + {input_val} + 1 = 0x{calculated:x} ({calculated}) (matches)")
 
-        print("\n🎯 RESULT: Temperature conversion function working correctly!")
-        print("✅ sdk_temp2degree function test passed")
+        print("\n[TARGET] RESULT: Temperature conversion function working correctly!")
+        print("[OK] sdk_temp2degree function test passed")
 
     def test_module_count_argument_validation(self):
         """Test that module_count argument is properly handled"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 2.2: MODULE COUNT ARGUMENT VALIDATION")
+        print("[TEST] TEST 2.2: MODULE COUNT ARGUMENT VALIDATION")
         print("=" * 80)
-        print("📋 Description: Validating that the function uses the specified")
+        print("[LIST] Description: Validating that the function uses the specified")
         print("   argument configuration correctly. This ensures the test setup")
         print("   matches the requirements and the function operates on the")
         print("   expected number of modules with correct indexing.")
         print()
-        print("🎯 Requirements Validation:")
-        print("   • Module count: 36 modules")
-        print("   • Index offset: 1 (modules indexed from 1 to 36)")
-        print("   • Input path template: contains 'module{}' pattern")
-        print("   • Configuration matches specified basic setup")
+        print("[TARGET] Requirements Validation:")
+        print("   * Module count: 36 modules")
+        print("   * Index offset: 1 (modules indexed from 1 to 36)")
+        print("   * Input path template: contains 'module{}' pattern")
+        print("   * Configuration matches specified basic setup")
         print()
 
-        print("🔍 Validating argument configuration:")
+        print("[SEARCH] Validating argument configuration:")
 
         # Test the module count and offset values
-        print(f"   • Checking fout_idx_offset...")
+        print(f"   * Checking fout_idx_offset...")
         expected_offset = 1
         actual_offset = self.arg_list["fout_idx_offset"]
         self.assertEqual(actual_offset, expected_offset,
                          f"fout_idx_offset should be {expected_offset}, got {actual_offset}")
-        print(f"     ✅ fout_idx_offset: {actual_offset} (correct)")
+        print(f"     [OK] fout_idx_offset: {actual_offset} (correct)")
 
-        print(f"   • Checking module_count...")
+        print(f"   * Checking module_count...")
         expected_count = 36
         actual_count = self.arg_list["module_count"]
         self.assertEqual(actual_count, expected_count,
                          f"module_count should be {expected_count}, got {actual_count}")
-        print(f"     ✅ module_count: {actual_count} (correct)")
+        print(f"     [OK] module_count: {actual_count} (correct)")
 
         # Test that fin contains the module template
-        print(f"   • Checking input path template...")
+        print(f"   * Checking input path template...")
         template_pattern = "module{}"
         actual_fin = self.arg_list["fin"]
         self.assertIn(template_pattern, actual_fin,
                       f"fin should contain '{template_pattern}', got {actual_fin}")
-        print(f"     ✅ Template pattern '{template_pattern}' found in path")
+        print(f"     [OK] Template pattern '{template_pattern}' found in path")
 
-        print(f"   • Complete argument structure:")
+        print(f"   * Complete argument structure:")
         for key, value in self.arg_list.items():
             print(f"     - {key}: {value}")
 
-        print("\n🎯 RESULT: Argument configuration matches requirements!")
-        print("✅ Module count argument validation test passed")
+        print("\n[TARGET] RESULT: Argument configuration matches requirements!")
+        print("[OK] Module count argument validation test passed")
 
     def test_sw_control_mode_ignored(self):
         """Test that modules in SW control mode are ignored"""
         print("\n" + "=" * 80)
-        print("🧪 TEST 2.3: SW CONTROL MODE - MODULE IGNORED")
+        print("[TEST] TEST 2.3: SW CONTROL MODE - MODULE IGNORED")
         print("=" * 80)
-        print("📋 Description: Testing that modules in SW_CONTROL mode (control=1)")
+        print("[LIST] Description: Testing that modules in SW_CONTROL mode (control=1)")
         print("   are properly ignored by the function. In independent mode, modules")
         print("   handle their own temperature monitoring, so the function should")
         print("   skip processing them entirely.")
         print()
-        print("🎯 Expected Behavior:")
-        print("   • Module with control=1 (SW_CONTROL) should be skipped")
-        print("   • No output files should be created for SW_CONTROL modules")
-        print("   • Function should continue processing other modules normally")
-        print("   • This simulates independent temperature management mode")
+        print("[TARGET] Expected Behavior:")
+        print("   * Module with control=1 (SW_CONTROL) should be skipped")
+        print("   * No output files should be created for SW_CONTROL modules")
+        print("   * Function should continue processing other modules normally")
+        print("   * This simulates independent temperature management mode")
         print()
 
         # Create module in SW control mode
         source_idx = 14  # Will create output for module15 (14+1)
         module_name = f"module{source_idx + self.arg_list['fout_idx_offset']}"
-        print(f"🔧 Test Configuration:")
-        print(f"   • Testing module: source_idx={source_idx} → {module_name}")
-        print(f"   • Module present: 1 (inserted)")
-        print(f"   • Control mode: 1 (SW_CONTROL - independent mode)")
-        print(f"   • Temperature input: 500 (available but should be ignored)")
-        print(f"   • Threshold files: available but should be ignored")
+        print(f"[CONFIG] Test Configuration:")
+        print(f"   * Testing module: source_idx={source_idx} -> {module_name}")
+        print(f"   * Module present: 1 (inserted)")
+        print(f"   * Control mode: 1 (SW_CONTROL - independent mode)")
+        print(f"   * Temperature input: 500 (available but should be ignored)")
+        print(f"   * Threshold files: available but should be ignored")
         print()
 
         config = {
@@ -874,19 +874,19 @@ class TestModuleTempPopulate(unittest.TestCase):
             'has_cooling_level': False
         }
 
-        print("📁 Creating SW_CONTROL module files:")
-        print("   • control → '1' (SW_CONTROL mode - should trigger skip)")
-        print("   • present → '1' (module inserted)")
-        print("   • temperature/input → '500' (available but ignored)")
-        print("   • temperature/threshold_hi → '600' (available but ignored)")
+        print("[FOLDER] Creating SW_CONTROL module files:")
+        print("   * control -> '1' (SW_CONTROL mode - should trigger skip)")
+        print("   * present -> '1' (module inserted)")
+        print("   * temperature/input -> '500' (available but ignored)")
+        print("   * temperature/threshold_hi -> '600' (available but ignored)")
 
         self._create_module_files(source_idx, config)
 
-        print("\n🔄 Executing module_temp_populate function...")
-        print("   • Function should detect SW_CONTROL mode")
-        print("   • Function should skip this module entirely")
-        print("   • No temperature processing should occur")
-        print("   • No output files should be created")
+        print("\n[LOOP] Executing module_temp_populate function...")
+        print("   * Function should detect SW_CONTROL mode")
+        print("   * Function should skip this module entirely")
+        print("   * No temperature processing should occur")
+        print("   * No output files should be created")
 
         # Mock file operations
         mock_open_func, mock_islink_func, mock_isfile_func = self._mock_file_operations()
@@ -898,7 +898,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Call function under test
             self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
 
-            print("\n🔍 Verifying SW_CONTROL module was ignored...")
+            print("\n[SEARCH] Verifying SW_CONTROL module was ignored...")
             # Verify no files are created for SW control modules
             output_files = [
                 f"{module_name}_temp_input",
@@ -911,44 +911,44 @@ class TestModuleTempPopulate(unittest.TestCase):
                 f"{module_name}_status"
             ]
 
-            print(f"   📂 Checking that NO files were created for {module_name}:")
+            print(f"   [DIR] Checking that NO files were created for {module_name}:")
             all_ignored = True
             for filename in output_files:
                 file_path = os.path.join(self.thermal_output_dir, filename)
                 file_exists = os.path.exists(file_path)
                 self.assertFalse(file_exists,
                                  f"File {filename} should not exist for SW control module")
-                print(f"      ✅ {filename}: NOT CREATED (correctly ignored)")
+                print(f"      [OK] {filename}: NOT CREATED (correctly ignored)")
                 if file_exists:
                     all_ignored = False
 
             if all_ignored:
-                print("\n🎯 RESULT: SW_CONTROL module properly ignored - no files created!")
+                print("\n[TARGET] RESULT: SW_CONTROL module properly ignored - no files created!")
             else:
-                print("\n❌ RESULT: Some files were incorrectly created for SW_CONTROL module!")
+                print("\n[FAIL] RESULT: Some files were incorrectly created for SW_CONTROL module!")
 
-        print("✅ SW control mode ignored test passed")
+        print("[OK] SW control mode ignored test passed")
 
 
 def main():
     """Main function to run all tests"""
     print("=" * 80)
-    print("🚀 COMPREHENSIVE MODULE_TEMP_POPULATE TEST SUITE")
+    print("[START] COMPREHENSIVE MODULE_TEMP_POPULATE TEST SUITE")
     print("=" * 80)
-    print(f"📋 Test Suite Description:")
+    print(f"[LIST] Test Suite Description:")
     print(f"   This comprehensive test suite validates the module_temp_populate function")
     print(f"   from hw_management_sync.py with detailed runtime descriptions and")
     print(f"   thorough coverage of all specified test scenarios.")
     print()
-    print(f"🔧 Test Environment:")
-    print(f"   • Python version: {sys.version.split()[0]}")
-    print(f"   • Testing module: hw_management_sync.py")
-    print(f"   • Module path: {hw_mgmt_path}")
-    print(f"   • Test configuration: 36 modules, offset=1")
-    print(f"   • Input path: /sys/module/sx_core/asic0/module{{}}/")
-    print(f"   • Output path: /var/run/hw-management/thermal/")
+    print(f"[CONFIG] Test Environment:")
+    print(f"   * Python version: {sys.version.split()[0]}")
+    print(f"   * Testing module: hw_management_sync.py")
+    print(f"   * Module path: {hw_mgmt_path}")
+    print(f"   * Test configuration: 36 modules, offset=1")
+    print(f"   * Input path: /sys/module/sx_core/asic0/module{{}}/")
+    print(f"   * Output path: /var/run/hw-management/thermal/")
     print()
-    print(f"📊 Test Categories:")
+    print(f"[STATS] Test Categories:")
     print(f"   1. NORMAL CONDITIONS - All files present and readable")
     print(f"   2. INPUT READ ERRORS - Default values when input fails")
     print(f"   3. ATTRIBUTE READ ERRORS - Partial failures handling")
@@ -959,14 +959,14 @@ def main():
     print(f"   8. CONTROL MODE HANDLING - SW_CONTROL module skipping")
     print()
     print("=" * 80)
-    print("🏁 STARTING TEST EXECUTION...")
+    print("[FINISH] STARTING TEST EXECUTION...")
     print("=" * 80)
 
     # Run tests
     unittest.main(verbosity=2, exit=False)
 
     print("\n" + "=" * 80)
-    print("🎯 TEST SUITE EXECUTION COMPLETED")
+    print("[TARGET] TEST SUITE EXECUTION COMPLETED")
     print("=" * 80)
 
 

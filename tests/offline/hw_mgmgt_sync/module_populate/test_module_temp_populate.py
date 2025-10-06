@@ -190,25 +190,25 @@ class TestModuleTempPopulate(unittest.TestCase):
                 if config['mode'] == 1:  # SDK_SW_CONTROL
                     # Files should NOT be created for SW control mode
                     self._verify_files_not_created(module_name, written_files)
-                    print(f"✓ Module {module_name}: SW control mode - no files created")
+                    print(f"[+] Module {module_name}: SW control mode - no files created")
 
                 else:  # SDK_FW_CONTROL
                     if config['present'] == 0:
                         # Files should contain zeros for absent modules
                         self._verify_absent_module_files(module_name)
-                        print(f"✓ Module {module_name}: FW control, not present - zero values")
+                        print(f"[+] Module {module_name}: FW control, not present - zero values")
 
                     else:
                         # Files should contain actual temperature values
                         expected_temp = self._sdk_temp2degree(config['temperature_input'])
                         expected_crit = self._sdk_temp2degree(config['temperature_threshold'])
                         self._verify_present_module_files(module_name, expected_temp, expected_crit)
-                        print(f"✓ Module {module_name}: FW control, present - actual values "
+                        print(f"[+] Module {module_name}: FW control, present - actual values "
                               f"(temp={expected_temp}, crit={expected_crit})")
 
             # Verify module counter file
             self._verify_module_counter()
-            print("✓ Module counter file verified")
+            print("[+] Module counter file verified")
 
     def _verify_files_not_created(self, module_name, written_files):
         """Verify that thermal files are not created for SW control modules"""

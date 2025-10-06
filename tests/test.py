@@ -50,10 +50,10 @@ class TestRunner:
     def print_test_result(self, test_name, passed, output=None):
         """Print test result"""
         if passed:
-            print(f"{Colors.GREEN}✓ PASSED:{Colors.RESET} {test_name}")
+            print(f"{Colors.GREEN}[PASSED]{Colors.RESET} {test_name}")
             self.passed_tests.append(test_name)
         else:
-            print(f"{Colors.RED}✗ FAILED:{Colors.RESET} {test_name}")
+            print(f"{Colors.RED}[FAILED]{Colors.RESET} {test_name}")
             self.failed_tests.append(test_name)
             if output and self.verbose:
                 print(f"{Colors.YELLOW}Output:{Colors.RESET}")
@@ -147,7 +147,7 @@ class TestRunner:
             if test['cwd'].exists():
                 self.run_command(test['cmd'], test['cwd'], test['name'])
             else:
-                print(f"{Colors.YELLOW}⚠ SKIPPED:{Colors.RESET} {test['name']} (requires hardware)")
+                print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} {test['name']} (requires hardware)")
         
         return len(self.failed_tests) == 0
     
@@ -157,8 +157,8 @@ class TestRunner:
         
         total = len(self.passed_tests) + len(self.failed_tests)
         
-        print(f"{Colors.GREEN}✓ Passed:{Colors.RESET} {len(self.passed_tests)}/{total}")
-        print(f"{Colors.RED}✗ Failed:{Colors.RESET} {len(self.failed_tests)}/{total}")
+        print(f"{Colors.GREEN}Passed:{Colors.RESET} {len(self.passed_tests)}/{total}")
+        print(f"{Colors.RED}Failed:{Colors.RESET} {len(self.failed_tests)}/{total}")
         
         if self.failed_tests:
             print(f"\n{Colors.RED}Failed tests:{Colors.RESET}")

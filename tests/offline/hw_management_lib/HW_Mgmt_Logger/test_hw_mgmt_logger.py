@@ -60,7 +60,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 try:
     from hw_management_lib import HW_Mgmt_Logger
 except ImportError as e:
-    print(f"❌ Failed to import HW_Mgmt_Logger: {e}")
+    print(f"[FAIL] Failed to import HW_Mgmt_Logger: {e}")
     sys.exit(1)
 
 # Color codes for beautiful output
@@ -84,17 +84,17 @@ class Colors:
 class Icons:
     try:
         # Test if Unicode emojis work
-        test_encode = "✅".encode(sys.stdout.encoding or 'utf-8')
-        PASS = f"{Colors.GREEN}✅{Colors.RESET}"
-        FAIL = f"{Colors.RED}❌{Colors.RESET}"
-        SKIP = f"{Colors.YELLOW}⏭️{Colors.RESET}"
-        INFO = f"{Colors.BLUE}ℹ️{Colors.RESET}"
-        WARNING = f"{Colors.YELLOW}⚠️{Colors.RESET}"
-        DEBUG = f"{Colors.CYAN}🐛{Colors.RESET}"
-        RANDOM = f"{Colors.MAGENTA}🎲{Colors.RESET}"
-        THREAD = f"{Colors.CYAN}🧵{Colors.RESET}"
-        FILE = f"{Colors.BLUE}📁{Colors.RESET}"
-        LOG = f"{Colors.GREEN}📝{Colors.RESET}"
+        test_encode = "[OK]".encode(sys.stdout.encoding or 'utf-8')
+        PASS = f"{Colors.GREEN}[OK]{Colors.RESET}"
+        FAIL = f"{Colors.RED}[FAIL]{Colors.RESET}"
+        SKIP = f"{Colors.YELLOW}[SKIP]{Colors.RESET}"
+        INFO = f"{Colors.BLUE}[INFO]{Colors.RESET}"
+        WARNING = f"{Colors.YELLOW}[WARN]{Colors.RESET}"
+        DEBUG = f"{Colors.CYAN}[BUG]{Colors.RESET}"
+        RANDOM = f"{Colors.MAGENTA}[RANDOM]{Colors.RESET}"
+        THREAD = f"{Colors.CYAN}[THREAD]{Colors.RESET}"
+        FILE = f"{Colors.BLUE}[FOLDER]{Colors.RESET}"
+        LOG = f"{Colors.GREEN}[NOTE]{Colors.RESET}"
     except (UnicodeEncodeError, LookupError, AttributeError):
         # Fallback to ASCII characters
         PASS = f"{Colors.GREEN}+{Colors.RESET}"

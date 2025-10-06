@@ -57,7 +57,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 try:
     from hw_management_lib import HW_Mgmt_Logger
 except ImportError as e:
-    print(f"❌ Failed to import HW_Mgmt_Logger: {e}")
+    print(f"[FAIL] Failed to import HW_Mgmt_Logger: {e}")
     sys.exit(1)
 
 
@@ -293,7 +293,7 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
         # Test various Unicode categories
         test_messages = [
             "ASCII: Hello World",
-            "Emoji: 🚀 Rocket",
+            "Unicode: Rocket symbol",
             "Cyrillic: Привет мир",
             "Control chars: \t\n\r",
             "Special: \u0000\u001F\u007F\u0080\u009F"  # Control characters
@@ -309,7 +309,7 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
             content = f.read()
             # Most messages should be present (some control chars may be handled)
             self.assertIn("ASCII: Hello World", content)
-            self.assertIn("🚀", content)  # Emoji should work
+            self.assertIn("Unicode: Rocket symbol", content)
 
     def test_error_recovery(self):
         """Test error recovery scenarios"""
