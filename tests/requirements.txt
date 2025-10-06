@@ -1,0 +1,44 @@
+# Requirements for NVIDIA HW-MGMT Test Suite
+# Core dependencies for running all tests (both pytest and legacy test runners)
+
+# Core testing framework
+pytest>=6.2.0               # Main testing framework
+
+# Pytest plugins for enhanced functionality
+pytest-html>=3.1.0          # HTML test reports
+pytest-cov>=4.0.0           # Coverage reporting  
+# pytest-xdist>=2.5.0         # Parallel test execution (removed - simplified test runner)
+pytest-timeout>=2.1.0       # Test timeout handling
+pytest-mock>=3.10.0         # Enhanced mocking capabilities
+pytest-sugar>=0.9.6         # Enhanced test output formatting
+
+# Core Python libraries (often already installed)
+setuptools>=40.0.0          # Package management
+wheel>=0.30.0               # Wheel package format
+
+# Colored output and formatting
+colorama>=0.4.4             # Cross-platform colored terminal text
+termcolor>=1.1.0            # Terminal coloring
+
+# System and hardware interaction
+psutil>=5.8.0               # System and process utilities (for performance monitoring)
+
+# Optional performance and benchmarking
+pytest-benchmark>=4.0.0     # Performance benchmarking
+
+# Mock and testing utilities  
+mock>=4.0.0                 # Mocking library (Python 3.3+ has unittest.mock)
+
+# Optional: Advanced reporting and analysis
+pytest-json-report>=1.5.0   # JSON test reports
+pytest-metadata>=2.0.0      # Test metadata collection
+
+# Optional: Parallel execution enhancements
+pytest-forked>=1.4.0        # Forked subprocess execution
+
+# Development and debugging  
+# pdbpp>=0.10.3               # Enhanced Python debugger (optional, may conflict)
+
+# Hardware interaction libraries (optional, hardware tests only)
+# pyserial>=3.5              # Serial communication (uncomment if needed)
+# requests>=2.28.0           # HTTP requests for REST API testing (uncomment if needed)

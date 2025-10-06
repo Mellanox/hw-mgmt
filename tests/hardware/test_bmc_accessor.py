@@ -26,8 +26,12 @@ import os
 import argparse
 import sys
 import subprocess
-print(sys.path)
-sys.path.append(os.path.abspath("../usr/usr/bin"))
+import pytest
+
+# Mark all tests in this module as hardware
+pytestmark = pytest.mark.hardware
+
+# Path configured in conftest.py - no need for manual sys.path manipulation
 
 
 class TestBMCAccessorLogin(unittest.TestCase):

@@ -389,6 +389,66 @@ class BOMDecoder:
                 print(f"    {j}. [{status}] {comp.category}: {comp.type} (cat:{comp.category_char},type:{comp.type_char})")
 
 
+def decode_bom(bom_string: str) -> Optional[Dict]:
+    """
+    Decode a BOM string and return the result.
+    
+    This is a convenience function for testing and programmatic use.
+    
+    Args:
+        bom_string: BOM string to decode
+        
+    Returns:
+        Decoded BOM data as dictionary, or None if decoding fails
+    """
+    try:
+        decoder = BOMDecoder()
+        bom_data = decoder.decode_bom_string(bom_string)
+        
+        # Convert BOMData to dictionary for easier testing
+        result = {
+            'boards': [],
+            'total_components': 0,
+            'component_summary': {}
+        }
+        
+        for board in bom_data.boards:
+            board_dict = {
+                'board_type': board.board_type,
+                'board_id': board.board_number,  # It's board_number, not board_id
+                'components': []
+            }
+            
+            for component in board.components:
+                component_dict = {
+                    'name': component.type,  # Use type as name
+                    'category': component.category,
+                    'populated': component.is_populated
+                }
+                board_dict['components'].append(component_dict)
+                
+            result['boards'].append(board_dict)
+            
+        result['total_components'] = sum(len(board['components']) for board in result['boards'])
+        
+        # Create component summary
+        for board in result['boards']:
+            for component in board['components']:
+                category = component['category'] or 'unknown'
+                if category not in result['component_summary']:
+                    result['component_summary'][category] = 0
+                result['component_summary'][category] += 1
+                
+        return result
+        
+    except Exception as e:
+        # For debugging: print the actual error
+        print(f"DEBUG: decode_bom exception: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def main():
     """Main function with command line interface"""
     parser = argparse.ArgumentParser(

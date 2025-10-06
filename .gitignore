@@ -1,1 +1,20 @@
 output/
+
+# Build and CI artifacts
+build/
+.ngci_tool/
+cov-results/
+
+# Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test logs and coverage reports
+tests/logs/
+tests/coverage_html_report/
+tests/.coverage
+tests/coverage.json
+tests/coverage.xml
+*.log
