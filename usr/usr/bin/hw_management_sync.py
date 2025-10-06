@@ -835,7 +835,7 @@ def module_temp_populate(arg_list, _dummy):
             except BaseException:
                 pass
         else:
-            LOGGER.notice(None, id="{} read_fail".format(module_name), repeat=0)
+            LOGGER.notice(None, id="{} read_fail".format(module_name))
 
         # Write the temperature data to files
         file_paths = {
@@ -942,7 +942,7 @@ def main():
 
     args = vars(CMD_PARSER.parse_args())
     global LOGGER
-    LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+    LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2, syslog_repeat=1, ident="hw-management-sync")
 
     if args["system_type"] is None:
         try:
