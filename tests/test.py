@@ -37,6 +37,36 @@ class TestRunner:
         self.failed_tests = []
         self.passed_tests = []
         
+    def clean_cache(self):
+        """Clean Python cache files to avoid stale module issues"""
+        import shutil
+        
+        cache_dirs = list(self.tests_dir.rglob("__pycache__"))
+        pyc_files = [f for f in self.tests_dir.rglob("*.pyc") if not any(p in f.parts for p in ["__pycache__"])]
+        
+        # Delete individual .pyc files first (those not in __pycache__)
+        for pyc_file in pyc_files:
+            try:
+                pyc_file.unlink()
+                if self.verbose:
+                    print(f"{Colors.YELLOW}Deleted:{Colors.RESET} {pyc_file}")
+            except Exception as e:
+                if self.verbose:
+                    print(f"{Colors.RED}Failed to delete {pyc_file}: {e}{Colors.RESET}")
+        
+        # Then delete __pycache__ directories (which may contain .pyc files)
+        for cache_dir in cache_dirs:
+            try:
+                shutil.rmtree(cache_dir)
+                if self.verbose:
+                    print(f"{Colors.YELLOW}Cleaned cache:{Colors.RESET} {cache_dir}")
+            except Exception as e:
+                if self.verbose:
+                    print(f"{Colors.RED}Failed to clean {cache_dir}: {e}{Colors.RESET}")
+        
+        if cache_dirs or pyc_files:
+            print(f"{Colors.GREEN}Cache cleaned:{Colors.RESET} {len(cache_dirs)} directories, {len(pyc_files)} .pyc files")
+        
     def print_header(self, text):
         """Print a formatted header"""
         print(f"\n{Colors.BOLD}{Colors.CYAN}{'=' * 80}{Colors.RESET}")
@@ -196,6 +226,9 @@ Examples:
         args.offline = True
     
     runner = TestRunner(verbose=args.verbose)
+    
+    # Clean Python cache before running tests to avoid stale module issues
+    runner.clean_cache()
     
     success = True
     
