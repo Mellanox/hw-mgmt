@@ -36,6 +36,7 @@ class TestRunner:
         self.hardware_dir = self.tests_dir / "hardware"
         self.failed_tests = []
         self.passed_tests = []
+        self.total_test_count = 0  # Track total individual tests
         
     def clean_cache(self):
         """Clean Python cache files to avoid stale module issues"""
@@ -103,9 +104,41 @@ class TestRunner:
             )
             
             passed = result.returncode == 0
+            output = result.stdout + result.stderr
+            
+            # Extract test counts and pytest summary
+            is_pytest = 'pytest' in ' '.join(cmd)
+            if is_pytest and passed:
+                # Extract the summary line (e.g., "74 passed in 0.46s")
+                summary_lines = []
+                for line in output.split('\n'):
+                    if 'passed' in line or 'failed' in line or 'error' in line:
+                        if any(x in line for x in ['passed in', 'failed', 'error']):
+                            summary_lines.append(line.strip())
+                            # Extract test count from pytest summary
+                            import re
+                            match = re.search(r'(\d+)\s+passed', line)
+                            if match:
+                                self.total_test_count += int(match.group(1))
+                
+                if summary_lines:
+                    # Show just the last summary line
+                    print(f"  {Colors.CYAN}{summary_lines[-1]}{Colors.RESET}")
+            else:
+                # For unittest, try to extract test count from output
+                import re
+                # Look for patterns like "Ran 16 tests" or "OK (16 tests)"
+                for line in output.split('\n'):
+                    match = re.search(r'Ran (\d+) test', line)
+                    if match:
+                        self.total_test_count += int(match.group(1))
+                        break
+                    match = re.search(r'OK.*\((\d+) test', line)
+                    if match:
+                        self.total_test_count += int(match.group(1))
+                        break
             
             if self.verbose or not passed:
-                output = result.stdout + result.stderr
                 self.print_test_result(test_name, passed, output)
             else:
                 self.print_test_result(test_name, passed)
@@ -124,35 +157,42 @@ class TestRunner:
         self.print_header("OFFLINE TESTS")
         
         tests = [
+            # Legacy unittest tests
             {
-                'name': 'HW_Mgmt_Logger - Main Tests',
+                'name': 'HW_Mgmt_Logger - Main Tests (unittest)',
                 'cmd': ['python3', 'test_hw_mgmt_logger.py', '--random-iterations', '5', '--verbosity', '1'],
                 'cwd': self.offline_dir / 'hw_management_lib' / 'HW_Mgmt_Logger'
             },
             {
-                'name': 'HW_Mgmt_Logger - Advanced Tests',
+                'name': 'HW_Mgmt_Logger - Advanced Tests (unittest)',
                 'cmd': ['python3', 'advanced_tests.py', '-v'],
                 'cwd': self.offline_dir / 'hw_management_lib' / 'HW_Mgmt_Logger'
             },
             {
-                'name': 'ASIC Temperature Populate',
+                'name': 'ASIC Temperature Populate (unittest)',
                 'cmd': ['python3', 'test_asic_temp_populate.py', '-v'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'asic_populate_temperature'
             },
             {
-                'name': 'Module Populate - Simple Test',
+                'name': 'Module Populate - Simple Test (unittest)',
                 'cmd': ['python3', 'simple_test.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate'
             },
             {
-                'name': 'Module Temperature Populate',
-                'cmd': ['python3', 'test_module_temp_populate.py'],
+                'name': 'Module Temperature Populate (unittest)',
+                'cmd': ['python3', 'legacy_module_temp_populate.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate'
             },
             {
-                'name': 'Module Temperature Populate (Extended)',
-                'cmd': ['python3', 'test_module_temp_populate.py'],
+                'name': 'Module Temperature Populate Extended (unittest)',
+                'cmd': ['python3', 'legacy_module_temp_populate_extended.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature'
+            },
+            # Pytest tests - auto-discovery (run last)
+            {
+                'name': 'Pytest Tests (offline)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/', '--tb=short', '--ignore=offline/hw_management_lib', '--ignore=offline/hw_mgmgt_sync', '--ignore=offline/thermal_control'],
+                'cwd': self.tests_dir
             },
         ]
         
@@ -185,13 +225,17 @@ class TestRunner:
         """Print test execution summary"""
         self.print_header("TEST SUMMARY")
         
-        total = len(self.passed_tests) + len(self.failed_tests)
+        total_suites = len(self.passed_tests) + len(self.failed_tests)
         
-        print(f"{Colors.GREEN}Passed:{Colors.RESET} {len(self.passed_tests)}/{total}")
-        print(f"{Colors.RED}Failed:{Colors.RESET} {len(self.failed_tests)}/{total}")
+        print(f"{Colors.CYAN}Test Suites:{Colors.RESET}")
+        print(f"  {Colors.GREEN}Passed:{Colors.RESET} {len(self.passed_tests)}/{total_suites}")
+        print(f"  {Colors.RED}Failed:{Colors.RESET} {len(self.failed_tests)}/{total_suites}")
+        
+        if self.total_test_count > 0:
+            print(f"\n{Colors.CYAN}Total Individual Tests:{Colors.RESET} {Colors.BOLD}{self.total_test_count}{Colors.RESET}")
         
         if self.failed_tests:
-            print(f"\n{Colors.RED}Failed tests:{Colors.RESET}")
+            print(f"\n{Colors.RED}Failed test suites:{Colors.RESET}")
             for test in self.failed_tests:
                 print(f"  - {test}")
         

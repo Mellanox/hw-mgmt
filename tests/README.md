@@ -55,6 +55,7 @@ tests/
 │
 ├── offline/                     # Offline tests (no hardware required)
 │   ├── test_example_pytest.py   # Example pytest tests (use as template)
+│   ├── test_hw_management_lib.py  # Comprehensive hw_management_lib tests (55+ tests)
 │   │
 │   ├── hw_management_lib/       # hw_management_lib.py tests
 │   │   └── HW_Mgmt_Logger/
@@ -101,13 +102,11 @@ python3 test.py --offline -v
 - Automatic cache cleanup
 - Timeout protection (5 minutes per test)
 
-**Current Tests:**
-- HW_Mgmt_Logger - Main Tests (16 tests)
-- HW_Mgmt_Logger - Advanced Tests (10 tests)
-- ASIC Temperature Populate
-- Module Populate - Simple Test
-- Module Temperature Populate
-- Module Temperature Populate (Extended)
+**Test Coverage:**
+- hw_management_lib.py (comprehensive pytest suite + legacy unittest suites)
+- hw_management_sync.py (ASIC and module population tests)
+- BMC accessor tests
+- Thermal control tests
 
 ### 2. Pytest Runner
 
