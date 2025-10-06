@@ -101,6 +101,8 @@ class HW_Mgmt_Logger(object):
     MAX_MSG_TIMEOUT_HASH_SIZE = 50
     MSG_HASH_TIMEOUT = 3600000  # 60 * 60 * 1000 pre-computed
 
+    LOG_REPEAT_UNLIMITED = 4294836225
+
     def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=0, syslog_repeat=0):
         """
         Initialize the Hardware Management Logger.
@@ -444,7 +446,7 @@ class HW_Mgmt_Logger(object):
         @param repeat: max count of the message to display in log
         @summary:
             if repeat > 0 then message will be logged to log "repeat" times.
-            if repeat == 0 then message will be logged to log unlimited times
+            if repeat == 0 then message will not be logged to log
 
             if id == None just print log (no start-stop markers)
             if id != None then save to hash, message for log start/stop event
@@ -476,7 +478,7 @@ class HW_Mgmt_Logger(object):
         # msg is not empty
         if msg:
             if repeat == 0:
-                log_emit = True
+                log_emit = False
             else:
                 if id_hash:
                     if id_hash in log_hash:
