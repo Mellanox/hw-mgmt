@@ -101,7 +101,9 @@ class HW_Mgmt_Logger(object):
     MAX_MSG_TIMEOUT_HASH_SIZE = 50
     MSG_HASH_TIMEOUT = 3600000  # 60 * 60 * 1000 pre-computed
 
-    def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=0, syslog_repeat=0):
+    LOG_REPEAT_UNLIMITED = 4294836225
+
+    def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=LOG_REPEAT_UNLIMITED, syslog_repeat=LOG_REPEAT_UNLIMITED):
         """
         Initialize the Hardware Management Logger.
 
@@ -123,7 +125,7 @@ class HW_Mgmt_Logger(object):
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(self.DEBUG)
         self.logger.propagate = False
-        self.logger_fh = None
+        self._suspend = True
         self._syslog = None
         self._syslog_min_log_priority = self.CRITICAL  # Initialize to high level
 
@@ -143,6 +145,7 @@ class HW_Mgmt_Logger(object):
         self.set_param(ident, log_file, log_level, syslog_level)
         for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
             setattr(self, level, self._make_log_level(level))
+        self.resume()
 
     def __del__(self):
         """
@@ -212,6 +215,20 @@ class HW_Mgmt_Logger(object):
             self._syslog.closelog()
             self._syslog = None
 
+    def suspend(self):
+        """
+        @summary:
+            Suspend logging
+        """
+        self._suspend = True
+
+    def resume(self):
+        """
+        @summary:
+            Resume logging
+        """
+        self._suspend = False
+
     def set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
         @summary:
@@ -244,25 +261,18 @@ class HW_Mgmt_Logger(object):
                 elif not os.access(log_dir, os.W_OK):
                     raise PermissionError(f"Cannot write to log directory: {log_dir}")
 
+        self.logger.setLevel(log_level)
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-
-        # Clean up existing handler if it exists (for repeated calls to set_param)
-        if self.logger_fh:
-            self.logger_fh.close()
-            self.logger.removeHandler(self.logger_fh)
-            self.logger_fh = None
-
         if log_file:
             if any(std_file in log_file for std_file in ["stdout", "stderr"]):
-                self.logger_fh = logging.StreamHandler()
+                logger_fh = logging.StreamHandler()
             else:
-                self.logger_fh = RotatingFileHandler(log_file,
-                                                     maxBytes=self.MAX_LOG_FILE_SIZE,
-                                                     backupCount=self.MAX_LOG_FILE_BACKUP_COUNT)
+                logger_fh = RotatingFileHandler(log_file,
+                                                maxBytes=self.MAX_LOG_FILE_SIZE,
+                                                backupCount=self.MAX_LOG_FILE_BACKUP_COUNT)
 
-            self.logger_fh.setFormatter(formatter)
-            self.logger_fh.setLevel(log_level)
-            self.logger.addHandler(self.logger_fh)
+            logger_fh.setFormatter(formatter)
+            self.logger.addHandler(logger_fh)
 
         if syslog_level:
             self.init_syslog(log_identifier=ident, syslog_level=syslog_level)
@@ -305,6 +315,7 @@ class HW_Mgmt_Logger(object):
         self.close_syslog()
 
         # Clean up only this logger's handlers (don't shutdown all logging)
+        self.suspend()
         handler_list = self.logger.handlers[:]
         for handler in handler_list:
             try:
@@ -314,20 +325,10 @@ class HW_Mgmt_Logger(object):
                 pass  # Handler might already be closed
             self.logger.removeHandler(handler)
 
-        # Clear the reference to our file handler
-        self.logger_fh = None
-
         with self._syslog_hash_lock:
             self.syslog_hash.clear()
         with self._log_hash_lock:
             self.log_hash.clear()
-
-    def close_log_handler(self):
-        if self.logger_fh:
-            self.logger_fh.flush()
-            self.logger_fh.close()
-            self.logger.removeHandler(self.logger_fh)
-            self.logger_fh = None
 
     def log_handler(self, level, msg="", id=None, log_repeat=None, syslog_repeat=None):
         """
@@ -348,6 +349,10 @@ class HW_Mgmt_Logger(object):
         @param syslog_repeat: Maximum number of times to log repeated messages to syslog before collapsing.
         @param log_repeat: Maximum number of times to log repeated messages to file before collapsing.
         """
+
+        if self._suspend:
+            return
+
         if log_repeat is None:
             log_repeat = self.log_repeat
 
@@ -377,7 +382,7 @@ class HW_Mgmt_Logger(object):
         if self._syslog:
             # CRITICAL always goes to syslog (regardless of priority threshold)
             if level == self.CRITICAL:
-                syslog_msg = msg,
+                syslog_msg = msg
                 syslog_emit = True
             # Other levels only if they meet priority threshold
             elif level >= self._syslog_min_log_priority:
@@ -387,12 +392,12 @@ class HW_Mgmt_Logger(object):
         # Handle file logging (independent of syslog logging)
         log_emit = False
         log_msg = msg  # Initialize log_msg
-        if self.logger_fh and level >= self.logger_fh.level:
+        if level >= self.logger.level:
             log_msg, log_emit = self.push_log(msg, id, log_repeat)
 
         # Perform actual logging operations
         try:
-            if log_emit and self.logger_fh:
+            if log_emit:
                 self.logger.log(level, log_msg)
             if syslog_emit and self._syslog:
                 self.syslog_log(level, syslog_msg)
@@ -444,7 +449,7 @@ class HW_Mgmt_Logger(object):
         @param repeat: max count of the message to display in log
         @summary:
             if repeat > 0 then message will be logged to log "repeat" times.
-            if repeat == 0 then message will be logged to log unlimited times
+            if repeat == 0 then message will not be logged to log
 
             if id == None just print log (no start-stop markers)
             if id != None then save to hash, message for log start/stop event
@@ -476,7 +481,7 @@ class HW_Mgmt_Logger(object):
         # msg is not empty
         if msg:
             if repeat == 0:
-                log_emit = True
+                log_emit = False
             else:
                 if id_hash:
                     if id_hash in log_hash:
