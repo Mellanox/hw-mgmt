@@ -39,8 +39,6 @@ This test suite provides detailed testing of ASIC temperature population functio
 with beautiful colored output, error reporting, and configurable iteration testing.
 """
 
-from hw_management_sync import asic_temp_populate, sdk_temp2degree, CONST, LOGGER
-import hw_management_sync
 import sys
 import os
 import unittest
@@ -55,9 +53,11 @@ import traceback
 import time
 
 # Add the main module to the path
-sys.path.insert(0, '/auto/mtrsysgwork/oleksandrs/hw-managment/hw_mgmt_clean/usr/usr/bin')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'usr', 'usr', 'bin'))
 
 # Import the module under test
+from hw_management_sync import asic_temp_populate, sdk_temp2degree, CONST, LOGGER
+import hw_management_sync
 
 # ANSI color codes for beautiful output
 

@@ -61,7 +61,7 @@ import importlib.util
 
 # Add hw_management_sync.py to path for import
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..'))
 hw_mgmt_path = os.path.join(project_root, 'usr', 'usr', 'bin')
 sys.path.insert(0, hw_mgmt_path)
 
@@ -95,6 +95,10 @@ class TestModuleTempPopulate(unittest.TestCase):
         # Inject our mock CONST if needed
         if not hasattr(cls.hw_mgmt_module, 'CONST'):
             cls.hw_mgmt_module.CONST = MockCONST()
+        
+        # Ensure LOGGER is mocked if it's None
+        if cls.hw_mgmt_module.LOGGER is None:
+            cls.hw_mgmt_module.LOGGER = MagicMock()
 
     def setUp(self):
         """Set up test fixtures before each test method"""

@@ -32,13 +32,12 @@ def setup_import_path(hw_mgmt_path=None):
         else:
             hw_mgmt_dir = os.path.abspath(hw_mgmt_path)
     else:
-        # Auto-detect
-        if os.path.exists('./hw_management_sync.py'):
-            hw_mgmt_dir = '.'
-        elif os.path.exists('./bin/hw_management_sync.py'):
-            hw_mgmt_dir = './bin'
-        else:
-            raise FileNotFoundError("Cannot find hw_management_sync.py")
+        # Auto-detect - use relative path from test location
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hw_mgmt_dir = os.path.join(script_dir, '..', '..', '..', '..', 'usr', 'usr', 'bin')
+        hw_mgmt_dir = os.path.abspath(hw_mgmt_dir)
+        if not os.path.exists(os.path.join(hw_mgmt_dir, 'hw_management_sync.py')):
+            raise FileNotFoundError(f"Cannot find hw_management_sync.py in {hw_mgmt_dir}")
 
     hw_mgmt_dir = os.path.abspath(hw_mgmt_dir)
     if hw_mgmt_dir not in sys.path:

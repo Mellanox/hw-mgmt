@@ -55,7 +55,7 @@ from unittest.mock import patch, MagicMock
 from pathlib import Path
 
 # Add the library path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'usr', 'usr', 'bin'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'usr', 'usr', 'bin'))
 
 try:
     from hw_management_lib import HW_Mgmt_Logger
