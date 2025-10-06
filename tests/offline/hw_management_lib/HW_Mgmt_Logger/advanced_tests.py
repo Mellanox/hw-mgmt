@@ -57,7 +57,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 try:
     from hw_management_lib import HW_Mgmt_Logger
 except ImportError as e:
-    print(f"[FAIL] Failed to import HW_Mgmt_Logger: {e}")
+    print(f"❌ Failed to import HW_Mgmt_Logger: {e}")
     sys.exit(1)
 
 
