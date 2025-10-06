@@ -29,6 +29,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+
 source hw-management-helpers.sh
 declare -A leakage_map
 # Format: leakage_map[ID]="address:offset"
@@ -41,15 +42,49 @@ leakage_map[aggr]="0x20fe:0"
 
 function usage() {
     cat <<EOF
-Usage: $0 [OPTIONS]
+hw-management-leakage-mock.sh - Hardware Management Leakage Sensor Mock Tool
 
-Options:
-  -s <id>   Simulate leakage for the given sensor id (unset bit at offset)
-  -r <id>   Revert leakage for the given sensor id (set bit at offset)
-  -c        Clear all leakages (revert all leakage sensors)
-  -h        Show this help message
+DESCRIPTION:
+    This script allows you to simulate and control leakage sensor states on supported
+    NVIDIA switch systems. It manipulates hardware registers to mock leakage detection
+    for testing and validation purposes.
 
-Valid leakage ids: ${!leakage_map[@]}
+USAGE: 
+    $0 [OPTIONS]
+
+OPTIONS:
+    -s <id>     Simulate leakage for the given sensor ID
+                (unsets the corresponding bit at the register offset)
+    
+    -r <id>     Revert/clear leakage for the given sensor ID  
+                (sets the corresponding bit at the register offset)
+    
+    -c          Clear all leakages (revert all leakage sensors to normal state)
+    
+    -h          Show this help message and exit
+
+SUPPORTED LEAKAGE SENSOR IDs:
+    ${!leakage_map[@]}
+
+EXAMPLES:
+    # Simulate leakage on sensor 1
+    $0 -s 1
+    
+    # Revert leakage on sensor 2  
+    $0 -r 2
+    
+    # Clear all simulated leakages
+    $0 -c
+    
+    # Show help
+    $0 -h
+
+NOTES:
+    - This tool only works on supported NVIDIA switch systems (N5-N9 series)
+    - Requires iorw utility for hardware register access
+    - Leakage state: 0 = leakage detected, 1 = no leakage detected
+    - Use with caution as it directly modifies hardware registers
+
 EOF
 }
 
@@ -59,10 +94,6 @@ function is_system_supported ()
     local gb200_rgx="N5[0-4][0-9]+_LD"
     pn=$(cat $pn_file)
     if [[ $pn =~ $nvl_rgx ]]; then
-        # if [[ $pn =~ $gb200_rgx ]]; then
-            #TODO: check MGMT CPLD version >= 0900
-            # true
-        # fi
         true
     fi
     false
