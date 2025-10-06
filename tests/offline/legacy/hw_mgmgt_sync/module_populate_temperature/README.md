@@ -160,28 +160,28 @@ Test configuration: 36 modules, offset=1
 ================================================================================
 
 🧪 Testing normal condition with all files present...
-✅ Normal condition test passed
+[PASS] Normal condition test passed
 
 🧪 Testing default temperature values when input read error...
-✅ Input read error test passed
+[PASS] Input read error test passed
 
 🧪 Testing temperature values when other attributes read error...
-✅ Other attributes read error test passed
+[PASS] Other attributes read error test passed
 
 🧪 Testing error handling - no crash conditions...
-✅ Error handling test passed - no crashes occurred
+[PASS] Error handling test passed - no crashes occurred
 
 🧪 Testing random configuration of all 36 modules...
-✅ Random configuration test passed - processed X modules
+[PASS] Random configuration test passed - processed X modules
 
 🧪 Testing sdk_temp2degree function...
-✅ sdk_temp2degree function test passed
+[PASS] sdk_temp2degree function test passed
 
 🧪 Testing module_count argument validation...
-✅ Module count argument validation test passed
+[PASS] Module count argument validation test passed
 
 🧪 Testing SW control mode modules are ignored...
-✅ SW control mode ignored test passed
+[PASS] SW control mode ignored test passed
 
 --------------------------------------------------------------------------------
 Ran 8 tests in X.XXXs
@@ -191,14 +191,14 @@ OK
 
 ## Test Requirements Met
 
-✅ **Basic Module Configuration**: Uses specified argument list with 36 modules  
-✅ **Normal Condition Testing**: All files created and filled with values  
-✅ **Input Read Error**: Default temperature values when input read fails  
-✅ **Other Attributes Error**: Temperature values when other attributes fail  
-✅ **Error Handling**: No-crash condition for all reading errors  
-✅ **Random Testing**: Comprehensive testing of all module combinations  
-✅ **Software Control**: Proper handling of SW_CONTROL mode modules  
-✅ **Temperature Conversion**: Accurate sdk_temp2degree function testing  
+[PASS] **Basic Module Configuration**: Uses specified argument list with 36 modules  
+[PASS] **Normal Condition Testing**: All files created and filled with values  
+[PASS] **Input Read Error**: Default temperature values when input read fails  
+[PASS] **Other Attributes Error**: Temperature values when other attributes fail  
+[PASS] **Error Handling**: No-crash condition for all reading errors  
+[PASS] **Random Testing**: Comprehensive testing of all module combinations  
+[PASS] **Software Control**: Proper handling of SW_CONTROL mode modules  
+[PASS] **Temperature Conversion**: Accurate sdk_temp2degree function testing  
 
 ## Dependencies
 

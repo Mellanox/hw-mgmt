@@ -52,7 +52,7 @@ echo
 echo "==================================="
 
 if [ $TEST_RESULT -eq 0 ]; then
-    echo "✅ All tests PASSED!"
+    echo "[PASS] All tests PASSED!"
     echo
     echo "Test Coverage Summary:"
     echo "- SW mode behavior (no thermal file modifications)"
@@ -62,7 +62,7 @@ if [ $TEST_RESULT -eq 0 ]; then
     echo "- Helper function validation"
     echo "- Constants validation"
 else
-    echo "❌ Some tests FAILED!"
+    echo "[FAIL] Some tests FAILED!"
     echo
     echo "Please check the test output above for details."
 fi

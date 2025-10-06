@@ -707,28 +707,31 @@ class TestThermalControlIntegration:
 # COMPREHENSIVE TEST SUMMARY
 # =============================================================================
 
-def test_thermal_control_comprehensive_summary():
-    """Summary of comprehensive thermal control test coverage"""
+def test_thermal_control_coverage_info():
+    """Informational summary of thermal control test coverage"""
     print("\n" + "="*80)
-    print("[PASS] THERMAL CONTROL COMPREHENSIVE TEST COVERAGE")
+    print("[INFO] THERMAL CONTROL COMPREHENSIVE TEST COVERAGE")
     print("="*80)
-    print("[PASS] CONST class and constants: TESTED")
-    print("[PASS] Utility functions (str2bool, current_milli_time, etc.): TESTED")  
-    print("[PASS] Logger and SyslogFilter classes: TESTED")
-    print("[PASS] RepeatedTimer class: TESTED")
-    print("[PASS] hw_managemet_file_op class: TESTED")
-    print("[PASS] iterate_err_counter class: TESTED")
-    print("[PASS] system_device base class: TESTED")
-    print("[PASS] thermal_sensor class: TESTED")
-    print("[PASS] thermal_module_sensor class: TESTED")
-    print("[PASS] thermal_asic_sensor class: TESTED")
-    print("[PASS] psu_fan_sensor class: TESTED")
-    print("[PASS] fan_sensor class: TESTED")
-    print("[PASS] ambiant_thermal_sensor class: TESTED")
-    print("[PASS] dpu_module class: TESTED")
-    print("[PASS] Integration and workflow tests: TESTED")
-    print("[PASS] Error handling and edge cases: TESTED")
+    print("[INFO] CONST class and constants: TESTED")
+    print("[INFO] Utility functions (str2bool, current_milli_time, etc.): TESTED")  
+    print("[INFO] Logger and SyslogFilter classes: TESTED")
+    print("[INFO] RepeatedTimer class: TESTED")
+    print("[INFO] hw_managemet_file_op class: TESTED")
+    print("[INFO] iterate_err_counter class: TESTED")
+    print("[INFO] system_device base class: TESTED")
+    print("[INFO] thermal_sensor class: TESTED")
+    print("[INFO] thermal_module_sensor class: TESTED")
+    print("[INFO] thermal_asic_sensor class: TESTED")
+    print("[INFO] psu_fan_sensor class: TESTED")
+    print("[INFO] fan_sensor class: TESTED")
+    print("[INFO] ambiant_thermal_sensor class: TESTED")
+    print("[INFO] dpu_module class: TESTED")
+    print("[INFO] Integration and workflow tests: TESTED")
+    print("[INFO] Error handling and edge cases: TESTED")
     print("="*80)
     print("[INFO] TOTAL: 50+ comprehensive tests covering all major components")
-    print("[SUCCESS] Thermal control functionality preserved and tested!")
+    print("[INFO] Thermal control functionality preserved and tested!")
     print("="*80)
+    
+    # This is just informational - always passes as it's not testing functionality
+    assert True, "This is an informational summary, not a functional test"

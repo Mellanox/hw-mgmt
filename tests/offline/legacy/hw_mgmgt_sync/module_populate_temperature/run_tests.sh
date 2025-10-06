@@ -59,7 +59,7 @@ echo -e "${BLUE}========================================${NC}"
 HW_MGMT_PATH="$PROJECT_ROOT/usr/usr/bin/hw_management_sync.py"
 
 if [ ! -f "$HW_MGMT_PATH" ]; then
-    echo -e "${RED}❌ Could not find hw_management_sync.py at: $HW_MGMT_PATH${NC}"
+    echo -e "${RED}[FAIL] Could not find hw_management_sync.py at: $HW_MGMT_PATH${NC}"
     echo -e "${YELLOW}Please ensure you're running this from the correct directory${NC}"
     exit 1
 fi
@@ -72,7 +72,7 @@ cd "$SCRIPT_DIR"
 
 # Check if test file exists
 if [ ! -f "test_module_temp_populate.py" ]; then
-    echo -e "${RED}❌ Test file not found: test_module_temp_populate.py${NC}"
+    echo -e "${RED}[FAIL] Test file not found: test_module_temp_populate.py${NC}"
     exit 1
 fi
 
@@ -82,10 +82,10 @@ echo ""
 
 if python3 run_tests.py --hw-mgmt-path "$HW_MGMT_PATH" "$@"; then
     echo ""
-    echo -e "${GREEN}✅ All tests completed successfully!${NC}"
+    echo -e "${GREEN}[PASS] All tests completed successfully!${NC}"
     exit 0
 else
     echo ""
-    echo -e "${RED}❌ Some tests failed!${NC}"
+    echo -e "${RED}[FAIL] Some tests failed!${NC}"
     exit 1
 fi

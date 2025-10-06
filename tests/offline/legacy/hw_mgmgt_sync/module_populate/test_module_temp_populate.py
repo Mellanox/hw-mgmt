@@ -207,7 +207,7 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             # Verify module counter file
             self._verify_module_counter()
-            print("✓ Module counter file verified")
+            print("[PASS] Module counter file verified")
 
     def _verify_files_not_created(self, module_name, written_files):
         """Verify that thermal files are not created for SW control modules"""

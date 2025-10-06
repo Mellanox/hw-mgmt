@@ -60,7 +60,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'us
 try:
     from hw_management_lib import HW_Mgmt_Logger
 except ImportError as e:
-    print(f"❌ Failed to import HW_Mgmt_Logger: {e}")
+    print(f"[FAIL] Failed to import HW_Mgmt_Logger: {e}")
     sys.exit(1)
 
 # Color codes for beautiful output
@@ -84,9 +84,9 @@ class Colors:
 class Icons:
     try:
         # Test if Unicode emojis work
-        test_encode = "✅".encode(sys.stdout.encoding or 'utf-8')
-        PASS = f"{Colors.GREEN}✅{Colors.RESET}"
-        FAIL = f"{Colors.RED}❌{Colors.RESET}"
+        test_encode = "[PASS]".encode(sys.stdout.encoding or 'utf-8')
+        PASS = f"{Colors.GREEN}[PASS]{Colors.RESET}"
+        FAIL = f"{Colors.RED}[FAIL]{Colors.RESET}"
         SKIP = f"{Colors.YELLOW}⏭️{Colors.RESET}"
         INFO = f"{Colors.BLUE}ℹ️{Colors.RESET}"
         WARNING = f"{Colors.YELLOW}⚠️{Colors.RESET}"

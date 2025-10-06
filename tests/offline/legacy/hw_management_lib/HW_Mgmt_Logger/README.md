@@ -85,7 +85,7 @@ python3 -m unittest test_hw_mgmt_logger -v
 
 ## 📊 Output Examples
 
-### ✅ Successful Test Run
+### [PASS] Successful Test Run
 ```
 ================================================================================
 📝 HW_Mgmt_Logger Comprehensive Test Suite
@@ -94,10 +94,10 @@ python3 -m unittest test_hw_mgmt_logger -v
 ℹ️ Test verbosity: 2
 
 ℹ️ Running: TestHWMgmtLogger.test_basic_initialization
-✅ test_basic_initialization PASSED
+[PASS] test_basic_initialization PASSED
 
 ℹ️ Running: TestHWMgmtLogger.test_file_logging_initialization
-✅ test_file_logging_initialization PASSED
+[PASS] test_file_logging_initialization PASSED
 
 🎲 Random test iteration 1/10
 🎲 Random test iteration 2/10
@@ -106,19 +106,19 @@ python3 -m unittest test_hw_mgmt_logger -v
 ================================================================================
 📝 Test Results Summary
 ================================================================================
-✅ Passed: 45
-❌ Failed: 0
-❌ Errors: 0
+[PASS] Passed: 45
+[FAIL] Failed: 0
+[FAIL] Errors: 0
 ⏭️ Skipped: 0
 ℹ️ Total: 45
 ℹ️ Time: 12.34s
 
-✅ ALL TESTS PASSED! 🎉
+[PASS] ALL TESTS PASSED! 🎉
 ```
 
-### ❌ Failed Test with Detailed Error Report
+### [FAIL] Failed Test with Detailed Error Report
 ```
-❌ test_parameter_validation FAILED
+[FAIL] test_parameter_validation FAILED
 
 ============================================================
 FAILURE DETAILS
@@ -160,27 +160,27 @@ Traceback:
 
 The test suite covers the following areas:
 
-### Core Functionality ✅
+### Core Functionality [PASS]
 - [x] Logger initialization with various parameters
 - [x] File logging (files, stdout, stderr)
 - [x] Syslog integration
 - [x] Log level management
 - [x] Message formatting and encoding
 
-### Advanced Features ✅
+### Advanced Features [PASS]
 - [x] Message repeat/collapse functionality
 - [x] Thread safety
 - [x] Resource management and cleanup
 - [x] Unicode and special character support
 - [x] Parameter validation
 
-### Error Handling ✅
+### Error Handling [PASS]
 - [x] Invalid parameter detection
 - [x] File system error handling
 - [x] Syslog error handling
 - [x] Memory and resource limits
 
-### Randomized Testing ✅
+### Randomized Testing [PASS]
 - [x] Random message generation
 - [x] Random parameter combinations
 - [x] Random repeat patterns

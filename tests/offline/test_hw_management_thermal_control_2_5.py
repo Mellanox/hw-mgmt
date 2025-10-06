@@ -784,28 +784,31 @@ class TestThermalControl25Performance:
 # COMPREHENSIVE V2.5 TEST SUMMARY
 # =============================================================================
 
-def test_thermal_control_v25_comprehensive_summary():
-    """Summary of comprehensive thermal control v2.5 test coverage"""
+def test_thermal_control_v25_coverage_info():
+    """Informational summary of thermal control v2.5 test coverage"""
     print("\n" + "="*80)
-    print("[PASS] THERMAL CONTROL V2.5 COMPREHENSIVE TEST COVERAGE")
+    print("[INFO] THERMAL CONTROL V2.5 COMPREHENSIVE TEST COVERAGE")
     print("="*80)
-    print("[PASS] Enhanced CONST class and v2.5 constants: TESTED")
-    print("[PASS] V2.5 utility functions (natural_key, enhanced timing): TESTED")
-    print("[PASS] Enhanced Logger and SyslogFilter classes: TESTED")
-    print("[PASS] pwm_regulator_simple class (new): TESTED")
-    print("[PASS] pwm_regulator_dynamic class (enhanced): TESTED")
-    print("[PASS] Enhanced thermal_sensor class: TESTED")
-    print("[PASS] Enhanced thermal_module_sensor class: TESTED")
-    print("[PASS] thermal_module_tec_sensor class (new): TESTED")
-    print("[PASS] Enhanced thermal_asic_sensor class: TESTED")
-    print("[PASS] V2.5 multi-ASIC thermal management: TESTED")
-    print("[PASS] Advanced thermal algorithms: TESTED")
-    print("[PASS] Enhanced thermal policy management: TESTED")
-    print("[PASS] V2.5 performance optimizations: TESTED")
-    print("[PASS] Enhanced error recovery mechanisms: TESTED")
-    print("[PASS] Thermal data persistence: TESTED")
+    print("[INFO] Enhanced CONST class and v2.5 constants: TESTED")
+    print("[INFO] V2.5 utility functions (natural_key, enhanced timing): TESTED")
+    print("[INFO] Enhanced Logger and SyslogFilter classes: TESTED")
+    print("[INFO] pwm_regulator_simple class (new): TESTED")
+    print("[INFO] pwm_regulator_dynamic class (enhanced): TESTED")
+    print("[INFO] Enhanced thermal_sensor class: TESTED")
+    print("[INFO] Enhanced thermal_module_sensor class: TESTED")
+    print("[INFO] thermal_module_tec_sensor class (new): TESTED")
+    print("[INFO] Enhanced thermal_asic_sensor class: TESTED")
+    print("[INFO] V2.5 multi-ASIC thermal management: TESTED")
+    print("[INFO] Advanced thermal algorithms: TESTED")
+    print("[INFO] Enhanced thermal policy management: TESTED")
+    print("[INFO] V2.5 performance optimizations: TESTED")
+    print("[INFO] Enhanced error recovery mechanisms: TESTED")
+    print("[INFO] Thermal data persistence: TESTED")
     print("="*80)
     print("[INFO] TOTAL: 60+ comprehensive tests covering all v2.5 enhancements")
-    print("[SUCCESS] Thermal control v2.5 functionality fully preserved and tested!")
-    print("[SUCCESS] Advanced thermal management capabilities verified!")
+    print("[INFO] Thermal control v2.5 functionality fully preserved and tested!")
+    print("[INFO] Advanced thermal management capabilities verified!")
     print("="*80)
+    
+    # This is just informational - always passes as it's not testing functionality
+    assert True, "This is an informational summary, not a functional test"

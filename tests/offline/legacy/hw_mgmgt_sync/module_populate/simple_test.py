@@ -56,31 +56,31 @@ def main():
         print(f"Found hw_management_sync.py in: {hw_mgmt_dir}")
 
         from hw_management_sync import CONST, sdk_temp2degree, module_temp_populate
-        print("✅ Import successful!")
-        print(f"✅ CONST.SDK_FW_CONTROL = {CONST.SDK_FW_CONTROL}")
-        print(f"✅ CONST.SDK_SW_CONTROL = {CONST.SDK_SW_CONTROL}")
-        print(f"✅ sdk_temp2degree(25) = {sdk_temp2degree(25)}")
-        print(f"✅ sdk_temp2degree(-10) = {sdk_temp2degree(-10)}")
+        print("[PASS] Import successful!")
+        print(f"[PASS] CONST.SDK_FW_CONTROL = {CONST.SDK_FW_CONTROL}")
+        print(f"[PASS] CONST.SDK_SW_CONTROL = {CONST.SDK_SW_CONTROL}")
+        print(f"[PASS] sdk_temp2degree(25) = {sdk_temp2degree(25)}")
+        print(f"[PASS] sdk_temp2degree(-10) = {sdk_temp2degree(-10)}")
 
         # Test temperature conversion formula
         assert sdk_temp2degree(25) == 25 * 125, "Positive temperature conversion failed"
         assert sdk_temp2degree(-10) == 0xffff + (-10) + 1, "Negative temperature conversion failed"
-        print("✅ Temperature conversion tests PASSED")
+        print("[PASS] Temperature conversion tests PASSED")
 
         # Test constants
         assert CONST.SDK_FW_CONTROL == 0, "SDK_FW_CONTROL should be 0"
         assert CONST.SDK_SW_CONTROL == 1, "SDK_SW_CONTROL should be 1"
-        print("✅ Constants tests PASSED")
+        print("[PASS] Constants tests PASSED")
 
         # Test function exists
         assert callable(module_temp_populate), "module_temp_populate should be callable"
-        print("✅ Function existence tests PASSED")
+        print("[PASS] Function existence tests PASSED")
 
-        print("✅ ALL TESTS PASSED!")
-        print(f"✅ Successfully tested folder-agnostic import from: {hw_mgmt_dir}")
+        print("[PASS] ALL TESTS PASSED!")
+        print(f"[PASS] Successfully tested folder-agnostic import from: {hw_mgmt_dir}")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         return 1
 
     return 0

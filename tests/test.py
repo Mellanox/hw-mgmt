@@ -659,8 +659,8 @@ class HWMGMTTestRunner:
                   bmc_ip: str = "127.0.0.1", markers: str = None) -> TestResult:
         """Run tests based on specified type"""
         
-        # Create pytest command
-        cmd = ["python", "-m", "pytest"]
+        # Create pytest command with CI-friendly options (no special characters/progress bars)
+        cmd = ["python", "-m", "pytest", "--tb=short", "-p", "no:sugar"]
         
         # Add paths based on test type
         if test_type == "offline":

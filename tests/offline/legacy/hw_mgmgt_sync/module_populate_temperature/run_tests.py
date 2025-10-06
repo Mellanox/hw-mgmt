@@ -77,19 +77,19 @@ def run_tests(test_file=None, verbose=False, hw_mgmt_path=None):
         test_file = current_dir / "test_module_temp_populate.py"
 
     if not test_file.exists():
-        print(f"❌ Test file not found: {test_file}")
+        print(f"[FAIL] Test file not found: {test_file}")
         return False
 
     if hw_mgmt_path is None:
         hw_mgmt_path = find_hw_mgmt_path()
 
     if hw_mgmt_path is None:
-        print("❌ Could not find hw_management_sync.py")
+        print("[FAIL] Could not find hw_management_sync.py")
         print("Please specify the path using --hw-mgmt-path option")
         return False
 
     if not Path(hw_mgmt_path).exists():
-        print(f"❌ hw_management_sync.py not found at: {hw_mgmt_path}")
+        print(f"[FAIL] hw_management_sync.py not found at: {hw_mgmt_path}")
         return False
 
     print("=" * 80)
@@ -123,15 +123,15 @@ def run_tests(test_file=None, verbose=False, hw_mgmt_path=None):
 
         print("=" * 80)
         if result.returncode == 0:
-            print("✅ All tests passed!")
+            print("[PASS] All tests passed!")
         else:
-            print("❌ Some tests failed!")
+            print("[FAIL] Some tests failed!")
         print("=" * 80)
 
         return result.returncode == 0
 
     except Exception as e:
-        print(f"❌ Error running tests: {e}")
+        print(f"[FAIL] Error running tests: {e}")
         return False
 
 

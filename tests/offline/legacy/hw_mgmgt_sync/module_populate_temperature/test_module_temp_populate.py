@@ -333,10 +333,10 @@ class TestModuleTempPopulate(unittest.TestCase):
                         actual_value = f.read().strip()
                         self.assertEqual(actual_value, expected_value,
                                          f"File {filename} should contain '{expected_value}', got '{actual_value}'")
-                        print(f"         ✅ {filename}: {actual_value}")
+                        print(f"         [PASS] {filename}: {actual_value}")
 
         print("\n🎯 RESULT: All temperature files created successfully with correct values!")
-        print("✅ Normal condition test passed")
+        print("[PASS] Normal condition test passed")
 
     def test_input_read_error_default_values(self):
         """Test 1.2: Default temperature values when input read error occurs"""
@@ -425,10 +425,10 @@ class TestModuleTempPopulate(unittest.TestCase):
                     actual_value = f.read().strip()
                     self.assertEqual(actual_value, expected_value,
                                      f"File {filename} should contain '{expected_value}', got '{actual_value}'")
-                    print(f"      ✅ {filename}: {actual_value} (default value)")
+                    print(f"      [PASS] {filename}: {actual_value} (default value)")
 
         print("\n🎯 RESULT: Input read error handled correctly - all values defaulted to '0'!")
-        print("✅ Input read error test passed")
+        print("[PASS] Input read error test passed")
 
     def test_other_attributes_read_error(self):
         """Test 1.3: Temperature values when other attributes read error occurs"""
@@ -534,14 +534,14 @@ class TestModuleTempPopulate(unittest.TestCase):
                     self.assertEqual(actual_value, expected_value,
                                      f"File {filename} should contain '{expected_value}', got '{actual_value}'")
                     if "temp_input" in filename:
-                        print(f"      ✅ {filename}: {actual_value} (processed from input)")
+                        print(f"      [PASS] {filename}: {actual_value} (processed from input)")
                     elif "status" in filename:
-                        print(f"      ✅ {filename}: {actual_value} (module present)")
+                        print(f"      [PASS] {filename}: {actual_value} (module present)")
                     else:
-                        print(f"      ✅ {filename}: {actual_value} (default value)")
+                        print(f"      [PASS] {filename}: {actual_value} (default value)")
 
         print("\n🎯 RESULT: Partial read errors handled correctly - input processed, thresholds defaulted!")
-        print("✅ Other attributes read error test passed")
+        print("[PASS] Other attributes read error test passed")
 
     def test_error_handling_no_crash(self):
         """Test that function doesn't crash on various error conditions"""
@@ -623,13 +623,13 @@ class TestModuleTempPopulate(unittest.TestCase):
             try:
                 self.hw_mgmt_module.module_temp_populate(self.arg_list, None)
                 print("\n🔍 Function execution completed successfully!")
-                print("   ✅ No exceptions were raised")
-                print("   ✅ Function handled all error conditions gracefully")
-                print("   ✅ Robust error handling confirmed")
+                print("   [PASS] No exceptions were raised")
+                print("   [PASS] Function handled all error conditions gracefully")
+                print("   [PASS] Robust error handling confirmed")
                 print("\n🎯 RESULT: Function demonstrates excellent error resilience!")
-                print("✅ Error handling test passed - no crashes occurred")
+                print("[PASS] Error handling test passed - no crashes occurred")
             except Exception as e:
-                print(f"\n❌ Function crashed with error: {e}")
+                print(f"\n[FAIL] Function crashed with error: {e}")
                 self.fail(f"Function crashed with error: {e}")
 
     def test_random_module_configuration(self):
@@ -715,7 +715,7 @@ class TestModuleTempPopulate(unittest.TestCase):
                     counter_value = f.read().strip()
                     self.assertEqual(counter_value, str(self.arg_list["module_count"]),
                                      f"module_counter should be {self.arg_list['module_count']}")
-                    print(f"   ✅ Module counter file: {counter_value}")
+                    print(f"   [PASS] Module counter file: {counter_value}")
 
                 # Count how many modules were processed
                 processed_modules = 0
@@ -728,15 +728,15 @@ class TestModuleTempPopulate(unittest.TestCase):
                     else:
                         skipped_modules += 1
 
-                print(f"   ✅ Processed modules: {processed_modules}")
-                print(f"   ✅ Skipped modules (SW_CONTROL): {skipped_modules}")
-                print(f"   ✅ Total modules handled: {processed_modules + skipped_modules}")
+                print(f"   [PASS] Processed modules: {processed_modules}")
+                print(f"   [PASS] Skipped modules (SW_CONTROL): {skipped_modules}")
+                print(f"   [PASS] Total modules handled: {processed_modules + skipped_modules}")
 
                 print("\n🎯 RESULT: Large-scale random testing successful!")
-                print(f"✅ Random configuration test passed - processed {processed_modules} modules")
+                print(f"[PASS] Random configuration test passed - processed {processed_modules} modules")
 
             except Exception as e:
-                print(f"\n❌ Random configuration test failed with error: {e}")
+                print(f"\n[FAIL] Random configuration test failed with error: {e}")
                 self.fail(f"Random configuration test failed with error: {e}")
 
     def test_sdk_temp2degree_function(self):
@@ -776,13 +776,13 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Additional verification message
             if input_val >= 0:
                 calculated = input_val * 125
-                print(f"     ✅ Calculation: {input_val} × 125 = {calculated} (matches)")
+                print(f"     [PASS] Calculation: {input_val} × 125 = {calculated} (matches)")
             else:
                 calculated = 0xffff + input_val + 1
-                print(f"     ✅ Calculation: 0x{0xffff:x} + {input_val} + 1 = 0x{calculated:x} ({calculated}) (matches)")
+                print(f"     [PASS] Calculation: 0x{0xffff:x} + {input_val} + 1 = 0x{calculated:x} ({calculated}) (matches)")
 
         print("\n🎯 RESULT: Temperature conversion function working correctly!")
-        print("✅ sdk_temp2degree function test passed")
+        print("[PASS] sdk_temp2degree function test passed")
 
     def test_module_count_argument_validation(self):
         """Test that module_count argument is properly handled"""
@@ -809,14 +809,14 @@ class TestModuleTempPopulate(unittest.TestCase):
         actual_offset = self.arg_list["fout_idx_offset"]
         self.assertEqual(actual_offset, expected_offset,
                          f"fout_idx_offset should be {expected_offset}, got {actual_offset}")
-        print(f"     ✅ fout_idx_offset: {actual_offset} (correct)")
+        print(f"     [PASS] fout_idx_offset: {actual_offset} (correct)")
 
         print(f"   • Checking module_count...")
         expected_count = 36
         actual_count = self.arg_list["module_count"]
         self.assertEqual(actual_count, expected_count,
                          f"module_count should be {expected_count}, got {actual_count}")
-        print(f"     ✅ module_count: {actual_count} (correct)")
+        print(f"     [PASS] module_count: {actual_count} (correct)")
 
         # Test that fin contains the module template
         print(f"   • Checking input path template...")
@@ -824,14 +824,14 @@ class TestModuleTempPopulate(unittest.TestCase):
         actual_fin = self.arg_list["fin"]
         self.assertIn(template_pattern, actual_fin,
                       f"fin should contain '{template_pattern}', got {actual_fin}")
-        print(f"     ✅ Template pattern '{template_pattern}' found in path")
+        print(f"     [PASS] Template pattern '{template_pattern}' found in path")
 
         print(f"   • Complete argument structure:")
         for key, value in self.arg_list.items():
             print(f"     - {key}: {value}")
 
         print("\n🎯 RESULT: Argument configuration matches requirements!")
-        print("✅ Module count argument validation test passed")
+        print("[PASS] Module count argument validation test passed")
 
     def test_sw_control_mode_ignored(self):
         """Test that modules in SW control mode are ignored"""
@@ -914,16 +914,16 @@ class TestModuleTempPopulate(unittest.TestCase):
                 file_exists = os.path.exists(file_path)
                 self.assertFalse(file_exists,
                                  f"File {filename} should not exist for SW control module")
-                print(f"      ✅ {filename}: NOT CREATED (correctly ignored)")
+                print(f"      [PASS] {filename}: NOT CREATED (correctly ignored)")
                 if file_exists:
                     all_ignored = False
 
             if all_ignored:
                 print("\n🎯 RESULT: SW_CONTROL module properly ignored - no files created!")
             else:
-                print("\n❌ RESULT: Some files were incorrectly created for SW_CONTROL module!")
+                print("\n[FAIL] RESULT: Some files were incorrectly created for SW_CONTROL module!")
 
-        print("✅ SW control mode ignored test passed")
+        print("[PASS] SW control mode ignored test passed")
 
 
 def main():

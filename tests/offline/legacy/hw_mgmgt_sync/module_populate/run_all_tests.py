@@ -62,16 +62,16 @@ def test_basic_functionality():
         # Test constants
         assert CONST.SDK_FW_CONTROL == 0, f"SDK_FW_CONTROL should be 0, got {CONST.SDK_FW_CONTROL}"
         assert CONST.SDK_SW_CONTROL == 1, f"SDK_SW_CONTROL should be 1, got {CONST.SDK_SW_CONTROL}"
-        print("✅ Constants test PASSED")
+        print("[PASS] Constants test PASSED")
 
         # Test function existence
         assert callable(module_temp_populate), "module_temp_populate should be callable"
         assert callable(sdk_temp2degree), "sdk_temp2degree should be callable"
-        print("✅ Function existence test PASSED")
+        print("[PASS] Function existence test PASSED")
 
         return True
     except Exception as e:
-        print(f"❌ Basic functionality test FAILED: {e}")
+        print(f"[FAIL] Basic functionality test FAILED: {e}")
         return False
 
 
@@ -94,20 +94,20 @@ def test_temperature_conversion():
         for input_temp, expected, description in test_cases:
             result = sdk_temp2degree(input_temp)
             if result == expected:
-                print(f"  ✅ {description}: sdk_temp2degree({input_temp}) = {result}")
+                print(f"  [PASS] {description}: sdk_temp2degree({input_temp}) = {result}")
                 passed += 1
             else:
-                print(f"  ❌ {description}: sdk_temp2degree({input_temp}) = {result}, expected {expected}")
+                print(f"  [FAIL] {description}: sdk_temp2degree({input_temp}) = {result}, expected {expected}")
 
         if passed == total:
-            print(f"✅ Temperature conversion test PASSED ({passed}/{total})")
+            print(f"[PASS] Temperature conversion test PASSED ({passed}/{total})")
             return True
         else:
-            print(f"❌ Temperature conversion test FAILED ({passed}/{total})")
+            print(f"[FAIL] Temperature conversion test FAILED ({passed}/{total})")
             return False
 
     except Exception as e:
-        print(f"❌ Temperature conversion test FAILED: {e}")
+        print(f"[FAIL] Temperature conversion test FAILED: {e}")
         return False
 
 
@@ -141,11 +141,11 @@ def test_random_module_states():
         present_count = sum(1 for state in module_states if state['present'] == 1)
 
         print(f"  📊 Summary: {fw_control_count} FW control, {sw_control_count} SW control, {present_count} present")
-        print("✅ Random module states test PASSED")
+        print("[PASS] Random module states test PASSED")
         return True
 
     except Exception as e:
-        print(f"❌ Random module states test FAILED: {e}")
+        print(f"[FAIL] Random module states test FAILED: {e}")
         return False
 
 
@@ -161,12 +161,12 @@ def test_folder_agnostic_functionality(hw_mgmt_dir):
 
         assert actual_dir == expected_dir, f"Module loaded from {actual_dir}, expected {expected_dir}"
 
-        print(f"  ✅ Module loaded from: {actual_dir}")
-        print("✅ Folder-agnostic functionality test PASSED")
+        print(f"  [PASS] Module loaded from: {actual_dir}")
+        print("[PASS] Folder-agnostic functionality test PASSED")
         return True
 
     except Exception as e:
-        print(f"❌ Folder-agnostic functionality test FAILED: {e}")
+        print(f"[FAIL] Folder-agnostic functionality test FAILED: {e}")
         return False
 
 
@@ -211,23 +211,23 @@ def main():
         print("=" * 70)
 
         for i, (test_name, _) in enumerate(tests):
-            status = "✅ PASSED" if i < passed else "❌ FAILED"
+            status = "[PASS] PASSED" if i < passed else "[FAIL] FAILED"
             print(f"  {status} - {test_name}")
 
         print(f"\n🏆 Tests Passed: {passed}/{total}")
 
         if passed == total:
             print("🎉 ALL TESTS PASSED!")
-            print("✅ The module_temp_populate test suite is working correctly!")
-            print("✅ Folder-agnostic functionality confirmed!")
-            print("✅ 5 modules with random parameters tested!")
+            print("[PASS] The module_temp_populate test suite is working correctly!")
+            print("[PASS] Folder-agnostic functionality confirmed!")
+            print("[PASS] 5 modules with random parameters tested!")
         else:
             print("⚠️  Some tests failed. Please check the output above.")
 
         return 0 if passed == total else 1
 
     except Exception as e:
-        print(f"❌ Critical error: {e}")
+        print(f"[FAIL] Critical error: {e}")
         return 1
 
 

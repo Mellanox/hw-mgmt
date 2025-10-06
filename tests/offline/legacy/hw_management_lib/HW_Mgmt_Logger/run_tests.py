@@ -68,8 +68,8 @@ class Icons:
         ROCKET = "🚀"
         TEST = "🧪"
         INFO = "ℹ️"
-        SUCCESS = "✅"
-        FAIL = "❌"
+        SUCCESS = "[PASS]"
+        FAIL = "[FAIL]"
         RANDOM = "🎲"
     except (UnicodeEncodeError, LookupError, AttributeError):
         # Fallback to ASCII characters

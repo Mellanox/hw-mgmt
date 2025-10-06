@@ -87,12 +87,12 @@ Module 3: present=1, mode=1, temp=35, threshold=80
 Module 4: present=0, mode=1, temp=40, threshold=85
 Module 5: present=1, mode=0, temp=45, threshold=90
 ======================================================================
-✓ Module module1: FW control, present - actual values (temp=3125, crit=8750)
-✓ Module module2: FW control, not present - zero values
-✓ Module module3: SW control mode - no files created
-✓ Module module4: SW control mode - no files created
-✓ Module module5: FW control, present - actual values (temp=5625, crit=11250)
-✓ Module counter file verified
+[PASS] Module module1: FW control, present - actual values (temp=3125, crit=8750)
+[PASS] Module module2: FW control, not present - zero values
+[PASS] Module module3: SW control mode - no files created
+[PASS] Module module4: SW control mode - no files created
+[PASS] Module module5: FW control, present - actual values (temp=5625, crit=11250)
+[PASS] Module counter file verified
 .
 ----------------------------------------------------------------------
 Ran 1 test in 0.XXXs
