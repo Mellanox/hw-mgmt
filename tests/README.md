@@ -13,6 +13,17 @@ The test suite supports two testing frameworks:
 1. **Standalone tests** - Original test scripts with custom runners
 2. **Pytest** - Modern pytest-based tests with rich fixtures and features
 
+### CI/CD Strict Mode
+
+The test runner (`test.py`) is configured for **strict CI/CD mode**:
+
+- ✗ **Fails on ANY test failure**
+- ✗ **Fails on ANY pytest warning** (via `-W error`)
+- ✗ **Fails on ANY xfail or skip test**
+- ✗ **Fails on unregistered pytest markers**
+
+**Known bugs and issues** are tracked separately in `offline/known_issues_*.py` files, which are explicitly ignored by CI. This ensures the pipeline only passes when all active tests are clean.
+
 ## Quick Start
 
 ### Running All Tests
@@ -132,6 +143,30 @@ pytest --durations=10
 # Parallel execution (requires pytest-xdist)
 pytest -n auto
 ```
+
+## Known Issues and Bugs
+
+Known bugs and future enhancements are tracked in separate files that are **excluded from CI**:
+
+- `offline/known_issues_redfish_client.py` - Known bugs in hw_management_redfish_client.py
+- Add more `known_issues_*.py` files as needed
+
+### Running Known Issues Tests
+
+```bash
+# Run all known issues
+python3 -m pytest offline/known_issues_*.py -v
+
+# Run specific known issues file
+python3 -m pytest offline/known_issues_redfish_client.py -v
+```
+
+### When a Bug is Fixed
+
+1. Move the test from `known_issues_*.py` to the main test file
+2. Remove the `@pytest.mark.xfail` or `@pytest.mark.skip` decorator
+3. Update the test to verify the fix works correctly
+4. The test will now run in CI
 
 ## Creating New Tests
 

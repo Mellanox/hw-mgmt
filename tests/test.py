@@ -4,6 +4,15 @@
 # Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Test Runner for hw-mgmt
+#
+# CI/CD STRICT MODE:
+#   - Fails on ANY test failure
+#   - Fails on ANY pytest warning (via -W error)
+#   - Fails on ANY xfail or skip test
+#   - Fails on unregistered pytest markers
+#
+# Known issues and bugs are tracked in offline/known_issues_*.py files
+# which are explicitly ignored by CI.
 ########################################################################
 
 import sys
@@ -189,9 +198,20 @@ class TestRunner:
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature'
             },
             # Pytest tests - auto-discovery (run last)
+            # Pytest tests - auto-discovery (strict mode for CI)
             {
                 'name': 'Pytest Tests (offline)',
-                'cmd': ['python3', '-m', 'pytest', 'offline/', '--tb=short', '--ignore=offline/hw_management_lib', '--ignore=offline/hw_mgmgt_sync', '--ignore=offline/thermal_control'],
+                'cmd': [
+                    'python3', '-m', 'pytest', 'offline/', 
+                    '--tb=short', 
+                    '--strict-markers',  # Fail on unregistered markers
+                    '--strict-config',   # Fail on config errors
+                    '-W', 'error',       # Convert warnings to errors
+                    '--ignore=offline/hw_management_lib',
+                    '--ignore=offline/hw_mgmgt_sync',
+                    '--ignore=offline/thermal_control',
+                    '--ignore=offline/known_issues_redfish_client.py'  # Skip known issues file
+                ],
                 'cwd': self.tests_dir
             },
         ]
