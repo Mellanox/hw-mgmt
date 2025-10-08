@@ -37,6 +37,8 @@ declare -A leakage_map
 # 1 = leakage not detected
 leakage_map[1]="0x20ff:0"
 leakage_map[2]="0x20ff:1"
+leakage_map[3]="0x20ff:2"
+leakage_map[4]="0x20ff:3"
 leakage_map[5]="0x20ff:4"
 leakage_map[aggr]="0x20fe:0"
 
@@ -49,18 +51,18 @@ DESCRIPTION:
     NVIDIA switch systems. It manipulates hardware registers to mock leakage detection
     for testing and validation purposes.
 
-USAGE: 
+USAGE:
     $0 [OPTIONS]
 
 OPTIONS:
     -s <id>     Simulate leakage for the given sensor ID
                 (unsets the corresponding bit at the register offset)
-    
-    -r <id>     Revert/clear leakage for the given sensor ID  
+
+    -r <id>     Revert/clear leakage for the given sensor ID
                 (sets the corresponding bit at the register offset)
-    
+
     -c          Clear all leakages (revert all leakage sensors to normal state)
-    
+
     -h          Show this help message and exit
 
 SUPPORTED LEAKAGE SENSOR IDs:
@@ -69,13 +71,13 @@ SUPPORTED LEAKAGE SENSOR IDs:
 EXAMPLES:
     # Simulate leakage on sensor 1
     $0 -s 1
-    
-    # Revert leakage on sensor 2  
+
+    # Revert leakage on sensor 2
     $0 -r 2
-    
+
     # Clear all simulated leakages
     $0 -c
-    
+
     # Show help
     $0 -h
 
@@ -88,18 +90,17 @@ NOTES:
 EOF
 }
 
-function is_system_supported () 
+function is_system_supported ()
 {
-    local nvl_rgx="N[5-9]+_LD"
-    local gb200_rgx="N5[0-4][0-9]+_LD"
+    local nvl_rgx="N[0-9]+_LD"
     pn=$(cat $pn_file)
     if [[ $pn =~ $nvl_rgx ]]; then
-        true
+        return 0
     fi
-    false
+    return 1
 }
 
-function clear_all_leakage () 
+function clear_all_leakage ()
 {
     echo "Clearing all leakage"
     for leakage_id in "${!leakage_map[@]}"; do
@@ -107,7 +108,7 @@ function clear_all_leakage ()
     done
 }
 
-function mock_leakage () 
+function mock_leakage ()
 {
     local leakage_id=$1
     local entry=${leakage_map[$leakage_id]}
@@ -127,7 +128,7 @@ function mock_leakage ()
     iorw -w -b $address -l 1 -v $hex_val
 }
 
-function unmock_leakage () 
+function unmock_leakage ()
 {
     local leakage_id=$1
     local entry=${leakage_map[$leakage_id]}
@@ -147,7 +148,7 @@ function unmock_leakage ()
     iorw -w -b $address -l 1 -v $hex_val
 }
 
-main() 
+main()
 {
     if [[ $# -eq 0 ]]; then
         usage
