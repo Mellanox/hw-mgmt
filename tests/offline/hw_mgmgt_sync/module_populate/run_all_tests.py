@@ -54,7 +54,7 @@ def setup_import_path(hw_mgmt_path=None):
 
 def test_basic_functionality():
     """Test basic function imports and constants"""
-    print("🧪 Testing basic functionality...")
+    print("[TEST] Testing basic functionality...")
 
     try:
         from hw_management_sync import CONST, sdk_temp2degree, module_temp_populate
@@ -62,22 +62,22 @@ def test_basic_functionality():
         # Test constants
         assert CONST.SDK_FW_CONTROL == 0, f"SDK_FW_CONTROL should be 0, got {CONST.SDK_FW_CONTROL}"
         assert CONST.SDK_SW_CONTROL == 1, f"SDK_SW_CONTROL should be 1, got {CONST.SDK_SW_CONTROL}"
-        print("✅ Constants test PASSED")
+        print("[OK] Constants test PASSED")
 
         # Test function existence
         assert callable(module_temp_populate), "module_temp_populate should be callable"
         assert callable(sdk_temp2degree), "sdk_temp2degree should be callable"
-        print("✅ Function existence test PASSED")
+        print("[OK] Function existence test PASSED")
 
         return True
     except Exception as e:
-        print(f"❌ Basic functionality test FAILED: {e}")
+        print(f"[FAIL] Basic functionality test FAILED: {e}")
         return False
 
 
 def test_temperature_conversion():
     """Test sdk_temp2degree function with various inputs"""
-    print("🧪 Testing temperature conversion...")
+    print("[TEST] Testing temperature conversion...")
 
     try:
         from hw_management_sync import sdk_temp2degree
@@ -94,26 +94,26 @@ def test_temperature_conversion():
         for input_temp, expected, description in test_cases:
             result = sdk_temp2degree(input_temp)
             if result == expected:
-                print(f"  ✅ {description}: sdk_temp2degree({input_temp}) = {result}")
+                print(f"  [OK] {description}: sdk_temp2degree({input_temp}) = {result}")
                 passed += 1
             else:
-                print(f"  ❌ {description}: sdk_temp2degree({input_temp}) = {result}, expected {expected}")
+                print(f"  [FAIL] {description}: sdk_temp2degree({input_temp}) = {result}, expected {expected}")
 
         if passed == total:
-            print(f"✅ Temperature conversion test PASSED ({passed}/{total})")
+            print(f"[OK] Temperature conversion test PASSED ({passed}/{total})")
             return True
         else:
-            print(f"❌ Temperature conversion test FAILED ({passed}/{total})")
+            print(f"[FAIL] Temperature conversion test FAILED ({passed}/{total})")
             return False
 
     except Exception as e:
-        print(f"❌ Temperature conversion test FAILED: {e}")
+        print(f"[FAIL] Temperature conversion test FAILED: {e}")
         return False
 
 
 def test_random_module_states():
     """Test with randomized module states as requested"""
-    print("🧪 Testing random module states (5 modules as requested)...")
+    print("[TEST] Testing random module states (5 modules as requested)...")
 
     try:
         from hw_management_sync import CONST
@@ -140,18 +140,18 @@ def test_random_module_states():
         sw_control_count = sum(1 for state in module_states if state['mode'] == CONST.SDK_SW_CONTROL)
         present_count = sum(1 for state in module_states if state['present'] == 1)
 
-        print(f"  📊 Summary: {fw_control_count} FW control, {sw_control_count} SW control, {present_count} present")
-        print("✅ Random module states test PASSED")
+        print(f"  [STATS] Summary: {fw_control_count} FW control, {sw_control_count} SW control, {present_count} present")
+        print("[OK] Random module states test PASSED")
         return True
 
     except Exception as e:
-        print(f"❌ Random module states test FAILED: {e}")
+        print(f"[FAIL] Random module states test FAILED: {e}")
         return False
 
 
 def test_folder_agnostic_functionality(hw_mgmt_dir):
     """Test that the folder-agnostic import worked correctly"""
-    print("🧪 Testing folder-agnostic functionality...")
+    print("[TEST] Testing folder-agnostic functionality...")
 
     try:
         import hw_management_sync
@@ -161,12 +161,12 @@ def test_folder_agnostic_functionality(hw_mgmt_dir):
 
         assert actual_dir == expected_dir, f"Module loaded from {actual_dir}, expected {expected_dir}"
 
-        print(f"  ✅ Module loaded from: {actual_dir}")
-        print("✅ Folder-agnostic functionality test PASSED")
+        print(f"  [OK] Module loaded from: {actual_dir}")
+        print("[OK] Folder-agnostic functionality test PASSED")
         return True
 
     except Exception as e:
-        print(f"❌ Folder-agnostic functionality test FAILED: {e}")
+        print(f"[FAIL] Folder-agnostic functionality test FAILED: {e}")
         return False
 
 
@@ -177,14 +177,14 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("🚀 MODULE_TEMP_POPULATE TEST SUITE")
+    print("[START] MODULE_TEMP_POPULATE TEST SUITE")
     print("=" * 70)
     print(f"Python version: {sys.version}")
 
     try:
         # Setup import path
         hw_mgmt_dir = setup_import_path(args.hw_mgmt_path)
-        print(f"📂 Using hw_management_sync.py from: {hw_mgmt_dir}")
+        print(f"[DIR] Using hw_management_sync.py from: {hw_mgmt_dir}")
         print("=" * 70)
 
         # Run all tests
@@ -199,7 +199,7 @@ def main():
         total = len(tests)
 
         for test_name, test_func in tests:
-            print(f"\n🔬 Running: {test_name}")
+            print(f"\n[ANALYZE] Running: {test_name}")
             print("-" * 40)
             if test_func():
                 passed += 1
@@ -207,27 +207,27 @@ def main():
 
         # Final results
         print("=" * 70)
-        print("📋 FINAL TEST RESULTS")
+        print("[LIST] FINAL TEST RESULTS")
         print("=" * 70)
 
         for i, (test_name, _) in enumerate(tests):
-            status = "✅ PASSED" if i < passed else "❌ FAILED"
+            status = "[OK] PASSED" if i < passed else "[FAIL] FAILED"
             print(f"  {status} - {test_name}")
 
-        print(f"\n🏆 Tests Passed: {passed}/{total}")
+        print(f"\n[WINNER] Tests Passed: {passed}/{total}")
 
         if passed == total:
-            print("🎉 ALL TESTS PASSED!")
-            print("✅ The module_temp_populate test suite is working correctly!")
-            print("✅ Folder-agnostic functionality confirmed!")
-            print("✅ 5 modules with random parameters tested!")
+            print("[SUCCESS] ALL TESTS PASSED!")
+            print("[OK] The module_temp_populate test suite is working correctly!")
+            print("[OK] Folder-agnostic functionality confirmed!")
+            print("[OK] 5 modules with random parameters tested!")
         else:
-            print("⚠️  Some tests failed. Please check the output above.")
+            print("[WARN]  Some tests failed. Please check the output above.")
 
         return 0 if passed == total else 1
 
     except Exception as e:
-        print(f"❌ Critical error: {e}")
+        print(f"[FAIL] Critical error: {e}")
         return 1
 
 

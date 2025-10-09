@@ -377,7 +377,7 @@ class HW_Mgmt_Logger(object):
         if self._syslog:
             # CRITICAL always goes to syslog (regardless of priority threshold)
             if level == self.CRITICAL:
-                syslog_msg = msg,
+                syslog_msg = msg
                 syslog_emit = True
             # Other levels only if they meet priority threshold
             elif level >= self._syslog_min_log_priority:

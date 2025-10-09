@@ -106,6 +106,11 @@ class TestModuleTempPopulate(unittest.TestCase):
 
     def _load_hw_management_module(self, hw_mgmt_path):
         """Dynamically load the hw_management_sync module from given path"""
+        # Add the directory containing hw_management_sync.py to sys.path
+        hw_mgmt_dir = os.path.dirname(os.path.abspath(hw_mgmt_path))
+        if hw_mgmt_dir not in sys.path:
+            sys.path.insert(0, hw_mgmt_dir)
+
         spec = importlib.util.spec_from_file_location("hw_management_sync", hw_mgmt_path)
         hw_mgmt_module = importlib.util.module_from_spec(spec)
 
@@ -113,6 +118,11 @@ class TestModuleTempPopulate(unittest.TestCase):
         sys.modules["hw_management_redfish_client"] = MagicMock()
 
         spec.loader.exec_module(hw_mgmt_module)
+
+        # Ensure LOGGER is mocked if it's None
+        if hw_mgmt_module.LOGGER is None:
+            hw_mgmt_module.LOGGER = MagicMock()
+
         return hw_mgmt_module
 
     def _sdk_temp2degree(self, val):
@@ -180,25 +190,25 @@ class TestModuleTempPopulate(unittest.TestCase):
                 if config['mode'] == 1:  # SDK_SW_CONTROL
                     # Files should NOT be created for SW control mode
                     self._verify_files_not_created(module_name, written_files)
-                    print(f"✓ Module {module_name}: SW control mode - no files created")
+                    print(f"[+] Module {module_name}: SW control mode - no files created")
 
                 else:  # SDK_FW_CONTROL
                     if config['present'] == 0:
                         # Files should contain zeros for absent modules
                         self._verify_absent_module_files(module_name)
-                        print(f"✓ Module {module_name}: FW control, not present - zero values")
+                        print(f"[+] Module {module_name}: FW control, not present - zero values")
 
                     else:
                         # Files should contain actual temperature values
                         expected_temp = self._sdk_temp2degree(config['temperature_input'])
                         expected_crit = self._sdk_temp2degree(config['temperature_threshold'])
                         self._verify_present_module_files(module_name, expected_temp, expected_crit)
-                        print(f"✓ Module {module_name}: FW control, present - actual values "
+                        print(f"[+] Module {module_name}: FW control, present - actual values "
                               f"(temp={expected_temp}, crit={expected_crit})")
 
             # Verify module counter file
             self._verify_module_counter()
-            print("✓ Module counter file verified")
+            print("[+] Module counter file verified")
 
     def _verify_files_not_created(self, module_name, written_files):
         """Verify that thermal files are not created for SW control modules"""
@@ -267,20 +277,29 @@ class TestModuleTempPopulate(unittest.TestCase):
 def main():
     """Main function to run tests with command line arguments"""
     parser = argparse.ArgumentParser(description='Test module_temp_populate function')
-    parser.add_argument('hw_mgmt_path',
-                        help='Path to hw_management_sync.py file')
+    parser.add_argument('hw_mgmt_path', nargs='?',
+                        help='Path to hw_management_sync.py file (optional, auto-detects if not provided)')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Verbose output')
 
     args, unittest_args = parser.parse_known_args()
 
+    # Determine the hw_management_sync.py path
+    if args.hw_mgmt_path:
+        hw_mgmt_path = args.hw_mgmt_path
+    else:
+        # Auto-detect using relative path from test location
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hw_mgmt_path = os.path.join(script_dir, '..', '..', '..', '..', 'usr', 'usr', 'bin', 'hw_management_sync.py')
+        hw_mgmt_path = os.path.abspath(hw_mgmt_path)
+
     # Validate the hw_management_sync.py path
-    if not os.path.isfile(args.hw_mgmt_path):
-        print(f"Error: File {args.hw_mgmt_path} does not exist")
+    if not os.path.isfile(hw_mgmt_path):
+        print(f"Error: File {hw_mgmt_path} does not exist")
         sys.exit(1)
 
     # Store the path for use in tests
-    TestModuleTempPopulate.hw_mgmt_path = os.path.abspath(args.hw_mgmt_path)
+    TestModuleTempPopulate.hw_mgmt_path = os.path.abspath(hw_mgmt_path)
 
     print(f"Testing hw_management_sync.py from: {TestModuleTempPopulate.hw_mgmt_path}")
     print("=" * 70)

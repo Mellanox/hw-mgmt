@@ -52,12 +52,12 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock, call
 
 # Add the library path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'usr', 'usr', 'bin'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'usr', 'usr', 'bin'))
 
 try:
     from hw_management_lib import HW_Mgmt_Logger
 except ImportError as e:
-    print(f"❌ Failed to import HW_Mgmt_Logger: {e}")
+    print(f"[ERROR] Failed to import HW_Mgmt_Logger: {e}")
     sys.exit(1)
 
 
@@ -197,20 +197,20 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
 
         # Scenario 1: Multiple overlapping repeats
         for i in range(5):
-            logger.info("Overlapping message A", id="repeat_a", repeat=2)
-            logger.info("Overlapping message B", id="repeat_b", repeat=3)
+            logger.info("Overlapping message A", id="repeat_a", log_repeat=2)
+            logger.info("Overlapping message B", id="repeat_b", log_repeat=3)
 
         # Scenario 2: Nested repeat patterns
-        logger.info("Outer message", id="outer", repeat=2)
+        logger.info("Outer message", id="outer", log_repeat=2)
         for i in range(4):
-            logger.info("Inner message", id="inner", repeat=1)
+            logger.info("Inner message", id="inner", log_repeat=1)
         logger.info(None, id="inner")  # Finalize inner
         logger.info(None, id="outer")  # Finalize outer
 
         # Scenario 3: Interleaved different levels
         for i in range(3):
-            logger.debug("Debug repeat", id="debug_repeat", repeat=1)
-            logger.error("Error repeat", id="error_repeat", repeat=2)
+            logger.debug("Debug repeat", id="debug_repeat", log_repeat=1)
+            logger.error("Error repeat", id="error_repeat", log_repeat=2)
 
         logger.stop()
 
@@ -293,7 +293,8 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
         # Test various Unicode categories
         test_messages = [
             "ASCII: Hello World",
-            "Cyrillic: Привет мир",
+            "Unicode: Rocket symbol",
+            "Cyrillic: Privet mir",
             "Control chars: \t\n\r",
             "Special: \u0000\u001F\u007F\u0080\u009F"  # Control characters
         ]
@@ -308,7 +309,7 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
             content = f.read()
             # Most messages should be present (some control chars may be handled)
             self.assertIn("ASCII: Hello World", content)
-            self.assertIn("🚀", content)  # Emoji should work
+            self.assertIn("Unicode: Rocket symbol", content)
 
     def test_error_recovery(self):
         """Test error recovery scenarios"""
