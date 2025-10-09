@@ -1853,17 +1853,17 @@ class thermal_module_sensor(system_device):
         self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
 
     # ----------------------------------------------------------------------
-    def get_temp_support_status(self):
+    def get_temp_support_status(self, value=0):
         """
         @summary: Check if module supporting temp sensor (optic)
         @return: True - in case if temp sensor is supported
             False - if module is not optical
         """
-        status = True
+        status = False
 
-        if self.val_max == 0:
-            self.log.debug("{} does not support temp reading max:{}".format(self.name, self.val_max))
-            status = False
+        if self.val_max != 0 or value:
+            self.log.debug("{} support temp reading".format(self.name))
+            status = True
 
         return status
 
@@ -1882,21 +1882,35 @@ class thermal_module_sensor(system_device):
             try:
                 value = self.read_file_float(temp_read_file, self.scale)
                 self.log.debug("{} value:{}".format(self.name, value))
-                self.fread_err.handle_err(temp_read_file, reset=True)
-                # handle case if cable was replsed by the other cable with the sensor
-                if value != 0 and self.val_min == 0 and self.val_max == 0:
-                    self.log.info("{} refreshing min/max arttribures by the rule: val({}) min({}) max({})".format(self.name,
-                                                                                                                  value,
-                                                                                                                  self.val_min,
-                                                                                                                  self.val_max))
+                # handle case if cable was replaced by the other cable
+                # cable removed - value == 0 max != 0
+                # cable connected - value != 0 max == 0
+                if (value != 0 and self.val_max == 0) or (value == 0 and self.val_max != 0):
+                    self.log.info("{} refreshing min/max attributes by the rule: val({}) max({})".format(self.name,
+                                                                                                         value,
+                                                                                                         self.val_max))
                     self.refresh_attr()
-                self.update_value(value)
 
-                if self.get_temp_support_status():
-                    if self.value > self.val_max:
-                        self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
-                    elif self.value < self.val_min:
-                        self.log.debug("{} value {}".format(self.name, self.value))
+                if self.get_temp_support_status(value):
+                    if self.val_hcrit is not None and value >= self.val_hcrit:
+                        self.log.warn("{} value({}) >= hcrit({})".format(self.name,
+                                                                         value,
+                                                                         self.val_hcrit))
+                        self.fread_err.handle_err(temp_read_file)
+                    elif self.val_lcrit is not None and value <= self.val_lcrit:
+                        self.log.warn("{} value({}) <= lcrit({})".format(self.name,
+                                                                         value,
+                                                                         self.val_lcrit))
+                        self.fread_err.handle_err(temp_read_file)
+                    else:
+                        self.fread_err.handle_err(temp_read_file, reset=True)
+                        self.update_value(value)
+                        if self.value > self.val_max:
+                            self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
+                        elif self.value < self.val_min:
+                            self.log.debug("{} value {}".format(self.name, self.value))
+                else:
+                    self.fread_err.handle_err(temp_read_file, reset=True)
             except (ValueError, TypeError, OSError, IOError):
                 self.log.warn("value reading from file: {}".format(self.base_file_name))
                 self.fread_err.handle_err(temp_read_file)
