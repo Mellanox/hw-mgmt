@@ -1443,8 +1443,10 @@ class thermal_module_sensor(system_device):
                 value = self.read_file_int(temp_read_file, self.scale)
                 self.log.debug("{} value:{}".format(self.name, value))
                 self.fread_err.handle_err(temp_read_file, reset=True)
-                # handle case if cable was replsed by the other cable with the sensor
-                if value != 0 and self.val_min == 0 and self.val_max == 0:
+                # handle case if cable was replaced by the other cable
+                # cable removed - value == 0 max != 0
+                # cable connected - value != 0 max == 0
+                if (value != 0 and self.val_max == 0) or (value == 0 and self.val_max != 0):
                     self.log.info("{} refreshing min/max arttribures by the rule: val({}) min({}) max({})".format(self.name,
                                                                                                                   value,
                                                                                                                   self.val_min,
@@ -1456,14 +1458,14 @@ class thermal_module_sensor(system_device):
                         self.log.warn("{} value({}) >= hcrit({})".format(self.name,
                                                                          value,
                                                                          self.val_hcrit))
-                        self.fread_err.handle_err(self.file_input)
+                        self.fread_err.handle_err(temp_read_file)
                     elif self.val_lcrit is not None and value <= self.val_lcrit:
                         self.log.warn("{} value({}) <= lcrit({})".format(self.name,
                                                                          value,
                                                                          self.val_lcrit))
-                        self.fread_err.handle_err(self.file_input)
+                        self.fread_err.handle_err(temp_read_file)
                     else:
-                        self.fread_err.handle_err(self.file_input, reset=True)
+                        self.fread_err.handle_err(temp_read_file, reset=True)
                         self.update_value(value)
                         if self.value > self.val_max:
                             self.log.warn("{} value({}) >= ({})".format(self.name, self.value, self.val_max))
