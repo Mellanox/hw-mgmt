@@ -64,13 +64,13 @@ class Colors:
 class Icons:
     try:
         # Test if Unicode emojis work
-        test_encode = "🚀".encode(sys.stdout.encoding or 'utf-8')
-        ROCKET = "🚀"
-        TEST = "🧪"
-        INFO = "ℹ️"
-        SUCCESS = "✅"
-        FAIL = "❌"
-        RANDOM = "🎲"
+        test_encode = "[START]".encode(sys.stdout.encoding or 'utf-8')
+        ROCKET = "[START]"
+        TEST = "[TEST]"
+        INFO = "[INFO]"
+        SUCCESS = "[OK]"
+        FAIL = "[FAIL]"
+        RANDOM = "[RANDOM]"
     except (UnicodeEncodeError, LookupError, AttributeError):
         # Fallback to ASCII characters
         ROCKET = "*"
