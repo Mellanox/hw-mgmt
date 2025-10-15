@@ -2858,6 +2858,11 @@ check_system()
 	esac
 	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
+	if check_bmc_is_supported; then
+		pushd /usr/bin
+		python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+		popd
+	fi
 }
 
 create_event_files()
