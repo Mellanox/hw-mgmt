@@ -341,6 +341,21 @@ check_tc_is_supported()
 	fi
 }
 
+# This function checks if BMC is supported for current platform
+# Returns 0 if BMC is supported, 1 otherwise.
+check_bmc_is_supported()
+{
+	case $vm_sku in
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI181|HI182)
+			return 0
+			;;
+
+		*)
+			return 1
+			;;
+	esac
+}
+
 # This function create or cleans sysfs monitor helper files.
 init_sysfs_monitor_timestamp_files()
 {
