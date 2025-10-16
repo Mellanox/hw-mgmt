@@ -50,7 +50,7 @@ def current_milli_time():
     return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
 
 
-class HW_Mgmt_Logger(object):
+class HW_Mgmt_Logger:
     """
     Hardware Management Logger - provides robust logging to files and syslog.
 
@@ -139,8 +139,7 @@ class HW_Mgmt_Logger(object):
         self.syslog_repeat = syslog_repeat
         self.syslog_hash = {}    # hash array of the messages which was logged to syslog
         self.log_hash = {}    # hash array of the messages which was logged to log
-        self._syslog_hash_lock = Lock()  # Thread safety for syslog_hash
-        self._log_hash_lock = Lock()      # Thread safety for log_hash
+        self._lock = Lock()  # Thread safety for all logger operations
 
         self.set_param(ident, log_file, log_level, syslog_level)
         for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
@@ -280,7 +279,7 @@ class HW_Mgmt_Logger(object):
     def syslog_log(self, level, msg):
         """
         @summary:
-            Log message to syslog
+            Log message to syslog (thread-safe)
         @param level: log level
         @param msg: message
         """
@@ -307,7 +306,7 @@ class HW_Mgmt_Logger(object):
             except Exception as e:
                 print(f"Warning: Failed to write to syslog: {e}")
 
-    def close_log_handler(self):
+    def _close_log_handler(self):
         """
         @summary:
             Close log handlers
@@ -326,16 +325,13 @@ class HW_Mgmt_Logger(object):
         @summary:
             Cleanup and stop logger
         """
-        self.close_syslog()
-
         # Clean up only this logger's handlers (don't shutdown all logging)
         self.suspend()
-        self.close_log_handler()
 
-        with self._syslog_hash_lock:
-            self.syslog_hash.clear()
-        with self._log_hash_lock:
-            self.log_hash.clear()
+        self.close_syslog()
+        self._close_log_handler()
+        self.syslog_hash.clear()
+        self.log_hash.clear()
 
     def log_handler(self, level, msg="", id=None, log_repeat=None, syslog_repeat=None):
         """
@@ -394,26 +390,28 @@ class HW_Mgmt_Logger(object):
             # Other levels only if they meet priority threshold
             elif level >= self._syslog_min_log_priority:
                 if level in [self.ERROR, self.WARNING, self.INFO, self.NOTICE]:
-                    syslog_msg, syslog_emit = self.push_syslog(msg, id, syslog_repeat)
+                    syslog_msg, syslog_emit = self._push_syslog(msg, id, syslog_repeat)
 
         # Handle file logging (independent of syslog logging)
+        # Thread-safe handler access
         log_emit = False
         log_msg = msg  # Initialize log_msg
-        if level >= self.logger.level:
-            log_msg, log_emit = self.push_log(msg, id, log_repeat)
 
-        # Perform actual logging operations
+        if level >= self.logger.level:
+            log_msg, log_emit = self._push_log(msg, id, log_repeat)
+
+        # Perform actual logging operations (thread-safe)
         try:
             if log_emit:
                 self.logger.log(level, log_msg)
-            if syslog_emit and self._syslog:
+            if syslog_emit:
                 self.syslog_log(level, syslog_msg)
         except (IOError, OSError, ValueError) as e:
             # Use the appropriate message for error reporting
             error_msg = log_msg if log_msg else syslog_msg
             print("Error logging message: {} - {}".format(error_msg, e))
 
-    def hash_garbage_collect(self, log_hash):
+    def _hash_garbage_collect(self, log_hash):
         """
         @summary:
             Remove from log_hash all messages older than 60 minutes or if hash is too big
@@ -421,7 +419,7 @@ class HW_Mgmt_Logger(object):
         hash_size = len(log_hash)
 
         if hash_size > self.MAX_MSG_HASH_SIZE:
-            # some major issue. We never expect to have more than 100 messages in hash.
+            # some major issue. We never expect to have more than MAX_MSG_HASH_SIZE messages in hash.
             # Use print instead of logger to avoid potential circular logging issues
             print("hash_garbage_collect: too many ({}) messages in hash. Remove all messages.".format(hash_size))
             log_hash.clear()  # Clear the actual dictionary, not reassign local variable
@@ -429,7 +427,7 @@ class HW_Mgmt_Logger(object):
 
         if hash_size > self.MAX_MSG_TIMEOUT_HASH_SIZE:
             # some messages were not cleaned up.
-            # remove messages older than 60 minutes
+            # remove messages older than MSG_HASH_TIMEOUT seconds
             current_time = current_milli_time()
             cutoff_time = current_time - self.MSG_HASH_TIMEOUT
 
@@ -441,15 +439,15 @@ class HW_Mgmt_Logger(object):
                 print("hash_garbage_collect: remove message \"{}\" from hash".format(log_hash[key]["msg"]))
                 del log_hash[key]
 
-    def push_syslog(self, msg="", id=None, repeat=None):
-        with self._syslog_hash_lock:
-            return self.push_log_hash(self.syslog_hash, msg, id, repeat)
+    def _push_syslog(self, msg="", id=None, repeat=None):
+        with self._lock:
+            return self._push_log_hash(self.syslog_hash, msg, id, repeat)
 
-    def push_log(self, msg="", id=None, repeat=None):
-        with self._log_hash_lock:
-            return self.push_log_hash(self.log_hash, msg, id, repeat)
+    def _push_log(self, msg="", id=None, repeat=None):
+        with self._lock:
+            return self._push_log_hash(self.log_hash, msg, id, repeat)
 
-    def push_log_hash(self, log_hash, msg="", id=None, repeat=0):
+    def _push_log_hash(self, log_hash, msg="", id=None, repeat=0):
         """
         @param msg: message to save to log
         @param id: id used as key for message that should be "collapsed" into start/stop messages
@@ -494,7 +492,7 @@ class HW_Mgmt_Logger(object):
                     if id_hash in log_hash:
                         log_hash[id_hash]["count"] += 1
                     else:
-                        self.hash_garbage_collect(log_hash)
+                        self._hash_garbage_collect(log_hash)
                         log_hash[id_hash] = {"count": 1, "msg": msg, "ts": current_milli_time(), "repeat": repeat}
                     log_hash[id_hash]["ts"] = current_milli_time()
                     if log_hash[id_hash]["count"] <= repeat:
