@@ -495,46 +495,46 @@ class TestPushLogHash:
 
     def test_simple_no_repeat(self, basic_logger):
         """Simple: Message with no repeat (repeat=0)"""
-        msg, should_emit = basic_logger.push_log_hash(basic_logger.log_hash, "Test", None, HW_Mgmt_Logger.LOG_REPEAT_UNLIMITED)
+        msg, should_emit = basic_logger._push_log_hash(basic_logger.log_hash, "Test", None, HW_Mgmt_Logger.LOG_REPEAT_UNLIMITED)
         assert msg == "Test"
         assert should_emit is True
 
     def test_medium_with_repeat_id(self, basic_logger):
         """Medium: Message with repeat ID"""
         # First call
-        msg1, emit1 = basic_logger.push_log_hash(basic_logger.log_hash, "Repeat msg", "id1", 2)
+        msg1, emit1 = basic_logger._push_log_hash(basic_logger.log_hash, "Repeat msg", "id1", 2)
         assert emit1 is True
 
         # Second call
-        msg2, emit2 = basic_logger.push_log_hash(basic_logger.log_hash, "Repeat msg", "id1", 2)
+        msg2, emit2 = basic_logger._push_log_hash(basic_logger.log_hash, "Repeat msg", "id1", 2)
         assert emit2 is True
 
         # Third call - should be suppressed
-        msg3, emit3 = basic_logger.push_log_hash(basic_logger.log_hash, "Repeat msg", "id1", 2)
+        msg3, emit3 = basic_logger._push_log_hash(basic_logger.log_hash, "Repeat msg", "id1", 2)
         assert emit3 is False
 
     def test_medium_finalize_message(self, basic_logger):
         """Medium: Finalize message with empty string"""
         # Send repeated messages
         for _ in range(5):
-            basic_logger.push_log_hash(basic_logger.log_hash, "Repeat", "id1", 2)
+            basic_logger._push_log_hash(basic_logger.log_hash, "Repeat", "id1", 2)
 
         # Finalize
-        msg, emit = basic_logger.push_log_hash(basic_logger.log_hash, "", "id1", 0)
+        msg, emit = basic_logger._push_log_hash(basic_logger.log_hash, "", "id1", 0)
         assert emit is True
         assert "message repeated" in msg
         assert "and stopped" in msg
 
     def test_complex_none_message(self, basic_logger):
         """Complex: None message is handled gracefully"""
-        msg, emit = basic_logger.push_log_hash(basic_logger.log_hash, None, "id1", 2)
+        msg, emit = basic_logger._push_log_hash(basic_logger.log_hash, None, "id1", 2)
         # None should be converted to empty string, treated as finalize
         assert msg == "" or isinstance(msg, str)
 
     def test_complex_unhashable_id(self, basic_logger):
         """Complex: Unhashable ID is handled gracefully"""
         unhashable_id = ['list', 'id']  # Lists are unhashable
-        msg, emit = basic_logger.push_log_hash(basic_logger.log_hash, "Test", unhashable_id, 2)
+        msg, emit = basic_logger._push_log_hash(basic_logger.log_hash, "Test", unhashable_id, 2)
         # Should work without raising exception
         assert emit is True
 
@@ -545,7 +545,7 @@ class TestPushLogHash:
 
         def worker(worker_id):
             for i in range(10):
-                msg, emit = basic_logger.push_log(f"Worker {worker_id} msg {i}", f"id_{worker_id}", 5)
+                msg, emit = basic_logger._push_log(f"Worker {worker_id} msg {i}", f"id_{worker_id}", 5)
                 with lock:
                     results.append((msg, emit))
 
@@ -564,7 +564,7 @@ class TestHashGarbageCollect:
 
     def test_simple_empty_hash(self, basic_logger):
         """Simple: Garbage collect on empty hash"""
-        basic_logger.hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
         assert len(basic_logger.log_hash) == 0
 
     def test_medium_small_hash(self, basic_logger):
@@ -578,7 +578,7 @@ class TestHashGarbageCollect:
                 "repeat": 2
             }
 
-        basic_logger.hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
         # Should not clear small hash
         assert len(basic_logger.log_hash) == 10
 
@@ -593,7 +593,7 @@ class TestHashGarbageCollect:
                 "repeat": 2
             }
 
-        basic_logger.hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
         # Should clear the entire hash
         assert len(basic_logger.log_hash) == 0
 
@@ -617,7 +617,7 @@ class TestHashGarbageCollect:
                 "repeat": 2
             }
 
-        basic_logger.hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
 
         # Old messages should be removed, recent ones kept
         assert len(basic_logger.log_hash) < 60
@@ -649,7 +649,7 @@ class TestResourceManagement:
         logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
         assert logger.logger.handlers != []
 
-        logger.close_log_handler()
+        logger._close_log_handler()
         assert logger.logger.handlers == []
 
         logger.stop()

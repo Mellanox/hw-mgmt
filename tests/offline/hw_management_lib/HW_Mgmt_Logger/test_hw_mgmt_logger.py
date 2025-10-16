@@ -252,9 +252,8 @@ class TestHWMgmtLogger(unittest.TestCase):
         if self.logger:
             try:
                 # Clear hashes before stopping
-                with self.logger._log_hash_lock:
+                with self.logger._lock:
                     self.logger.log_hash.clear()
-                with self.logger._syslog_hash_lock:
                     self.logger.syslog_hash.clear()
                 self.logger.stop()
             except Exception:
@@ -264,9 +263,8 @@ class TestHWMgmtLogger(unittest.TestCase):
     def _clean_logger_state(self, logger):
         """Clean logger state before each iteration"""
         if logger:
-            with logger._log_hash_lock:
+            with logger._lock:
                 logger.log_hash.clear()
-            with logger._syslog_hash_lock:
                 logger.syslog_hash.clear()
 
     # ========================================================================
@@ -664,8 +662,7 @@ class TestHWMgmtLogger(unittest.TestCase):
         self.logger = HW_Mgmt_Logger(log_file=self.test_log_file,
                                      log_level=HW_Mgmt_Logger.INFO)
 
-        self.assertIsNotNone(self.logger._log_hash_lock)
-        self.assertIsNotNone(self.logger._syslog_hash_lock)
+        self.assertIsNotNone(self.logger._lock)
 
     def test_61_concurrent_hash_access(self):
         """Test concurrent access to hash doesn't raise exceptions"""
