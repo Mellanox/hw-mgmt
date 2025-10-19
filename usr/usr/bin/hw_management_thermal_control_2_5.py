@@ -337,7 +337,7 @@ SENSOR_DEF_CONFIG = {
     r'psu\d+_temp':     {"type": "thermal_sensor",
                          "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
                         },
-    r'voltmon\d+_temp': {"type": "thermal_sensor",
+    r'(swb\d+_)?voltmon\d+_temp': {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                          "input_suffix": "_input"
@@ -364,7 +364,7 @@ SENSOR_DEF_CONFIG = {
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
                         },
-    r'dpu\\d+_module':  {"type": "dpu_module",
+    r'dpu\d+_module':   {"type": "dpu_module",
                          "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list" : []
                         },
