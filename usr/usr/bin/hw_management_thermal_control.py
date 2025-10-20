@@ -272,7 +272,7 @@ SENSOR_DEF_CONFIG = {
     r'pch':             {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": 70000, "val_max": 108000,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
-                         "input_suffix": "_temp", "value_hyst": 2, "input_smooth_level": 3, "enable": 0
+                         "input_suffix": "_temp", "value_hyst": 2, "input_smooth_level": 3
                         },
     r'comex_amb':       {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
