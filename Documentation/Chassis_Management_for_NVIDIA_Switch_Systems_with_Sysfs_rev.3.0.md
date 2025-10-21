@@ -4329,6 +4329,120 @@ echo 1 > $bsp_path/system/power_cycle
 echo 1 > $bsp_path/system/power_down
 ```
 
+### CPU Shut Down Request
+
+**Node name:** `$bsp_path/system/cpu_shutdown_req`
+
+**Description:** CPU initiated shutdown request signal. This attribute is used by the CPU to request a system shutdown sequence.
+
+**Access:** Read/Write
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| request | Integer | 0/1 |
+
+**Example:** Set CPU shutdown request:
+```bash
+echo 1 > $bsp_path/system/cpu_shutdown_req
+```
+
+### Graceful Power Off
+
+**Node name:** `$bsp_path/system/graceful_power_off`
+
+**Description:** Initiate graceful system power off sequence. This attribute triggers a controlled shutdown procedure that allows the system to properly close processes and save state before powering off.
+
+**Access:** Read/Write
+
+**Release version:** 3.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| poweroff | Integer | 0/1 |
+
+**Example:** Initiate graceful power off:
+```bash
+echo 1 > $bsp_path/system/graceful_power_off
+```
+
+**Note:** See also section 3.5.9 for the related event `graceful_pwr_off` that monitors graceful shutdown status.
+
+### CPU Power off Ready
+
+**Node name:** `$bsp_path/system/cpu_power_off_ready`
+
+**Description:** CPU signal indicating readiness for power off. This attribute is set by the CPU to signal that it has completed shutdown procedures and is ready for the system to power down.
+
+**Access:** Read/Write
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| ready | Integer | 0/1 |
+
+**Example:** Set CPU power off ready status:
+```bash
+echo 1 > $bsp_path/system/cpu_power_off_ready
+```
+
+### Shutdown Unlock
+
+**Node name:** `$bsp_path/system/shutdown_unlock`
+
+**Description:** Unlock mechanism for shutdown operations. This attribute must be set to enable shutdown and power cycle operations, providing a safety mechanism to prevent accidental system shutdowns.
+
+**Access:** Read/Write
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| unlock | Integer | 0/1 |
+
+**Example:** Unlock shutdown operations:
+```bash
+echo 1 > $bsp_path/system/shutdown_unlock
+```
+
+**Example:** Lock shutdown operations:
+```bash
+echo 0 > $bsp_path/system/shutdown_unlock
+```
+
+### Boot Completed
+
+**Node name:** `$bsp_path/system/boot_completed`
+
+**Description:** System boot completion status. This attribute indicates that the system has completed its boot sequence and is fully operational.
+
+**Access:** Read/Write
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| status | Integer | 0 (not completed), 1 (completed) |
+
+**Example:** Read boot completion status:
+```bash
+cat $bsp_path/system/boot_completed
+```
+
+**Example:** Set boot completed flag:
+```bash
+echo 1 > $bsp_path/system/boot_completed
+```
+
+**Note:** On AMD SNW CPU platforms, this may be implemented as a GPIO-based attribute.
+
 ### Set Line Card Power
 
 **Node name:** `$bsp_path/system/lc<index>_power`
