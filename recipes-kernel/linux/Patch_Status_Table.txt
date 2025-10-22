@@ -779,7 +779,7 @@ Kernel-6.12
 |0027-platform-mellanox-mlx-platform-Change-register-name.patch   | e75394b            | Feature upstream                         | 6.15.1     |                                                |
 |0028-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  | d00f779            | Feature upstream                         | 6.15.1     |                                                |
 |0029-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  | 783259e            | Feature upstream                         | 6.15.1     |                                                |
-|0030-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           |            |                                                |
+|0030-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           | 6.12.53    |                                                |
 |0031-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
 |0032-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
 |0033-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
@@ -796,7 +796,7 @@ Kernel-6.12
 |0044-platform_data-mlxreg-Add-non-sticky-bit-indication-f.patch  | 3a1f095            | Feature upstream                         | 6.15.1     |                                                |
 |0045-platform-mellanox-mlxreg-hotplug-Add-handling-of-non.patch  | 623a39e            | Feature upstream                         | 6.15.1     |                                                |
 |0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  | 51717e8            | Feature upstream                         | 6.15.1     |                                                |
-|0047-hwmon-mlxreg-fan-Prevent-fans-from-getting-stuck-at-.patch  | b82f116            | Feature upstream                         | 6.15.1     |                                                |
+|0047-hwmon-mlxreg-fan-Prevent-fans-from-getting-stuck-at-.patch  | b82f116            | Feature upstream                         | 6.12.45    |                                                |
 |0048-UBUNTU-SAUCE-mlxbf_gige-add-RX_DMA-disable-to-NAPI-p.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0049-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0050-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
