@@ -49,7 +49,6 @@ System Thermal control tool
 #######################################################################
 import os
 import sys
-import time
 import traceback
 import argparse
 import subprocess
@@ -59,6 +58,7 @@ from hw_management_lib import current_milli_time as current_milli_time
 import json
 import re
 from threading import Timer, Event
+import psutil
 
 #############################
 # Global const
@@ -3832,6 +3832,12 @@ class ThermalManagement(hw_management_file_op):
 
         self.log.info("Thermal periodic report")
         self.log.info("================================")
+        if hasattr(self, "process"):
+            memory_info = self.process.memory_full_info()
+            memory_usage_rss = round(memory_info.rss / 1024**2, 1)
+            memory_usage_pss = round(memory_info.pss / 1024**2, 1)
+            memory_usage_uss = round(memory_info.uss / 1024**2, 1)
+            self.log.info("Memory usage: {} MB (PSS: {} MB, USS: {} MB)".format(memory_usage_rss, memory_usage_pss, memory_usage_uss))
         self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
         self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
         self.log.info("dir:{}".format(flow_dir))
@@ -3903,6 +3909,7 @@ if __name__ == '__main__':
     else:
         syslog_level = Logger.NOTSET
 
+    process = psutil.Process(os.getpid())
     logger = Logger(log_file=args[CONST.LOG_FILE], log_level=args["verbosity"],
                     log_repeat=Logger.LOG_REPEAT_UNLIMITED, syslog_repeat=0,
                     syslog_level=syslog_level,
@@ -3910,6 +3917,7 @@ if __name__ == '__main__':
     thermal_management = None
     try:
         thermal_management = ThermalManagement(args, logger)
+        thermal_management.process = process
         thermal_management.init()
         thermal_management.start(reason="init")
         thermal_management.run()
