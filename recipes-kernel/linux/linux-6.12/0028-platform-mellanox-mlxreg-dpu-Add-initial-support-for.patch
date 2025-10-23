@@ -259,7 +259,7 @@ index 00000000..277e4b8
 +	{
 +		.label = "boot_progress",
 +		.reg = MLXREG_DPU_REG_GP1_OFFSET,
-+		.mask = GENMASK(3, 0),
++		.bit = GENMASK(3, 0),
 +		.mode = 0444,
 +	},
 +	{
