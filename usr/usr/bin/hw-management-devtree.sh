@@ -1499,7 +1499,6 @@ devtr_check_board_components()
 						else
 							hotswap_name=$(echo ${curr_component[3]} | grep -o '[^0-9]\+')
 							hotswap_num=$(echo ${curr_component[3]} | grep -o '[0-9]\+')
-							hotswap_num=$((hotswap_num+brd*board_hotswap_num))
 							curr_component[3]=${hotswap_name}$((hotswap_num+brd*board_hotswap_num))
 						fi
 					fi
