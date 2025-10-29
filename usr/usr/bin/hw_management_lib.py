@@ -36,7 +36,7 @@ import sys
 import logging
 from logging.handlers import RotatingFileHandler
 import syslog
-from threading import Lock
+import threading
 import time
 
 
@@ -139,9 +139,9 @@ class HW_Mgmt_Logger:
         self.syslog_repeat = syslog_repeat
         self.syslog_hash = {}    # hash array of the messages which was logged to syslog
         self.log_hash = {}    # hash array of the messages which was logged to log
-        self._lock = Lock()  # Thread safety for all logger operations
+        self._lock = threading.Lock()  # Thread safety for all logger operations
 
-        self.set_param(ident, log_file, log_level, syslog_level)
+        self._set_param(ident, log_file, log_level, syslog_level)
         for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
             setattr(self, level, self._make_log_level(level))
         self.resume()
@@ -228,7 +228,7 @@ class HW_Mgmt_Logger:
         """
         self._suspend = False
 
-    def set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
+    def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
         @summary:
             Set logger parameters. Can be called any time
@@ -418,6 +418,7 @@ class HW_Mgmt_Logger:
         """
         hash_size = len(log_hash)
 
+        # don't clean up if hash size < MAX_MSG_TIMEOUT_HASH_SIZE and < MAX_MSG_HASH_SIZE
         if hash_size > self.MAX_MSG_HASH_SIZE:
             # some major issue. We never expect to have more than MAX_MSG_HASH_SIZE messages in hash.
             # Use print instead of logger to avoid potential circular logging issues
@@ -512,3 +513,95 @@ class HW_Mgmt_Logger:
                     log_emit = True
 
         return msg, log_emit
+
+# ----------------------------------------------------------------------
+
+
+class RepeatedTimer:
+    THREAD_STOP_TIMEOUT = 0.2
+
+    def __init__(self, interval, function, auto_start=False):
+        """
+        @summary: Create timer object which run function in separate thread
+        @param interval: Interval in seconds to run function
+        @param function: function name to run
+        @param auto_start: If True, automatically start the timer. If False, requires manual start() (default: False).
+        """
+        self.func = function
+        self.interval = interval
+        self._stop_event = threading.Event()
+        self._thread = None
+        if auto_start:
+            self.start()
+
+    def __del__(self):
+        """
+        @summary:
+            Ensure timer is stopped during cleanup
+        """
+        try:
+            # Use a timeout to avoid blocking indefinitely during app termination
+            self.stop()
+        except Exception:
+            pass
+
+    def _run(self):
+        """
+        @summary:
+            Run function in separate thread
+        """
+        while not self._stop_event.is_set():
+            start = time.time()
+            try:
+                self.func()
+            except Exception as e:
+                print(f"Error in periodic task: {e}")
+            # Sleep remaining time if func took less than interval
+            elapsed = time.time() - start
+            sleep_time = max(0, self.interval - elapsed)
+            if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
+                break  # Event was set, exit immediately
+
+    def start(self, immediately_run=False):
+        """
+        @summary:
+            Start selected timer (if it not running)
+        """
+        if immediately_run:
+            self.func()
+
+        if self._thread and self._thread.is_alive():
+            return  # already running
+
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        """Stop periodic execution.
+        @summary:
+            Stop selected timer (if it started before
+        @return: True if thread stopped successfully, False if still alive after timeout
+        """
+        self._stop_event.set()
+        if self._thread:
+            # Check if we're trying to stop from within the same thread (avoid deadlock)
+            if self._thread is threading.current_thread():
+                # Don't join ourselves - just set the stop event and return
+                # Thread will exit naturally after current callback completes
+                return True
+
+            self._thread.join(timeout=self.THREAD_STOP_TIMEOUT)
+            # Verify thread actually stopped
+            if self._thread.is_alive():
+                print(f"Warning: RepeatedTimer thread still alive after stop timeout")
+                return False
+            self._thread = None
+        return True
+
+    def is_running(self):
+        """
+        @summary:
+            Return True if the timer is currently running
+        """
+        return self._thread is not None and self._thread.is_alive()
