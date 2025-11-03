@@ -144,7 +144,7 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
         logger.stop()
 
         # Reinitialize with different level
-        logger.set_param(log_level=HW_Mgmt_Logger.INFO, log_file=log_file)
+        logger._set_param(log_level=HW_Mgmt_Logger.INFO, log_file=log_file)
         logger.info("Info message 2")  # Should be logged now
         logger.warning("Warning message 2")  # Should be logged
         logger.stop()
@@ -325,7 +325,7 @@ class AdvancedHWMgmtLoggerTests(unittest.TestCase):
 
             # File logging should still work
             log_file = os.path.join(self.temp_dir, "recovery_test.log")
-            logger.set_param(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
+            logger._set_param(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
             logger.info("Recovery test message")
             logger.stop()
 

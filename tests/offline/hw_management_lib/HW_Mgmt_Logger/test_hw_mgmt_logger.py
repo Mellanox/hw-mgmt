@@ -621,7 +621,7 @@ class TestHWMgmtLogger(unittest.TestCase):
         self.logger.info("Message in first file")
 
         # Change log file
-        self.logger.set_param(log_file=log_file2, log_level=HW_Mgmt_Logger.INFO)
+        self.logger._set_param(log_file=log_file2, log_level=HW_Mgmt_Logger.INFO)
         self.logger.info("Message in second file")
 
         # Both files should exist
@@ -637,21 +637,21 @@ class TestHWMgmtLogger(unittest.TestCase):
         self.logger = HW_Mgmt_Logger()
 
         with self.assertRaises(ValueError):
-            self.logger.set_param(log_file=123)
+            self.logger._set_param(log_file=123)
 
     def test_52_set_param_invalid_log_level(self):
         """Test set_param with invalid log level"""
         self.logger = HW_Mgmt_Logger()
 
         with self.assertRaises(ValueError):
-            self.logger.set_param(log_level=999)
+            self.logger._set_param(log_level=999)
 
     def test_53_set_param_invalid_syslog_level(self):
         """Test set_param with invalid syslog level"""
         self.logger = HW_Mgmt_Logger()
 
         with self.assertRaises(ValueError):
-            self.logger.set_param(syslog_level=999)
+            self.logger._set_param(syslog_level=999)
 
     # ========================================================================
     # Thread Safety Tests

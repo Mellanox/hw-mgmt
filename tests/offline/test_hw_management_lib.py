@@ -225,7 +225,7 @@ class TestSetParam:
     def test_simple_change_log_level(self, log_file):
         """Simple: Change log level"""
         logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.WARNING)
-        logger.set_param(log_file=log_file, log_level=HW_Mgmt_Logger.DEBUG)
+        logger._set_param(log_file=log_file, log_level=HW_Mgmt_Logger.DEBUG)
         assert logger.logger.level == HW_Mgmt_Logger.DEBUG
         logger.stop()
 
@@ -237,7 +237,7 @@ class TestSetParam:
         logger = HW_Mgmt_Logger(log_file=log1, log_level=HW_Mgmt_Logger.INFO)
         logger.info("First file message")
 
-        logger.set_param(log_file=log2, log_level=HW_Mgmt_Logger.INFO)
+        logger._set_param(log_file=log2, log_level=HW_Mgmt_Logger.INFO)
         logger.info("Second file message")
 
         logger.stop()
@@ -251,21 +251,21 @@ class TestSetParam:
         """Medium: Invalid log_file type raises ValueError"""
         logger = HW_Mgmt_Logger()
         with pytest.raises(ValueError, match="log_file must be a string"):
-            logger.set_param(log_file=123)
+            logger._set_param(log_file=123)
         logger.stop()
 
     def test_medium_invalid_log_level(self, log_file):
         """Medium: Invalid log level raises ValueError"""
         logger = HW_Mgmt_Logger()
         with pytest.raises(ValueError, match="Invalid log_level"):
-            logger.set_param(log_file=log_file, log_level=999)
+            logger._set_param(log_file=log_file, log_level=999)
         logger.stop()
 
     def test_complex_nonexistent_directory(self):
         """Complex: Non-existent log directory raises PermissionError"""
         logger = HW_Mgmt_Logger()
         with pytest.raises(PermissionError, match="Log directory does not exist"):
-            logger.set_param(log_file="/nonexistent/dir/test.log")
+            logger._set_param(log_file="/nonexistent/dir/test.log")
         logger.stop()
 
     def test_complex_stream_handlers(self):
@@ -273,14 +273,14 @@ class TestSetParam:
         logger = HW_Mgmt_Logger()
 
         # Test stdout
-        logger.set_param(log_file="stdout", log_level=HW_Mgmt_Logger.INFO)
+        logger._set_param(log_file="stdout", log_level=HW_Mgmt_Logger.INFO)
 
         import logging
         assert logger.logger.handlers[0] is not None
         assert isinstance(logger.logger.handlers[0], logging.StreamHandler)
 
         # Test stderr
-        logger.set_param(log_file="stderr", log_level=HW_Mgmt_Logger.INFO)
+        logger._set_param(log_file="stderr", log_level=HW_Mgmt_Logger.INFO)
         assert logger.logger.handlers[1] is not None
         assert isinstance(logger.logger.handlers[1], logging.StreamHandler)
 
