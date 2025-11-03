@@ -172,6 +172,44 @@ def thermal_data_set_module(asic_index,
         return False
 
 
+vendor_data_key_replace = {
+    "part_number": "PN",
+    "manufacturer": "Manufacturer"
+}
+
+
+def vendor_data_set_module(asic_index,
+                           module_index,
+                           vendor_info=None):
+    """Function sets module vendor data."""
+    if not check_asic_index(asic_index) or not check_module_index(asic_index, module_index):
+        return False
+
+    # Define file paths
+    vendor_file = os.path.join(BASE_PATH, "eeprom", f"module{module_index}_data")
+    # Create the file if it doesn't exist and write the values
+    try:
+        if vendor_info:
+            vendor_data = []
+            for key, value in vendor_info.items():
+                # make key case agnostic
+                key_lower = key.lower()
+                # if key is not in vendor_data_key_replace, use the original key
+                key_value = key if key_lower not in vendor_data_key_replace else vendor_data_key_replace[key_lower]
+                # format key and value for output format
+                str_value = f"{key_value:<25}: {value}"
+                vendor_data.append(str_value)
+            with open(vendor_file, 'w', encoding="utf-8") as f:
+                f.write("\n".join(vendor_data) + "\n")
+        else:
+            if os.path.exists(vendor_file):
+                os.remove(vendor_file)
+        return True  # Successfully set vendor data for the module
+    except Exception as e:
+        print(f"Error setting vendor data for Module {module_index}: {str(e)}")
+        return False
+
+
 def thermal_data_clean_asic(asic_index):
     """Function cleans asic data."""
     if not check_asic_index(asic_index):
@@ -221,4 +259,22 @@ def thermal_data_clean_module(asic_index, module_index):
         return True  # Successfully cleaned thermal data for the module
     except Exception as e:
         print(f"Error cleaning thermal data for Module {module_index}: {str(e)}")
+        return False
+
+
+def vendor_data_clear_module(asic_index,
+                             module_index):
+    """Function cleans module vendor data."""
+    if not check_asic_index(asic_index) or not check_module_index(asic_index, module_index):
+        return False
+
+    # Define file paths
+    vendor_file = os.path.join(BASE_PATH, "eeprom", f"module{module_index}_data")
+    # Remove the files if they exist
+    try:
+        if os.path.exists(vendor_file):
+            os.remove(vendor_file)
+        return True  # Successfully cleaned vendor data for the module
+    except Exception as e:
+        print(f"Error cleaning vendor data for Module {module_index}: {str(e)}")
         return False
