@@ -133,6 +133,8 @@ device_connect_delay=0.2
 # DNV - Denverton
 # BF3 - BlueField-3
 # AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
+# AMD_V3000 - AMD V3000
+# AMD_FRNG - AMD Firerange
 # ARMv7 - Aspeed 2600
 IVB_CPU=0x63A
 RNG_CPU=0x64D
@@ -141,6 +143,8 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
+AMD_V3000_CPU=0x1944
+AMD_FRNG_CPU=0x1A44
 ARMv7_CPU=0xC07
 amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 n5110_mctp_bus="0"
