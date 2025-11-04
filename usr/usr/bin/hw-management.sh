@@ -861,6 +861,14 @@ set_jtag_gpio()
 				;;
 			esac
 			;;
+		$AMD_V3000_CPU)
+			jtag_tdi=5
+			jtag_tck=132
+			jtag_tms=7
+			jtag_tdo=8
+			echo 0x20e5 > $config_path/jtag_rw_reg
+			echo 0x20e6 > $config_path/jtag_ro_reg
+			;;
 		*)
 			return 0
 			;;
@@ -963,10 +971,15 @@ set_gpios()
 			;;
 		$AMD_SNW_CPU)
 			set_jtag_gpio $1
-			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
 			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
+			;;
+		$AMD_V3000_CPU)
+			set_jtag_gpio $1
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(89 10 12 23)
+			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
 			return 1
