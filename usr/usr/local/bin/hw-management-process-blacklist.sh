@@ -47,7 +47,9 @@ blacklist pcspkr
 blacklist i2c_piix4
 blacklist cfg80211
 blacklist cdc_subset
-blacklist delta_i2c_ismt"
+blacklist delta_i2c_ismt
+blacklist i2c_hid_acpi
+blacklist amd_sfh"
 
 # Get system SKU
 SKU=$(cat /sys/devices/virtual/dmi/id/product_sku 2>/dev/null)
