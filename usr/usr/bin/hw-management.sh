@@ -963,10 +963,14 @@ set_gpios()
 			;;
 		$AMD_SNW_CPU)
 			set_jtag_gpio $1
-			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
 			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
+			;;
+		$AMD_V3000_CPU)
+			gpiolabel="AMDI0030:00"
+			gpio_idx=(7 10 12 23)
+			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
 			return 1
