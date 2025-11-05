@@ -100,6 +100,8 @@ class CONST:
     SYS_CONF_FAN_STEADY_STATE_DELAY = "fan_steady_state_delay"
     SYS_CONF_FAN_STEADY_STATE_PWM = "fan_steady_state_pwm"
     SYS_CONF_FAN_STEADY_ATTENTION_ITEMS = "attention_fans"
+    SYS_CONF_DEV_TUNE = "dev_tune"
+    DEV_CONF_EXTRA_PARAM = "extra_param"
 
     # *************************
     # Folders definition
@@ -241,7 +243,7 @@ SENSOR_DEF_CONFIG = {
                          "refresh_attr_period": 1 * 60
                         },
     r'module\d+':       {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
+                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000, "val_min_offset": -20000, "val_max_offset": 0,
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
                          "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
                         },
@@ -649,6 +651,20 @@ class hw_management_file_op:
         os.remove(filename)
 
     # ----------------------------------------------------------------------
+    def get_file_mtime(self, filename):
+        """
+        @summary:
+            get file modification time
+        @param filename: file to check {hw-management-folder}/filename
+        @return: file modification time
+        """
+        filename = os.path.join(self.root_folder, filename)
+        try:
+            return os.path.getmtime(filename)
+        except (OSError, IOError):
+            return 0
+
+    # ----------------------------------------------------------------------
     def write_pwm(self, pwm, validate=False):
         """
         @summary:
@@ -888,6 +904,7 @@ class system_device(hw_management_file_op):
         self.sensors_config = sys_config[CONST.SYS_CONF_SENSORS_CONF][name]
         self.name = name
         self.type = self.sensors_config["type"]
+        self.extra_config = self.sensors_config.get(CONST.DEV_CONF_EXTRA_PARAM, {})
         self.log.info("Init {0} ({1})".format(self.name, self.type))
         self.log.debug("sensor config:\n{}".format(json.dumps(self.sensors_config, indent=4)))
         self.base_file_name = self.sensors_config.get("base_file_name", None)
@@ -1411,7 +1428,86 @@ class thermal_module_sensor(system_device):
         self.scale = CONST.TEMP_SENSOR_SCALE / scale_value
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
+
+        self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
+        self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
+        self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
+        self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+
+        self.eeprom_data_timestamp = None
         self.refresh_attr()
+
+    # ----------------------------------------------------------------------
+    def _module_get_data_from_file(self):
+        """
+        @summary: get data from file
+        @return: tuple (data_dictionary, change_flag)
+        Split eeprom data into key-value pairs
+        Data format in file:
+            Manufacturer:            MMMMMMM
+            PN:                      YYYYYYYYYYY
+            SN:                      XXXXXXXXXXX
+        If module data file not exists - return empty dictionary (module not supported data or not present)
+        If module data file is changed - read data from file and split into key-value pairs
+        If module data file is not changed - return empty dictionary
+        if eeprom data file content is changed or file was removed/created - return change_flag = True
+        """
+        filename = "eeprom/{}_data".format(self.base_file_name)
+        if self.check_file(filename):
+            file_mtime = self.get_file_mtime(filename)
+        else:
+            file_mtime = 0
+
+        if not hasattr(self, "eeprom_data_timestamp"):
+            self.eeprom_data_timestamp = None
+
+        eeprom_data_dict = {}
+        change_flag = False
+        if file_mtime != self.eeprom_data_timestamp:
+            self.eeprom_data_timestamp = file_mtime
+            eeprom_data = ""
+            try:
+                eeprom_data = self.read_file(filename)
+            except (ValueError, TypeError, OSError, IOError):
+                pass
+
+            if eeprom_data:
+                for line in eeprom_data.split("\n"):
+                    line = line.strip()
+                    # Skip empty lines and lines without ':'
+                    if not line or ':' not in line:
+                        continue
+                    try:
+                        key, value = line.split(":", 1)
+                        key = key.strip()
+                        value = value.strip()
+                        if key and value:
+                            eeprom_data_dict[key] = value
+                    except ValueError:
+                        self.log.notice("{}: Malformed EEPROM line: {}".format(self.name, line))
+                        continue
+            change_flag = True
+
+        return eeprom_data_dict, change_flag
+
+    # ----------------------------------------------------------------------
+    def _module_get_custom_config(self, manufacturer, pn):
+        """
+        @summary: get module custom configuration
+        @param manufacturer: manufacturer
+        @param pn: product number
+        @return: custom configuration
+        """
+        if self.extra_config:
+            match_string = f"{manufacturer}:{pn}"
+            for key_regexp, value in self.extra_config.items():
+                try:
+                    if re.match(key_regexp, match_string):
+                        return value
+                except re.error as e:
+                    self.log.notice("{}: Invalid regex pattern '{}': {}".format(self.name, key_regexp, e))
+                    continue
+        return None
 
     # ----------------------------------------------------------------------
     def refresh_attr(self):
@@ -1419,11 +1515,57 @@ class thermal_module_sensor(system_device):
         @summary: refresh sensor attributes.
         @return None
         """
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
-        if self.val_max != 0:
-            self.val_min = self.val_max - 20
+        custom_config = None
+        if self.extra_config:
+            eeprom_data, change_flag = self._module_get_data_from_file()
         else:
-            self.val_min = self.val_max
+            change_flag = False
+
+        # if eeprom data is changed - module parameters need to be updated
+        if change_flag:
+            self.log.info("{}: config update required".format(self.name))
+
+            # Build case-insensitive lookup mapping
+            eeprom_data_lower = {k.lower(): v for k, v in eeprom_data.items()}
+
+            manufacturer = eeprom_data_lower.get("manufacturer")
+            if manufacturer is None:
+                self.log.debug("{}: EEPROM key 'Manufacturer' not found".format(self.name))
+
+            pn = eeprom_data_lower.get("pn")
+            if pn is None:
+                self.log.debug("{}: EEPROM key 'PN' not found".format(self.name))
+
+            if manufacturer and pn:
+                custom_config = self._module_get_custom_config(manufacturer, pn)
+                self.log.info("{}: custom config: {} for manufacturer: {}, pn: {}".format(self.name, custom_config, manufacturer, pn))
+            else:
+                custom_config = None
+
+            if custom_config:
+                self.pwm_min = custom_config.get("pwm_min", self.pwm_min)
+                self.pwm_max = custom_config.get("pwm_max", self.pwm_max)
+                self.val_min_offset = custom_config.get("val_min_offset", self.val_min_offset)
+                self.val_max_offset = custom_config.get("val_max_offset", self.val_max_offset)
+            else:
+                self.log.info("{}: no custom config found, using default values".format(self.name))
+                self.pwm_min = self.sensors_config.get("pwm_min", CONST.PWM_MIN)
+                self.pwm_max = self.sensors_config.get("pwm_max", CONST.PWM_MAX)
+                self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
+                self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+            self.log.info("{}: pwm_min: {}, pwm_max: {}, val_min_offset: {}, val_max_offset: {}".format(self.name,
+                                                                                                        self.pwm_min,
+                                                                                                        self.pwm_max,
+                                                                                                        self.val_min_offset,
+                                                                                                        self.val_max_offset))
+
+        val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
+        if val_max != 0 and self.scale != 0:
+            self.val_max = val_max + self.val_max_offset / self.scale
+            self.val_min = self.val_max + self.val_min_offset / self.scale
+        else:
+            self.val_max = 0
+            self.val_min = 0
 
     # ----------------------------------------------------------------------
     def get_fault(self):
@@ -3177,31 +3319,58 @@ class ThermalManagement(hw_management_file_op):
         return val
 
     # ----------------------------------------------------------------------
-    def _sensor_add_config(self, sensor_type, sensor_name, extra_config=None):
+    def _sensor_add_config(self, sensor_type, sensor_name, initial_config=None):
         """
         @summary: Create sensor config and add it to main config dict
+            1. Use configuration from 'sensors_config'[sensor_name] as base.
+            2. Apply initial_config to base config.
+            3. Load "tune" parameters. This parameters can be used for dynamically change sensor configuration.
+               Sensor name can be defined as regex mask.
+            4. Apply "dev_parameters" parameters from tc_config.json.
+               Sensor name can be defined as regex mask.
+            5. Apply missing keys from def config (defined in top of this file)
+               Sensor name can be defined as regex mask.
+            Steps 1,2,3,4,5 adding only new configuration parameters if they were not added on previous steps.
+            So next step will not add parameters if they were already added on previous steps.
         @param sensor_type: sensor/device sensor_type
         @param sensor_name: sensor/device sensor_name
-        @param extr_config: additional configuration which can override default values from SENSOR_DEF_CONFIG
+        @param initial_config: initial configuration which overrides default values from SENSOR_DEF_CONFIG
+        @return: None
         """
+        # 1. Create initial sensor config
         sensors_config = self.sys_config[CONST.SYS_CONF_SENSORS_CONF]
         if sensor_name not in sensors_config.keys():
             sensors_config[sensor_name] = {"type": sensor_type}
         sensors_config[sensor_name]["name"] = sensor_name
 
-        if extra_config:
-            add_missing_to_dict(sensors_config[sensor_name], extra_config)
+        # 2. Apply sensor initial config from initial_config
+        if initial_config:
+            add_missing_to_dict(sensors_config[sensor_name], initial_config)
 
-        # 1. Add missing keys from system_conf->sensors_config to sensor_conf
+        # 3. Apply config from dev_tune as extra_param
+        if CONST.SYS_CONF_DEV_TUNE in self.sys_config:
+            dev_tune = self.sys_config[CONST.SYS_CONF_DEV_TUNE]
+            for name_mask, dev_tune_val in dev_tune.items():
+                if not name_mask.endswith("$"):
+                    name_mask = name_mask + "$"
+                if re.match(name_mask, sensor_name):
+                    add_missing_to_dict(sensors_config[sensor_name], {CONST.DEV_CONF_EXTRA_PARAM: dev_tune_val})
+                    break
+
+        # 4. Apply missing keys from dev_parameters to sensor_conf
         dev_param = self.sys_config[CONST.SYS_CONF_DEV_PARAM]
         for name_mask, val in dev_param.items():
+            if not name_mask.endswith("$"):
+                name_mask = name_mask + "$"
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
 
-        # 2. Add missing keys from def config to sensor_conf
+        # 5. Apply missing keys from def config to sensor_conf
         dev_param = SENSOR_DEF_CONFIG
         for name_mask, val in dev_param.items():
+            if not name_mask.endswith("$"):
+                name_mask = name_mask + "$"
             if re.match(name_mask, sensor_name):
                 add_missing_to_dict(sensors_config[sensor_name], val)
                 break
@@ -3414,6 +3583,9 @@ class ThermalManagement(hw_management_file_op):
 
         if CONST.SYS_CONF_GENERAL_CONFIG_PARAM not in sys_config:
             sys_config[CONST.SYS_CONF_GENERAL_CONFIG_PARAM] = {}
+
+        if CONST.SYS_CONF_DEV_TUNE not in sys_config:
+            sys_config[CONST.SYS_CONF_DEV_TUNE] = {}
 
         return sys_config
 
