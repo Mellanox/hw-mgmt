@@ -1,4 +1,4 @@
-From 73228c8023e1a3ef0939843cad4e7a091bd4d88d Mon Sep 17 00:00:00 2001
+From 78cb98d2979247c767e2ea18ff15630e2b073f00 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -23,9 +23,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Makefile            |    2 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  626 ++++
- drivers/platform/mellanox/nvsw-host-l1.c      |  692 ++++
+ drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
  drivers/platform/mellanox/nvsw.h              |  262 ++
- 7 files changed, 4436 insertions(+), 4 deletions(-)
+ 7 files changed, 4454 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -3563,10 +3563,10 @@ index 000000000..078c17924
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
 new file mode 100644
-index 000000000..06b2c38f3
+index 000000000..bf12509b2
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,692 @@
+@@ -0,0 +1,710 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3829,6 +3829,24 @@ index 000000000..06b2c38f3
 +		.mode = 0644,
 +	},
 +	{
++		.label = "cpu_erot_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
++		.label = "mcu1_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0644,
++	},
++	{
++		.label = "mcu2_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0644,
++	},
++	{
 +		.label = "reset_long_pb",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -3859,7 +3877,7 @@ index 000000000..06b2c38f3
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_pwr_button_or_leak_con",
++		.label = "reset_pwr_button",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
@@ -3883,9 +3901,15 @@ index 000000000..06b2c38f3
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_erot",
-+		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(0),
++		.label = "reset_cpu_erot",
++		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_leak_con",
++		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
 +	{
@@ -3907,12 +3931,6 @@ index 000000000..06b2c38f3
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_cpu_pwr_fail",
-+		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(4),
-+		.mode = 0444,
-+	},
-+	{
 +		.label = "reset_pwr_converter_fail",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(5),
@@ -3925,7 +3943,7 @@ index 000000000..06b2c38f3
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "reset_mgmt_pwr",
++		.label = "reset_mgmt_pwr_fail",
 +		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
