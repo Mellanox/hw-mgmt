@@ -57,10 +57,12 @@ import signal
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison
 import json
 import re
-from threading import Timer, Event
-import pdb
+from threading import Event
+import psutil
+import threading
 
 #############################
 # Global const
@@ -208,8 +210,10 @@ class CONST(object):
     DRWR_ERR_LIST = [DIRECTION, TACHO, PRESENT, SENSOR_READ_ERR]
     PSU_ERR_LIST = [DIRECTION, PRESENT, SENSOR_READ_ERR]
 
-    MLXREG_SET_CMD_STR = "yes |  mlxreg -d  {pcidev} --reg_name MFSC --indexes \"pwm=0x0\" --set \"pwm_duty_cycle={pwm}\""
-    MLXREG_GET_CMD_STR = "mlxreg -d {pcidev} --reg_name MFSC --get --indexes \"pwm=0x0\" | grep pwm | head -n 1 | cut -d '|' -f 2"
+    # Memory usage information
+    DBG_MEMORY_INFO = True
+    DBG_MEMORY_USAGE_ALERT = 50000    # KB
+    DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
 
 
 """
@@ -399,8 +403,13 @@ DMIN_TABLE_DEFAULT = {
 
 ASIC_CONF_DEFAULT = {"1": {"pwm_control": False, "fan_control": False}}
 
+# global variables
+gmemory_snapshot = None
+gmemory_snapshot_profiler = ObjectSnapshot(max_depth=16)
 
 # ----------------------------------------------------------------------
+
+
 def str2bool(val):
     """
     @summary:
@@ -670,6 +679,25 @@ class hw_management_file_op(object):
         return ret
 
     # ----------------------------------------------------------------------
+    def _terminate_proc(self, proc, timeout=1.0):
+        """
+        @summary:
+            terminate process
+        @param timeout: timeout to wait for process to terminate
+        @param proc: process to terminate
+        """
+        if proc:
+            try:
+                proc.terminate()
+                proc.wait(timeout=timeout)
+            except (subprocess.TimeoutExpired, OSError, ProcessLookupError):
+                try:
+                    proc.kill()
+                    proc.wait(timeout=timeout)
+                except (OSError, ProcessLookupError, subprocess.TimeoutExpired):
+                    pass
+
+    # ----------------------------------------------------------------------
     def write_pwm_mlxreg(self, pwm, validate=False):
         """
         @summary:
@@ -681,17 +709,31 @@ class hw_management_file_op(object):
         if not self.asic_pcidev:
             return False
 
+        yes_proc = None
+        mlxreg_proc = None
         try:
             pwm_out = int(pwm * 255 / 100)
             if os.path.exists(self.asic_pcidev):
-                mlxreg_set_cmd = CONST.MLXREG_SET_CMD_STR.format(pcidev=self.asic_pcidev,
-                                                                 pwm=hex(pwm_out))
-                self.log.debug("set mlxreg pwm {}% cmd:{}".format(pwm, mlxreg_set_cmd))
-                subprocess.call(mlxreg_set_cmd, shell=True)
+                yes_proc = subprocess.Popen(['yes'], stdout=subprocess.PIPE)
+                mlxreg_proc = subprocess.Popen(
+                    ['mlxreg', '-d', self.asic_pcidev, '--reg_name', 'MFSC',
+                     '--indexes', 'pwm=0x0', '--set', f'pwm_duty_cycle={hex(pwm_out)}'],
+                    stdin=yes_proc.stdout,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                mlxreg_proc.communicate(timeout=3.0)
+                yes_proc.stdout.close()
             else:
                 ret = False
         except (OSError, ValueError, subprocess.SubprocessError, subprocess.TimeoutExpired):
             ret = False
+        finally:
+            # CRITICAL FIX: Ensure processes are terminated to prevent zombie leak
+            if yes_proc:
+                self._terminate_proc(yes_proc, timeout=1.0)
+            if mlxreg_proc:
+                self._terminate_proc(mlxreg_proc, timeout=1.0)
 
         if validate:
             pwm_get = self.read_pwm_mlxreg()
@@ -728,33 +770,58 @@ class hw_management_file_op(object):
             return default_val
 
         pwm_out = default_val
+        mlxreg_proc = None
         try:
-            mlxreg_get_cmd = CONST.MLXREG_GET_CMD_STR.format(pcidev=self.asic_pcidev)
-            self.log.debug("get mlxreg pwm cmd:{}".format(mlxreg_get_cmd))
-            subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True,
-                           check=False,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           text=True)
-            ret = result.stdout
-            pwm = int(ret.strip(), 16)
-            pwm_out = int(pwm / 2.55 + 0.5)
+            mlxreg_proc = subprocess.Popen(
+                ['mlxreg', '-d', self.asic_pcidev, '--reg_name', 'MFSC',
+                 '--get', '--indexes', 'pwm=0x0'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            stdout, _ = mlxreg_proc.communicate(timeout=3.0)
+            if stdout:
+                stdout_lines = stdout.decode('utf-8', errors='replace').splitlines()
+                for line in stdout_lines:
+                    if "pwm" in line:
+                        pwm = int(line.split("|")[1].strip(), 16)
+                        pwm_out = int(pwm / 2.55 + 0.5)
+                        break
+
         except (ValueError, TypeError, subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
             pass
+        finally:
+            # CRITICAL FIX: Ensure process is terminated to prevent leak
+            if mlxreg_proc:
+                self._terminate_proc(mlxreg_proc, timeout=1.0)
 
         return pwm_out
 
 
-class iterate_err_counter():
-    def __init__(self, logger, name, err_max):
+class iterate_err_counter:
+    def __init__(self, logger, name, err_max, warn_err_limit_entries=32):
+        """
+        @summary:
+            Initialize error counter
+        @param logger: logger object
+        @param name: name of the error counter
+        @param err_max: maximum number of err entries to count.
+        @param warn_err_limit_entries: maximum number of err entries to warn about
+                        By the app logic, we donn't expect more than 5 errors simultaneously but
+                        user can tyune it on counter initialization.
+                        Default set it to "limit" to be safe and to avoid memory leaks.
+                        If more than "limit" errors: will try to remove zero count entries to free memory.
+                        If still more than "limit" errors, will log error message and block adding new errors.
+
+        """
         self.log = logger
         self.name = name
         self.err_max = err_max
         self.err_counter_dict = {}
+        self.warn_err_limit_entries = warn_err_limit_entries
 
     # ----------------------------------------------------------------------
     def reset_all(self):
-        self.err_counter_dict = {}
+        self.err_counter_dict.clear()
 
     # ----------------------------------------------------------------------
     def handle_err(self, err_name, reset=False, print_log=True):
@@ -763,7 +830,18 @@ class iterate_err_counter():
         @param err_name: err name to be handled
         @param  reset: 1- increment errors counter for file, 0 - reset error counter for the file
         """
-        err_cnt = self.err_counter_dict.get(err_name, None)
+        # Check dictionary size before adding new entries
+        if err_name not in self.err_counter_dict:
+            if len(self.err_counter_dict) >= self.warn_err_limit_entries:
+                # Remove entries with count = 0 (resolved errors)
+                keys_to_remove = [k for k, v in self.err_counter_dict.items() if v == 0]
+                for k in keys_to_remove:
+                    del self.err_counter_dict[k]
+            if len(self.err_counter_dict) >= self.warn_err_limit_entries:
+                self.log.error("{}: error counter dictionary size exceeded max limit of {}".format(self.name, self.warn_err_limit_entries))
+                return False
+
+        err_cnt = self.err_counter_dict.get(err_name, 0)
         err_level = self.err_max
         if not reset:
             if err_cnt:
@@ -774,10 +852,11 @@ class iterate_err_counter():
             if print_log and err_cnt < err_level:
                 self.log.warn("{}: {} error {} times".format(self.name, err_name, err_cnt))
         else:
-            if err_cnt and err_cnt != 0 and print_log:
+            if err_cnt and print_log:
                 self.log.notice("{}: {} OK".format(self.name, err_name))
             err_cnt = 0
         self.err_counter_dict[err_name] = err_cnt
+        return True
 
     # ----------------------------------------------------------------------
     def check_err(self):
@@ -849,20 +928,32 @@ class system_device(hw_management_file_op):
         self.value_last_update_trend = 0
         self.value_trend = 0
         self.value_hyst = int(self.sensors_config.get("value_hyst", CONST.VALUE_HYSTERESIS_DEF))
-        self.clear_fault_list()
 
         # ==================
+        self.mask_fault_list = []
         self.static_mask_fault_list = []
+
         self.dynamic_mask_fault_list = self.sensors_config.get("dynamic_err_mask", [])
         if not self.dynamic_mask_fault_list:
             self.dynamic_mask_fault_list = []
-        self.mask_fault_list = []
-        self.fault_list = []
 
+        self.fault_list = []
         self.fault_list_static_filtered = []
-        self.fault_list_dynamic_filtered = []
         self.fault_list_dynamic = []
+        self.fault_list_dynamic_filtered = []
         self.dynamic_filter_ena = False
+
+    # ----------------------------------------------------------------------
+    def __del__(self):
+        """
+        @summary: Cleanup and stop logger
+        """
+        try:
+            # Explicitly clean up all variables
+            self.stop()
+        except (AttributeError, TypeError, RuntimeError):
+            # Ignore errors during cleanup in destructor to avoid issues during interpreter shutdown
+            pass
 
     # ----------------------------------------------------------------------
     def start(self):
@@ -1127,10 +1218,13 @@ class system_device(hw_management_file_op):
         """
         @summary: clear fault list
         """
-        self.fault_list = []
-        self.fault_list_static_filtered = []
-        self.fault_list_dynamic_filtered = []
-        self.fault_list_dynamic = []
+        # clear all fault lists initialized in the class constructor
+        # no need to check if attributes exist, because they are initialized in the class constructor
+        # and we can be sure that they are all initialized
+        self.fault_list.clear()
+        self.fault_list_static_filtered.clear()
+        self.fault_list_dynamic.clear()
+        self.fault_list_dynamic_filtered.clear()
 
     # ----------------------------------------------------------------------
     def get_fault_list_static_filtered(self):
@@ -1610,6 +1704,34 @@ class psu_fan_sensor(system_device):
         return psu_status
 
     # ----------------------------------------------------------------------
+    def _i2c_set(self, bus, addr, arg_list, timeout=2.0):
+        """
+        @summary: Execute i2c command
+        @param bus: i2c bus
+        @param addr: i2c address
+        @param arg_list: i2c command arguments list
+        @return: result of i2c command
+        """
+
+        timestump = current_milli_time()
+        while current_milli_time() - timestump < timeout:
+            try:
+                # 1. check if i2c bus is available
+                if os.path.isfile("/sys/bus/i2c/devices/i2c-{}/name".format(int(bus))):
+                    cmd = ['i2cset', '-f', '-y', str(bus), str(addr)] + arg_list
+                    # 2. execute i2c command
+                    result = subprocess.run(cmd, shell=False, timeout=2.0,
+                                            capture_output=True, check=True)
+                    return result
+                else:
+                    self.log.warn("I2C bus {} is not available. Try again in 100ms".format(bus))
+                    time.sleep(0.1)
+            except (ValueError, TypeError, OSError, IOError):
+                self.log.warn("I2C bus {} is not available".format(bus))
+                time.sleep(0.1)
+        return None
+
+    # ----------------------------------------------------------------------
     def set_pwm(self, pwm):
         """
         @summary: Set PWM level for PSU FAN
@@ -1619,7 +1741,7 @@ class psu_fan_sensor(system_device):
             present = self.thermal_read_file_int("{0}_pwr_status".format(self.base_file_name))
             if present == 1:
                 self.log.info("Write {} PWM {}".format(self.name, pwm))
-                psu_pwm, _, _ = g_get_range_val(self.pwm_decode, pwm)
+                psu_pwm, _, _ = g_get_range_val(self.pwm_decode, round(pwm))
                 if not psu_pwm:
                     self.log.info("{} Can't much PWM {} to PSU. PWM value not be change".format(self.name, pwm))
 
@@ -1639,12 +1761,20 @@ class psu_fan_sensor(system_device):
                 fan_speed_units = self.read_file("config/fan_speed_units")
 
                 # Set fan speed units (percentage or RPM)
-                i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, fan_config_command, fan_speed_units)
-                subprocess.call(i2c_cmd, shell=True)
+                result = self._i2c_set(bus, addr, [str(fan_config_command), str(fan_speed_units), 'wp'])
+                if result is None:
+                    self.log.warn("{} i2cset config failed.".format(self.name))
+                elif result.returncode != 0:
+                    error_msg = result.stderr.decode('utf-8', errors='replace') if result.stderr else "Unknown error"
+                    self.log.warn("{} i2cset config failed: {}".format(self.name, error_msg))
+
                 # Set fan speed
-                i2c_cmd = "i2cset -f -y {0} {1} {2} {3} wp".format(bus, addr, command, psu_pwm)
-                self.log.debug("{} set pwm {} cmd:{}".format(self.name, psu_pwm, i2c_cmd))
-                subprocess.call(i2c_cmd, shell=True)
+                result = self._i2c_set(bus, addr, [str(command), str(psu_pwm), 'wp'])
+                if result is None:
+                    self.log.warn("{} i2cset speed failed.".format(self.name))
+                elif result.returncode != 0:
+                    error_msg = result.stderr.decode('utf-8', errors='replace') if result.stderr else "Unknown error"
+                    self.log.warn("{} i2cset speed failed: {}".format(self.name, error_msg))
         except (ValueError, TypeError, subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
             self.log.error("{} set PWM error".format(self.name), repeat=1)
 
@@ -1700,8 +1830,7 @@ class psu_fan_sensor(system_device):
         """
         pwm_new = self.pwm
         fault_list = self.get_fault_list_filtered()
-        self.fault_list_old = self.fault_list
-
+        self.fault_list_old = self.fault_list[:]
         psu_status = self._get_status()
 
         if CONST.PRESENT in fault_list:
@@ -2541,6 +2670,8 @@ class ThermalManagement(hw_management_file_op):
         self.dev_err_exclusion_conf = {}
         self.obj_init_continue = True
 
+        self.memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
+
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
         """
@@ -2573,7 +2704,7 @@ class ThermalManagement(hw_management_file_op):
             self.log.error("Missing max tachos config.", repeat=1)
             sys.exit(1)
         # Find ASIC pci device fio
-        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True,
+        result = subprocess.run(['find', '/dev/mst', '-name', '*pciconf0'], shell=False,
                                 check=False,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
@@ -3342,6 +3473,7 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Init thermal control ver: v.{}".format(VERSION), repeat=1)
         self.log.notice("********************************", repeat=1)
 
+        self.process = psutil.Process(os.getpid())
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
         # Set initial PWM to maximum
@@ -3394,13 +3526,17 @@ class ThermalManagement(hw_management_file_op):
             if fan_obj:
                 self.pwm_max_reduction = fan_obj.get_max_reduction()
 
-            if not self.periodic_report_worker_timer:
-                self.periodic_report_worker_timer = RepeatedTimer(self.periodic_report_time, self.print_periodic_info)
-            self.periodic_report_worker_timer.start()
+            # Stop old timers before creating new ones
+            if self.periodic_report_worker_timer:
+                self.periodic_report_worker_timer.stop()
+            self.periodic_report_worker_timer = RepeatedTimer(
+                self.periodic_report_time, self.print_periodic_info, auto_start=True)
 
-            if not self.pwm_worker_timer:
-                self.pwm_worker_timer = RepeatedTimer(self.pwm_worker_poll_time, self._pwm_worker)
-            self.pwm_worker_timer.stop()
+            # PWM worker timer - stop old one and START the new one!
+            if self.pwm_worker_timer:
+                self.pwm_worker_timer.stop()
+            self.pwm_worker_timer = RepeatedTimer(
+                self.pwm_worker_poll_time, self._pwm_worker, auto_start=False)
 
             fan_dir = self._get_chassis_fan_dir()
             self._update_system_flow_dir(fan_dir)
@@ -3449,6 +3585,13 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Thermal control is running", repeat=1)
         self.log.notice("********************************", repeat=1)
         module_scan_timeout = 0
+
+        global gmemory_snapshot
+        if gmemory_snapshot_profiler:
+            gmemory_snapshot = gmemory_snapshot_profiler.collect_snapshot(self, "self")
+        else:
+            gmemory_snapshot = None
+
         # main loop
         while not self.exit.is_set() or not self.exit_flag:
             try:
@@ -3597,6 +3740,72 @@ class ThermalManagement(hw_management_file_op):
                 sleep_ms = 20 * 1000
             self.exit.wait(sleep_ms / 1000)
 
+# ----------------------------------------------------------------------
+    def show_full_thread_report(self, pid=None):
+        try:
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            self.log.info(f"No process with PID {pid}")
+            return
+
+        self.log.info(f"Process PID {pid}: {process.name()} [status={process.status()}]")
+        self.log.info(f"Memory RSS: {process.memory_info().rss / 1024 / 1024:.2f} MB")
+        self.log.info(f"CPU threads (LWPs): {len(process.threads())}")
+        self.log.info(f"Python threads: {threading.active_count()}")
+        self.log.info(f"Estimated memory per Python thread: ~{process.memory_info().rss / 1024 / 1024:.2f} MB")
+        self.log.info("-" * 90)
+
+        # --- OS-level threads ---
+        self.log.info("OS-level threads (from psutil):")
+        for t in process.threads():
+            self.log.info(f"  TID {t.id:<7} | user_time={t.user_time:.3f}s | system_time={t.system_time:.3f}s")
+        self.log.info("-" * 90)
+
+        # --- Python-level threads ---
+        self.log.info("Python threading.Thread objects:")
+        current_tid = threading.get_native_id()  # since Python 3.8+
+        for t in threading.enumerate():
+            native_id = getattr(t, "native_id", None)
+            if native_id:
+                native_process = psutil.Process(native_id)
+                mem_info = f"mem ~{native_process.memory_info().rss / 1024 / 1024:.2f} MB"
+            else:
+                mem_info = "mem N/A"
+            marker = "O" if native_id == current_tid else " "
+            self.log.info(f"{marker} Thread name='{t.name[:30]:<30}', ident={t.ident}, native_id={native_id}, alive={t.is_alive()}, {mem_info}")
+        self.log.info("-" * 90)
+        cpu_time = process.cpu_times()
+        self.log.info(f"Total process memory (RSS): {process.memory_info().rss / 1024 / 1024:.2f} MB")
+        self.log.info(f"Total CPU time: user={cpu_time.user:.2f}s, system={cpu_time.system:.2f}s")
+
+    # ----------------------------------------------------------------------
+    def print_memory_info(self):
+        """
+        @summary:  Print memory usage info
+        """
+        if hasattr(self, "process"):
+            memory_info = self.process.memory_full_info()
+            memory_usage_rss = round(memory_info.rss / 1024, 1)
+            memory_usage_pss = round(memory_info.pss / 1024, 1)
+            memory_usage_uss = round(memory_info.uss / 1024, 1)
+            self.log.info("Memory usage: {} KB (PSS: {} KB, USS: {} KB)".format(memory_usage_rss, memory_usage_pss, memory_usage_uss))
+
+            if memory_usage_rss > self.memory_alert_threshold:
+                self.log.error("!!!!!!!! Memory usage is too high: {} KB > {} KB !!!!!!!!".format(memory_usage_rss, self.memory_alert_threshold))
+                self.log.info("=" * 90)
+                self.show_full_thread_report(self.process.pid)
+                self.log.info("=" * 90)
+                self.memory_alert_threshold = memory_usage_rss + CONST.DBG_MEMORY_USAGE_ALERT_STEP
+
+                global gmemory_snapshot
+                if gmemory_snapshot_profiler:
+                    memory_snapshot = gmemory_snapshot_profiler.collect_snapshot(self, "self")
+                    if memory_snapshot:
+                        comparison = compare_snapshots(gmemory_snapshot, memory_snapshot, min_growth_bytes=1024)
+                        comparison_res_json = print_comparison(comparison, output_format="json")
+                        self.log.info(json.dumps(comparison_res_json, indent=4))
+                    gmemory_snapshot = memory_snapshot
+
     # ----------------------------------------------------------------------
     def print_periodic_info(self):
         """
@@ -3624,6 +3833,8 @@ class ThermalManagement(hw_management_file_op):
 
         self.log.info("Thermal periodic report")
         self.log.info("================================")
+        if CONST.DBG_MEMORY_INFO:
+            self.print_memory_info()
         self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
         self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
         self.log.info("dir:{}".format(flow_dir))
