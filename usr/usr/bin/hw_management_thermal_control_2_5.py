@@ -49,13 +49,13 @@ System Thermal control tool
 #######################################################################
 import os
 import sys
-import time
 import traceback
 import argparse
 import subprocess
 import signal
-import logging
-from logging.handlers import RotatingFileHandler, SysLogHandler
+from hw_management_lib import HW_Mgmt_Logger as Logger
+from hw_management_lib import current_milli_time as current_milli_time
+from hw_management_lib import RepeatedTimer as RepeatedTimer
 import json
 import re
 from threading import Timer, Event
@@ -461,18 +461,9 @@ def str2bool(val):
         return False
     return None
 
-
 # ----------------------------------------------------------------------
-def current_milli_time():
-    """
-    @summary:
-        get current time in milliseconds
-    @return: int value time in milliseconds
-    """
-    return round(time.clock_gettime(1) * 1000)
 
 
-# ----------------------------------------------------------------------
 def get_dict_val_by_path(dict_in, path):
     """
     @summary: get value from the multi nested dict_in.
@@ -553,265 +544,7 @@ def add_missing_to_dict(dict_base, dict_new):
             dict_base[key] = dict_new[key]
 
 
-# ----------------------------------------------------------------------
-class SyslogFilter(logging.Filter):
-
-    def filter(self, record):
-        res = False
-        if record.getMessage().startswith("@syslog "):
-            record.msg = record.getMessage().replace("@syslog ", "")
-            res = True
-        return res
-
-
-# ----------------------------------------------------------------------
-class Logger(object):
-    """
-    Logger class provide functionality to log messages.
-    It can log to several places in parallel
-    """
-
-    def __init__(self, use_syslog=False, log_file=None, verbosity=20):
-        """
-        @summary:
-            The following class provide functionality to log messages.
-        @param use_syslog: log also to syslog. Applicable arg
-            value 1-enable/0-disable
-        @param log_file: log to user specified file. Set '' if no log needed
-        """
-        self.logger = None
-        logging.basicConfig(level=logging.DEBUG)
-        logging.addLevelName(logging.INFO + 5, "NOTICE")
-        SysLogHandler.priority_map["NOTICE"] = "notice"
-        self.logger = logging.getLogger("main")
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.propagate = False
-        self.logger_fh = None
-        self.logger_emit = True
-
-        self.set_param(use_syslog, log_file, verbosity)
-
-    def set_param(self, use_syslog=None, log_file=None, verbosity=20):
-        """
-        @summary:
-            Set logger parameters. Can be called any time
-            log provided by /lib/lsb/init-functions always turned on
-        @param use_syslog: log also to syslog. Applicable arg
-            value 1-enable/0-disable
-        @param log_file: log to user specified file. Set None if no log needed
-        """
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-
-        if log_file:
-            if any(std_file in log_file for std_file in ["stdout", "stderr"]):
-                self.logger_fh = logging.StreamHandler()
-            else:
-                self.logger_fh = RotatingFileHandler(log_file, maxBytes=(10 * 1024) * 1024, backupCount=3)
-
-            self.logger_fh.setFormatter(formatter)
-            self.logger_fh.setLevel(verbosity)
-            self.logger.addHandler(self.logger_fh)
-
-        if use_syslog:
-            if sys.platform == "darwin":
-                address = "/var/run/syslog"
-            else:
-                if os.path.exists("/dev/log"):
-                    address = "/dev/log"
-                else:
-                    address = ("localhost", 514)
-            facility = SysLogHandler.LOG_SYSLOG
-            try:
-                syslog_handler = SysLogHandler(address=address, facility=facility)
-                syslog_handler.setLevel(logging.INFO + 5)
-
-                syslog_handler.setFormatter(logging.Formatter("hw-management-tc: %(levelname)s - %(message)s"))
-                syslog_handler.addFilter(SyslogFilter("syslog"))
-                self.logger.addHandler(syslog_handler)
-            except IOError as err:
-                print("Can't init syslog {} address {}".format(str(err), address))
-
-    def stop(self):
-        """
-        @summary:
-            Cleanup and Stop logger
-        """
-        logging.shutdown()
-        handler_list = self.logger.handlers[:]
-        for handler in handler_list:
-            handler.close()
-            self.logger.removeHandler(handler)
-        self.logger_emit = False
-
-    def close_tc_log_handler(self):
-        if self.logger_fh:
-            self.logger_fh.close()
-            self.logger.removeHandler(self.logger_fh)
-
-    def set_loglevel(self, verbosity):
-        """
-        @summary:
-            Set log level for logging in file
-        @param verbosity: logging level 0 .. 80
-        """
-        if self.logger_fh:
-            self.logger_fh.setLevel(verbosity)
-
-    def debug(self, msg="", syslog=0):
-        """
-        @summary:
-            Log "debug" message.
-        @param msg: message to save to log
-        """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
-
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
-                self.logger.debug(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
-
-    def info(self, msg="", syslog=0):
-        """
-        @summary:
-            Log "info" message.
-        @param msg: message to save to log
-        """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
-
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
-                self.logger.info(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
-
-    def notice(self, msg="", syslog=0):
-        """
-        @summary:
-            Log "notice" message.
-        @param msg: message to save to log
-        """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
-
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
-                self.logger.log(logging.INFO + 5, msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
-
-    def warn(self, msg="", syslog=0):
-        """
-        @summary:
-            Log "warn" message.
-        @param msg: message to save to log
-        """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
-
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
-                self.logger.warning(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
-
-    def error(self, msg="", syslog=0):
-        """
-        @summary:
-            Log "error" message.
-        @param msg: message to save to log
-        """
-        if not self.logger_emit:
-            return
-        self.logger_emit = False
-
-        msg_prefix = ""
-        if syslog:
-            msg_prefix = "@syslog "
-        try:
-            if self.logger:
-                self.logger.error(msg_prefix + msg)
-        except BaseException:
-            pass
-        self.logger_emit = True
-
-
-class RepeatedTimer(object):
-    """
-     @summary:
-         Provide repeat timer service. Can start provided function with selected  interval
-    """
-
-    def __init__(self, interval, function):
-        """
-        @summary:
-            Create timer object which run function in separate thread
-            Automatically start timer after init
-        @param interval: Interval in seconds to run function
-        @param function: function name to run
-        """
-        self._timer = None
-        self.interval = interval
-        self.function = function
-
-        self.is_running = False
-        self.start()
-
-    def _run(self):
-        """
-        @summary:
-            wrapper to run function
-        """
-        self.is_running = False
-        self.start()
-        self.function()
-
-    def start(self, immediately_run=False):
-        """
-        @summary:
-            Start selected timer (if it not running)
-        """
-        if immediately_run:
-            self.function()
-            self.stop()
-
-        if not self.is_running:
-            self._timer = Timer(self.interval, self._run)
-            self._timer.start()
-            self.is_running = True
-
-    def stop(self):
-        """
-        @summary:
-            Stop selected timer (if it started before
-        """
-        self._timer.cancel()
-        self.is_running = False
-
-
-class hw_management_file_op(object):
+class hw_management_file_op:
     """
     @summary: Base class for hardware management file operations
     Provides common file operations for hardware management
@@ -1372,10 +1105,10 @@ class system_device(hw_management_file_op):
         self.pwm_min = int(self.sensors_config.get("pwm_min", CONST.PWM_MIN))
         self.pwm_max = int(self.sensors_config.get("pwm_max", CONST.PWM_MAX))
         if not self.validate_sensor_param("pwm_min", self.pwm_min):
-            self.log.error("{}: pwm_min incorrect value ({})".format(self.name, self.pwm_min), 1)
+            self.log.error("{}: pwm_min incorrect value ({})".format(self.name, self.pwm_min), repeat=1)
             raise ValueError("Incorrect value of pwm_min {}".format(self.pwm_min))
         if not self.validate_sensor_param("pwm_max", self.pwm_max):
-            self.log.error("{}: pwm_max incorrect value ({})".format(self.name, self.pwm_max), 1)
+            self.log.error("{}: pwm_max incorrect value ({})".format(self.name, self.pwm_max), repeat=1)
             raise ValueError("Incorrect value of pwm_max {}".format(self.pwm_max))
 
         self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
@@ -2266,7 +1999,7 @@ class psu_fan_sensor(system_device):
                     error_msg = result.stderr.decode('utf-8', errors='replace') if result.stderr else "Unknown error"
                     self.log.warn("{} i2cset speed failed: {}".format(self.name, error_msg))
         except (ValueError, TypeError, subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
-            self.log.error("{} set PWM error".format(self.name), 1)
+            self.log.error("{} set PWM error".format(self.name), repeat=1)
 
     # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
@@ -3055,7 +2788,7 @@ class ThermalManagement(hw_management_file_op):
         """
         hw_management_file_op.__init__(self, cmd_arg)
         self.log = tc_logger
-        self.log.notice("Preinit thermal control ver {}".format(VERSION), 1)
+        self.log.notice("Preinit thermal control ver {}".format(VERSION), repeat=1)
         try:
             self.write_file(CONST.LOG_LEVEL_FILENAME, cmd_arg["verbosity"])
         except (OSError, IOError):
@@ -3090,7 +2823,7 @@ class ThermalManagement(hw_management_file_op):
         try:
             self.sys_config = self.load_configuration()
         except (ValueError, TypeError, IOError) as e:
-            self.log.error("Failed to load configuration: {}".format(e), 1)
+            self.log.error("Failed to load configuration: {}".format(e), repeat=1)
             sys.exit(1)
 
         signal.signal(signal.SIGTERM, self.sig_handler)
@@ -3100,17 +2833,17 @@ class ThermalManagement(hw_management_file_op):
         self.exit_flag = False
 
         if not str2bool(self.sys_config.get("platform_support", 1)):
-            self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), 1)
+            self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), repeat=1)
             self.log.notice("Set TC to idle.")
             while True:
                 self.exit.wait(60)
 
         if not self.is_pwm_exists():
-            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is required for TC run\nWaiting for ASIC init", 1)
+            self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is required for TC run\nWaiting for ASIC init", repeat=1)
             while not self.is_pwm_exists():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
-            self.log.notice("PWM control activated", 1)
+            self.log.notice("PWM control activated", repeat=1)
 
         self.attention_fans_lst = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_FAN_STEADY_ATTENTION_ITEMS])
         if self.attention_fans_lst:
@@ -3132,13 +2865,13 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("PWM update time: {} sec".format(self.pwm_worker_poll_time))
 
         # Set PWM to the default state while we are waiting for system configuration
-        self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
+        self.log.notice("Set FAN PWM {}".format(self.pwm_target), repeat=1)
         if not self.write_pwm(self.pwm_target, validate=True):
             self.log.warn("PWM write validation mismatch set:{} get:{}".format(self.pwm_target, self.read_pwm()))
 
         if self.check_file("config/thermal_delay"):
             thermal_delay = int(self.read_file("config/thermal_delay"))
-            self.log.notice("Additional delay defined in ./config/thermal_delay ({} sec).".format(thermal_delay), 1)
+            self.log.notice("Additional delay defined in ./config/thermal_delay ({} sec).".format(thermal_delay), repeat=1)
             timeout = current_milli_time() + 1000 * thermal_delay
             while timeout > current_milli_time():
                 if not self.write_pwm(self.pwm_target):
@@ -3149,12 +2882,12 @@ class ThermalManagement(hw_management_file_op):
                     break
 
         if not self.is_fan_tacho_init():
-            self.log.notice("Missing FAN tacho (probably ASIC not initialized yet). FANs is required for TC run\nWaiting for ASIC init", 1)
+            self.log.notice("Missing FAN tacho (probably ASIC not initialized yet). FANs is required for TC run\nWaiting for ASIC init", repeat=1)
             while not self.is_fan_tacho_init():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
 
-        self.log.notice("Nvidia thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
+        self.log.notice("Nvidia thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), repeat=1)
         timeout = current_milli_time() + 1000 * CONST.THERMAL_WAIT_FOR_CONFIG
         while timeout > current_milli_time():
             if not self.write_pwm(self.pwm_target):
@@ -3194,14 +2927,14 @@ class ThermalManagement(hw_management_file_op):
         try:
             self.asic_counter = int(self.read_file("config/asic_num"))
         except (ValueError, TypeError, OSError, IOError):
-            self.log.error("Missing ASIC num config.", 1)
+            self.log.error("Missing ASIC num config.", repeat=1)
             sys.exit(1)
 
         try:
             self.max_tachos = int(self.read_file("config/max_tachos"))
             self.log.info("Fan tacho:{}".format(self.max_tachos))
         except (ValueError, TypeError, OSError, IOError):
-            self.log.error("Missing max tachos config.", 1)
+            self.log.error("Missing max tachos config.", repeat=1)
             sys.exit(1)
         # Find ASIC pci device fio
         result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True,
@@ -3222,7 +2955,7 @@ class ThermalManagement(hw_management_file_op):
             for drwr_idx in range(1, self.fan_drwr_num + 1):
                 sensor_list.append("drwr{}".format(drwr_idx))
         except (ValueError, TypeError, OSError, IOError):
-            self.log.error("Missing fan_drwr_num config.", 1)
+            self.log.error("Missing fan_drwr_num config.", repeat=1)
             sys.exit(1)
 
         if self.fan_drwr_num:
@@ -3234,13 +2967,13 @@ class ThermalManagement(hw_management_file_op):
             for psu_idx in range(1, self.psu_count + 1):
                 sensor_list.append("psu{}".format(psu_idx))
         except (ValueError, TypeError, OSError, IOError):
-            self.log.error("Missing hotplug_psus config.", 1)
+            self.log.error("Missing hotplug_psus config.", repeat=1)
             sys.exit(1)
 
         try:
             self.psu_pwr_count = int(self.read_file("config/hotplug_pwrs"))
         except (ValueError, TypeError, OSError, IOError):
-            self.log.error("Missing hotplug_pwrs config.", 1)
+            self.log.error("Missing hotplug_pwrs config.", repeat=1)
             sys.exit(1)
 
         # Collect voltmon sensors
@@ -3512,7 +3245,7 @@ class ThermalManagement(hw_management_file_op):
             self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
             pwm_real = self.read_pwm()
             if not pwm_real:
-                self.log.warn("Read PWM error. Possible hw-management is not running", 1)
+                self.log.warn("Read PWM error. Possible hw-management is not running", repeat=1)
                 return
 
             if abs(pwm_real - self.pwm) > 1:
@@ -3525,7 +3258,7 @@ class ThermalManagement(hw_management_file_op):
         if self.pwm_target == self.pwm:
             pwm_real = self.read_pwm()
             if not pwm_real:
-                self.log.warn("Read PWM error. Possible hw-management is not running", 1)
+                self.log.warn("Read PWM error. Possible hw-management is not running", repeat=1)
                 return
 
             if abs(pwm_real - self.pwm) > 1:
@@ -3720,13 +3453,11 @@ class ThermalManagement(hw_management_file_op):
         """
         if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
             self.exit_flag = True
-            self.log.close_tc_log_handler()
+            self.log.syslog_log(self.log.NOTICE, "Thermal control stopped by signal {}".format(sig))
+            self.log.stop()
             if self.sys_config.get("platform_support", 1):
                 self.stop(reason="SIG {}".format(sig))
 
-            self.log.notice("Thermal control stopped", 1)
-            self.log.logger_emit = False
-            self.log.stop()
             os._exit(0)
 
     # ----------------------------------------------------------------------
@@ -3766,13 +3497,13 @@ class ThermalManagement(hw_management_file_op):
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
                 except (json.JSONDecodeError, ValueError):
-                    self.log.error("System config file {} broken.".format(config_file_name), 1)
+                    self.log.error("System config file {} broken.".format(config_file_name), repeat=1)
                     sys_config["platform_support"] = 0
         else:
             self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
                                                                                                              self.board_type,
                                                                                                              self.sku,
-                                                                                                             self.system_ver), 1)
+                                                                                                             self.system_ver), repeat=1)
             sys_config["platform_support"] = 0
 
         # 1. Init dmin table
@@ -4001,9 +3732,9 @@ class ThermalManagement(hw_management_file_op):
         """
         @summary: Init thermal-control main
         """
-        self.log.notice("********************************", 1)
-        self.log.notice("Init thermal control ver: v.{}".format(VERSION), 1)
-        self.log.notice("********************************", 1)
+        self.log.notice("********************************", repeat=1)
+        self.log.notice("Init thermal control ver: v.{}".format(VERSION), repeat=1)
+        self.log.notice("********************************", repeat=1)
 
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
@@ -4044,7 +3775,7 @@ class ThermalManagement(hw_management_file_op):
         """
 
         if self.state != CONST.RUNNING:
-            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason), 1)
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason), repeat=1)
             self.state = CONST.RUNNING
             self.emergency = False
 
@@ -4098,10 +3829,10 @@ class ThermalManagement(hw_management_file_op):
                 if dev_obj.enable:
                     dev_obj.stop()
 
-            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), 1)
+            self.log.notice("Thermal control state changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), repeat=1)
             self.state = CONST.STOPPED
             self._set_pwm(CONST.PWM_MAX, reason="TC stop")
-            self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
+            self.log.notice("Set FAN PWM {}".format(self.pwm_target), repeat=1)
 
     # ----------------------------------------------------------------------
     def run(self):
@@ -4110,9 +3841,9 @@ class ThermalManagement(hw_management_file_op):
         """
         fault_cnt_old = 0
         fault_cnt = 0
-        self.log.notice("********************************", 1)
-        self.log.notice("Thermal control is running", 1)
-        self.log.notice("********************************", 1)
+        self.log.notice("********************************", repeat=1)
+        self.log.notice("Thermal control is running", repeat=1)
+        self.log.notice("********************************", repeat=1)
         module_scan_timeout = 0
         # main loop
         while not self.exit.is_set() or not self.exit_flag:
@@ -4352,7 +4083,15 @@ if __name__ == '__main__':
                             help="Define custom hw-management root folder",
                             default=CONST.HW_MGMT_FOLDER_DEF)
     args = vars(CMD_PARSER.parse_args())
-    logger = Logger(args[CONST.LOG_USE_SYSLOG], args[CONST.LOG_FILE], args["verbosity"])
+    if args[CONST.LOG_USE_SYSLOG]:
+        syslog_level = Logger.NOTICE
+    else:
+        syslog_level = Logger.NOTSET
+
+    logger = Logger(log_file=args[CONST.LOG_FILE], log_level=args["verbosity"],
+                    log_repeat=Logger.LOG_REPEAT_UNLIMITED, syslog_repeat=0,
+                    syslog_level=syslog_level,
+                    ident="hw-management-tc")
     thermal_management = None
     try:
         thermal_management = ThermalManagement(args, logger)
