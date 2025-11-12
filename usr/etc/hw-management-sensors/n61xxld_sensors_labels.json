@@ -6,13 +6,13 @@
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
 				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-1+Conv+Curr+Out+1"},
-				"temp2": {"name": "PDB-1+Conv+Temp"}
+				"temp1": {"name": "PDB-1+Conv+Temp"}
 			},
 			"raa228004" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
 				"in2": {"name": "PDB-1+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-1+Conv+Curr+Out+1"},
-				"temp2": {"name": "PDB-1+Conv+Temp"}
+				"temp1": {"name": "PDB-1+Conv+Temp"}
 			}
 		},
 		"pwr_conv2": {
@@ -20,13 +20,13 @@
 				"in1": {"name": "PDB-2+Conv+Vol+In+1"},
 				"in2": {"name": "PDB-2+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-2+Conv+Curr+Out+1"},
-				"temp2": {"name": "PDB-2+Conv+Temp"}
+				"temp1": {"name": "PDB-2+Conv+Temp"}
 			},
 			"raa228004" : {
 				"in1": {"name": "PDB-2+Conv+Vol+In+1"},
 				"in2": {"name": "PDB-2+Conv+Vol+Out+1"},
 				"curr2": {"name": "PDB-2+Conv+Curr+Out+1"},
-				"temp2": {"name": "PDB-2+Conv+Temp"}
+				"temp1": {"name": "PDB-2+Conv+Temp"}
 			}
 		},
 		"pdb_hotswap1": {
@@ -67,7 +67,6 @@
 		"voltmon2_curr3" : "PMIC-2+ASIC1_AVDD_PL0+Curr+Out+1",
 		"voltmon2_curr4" : "PMIC-2+ASIC1_AVDD_PL0+Curr+Out+2",
 		"voltmon2_temp1" : "PMIC-2+Temp+1",
-		"voltmon2_temp2" : "PMIC-2+Temp+2",
 		"voltmon3_in1" : "PMIC-3+PVIN1_AVDD_DVDD_ASIC1+Vol+In+1",
 		"voltmon3_in2" : "PMIC-3+ASIC1_AVDD_PL1+Vol+Out+1",
 		"voltmon3_in3" : "PMIC-3+ASIC1_DVDD_PL1+Vol+Out+2",
@@ -80,7 +79,6 @@
 		"voltmon3_curr3" : "PMIC-3+ASIC1_AVDD_PL1+Curr+Out+1",
 		"voltmon3_curr4" : "PMIC-3+ASIC1_DVDD_PL1+Curr+Out+2",
 		"voltmon3_temp1" : "PMIC-3+Temp+1",
-		"voltmon3_temp2" : "PMIC-3+Temp+2",
 		"voltmon4_in1" : "PMIC-4+PVIN1_AVCC_HVDD_ASIC1+Vol+In+1",
 		"voltmon4_in2" : "PMIC-4+ASIC1_AVCC_PL0_PL1+Vol+Out+1",
 		"voltmon4_in3" : "PMIC-4+ASIC1_HVDD_PL0_PL1+Vol+Out+2",
@@ -93,7 +91,6 @@
 		"voltmon4_curr3" : "PMIC-4+ASIC1_AVCC_PL0_PL1+Curr+Out+1",
 		"voltmon4_curr4" : "PMIC-4+ASIC1_HVDD_PL0_PL1+Curr+Out+2",
 		"voltmon4_temp1" : "PMIC-4+Temp+1",
-		"voltmon4_temp2" : "PMIC-4+Temp+2",
 		"voltmon5_in1" : "PMIC-5+PVIN1_VDD_ASIC2+Vol+In+1",
 		"voltmon5_in2" : "PMIC-5+ASIC2_VDD+Vol+Out+1",
 		"voltmon5_power1" : "PMIC-5+PVIN1_VDD_ASIC2+Pwr+In+1",
@@ -113,7 +110,6 @@
 		"voltmon6_curr3" : "PMIC-6+ASIC2_AVDD_PL0+Curr+Out+1",
 		"voltmon6_curr4" : "PMIC-6+ASIC2_AVDD_PL0+Curr+Out+2",
 		"voltmon6_temp1" : "PMIC-6+Temp+1",
-		"voltmon6_temp2" : "PMIC-6+Temp+2",
 		"voltmon7_in1" : "PMIC-7+PVIN1_AVDD_DVDD_ASIC2+Vol+In+1",
 		"voltmon7_in2" : "PMIC-7+ASIC2_AVDD_PL1+Vol+Out+1",
 		"voltmon7_in3" : "PMIC-7+ASIC2_DVDD_PL1+Vol+Out+2",
@@ -126,7 +122,6 @@
 		"voltmon7_curr3" : "PMIC-7+ASIC2_AVDD_PL1+Curr+Out+1",
 		"voltmon7_curr4" : "PMIC-7+ASIC2_DVDD_PL1+Curr+Out+2",
 		"voltmon7_temp1" : "PMIC-7+Temp+1",
-		"voltmon7_temp2" : "PMIC-7+Temp+2",
 		"voltmon8_in1" : "PMIC-8+PVIN1_AVCC_HVDD_ASIC2+Vol+In+1",
 		"voltmon8_in2" : "PMIC-8+ASIC2_AVCC_PL0_PL1+Vol+Out+1",
 		"voltmon8_in3" : "PMIC-8+ASIC2_HVDD_PL0_PL1+Vol+Out+2",
@@ -139,7 +134,6 @@
 		"voltmon8_curr3" : "PMIC-8+ASIC2_AVCC_PL0_PL1+Curr+Out+1",
 		"voltmon8_curr4" : "PMIC-8+ASIC2_HVDD_PL0_PL1+Curr+Out+2",
 		"voltmon8_temp1" : "PMIC-8+Temp+1",
-		"voltmon8_temp2" : "PMIC-8+Temp+2",
 		"voltmon9_in1" : "PMIC-9+PVIN1_VDD_ASIC3+Vol+In+1",
 		"voltmon9_in2" : "PMIC-9+ASIC3_VDD+Vol+Out+1",
 		"voltmon9_power1" : "PMIC-9+PVIN1_VDD_ASIC3+Pwr+In+1",
@@ -159,7 +153,6 @@
 		"voltmon10_curr3" : "PMIC-10+ASIC3_AVDD_PL0+Curr+Out+1",
 		"voltmon10_curr4" : "PMIC-10+ASIC3_AVDD_PL0+Curr+Out+2",
 		"voltmon10_temp1" : "PMIC-10+Temp+1",
-		"voltmon10_temp2" : "PMIC-10+Temp+2",
 		"voltmon11_in1" : "PMIC-11+PVIN1_AVDD_DVDD_ASIC3+Vol+In+1",
 		"voltmon11_in2" : "PMIC-11+ASIC3_AVDD_PL1+Vol+Out+1",
 		"voltmon11_in3" : "PMIC-11+ASIC3_DVDD_PL1+Vol+Out+2",
@@ -172,7 +165,6 @@
 		"voltmon11_curr3" : "PMIC-11+ASIC3_AVDD_PL1+Curr+Out+1",
 		"voltmon11_curr4" : "PMIC-11+ASIC3_DVDD_PL1+Curr+Out+2",
 		"voltmon11_temp1" : "PMIC-11+Temp+1",
-		"voltmon11_temp2" : "PMIC-11+Temp+2",
 		"voltmon12_in1" : "PMIC-12+PVIN1_AVCC_HVDD_ASIC3+Vol+In+1",
 		"voltmon12_in2" : "PMIC-12+ASIC3_AVCC_PL0_PL1+Vol+Out+1",
 		"voltmon12_in3" : "PMIC-12+ASIC3_HVDD_PL0_PL1+Vol+Out+2",
@@ -185,7 +177,6 @@
 		"voltmon12_curr3" : "PMIC-12+ASIC3_AVCC_PL0_PL1+Curr+Out+1",
 		"voltmon12_curr4" : "PMIC-12+ASIC3_HVDD_PL0_PL1+Curr+Out+2",
 		"voltmon12_temp1" : "PMIC-12+Temp+1",
-		"voltmon12_temp2" : "PMIC-12+Temp+2",
 		"voltmon13_in1" : "PMIC-13+PVIN1_VDD_ASIC4+Vol+In+1",
 		"voltmon13_in2" : "PMIC-13+ASIC4_VDD+Vol+Out+1",
 		"voltmon13_power1" : "PMIC-13+PVIN1_VDD_ASIC4+Pwr+In+1",
@@ -205,7 +196,6 @@
 		"voltmon14_curr3" : "PMIC-14+ASIC4_AVDD_PL0+Curr+Out+1",
 		"voltmon14_curr4" : "PMIC-14+ASIC4_AVDD_PL0+Curr+Out+2",
 		"voltmon14_temp1" : "PMIC-14+Temp+1",
-		"voltmon14_temp2" : "PMIC-14+Temp+2",
 		"voltmon15_in1" : "PMIC-15+PVIN1_AVDD_DVDD_ASIC4+Vol+In+1",
 		"voltmon15_in2" : "PMIC-15+ASIC4_AVDD_PL1+Vol+Out+1",
 		"voltmon15_in3" : "PMIC-15+ASIC4_DVDD_PL1+Vol+Out+2",
@@ -218,7 +208,6 @@
 		"voltmon15_curr3" : "PMIC-15+ASIC4_AVDD_PL1+Curr+Out+1",
 		"voltmon15_curr4" : "PMIC-15+ASIC4_DVDD_PL1+Curr+Out+2",
 		"voltmon15_temp1" : "PMIC-15+Temp+1",
-		"voltmon15_temp2" : "PMIC-15+Temp+2",
 		"voltmon16_in1" : "PMIC-16+PVIN1_AVCC_HVDD_ASIC4+Vol+In+1",
 		"voltmon16_in2" : "PMIC-16+ASIC4_AVCC_PL0_PL1+Vol+Out+1",
 		"voltmon16_in3" : "PMIC-16+ASIC4_HVDD_PL0_PL1+Vol+Out+2",
@@ -231,12 +220,10 @@
 		"voltmon16_curr3" : "PMIC-16+ASIC4_AVCC_PL0_PL1+Curr+Out+1",
 		"voltmon16_curr4" : "PMIC-16+ASIC4_HVDD_PL0_PL1+Curr+Out+2",
 		"voltmon16_temp1" : "PMIC-16+Temp+1",
-		"voltmon16_temp2" : "PMIC-16+Temp+2",
 		"comex_voltmon1_in1" : "PMIC-17+12V_MAIN+Vol+In+1",
 		"comex_voltmon1_in2" : "PMIC-17+CPU+Vol+Out+1",
 		"comex_voltmon1_in3" : "PMIC-17+SOC+Vol+Out+2",
 		"comex_voltmon1_temp1" : "PMIC-17+Temp+1",
-		"comex_voltmon1_temp2" : "PMIC-17+Temp+2",
 		"comex_voltmon1_curr1" : "PMIC-17+12V_MAIN+Curr+In+1",
 		"comex_voltmon1_curr2" : "PMIC-17+CPU+Curr+Out+1",
 		"comex_voltmon2_in1" : "PMIC-18+COMEX_VDD_MEM+Vol+In+1",
