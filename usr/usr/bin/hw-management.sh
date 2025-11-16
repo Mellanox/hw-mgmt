@@ -3300,10 +3300,10 @@ set_asic_pci_id()
 	HI180)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
-		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
-		asic3_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic4_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
