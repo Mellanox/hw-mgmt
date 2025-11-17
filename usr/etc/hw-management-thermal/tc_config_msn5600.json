@@ -46,6 +46,11 @@
 		"drivetemp":      {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60},
 		"ibc\\d+":         {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60}
 	},
+	"dev_tune" : {
+        "module\\d+": {
+            "PINEWAVE:T-OH8CNT-NMT" : {"val_max_offset": -7000}
+        }
+    },
 	"error_mask" : {"psu_err" : ["direction", "present"]},
 	"sensor_list" : ["asic1", "cpu", "drivetemp", "drwr1", "drwr2", "drwr3", "drwr4", "ibc1", "ibc2", "ibc3", "ibc4", "psu1", "psu2", 
 	"sensor_amb", "sodimm1", "sodimm2", "voltmon1", "voltmon2", "voltmon3", "voltmon4", "voltmon5", "voltmon6", "voltmon7", "voltmon8", "voltmon9", "voltmon10", "voltmon11"]
