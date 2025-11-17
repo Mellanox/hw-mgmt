@@ -1448,7 +1448,9 @@ devtr_check_board_components()
 				# SN5800 system has 4 power boards, each with 1 power converter
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					curr_component[2]=$((curr_component[2]+brd))
+					if [ $board_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
+					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_pwr_conv_num}" ]; then
 							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
@@ -1492,7 +1494,9 @@ devtr_check_board_components()
 				# SN5800 system has 4 power boards, each with 1 hot-swap controller
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
-					curr_component[2]=$((curr_component[2]+brd))
+					if [ $board_bus_offset -ne 0 ]; then
+						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
+					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_hotswap_num}" ]; then
 							curr_component[3]=${board_name_pfx}${n}_${curr_component[3]}
