@@ -1,5 +1,5 @@
 [Unit]
-Description=Hw-management events sync service of Nvidia systems
+Description=Hw-management peripheral updater service (fans, BMC, leakage sensors)
 After=hw-management.service
 Requires=hw-management.service
 PartOf=hw-management.service
@@ -8,7 +8,7 @@ StartLimitIntervalSec=1200
 StartLimitBurst=5
 
 [Service]
-ExecStart=/bin/sh -c "/usr/bin/hw_management_sync.py"
+ExecStart=/bin/sh -c "/usr/bin/hw_management_peripheral_updater.py"
 ExecStop=/bin/kill $MAINPID
 TimeoutStopSec=1
 
