@@ -32,7 +32,7 @@ Customer Feedback Issues Addressed:
 - Performance concerns on embedded system
 """
 
-from hw_management_sync import module_temp_populate, logger
+from hw_management_thermal_updater import module_temp_populate, LOGGER as logger
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
 import tempfile
@@ -63,17 +63,22 @@ class TestModuleTempPopulate(unittest.TestCase):
         self.config_dir = os.path.join(self.test_dir, "var", "run", "hw-management", "config")
         os.makedirs(self.thermal_dir, exist_ok=True)
         os.makedirs(self.config_dir, exist_ok=True)
+        
+        # Mock LOGGER for all tests
+        self.logger_patcher = patch('hw_management_thermal_updater.LOGGER')
+        self.mock_logger = self.logger_patcher.start()
 
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
+        self.logger_patcher.stop()
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
-    @patch('hw_management_sync.sdk_temp2degree')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.sdk_temp2degree')
     def test_normal_module_processing(self, mock_sdk_temp, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test normal module processing with proper exception handling."""
         # Setup mocks
@@ -95,10 +100,10 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Verify file writes were called
             mock_file_open.assert_called()
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
     def test_sw_control_mode_skip(self, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test that SW control mode modules are skipped (no cleanup)."""
         # Setup mocks
@@ -117,10 +122,10 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Note: We don't clean up files in SW control mode as it's not our responsibility
             mock_file_open.assert_not_called()
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
     def test_exception_handling_file_read(self, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test exception handling when reading module present file."""
         # Setup mocks
@@ -147,11 +152,11 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Verify exception was handled gracefully
             # The function should continue processing other modules
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
-    @patch('hw_management_sync.sdk_temp2degree')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.sdk_temp2degree')
     def test_exception_handling_temperature_read(self, mock_sdk_temp, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test exception handling when reading temperature files."""
         # Setup mocks
@@ -178,10 +183,10 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             # Verify exception was handled gracefully
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
     def test_module_counter_update_only_when_updated(self, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test that module counter is only updated when modules are actually updated."""
         # Setup mocks - no modules present
@@ -202,11 +207,11 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Verify module counter was NOT updated (no modules were updated)
             # The function should only update counter when module_updated = True
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
-    @patch('hw_management_sync.sdk_temp2degree')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.sdk_temp2degree')
     def test_direct_file_writes_performance(self, mock_sdk_temp, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test that direct file writes are used for performance on embedded system."""
         # Setup mocks
@@ -228,10 +233,10 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Verify direct file writes were used (not atomic operations)
             # This ensures performance on embedded system with 256 iterations
 
-    @patch('hw_management_sync.os.path.islink')
-    @patch('hw_management_sync.os.path.exists')
+    @patch('hw_management_thermal_updater.os.path.islink')
+    @patch('hw_management_thermal_updater.os.path.exists')
     @patch('builtins.open', new_callable=mock_open)
-    @patch('hw_management_sync.is_module_host_management_mode')
+    @patch('hw_management_thermal_updater.is_module_host_management_mode')
     def test_symlink_skip_optimization(self, mock_host_mode, mock_file_open, mock_exists, mock_islink):
         """Test that symlinks are skipped without validation (optimization for 20-second intervals)."""
         # Setup mocks
