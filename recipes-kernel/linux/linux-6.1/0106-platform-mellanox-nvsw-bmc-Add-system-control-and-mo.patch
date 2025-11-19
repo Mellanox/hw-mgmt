@@ -1,4 +1,4 @@
-From 78cb98d2979247c767e2ea18ff15630e2b073f00 Mon Sep 17 00:00:00 2001
+From ea852d182f8ad43c6d1573950802595a2b54776e Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -23,9 +23,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Makefile            |    2 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  626 ++++
- drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
+ drivers/platform/mellanox/nvsw-host-l1.c      |  709 +++++
  drivers/platform/mellanox/nvsw.h              |  262 ++
- 7 files changed, 4454 insertions(+), 4 deletions(-)
+ 7 files changed, 4453 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -3563,10 +3563,10 @@ index 000000000..078c17924
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
 new file mode 100644
-index 000000000..bf12509b2
+index 000000000..f139cdc5a
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,710 @@
+@@ -0,0 +1,709 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3723,7 +3723,6 @@ index 000000000..bf12509b2
 +		.reg = NVSW_REG_GP0_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0644,
-+		.secured = 1,
 +	},
 +	{
 +		.label = "pcie_asic_reset_dis",
