@@ -51,6 +51,10 @@ class TestModuleTempPopulate(unittest.TestCase):
 
         # Store original working directory
         self.original_cwd = os.getcwd()
+        
+        # Path to hw_management_thermal_updater (where module_temp_populate now lives)
+        self.hw_mgmt_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 
+                                         'usr', 'usr', 'bin', 'hw_management_thermal_updater.py')
 
         # Module configuration
         self.module_count = 5
@@ -105,12 +109,14 @@ class TestModuleTempPopulate(unittest.TestCase):
                     f.write(str(config['temperature_threshold']))
 
     def _load_hw_management_module(self, hw_mgmt_path):
-        """Dynamically load the hw_management_sync module from given path"""
-        spec = importlib.util.spec_from_file_location("hw_management_sync", hw_mgmt_path)
+        """Dynamically load the hw_management_thermal_updater module from given path"""
+        spec = importlib.util.spec_from_file_location("hw_management_thermal_updater", hw_mgmt_path)
         hw_mgmt_module = importlib.util.module_from_spec(spec)
 
         # Mock sys.modules to avoid import issues
         sys.modules["hw_management_redfish_client"] = MagicMock()
+        sys.modules["hw_management_platform_config"] = MagicMock()
+        sys.modules["hw_management_lib"] = MagicMock()
 
         spec.loader.exec_module(hw_mgmt_module)
         return hw_mgmt_module
@@ -128,6 +134,9 @@ class TestModuleTempPopulate(unittest.TestCase):
 
         # Load the module
         hw_mgmt_module = self._load_hw_management_module(self.hw_mgmt_path)
+        
+        # Mock LOGGER to prevent AttributeError
+        hw_mgmt_module.LOGGER = MagicMock()
 
         # Prepare arguments
         arg_list = {
