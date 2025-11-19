@@ -219,6 +219,7 @@ class TestLoggerInitialization:
         assert "Logger 1 message" not in content2
 
 
+@pytest.mark.skip(reason="set_param method not available in V.7.0040.4000_BR base")
 class TestSetParam:
     """Tests for set_param() method"""
 

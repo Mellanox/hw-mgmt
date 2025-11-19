@@ -246,10 +246,10 @@ class TestPlatformChipupCoverage(unittest.TestCase):
             "ASIC and chipup platform counts must match"
         )
 
-        # Document current count
+        # Document current count (V.7.0040.4000_BR has 15 ASIC platforms)
         self.assertGreaterEqual(
-            asic_platform_count, 18,
-            f"Expected at least 18 ASIC platforms, found {asic_platform_count}"
+            asic_platform_count, 15,
+            f"Expected at least 15 ASIC platforms, found {asic_platform_count}"
         )
 
         print(f"\n[PASS] Platform count validated: {asic_platform_count} platforms")
