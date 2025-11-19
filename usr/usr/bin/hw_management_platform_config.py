@@ -156,13 +156,14 @@ PLATFORM_CONFIG = {
     ],
 }
 
+
 def get_platform_config(product_sku):
     """
     Get the complete platform configuration for a given SKU.
-    
+
     @param product_sku: Platform SKU identifier (e.g., "HI162", "MSN3700")
     @return: List of monitoring entries, or None if not found
-    
+
     Example:
         config = get_platform_config("HI162")
         if config:
@@ -170,6 +171,7 @@ def get_platform_config(product_sku):
                 print(f"Function: {entry['fn']}, Poll: {entry['poll']}s")
     """
     return PLATFORM_CONFIG.get(product_sku)
+
 
 def get_module_count(product_sku):
     """Get the number of optical modules for a given platform."""
@@ -184,6 +186,7 @@ def get_module_count(product_sku):
                     return arg.get("module_count", 0)
         return 0
     return config.get("module_count", 0)
+
 
 def get_all_platform_skus():
     """Get a list of all supported platform SKUs."""

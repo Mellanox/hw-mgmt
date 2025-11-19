@@ -1,0 +1,62 @@
+Create uniitest for hw_management_thermal_control.py and put it to 
+./unittest/hw_mgmt_thermal_control_2_0/module_tec_4359937/
+
+Make it executible standalone and detailed beautiful output (with color icons)
+All random rests repeat N iterations. Set random iteration as input parameter for the test 
+Add to output detailed report on error (crash) with input parameters
+Don't add test "/path/with/\x00/nullbyte"
+clean sensor_read_error before each test ineration
+
+
+#### Input Files (sensor attributes):
+- `module{N}_temp_input` - Processed temperature value. Can't be lower than 'amb_temp'
+- `module{N}_cooling_level_input` - Cooling level value
+   can be in range 0..module{N}_cooling_level_warning
+- `module{N}_cooling_level_warning` - Maximum cooling level value
+   can be in range 0..960
+   
+#### Input parameters:
+- 'flow_dir' - random ["C2P", "P2C"]
+- 'amb_temp' - random 20..50
+- 'thermal_table' - DMIN_TABLE_DEFAULT as reference+
+ 
+#### Output:
+- 'self.pwm' calculated by formula module{N}_cooling_level_input/module{N}_cooling_level_warning * 100%
+
+## Test Scenarios
+
+### 1. Normal Condition Testing (random sensor attributes)
+- **Description**: Tests normal operation when all attributes files are present and readable. Random values for module{N}_cooling_level_{}, module{N}_temp_input. 
+                   module{N}_temp_input should be scaled by 1000 (1 degree C = 1000 in module{N}_temp_input)
+				   module{N}_cooling_level_{} - no scale (1)
+- **Expected**: PWM range 20..100. No error
+
+### 2. Sensor random read error Testing (missing sensor)
+- **Description**: Tests behavior when random input file cannot be read (missing file). SENSOR_READ_ERR rising after 3 repeating errors
+                   test all sensor attributes for file missing
+- **Expected**: PWM set to alue according thermal_table. SENSOR_READ_ERR rising
+
+### 3. Sensor random read error Testing (none-integer value sensor)
+- **Description**: Tests behavior when random input file return none-integer value or empty. SENSOR_READ_ERR rising after 3 repeating errors
+					test all sensor attributes for none-integer value
+- **Expected**: PWM set to alue according thermal_table. SENSOR_READ_ERR rising
+
+### 4. Sensor random read error Testing (value out of lcrit/hcrit range)
+- **Description**: Tests behavior when module{N}_cooling_level_{} file value  out of lcrit/hcrit range. SENSOR_READ_ERR rising after 3 repeating errors
+- **Expected**: PWM set to alue according thermal_table. SENSOR_READ_ERR rising
+
+### 5. Sensor config random parameters testing (not defined parameters):
+"val_lcrit"
+"val_hcrit"
+"pwm_min"
+"pwm_max"
+"val_min"
+"val_max"
+
+### 6. Error Handling Testing
+- **Description**: Tests that the function doesn't crash under various error conditions
+- **Expected**: Function completes without exceptions regardless of file read errors
+
+### 7. Status print status
+- **Description**: Run print status function (__str__) after each iteration of previous tests (#1-#6)
+- **Expected**: No crashes/errors
