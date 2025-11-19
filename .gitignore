@@ -1,1 +1,34 @@
 output/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Test artifacts
+tests/logs/
+tests/__pycache__/
+.pytest_cache/
+.benchmarks/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CI/CD tools
+.ngci_tool/
+
+# Temporary files
+*.log
+*.bak
+*.tmp
