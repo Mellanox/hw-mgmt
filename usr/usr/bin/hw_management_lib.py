@@ -228,6 +228,18 @@ class HW_Mgmt_Logger:
         """
         self._suspend = False
 
+    def set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
+        """
+        @summary:
+            Public API to set logger parameters. Can be called any time.
+            This is a wrapper around the internal _set_param method.
+        @param ident: log identifier
+        @param log_file: log to user specified file. Set None if no log needed
+        @param log_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
+        @param syslog_level: syslog level (same values as log_level)
+        """
+        return self._set_param(ident=ident, log_file=log_file, log_level=log_level, syslog_level=syslog_level)
+
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
         @summary:

@@ -82,7 +82,7 @@ echo ""
 
 if python3 run_tests.py --hw-mgmt-path "$HW_MGMT_PATH" "$@"; then
     echo ""
-    echo -e "${GREEN}✅ All tests completed successfully!${NC}"
+    echo -e "${GREEN}All tests completed successfully!${NC}"
     exit 0
 else
     echo ""

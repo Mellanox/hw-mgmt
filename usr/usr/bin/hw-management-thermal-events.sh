@@ -1463,10 +1463,6 @@ else
 		unlink $thermal_path/pch_temp
 	fi
 	if [ "$2" == "sodimm_temp" ]; then
-		name=$(< /sys/"$3"/name)
-		if [ "$name" != "jc42" ]; then
-			exit
-		fi
 		find "$thermal_path" -iname "sodimm*_temp*" -exec unlink {} \;
 	fi
 	if [ "$2" == "psu1" ] || [ "$2" == "psu2" ] ||

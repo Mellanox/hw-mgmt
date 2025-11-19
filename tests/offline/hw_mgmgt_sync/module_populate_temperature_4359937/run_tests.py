@@ -72,8 +72,8 @@ def setup_environment():
 
     # Verify the module can be imported
     try:
-        import hw_management_sync
-        print(f"[OK] Successfully imported hw_management_sync from {hw_management_sync.__file__}")
+        import hw_management_thermal_updater
+        print(f"[OK] Successfully imported hw_management_thermal_updater from {hw_management_thermal_updater.__file__}")
         return True
     except ImportError as e:
         print(f"[ERROR] Failed to import hw_management_sync: {e}")

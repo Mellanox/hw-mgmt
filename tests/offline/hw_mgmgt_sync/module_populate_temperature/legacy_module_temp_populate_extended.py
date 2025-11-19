@@ -34,7 +34,7 @@
 
 
 """
-Comprehensive unit tests for module_temp_populate function from hw_management_sync.py
+Comprehensive unit tests for module_temp_populate function from hw_management_thermal_updater.py
 
 This test suite covers:
 1. Normal conditions with all files present and readable
@@ -59,7 +59,7 @@ import json
 from unittest.mock import patch, mock_open, MagicMock
 import importlib.util
 
-# Add hw_management_sync.py to path for import
+# Add hw_management_thermal_updater.py to path for import
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..', '..'))
 hw_mgmt_path = os.path.join(project_root, 'usr', 'usr', 'bin')
@@ -87,8 +87,8 @@ class TestModuleTempPopulate(unittest.TestCase):
         sys.modules['hw_management_redfish_client'] = MagicMock()
 
         # Import the module after mocking dependencies
-        hw_mgmt_file = os.path.join(hw_mgmt_path, 'hw_management_sync.py')
-        spec = importlib.util.spec_from_file_location("hw_management_sync", hw_mgmt_file)
+        hw_mgmt_file = os.path.join(hw_mgmt_path, 'hw_management_thermal_updater.py')
+        spec = importlib.util.spec_from_file_location("hw_management_thermal_updater", hw_mgmt_file)
         cls.hw_mgmt_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.hw_mgmt_module)
 
@@ -937,12 +937,12 @@ def main():
     print("=" * 80)
     print(f"[LIST] Test Suite Description:")
     print(f"   This comprehensive test suite validates the module_temp_populate function")
-    print(f"   from hw_management_sync.py with detailed runtime descriptions and")
+    print(f"   from hw_management_thermal_updater.py with detailed runtime descriptions and")
     print(f"   thorough coverage of all specified test scenarios.")
     print()
     print(f"[CONFIG] Test Environment:")
     print(f"   * Python version: {sys.version.split()[0]}")
-    print(f"   * Testing module: hw_management_sync.py")
+    print(f"   * Testing module: hw_management_thermal_updater.py")
     print(f"   * Module path: {hw_mgmt_path}")
     print(f"   * Test configuration: 36 modules, offset=1")
     print(f"   * Input path: /sys/module/sx_core/asic0/module{{}}/")

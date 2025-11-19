@@ -16,13 +16,13 @@ This directory contains comprehensive unit tests for the `thermal_module_tec_sen
 
 ## Test Scenarios
 
-### 1. Normal Condition Testing (random) ✅
+### 1. Normal Condition Testing (random)
 - **Description**: Tests normal operation with random sensor values (configurable iterations)
 - **Input**: Random temperature (20-80°C), cooling levels (0-960), flow directions
 - **Expected**: PWM calculated correctly as `cooling_level_input/cooling_level_warning * 100%`
 - **Range**: PWM should be between 20-100%
 
-### 2. Sensor Missing File Error Testing ✅
+### 2. Sensor Missing File Error Testing
 - **Description**: Tests behavior when sensor files are missing (configurable iterations)
 - **Files Tested**: Randomly selects from:
   - `thermal/module{N}_temp_input`
@@ -31,31 +31,31 @@ This directory contains comprehensive unit tests for the `thermal_module_tec_sen
 - **Random Parameters**: Flow direction, ambient temperature
 - **Expected**: SENSOR_READ_ERR raised after 3+ repeated errors
 
-### 3. Sensor Invalid Value Error Testing ✅
+### 3. Sensor Invalid Value Error Testing
 - **Description**: Tests behavior with non-integer/invalid sensor values (configurable iterations)
 - **Invalid Values**: Randomly selects from: `""`, `"abc"`, `"12.34.56"`, `"not_a_number"`, `" "`, `"\n"`, `"NaN"`, `"inf"`, `"-inf"`, `"123abc"`, `"++123"`
 - **Random Selection**: File and invalid value combinations
 - **Expected**: SENSOR_READ_ERR raised after 3+ repeated errors
 
-### 4. Sensor Out-of-Range Error Testing ✅
+### 4. Sensor Out-of-Range Error Testing
 - **Description**: Tests behavior when cooling levels are outside lcrit/hcrit range (configurable iterations)
 - **Test Cases**: Randomly generates values below lcrit (-100 to -1) and above hcrit (961 to 2000)
 - **Random Parameters**: Flow direction, ambient temperature
 - **Expected**: SENSOR_READ_ERR raised after 3+ repeated errors
 
-### 5. Config Missing Parameters Testing ✅
+### 5. Config Missing Parameters Testing
 - **Description**: Tests behavior with missing configuration parameters (configurable iterations)
 - **Parameters Tested**: Randomly selects from `val_lcrit`, `val_hcrit`, `pwm_min`, `pwm_max`, `val_min`, `val_max`
 - **Random Parameters**: Flow direction, ambient temperature
 - **Expected**: Sensor uses default values and continues operation
 
-### 6. Error Handling Testing ✅
+### 6. Error Handling Testing
 - **Description**: Tests system robustness under various error conditions (configurable iterations)
 - **Scenarios**: Randomly selects from invalid directories, permission errors, corrupted file system, non-existent paths, very long paths
 - **Random Parameters**: Flow direction, ambient temperature
 - **Expected**: No crashes, graceful error handling
 
-### 7. Status Print Testing ✅
+### 7. Status Print Testing
 - **Description**: Run print status function (__str__) after each iteration of previous tests (#1-#6)
 - **Implementation**: Status print called after every iteration in tests 1-6
 - **Coverage**: Total status print calls = iteration_count × 6 tests
@@ -123,7 +123,7 @@ python3 test_thermal_module_tec_sensor.py --help
     ℹ️ Status [normal_test_2]: "module1 " temp:65  , cooling_lvl:80 , cooling_lvl_max:160, faults:[], pwm: 50, STOPPED
   ...
 
-✅ PASS TestThermalModuleTecSensor.test_01_normal_condition_random
+PASS TestThermalModuleTecSensor.test_01_normal_condition_random
 
 📁 Testing missing sensor files...
   💥 Iteration 1: Testing missing file: thermal/module1_cooling_level_warning
@@ -132,7 +132,7 @@ python3 test_thermal_module_tec_sensor.py --help
     ℹ️ Status [missing_file_2]: "module1 " temp:0   , cooling_lvl:0  , cooling_lvl_max:100, faults:[sensor_read_error], pwm: 100, STOPPED
   ...
 
-✅ PASS TestThermalModuleTecSensor.test_02_sensor_missing_file_error
+PASS TestThermalModuleTecSensor.test_02_sensor_missing_file_error
 
 ...
 
