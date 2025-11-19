@@ -58,23 +58,23 @@ Usage:
     python3 -m pytest test_hw_management_independent_mode_update.py::TestRandomScenarios -v
 """
 
+import hw_management_independent_mode_update as test_module
+from datetime import datetime
+from contextlib import redirect_stdout
+from io import StringIO
+from typing import Dict, List, Tuple, Any
+from pathlib import Path
+import traceback
+import argparse
+import random
+import shutil
+import tempfile
+import pytest
+import os
 import sys
 # Add the library path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'usr', 'usr', 'bin'))
 
-import os
-import pytest
-import tempfile
-import shutil
-import random
-import argparse
-import traceback
-from pathlib import Path
-from typing import Dict, List, Tuple, Any
-from io import StringIO
-from contextlib import redirect_stdout
-from datetime import datetime
-import hw_management_independent_mode_update as test_module
 
 # Mark all tests in this file as offline tests
 pytestmark = pytest.mark.offline
