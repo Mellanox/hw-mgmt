@@ -56,7 +56,7 @@ class PeripheralUpdaterIntegrationTest(unittest.TestCase):
         # Stop DVS before tests
         print("Stopping DVS before tests...")
         cls._stop_dvs()
-        
+
         # OPTIMIZATION: Start DVS once and reuse across tests
         # This saves ~15s per test that needs DVS (tests 3, 4, 5)
         print("Starting DVS once for all tests...")
@@ -180,10 +180,10 @@ class PeripheralUpdaterIntegrationTest(unittest.TestCase):
             for attempt in range(3):
                 result = cls._run_command("pgrep -f dvs", check=False, timeout=5)
                 if result and result.returncode == 0:
-                    print(f"DVS processes detected (attempt {attempt+1}/3)")
+                    print(f"DVS processes detected (attempt {attempt + 1}/3)")
                     return True
                 time.sleep(1)
-            
+
             print("WARNING: No DVS processes found after 3 attempts")
             return False
 
@@ -194,7 +194,7 @@ class PeripheralUpdaterIntegrationTest(unittest.TestCase):
     def _start_dvs(self):
         """
         Start DVS with hybrid SDK bridge mode.
-        
+
         OPTIMIZATION: Check if DVS is already running from setUpClass.
         Only restart if needed for specific tests (e.g., test_05).
         """
@@ -203,7 +203,7 @@ class PeripheralUpdaterIntegrationTest(unittest.TestCase):
         if result and result.returncode == 0:
             print("DVS already running (reusing from setUpClass) - skipping start")
             return True
-        
+
         print("DVS not running - starting fresh...")
         print("NOTE: DVS will be started in background, then we wait 12 seconds...")
 
@@ -225,10 +225,10 @@ class PeripheralUpdaterIntegrationTest(unittest.TestCase):
             for attempt in range(3):
                 result = self._run_command("pgrep -f dvs", check=False, timeout=5)
                 if result and result.returncode == 0:
-                    print(f"DVS processes detected (attempt {attempt+1}/3)")
+                    print(f"DVS processes detected (attempt {attempt + 1}/3)")
                     return True
                 time.sleep(1)
-            
+
             print("WARNING: No DVS processes found, but assuming DVS is up")
             return True
 
