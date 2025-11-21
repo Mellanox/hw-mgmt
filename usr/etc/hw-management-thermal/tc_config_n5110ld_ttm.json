@@ -17,8 +17,8 @@
 	"psu_fan_pwm_decode" : {"0:100": -1},
 	"fan_trend" : {
 		"C2P": {
-			"0" : {"rpm_min":6700, "rpm_max":33000, "slope": 328.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":6000, "rpm_max":30000, "slope": 300, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
+			"0" : {"rpm_min":6700, "rpm_max":33000, "slope": 328.8, "pwm_min" : 20, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":6000, "rpm_max":30000, "slope": 300, "pwm_min" : 20, "pwm_max_reduction" : 10}
 			}
 	},
 	"dev_parameters" : {
