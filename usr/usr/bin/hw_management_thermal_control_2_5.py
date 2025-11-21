@@ -2403,6 +2403,11 @@ class fan_sensor(system_device):
         self.insert_failed = False
         self.insert_event = False
 
+        self.rpm_tolerance = self._get_rpm_tolerance()
+        self.log.info("{}: RPM min:{} max:{} tolerance:{:.2f}".format(self.name, self.val_min_def,
+                                                                      self.val_max_def,
+                                                                      self.rpm_tolerance))
+
     # ----------------------------------------------------------------------
     def refresh_attr(self):
         """
@@ -2411,6 +2416,22 @@ class fan_sensor(system_device):
         """
         self.fan_dir = self._read_dir()
         self.drwr_param = self._get_fan_drwr_param()
+
+    # ----------------------------------------------------------------------
+    def _get_rpm_tolerance(self):
+        """
+        @summary: Get FAN RPM tolerance in percent
+        from tc_config "fan_trend" -> "rpm_tolerance"
+        if not present, get from file config/fan_speed_tolerance.
+        if not present, use default value
+        @return: FAN RPM tolerance in percent
+        """
+        rpm_tolerance = self.drwr_param["0"].get("rpm_tolerance", None)
+        if rpm_tolerance is None:
+            rpm_tolerance = self.get_file_val("config/fan_speed_tolerance", CONST.FAN_RPM_TOLERANCE)
+        rpm_tolerance = float(rpm_tolerance) / 100.0
+
+        return rpm_tolerance
 
     # ----------------------------------------------------------------------
     def _get_fan_drwr_param(self):
@@ -2544,11 +2565,10 @@ class fan_sensor(system_device):
             if rpm_max == 0:
                 rpm_max = self.val_max_def
 
-            rpm_tolerance = float(fan_param.get("rpm_tolerance", CONST.FAN_RPM_TOLERANCE)) / 100
             pwm_min = float(fan_param["pwm_min"])
             self.log.debug("Real:{} min:{} max:{}".format(rpm_real, rpm_min, rpm_max))
             # 1. Check fan speed in range with tolerance
-            if rpm_real < rpm_min * (1 - rpm_tolerance) or rpm_real > rpm_max * (1 + rpm_tolerance):
+            if rpm_real < rpm_min * (1 - self.rpm_tolerance) or rpm_real > rpm_max * (1 + self.rpm_tolerance):
                 self.log.info("{} tacho{}={} out of RPM range {}:{}".format(self.name,
                                                                             tacho_idx + 1,
                                                                             rpm_real,
@@ -2571,7 +2591,7 @@ class fan_sensor(system_device):
                                                                                                                      rpm_calculated,
                                                                                                                      rpm_diff,
                                                                                                                      rpm_diff_norm * 100))
-                    if rpm_diff_norm >= rpm_tolerance:
+                    if rpm_diff_norm >= self.rpm_tolerance:
                         self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} pwm  {}".format(self.name,
                                                                                                                     tacho_idx,
                                                                                                                     rpm_real,
