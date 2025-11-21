@@ -29,11 +29,11 @@
 	"psu_fan_pwm_decode" : {"0:10": 10, "11:21": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
 	"fan_trend" : {
 		"C2P": {
-			"0" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
+			"0" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10}},
 		"P2C": {
-			"0" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}
+			"0" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10}
 		}
 	},
 	"general_config" : {"attention_fans" : ["drwr1", "drwr2", "drwr3", "drwr4"], "fan_steady_state_delay" : 10, "fan_steady_state_pwm" : 50},
