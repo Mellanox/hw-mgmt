@@ -97,7 +97,9 @@ chipup_log_archive_max=3
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 chipup_retry_count=3
-fan_speed_tolerance=15
+
+# Set FAN speed tolerance based on spec +-30%
+fan_speed_tolerance=30
 minimal_unsupported=0
 
 mctp_bus=""
