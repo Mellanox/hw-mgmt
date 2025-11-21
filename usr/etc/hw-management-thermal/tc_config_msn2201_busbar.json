@@ -22,11 +22,11 @@
 	},
 	"fan_trend" : {
 		"C2P": {
-			"0" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}},
+			"0" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10}},
 		"P2C": {
-			"0" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10, "rpm_tolerance" : 30}}
+			"0" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":1983, "rpm_max":22000, "slope": 227, "pwm_min" : 10, "pwm_max_reduction" : 10}}
 	},
 	"dev_parameters" : {
 		"asic\\d*":           {"pwm_min": 20, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":70},
