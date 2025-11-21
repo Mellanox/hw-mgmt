@@ -31,11 +31,11 @@
 	"psu_fan_pwm_decode" : {"0:10": 10, "11:21": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
 	"fan_trend" : {
         "C2P": {
-			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30}},
+			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3},
+			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3}},
 		"P2C": {
-			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30},
-			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3, "rpm_tolerance" : 30}}
+			"0" : {"rpm_min":6150, "rpm_max":29700, "slope": 294.6, "pwm_min" : 20, "pwm_max_reduction" : 3},
+			"1" : {"rpm_min":5650, "rpm_max":27500, "slope": 273.1, "pwm_min" : 20, "pwm_max_reduction" : 3}}
 	}, 
 	"dev_parameters" : {
 		"asic\\d*":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 

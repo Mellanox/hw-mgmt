@@ -121,7 +121,9 @@ n51xx_reset_attr_num=22
 n61xx_reset_attr_num=22
 q3401_reset_attr_num=17
 chipup_retry_count=3
-fan_speed_tolerance=15
+
+# Set FAN speed tolerance based on spec +-30%
+fan_speed_tolerance=30
 minimal_unsupported=0
 dummy_psus_supported=0
 sed_pba_guid=0d1d8ac9-9958-4e34-aae6-5236e3232bb5
@@ -2637,9 +2639,6 @@ sn5640_specific()
 	# Set FAN rear (outlet) speed limits 
 	echo 20500 > $config_path/fan_rear_max_speed
 	echo 6468 > $config_path/fan_rear_min_speed
-	
-	# Set FAN speed tolerance based on spec +-10%
-	fan_speed_tolerance=10
 	
 	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
