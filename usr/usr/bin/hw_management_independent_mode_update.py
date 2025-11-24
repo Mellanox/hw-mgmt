@@ -112,32 +112,33 @@ def thermal_data_set_asic(asic_index, temperature, warning_threshold, critical_t
     if not check_asic_index(asic_index):
         return False
 
+    file_paths_value_dict = {}
     # Define file paths based on asic_index
     if asic_index == 0:
-        temp_crit_file = os.path.join(BASE_PATH, "thermal", "asic_temp_crit")
-        temp_input_file = os.path.join(BASE_PATH, "thermal", "asic")
-        temp_emergency_file = os.path.join(BASE_PATH, "thermal", "asic_temp_emergency")
-        temp_fault_file = os.path.join(BASE_PATH, "thermal", "asic_temp_fault")
-    else:
-        temp_crit_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_crit")
-        temp_input_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}")
-        temp_emergency_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_emergency")
-        temp_fault_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_fault")
+        file_paths_value_dict.update({
+            "asic_temp_crit": critical_threshold,
+            "asic": temperature,
+            "asic_temp_emergency": warning_threshold,
+            "asic_temp_fault": fault
+        })
 
-    # Create the files if they don't exist and write the values
+    file_paths_value_dict.update({
+        f"asic{asic_index + 1}_temp_crit": critical_threshold,
+        f"asic{asic_index + 1}": temperature,
+        f"asic{asic_index + 1}_temp_emergency": warning_threshold,
+        f"asic{asic_index + 1}_temp_fault": fault
+    })
+
     try:
-        with open(temp_crit_file, 'w', encoding="utf-8") as f:
-            f.write(str(critical_threshold))
-        with open(temp_input_file, 'w', encoding="utf-8") as f:
-            f.write(str(temperature))
-        with open(temp_emergency_file, 'w', encoding="utf-8") as f:
-            f.write(str(warning_threshold))
-        with open(temp_fault_file, 'w', encoding="utf-8") as f:
-            f.write(str(fault))
-        return True  # Successfully set thermal data
+        for fname, value in file_paths_value_dict.items():
+            f_name_full = os.path.join(BASE_PATH, "thermal", fname)
+            if value is not None:
+                with open(f_name_full, 'w', encoding="utf-8") as f:
+                    f.write("{}\n".format(value))
     except Exception as e:
         print(f"Error setting thermal data for ASIC {asic_index}: {str(e)}")
         return False
+    return True
 
 
 def thermal_data_set_module(asic_index,
@@ -177,28 +178,29 @@ def thermal_data_clean_asic(asic_index):
     if not check_asic_index(asic_index):
         return False
 
+    file_paths_value_list = []
+
     # Define file paths based on asic_index
     if asic_index == 0:
-        temp_crit_file = os.path.join(BASE_PATH, "thermal", "asic_temp_crit")
-        temp_input_file = os.path.join(BASE_PATH, "thermal", "asic")
-        temp_emergency_file = os.path.join(BASE_PATH, "thermal", "asic_temp_emergency")
-        temp_fault_file = os.path.join(BASE_PATH, "thermal", "asic_temp_fault")
-    else:
-        temp_crit_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_crit")
-        temp_input_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}")
-        temp_emergency_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_emergency")
-        temp_fault_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_fault")
+        file_paths_value_list.append("asic_temp_crit")
+        file_paths_value_list.append("asic")
+        file_paths_value_list.append("asic_temp_emergency")
+        file_paths_value_list.append("asic_temp_fault")
+
+    file_paths_value_list.append(f"asic{asic_index + 1}_temp_crit")
+    file_paths_value_list.append(f"asic{asic_index + 1}")
+    file_paths_value_list.append(f"asic{asic_index + 1}_temp_emergency")
+    file_paths_value_list.append(f"asic{asic_index + 1}_temp_fault")
 
     # Remove the files if they exist
     try:
-        os.remove(temp_crit_file)
-        os.remove(temp_input_file)
-        os.remove(temp_emergency_file)
-        os.remove(temp_fault_file)
-        return True  # Successfully cleaned thermal data for the ASIC
+        for file_path in file_paths_value_list:
+            file_path_full = os.path.join(BASE_PATH, "thermal", file_path)
+            os.remove(file_path_full)
     except Exception as e:
         print(f"Error cleaning thermal data for ASIC {asic_index}: {str(e)}")
         return False
+    return True  # Successfully cleaned thermal data for the ASIC
 
 
 def thermal_data_clean_module(asic_index, module_index):
