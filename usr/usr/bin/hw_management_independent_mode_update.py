@@ -107,6 +107,15 @@ def module_data_set_module_counter(module_counter):
         return False
 
 
+def _populate_file_data(file_paths_value_dict):
+    """Function populates file data."""
+    for fname, value in file_paths_value_dict.items():
+        f_name_full = os.path.join(BASE_PATH, "thermal", fname)
+        if value is not None:
+            with open(f_name_full, 'w', encoding="utf-8") as f:
+                f.write("{}\n".format(value))
+
+
 def thermal_data_set_asic(asic_index, temperature, warning_threshold, critical_threshold, fault=0):
     """Function sets asic data."""
     if not check_asic_index(asic_index):
@@ -114,30 +123,32 @@ def thermal_data_set_asic(asic_index, temperature, warning_threshold, critical_t
 
     # Define file paths based on asic_index
     if asic_index == 0:
-        temp_crit_file = os.path.join(BASE_PATH, "thermal", "asic_temp_crit")
-        temp_input_file = os.path.join(BASE_PATH, "thermal", "asic")
-        temp_emergency_file = os.path.join(BASE_PATH, "thermal", "asic_temp_emergency")
-        temp_fault_file = os.path.join(BASE_PATH, "thermal", "asic_temp_fault")
-    else:
-        temp_crit_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_crit")
-        temp_input_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}")
-        temp_emergency_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_emergency")
-        temp_fault_file = os.path.join(BASE_PATH, "thermal", f"asic{asic_index + 1}_temp_fault")
+        file_paths_value_dict = {
+            "asic_temp_crit": critical_threshold,
+            "asic_temp_input": temperature,
+            "asic_temp_emergency": warning_threshold,
+            "asic_temp_fault": fault
+        }
 
-    # Create the files if they don't exist and write the values
+        try:
+            _populate_file_data(file_paths_value_dict)
+        except Exception as e:
+            print(f"Error setting thermal data for ASIC: {str(e)}")
+            return False
+
+    file_paths_value_dict = {
+        f"asic{asic_index + 1}_temp_crit": critical_threshold,
+        f"asic{asic_index + 1}_temp_input": temperature,
+        f"asic{asic_index + 1}_temp_emergency": warning_threshold,
+        f"asic{asic_index + 1}_temp_fault": fault
+    }
+
     try:
-        with open(temp_crit_file, 'w', encoding="utf-8") as f:
-            f.write(str(critical_threshold))
-        with open(temp_input_file, 'w', encoding="utf-8") as f:
-            f.write(str(temperature))
-        with open(temp_emergency_file, 'w', encoding="utf-8") as f:
-            f.write(str(warning_threshold))
-        with open(temp_fault_file, 'w', encoding="utf-8") as f:
-            f.write(str(fault))
-        return True  # Successfully set thermal data
+        _populate_file_data(file_paths_value_dict)
     except Exception as e:
         print(f"Error setting thermal data for ASIC {asic_index}: {str(e)}")
         return False
+    return True
 
 
 def thermal_data_set_module(asic_index,
