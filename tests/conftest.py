@@ -124,11 +124,16 @@ def hw_mgmt_logger():
 @pytest.fixture
 def hw_mgmt_sync():
     """Import and return hw_management_sync module"""
+    # Try to import peripheral_updater for fan/BMC tests, thermal_updater for ASIC/module tests
     try:
-        import hw_management_sync
-        return hw_management_sync
-    except ImportError as e:
-        pytest.skip(f"Cannot import hw_management_sync: {e}")
+        import hw_management_peripheral_updater
+        return hw_management_peripheral_updater
+    except ImportError:
+        try:
+            import hw_management_thermal_updater
+            return hw_management_thermal_updater
+        except ImportError as e:
+            pytest.skip(f"Cannot import hw_management modules: {e}")
 
 
 @pytest.fixture(autouse=True)

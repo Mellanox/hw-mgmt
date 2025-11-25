@@ -36,8 +36,8 @@ def setup_import_path(hw_mgmt_path=None):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         hw_mgmt_dir = os.path.join(script_dir, '..', '..', '..', '..', 'usr', 'usr', 'bin')
         hw_mgmt_dir = os.path.abspath(hw_mgmt_dir)
-        if not os.path.exists(os.path.join(hw_mgmt_dir, 'hw_management_sync.py')):
-            raise FileNotFoundError(f"Cannot find hw_management_sync.py in {hw_mgmt_dir}")
+        if not os.path.exists(os.path.join(hw_mgmt_dir, 'hw_management_thermal_updater.py')):
+            raise FileNotFoundError(f"Cannot find hw_management_thermal_updater.py in {hw_mgmt_dir}")
 
     hw_mgmt_dir = os.path.abspath(hw_mgmt_dir)
     if hw_mgmt_dir not in sys.path:
@@ -47,14 +47,14 @@ def setup_import_path(hw_mgmt_path=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Simple test for folder-agnostic functionality')
-    parser.add_argument('--hw-mgmt-path', help='Path to hw_management_sync.py')
+    parser.add_argument('--hw-mgmt-path', help='Path to hw_management_thermal_updater.py')
     args = parser.parse_args()
 
     try:
         hw_mgmt_dir = setup_import_path(args.hw_mgmt_path)
-        print(f"Found hw_management_sync.py in: {hw_mgmt_dir}")
+        print(f"Found hw_management_thermal_updater.py in: {hw_mgmt_dir}")
 
-        from hw_management_sync import CONST, sdk_temp2degree, module_temp_populate
+        from hw_management_thermal_updater import CONST, sdk_temp2degree, module_temp_populate
         print("[OK] Import successful!")
         print(f"[OK] CONST.SDK_FW_CONTROL = {CONST.SDK_FW_CONTROL}")
         print(f"[OK] CONST.SDK_SW_CONTROL = {CONST.SDK_SW_CONTROL}")

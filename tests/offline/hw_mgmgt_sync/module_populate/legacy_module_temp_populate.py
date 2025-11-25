@@ -18,7 +18,7 @@
 #
 
 """
-Unit test for hw_management_sync.py module_temp_populate function.
+Unit test for hw_management_thermal_updater.py module_temp_populate function.
 This test is agnostic to the folder from where it is running.
 """
 
@@ -105,13 +105,13 @@ class TestModuleTempPopulate(unittest.TestCase):
                     f.write(str(config['temperature_threshold']))
 
     def _load_hw_management_module(self, hw_mgmt_path):
-        """Dynamically load the hw_management_sync module from given path"""
-        # Add the directory containing hw_management_sync.py to sys.path
+        """Dynamically load the hw_management_thermal_updater module from given path"""
+        # Add the directory containing hw_management_thermal_updater.py to sys.path
         hw_mgmt_dir = os.path.dirname(os.path.abspath(hw_mgmt_path))
         if hw_mgmt_dir not in sys.path:
             sys.path.insert(0, hw_mgmt_dir)
 
-        spec = importlib.util.spec_from_file_location("hw_management_sync", hw_mgmt_path)
+        spec = importlib.util.spec_from_file_location("hw_management_thermal_updater", hw_mgmt_path)
         hw_mgmt_module = importlib.util.module_from_spec(spec)
 
         # Mock sys.modules to avoid import issues
@@ -206,9 +206,10 @@ class TestModuleTempPopulate(unittest.TestCase):
                         print(f"[+] Module {module_name}: FW control, present - actual values "
                               f"(temp={expected_temp}, crit={expected_crit})")
 
-            # Verify module counter file
-            self._verify_module_counter()
-            print("[+] Module counter file verified")
+            # Note: module_counter file is now written by write_module_counter() during initialization,
+            # not by module_temp_populate(). This is a design change to improve reliability.
+            # self._verify_module_counter()  # Disabled - module_counter now handled separately
+            print("[+] Test completed (Note: module_counter now written by write_module_counter() during init)")
 
     def _verify_files_not_created(self, module_name, written_files):
         """Verify that thermal files are not created for SW control modules"""
@@ -278,22 +279,22 @@ def main():
     """Main function to run tests with command line arguments"""
     parser = argparse.ArgumentParser(description='Test module_temp_populate function')
     parser.add_argument('hw_mgmt_path', nargs='?',
-                        help='Path to hw_management_sync.py file (optional, auto-detects if not provided)')
+                        help='Path to hw_management_thermal_updater.py file (optional, auto-detects if not provided)')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Verbose output')
 
     args, unittest_args = parser.parse_known_args()
 
-    # Determine the hw_management_sync.py path
+    # Determine the hw_management_thermal_updater.py path
     if args.hw_mgmt_path:
         hw_mgmt_path = args.hw_mgmt_path
     else:
         # Auto-detect using relative path from test location
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        hw_mgmt_path = os.path.join(script_dir, '..', '..', '..', '..', 'usr', 'usr', 'bin', 'hw_management_sync.py')
+        hw_mgmt_path = os.path.join(script_dir, '..', '..', '..', '..', 'usr', 'usr', 'bin', 'hw_management_thermal_updater.py')
         hw_mgmt_path = os.path.abspath(hw_mgmt_path)
 
-    # Validate the hw_management_sync.py path
+    # Validate the hw_management_thermal_updater.py path
     if not os.path.isfile(hw_mgmt_path):
         print(f"Error: File {hw_mgmt_path} does not exist")
         sys.exit(1)
@@ -301,7 +302,7 @@ def main():
     # Store the path for use in tests
     TestModuleTempPopulate.hw_mgmt_path = os.path.abspath(hw_mgmt_path)
 
-    print(f"Testing hw_management_sync.py from: {TestModuleTempPopulate.hw_mgmt_path}")
+    print(f"Testing hw_management_thermal_updater.py from: {TestModuleTempPopulate.hw_mgmt_path}")
     print("=" * 70)
 
     # Run the tests

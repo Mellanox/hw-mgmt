@@ -287,6 +287,100 @@ class TestSetParam:
         logger.stop()
 
 
+class TestSetLogLevel:
+    """Tests for set_loglevel() convenience method"""
+
+    def test_simple_set_loglevel(self, log_file):
+        """Simple: set_loglevel() changes log level"""
+        logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
+
+        # Change to DEBUG
+        logger.set_loglevel(HW_Mgmt_Logger.DEBUG)
+        assert logger.logger.level == HW_Mgmt_Logger.DEBUG
+
+        # Change to ERROR
+        logger.set_loglevel(HW_Mgmt_Logger.ERROR)
+        assert logger.logger.level == HW_Mgmt_Logger.ERROR
+
+        logger.stop()
+
+    def test_medium_runtime_log_level_adjustment(self, log_file):
+        """Medium: Dynamic log level adjustment affects what gets logged"""
+        logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.WARNING)
+
+        # INFO should not be logged initially
+        logger.info("This should not appear")
+
+        # Change to DEBUG
+        logger.set_loglevel(HW_Mgmt_Logger.DEBUG)
+        logger.info("This should appear")
+        logger.debug("Debug message")
+
+        # Verify messages were logged
+        with open(log_file, 'r') as f:
+            content = f.read()
+            assert "This should not appear" not in content
+            assert "This should appear" in content
+            assert "Debug message" in content
+
+        logger.stop()
+
+    def test_complex_service_simulation(self, temp_dir):
+        """Complex: Simulate service reading log level from file (like thermal/peripheral updater)"""
+        # This simulates what thermal_updater.py and peripheral_updater.py do
+        log_file = os.path.join(temp_dir, "service.log")
+        log_level_file = os.path.join(temp_dir, "log_level")
+
+        # Create logger
+        logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
+
+        # Initially INFO level
+        logger.debug("Initial debug - should not appear")
+        logger.info("Initial info - should appear")
+
+        # Simulate service reading log level file and adjusting
+        with open(log_level_file, 'w') as f:
+            f.write(str(HW_Mgmt_Logger.DEBUG))
+
+        # Service reads the file and calls set_loglevel
+        if os.path.isfile(log_level_file):
+            with open(log_level_file, 'r') as f:
+                new_level = int(f.read().rstrip('\n'))
+                logger.set_loglevel(new_level)
+
+        # Now debug should work
+        logger.debug("After adjustment - should appear")
+
+        # Verify
+        with open(log_file, 'r') as f:
+            content = f.read()
+            assert "Initial debug - should not appear" not in content
+            assert "Initial info - should appear" in content
+            assert "After adjustment - should appear" in content
+
+        logger.stop()
+
+    def test_complex_all_log_levels(self, log_file):
+        """Complex: Test all valid log levels"""
+        logger = HW_Mgmt_Logger(log_file=log_file)
+
+        valid_levels = [
+            HW_Mgmt_Logger.DEBUG,
+            HW_Mgmt_Logger.INFO,
+            HW_Mgmt_Logger.NOTICE,
+            HW_Mgmt_Logger.WARNING,
+            HW_Mgmt_Logger.ERROR,
+            HW_Mgmt_Logger.CRITICAL,
+            HW_Mgmt_Logger.NOTSET
+        ]
+
+        for level in valid_levels:
+            logger.set_loglevel(level)
+            assert logger.logger.level == level
+
+        logger.stop()
+
+
 class TestLogLevelMethods:
     """Tests for debug(), info(), notice(), warn(), error(), critical()"""
 
