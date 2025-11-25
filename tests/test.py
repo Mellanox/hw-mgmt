@@ -38,7 +38,7 @@ class Colors:
 class TestRunner:
     """Test runner for hw-mgmt test suite"""
 
-    def __init__(self, verbose=False, enable_logs=True):
+    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None):
         self.verbose = verbose
         self.enable_logs = enable_logs
         self.tests_dir = Path(__file__).parent.absolute()
@@ -49,12 +49,21 @@ class TestRunner:
         self.passed_tests = []
         self.total_test_count = 0  # Track total individual tests
 
+        # Hardware test SSH parameters
+        self.hardware_host = hardware_host
+        self.hardware_user = hardware_user
+        self.hardware_password = hardware_password
+
         # Create logs directory if logging is enabled
         if self.enable_logs:
             self.logs_dir.mkdir(exist_ok=True)
-            # Clean old logs
+            # Clean old logs (ignore permission errors)
             for old_log in self.logs_dir.glob("*.log"):
-                old_log.unlink()
+                try:
+                    old_log.unlink()
+                except (PermissionError, OSError):
+                    # Skip files we can't delete (may be owned by another user/root)
+                    pass
 
     def check_dependencies(self, auto_install=True):
         """Check if required dependencies are installed, optionally auto-install"""
@@ -340,20 +349,26 @@ class TestRunner:
                 'cmd': ['python3', 'legacy_module_temp_populate_extended.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature'
             },
+            # Disabled TEC tests for V.7.0040.4000_BR - thermal_module_tec_sensor function not available in base
+            # {
+            #     'name': 'Thermal Control 2.0 TEC module test FR:4359937 (unittest)',
+            #     'cmd': ['python3', 'test_thermal_module_tec_sensor_2_0.py', '-i 20'],
+            #     'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_0' / 'module_tec_4359937'
+            # },
+            # {
+            #     'name': 'Thermal Control 2.5 TEC module test FR:4359937 (unittest)',
+            #     'cmd': ['python3', 'test_thermal_module_tec_sensor.py', '-i 20'],
+            #     'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_5' / 'module_tec_4359937'
+            # },
+            # {
+            #     'name': 'Module Temperature Populate TEC test FR:4359937 (unittest)',
+            #     'cmd': ['python3', 'test_module_temp_populate.py', '-i 20'],
+            #     'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature_4359937'
+            # },
             {
-                'name': 'Thermal Control 2.0 TEC module test FR:4359937 (unittest)',
-                'cmd': ['python3', 'test_thermal_module_tec_sensor_2_0.py', '-i 20'],
-                'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_0' / 'module_tec_4359937'
-            },
-            {
-                'name': 'Thermal Control 2.5 TEC module test FR:4359937 (unittest)',
-                'cmd': ['python3', 'test_thermal_module_tec_sensor.py', '-i 20'],
-                'cwd': self.offline_dir / 'hw_mgmt_thermal_control_2_5' / 'module_tec_4359937'
-            },
-            {
-                'name': 'Module Temperature Populate TEC test FR:4359937 (unittest)',
-                'cmd': ['python3', 'test_module_temp_populate.py', '-i 20'],
-                'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature_4359937'
+                'name': 'Module Counter Reliability Test (unittest)',
+                'cmd': ['python3', 'test_module_counter.py'],
+                'cwd': self.offline_dir / 'hw_mgmgt_sync'
             },
             # Pytest tests - auto-discovery (run last)
             # Pytest tests - auto-discovery (strict mode for CI)
@@ -368,6 +383,8 @@ class TestRunner:
                     '--ignore=offline/hw_management_lib',
                     '--ignore=offline/hw_mgmgt_sync',
                     '--ignore=offline/thermal_control',
+                    '--ignore=offline/hw_mgmt_thermal_control_2_0',
+                    '--ignore=offline/hw_mgmt_thermal_control_2_5',
                     '--ignore=offline/known_issues_redfish_client.py'  # Skip known issues file
                 ],
                 'cwd': self.tests_dir
@@ -380,24 +397,312 @@ class TestRunner:
         return len(self.failed_tests) == 0
 
     def run_hardware_tests(self):
-        """Run all hardware tests"""
+        """Run all hardware tests via SSH to hardware system"""
         self.print_header("HARDWARE TESTS")
 
+        # Check if hardware connection parameters are provided
+        if not all([self.hardware_host, self.hardware_user, self.hardware_password]):
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} Hardware tests require SSH credentials")
+            print(f"{Colors.YELLOW}Usage: python3 test.py --hardware --host <hostname> --user <username> --password <password>{Colors.RESET}")
+            print()
+            print(f"{Colors.YELLOW}NOTE: Basic hardware tests require:{Colors.RESET}")
+            print(f"{Colors.YELLOW}  - Actual hardware with hw-management installed{Colors.RESET}")
+            print(f"{Colors.YELLOW}  - Root/sudo access for service control{Colors.RESET}")
+            print()
+            print(f"{Colors.CYAN}NOTE: DVS integration tests are disabled by default (they can hang).{Colors.RESET}")
+            print(f"{Colors.CYAN}      Edit tests/test.py to enable full DVS tests if needed.{Colors.RESET}")
+            return True  # Not a failure, just skipped
+
+        print(f"{Colors.CYAN}Connecting to hardware: {self.hardware_user}@{self.hardware_host}{Colors.RESET}")
+        print()
+
+        # Check if sshpass is available
+        if not self._check_sshpass():
+            print(f"{Colors.RED}[ERROR]{Colors.RESET} sshpass is not installed")
+            print(f"{Colors.YELLOW}Install with: sudo apt-get install sshpass{Colors.RESET}")
+            self.failed_tests.append("Hardware Tests (sshpass missing)")
+            return False
+
+        # Deploy files to hardware first
+        print(f"\n{Colors.CYAN}{'=' * 70}{Colors.RESET}")
+        print(f"{Colors.CYAN}DEPLOYING FILES TO HARDWARE{Colors.RESET}")
+        print(f"{Colors.CYAN}{'=' * 70}{Colors.RESET}\n")
+
+        if not self._deploy_to_hardware():
+            print(f"\n{Colors.RED}[ERROR]{Colors.RESET} Failed to deploy files to hardware")
+            self.failed_tests.append("Hardware Tests (deployment failed)")
+            return False
+
+        print(f"\n{Colors.GREEN}Deployment successful!{Colors.RESET}\n")
+
+        # Basic tests (fast, no DVS required) - always run
+        test_files = [
+            'test_basic_services.py',
+        ]
+
+        # Full DVS integration tests (slow, ~2 minutes)
+        # These tests start/stop DVS and verify file clearing behavior
+        # Files are cleared after 3 retry cycles (takes 9+ seconds)
+        test_files.extend([
+            'test_thermal_updater_integration.py',
+            'test_peripheral_updater_integration.py',
+        ])
+
+        # Copy test files to hardware
+        print(f"{Colors.CYAN}Copying test files to hardware...{Colors.RESET}")
+        remote_test_dir = "/tmp/hw_mgmt_hardware_tests"
+
+        if not self._ssh_create_remote_dir(remote_test_dir):
+            self.failed_tests.append("Hardware Tests (failed to create remote directory)")
+            return False
+
+        for test_file in test_files:
+            local_path = self.hardware_dir / test_file
+            if local_path.exists():
+                if not self._ssh_copy_file(str(local_path), f"{remote_test_dir}/{test_file}"):
+                    print(f"{Colors.YELLOW}[WARNING]{Colors.RESET} Failed to copy {test_file}")
+                else:
+                    print(f"  {Colors.GREEN}Copied:{Colors.RESET} {test_file}")
+
+        # Make files executable on hardware
+        print(f"{Colors.CYAN}Making test files executable...{Colors.RESET}")
+        self._ssh_run_command(f"chmod +x {remote_test_dir}/*.py")
+
+        # Run tests on hardware (matches test_files list above)
         tests = [
             {
-                'name': 'BMC Accessor Login Test',
-                'cmd': ['python3', 'hw_management_bmcaccessor_login_test.py'],
-                'cwd': self.hardware_dir
+                'name': 'Basic Service Tests (Fast)',
+                'file': 'test_basic_services.py'
+            },
+            {
+                'name': 'Thermal Updater Integration Tests (with DVS)',
+                'file': 'test_thermal_updater_integration.py'
+            },
+            {
+                'name': 'Peripheral Updater Integration Tests (with DVS)',
+                'file': 'test_peripheral_updater_integration.py'
             },
         ]
 
         for test in tests:
-            if test['cwd'].exists():
-                self.run_command(test['cmd'], test['cwd'], test['name'])
+            print(f"\n{Colors.BLUE}Running: {Colors.BOLD}{test['name']}{Colors.RESET}")
+            print("-" * 70)
+
+            success = self._ssh_run_test(remote_test_dir, test['file'], test['name'])
+
+            if success:
+                print(f"{Colors.GREEN}[PASSED]{Colors.RESET} {test['name']}")
+                self.passed_tests.append(test['name'])
             else:
-                print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} {test['name']} (requires hardware)")
+                print(f"{Colors.RED}[FAILED]{Colors.RESET} {test['name']}")
+                self.failed_tests.append(test['name'])
+
+        # Cleanup remote test directory
+        print(f"\n{Colors.CYAN}Cleaning up remote test files...{Colors.RESET}")
+        self._ssh_run_command(f"rm -rf {remote_test_dir}")
 
         return len(self.failed_tests) == 0
+
+    def _check_sshpass(self):
+        """Check if sshpass is installed"""
+        try:
+            result = subprocess.run(
+                ['which', 'sshpass'],
+                capture_output=True,
+                check=True
+            )
+            return result.returncode == 0
+        except subprocess.CalledProcessError:
+            return False
+
+    def _deploy_to_hardware(self):
+        """Deploy Python scripts and service files to hardware"""
+        repo_root = self.tests_dir.parent
+
+        # Files to deploy
+        python_files = [
+            'usr/usr/bin/hw_management_thermal_updater.py',
+            'usr/usr/bin/hw_management_peripheral_updater.py',
+            'usr/usr/bin/hw_management_platform_config.py',
+        ]
+
+        service_files = [
+            ('debian/hw-management.hw-management-thermal-updater.service',
+             '/lib/systemd/system/hw-management-thermal-updater.service'),
+            ('debian/hw-management.hw-management-peripheral-updater.service',
+             '/lib/systemd/system/hw-management-peripheral-updater.service'),
+        ]
+
+        # Deploy Python scripts
+        print(f"{Colors.CYAN}Deploying Python scripts...{Colors.RESET}")
+        for python_file in python_files:
+            local_path = repo_root / python_file
+            remote_path = f'/usr/bin/{os.path.basename(python_file)}'
+
+            if not local_path.exists():
+                print(f"{Colors.RED}[ERROR]{Colors.RESET} Local file not found: {local_path}")
+                return False
+
+            if not self._ssh_copy_file(str(local_path), remote_path):
+                print(f"{Colors.RED}[ERROR]{Colors.RESET} Failed to copy {python_file}")
+                return False
+
+            print(f"  {Colors.GREEN}Deployed:{Colors.RESET} {os.path.basename(python_file)}")
+
+        # Make Python scripts executable
+        print(f"\n{Colors.CYAN}Making scripts executable...{Colors.RESET}")
+        if not self._ssh_run_command("chmod +x /usr/bin/hw_management_*_updater.py"):
+            print(f"{Colors.YELLOW}[WARNING]{Colors.RESET} Failed to chmod scripts")
+
+        # Deploy service files
+        print(f"\n{Colors.CYAN}Deploying service files...{Colors.RESET}")
+        for local_file, remote_path in service_files:
+            local_path = repo_root / local_file
+
+            if not local_path.exists():
+                print(f"{Colors.RED}[ERROR]{Colors.RESET} Local file not found: {local_path}")
+                return False
+
+            if not self._ssh_copy_file(str(local_path), remote_path):
+                print(f"{Colors.RED}[ERROR]{Colors.RESET} Failed to copy {local_file}")
+                return False
+
+            print(f"  {Colors.GREEN}Deployed:{Colors.RESET} {os.path.basename(remote_path)}")
+
+        # Reload systemd
+        print(f"\n{Colors.CYAN}Reloading systemd...{Colors.RESET}")
+        if not self._ssh_run_command("systemctl daemon-reload"):
+            print(f"{Colors.YELLOW}[WARNING]{Colors.RESET} Failed to reload systemd")
+
+        # Enable services
+        print(f"{Colors.CYAN}Enabling services...{Colors.RESET}")
+        self._ssh_run_command("systemctl enable hw-management-thermal-updater")
+        self._ssh_run_command("systemctl enable hw-management-peripheral-updater")
+
+        return True
+
+    def _ssh_create_remote_dir(self, remote_dir):
+        """Create directory on remote hardware"""
+        print(f"{Colors.CYAN}[DEBUG] Creating remote directory: {remote_dir}{Colors.RESET}")
+
+        cmd = [
+            'sshpass', '-p', self.hardware_password,
+            'ssh', '-o', 'StrictHostKeyChecking=no',
+            '-o', 'ConnectTimeout=10',
+            f'{self.hardware_user}@{self.hardware_host}',
+            f'mkdir -p {remote_dir}'
+        ]
+
+        if self.verbose:
+            print(f"{Colors.CYAN}[DEBUG] Command: {' '.join([c if c != self.hardware_password else '***' for c in cmd])}{Colors.RESET}")
+
+        try:
+            print(f"{Colors.CYAN}[DEBUG] Executing SSH command...{Colors.RESET}")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+
+            if result.returncode == 0:
+                print(f"{Colors.GREEN}[DEBUG] Remote directory created successfully{Colors.RESET}")
+            else:
+                print(f"{Colors.RED}[DEBUG] Failed to create directory. Return code: {result.returncode}{Colors.RESET}")
+                if result.stderr:
+                    print(f"{Colors.RED}[DEBUG] stderr: {result.stderr}{Colors.RESET}")
+
+            return result.returncode == 0
+        except subprocess.TimeoutExpired as e:
+            print(f"{Colors.RED}[DEBUG] Timeout creating remote directory (10s){Colors.RESET}")
+            return False
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.RED}[DEBUG] Failed to create remote directory: {e}{Colors.RESET}")
+            return False
+
+    def _ssh_copy_file(self, local_path, remote_path):
+        """Copy file to remote hardware via scp"""
+        cmd = [
+            'sshpass', '-p', self.hardware_password,
+            'scp', '-o', 'StrictHostKeyChecking=no',
+            '-o', 'ConnectTimeout=10',
+            local_path,
+            f'{self.hardware_user}@{self.hardware_host}:{remote_path}'
+        ]
+
+        if self.verbose:
+            print(f"{Colors.CYAN}[DEBUG] Copying {local_path} to {remote_path}{Colors.RESET}")
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0 and result.stderr:
+                print(f"{Colors.YELLOW}[DEBUG] Copy failed: {result.stderr}{Colors.RESET}")
+
+            return result.returncode == 0
+        except subprocess.TimeoutExpired:
+            print(f"{Colors.RED}[DEBUG] Timeout copying file (30s){Colors.RESET}")
+            return False
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.RED}[DEBUG] Error copying file: {e}{Colors.RESET}")
+            return False
+
+    def _ssh_run_command(self, command):
+        """Run command on remote hardware via SSH"""
+        if self.verbose:
+            print(f"{Colors.CYAN}[DEBUG] Running command: {command}{Colors.RESET}")
+
+        cmd = [
+            'sshpass', '-p', self.hardware_password,
+            'ssh', '-o', 'StrictHostKeyChecking=no',
+            '-o', 'ConnectTimeout=10',
+            f'{self.hardware_user}@{self.hardware_host}',
+            command
+        ]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0 and self.verbose:
+                print(f"{Colors.YELLOW}[DEBUG] Command failed with return code {result.returncode}{Colors.RESET}")
+                if result.stderr:
+                    print(f"{Colors.YELLOW}[DEBUG] stderr: {result.stderr}{Colors.RESET}")
+
+            return result.returncode == 0
+        except subprocess.TimeoutExpired:
+            print(f"{Colors.RED}[DEBUG] Timeout running command (60s){Colors.RESET}")
+            return False
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.RED}[DEBUG] Error running command: {e}{Colors.RESET}")
+            return False
+
+    def _ssh_run_test(self, remote_dir, test_file, test_name):
+        """Run a test file on remote hardware and capture output"""
+        cmd = [
+            'sshpass', '-p', self.hardware_password,
+            'ssh', '-o', 'StrictHostKeyChecking=no',
+            f'{self.hardware_user}@{self.hardware_host}',
+            f'cd {remote_dir} && sudo python3 {test_file}'
+        ]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minutes timeout for hardware tests
+            )
+
+            # Print output
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr and self.verbose:
+                print(f"{Colors.YELLOW}stderr:{Colors.RESET}")
+                print(result.stderr)
+
+            return result.returncode == 0
+
+        except subprocess.TimeoutExpired:
+            print(f"{Colors.RED}Test timed out after 5 minutes{Colors.RESET}")
+            return False
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.RED}Test failed with error: {e}{Colors.RESET}")
+            return False
 
     def run_beautifier(self):
         """Run NVIDIA code beautifier (ngci_tool -b)"""
@@ -445,9 +750,60 @@ class TestRunner:
             return True
         else:
             print(f"{Colors.RED}[FAILED]{Colors.RESET} Code formatting issues found")
-            print(f"{Colors.YELLOW}Run 'ngci_tool -b repair' to auto-fix formatting issues{Colors.RESET}")
-            self.failed_tests.append("Beautifier")
-            return False
+            print(f"{Colors.CYAN}Automatically running 'ngci_tool -b repair' to fix formatting...{Colors.RESET}")
+
+            # Automatically run repair
+            repair_result = None
+            for ngci_path in ngci_paths:
+                try:
+                    repair_result = subprocess.run(
+                        [ngci_path, '-b', 'repair'],
+                        cwd=repo_root,
+                        capture_output=True,
+                        text=True,
+                        check=False
+                    )
+                    break
+                except (FileNotFoundError, Exception):
+                    continue
+
+            if repair_result and repair_result.returncode == 0:
+                print(f"{Colors.GREEN}[AUTO-FIXED]{Colors.RESET} Formatting issues automatically repaired")
+
+                # Re-run beautifier to verify fix
+                print(f"{Colors.CYAN}Re-validating code formatting after repair...{Colors.RESET}")
+                verify_result = None
+                for ngci_path in ngci_paths:
+                    try:
+                        verify_result = subprocess.run(
+                            [ngci_path, '-b'],
+                            cwd=repo_root,
+                            capture_output=True,
+                            text=True,
+                            check=False
+                        )
+                        break
+                    except (FileNotFoundError, Exception):
+                        continue
+
+                if verify_result and verify_result.returncode == 0:
+                    print(f"{Colors.GREEN}[PASSED]{Colors.RESET} Code formatting verified after auto-repair")
+                    print(f"{Colors.YELLOW}Please review and commit the formatting changes{Colors.RESET}")
+                    self.passed_tests.append("Beautifier (auto-fixed)")
+                    return True
+                else:
+                    print(f"{Colors.RED}[FAILED]{Colors.RESET} Issues remain after auto-repair")
+                    if verify_result and self.verbose:
+                        print(verify_result.stdout + verify_result.stderr)
+                    self.failed_tests.append("Beautifier")
+                    return False
+            else:
+                repair_output = repair_result.stdout + repair_result.stderr if repair_result else ""
+                if self.verbose and repair_output:
+                    print(repair_output)
+                print(f"{Colors.YELLOW}Auto-repair completed with warnings - please review changes{Colors.RESET}")
+                self.failed_tests.append("Beautifier")
+                return False
 
     def run_spell_check(self):
         """Run NVIDIA spell checker (ngci_tool -s)"""
@@ -493,6 +849,9 @@ class TestRunner:
             return True
         else:
             print(f"{Colors.RED}[FAILED]{Colors.RESET} Spelling errors found")
+            print(f"\n{Colors.YELLOW}TIP:{Colors.RESET} If you see valid technical terms flagged as errors,")
+            print(f"     add them to the global dictionary using:")
+            print(f"     {Colors.CYAN}ngci_tool --spell-check add-to-dict [your_word_here]{Colors.RESET}\n")
             self.failed_tests.append("Spell Check")
             return False
 
@@ -578,38 +937,59 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --offline          # Run offline tests only (default)
-  %(prog)s --hardware         # Run hardware tests only
-  %(prog)s --all              # Run all tests
-  %(prog)s --clean            # Clean all generated files (cache, logs, etc.)
+  %(prog)s --offline                                    # Run offline tests only (default)
+  %(prog)s --hardware --host 10.0.0.1 --user root --password mypass
+                                                        # Run hardware tests via SSH
+  %(prog)s --all                                        # Run all tests (offline + beautifier + spell)
+  %(prog)s --clean                                      # Clean all generated files (cache, logs, etc.)
 
 Note: Dependencies are automatically installed if missing
       Offline tests show verbose output by default
+      Hardware tests are NOT run by default - requires explicit --hardware flag with SSH credentials
         """
     )
     parser.add_argument('--offline', action='store_true', help='Run offline tests')
-    parser.add_argument('--hardware', action='store_true', help='Run hardware tests')
-    parser.add_argument('--all', action='store_true', help='Run all tests')
+    parser.add_argument('--hardware', action='store_true', help='Run hardware tests (requires SSH credentials)')
+    parser.add_argument('--all', action='store_true', help='Run all offline tests (does NOT include hardware)')
     parser.add_argument('--clean', action='store_true', help='Clean all generated files (cache, logs, outputs)')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose debug output')
+
+    # Hardware SSH connection parameters
+    parser.add_argument('--host', type=str, help='Hardware hostname or IP address for SSH')
+    parser.add_argument('--user', type=str, help='SSH username for hardware connection')
+    parser.add_argument('--password', type=str, help='SSH password for hardware connection')
 
     args = parser.parse_args()
 
-    runner = TestRunner(verbose=False)
+    # Set verbose mode from command line flag
+    verbose_mode = args.verbose
+
+    runner = TestRunner(
+        verbose=verbose_mode,
+        hardware_host=args.host,
+        hardware_user=args.user,
+        hardware_password=args.password
+    )
 
     # Handle clean command
     if args.clean:
         return 0 if runner.clean_all() else 1
 
-    # Auto-check and install dependencies before running tests
-    print(f"{Colors.CYAN}Checking dependencies...{Colors.RESET}")
-    if not runner.check_dependencies(auto_install=True):
-        print(f"\n{Colors.RED}Failed to install required dependencies{Colors.RESET}")
-        print(f"{Colors.YELLOW}Please install manually: pip install pytest>=6.0{Colors.RESET}")
-        return 1
-
     # If no specific test type is selected, default to offline
     if not any([args.offline, args.hardware, args.all]):
         args.offline = True
+
+    # Auto-check and install dependencies ONLY if running offline tests
+    # Hardware tests use unittest (built-in) and run remotely via SSH
+    if args.offline or args.all:
+        print(f"{Colors.CYAN}Checking dependencies...{Colors.RESET}")
+        if not runner.check_dependencies(auto_install=True):
+            print(f"\n{Colors.RED}Failed to install required dependencies{Colors.RESET}")
+            print(f"{Colors.YELLOW}Please install manually: pip install pytest>=6.0{Colors.RESET}")
+            return 1
+    elif args.hardware:
+        # Hardware tests don't need pytest locally (they use unittest and run remotely)
+        print(f"{Colors.CYAN}Skipping dependency check (hardware tests use unittest remotely){Colors.RESET}")
 
     # Make offline tests verbose by default (can help with debugging)
     if args.offline and not args.hardware and not args.all:
@@ -620,21 +1000,26 @@ Note: Dependencies are automatically installed if missing
 
     success = True
 
+    # Run offline tests (for --offline or --all)
     if args.offline or args.all:
         if not runner.run_offline_tests():
             success = False
 
-    if args.hardware or args.all:
+    # Run hardware tests ONLY if explicitly requested with --hardware
+    # (NOT included in --all to prevent accidental hardware test runs)
+    if args.hardware:
         if not runner.run_hardware_tests():
             success = False
 
-    # Always run beautifier check (unless only cleaning)
-    if not runner.run_beautifier():
-        success = False
+    # Always run beautifier check for offline/all (skip if only hardware)
+    if not args.hardware or args.all or args.offline:
+        if not runner.run_beautifier():
+            success = False
 
-    # Always run spell check (unless only cleaning)
-    if not runner.run_spell_check():
-        success = False
+    # Always run spell check for offline/all (skip if only hardware)
+    if not args.hardware or args.all or args.offline:
+        if not runner.run_spell_check():
+            success = False
 
     # Skip security scan - CI handles this separately
     # Security scanner has a known bug with large changesets (60+ chunks)

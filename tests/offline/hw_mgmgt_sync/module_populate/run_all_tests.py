@@ -39,12 +39,12 @@ def setup_import_path(hw_mgmt_path=None):
             hw_mgmt_dir = os.path.abspath(hw_mgmt_path)
     else:
         # Auto-detect
-        if os.path.exists('./hw_management_sync.py'):
+        if os.path.exists('./hw_management_thermal_updater.py'):
             hw_mgmt_dir = '.'
-        elif os.path.exists('./bin/hw_management_sync.py'):
+        elif os.path.exists('./bin/hw_management_thermal_updater.py'):
             hw_mgmt_dir = './bin'
         else:
-            raise FileNotFoundError("Cannot find hw_management_sync.py")
+            raise FileNotFoundError("Cannot find hw_management_thermal_updater.py")
 
     hw_mgmt_dir = os.path.abspath(hw_mgmt_dir)
     if hw_mgmt_dir not in sys.path:
@@ -57,7 +57,7 @@ def test_basic_functionality():
     print("[TEST] Testing basic functionality...")
 
     try:
-        from hw_management_sync import CONST, sdk_temp2degree, module_temp_populate
+        from hw_management_thermal_updater import CONST, sdk_temp2degree, module_temp_populate
 
         # Test constants
         assert CONST.SDK_FW_CONTROL == 0, f"SDK_FW_CONTROL should be 0, got {CONST.SDK_FW_CONTROL}"
@@ -80,7 +80,7 @@ def test_temperature_conversion():
     print("[TEST] Testing temperature conversion...")
 
     try:
-        from hw_management_sync import sdk_temp2degree
+        from hw_management_thermal_updater import sdk_temp2degree
 
         test_cases = [
             (0, 0, "Zero temperature"),
@@ -116,7 +116,7 @@ def test_random_module_states():
     print("[TEST] Testing random module states (5 modules as requested)...")
 
     try:
-        from hw_management_sync import CONST
+        from hw_management_thermal_updater import CONST
 
         # Generate 5 random module states as requested
         random.seed(42)  # For reproducible results
@@ -154,8 +154,8 @@ def test_folder_agnostic_functionality(hw_mgmt_dir):
     print("[TEST] Testing folder-agnostic functionality...")
 
     try:
-        import hw_management_sync
-        module_file = hw_management_sync.__file__
+        import hw_management_thermal_updater
+        module_file = hw_management_thermal_updater.__file__
         expected_dir = os.path.abspath(hw_mgmt_dir)
         actual_dir = os.path.dirname(os.path.abspath(module_file))
 
@@ -173,7 +173,7 @@ def test_folder_agnostic_functionality(hw_mgmt_dir):
 def main():
     """Main test runner"""
     parser = argparse.ArgumentParser(description='Comprehensive test runner for module_temp_populate')
-    parser.add_argument('--hw-mgmt-path', help='Path to hw_management_sync.py')
+    parser.add_argument('--hw-mgmt-path', help='Path to hw_management_thermal_updater.py')
     args = parser.parse_args()
 
     print("=" * 70)
@@ -184,7 +184,7 @@ def main():
     try:
         # Setup import path
         hw_mgmt_dir = setup_import_path(args.hw_mgmt_path)
-        print(f"[DIR] Using hw_management_sync.py from: {hw_mgmt_dir}")
+        print(f"[DIR] Using hw_management_thermal_updater.py from: {hw_mgmt_dir}")
         print("=" * 70)
 
         # Run all tests

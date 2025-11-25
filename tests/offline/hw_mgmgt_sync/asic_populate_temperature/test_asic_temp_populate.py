@@ -33,7 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 """
-Comprehensive Unit Tests for asic_temp_populate function from hw_management_sync.py
+Comprehensive Unit Tests for asic_temp_populate function from hw_management_thermal_updater.py
 
 This test suite provides detailed testing of ASIC temperature population functionality
 with beautiful colored output, error reporting, and configurable iteration testing.
@@ -57,8 +57,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..
 
 # Import the module under test - DO NOT REORDER (must be after sys.path.insert)
 # fmt: off
-import hw_management_sync  # noqa: E402
-from hw_management_sync import asic_temp_populate, sdk_temp2degree, CONST, LOGGER  # noqa: E402
+import hw_management_thermal_updater  # noqa: E402
+from hw_management_thermal_updater import asic_temp_populate, sdk_temp2degree, CONST, LOGGER  # noqa: E402
 # fmt: on
 
 # ANSI color codes for beautiful output
@@ -685,7 +685,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.islink', return_value=False), \
                         patch('os.path.exists', return_value=True), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         mock_file = mock_open()
@@ -762,7 +762,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.islink', return_value=False), \
                         patch('os.path.exists', return_value=True), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -826,7 +826,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.islink', return_value=False), \
                         patch('os.path.exists', return_value=True), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -871,7 +871,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.islink', return_value=False), \
                         patch('os.path.exists', return_value=True), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -915,7 +915,7 @@ class AsicTempPopulateTestSuite:
                         self.result.add_pass(f"{scenario_name} Iteration {iteration + 1}", "Skipped None config")
                         continue
 
-                    with patch('hw_management_sync.LOGGER', MagicMock()):
+                    with patch('hw_management_thermal_updater.LOGGER', MagicMock()):
                         asic_temp_populate(config, None)
 
                     self.result.add_pass(f"{scenario_name} Iteration {iteration + 1}",
@@ -956,7 +956,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.islink', return_value=False), \
                         patch('os.path.exists', return_value=True), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -1098,7 +1098,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=False), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         # Return empty mock for non-existent files
@@ -1173,7 +1173,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=asic_dir_exists), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "_ready" in filename and ready_value is not None:
@@ -1246,7 +1246,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=True), \
                         patch('os.path.islink', return_value=has_symlink), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -1328,7 +1328,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=True), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -1402,7 +1402,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=True), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -1496,7 +1496,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=False), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     reset_called = False
 
@@ -1514,7 +1514,7 @@ class AsicTempPopulateTestSuite:
                         else:
                             return mock_open().return_value
 
-                    with patch('hw_management_sync.asic_temp_reset', side_effect=mock_asic_temp_reset), \
+                    with patch('hw_management_thermal_updater.asic_temp_reset', side_effect=mock_asic_temp_reset), \
                             patch('builtins.open', side_effect=mock_open_func):
 
                         asic_temp_populate(asic_config, None)
@@ -1586,7 +1586,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=True), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -1687,7 +1687,7 @@ class AsicTempPopulateTestSuite:
                         else:
                             return mock_open().return_value
 
-                    with patch('hw_management_sync.LOGGER', mock_logger), \
+                    with patch('hw_management_thermal_updater.LOGGER', mock_logger), \
                             patch('builtins.open', side_effect=mock_open_func):
 
                         asic_temp_populate(asic_config, None)
@@ -1757,7 +1757,7 @@ class AsicTempPopulateTestSuite:
                 with patch('os.path.exists', return_value=True), \
                         patch('os.path.islink', return_value=False), \
                         patch('os.makedirs'), \
-                        patch('hw_management_sync.LOGGER', MagicMock()):
+                        patch('hw_management_thermal_updater.LOGGER', MagicMock()):
 
                     def mock_open_func(filename, *args, **kwargs):
                         if "temperature/input" in filename:
@@ -2014,12 +2014,12 @@ def main():
     args = parser.parse_args()
 
     # Initialize mock logger to avoid errors
-    if not hasattr(hw_management_sync, 'LOGGER') or hw_management_sync.LOGGER is None:
-        hw_management_sync.LOGGER = MagicMock()
+    if not hasattr(hw_management_thermal_updater, 'LOGGER') or hw_management_thermal_updater.LOGGER is None:
+        hw_management_thermal_updater.LOGGER = MagicMock()
 
     print(f"{Colors.BOLD}{Colors.OKCYAN}")
     print("=" * 70)
-    print(f"{Icons.ASIC} HW Management Sync - ASIC Temperature Populate Tests {Icons.ASIC}")
+    print(f"{Icons.ASIC} HW Management Thermal Updater - ASIC Temperature Populate Tests {Icons.ASIC}")
     print("=" * 70)
     print(f"{Colors.ENDC}")
 

@@ -33,7 +33,7 @@
 #
 
 """
-Comprehensive unit tests for module_temp_populate function from hw_management_sync.py
+Comprehensive unit tests for module_temp_populate function from hw_management_thermal_updater.py
 
 This test suite covers:
 1. Normal conditions with all files present and readable
@@ -64,7 +64,7 @@ from unittest.mock import patch, mock_open, MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'usr', 'usr', 'bin'))
 
 # Import the module under test
-import hw_management_sync
+import hw_management_thermal_updater
 # fmt: on
 
 
@@ -91,11 +91,11 @@ class TestModuleTempPopulate(unittest.TestCase):
         }
 
         # Mock LOGGER to prevent AttributeError
-        self.logger_patch = patch.object(hw_management_sync, 'LOGGER', MagicMock())
+        self.logger_patch = patch.object(hw_management_thermal_updater, 'LOGGER', MagicMock())
         self.mock_logger = self.logger_patch.start()
 
         # Patch the output and config directories
-        self.output_patch = patch.object(hw_management_sync, 'open', create=True)
+        self.output_patch = patch.object(hw_management_thermal_updater, 'open', create=True)
         self.islink_patch = patch('os.path.islink', return_value=False)
         self.isfile_patch = patch('os.path.isfile', return_value=True)
 
@@ -194,7 +194,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Test with one module
             test_args = {"fin": "/sys/module/sx_core/asic0/module{}/", "fout_idx_offset": 1, "module_count": 1}
             print(f"       | Test arguments: {test_args}")
-            hw_management_sync.module_temp_populate(test_args, None)
+            hw_management_thermal_updater.module_temp_populate(test_args, None)
 
             # Check if files were written
             print("       | Validating results...")
@@ -208,7 +208,7 @@ class TestModuleTempPopulate(unittest.TestCase):
                     print(f"       |   {key.split('/')[-1]}: {value}")
 
                 if temp_input_key in written_files:
-                    expected_temp = hw_management_sync.sdk_temp2degree(25000)
+                    expected_temp = hw_management_thermal_updater.sdk_temp2degree(25000)
                     actual_temp = written_files[temp_input_key]
                     print(f"       | Temperature conversion: 25000 -> {expected_temp}")
                     print(f"       | Actual output: {actual_temp}")
@@ -274,7 +274,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             test_args = self.test_args.copy()
             test_args["module_count"] = 1
             print(f"       | Test arguments: {test_args}")
-            hw_management_sync.module_temp_populate(test_args, None)
+            hw_management_thermal_updater.module_temp_populate(test_args, None)
 
             print("       | Validating default value behavior...")
             # Verify default temperature values are used (string "0")
@@ -334,15 +334,15 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             test_args = self.test_args.copy()
             test_args["module_count"] = 1
-            hw_management_sync.module_temp_populate(test_args, None)
+            hw_management_thermal_updater.module_temp_populate(test_args, None)
 
             # Verify input temperature is processed but other attributes use defaults
             if "/var/run/hw-management/thermal/module1_temp_input" in written_files:
-                expected_temp = hw_management_sync.sdk_temp2degree(25000)
+                expected_temp = hw_management_thermal_updater.sdk_temp2degree(25000)
                 self.assertEqual(written_files["/var/run/hw-management/thermal/module1_temp_input"], str(expected_temp))
-                self.assertEqual(written_files["/var/run/hw-management/thermal/module1_temp_crit"], str(hw_management_sync.CONST.MODULE_TEMP_MAX_DEF))
+                self.assertEqual(written_files["/var/run/hw-management/thermal/module1_temp_crit"], str(hw_management_thermal_updater.CONST.MODULE_TEMP_MAX_DEF))
                 # Emergency should be crit + offset
-                expected_emergency = hw_management_sync.CONST.MODULE_TEMP_MAX_DEF + hw_management_sync.CONST.MODULE_TEMP_EMERGENCY_OFFSET
+                expected_emergency = hw_management_thermal_updater.CONST.MODULE_TEMP_MAX_DEF + hw_management_thermal_updater.CONST.MODULE_TEMP_EMERGENCY_OFFSET
                 self.assertEqual(written_files["/var/run/hw-management/thermal/module1_temp_emergency"], str(expected_emergency))
             else:
                 print("Function correctly handled partial file availability")
@@ -364,7 +364,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             # Should not raise any exceptions
             try:
                 print("       |   Executing function...")
-                hw_management_sync.module_temp_populate(self.test_args, None)
+                hw_management_thermal_updater.module_temp_populate(self.test_args, None)
                 print("       |   Function completed without crashing")
             except Exception as e:
                 print(f"       |   UNEXPECTED: Function crashed with: {e}")
@@ -379,7 +379,7 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             try:
                 print("       |   Executing function...")
-                hw_management_sync.module_temp_populate(self.test_args, None)
+                hw_management_thermal_updater.module_temp_populate(self.test_args, None)
                 print("       |   Function completed gracefully despite permission errors")
             except PermissionError:
                 print("       |   UNEXPECTED: Function should handle permission errors gracefully")
@@ -468,7 +468,7 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             # Should handle all 36 modules without issues
             try:
-                hw_management_sync.module_temp_populate(self.test_args, None)
+                hw_management_thermal_updater.module_temp_populate(self.test_args, None)
                 print("       | Function executed successfully with no exceptions")
             except Exception as e:
                 print(f"       | Function failed with error: {e}")
@@ -524,7 +524,7 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             test_args = self.test_args.copy()
             test_args["module_count"] = 1
-            hw_management_sync.module_temp_populate(test_args, None)
+            hw_management_thermal_updater.module_temp_populate(test_args, None)
 
             # Verify no output files are created for SW_CONTROL modules
             module_files = [f for f in written_files.keys() if "module1_" in f]
@@ -539,21 +539,21 @@ class TestModuleTempPopulate(unittest.TestCase):
 
         # Test positive temperature
         input_val = 25000
-        result = hw_management_sync.sdk_temp2degree(input_val)
+        result = hw_management_thermal_updater.sdk_temp2degree(input_val)
         expected = input_val * 125
         print(f"       | Positive temp: {input_val} -> {result} (expected: {expected})")
         self.assertEqual(result, expected)
 
         # Test zero temperature
         input_val = 0
-        result = hw_management_sync.sdk_temp2degree(input_val)
+        result = hw_management_thermal_updater.sdk_temp2degree(input_val)
         expected = 0
         print(f"       | Zero temp: {input_val} -> {result} (expected: {expected})")
         self.assertEqual(result, expected)
 
         # Test negative temperature
         input_val = -1000
-        result = hw_management_sync.sdk_temp2degree(input_val)
+        result = hw_management_thermal_updater.sdk_temp2degree(input_val)
         expected = 0xffff + input_val + 1
         print(f"       | Negative temp: {input_val} -> {result} (expected: {expected})")
         print(f"       | Formula: 0xffff + ({input_val}) + 1 = {expected}")
@@ -561,7 +561,7 @@ class TestModuleTempPopulate(unittest.TestCase):
 
         # Test edge case
         input_val = -1
-        result = hw_management_sync.sdk_temp2degree(input_val)
+        result = hw_management_thermal_updater.sdk_temp2degree(input_val)
         expected = 0xffff + input_val + 1
         print(f"       | Edge case: {input_val} -> {result} (expected: {expected})")
         print(f"       | Formula: 0xffff + ({input_val}) + 1 = {expected}")
@@ -603,7 +603,7 @@ class TestModuleTempPopulate(unittest.TestCase):
 
             try:
                 print("       |   Calling function with test arguments...")
-                hw_management_sync.module_temp_populate(test_args, None)
+                hw_management_thermal_updater.module_temp_populate(test_args, None)
                 print("       |   Function accepted arguments without KeyError")
             except KeyError as e:
                 print(f"       |   FAILURE: Missing required argument: {e}")
@@ -624,19 +624,19 @@ class TestModuleHostManagementMode(unittest.TestCase):
     def test_fw_control_mode(self):
         """Test FW_CONTROL mode detection"""
         with patch('builtins.open', mock_open(read_data="0")):
-            result = hw_management_sync.is_module_host_management_mode("/test/path")
+            result = hw_management_thermal_updater.is_module_host_management_mode("/test/path")
             self.assertFalse(result)
 
     def test_sw_control_mode(self):
         """Test SW_CONTROL mode detection"""
         with patch('builtins.open', mock_open(read_data="1")):
-            result = hw_management_sync.is_module_host_management_mode("/test/path")
+            result = hw_management_thermal_updater.is_module_host_management_mode("/test/path")
             self.assertTrue(result)
 
     def test_file_read_error(self):
         """Test default behavior when control file cannot be read"""
         with patch('builtins.open', side_effect=FileNotFoundError):
-            result = hw_management_sync.is_module_host_management_mode("/test/path")
+            result = hw_management_thermal_updater.is_module_host_management_mode("/test/path")
             self.assertFalse(result)  # Should default to FW_CONTROL
 
 

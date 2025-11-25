@@ -5,11 +5,30 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.pytest_cache/
+.Python
 
-# Test logs
+# Test artifacts
 tests/logs/
+tests/__pycache__/
+.pytest_cache/
+.benchmarks/
 
-# CI/Build artifacts
-.ngci_tool/
+# Build artifacts
+*.egg-info/
+dist/
 build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CI/CD tools
+.ngci_tool/
+
+# Temporary files
+*.log
+*.bak
+*.tmp

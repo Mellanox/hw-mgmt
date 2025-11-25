@@ -56,7 +56,8 @@ endif
 override_dh_installinit:
 	dh_installinit --name=hw-management
 	dh_installinit --name=hw-management-tc
-	dh_installinit --name=hw-management-sync
+	dh_installinit --name=hw-management-peripheral-updater
+	dh_installinit --name=hw-management-thermal-updater
 	dh_installinit --name=hw-management-sysfs-monitor
 	dh_installinit --name=hw-management-fast-sysfs-monitor
 	dh_installinit --name=hw-management-blacklist-generator
@@ -64,7 +65,8 @@ override_dh_installinit:
 override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management
 	dh_systemd_enable --name=hw-management-tc
-	dh_systemd_enable --name=hw-management-sync
+	dh_systemd_enable --name=hw-management-peripheral-updater
+	dh_systemd_enable --name=hw-management-thermal-updater
 	dh_systemd_enable --name=hw-management-sysfs-monitor
 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
 	dh_systemd_enable --name=hw-management-blacklist-generator
@@ -72,7 +74,8 @@ override_dh_systemd_enable:
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management
 	dh_systemd_start --name=hw-management-tc
-	dh_systemd_start --name=hw-management-sync
+	dh_systemd_start --name=hw-management-peripheral-updater
+	dh_systemd_start --name=hw-management-thermal-updater
 	dh_systemd_start --name=hw-management-sysfs-monitor
 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
 	dh_systemd_start --name=hw-management-blacklist-generator
