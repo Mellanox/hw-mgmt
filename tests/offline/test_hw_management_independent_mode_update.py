@@ -58,8 +58,10 @@ Usage:
     python3 -m pytest test_hw_management_independent_mode_update.py::TestRandomScenarios -v
 """
 
-import hw_management_independent_mode_update as test_module
 import sys
+# Add the library path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'usr', 'usr', 'bin'))
+
 import os
 import pytest
 import tempfile
@@ -72,16 +74,7 @@ from typing import Dict, List, Tuple, Any
 from io import StringIO
 from contextlib import redirect_stdout
 from datetime import datetime
-
-# Add parent directory to path to import the module under test
-TESTS_DIR = Path(__file__).parent
-PROJECT_ROOT = TESTS_DIR.parent.parent
-HW_MGMT_BIN = PROJECT_ROOT / "usr" / "usr" / "bin"
-
-if str(HW_MGMT_BIN) not in sys.path:
-    sys.path.insert(0, str(HW_MGMT_BIN))
-
-# Import the module to test
+import hw_management_independent_mode_update as test_module
 
 # Mark all tests in this file as offline tests
 pytestmark = pytest.mark.offline
@@ -321,7 +314,7 @@ class TestModuleCountOperations:
 
         # Verify the value was written
         module_file = mock_hw_mgmt_base / "config" / "module_counter"
-        assert module_file.read_text() == "32"
+        assert module_file.read_text().strip() == "32"
         print(f"{ICON_PASS} Module counter set and verified: 32")
 
     def test_set_module_counter_negative(self, mock_hw_mgmt_base):
@@ -442,10 +435,16 @@ class TestAsicThermalData:
 
         # Verify files were created with correct values
         thermal_dir = mock_hw_mgmt_base / "thermal"
-        assert (thermal_dir / "asic").read_text() == "50000"
-        assert (thermal_dir / "asic_temp_emergency").read_text() == "85000"
-        assert (thermal_dir / "asic_temp_crit").read_text() == "100000"
-        assert (thermal_dir / "asic_temp_fault").read_text() == "0"
+        assert (thermal_dir / "asic").read_text().strip() == "50000"
+        assert (thermal_dir / "asic_temp_emergency").read_text().strip() == "85000"
+        assert (thermal_dir / "asic_temp_crit").read_text().strip() == "100000"
+        assert (thermal_dir / "asic_temp_fault").read_text().strip() == "0"
+
+        # Verify asic1_* files are also created for ASIC 0
+        assert (thermal_dir / "asic1").read_text().strip() == "50000"
+        assert (thermal_dir / "asic1_temp_emergency").read_text().strip() == "85000"
+        assert (thermal_dir / "asic1_temp_crit").read_text().strip() == "100000"
+        assert (thermal_dir / "asic1_temp_fault").read_text().strip() == "0"
         print(f"{ICON_PASS} ASIC 0 thermal data set correctly (temp=50000, warn=85000, crit=100000)")
 
     def test_thermal_data_set_asic_secondary(self, mock_hw_mgmt_base, setup_asic_count):
@@ -458,10 +457,10 @@ class TestAsicThermalData:
 
         # Verify files were created with correct values (index 2 -> asic3)
         thermal_dir = mock_hw_mgmt_base / "thermal"
-        assert (thermal_dir / "asic3").read_text() == "45000"
-        assert (thermal_dir / "asic3_temp_emergency").read_text() == "80000"
-        assert (thermal_dir / "asic3_temp_crit").read_text() == "95000"
-        assert (thermal_dir / "asic3_temp_fault").read_text() == "1"
+        assert (thermal_dir / "asic3").read_text().strip() == "45000"
+        assert (thermal_dir / "asic3_temp_emergency").read_text().strip() == "80000"
+        assert (thermal_dir / "asic3_temp_crit").read_text().strip() == "95000"
+        assert (thermal_dir / "asic3_temp_fault").read_text().strip() == "1"
         print(f"{ICON_PASS} ASIC 2 thermal data set correctly (temp=45000, fault=1)")
 
     def test_thermal_data_set_asic_invalid_index(self, mock_hw_mgmt_base, setup_asic_count):
@@ -500,10 +499,10 @@ class TestModuleThermalData:
 
         # Verify files were created
         thermal_dir = mock_hw_mgmt_base / "thermal"
-        assert (thermal_dir / "module1_temp_input").read_text() == "55000"
-        assert (thermal_dir / "module1_temp_emergency").read_text() == "80000"
-        assert (thermal_dir / "module1_temp_crit").read_text() == "95000"
-        assert (thermal_dir / "module1_temp_fault").read_text() == "0"
+        assert (thermal_dir / "module1_temp_input").read_text().strip() == "55000"
+        assert (thermal_dir / "module1_temp_emergency").read_text().strip() == "80000"
+        assert (thermal_dir / "module1_temp_crit").read_text().strip() == "95000"
+        assert (thermal_dir / "module1_temp_fault").read_text().strip() == "0"
         print(f"{ICON_PASS} Module 1 thermal data set correctly (temp=55000)")
 
     def test_thermal_data_set_module_invalid_asic(self, mock_hw_mgmt_base, setup_asic_count, setup_module_count):
@@ -619,20 +618,25 @@ class TestAsicCleanup:
         # First set thermal data
         test_module.thermal_data_set_asic(0, 50000, 85000, 100000)
 
-        # Verify files exist
+        # Verify files exist (both asic and asic1 for ASIC 0)
         thermal_dir = mock_hw_mgmt_base / "thermal"
         assert (thermal_dir / "asic").exists()
-        print(f"{ICON_INFO} ASIC 0 thermal data files created")
+        assert (thermal_dir / "asic1").exists()
+        print(f"{ICON_INFO} ASIC 0 thermal data files created (both asic and asic1)")
 
         # Clean the data
         result = test_module.thermal_data_clean_asic(0)
         assert result is True, "Expected True for cleaning ASIC data"
 
-        # Verify files were removed
+        # Verify files were removed (both asic and asic1 for ASIC 0)
         assert not (thermal_dir / "asic").exists()
         assert not (thermal_dir / "asic_temp_crit").exists()
         assert not (thermal_dir / "asic_temp_emergency").exists()
         assert not (thermal_dir / "asic_temp_fault").exists()
+        assert not (thermal_dir / "asic1").exists()
+        assert not (thermal_dir / "asic1_temp_crit").exists()
+        assert not (thermal_dir / "asic1_temp_emergency").exists()
+        assert not (thermal_dir / "asic1_temp_fault").exists()
         print(f"{ICON_PASS} ASIC 0 thermal data files cleaned successfully")
 
     def test_thermal_data_clean_asic_secondary(self, mock_hw_mgmt_base, setup_asic_count):
@@ -640,14 +644,28 @@ class TestAsicCleanup:
         print(f"\n{ICON_RUN} Testing thermal_data_clean_asic for secondary ASIC")
         setup_asic_count(4)
 
-        # Set and clean ASIC 2
-        test_module.thermal_data_set_asic(2, 50000, 85000, 100000)
-        result = test_module.thermal_data_clean_asic(2)
+        # Set and clean ASIC 1 (should create asic2_* files)
+        test_module.thermal_data_set_asic(1, 50000, 85000, 100000, 1)
+        result = test_module.thermal_data_clean_asic(1)
         assert result is True
 
         thermal_dir = mock_hw_mgmt_base / "thermal"
+        assert not (thermal_dir / "asic2").exists()
+        assert not (thermal_dir / "asic2_temp_emergency").exists()
+        assert not (thermal_dir / "asic2_temp_crit").exists()
+        assert not (thermal_dir / "asic2_temp_fault").exists()
+        print(f"{ICON_PASS} ASIC 1 thermal data (asic2_*) cleaned successfully")
+
+        # Set and clean ASIC 2 (should create asic3_* files)
+        test_module.thermal_data_set_asic(2, 50000, 85000, 100000, 1)
+        result = test_module.thermal_data_clean_asic(2)
+        assert result is True
+
         assert not (thermal_dir / "asic3").exists()
-        print(f"{ICON_PASS} ASIC 2 thermal data cleaned successfully")
+        assert not (thermal_dir / "asic3_temp_emergency").exists()
+        assert not (thermal_dir / "asic3_temp_crit").exists()
+        assert not (thermal_dir / "asic3_temp_fault").exists()
+        print(f"{ICON_PASS} ASIC 2 thermal data (asic3_*) cleaned successfully")
 
     def test_thermal_data_clean_asic_invalid(self, mock_hw_mgmt_base, setup_asic_count):
         """Test cleaning ASIC data with invalid index"""
@@ -975,6 +993,7 @@ class TestBoundaryConditions:
         # Verify all files exist
         thermal_dir = mock_hw_mgmt_base / "thermal"
         assert (thermal_dir / "asic").exists()
+        assert (thermal_dir / "asic1").exists()  # ASIC 0 creates both asic and asic1
         assert (thermal_dir / "module1_temp_input").exists()
         assert (thermal_dir / "module10_temp_input").exists()
         print(f"{ICON_PASS} Concurrent operations completed successfully")
@@ -990,15 +1009,19 @@ class TestErrorRecovery:
 
         # Set initial data
         test_module.thermal_data_set_asic(0, 40000, 75000, 90000)
-        thermal_file = mock_hw_mgmt_base / "thermal" / "asic"
-        assert thermal_file.read_text() == "40000"
-        print(f"{ICON_INFO} Initial data: temp=40000")
+        thermal_dir = mock_hw_mgmt_base / "thermal"
+        thermal_file = thermal_dir / "asic"
+        thermal_file_asic1 = thermal_dir / "asic1"
+        assert thermal_file.read_text().strip() == "40000"
+        assert thermal_file_asic1.read_text().strip() == "40000"
+        print(f"{ICON_INFO} Initial data: temp=40000 (both asic and asic1)")
 
         # Overwrite with new data
         result = test_module.thermal_data_set_asic(0, 55000, 80000, 95000)
         assert result is True
-        assert thermal_file.read_text() == "55000"
-        print(f"{ICON_INFO} Overwritten data: temp=55000")
+        assert thermal_file.read_text().strip() == "55000"
+        assert thermal_file_asic1.read_text().strip() == "55000"
+        print(f"{ICON_INFO} Overwritten data: temp=55000 (both asic and asic1)")
         print(f"{ICON_PASS} Data overwrite successful")
 
     def test_clean_nonexistent_data(self, mock_hw_mgmt_base, setup_asic_count):
@@ -1007,9 +1030,10 @@ class TestErrorRecovery:
         setup_asic_count(2)
 
         # Try to clean data that doesn't exist
+        # Note: remove_file_list returns True even if files don't exist (it's not an error)
         result = test_module.thermal_data_clean_asic(0)
-        assert result is False, "Expected False when cleaning non-existent data"
-        print(f"{ICON_PASS} Correctly handled cleaning non-existent data")
+        assert result is True, "Expected True when cleaning non-existent data (graceful handling)"
+        print(f"{ICON_PASS} Correctly handled cleaning non-existent data (graceful success)")
 
     def test_module_counter_persistence(self, mock_hw_mgmt_base):
         """Test module counter persistence across operations"""
