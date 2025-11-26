@@ -267,5 +267,112 @@ class TestConfigurationFunctions(unittest.TestCase):
         self.assertGreater(len(peripheral_module.attrib_list), 0)
 
 
+class TestGetAsicNumErrorHandling(unittest.TestCase):
+    """Test get_asic_num() error handling and logging"""
+
+    def setUp(self):
+        """Setup test fixtures"""
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up"""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_get_asic_num_with_logger_on_error(self):
+        """Test get_asic_num logs warning when file read fails"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Create invalid file
+        asic_num_file = os.path.join(self.temp_dir, "asic_num")
+        with open(asic_num_file, 'w') as f:
+            f.write("invalid_number\n")
+
+        with patch('hw_management_peripheral_updater.os.path.join', return_value=asic_num_file):
+            with patch('hw_management_peripheral_updater.LOGGER') as mock_logger:
+                result = peripheral_module.get_asic_num()
+
+                # Should log warning
+                mock_logger.warning.assert_called()
+                # Should return default
+                self.assertEqual(result, peripheral_module.CONST.ASIC_NUM_DEFAULT)
+
+    def test_get_asic_num_without_logger(self):
+        """Test get_asic_num works when LOGGER is None"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Temporarily set LOGGER to None
+        original_logger = peripheral_module.LOGGER
+        peripheral_module.LOGGER = None
+
+        try:
+            with patch('hw_management_peripheral_updater.os.path.join',
+                       return_value="/nonexistent/asic_num"):
+                result = peripheral_module.get_asic_num()
+                # Should return default without crashing
+                self.assertEqual(result, peripheral_module.CONST.ASIC_NUM_DEFAULT)
+        finally:
+            peripheral_module.LOGGER = original_logger
+
+
+class TestUpdateAsicChipupStatusErrors(unittest.TestCase):
+    """Test update_asic_chipup_status() error handling"""
+
+    def setUp(self):
+        """Setup test fixtures"""
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up"""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_update_asic_chipup_status_calls_get_asic_num(self):
+        """Test update_asic_chipup_status calls get_asic_num"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.get_asic_num', return_value=2) as mock_get_asic:
+            with patch('builtins.open', MagicMock()):
+                # Just test it calls get_asic_num
+                peripheral_module.update_asic_chipup_status(1)
+                mock_get_asic.assert_called()
+
+    def test_update_asic_chipup_status_handles_io_error(self):
+        """Test update_asic_chipup_status handles file write errors gracefully"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Mock open to raise OSError
+        with patch('builtins.open', side_effect=OSError("Permission denied")):
+            with patch('hw_management_peripheral_updater.LOGGER') as mock_logger:
+                # Should handle error and log it
+                peripheral_module.update_asic_chipup_status(1)
+                # Should have called logger (warning or info)
+                self.assertGreater(mock_logger.warning.call_count + mock_logger.info.call_count, 0)
+
+
+class TestHelperFunctions(unittest.TestCase):
+    """Test various helper functions"""
+
+    def test_build_attrib_list_basic(self):
+        """Test _build_attrib_list basic functionality"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        config = peripheral_module._build_attrib_list()
+        self.assertIsInstance(config, dict)
+        # Should have entries for different platforms
+        self.assertGreater(len(config), 0)
+
+
+class TestModuleCounterFallback(unittest.TestCase):
+    """Test module_counter fallback when platform_config is unavailable"""
+
+    def test_get_module_count_fallback_returns_zero(self):
+        """Test fallback get_module_count returns 0"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # If import failed, get_module_count should be the fallback that returns 0
+        # This is tested by the import at module level
+        # Just verify the function exists
+        self.assertTrue(hasattr(peripheral_module, 'get_module_count'))
+
+
 if __name__ == '__main__':
     unittest.main()

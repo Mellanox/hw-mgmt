@@ -851,6 +851,46 @@ class TestMissingCoverageLines:
         basic_redfish_client._RedfishClient__token = 'some_token'
         assert basic_redfish_client.has_login()
 
+    def test_exec_curl_cmd_with_no_regex_match(self, basic_redfish_client, mock_subprocess):
+        """Test error parsing when regex doesn't match"""
+        basic_redfish_client._RedfishClient__token = 'test_token'
+        
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (b'', b'Unknown error format')
+        mock_process.returncode = 1
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret, out, err = basic_redfish_client.exec_curl_cmd('curl test')
+        # Error should be returned as-is when regex doesn't match
+        assert 'Unknown error format' in err
+
+    def test_login_with_custom_password(self, basic_redfish_client, mock_subprocess):
+        """Test login with explicit password parameter"""
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            b'{"token": "new_token"}',
+            b''
+        )
+        mock_process.returncode = 0
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret = basic_redfish_client.login(password='custom_pass')
+        assert ret == RedfishClient.ERR_CODE_OK
+
+    def test_login_with_default_password(self, basic_redfish_client, mock_subprocess):
+        """Test login uses default password when None passed"""
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            b'{"token": "default_token"}',
+            b''
+        )
+        mock_process.returncode = 0
+        mock_subprocess.Popen.return_value = mock_process
+
+        # Login with default password (password=None means use self.__password)
+        ret = basic_redfish_client.login(password=None)
+        assert ret == RedfishClient.ERR_CODE_OK
+
 
 # =============================================================================
 # TEST MAIN
