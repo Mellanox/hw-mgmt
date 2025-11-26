@@ -456,6 +456,37 @@ class TestArchitectureIndependence(unittest.TestCase):
         print(f"[PASS] platform_config is independent (no hw_management imports)")
 
 
+class TestPlatformConfigRegexMatching(unittest.TestCase):
+    """Test platform_config regex matching functionality"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Load the platform_config module once for all tests"""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.join(script_dir, '..', '..')
+        hw_mgmt_dir = os.path.join(repo_root, 'usr', 'usr', 'bin')
+        hw_mgmt_dir = os.path.abspath(hw_mgmt_dir)
+
+        if hw_mgmt_dir not in sys.path:
+            sys.path.insert(0, hw_mgmt_dir)
+
+        config_path = os.path.join(hw_mgmt_dir, 'hw_management_platform_config.py')
+        spec = importlib.util.spec_from_file_location("hw_management_platform_config", config_path)
+        cls.config_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.config_module)
+
+    def test_get_platform_config_regex_match(self):
+        """Test regex match for keys like 'HI144|HI174'"""
+        config = self.config_module.get_platform_config("HI144")
+        self.assertIsNotNone(config)
+        self.assertIsInstance(config, list)
+
+    def test_get_module_count_regex(self):
+        """Test get_module_count with regex keys"""
+        count = self.config_module.get_module_count("HI144")
+        self.assertEqual(count, 65)
+
+
 def main():
     """Main test runner"""
     print("=" * 80)
@@ -474,6 +505,7 @@ def main():
     suite.addTests(loader.loadTestsFromTestCase(TestThermalConfigFiltering))
     suite.addTests(loader.loadTestsFromTestCase(TestPlatformConfigHelperFunctions))
     suite.addTests(loader.loadTestsFromTestCase(TestArchitectureIndependence))
+    suite.addTests(loader.loadTestsFromTestCase(TestPlatformConfigRegexMatching))
 
     # Run tests with verbose output
     runner = unittest.TextTestRunner(verbosity=2)
