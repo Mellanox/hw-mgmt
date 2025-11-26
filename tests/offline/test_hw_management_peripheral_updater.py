@@ -654,6 +654,181 @@ class TestRedfishSensorFunctions(unittest.TestCase):
             # Should return early when ReadingType not in redfish_attr
             peripheral_module.redfish_get_sensor(['/path', 'sensor1', 1000], None)
 
+    def test_redfish_get_sensor_writes_files_successfully(self):
+        """Test redfish_get_sensor writes sensor data to files"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        response = {
+            "Status": {"State": "Enabled", "Health": "OK"},
+            "ReadingType": "Temperature",
+            "Reading": 45.5,
+            "Thresholds": {
+                "UpperCritical": {"Reading": 100.0},
+                "LowerCaution": {"Reading": 10.0}
+            }
+        }
+
+        mock_open = unittest.mock.mock_open()
+        with patch('hw_management_peripheral_updater.redfish_get_req', return_value=response):
+            with patch('builtins.open', mock_open):
+                peripheral_module.redfish_get_sensor(['/path', 'temp1', 1000], None)
+
+                # Should write sensor value and thresholds
+                # Reading: 45.5 * 1000 = 45500
+                # UpperCritical: 100.0 * 1000 = 100000
+                # LowerCaution: 10.0 * 1000 = 10000
+                self.assertGreaterEqual(mock_open.call_count, 1)
+
+
+class TestRedfishConnectionSingleton(unittest.TestCase):
+    """Test RedfishConnection singleton class"""
+
+    def test_get_instance_creates_connection(self):
+        """Test RedfishConnection.get_instance creates BMCAccessor"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Reset singleton first
+        peripheral_module.RedfishConnection.reset_instance()
+
+        mock_accessor = MagicMock()
+        mock_accessor.login.return_value = 0  # ERR_CODE_OK
+
+        with patch('hw_management_peripheral_updater.BMCAccessor', return_value=mock_accessor):
+            instance = peripheral_module.RedfishConnection.get_instance()
+
+            self.assertIsNotNone(instance)
+            mock_accessor.login.assert_called_once()
+
+    def test_get_instance_returns_none_on_login_failure(self):
+        """Test RedfishConnection.get_instance returns None when login fails"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Reset singleton first
+        peripheral_module.RedfishConnection.reset_instance()
+
+        mock_accessor = MagicMock()
+        mock_accessor.login.return_value = -1  # Error
+
+        with patch('hw_management_peripheral_updater.BMCAccessor', return_value=mock_accessor):
+            instance = peripheral_module.RedfishConnection.get_instance()
+
+            self.assertIsNone(instance)
+
+    def test_reset_instance(self):
+        """Test RedfishConnection.reset_instance clears singleton"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Set instance first
+        peripheral_module.RedfishConnection._instance = MagicMock()
+
+        # Reset
+        peripheral_module.RedfishConnection.reset_instance()
+
+        # Should be None
+        self.assertIsNone(peripheral_module.RedfishConnection._instance)
+
+
+class TestUpdatePeripheralAttr(unittest.TestCase):
+    """Test update_peripheral_attr function"""
+
+    def test_update_peripheral_attr_calls_function_on_change(self):
+        """Test update_peripheral_attr invokes function when value changes"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        temp_dir = tempfile.mkdtemp()
+        test_file = os.path.join(temp_dir, "sensor")
+
+        try:
+            # Write initial value
+            with open(test_file, 'w') as f:
+                f.write("100\n")
+
+            mock_fn = MagicMock()
+            peripheral_module.test_sensor_fn = mock_fn
+
+            attr_prop = {
+                "fn": "test_sensor_fn",
+                "arg": ["arg1"],
+                "fin": test_file,
+                "poll": 0,
+                "ts": 0,
+                "hwmon": ""
+            }
+
+            # First call - should trigger
+            peripheral_module.update_peripheral_attr(attr_prop)
+            mock_fn.assert_called_with(["arg1"], "100")
+
+            # Second call with same value - should NOT trigger
+            mock_fn.reset_mock()
+            peripheral_module.update_peripheral_attr(attr_prop)
+            mock_fn.assert_not_called()
+
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def test_update_peripheral_attr_handles_read_error(self):
+        """Test update_peripheral_attr handles file read errors"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_fn = MagicMock()
+        peripheral_module.test_error_fn = mock_fn
+
+        attr_prop = {
+            "fn": "test_error_fn",
+            "arg": ["arg1"],
+            "fin": "/tmp/test_sensor",
+            "poll": 0,
+            "ts": 0,
+            "hwmon": ""
+        }
+
+        # Create file then make it unreadable
+        with open("/tmp/test_sensor", 'w') as f:
+            f.write("100\n")
+
+        with patch('builtins.open', side_effect=OSError()):
+            peripheral_module.update_peripheral_attr(attr_prop)
+
+            # Should call function with empty string on error
+            mock_fn.assert_called_with(["arg1"], "")
+
+    def test_update_peripheral_attr_no_file(self):
+        """Test update_peripheral_attr with no fin (file-less trigger)"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_fn = MagicMock()
+        peripheral_module.test_nofile_fn = mock_fn
+
+        attr_prop = {
+            "fn": "test_nofile_fn",
+            "arg": ["arg1"],
+            "poll": 0,
+            "ts": 0
+        }
+
+        peripheral_module.update_peripheral_attr(attr_prop)
+
+        # Should call function with None
+        mock_fn.assert_called_with(["arg1"], None)
+
+    def test_update_peripheral_attr_function_error(self):
+        """Test update_peripheral_attr handles function execution errors"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_fn = MagicMock(side_effect=KeyError("test error"))
+        peripheral_module.test_failing_fn = mock_fn
+
+        attr_prop = {
+            "fn": "test_failing_fn",
+            "arg": ["arg1"],
+            "poll": 0,
+            "ts": 0
+        }
+
+        # Should not crash even if function raises error
+        peripheral_module.update_peripheral_attr(attr_prop)
+
 
 class TestInitAndWriteFunctions(unittest.TestCase):
     """Test init_attr and write_module_counter functions"""
@@ -728,6 +903,107 @@ class TestInitAndWriteFunctions(unittest.TestCase):
             peripheral_module.init_attr(attr_prop)
             # Should set empty hwmon on error
             self.assertEqual(attr_prop.get("hwmon"), "")
+
+
+class TestMonitorAsicChipupLogging(unittest.TestCase):
+    """Test monitor_asic_chipup_status logging paths"""
+
+    def test_monitor_asic_chipup_logs_ready_asics(self):
+        """Test that ready ASICs are logged"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        arg = {
+            "asic": {"fin": "/sys/module/sx_core/asic0/"}
+        }
+
+        mock_logger = MagicMock()
+        with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
+            with patch('os.path.isfile', return_value=True):
+                with patch('builtins.open', unittest.mock.mock_open(read_data='50000\n')):
+                    with patch('hw_management_peripheral_updater.update_asic_chipup_status'):
+                        peripheral_module.monitor_asic_chipup_status(arg, None)
+
+                        # Should log debug message for ready ASIC
+                        debug_calls = [call for call in mock_logger.debug.call_args_list
+                                     if 'ASIC ready' in str(call)]
+                        self.assertGreater(len(debug_calls), 0)
+
+    def test_monitor_asic_chipup_logs_not_ready_asics(self):
+        """Test that not-ready ASICs are logged"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        arg = {
+            "asic": {"fin": "/sys/module/sx_core/asic0/"}
+        }
+
+        mock_logger = MagicMock()
+        with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
+            with patch('os.path.isfile', return_value=True):
+                with patch('builtins.open', side_effect=OSError("File not readable")):
+                    with patch('hw_management_peripheral_updater.update_asic_chipup_status'):
+                        peripheral_module.monitor_asic_chipup_status(arg, None)
+
+                        # Should log debug message for not-ready ASIC
+                        debug_calls = [call for call in mock_logger.debug.call_args_list
+                                     if 'not ready' in str(call)]
+                        self.assertGreater(len(debug_calls), 0)
+
+
+class TestRedfishInit(unittest.TestCase):
+    """Test redfish_init function"""
+
+    def test_redfish_init_calls_get_instance(self):
+        """Test redfish_init calls RedfishConnection.get_instance"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance') as mock_get:
+            peripheral_module.redfish_init()
+            mock_get.assert_called_once()
+
+
+class TestRedfishPostErrorHandling(unittest.TestCase):
+    """Test redfish_post_req error handling"""
+
+    def test_redfish_post_req_handles_error_and_retries_login(self):
+        """Test redfish_post_req retries login on error"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_rf_obj = MagicMock()
+        mock_rf_obj.rf_client.build_post_cmd.return_value = "mock_post_cmd"
+        mock_rf_obj.rf_client.exec_curl_cmd.return_value = (-1, '', 'error')  # Error code
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=mock_rf_obj):
+            result = peripheral_module.redfish_post_req('/test/path', {'key': 'value'})
+
+            # Should call login to retry
+            mock_rf_obj.login.assert_called_once()
+            # Returns error code
+            self.assertEqual(result, -1)
+
+    def test_redfish_post_req_no_connection(self):
+        """Test redfish_post_req when no connection available"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=None):
+            result = peripheral_module.redfish_post_req('/test/path', {'key': 'value'})
+            self.assertIsNone(result)
+
+
+class TestWriteModuleCounterError(unittest.TestCase):
+    """Test write_module_counter error handling"""
+
+    def test_write_module_counter_logs_error_on_failure(self):
+        """Test write_module_counter logs error when file write fails"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_logger = MagicMock()
+        with patch('hw_management_peripheral_updater.get_module_count', return_value=32):
+            with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
+                with patch('builtins.open', side_effect=OSError("Permission denied")):
+                    peripheral_module.write_module_counter("TEST_SKU")
+
+                    # Should log warning about failure
+                    mock_logger.warning.assert_called()
 
 
 class TestPlatformChipupCoverage(unittest.TestCase):
