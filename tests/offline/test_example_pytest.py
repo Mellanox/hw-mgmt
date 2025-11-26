@@ -157,6 +157,65 @@ def test_conditional():
     assert True
 
 
+class TestPythonSyntax:
+    """Test Python syntax compilation for all Python files"""
+
+    def test_compile_all_python_files(self, project_root):
+        """
+        Compile all Python files in the project to check for syntax errors.
+        This test helps catch syntax errors early.
+        
+        Note: Files with known Python 2 syntax are skipped with warnings.
+        """
+        import py_compile
+        import warnings
+        
+        # Find all Python files in usr/usr/bin
+        python_files = list((project_root / "usr" / "usr" / "bin").glob("*.py"))
+        
+        # Known files with Python 2 syntax (legacy files)
+        known_python2_files = {
+            'hw_management_nvl_temperature_get.py',
+            'hw_management_dpu_thermal_update.py'
+        }
+        
+        errors = []
+        warnings_list = []
+        compiled_count = 0
+        skipped_count = 0
+        
+        for py_file in python_files:
+            # Skip known Python 2 files
+            if py_file.name in known_python2_files:
+                warnings_list.append(f"{py_file.name}: Skipped (known Python 2 syntax)")
+                skipped_count += 1
+                continue
+                
+            try:
+                py_compile.compile(str(py_file), doraise=True)
+                compiled_count += 1
+            except py_compile.PyCompileError as e:
+                errors.append(f"{py_file.name}: {e}")
+        
+        # Report results
+        print(f"\n✅ Successfully compiled: {compiled_count} files")
+        if skipped_count > 0:
+            print(f"⚠️  Skipped (Python 2): {skipped_count} files")
+        
+        # Print warnings (not failures)
+        if warnings_list:
+            for warning in warnings_list:
+                print(f"  ⚠️  {warning}")
+        
+        # Only fail if NEW syntax errors are found (not in skip list)
+        if errors:
+            error_msg = f"\n\n❌ NEW syntax errors found in {len(errors)} file(s):\n" + "\n".join(errors)
+            pytest.fail(error_msg)
+        
+        # Verify we actually compiled some files
+        assert compiled_count > 0, "No Python files found to compile"
+
+
 if __name__ == "__main__":
     # Allow running tests directly
     pytest.main([__file__, "-v"])
