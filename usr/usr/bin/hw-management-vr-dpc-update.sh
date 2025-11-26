@@ -32,7 +32,25 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-source hw-management-helpers.sh
+# Source hw-management-helpers.sh if available (optional for BMC).
+if [ -f hw-management-helpers.sh ]; then
+	source hw-management-helpers.sh
+elif [ -f /usr/bin/hw-management-helpers.sh ]; then
+	source /usr/bin/hw-management-helpers.sh
+fi
+
+# Provide fallback log_info function if not available (for BMC compatibility).
+if ! type log_info >/dev/null 2>&1; then
+	log_info()
+	{
+		logger -t hw-management -p user.info "$1"
+	}
+fi
+
+# Provide default config_path if not defined (for BMC compatibility).
+if [ -z "$config_path" ]; then
+	config_path="/var/run/hw-management/config"
+fi
 
 # Default configuration constants.
 STORE_OFFSET=0x17
@@ -150,7 +168,8 @@ discover_files()
 			CRC_FILE="$firmware_dir/$crc_pattern"
 			log_info "Auto-discovered CRC file: $CRC_FILE"
 		else
-			error_exit "CRC file not provided and auto-discovery failed: $firmware_dir/$crc_pattern"
+			log_info "CRC file not provided and auto-discovery failed: $firmware_dir/$crc_pattern"
+			log_info "CRC validation will be skipped"
 		fi
 	fi
 
@@ -236,8 +255,16 @@ validate_inputs()
 		error_exit "CSV file not found: $CSV_FILE"
 	fi
 
-	if [[ ! -f "$CRC_FILE" ]]; then
-		error_exit "CRC file not found: $CRC_FILE"
+	# Check if CRC file is provided and not empty.
+	if [[ -n "$CRC_FILE" ]]; then
+		if [[ ! -f "$CRC_FILE" ]]; then
+			error_exit "CRC file not found: $CRC_FILE"
+		fi
+		# Check if file is empty (size is 0) or has no valid lines with content.
+		if [[ ! -s "$CRC_FILE" ]] || [[ $(grep -c '[^[:space:]]' "$CRC_FILE" 2>/dev/null || echo 0) -eq 0 ]]; then
+			log_info "CRC file is empty, CRC validation will be skipped"
+			CRC_FILE=""  # Clear to indicate skip
+		fi
 	fi
 
 	# Validate CSV file format (check if it has at least 2 lines).
@@ -272,7 +299,7 @@ i2c_cmd()
 get_device_address()
 {
 	local dev_addr
-	dev_addr=$(head -2 "$CSV_FILE" | tail -1 | cut -d ',' -f1)
+	dev_addr=$(head -n2 "$CSV_FILE" | tail -1 | cut -d ',' -f1)
 
 	# Validate device address format.
 	if [[ ! "$dev_addr" =~ ^0x[0-9a-fA-F]{2}$ ]]; then
@@ -411,9 +438,9 @@ validate_crc()
 	CRC_EXP[0]=$(echo "0x${CRC_EXP[0]}" | tr '[:upper:]' '[:lower:]')
 	CRC_EXP[1]=$(echo "0x${CRC_EXP[1]}" | tr '[:upper:]' '[:lower:]')
 
-	# Remove carriage return.
-	CRC_EXP[0]=${CRC_EXP[0]//$'\r'/}
-	CRC_EXP[1]=${CRC_EXP[1]//$'\r'/}
+	# Remove carriage return (BusyBox compatible).
+	CRC_EXP[0]=$(echo "${CRC_EXP[0]}" | tr -d '\r')
+	CRC_EXP[1]=$(echo "${CRC_EXP[1]}" | tr -d '\r')
 
 	# Get CRC from device.
 	store_user || error_exit "Failed to store user settings"
@@ -542,13 +569,17 @@ main()
 		exit 1
 	fi
 
-	# Validate CRC.
-	validate_crc
-	if [[ $? -eq 0 ]]; then
-		log_info "CRC validation passed - no update needed"
-		exit 0
+	# Validate CRC (skip if file is empty/not provided).
+	if [[ -n "$CRC_FILE" ]]; then
+		validate_crc
+		if [[ $? -eq 0 ]]; then
+			log_info "CRC validation passed - no update needed"
+			exit 0
+		else
+			log_info "CRC validation failed - proceeding with update"
+		fi
 	else
-		log_info "CRC validation failed - proceeding with update"
+		log_info "CRC file empty or not provided - skipping CRC validation, proceeding with update"
 	fi
 
 	# Compare and flash device.
