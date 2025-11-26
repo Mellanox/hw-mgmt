@@ -437,6 +437,299 @@ class TestMonitorAsicChipup(unittest.TestCase):
                     mock_update.assert_called()
 
 
+class TestMonitorAsicChipupEdgeCases(unittest.TestCase):
+    """Test monitor_asic_chipup_status edge cases for better coverage"""
+
+    def test_monitor_asic_chipup_invalid_asic_info_type(self):
+        """Test handling of invalid asic_info type"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # asic_info is not a dict (e.g., a string) - should skip
+        arg = {
+            "asic": "invalid_string_not_dict"
+        }
+
+        with patch('hw_management_peripheral_updater.update_asic_chipup_status') as mock_update:
+            peripheral_module.monitor_asic_chipup_status(arg, None)
+            # Should still call update with 0 (no valid ASICs)
+            mock_update.assert_called_with(0)
+
+    def test_monitor_asic_chipup_empty_fin_path(self):
+        """Test handling of empty fin path"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # fin is empty string - should skip
+        arg = {
+            "asic": {"fin": ""}
+        }
+
+        with patch('hw_management_peripheral_updater.update_asic_chipup_status') as mock_update:
+            peripheral_module.monitor_asic_chipup_status(arg, None)
+            # Should call update with 0
+            mock_update.assert_called_with(0)
+
+
+class TestRedfishFunctions(unittest.TestCase):
+    """Test redfish helper functions"""
+
+    def test_redfish_get_req_with_response(self):
+        """Test redfish_get_req when connection exists and returns data"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Mock RedfishConnection
+        mock_rf_obj = MagicMock()
+        mock_rf_obj.rf_client.build_get_cmd.return_value = "mock_cmd"
+        mock_rf_obj.rf_client.exec_curl_cmd.return_value = (0, '{"test": "data"}', '')
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=mock_rf_obj):
+            result = peripheral_module.redfish_get_req('/test/path')
+            
+            self.assertIsNotNone(result)
+            self.assertEqual(result, {"test": "data"})
+
+    def test_redfish_get_req_error_retries_login(self):
+        """Test redfish_get_req retries login on error"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_rf_obj = MagicMock()
+        mock_rf_obj.rf_client.build_get_cmd.return_value = "mock_cmd"
+        mock_rf_obj.rf_client.exec_curl_cmd.return_value = (-1, '', 'error')  # Error code
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=mock_rf_obj):
+            result = peripheral_module.redfish_get_req('/test/path')
+            
+            # Should call login to retry
+            mock_rf_obj.login.assert_called_once()
+            self.assertIsNone(result)
+
+    def test_redfish_get_req_no_connection(self):
+        """Test redfish_get_req when no connection available"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=None):
+            result = peripheral_module.redfish_get_req('/test/path')
+            self.assertIsNone(result)
+
+    def test_redfish_post_req_with_data(self):
+        """Test redfish_post_req sends POST request"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        mock_rf_obj = MagicMock()
+        mock_rf_obj.rf_client.build_post_cmd.return_value = "mock_post_cmd"
+        mock_rf_obj.rf_client.exec_curl_cmd.return_value = (0, '{"status": "ok"}', '')
+
+        with patch('hw_management_peripheral_updater.RedfishConnection.get_instance', return_value=mock_rf_obj):
+            result = peripheral_module.redfish_post_req('/test/path', {'key': 'value'})
+            
+            mock_rf_obj.rf_client.build_post_cmd.assert_called_with('/test/path', {'key': 'value'})
+            self.assertIsNotNone(result)
+
+
+class TestUtilityFunctions(unittest.TestCase):
+    """Test utility functions in peripheral_updater"""
+
+    def test_run_power_button_event(self):
+        """Test run_power_button_event executes commands"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+            peripheral_module.run_power_button_event(None, "1")
+            
+            # Should call os.system 3 times (2 hotplug events + logger)
+            self.assertEqual(mock_system.call_count, 3)
+
+    def test_run_power_button_event_released(self):
+        """Test run_power_button_event when released (value=0)"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+            peripheral_module.run_power_button_event(None, "0")
+            
+            # Should call os.system 2 times (no logger for release)
+            self.assertEqual(mock_system.call_count, 2)
+
+    def test_run_cmd_with_command_list(self):
+        """Test run_cmd executes list of commands"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        cmd_list = ["echo test_{arg1}", "echo another_{arg1}"]
+        
+        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+            peripheral_module.run_cmd(cmd_list, "arg_value")
+            
+            # Should call os.system for each command
+            self.assertEqual(mock_system.call_count, 2)
+
+    def test_sync_fan_absent(self):
+        """Test sync_fan with fan absent (val=0)"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+            peripheral_module.sync_fan(1, "0")
+            
+            # Should call os.system twice (echo + hotplug event)
+            self.assertEqual(mock_system.call_count, 2)
+            # Check that status=1 for absent fan
+            calls = [str(call) for call in mock_system.call_args_list]
+            self.assertTrue(any("fan1_status" in str(call) for call in calls))
+
+    def test_sync_fan_present(self):
+        """Test sync_fan with fan present (val=1)"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.os.system') as mock_system:
+            peripheral_module.sync_fan(2, "1")
+            
+            # Should call os.system twice
+            self.assertEqual(mock_system.call_count, 2)
+
+
+class TestRedfishSensorFunctions(unittest.TestCase):
+    """Test redfish sensor update functions"""
+
+    def test_redfish_get_sensor_no_response(self):
+        """Test redfish_get_sensor when redfish returns None"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        with patch('hw_management_peripheral_updater.redfish_get_req', return_value=None):
+            # Should return early without error
+            peripheral_module.redfish_get_sensor(['/path/to/sensor', 'sensor1', 1000], None)
+
+    def test_redfish_get_sensor_disabled_sensor(self):
+        """Test redfish_get_sensor with disabled sensor"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        response = {
+            "Status": {"State": "Disabled", "Health": "OK"},
+            "ReadingType": "Liquid",
+            "Reading": 0,
+            "Thresholds": {}
+        }
+
+        with patch('hw_management_peripheral_updater.redfish_get_req', return_value=response):
+            # Should return early when sensor is disabled
+            peripheral_module.redfish_get_sensor(['/path', 'sensor1', 1000], None)
+
+    def test_redfish_get_sensor_unhealthy_sensor(self):
+        """Test redfish_get_sensor with unhealthy sensor"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        response = {
+            "Status": {"State": "Enabled", "Health": "Critical"},
+            "ReadingType": "Liquid",
+            "Reading": 1,
+            "Thresholds": {}
+        }
+
+        with patch('hw_management_peripheral_updater.redfish_get_req', return_value=response):
+            # Should return early when sensor health is not OK
+            peripheral_module.redfish_get_sensor(['/path', 'sensor1', 1000], None)
+
+    def test_redfish_get_sensor_no_reading_type(self):
+        """Test redfish_get_sensor when ReadingType missing"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        response = {
+            "Status": {"State": "Enabled", "Health": "OK"},
+            "Reading": 1,
+            "Thresholds": {}
+        }
+
+        with patch('hw_management_peripheral_updater.redfish_get_req', return_value=response):
+            # Should return early when ReadingType missing
+            peripheral_module.redfish_get_sensor(['/path', 'sensor1', 1000], None)
+
+    def test_redfish_get_sensor_unknown_reading_type(self):
+        """Test redfish_get_sensor with unknown ReadingType"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        response = {
+            "Status": {"State": "Enabled", "Health": "OK"},
+            "ReadingType": "UnknownType",
+            "Reading": 1,
+            "Thresholds": {}
+        }
+
+        with patch('hw_management_peripheral_updater.redfish_get_req', return_value=response):
+            # Should return early when ReadingType not in redfish_attr
+            peripheral_module.redfish_get_sensor(['/path', 'sensor1', 1000], None)
+
+
+class TestInitAndWriteFunctions(unittest.TestCase):
+    """Test init_attr and write_module_counter functions"""
+
+    def setUp(self):
+        """Setup test fixtures"""
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up"""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_write_module_counter(self):
+        """Test write_module_counter writes file correctly"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        config_dir = os.path.join(self.temp_dir, "config")
+        os.makedirs(config_dir)
+        module_counter_file = os.path.join(config_dir, "module_counter")
+
+        with patch('hw_management_peripheral_updater.get_module_count', return_value=64):
+            with patch('hw_management_peripheral_updater.LOGGER'):
+                # Mock builtins.open to write to our test directory
+                with patch('builtins.open', unittest.mock.mock_open()) as mock_file:
+                    peripheral_module.write_module_counter("HI123")
+
+                    # Check open was called with correct path and write was called
+                    mock_file.assert_called_with("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
+                    mock_file().write.assert_called_with("64\n")
+
+    def test_init_attr_with_hwmon(self):
+        """Test init_attr with hwmon path"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        # Create mock hwmon structure
+        hwmon_dir = os.path.join(self.temp_dir, "hwmon")
+        os.makedirs(hwmon_dir)
+        hwmon0_dir = os.path.join(hwmon_dir, "hwmon0")
+        os.makedirs(hwmon0_dir)
+
+        attr_prop = {
+            "fin": os.path.join(self.temp_dir, "hwmon", "test_input")
+        }
+
+        with patch('hw_management_peripheral_updater.LOGGER'):
+            peripheral_module.init_attr(attr_prop)
+
+            # Should have detected hwmon0
+            self.assertEqual(attr_prop.get("hwmon"), "hwmon0")
+
+    def test_init_attr_without_hwmon(self):
+        """Test init_attr without hwmon path"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        attr_prop = {
+            "fin": "/sys/devices/platform/sensor/temp1"
+        }
+
+        with patch('hw_management_peripheral_updater.LOGGER'):
+            peripheral_module.init_attr(attr_prop)
+            # Should complete without error
+
+    def test_init_attr_hwmon_error(self):
+        """Test init_attr handles hwmon directory errors"""
+        import hw_management_peripheral_updater as peripheral_module
+
+        attr_prop = {
+            "fin": "/nonexistent/path/hwmon/test_input"
+        }
+
+        with patch('hw_management_peripheral_updater.LOGGER'):
+            peripheral_module.init_attr(attr_prop)
+            # Should set empty hwmon on error
+            self.assertEqual(attr_prop.get("hwmon"), "")
+
+
 class TestPlatformChipupCoverage(unittest.TestCase):
     """
     Validates that all platforms with ASICs have chipup monitoring configured.
