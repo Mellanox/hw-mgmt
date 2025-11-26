@@ -902,6 +902,53 @@ class TestRunner:
             self.failed_tests.append("Security Scan")
             return False
 
+    def run_header_check(self):
+        """Run NVIDIA header checker (ngci_tool -hc)"""
+        self.print_header("HEADER CHECK")
+
+        print(f"{Colors.BLUE}Running: {Colors.BOLD}NVIDIA Header Checker (ngci_tool -hc){Colors.RESET}")
+
+        # Run ngci_tool -hc from repository root
+        repo_root = self.tests_dir.parent
+        ngci_paths = [
+            '/auto/sw_system_release/ci/ngci/ngci_tool/ngci_tool.sh',
+            'ngci_tool'
+        ]
+
+        result = None
+        for ngci_path in ngci_paths:
+            try:
+                result = subprocess.run(
+                    [ngci_path, '-hc'],
+                    cwd=repo_root,
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                break
+            except FileNotFoundError:
+                continue
+            except Exception:
+                continue
+
+        if result is None:
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} ngci_tool not found - skipping header check")
+            return True
+
+        output = result.stdout + result.stderr
+
+        if self.verbose or result.returncode != 0:
+            print(output)
+
+        if result.returncode == 0:
+            print(f"{Colors.GREEN}[PASSED]{Colors.RESET} Header check passed")
+            self.passed_tests.append("Header Check")
+            return True
+        else:
+            print(f"{Colors.RED}[FAILED]{Colors.RESET} Header check found issues")
+            self.failed_tests.append("Header Check")
+            return False
+
     def print_summary(self):
         """Print test execution summary"""
         self.print_header("TEST SUMMARY")
@@ -940,8 +987,16 @@ Examples:
   %(prog)s --offline                                    # Run offline tests only (default)
   %(prog)s --hardware --host 10.0.0.1 --user root --password mypass
                                                         # Run hardware tests via SSH
-  %(prog)s --all                                        # Run all tests (offline + beautifier + spell)
+  %(prog)s --all                                        # Run all tests (offline + code quality checks)
   %(prog)s --clean                                      # Clean all generated files (cache, logs, etc.)
+  %(prog)s --offline --no-beautifier                    # Skip beautifier check
+  %(prog)s --all --no-security-scan --no-header-check   # Skip specific checks
+
+Code Quality Checks (enabled by default for offline/all):
+  - Beautifier (ngci_tool -b)  : Code formatting check (--no-beautifier to disable)
+  - Spell Check (ngci_tool -s) : Spelling validation (--no-spell-check to disable)
+  - Security Scan (ngci_tool -s2) : Secret detection (--no-security-scan to disable)
+  - Header Check (ngci_tool -hc) : Copyright/license headers (--no-header-check to disable)
 
 Note: Dependencies are automatically installed if missing
       Offline tests show verbose output by default
@@ -958,6 +1013,12 @@ Note: Dependencies are automatically installed if missing
     parser.add_argument('--host', type=str, help='Hardware hostname or IP address for SSH')
     parser.add_argument('--user', type=str, help='SSH username for hardware connection')
     parser.add_argument('--password', type=str, help='SSH password for hardware connection')
+
+    # Disable flags for code quality checks (all enabled by default)
+    parser.add_argument('--no-beautifier', action='store_true', help='Skip code beautifier check (ngci_tool -b)')
+    parser.add_argument('--no-spell-check', action='store_true', help='Skip spell checker (ngci_tool -s)')
+    parser.add_argument('--no-security-scan', action='store_true', help='Skip security scanner (ngci_tool -s2)')
+    parser.add_argument('--no-header-check', action='store_true', help='Skip header checker (ngci_tool -hc)')
 
     args = parser.parse_args()
 
@@ -1011,21 +1072,27 @@ Note: Dependencies are automatically installed if missing
         if not runner.run_hardware_tests():
             success = False
 
-    # Always run beautifier check for offline/all (skip if only hardware)
+    # Run code quality checks for offline/all (skip if only hardware)
     if not args.hardware or args.all or args.offline:
-        if not runner.run_beautifier():
-            success = False
+        # Run beautifier check (unless disabled)
+        if not args.no_beautifier:
+            if not runner.run_beautifier():
+                success = False
 
-    # Always run spell check for offline/all (skip if only hardware)
-    if not args.hardware or args.all or args.offline:
-        if not runner.run_spell_check():
-            success = False
+        # Run spell check (unless disabled)
+        if not args.no_spell_check:
+            if not runner.run_spell_check():
+                success = False
 
-    # Skip security scan - CI handles this separately
-    # Security scanner has a known bug with large changesets (60+ chunks)
-    # where it reports exit code 1 even with 0 secrets found
-    # if not runner.run_security_scan():
-    #     success = False
+        # Run security scan (unless disabled)
+        if not args.no_security_scan:
+            if not runner.run_security_scan():
+                success = False
+
+        # Run header check (unless disabled)
+        if not args.no_header_check:
+            if not runner.run_header_check():
+                success = False
 
     runner.print_summary()
 
