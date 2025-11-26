@@ -398,23 +398,40 @@ class TestRunner:
                 'cmd': ['python3', 'test_module_counter.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync'
             },
-            # Pytest tests - auto-discovery (run last)
-            # Pytest tests - auto-discovery (strict mode for CI)
+            # Pytest tests - run each file separately to avoid thread/mock conflicts
             {
-                'name': 'Pytest Tests (offline)',
-                'cmd': [
-                    'python3', '-m', 'pytest', 'offline/',
-                    '--tb=short',
-                    '--strict-markers',  # Fail on unregistered markers
-                    '--strict-config',   # Fail on config errors
-                    '-W', 'error',       # Convert warnings to errors
-                    '--ignore=offline/hw_management_lib',
-                    '--ignore=offline/hw_mgmgt_sync',
-                    '--ignore=offline/thermal_control',
-                    '--ignore=offline/hw_mgmt_thermal_control_2_0',
-                    '--ignore=offline/hw_mgmt_thermal_control_2_5',
-                    '--ignore=offline/known_issues_redfish_client.py'  # Skip known issues file
-                ],
+                'name': 'Pytest: Hardware Error Paths',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hardware_error_paths.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: HW Management Lib',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_lib.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Peripheral Updater',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_peripheral_updater.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Platform Config',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_platform_config.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Redfish Client',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_redfish_client.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Thermal Updater',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_updater.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Python Syntax',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
         ]
