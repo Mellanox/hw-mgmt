@@ -38,7 +38,7 @@ class Colors:
 class TestRunner:
     """Test runner for hw-mgmt test suite"""
 
-    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None):
+    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None, coverage=False, coverage_html=False, coverage_min=None):
         self.verbose = verbose
         self.enable_logs = enable_logs
         self.tests_dir = Path(__file__).parent.absolute()
@@ -53,6 +53,11 @@ class TestRunner:
         self.hardware_host = hardware_host
         self.hardware_user = hardware_user
         self.hardware_password = hardware_password
+
+        # Coverage parameters
+        self.coverage = coverage
+        self.coverage_html = coverage_html
+        self.coverage_min = coverage_min
 
         # Create logs directory if logging is enabled
         if self.enable_logs:
@@ -274,6 +279,8 @@ class TestRunner:
 
             # Extract test counts and pytest summary
             is_pytest = 'pytest' in ' '.join(cmd)
+            has_coverage = '--cov' in ' '.join(cmd)
+            
             if is_pytest and passed:
                 # Extract the summary line (e.g., "74 passed in 0.46s")
                 summary_lines = []
@@ -290,6 +297,25 @@ class TestRunner:
                 if summary_lines:
                     # Show just the last summary line
                     print(f"  {Colors.CYAN}{summary_lines[-1]}{Colors.RESET}")
+                
+                # If coverage was enabled, always show the coverage section
+                if has_coverage:
+                    print(f"\n{Colors.CYAN}Coverage Report:{Colors.RESET}")
+                    # Extract and display coverage table
+                    in_coverage = False
+                    for line in output.split('\n'):
+                        if 'Name' in line and 'Stmts' in line and 'Miss' in line:
+                            in_coverage = True
+                        if in_coverage:
+                            if line.strip() and not line.startswith('='):
+                                print(f"  {line}")
+                            elif line.startswith('=') and 'TOTAL' in output[output.find(line):output.find(line)+200]:
+                                # Print separator and continue to get TOTAL
+                                print(f"  {line}")
+                            elif 'TOTAL' in line:
+                                # Print TOTAL line and stop
+                                print(f"  {Colors.BOLD}{line}{Colors.RESET}")
+                                break
             else:
                 # For unittest, try to extract test count from output
                 import re
@@ -304,6 +330,8 @@ class TestRunner:
                         self.total_test_count += int(match.group(1))
                         break
 
+            # Show output if verbose or failed
+            # (coverage report is shown separately above if enabled)
             if self.verbose or not passed:
                 self.print_test_result(test_name, passed, output)
             else:
@@ -391,8 +419,27 @@ class TestRunner:
             },
         ]
 
+        # Add coverage options to pytest if coverage is enabled
+        if self.coverage:
+            pytest_test = tests[-1]  # Last test is pytest
+            # Use absolute path to source code
+            source_dir = self.tests_dir.parent / 'usr' / 'usr' / 'bin'
+            pytest_test['cmd'].extend([
+                f'--cov={source_dir}',  # Cover the source code
+                '--cov-report=term-missing:skip-covered',  # Show missing lines, skip 100% covered files
+                '--cov-branch',  # Include branch coverage
+            ])
+            if self.coverage_html:
+                pytest_test['cmd'].append('--cov-report=html')
+            if self.coverage_min:
+                pytest_test['cmd'].append(f'--cov-fail-under={self.coverage_min}')
+
         for test in tests:
             self.run_command(test['cmd'], test['cwd'], test['name'])
+
+        # Print coverage summary if coverage was enabled
+        if self.coverage:
+            self.print_coverage_summary()
 
         return len(self.failed_tests) == 0
 
@@ -976,6 +1023,23 @@ class TestRunner:
         else:
             print(f"\n{Colors.RED}{Colors.BOLD}SOME TESTS FAILED{Colors.RESET}")
 
+    def print_coverage_summary(self):
+        """Print coverage summary after tests"""
+        coverage_file = self.tests_dir.parent / '.coverage'
+        htmlcov_dir = self.tests_dir.parent / 'htmlcov'
+
+        if coverage_file.exists():
+            print(f"\n{Colors.CYAN}Code Coverage:{Colors.RESET}")
+            print(f"  Coverage data saved to: {Colors.BOLD}{coverage_file}{Colors.RESET}")
+
+            if htmlcov_dir.exists() and self.coverage_html:
+                index_file = htmlcov_dir / 'index.html'
+                print(f"  {Colors.GREEN}HTML Report:{Colors.RESET} {Colors.BOLD}{index_file}{Colors.RESET}")
+                print(f"  Open in browser: file://{index_file.absolute()}")
+
+        if self.coverage_min:
+            print(f"\n{Colors.CYAN}Minimum Coverage Required:{Colors.RESET} {self.coverage_min}%")
+
 
 def main():
     """Main test runner entry point"""
@@ -989,14 +1053,25 @@ Examples:
                                                         # Run hardware tests via SSH
   %(prog)s --all                                        # Run all tests (offline + code quality checks)
   %(prog)s --clean                                      # Clean all generated files (cache, logs, etc.)
-  %(prog)s --offline --no-beautifier                    # Skip beautifier check
+  %(prog)s --offline -sn                                # Skip all ngci tool checks (shortcut)
+  %(prog)s --offline --no-beautifier                    # Skip beautifier check only
   %(prog)s --all --no-security-scan --no-header-check   # Skip specific checks
+  %(prog)s --offline --coverage                         # Run tests with coverage measurement
+  %(prog)s --offline --coverage-html                    # Generate HTML coverage report
+  %(prog)s --offline --coverage-min 80                  # Require minimum 80%% coverage
 
 Code Quality Checks (enabled by default for offline/all):
   - Beautifier (ngci_tool -b)  : Code formatting check (--no-beautifier to disable)
   - Spell Check (ngci_tool -s) : Spelling validation (--no-spell-check to disable)
   - Security Scan (ngci_tool -s2) : Secret detection (--no-security-scan to disable)
   - Header Check (ngci_tool -hc) : Copyright/license headers (--no-header-check to disable)
+
+  Shortcut: Use -sn or --skip-ngci to disable ALL ngci tools at once
+
+Coverage Options:
+  --coverage           : Enable code coverage measurement (terminal report)
+  --coverage-html      : Generate HTML coverage report (opens in browser)
+  --coverage-min PCT   : Fail if coverage is below PCT%% (e.g., --coverage-min 80)
 
 Note: Dependencies are automatically installed if missing
       Offline tests show verbose output by default
@@ -1015,21 +1090,41 @@ Note: Dependencies are automatically installed if missing
     parser.add_argument('--password', type=str, help='SSH password for hardware connection')
 
     # Disable flags for code quality checks (all enabled by default)
+    parser.add_argument('-sn', '--skip-ngci', action='store_true', help='Skip all ngci_tool checks (beautifier, spell, security, header)')
     parser.add_argument('--no-beautifier', action='store_true', help='Skip code beautifier check (ngci_tool -b)')
     parser.add_argument('--no-spell-check', action='store_true', help='Skip spell checker (ngci_tool -s)')
     parser.add_argument('--no-security-scan', action='store_true', help='Skip security scanner (ngci_tool -s2)')
     parser.add_argument('--no-header-check', action='store_true', help='Skip header checker (ngci_tool -hc)')
+
+    # Coverage options
+    parser.add_argument('--coverage', action='store_true', help='Enable code coverage measurement')
+    parser.add_argument('--coverage-html', action='store_true', help='Generate HTML coverage report (implies --coverage)')
+    parser.add_argument('--coverage-min', type=int, metavar='PCT', help='Minimum coverage percentage required (fails if below)')
 
     args = parser.parse_args()
 
     # Set verbose mode from command line flag
     verbose_mode = args.verbose
 
+    # If --coverage-html is set, enable --coverage too
+    if args.coverage_html:
+        args.coverage = True
+
+    # If --skip-ngci/-sn is set, disable all ngci tool checks
+    if args.skip_ngci:
+        args.no_beautifier = True
+        args.no_spell_check = True
+        args.no_security_scan = True
+        args.no_header_check = True
+
     runner = TestRunner(
         verbose=verbose_mode,
         hardware_host=args.host,
         hardware_user=args.user,
-        hardware_password=args.password
+        hardware_password=args.password,
+        coverage=args.coverage,
+        coverage_html=args.coverage_html,
+        coverage_min=args.coverage_min
     )
 
     # Handle clean command
