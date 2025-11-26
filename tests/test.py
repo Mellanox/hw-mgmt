@@ -436,18 +436,36 @@ class TestRunner:
             },
         ]
 
-        # Add coverage options to pytest if coverage is enabled
+        # Add coverage options to all pytest tests if coverage is enabled
         if self.coverage:
-            pytest_test = tests[-1]  # Last test is pytest
-            # Use absolute path to source code
             source_dir = self.tests_dir.parent / 'usr' / 'usr' / 'bin'
-            pytest_test['cmd'].extend([
-                f'--cov={source_dir}',  # Cover the source code
-                '--cov-report=term-missing:skip-covered',  # Show missing lines, skip 100% covered files
-                '--cov-branch',  # Include branch coverage
-            ])
-            if self.coverage_html:
-                pytest_test['cmd'].append('--cov-report=html')
+            
+            # Find all pytest test suites (they start with "Pytest:")
+            pytest_tests = [t for t in tests if t['name'].startswith('Pytest:')]
+            
+            for idx, pytest_test in enumerate(pytest_tests):
+                # Add coverage to all pytest tests
+                cov_opts = [
+                    f'--cov={source_dir}',  # Cover the source code
+                    '--cov-branch',  # Include branch coverage
+                ]
+                
+                # Append coverage for all tests after the first
+                if idx > 0:
+                    cov_opts.append('--cov-append')
+                
+                # Only show report on the LAST pytest test
+                if idx == len(pytest_tests) - 1:
+                    cov_opts.append('--cov-report=term-missing:skip-covered')
+                    if self.coverage_html:
+                        cov_opts.append('--cov-report=html')
+                else:
+                    cov_opts.append('--cov-report=')  # No report for intermediate tests
+                
+                pytest_test['cmd'].extend(cov_opts)
+            
+            # Apply coverage minimum threshold to last pytest test
+            pytest_test = pytest_tests[-1]
             if self.coverage_min:
                 pytest_test['cmd'].append(f'--cov-fail-under={self.coverage_min}')
 
