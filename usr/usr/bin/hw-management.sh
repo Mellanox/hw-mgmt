@@ -118,6 +118,7 @@ chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
+sn58xx_reset_attr_num=15
 n61xx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
@@ -656,6 +657,7 @@ smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
 n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cart1 68 cart2 69 cart3 70 cart4 71 cpu-vr 6)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
+sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
 
 ACTION=$1
 
@@ -2690,6 +2692,48 @@ sn5640_specific()
 	echo 0 > "$config_path"/labels_ready
 }
 
+sn58xxld_specific()
+{
+	case $sku in
+	# SN5810_LD
+	HI181)
+		cpld_num=4
+		leakage_count=2
+		i2c_asic_bus_default=6
+		hotplug_pdbs=1
+		;;
+	# SN5800_LD
+	HI182)
+		cpld_num=10
+		leakage_count=5
+		asic_i2c_buses=(6 22 38 54)
+		hotplug_pdbs=4
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=69
+	named_busses+=(${sn58xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$sn58xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
 system_cleanup_specific()
 {
 	case $board_type in
@@ -2761,6 +2805,9 @@ check_system()
 			;;
 		VMOD0023)
 			n61xxld_specific
+			;;
+		VMOD0024)
+			sn58xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3206,7 +3253,7 @@ set_asic_pci_id()
 	HI158)
 		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
 		;;
-	HI171)
+	HI171|HI181|HI182)
 		asic_pci_id=$spc5_pci_id
 		;;
 	HI172)
@@ -3304,6 +3351,19 @@ set_asic_pci_id()
 		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
 		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
 		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
+		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
+		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
+		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
+		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
+		echo 4 > "$config_path"/asic_num
+		;;
+	HI182)
+		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
+		[ -z "$asics" ] && return
+		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $3}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
@@ -3484,7 +3544,27 @@ pre_devtr_init()
 		HI171|HI172)
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
-		*)
+		esac
+		;;
+	VMOD0024)
+		case $sku in
+		HI181)
+			echo 1 >  "$config_path"/swb_brd_num
+			echo 1 >  "$config_path"/pwr_brd_num
+			echo 11 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		HI182)
+			echo 4  > "$config_path"/swb_brd_num
+			echo 4  > "$config_path"/pwr_brd_num
+			echo 16 > "$config_path"/swb_brd_bus_offset
+			echo 16 > "$config_path"/pwr_brd_bus_offset
+			echo 11 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
 			;;
 		esac
 		;;
@@ -3865,7 +3945,7 @@ case $ACTION in
 			exit 1
 		fi
 		# TEMPORARY hw-management mockup values for HI180 in simx
-		if check_simx && [ "$sku" == "HI180" ] || [ "$sku" == "HI181" ]; then
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
