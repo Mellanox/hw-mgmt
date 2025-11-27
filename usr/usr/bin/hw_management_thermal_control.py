@@ -56,10 +56,11 @@ import signal
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison
 import json
 import re
-from threading import Timer, Event
 import psutil
+import threading
 
 #############################
 # Global const
@@ -209,6 +210,11 @@ class CONST:
 
     DRWR_ERR_LIST = [DIRECTION, TACHO, PRESENT, SENSOR_READ_ERR]
     PSU_ERR_LIST = [DIRECTION, PRESENT, SENSOR_READ_ERR]
+
+    # Memory usage debugging
+    DBG_MEMORY_INFO = True
+    DBG_MEMORY_USAGE_ALERT = 50000    # KB
+    DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
 
 
 """
@@ -403,8 +409,15 @@ DMIN_TABLE_DEFAULT = {
 
 ASIC_CONF_DEFAULT = {"1": {"pwm_control": False, "fan_control": False}}
 
+# global variables
+
+# Memory usage debugging variables
+gmemory_snapshot = None
+gmemory_snapshot_profiler = ObjectSnapshot(max_depth=16)
 
 # ----------------------------------------------------------------------
+
+
 def str2bool(val):
     """
     @summary:
@@ -2861,7 +2874,7 @@ class ThermalManagement(hw_management_file_op):
         signal.signal(signal.SIGTERM, self.sig_handler)
         signal.signal(signal.SIGINT, self.sig_handler)
         signal.signal(signal.SIGHUP, self.sig_handler)
-        self.exit = Event()
+        self.exit = threading.Event()
         self.exit_flag = False
 
         if not str2bool(self.sys_config.get("platform_support", 1)):
@@ -2925,6 +2938,8 @@ class ThermalManagement(hw_management_file_op):
         self.gearbox_counter = 0
         self.dev_err_exclusion_conf = {}
         self.obj_init_continue = True
+
+        self.memory_alert_threshold = CONST.DBG_MEMORY_USAGE_ALERT
 
     # ---------------------------------------------------------------------
     def _collect_hw_info(self):
@@ -3158,7 +3173,7 @@ class ThermalManagement(hw_management_file_op):
     # ---------------------------------------------------------------------
     def _attention_fan_insertion_recovery(self):
         pwm = self.read_pwm(100)
-        self.log.notice("Attention fan not started after insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), 1)
+        self.log.notice("Attention fan not started after insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), repeat=1)
         self._update_chassis_fan_speed(self.fan_steady_state_pwm, force=True)
         self.log.info("Waiting {}s for newly inserted fan to stabilize".format(self.fan_steady_state_delay))
         timeout = current_milli_time() + 1000 * self.fan_steady_state_delay
@@ -3537,7 +3552,7 @@ class ThermalManagement(hw_management_file_op):
             self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
                                                                                                              self.board_type,
                                                                                                              self.sku,
-                                                                                                             self.system_ver), 1)
+                                                                                                             self.system_ver), repeat=1)
             sys_config["platform_support"] = 0
 
         # 1. Init dmin table
@@ -3775,6 +3790,7 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Init thermal control ver: v.{}".format(VERSION), repeat=1)
         self.log.notice("********************************", repeat=1)
 
+        self.process = psutil.Process(os.getpid())
         self.add_sensors(self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM])
 
         # Set initial PWM to maximum
@@ -3886,6 +3902,13 @@ class ThermalManagement(hw_management_file_op):
         self.log.notice("Thermal control is running", repeat=1)
         self.log.notice("********************************", repeat=1)
         module_scan_timeout = 0
+
+        global gmemory_snapshot
+        if gmemory_snapshot_profiler:
+            gmemory_snapshot = gmemory_snapshot_profiler.collect_snapshot(self, "self")
+        else:
+            gmemory_snapshot = None
+
         # main loop
         while not self.exit.is_set() or not self.exit_flag:
             try:
@@ -4035,6 +4058,71 @@ class ThermalManagement(hw_management_file_op):
             self.exit.wait(sleep_ms / 1000)
 
     # ----------------------------------------------------------------------
+    def show_full_thread_report(self, pid=None):
+        """
+        @summary: Show full thread report
+        """
+        try:
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            self.log.info(f"No process with PID {pid}")
+            return
+
+        self.log.info(f"Process PID {pid}: {process.name()} [status={process.status()}]")
+        self.log.info(f"Memory RSS: {process.memory_info().rss / 1024 / 1024:.2f} MB")
+        self.log.info(f"CPU threads (LWPs): {len(process.threads())}")
+        self.log.info(f"Python threads: {threading.active_count()}")
+        self.log.info(f"Estimated memory per Python thread: ~{process.memory_info().rss / 1024 / 1024:.2f} MB")
+        self.log.info("-" * 90)
+
+        # --- OS-level threads ---
+        self.log.info("OS-level threads (from psutil):")
+        for t in process.threads():
+            self.log.info(f"  TID {t.id:<7} | user_time={t.user_time:.3f}s | system_time={t.system_time:.3f}s")
+        self.log.info("-" * 90)
+
+        # --- Python-level threads ---
+        self.log.info("Python threading.Thread objects:")
+        current_tid = getattr(threading, 'get_native_id', lambda: None)()
+        for t in threading.enumerate():
+            native_id = getattr(t, "native_id", None)
+            marker = "O" if native_id == current_tid else " "
+            self.log.info(f"{marker} Thread name='{t.name[:30]:<30}', ident={t.ident}, native_id={native_id}, alive={t.is_alive()}")
+        self.log.info("-" * 90)
+        self.log.info("Note: All Python threads share the same process memory space")
+        cpu_time = process.cpu_times()
+        self.log.info(f"Total process memory (RSS): {process.memory_info().rss / 1024 / 1024:.2f} MB")
+        self.log.info(f"Total CPU time: user={cpu_time.user:.2f}s, system={cpu_time.system:.2f}s")
+
+    # ----------------------------------------------------------------------
+    def print_memory_info(self):
+        """
+        @summary:  Print memory usage info
+        """
+        if hasattr(self, "process"):
+            memory_info = self.process.memory_full_info()
+            memory_usage_rss = round(memory_info.rss / 1024, 1)
+            memory_usage_pss = round(memory_info.pss / 1024, 1)
+            memory_usage_uss = round(memory_info.uss / 1024, 1)
+            self.log.info("Memory usage: {} KB (PSS: {} KB, USS: {} KB)".format(memory_usage_rss, memory_usage_pss, memory_usage_uss))
+
+            if memory_usage_rss > self.memory_alert_threshold:
+                self.log.error("!!!!!!!! Memory usage is too high: {} KB > {} KB !!!!!!!!".format(memory_usage_rss, self.memory_alert_threshold))
+                self.log.info("=" * 90)
+                self.show_full_thread_report(self.process.pid)
+                self.log.info("=" * 90)
+                self.memory_alert_threshold = memory_usage_rss + CONST.DBG_MEMORY_USAGE_ALERT_STEP
+
+                global gmemory_snapshot
+                if gmemory_snapshot_profiler:
+                    memory_snapshot = gmemory_snapshot_profiler.collect_snapshot(self, "self")
+                    if memory_snapshot:
+                        comparison = compare_snapshots(gmemory_snapshot, memory_snapshot, min_growth_bytes=1024)
+                        comparison_res_json = print_comparison(comparison, output_format="json", indent=4)
+                        self.log.info(comparison_res_json)
+                    gmemory_snapshot = memory_snapshot
+
+    # ----------------------------------------------------------------------
     def print_periodic_info(self):
         """
         @summary:  Print current TC state and info reported by the sensor objects
@@ -4061,12 +4149,8 @@ class ThermalManagement(hw_management_file_op):
 
         self.log.info("Thermal periodic report")
         self.log.info("================================")
-        if hasattr(self, "process"):
-            memory_info = self.process.memory_full_info()
-            memory_usage_rss = round(memory_info.rss / 1024**2, 1)
-            memory_usage_pss = round(memory_info.pss / 1024**2, 1)
-            memory_usage_uss = round(memory_info.uss / 1024**2, 1)
-            self.log.info("Memory usage: {} MB (PSS: {} MB, USS: {} MB)".format(memory_usage_rss, memory_usage_pss, memory_usage_uss))
+        if CONST.DBG_MEMORY_INFO:
+            self.print_memory_info()
         self.log.info("Temperature(C):{} amb {}".format(asic_info, amb_tmp))
         self.log.info("Cooling(%) {} (max pwm source:{})".format(self.pwm_target, self.pwm_change_reason))
         self.log.info("dir:{}".format(flow_dir))
@@ -4138,7 +4222,6 @@ if __name__ == '__main__':
     else:
         syslog_level = Logger.NOTSET
 
-    process = psutil.Process(os.getpid())
     logger = Logger(log_file=args[CONST.LOG_FILE], log_level=args["verbosity"],
                     log_repeat=Logger.LOG_REPEAT_UNLIMITED, syslog_repeat=0,
                     syslog_level=syslog_level,
@@ -4146,7 +4229,6 @@ if __name__ == '__main__':
     thermal_management = None
     try:
         thermal_management = ThermalManagement(args, logger)
-        thermal_management.process = process
         thermal_management.init()
         thermal_management.start(reason="init")
         thermal_management.run()
