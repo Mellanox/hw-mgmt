@@ -3585,6 +3585,7 @@ do_start()
 	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
+	run_fixup_script pre
 	check_cpu_type
 	pre_devtr_init
 	load_modules
