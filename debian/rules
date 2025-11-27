@@ -70,6 +70,7 @@ override_dh_systemd_enable:
 	dh_systemd_enable --name=hw-management-sysfs-monitor
 	dh_systemd_enable --name=hw-management-fast-sysfs-monitor
 	dh_systemd_enable --name=hw-management-blacklist-generator
+	dh_systemd_enable --no-enable --name=hw-management-sync
 
 override_dh_systemd_start:
 	dh_systemd_start --name=hw-management
@@ -79,6 +80,7 @@ override_dh_systemd_start:
 	dh_systemd_start --name=hw-management-sysfs-monitor
 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
 	dh_systemd_start --name=hw-management-blacklist-generator
+	dh_systemd_start --name=hw-management-fast-sysfs-monitor --no-start
 
 override_dh_strip_nondeterminism:
 
