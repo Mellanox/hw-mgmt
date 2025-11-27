@@ -38,9 +38,12 @@ from logging.handlers import RotatingFileHandler
 import syslog
 import threading
 import time
+import json
+from typing import Any, Dict, Set, Optional
 
 
 # ----------------------------------------------------------------------
+
 def current_milli_time():
     """
     @summary:
@@ -575,6 +578,9 @@ class RepeatedTimer:
 
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
+        # Set thread name for debugging
+        thread_name = "RepeatedTimer[{}]{:x}".format(self.func.__name__, id(self))
+        self._thread.name = thread_name
         self._thread.start()
 
     def stop(self):
@@ -605,3 +611,386 @@ class RepeatedTimer:
             Return True if the timer is currently running
         """
         return self._thread is not None and self._thread.is_alive()
+
+# ----------------------------------------------------------------------
+# Memory analysis tools
+# ----------------------------------------------------------------------
+
+
+class ObjectSnapshot:
+    """Represents a snapshot of object sizes in memory."""
+
+    def __init__(self, max_depth: int = 3):
+        """
+        Initialize a new snapshot collector.
+
+        Args:
+            max_depth: Maximum depth for recursive object traversal (default: 3)
+        """
+        self.max_depth = max_depth
+        self.snapshot: Dict[int, Dict[str, Any]] = {}
+
+    def collect_snapshot(self, obj: Any, name: str = "root") -> Dict[int, Dict[str, Any]]:
+        """
+        Scan an object and collect sizes of all child objects up to max_depth.
+
+        Args:
+            obj: The object to scan
+            name: Name/label for the root object
+
+        Returns:
+            Dictionary mapping object IDs to their metadata:
+            {
+                obj_id: {
+                    'size': size_in_bytes,
+                    'type': type_name,
+                    'name': object_name,
+                    'depth': depth_level,
+                    'refcount': reference_count
+                }
+            }
+        """
+        self.snapshot = {}
+        visited: Set[int] = set()
+
+        self._scan_object(obj, name, 0, visited)
+
+        return self.snapshot.copy()
+
+    def _scan_object(self, obj: Any, name: str, depth: int, visited: Set[int]) -> None:
+        """
+        Recursively scan an object and its children.
+
+        Args:
+            obj: Current object to scan
+            name: Name/label for the object
+            depth: Current depth level
+            visited: Set of already visited object IDs to avoid cycles
+        """
+        # Stop if we've exceeded max depth
+        if depth > self.max_depth:
+            return
+
+        obj_id = id(obj)
+
+        # Skip if already visited (avoid cycles)
+        if obj_id in visited:
+            return
+
+        visited.add(obj_id)
+
+        # Record this object's information
+        try:
+            obj_size = sys.getsizeof(obj)
+            obj_type = type(obj).__name__
+            obj_refcount = sys.getrefcount(obj) - 1  # Subtract 1 for the getrefcount call itself
+
+            self.snapshot[obj_id] = {
+                'size': obj_size,
+                'type': obj_type,
+                'name': name,
+                'depth': depth,
+                'refcount': obj_refcount
+            }
+        except Exception as e:
+            # Some objects may not support getsizeof
+            self.snapshot[obj_id] = {
+                'size': 0,
+                'type': type(obj).__name__,
+                'name': name,
+                'depth': depth,
+                'refcount': 0,
+                'error': str(e)
+            }
+            return
+
+        # Don't traverse further for certain types
+        if depth >= self.max_depth:
+            return
+
+        # Traverse child objects based on type
+        try:
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    self._scan_object(key, f"{name}[key:{key!r}]", depth + 1, visited)
+                    self._scan_object(value, f"{name}[{key!r}]", depth + 1, visited)
+
+            elif isinstance(obj, (list, tuple, set, frozenset)):
+                for idx, item in enumerate(obj):
+                    self._scan_object(item, f"{name}[{idx}]", depth + 1, visited)
+
+            elif hasattr(obj, '__dict__'):
+                # For custom objects, scan their __dict__
+                for attr_name, attr_value in obj.__dict__.items():
+                    self._scan_object(attr_value, f"{name}.{attr_name}", depth + 1, visited)
+
+            elif hasattr(obj, '__slots__'):
+                # For objects using __slots__
+                for slot in obj.__slots__:
+                    if hasattr(obj, slot):
+                        attr_value = getattr(obj, slot)
+                        self._scan_object(attr_value, f"{name}.{slot}", depth + 1, visited)
+
+        except Exception:
+            # Skip objects that can't be traversed
+            pass
+
+
+def compare_snapshots(snapshot1: Dict[int, Dict[str, Any]],
+                      snapshot2: Dict[int, Dict[str, Any]],
+                      show_new: bool = True,
+                      show_deleted: bool = False,
+                      min_growth_bytes: int = 0) -> Dict[str, Any]:
+    """
+    Compare two snapshots and identify growing, shrinking, new, and deleted objects.
+
+    Args:
+        snapshot1: First (earlier) snapshot
+        snapshot2: Second (later) snapshot
+        show_new: Include newly created objects (default: True)
+        show_deleted: Include deleted objects (default: False)
+        min_growth_bytes: Minimum size growth to report (default: 0)
+
+    Returns:
+        Dictionary containing:
+        {
+            'growing': List of objects that grew in size
+            'shrinking': List of objects that shrank in size
+            'new': List of newly created objects
+            'deleted': List of deleted objects
+            'total_growth': Total memory growth in bytes
+            'total_shrink': Total memory shrinkage in bytes
+        }
+    """
+    result = {
+        'growing': [],
+        'shrinking': [],
+        'new': [],
+        'deleted': [],
+        'total_growth': 0,
+        'total_shrink': 0
+    }
+
+    # Find growing and shrinking objects
+    for obj_id, info1 in snapshot1.items():
+        if obj_id in snapshot2:
+            info2 = snapshot2[obj_id]
+            size_diff = info2['size'] - info1['size']
+
+            if size_diff > min_growth_bytes:
+                result['growing'].append({
+                    'id': obj_id,
+                    'name': info2['name'],
+                    'type': info2['type'],
+                    'old_size': info1['size'],
+                    'new_size': info2['size'],
+                    'growth': size_diff,
+                    'depth': info2['depth']
+                })
+                result['total_growth'] += size_diff
+
+            elif size_diff < 0:
+                result['shrinking'].append({
+                    'id': obj_id,
+                    'name': info2['name'],
+                    'type': info2['type'],
+                    'old_size': info1['size'],
+                    'new_size': info2['size'],
+                    'shrink': abs(size_diff),
+                    'depth': info2['depth']
+                })
+                result['total_shrink'] += abs(size_diff)
+
+        elif show_deleted:
+            # Object exists in snapshot1 but not in snapshot2 (deleted)
+            result['deleted'].append({
+                'id': obj_id,
+                'name': info1['name'],
+                'type': info1['type'],
+                'size': info1['size'],
+                'depth': info1['depth']
+            })
+
+    # Find new objects
+    if show_new:
+        for obj_id, info2 in snapshot2.items():
+            if obj_id not in snapshot1:
+                result['new'].append({
+                    'id': obj_id,
+                    'name': info2['name'],
+                    'type': info2['type'],
+                    'size': info2['size'],
+                    'depth': info2['depth']
+                })
+
+    # Sort by size for easier analysis
+    result['growing'].sort(key=lambda x: x['growth'], reverse=True)
+    result['shrinking'].sort(key=lambda x: x['shrink'], reverse=True)
+    result['new'].sort(key=lambda x: x['size'], reverse=True)
+    result['deleted'].sort(key=lambda x: x['size'], reverse=True)
+
+    return result
+
+
+def print_comparison(comparison: Dict[str, Any],
+                     max_items: int = 20,
+                     verbose: bool = False,
+                     output_format: str = "text",
+                     indent: Optional[int] = 2) -> Optional[str]:
+    """
+    Print or return the comparison results.
+
+    Args:
+        comparison: Result from compare_snapshots()
+        max_items: Maximum number of items to show per category (default: 20)
+        verbose: Show detailed information (default: False)
+        output_format: Output format - "text" or "json" (default: "text")
+        indent: JSON indentation level when output_format is "json" (default: 2, None for compact)
+
+    Returns:
+        JSON string if output_format is "json", None otherwise
+    """
+    if output_format == "json":
+        return format_comparison_json(comparison, max_items, verbose, indent)
+    else:
+        _format_comparison_text(comparison, max_items, verbose)
+        return None
+
+
+def _format_comparison_json(comparison: Dict[str, Any],
+                            max_items: int,
+                            verbose: bool,
+                            indent: Optional[int]) -> str:
+    """
+    Format comparison results as JSON.
+
+    Args:
+        comparison: Result from compare_snapshots()
+        max_items: Maximum number of items to show per category
+        verbose: Include all details
+        indent: JSON indentation level (None for compact)
+
+    Returns:
+        JSON string representation of the comparison
+    """
+    output = {
+        "summary": {
+            "total_growth_bytes": comparison['total_growth'],
+            "total_growth_kb": round(comparison['total_growth'] / 1024, 2),
+            "total_shrink_bytes": comparison['total_shrink'],
+            "total_shrink_kb": round(comparison['total_shrink'] / 1024, 2),
+            "growing_objects_count": len(comparison['growing']),
+            "shrinking_objects_count": len(comparison['shrinking']),
+            "new_objects_count": len(comparison['new']),
+            "deleted_objects_count": len(comparison['deleted'])
+        },
+        "growing_objects": comparison['growing'][:max_items],
+        "new_objects": comparison['new'][:max_items]
+    }
+
+    if verbose:
+        output["shrinking_objects"] = comparison['shrinking'][:max_items]
+        output["deleted_objects"] = comparison['deleted'][:max_items]
+
+    json_str = json.dumps(output, indent=indent)
+    print(json_str)
+    return json_str
+
+
+def _format_comparison_text(comparison: Dict[str, Any],
+                            max_items: int,
+                            verbose: bool) -> None:
+    """
+    Format comparison results as human-readable text.
+
+    Args:
+        comparison: Result from compare_snapshots()
+        max_items: Maximum number of items to show per category
+        verbose: Show detailed information
+    """
+    print("=" * 80)
+    print("MEMORY SNAPSHOT COMPARISON")
+    print("=" * 80)
+
+    # Summary
+    print(f"\nSUMMARY:")
+    print(f"  Total Growth:    {comparison['total_growth']:,} bytes ({comparison['total_growth'] / 1024:.2f} KB)")
+    print(f"  Total Shrink:    {comparison['total_shrink']:,} bytes ({comparison['total_shrink'] / 1024:.2f} KB)")
+    print(f"  Growing Objects: {len(comparison['growing'])}")
+    print(f"  Shrinking Objects: {len(comparison['shrinking'])}")
+    print(f"  New Objects:     {len(comparison['new'])}")
+    print(f"  Deleted Objects: {len(comparison['deleted'])}")
+
+    # Growing objects
+    if comparison['growing']:
+        print(f"\nGROWING OBJECTS (Top {min(max_items, len(comparison['growing']))}):")
+        print(f"{'Name':<40} {'Type':<20} {'Old Size':>12} {'New Size':>12} {'Growth':>12}")
+        print("-" * 100)
+
+        for item in comparison['growing'][:max_items]:
+            name = item['name'][:37] + "..." if len(item['name']) > 40 else item['name']
+            print(f"{name:<40} {item['type']:<20} {item['old_size']:>12,} {item['new_size']:>12,} {item['growth']:>12,}")
+            if verbose:
+                print(f"  +-- ID: {item['id']}, Depth: {item['depth']}")
+
+    # New objects
+    if comparison['new']:
+        print(f"\nNEW OBJECTS (Top {min(max_items, len(comparison['new']))}):")
+        print(f"{'Name':<40} {'Type':<20} {'Size':>12}")
+        print("-" * 75)
+
+        for item in comparison['new'][:max_items]:
+            name = item['name'][:37] + "..." if len(item['name']) > 40 else item['name']
+            print(f"{name:<40} {item['type']:<20} {item['size']:>12,}")
+            if verbose:
+                print(f"  +-- ID: {item['id']}, Depth: {item['depth']}")
+
+    # Shrinking objects
+    if comparison['shrinking'] and verbose:
+        print(f"\nSHRINKING OBJECTS (Top {min(max_items, len(comparison['shrinking']))}):")
+        print(f"{'Name':<40} {'Type':<20} {'Old Size':>12} {'New Size':>12} {'Shrink':>12}")
+        print("-" * 100)
+
+        for item in comparison['shrinking'][:max_items]:
+            name = item['name'][:37] + "..." if len(item['name']) > 40 else item['name']
+            print(f"{name:<40} {item['type']:<20} {item['old_size']:>12,} {item['new_size']:>12,} {item['shrink']:>12,}")
+
+    print("\n" + "=" * 80)
+
+
+def format_comparison_json(comparison: Dict[str, Any],
+                           max_items: int = 20,
+                           verbose: bool = False,
+                           indent: Optional[int] = 2) -> str:
+    """
+    Convenience function to format comparison as JSON without printing.
+
+    Args:
+        comparison: Result from compare_snapshots()
+        max_items: Maximum number of items to include per category (default: 20)
+        verbose: Include all details (default: False)
+        indent: JSON indentation level (None for compact) (default: 2)
+
+    Returns:
+        JSON string representation of the comparison
+    """
+    output = {
+        "summary": {
+            "total_growth_bytes": comparison['total_growth'],
+            "total_growth_kb": round(comparison['total_growth'] / 1024, 2),
+            "total_shrink_bytes": comparison['total_shrink'],
+            "total_shrink_kb": round(comparison['total_shrink'] / 1024, 2),
+            "growing_objects_count": len(comparison['growing']),
+            "shrinking_objects_count": len(comparison['shrinking']),
+            "new_objects_count": len(comparison['new']),
+            "deleted_objects_count": len(comparison['deleted'])
+        },
+        "growing_objects": comparison['growing'][:max_items],
+        "new_objects": comparison['new'][:max_items]
+    }
+
+    if verbose:
+        output["shrinking_objects"] = comparison['shrinking'][:max_items]
+        output["deleted_objects"] = comparison['deleted'][:max_items]
+
+    return output
