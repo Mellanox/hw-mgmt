@@ -1,7 +1,6 @@
 [Unit]
 Description=Chassis HW management service of Nvidia systems
 Documentation=man:hw-management.service(8)
-Wants=hw-management-sync.service
 Wants=hw-management-sysfs-monitor.service
 Wants=hw-management-fast-sysfs-monitor.service
 
