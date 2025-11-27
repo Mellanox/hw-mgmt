@@ -379,7 +379,7 @@ class RedfishClient:
 
 '''
 BMCAccessor encapsulates BMC details such as IP address, credential management.
-It also acts as wrapper of RedfishClient. For each memmber function
+It also acts as wrapper of RedfishClient. For each member function
 RedfishClient.redfish_api_func(), there will be a wrapper member function
 BMCAccessor.func() implicitly defined.
 '''
@@ -387,7 +387,6 @@ BMCAccessor.func() implicitly defined.
 
 class BMCAccessor(object):
     CURL_PATH = '/usr/bin/curl'
-    BMC_INTERNAL_IP_ADDR = '10.0.1.1'
     BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
     BMC_NOS_ACCOUNT = 'yormnAnb'  # used for communication between NOS and BMC
@@ -406,18 +405,21 @@ class BMCAccessor(object):
                                        self.get_login_password())
 
     def get_ip_addr(self):
-        redis_cmd = '/usr/bin/sonic-db-cli ' \
-                    'CONFIG_DB hget "DEVICE_METADATA|localhost" bmc_addr'
-        result = subprocess.run(redis_cmd,
+        # Return BMC IP address. get usb0 IP address and replace the last
+        # byte with '1'.
+        # The assumption is that BMC IP address is always X.X.X.1.
+        cmd = "/usr/sbin/ip -o -4 addr list usb0 | awk -F ' *|/' '{print $4}'"
+        result = subprocess.run(cmd,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 shell=True,
                                 universal_newlines=True)
 
-        addr = self.BMC_INTERNAL_IP_ADDR
+        addr = "0.0.0.0"
         if result.returncode == 0:
             if len(result.stdout.strip()):
                 addr = result.stdout.strip()
+                addr = '.'.join(addr.split('.')[:-1] + ['1'])
         return addr
 
     def __getattr__(self, name):
