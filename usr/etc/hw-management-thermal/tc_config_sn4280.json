@@ -36,7 +36,7 @@
 			"1" : {"rpm_min":3100, "rpm_max":11000, "slope": 98.8, "pwm_min" : 20, "pwm_max_reduction" : 10}
 		}
 	},
-	"general_config" : {"attention_fans" : ["drwr1", "drwr2", "drwr3", "drwr4"], "fan_steady_state_delay" : 10, "fan_steady_state_pwm" : 50},
+	"general_config" : {"attention_fans" : ["drwr1", "drwr2", "drwr3", "drwr4"], "fan_steady_state_delay" : 25, "fan_steady_state_pwm" : 20},
 	"dev_parameters" : {
 		"asic\\d*":           {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!105000", "poll_time": 3, "sensor_read_error":100},
