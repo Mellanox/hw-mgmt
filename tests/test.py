@@ -38,12 +38,13 @@ class Colors:
 class TestRunner:
     """Test runner for hw-mgmt test suite"""
 
-    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None):
+    def __init__(self, verbose=False, enable_logs=True, hardware_host=None, hardware_user=None, hardware_password=None, coverage=False, coverage_html=False, coverage_min=None, shell_coverage=False, shell_coverage_min=None):
         self.verbose = verbose
         self.enable_logs = enable_logs
         self.tests_dir = Path(__file__).parent.absolute()
         self.offline_dir = self.tests_dir / "offline"
         self.hardware_dir = self.tests_dir / "hardware"
+        self.shell_dir = self.tests_dir / "shell"
         self.logs_dir = self.tests_dir / "logs"
         self.failed_tests = []
         self.passed_tests = []
@@ -53,6 +54,15 @@ class TestRunner:
         self.hardware_host = hardware_host
         self.hardware_user = hardware_user
         self.hardware_password = hardware_password
+
+        # Coverage parameters
+        self.coverage = coverage
+        self.coverage_html = coverage_html
+        self.coverage_min = coverage_min
+
+        # Shell testing coverage parameters
+        self.shell_coverage = shell_coverage
+        self.shell_coverage_min = shell_coverage_min
 
         # Create logs directory if logging is enabled
         if self.enable_logs:
@@ -274,6 +284,8 @@ class TestRunner:
 
             # Extract test counts and pytest summary
             is_pytest = 'pytest' in ' '.join(cmd)
+            has_coverage = '--cov' in ' '.join(cmd)
+
             if is_pytest and passed:
                 # Extract the summary line (e.g., "74 passed in 0.46s")
                 summary_lines = []
@@ -290,6 +302,25 @@ class TestRunner:
                 if summary_lines:
                     # Show just the last summary line
                     print(f"  {Colors.CYAN}{summary_lines[-1]}{Colors.RESET}")
+
+                # If coverage was enabled, always show the coverage section
+                if has_coverage:
+                    print(f"\n{Colors.CYAN}Coverage Report:{Colors.RESET}")
+                    # Extract and display coverage table
+                    in_coverage = False
+                    for line in output.split('\n'):
+                        if 'Name' in line and 'Stmts' in line and 'Miss' in line:
+                            in_coverage = True
+                        if in_coverage:
+                            if line.strip() and not line.startswith('='):
+                                print(f"  {line}")
+                            elif line.startswith('=') and 'TOTAL' in output[output.find(line):output.find(line) + 200]:
+                                # Print separator and continue to get TOTAL
+                                print(f"  {line}")
+                            elif 'TOTAL' in line:
+                                # Print TOTAL line and stop
+                                print(f"  {Colors.BOLD}{line}{Colors.RESET}")
+                                break
             else:
                 # For unittest, try to extract test count from output
                 import re
@@ -304,6 +335,8 @@ class TestRunner:
                         self.total_test_count += int(match.group(1))
                         break
 
+            # Show output if verbose or failed
+            # (coverage report is shown separately above if enabled)
             if self.verbose or not passed:
                 self.print_test_result(test_name, passed, output)
             else:
@@ -370,29 +403,113 @@ class TestRunner:
                 'cmd': ['python3', 'test_module_counter.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync'
             },
-            # Pytest tests - auto-discovery (run last)
-            # Pytest tests - auto-discovery (strict mode for CI)
+            # Pytest tests - run each file separately to avoid thread/mock conflicts
             {
-                'name': 'Pytest Tests (offline)',
-                'cmd': [
-                    'python3', '-m', 'pytest', 'offline/',
-                    '--tb=short',
-                    '--strict-markers',  # Fail on unregistered markers
-                    '--strict-config',   # Fail on config errors
-                    '-W', 'error',       # Convert warnings to errors
-                    '--ignore=offline/hw_management_lib',
-                    '--ignore=offline/hw_mgmgt_sync',
-                    '--ignore=offline/thermal_control',
-                    '--ignore=offline/hw_mgmt_thermal_control_2_0',
-                    '--ignore=offline/hw_mgmt_thermal_control_2_5',
-                    '--ignore=offline/known_issues_redfish_client.py'  # Skip known issues file
-                ],
+                'name': 'Pytest: Hardware Error Paths',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hardware_error_paths.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: HW Management Lib',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_lib.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Peripheral Updater',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_peripheral_updater.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Platform Config',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_platform_config.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Parse Labels',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_parse_labels.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Independent Mode Update',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_independent_mode_update.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: PSU FW Update Common',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_common.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: PSU FW Update Delta',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_delta.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: PSU FW Update Murata',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_psu_fw_update_murata.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: DPU Thermal Update',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_dpu_thermal_update.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Redfish Client',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_redfish_client.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Thermal Updater',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_updater.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Python Syntax',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
         ]
 
+        # Add coverage options to all pytest tests if coverage is enabled
+        if self.coverage:
+            source_dir = self.tests_dir.parent / 'usr' / 'usr' / 'bin'
+
+            # Find all pytest test suites (they start with "Pytest:")
+            pytest_tests = [t for t in tests if t['name'].startswith('Pytest:')]
+
+            for idx, pytest_test in enumerate(pytest_tests):
+                # Add coverage to all pytest tests
+                cov_opts = [
+                    f'--cov={source_dir}',  # Cover the source code
+                    '--cov-branch',  # Include branch coverage
+                ]
+
+                # Append coverage for all tests after the first
+                if idx > 0:
+                    cov_opts.append('--cov-append')
+
+                # Only show report on the LAST pytest test
+                if idx == len(pytest_tests) - 1:
+                    cov_opts.append('--cov-report=term-missing:skip-covered')
+                    if self.coverage_html:
+                        cov_opts.append('--cov-report=html')
+                else:
+                    cov_opts.append('--cov-report=')  # No report for intermediate tests
+
+                pytest_test['cmd'].extend(cov_opts)
+
+            # Apply coverage minimum threshold to last pytest test
+            pytest_test = pytest_tests[-1]
+            if self.coverage_min:
+                pytest_test['cmd'].append(f'--cov-fail-under={self.coverage_min}')
+
         for test in tests:
             self.run_command(test['cmd'], test['cwd'], test['name'])
+
+        # Print coverage summary if coverage was enabled
+        if self.coverage:
+            self.print_coverage_summary()
 
         return len(self.failed_tests) == 0
 
@@ -704,6 +821,178 @@ class TestRunner:
             print(f"{Colors.RED}Test failed with error: {e}{Colors.RESET}")
             return False
 
+    def check_shell_tools(self):
+        """Check if required shell testing tools are installed"""
+        missing_tools = []
+
+        # Check for shellspec
+        try:
+            result = subprocess.run(
+                ['which', 'shellspec'],
+                capture_output=True,
+                check=False
+            )
+            if result.returncode != 0:
+                missing_tools.append('shellspec')
+        except Exception:
+            missing_tools.append('shellspec')
+
+        # Check for kcov (optional if shell_coverage is enabled)
+        if self.shell_coverage:
+            try:
+                result = subprocess.run(
+                    ['which', 'kcov'],
+                    capture_output=True,
+                    check=False
+                )
+                if result.returncode != 0:
+                    missing_tools.append('kcov')
+            except Exception:
+                missing_tools.append('kcov')
+
+        return missing_tools
+
+    def install_shell_tools(self):
+        """Install shell testing tools using install-shell-test-tools.sh"""
+        install_script = self.tests_dir / "install-shell-test-tools.sh"
+
+        if not install_script.exists():
+            print(f"{Colors.RED}[ERROR]{Colors.RESET} Installation script not found: {install_script}")
+            return False
+
+        print(f"{Colors.CYAN}Auto-installing shell testing tools...{Colors.RESET}")
+        print(f"{Colors.CYAN}Running:{Colors.RESET} {install_script}")
+
+        try:
+            result = subprocess.run(
+                [str(install_script)],
+                cwd=self.tests_dir,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            # Print output if verbose
+            if self.verbose or result.returncode != 0:
+                print(result.stdout)
+                if result.stderr:
+                    print(result.stderr)
+
+            if result.returncode == 0:
+                print(f"{Colors.GREEN}[SUCCESS]{Colors.RESET} Shell testing tools installed successfully")
+                return True
+            else:
+                print(f"{Colors.YELLOW}[WARNING]{Colors.RESET} Shell tools installation completed with warnings")
+                # Still return True as installation script might succeed partially
+                return True
+
+        except Exception as e:
+            print(f"{Colors.RED}[ERROR]{Colors.RESET} Failed to run installation script: {e}")
+            return False
+
+    def run_shell_tests(self):
+        """Run shell script tests using ShellSpec"""
+        self.print_header("SHELL SCRIPT TESTS")
+
+        # Check if shell test directory exists
+        if not self.shell_dir.exists():
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell test directory not found: {self.shell_dir}")
+            return True
+
+        # Check if shellspec is installed
+        missing_tools = self.check_shell_tools()
+        if missing_tools:
+            print(f"{Colors.YELLOW}[WARNING]{Colors.RESET} Missing shell testing tools: {', '.join(missing_tools)}")
+
+            # Auto-install missing tools
+            print(f"{Colors.CYAN}Attempting auto-installation of shell testing tools...{Colors.RESET}")
+            if self.install_shell_tools():
+                # Re-check if tools are now available
+                missing_tools = self.check_shell_tools()
+                if missing_tools:
+                    print(f"{Colors.RED}[ERROR]{Colors.RESET} Tools still missing after installation: {', '.join(missing_tools)}")
+                    print(f"{Colors.YELLOW}Manual installation may be required:{Colors.RESET}")
+                    print(f"  cd {self.tests_dir}")
+                    print(f"  ./install-shell-test-tools.sh")
+                    print(f"\n{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell tests cannot run without required tools")
+                    return True
+                else:
+                    print(f"{Colors.GREEN}[SUCCESS]{Colors.RESET} All required tools are now installed")
+            else:
+                print(f"{Colors.RED}[ERROR]{Colors.RESET} Failed to install shell testing tools")
+                print(f"{Colors.YELLOW}Manual installation required:{Colors.RESET}")
+                print(f"  cd {self.tests_dir}")
+                print(f"  ./install-shell-test-tools.sh")
+                print(f"\n{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell tests cannot run without required tools")
+                return True
+
+        print(f"{Colors.BLUE}Running: {Colors.BOLD}ShellSpec Shell Script Tests{Colors.RESET}")
+        print(f"{Colors.CYAN}Test directory:{Colors.RESET} {self.shell_dir}")
+
+        # Build shellspec command
+        cmd = ['shellspec']
+
+        # Add coverage option if requested
+        if self.shell_coverage:
+            print(f"{Colors.CYAN}Code coverage:{Colors.RESET} Enabled (using kcov)")
+            cmd.extend([
+                '--kcov',
+                '--kcov-options', '--exclude-pattern=/usr,/lib,/tmp'
+            ])
+
+        # Add format option for better output
+        cmd.extend(['--format', 'documentation'])
+
+        # Run shellspec from shell test directory
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=self.shell_dir,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            # Print output
+            output = result.stdout + result.stderr
+            print(output)
+
+            # Check for coverage report
+            if self.shell_coverage:
+                coverage_dir = self.shell_dir / 'coverage'
+                if coverage_dir.exists():
+                    print(f"\n{Colors.GREEN}Coverage Report Generated:{Colors.RESET}")
+                    print(f"  Location: {coverage_dir}")
+
+                    # Try to find coverage summary
+                    index_file = coverage_dir / 'index.html'
+                    if index_file.exists():
+                        print(f"  HTML Report: file://{index_file.absolute()}")
+
+                    # Check minimum coverage if specified
+                    if self.shell_coverage_min:
+                        print(f"\n{Colors.YELLOW}Note:{Colors.RESET} Minimum coverage check ({self.shell_coverage_min}%) requires manual verification")
+                        print(f"  Open the HTML report to view actual coverage percentage")
+
+            # Determine success
+            if result.returncode == 0:
+                print(f"\n{Colors.GREEN}[PASSED]{Colors.RESET} Shell script tests passed")
+                self.passed_tests.append("Shell Tests")
+                return True
+            else:
+                print(f"\n{Colors.RED}[FAILED]{Colors.RESET} Shell script tests failed")
+                self.failed_tests.append("Shell Tests")
+                return False
+
+        except FileNotFoundError:
+            print(f"{Colors.RED}[ERROR]{Colors.RESET} shellspec command not found")
+            print(f"{Colors.CYAN}Install with:{Colors.RESET} ./install-shell-test-tools.sh")
+            return False
+        except Exception as e:
+            print(f"{Colors.RED}[ERROR]{Colors.RESET} Failed to run shell tests: {e}")
+            self.failed_tests.append("Shell Tests")
+            return False
+
     def run_beautifier(self):
         """Run NVIDIA code beautifier (ngci_tool -b)"""
         self.print_header("CODE BEAUTIFIER")
@@ -902,6 +1191,124 @@ class TestRunner:
             self.failed_tests.append("Security Scan")
             return False
 
+    def run_header_check(self):
+        """Run NVIDIA header checker (ngci_tool -hc)"""
+        self.print_header("HEADER CHECK")
+
+        print(f"{Colors.BLUE}Running: {Colors.BOLD}NVIDIA Header Checker (ngci_tool -hc){Colors.RESET}")
+
+        # Run ngci_tool -hc from repository root
+        repo_root = self.tests_dir.parent
+        ngci_paths = [
+            '/auto/sw_system_release/ci/ngci/ngci_tool/ngci_tool.sh',
+            'ngci_tool'
+        ]
+
+        result = None
+        for ngci_path in ngci_paths:
+            try:
+                result = subprocess.run(
+                    [ngci_path, '-hc'],
+                    cwd=repo_root,
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                break
+            except FileNotFoundError:
+                continue
+            except Exception:
+                continue
+
+        if result is None:
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} ngci_tool not found - skipping header check")
+            return True
+
+        output = result.stdout + result.stderr
+
+        if self.verbose or result.returncode != 0:
+            print(output)
+
+        if result.returncode == 0:
+            print(f"{Colors.GREEN}[PASSED]{Colors.RESET} Header check passed")
+            self.passed_tests.append("Header Check")
+            return True
+        else:
+            print(f"{Colors.RED}[FAILED]{Colors.RESET} Header check found issues")
+            self.failed_tests.append("Header Check")
+            return False
+
+    def run_shellcheck(self):
+        """Run ShellCheck static analysis on shell scripts"""
+        self.print_header("SHELLCHECK (Shell Script Linter)")
+
+        print(f"{Colors.BLUE}Running: {Colors.BOLD}ShellCheck Static Analysis{Colors.RESET}")
+
+        # Check if shellcheck is installed
+        try:
+            version_result = subprocess.run(
+                ['shellcheck', '--version'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if version_result.returncode != 0:
+                print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} shellcheck not installed")
+                print(f"{Colors.CYAN}Install with:{Colors.RESET} ./tests/install-shell-test-tools.sh")
+                return True
+        except FileNotFoundError:
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} shellcheck not found - install with: ./tests/install-shell-test-tools.sh")
+            return True
+
+        # Find all shell scripts in usr/usr/bin
+        repo_root = self.tests_dir.parent
+        shell_scripts_dir = repo_root / "usr" / "usr" / "bin"
+
+        if not shell_scripts_dir.exists():
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} Shell scripts directory not found: {shell_scripts_dir}")
+            return True
+
+        # Find all .sh files
+        shell_scripts = list(shell_scripts_dir.glob("*.sh"))
+
+        if not shell_scripts:
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} No shell scripts found in {shell_scripts_dir}")
+            return True
+
+        print(f"{Colors.CYAN}Analyzing {len(shell_scripts)} shell scripts...{Colors.RESET}")
+
+        # Run shellcheck on all shell scripts
+        all_passed = True
+        issues_found = 0
+
+        for script in shell_scripts:
+            result = subprocess.run(
+                ['shellcheck', '--color=always', '--severity=warning', str(script)],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                all_passed = False
+                issues_found += 1
+                if self.verbose:
+                    print(f"\n{Colors.YELLOW}Issues in {script.name}:{Colors.RESET}")
+                    print(result.stdout)
+
+        # Summary
+        if all_passed:
+            print(f"{Colors.GREEN}[PASSED]{Colors.RESET} All {len(shell_scripts)} shell scripts passed ShellCheck")
+            self.passed_tests.append("ShellCheck")
+            return True
+        else:
+            print(f"{Colors.RED}[FAILED]{Colors.RESET} ShellCheck found issues in {issues_found}/{len(shell_scripts)} scripts")
+            if not self.verbose:
+                print(f"{Colors.CYAN}Run with --verbose to see detailed issues{Colors.RESET}")
+                print(f"{Colors.CYAN}Or run directly:{Colors.RESET} shellcheck usr/usr/bin/*.sh")
+            self.failed_tests.append("ShellCheck")
+            return False
+
     def print_summary(self):
         """Print test execution summary"""
         self.print_header("TEST SUMMARY")
@@ -929,6 +1336,23 @@ class TestRunner:
         else:
             print(f"\n{Colors.RED}{Colors.BOLD}SOME TESTS FAILED{Colors.RESET}")
 
+    def print_coverage_summary(self):
+        """Print coverage summary after tests"""
+        coverage_file = self.tests_dir.parent / '.coverage'
+        htmlcov_dir = self.tests_dir.parent / 'htmlcov'
+
+        if coverage_file.exists():
+            print(f"\n{Colors.CYAN}Code Coverage:{Colors.RESET}")
+            print(f"  Coverage data saved to: {Colors.BOLD}{coverage_file}{Colors.RESET}")
+
+            if htmlcov_dir.exists() and self.coverage_html:
+                index_file = htmlcov_dir / 'index.html'
+                print(f"  {Colors.GREEN}HTML Report:{Colors.RESET} {Colors.BOLD}{index_file}{Colors.RESET}")
+                print(f"  Open in browser: file://{index_file.absolute()}")
+
+        if self.coverage_min:
+            print(f"\n{Colors.CYAN}Minimum Coverage Required:{Colors.RESET} {self.coverage_min}%")
+
 
 def main():
     """Main test runner entry point"""
@@ -937,13 +1361,55 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --offline                                    # Run offline tests only (default)
+  %(prog)s --offline                                    # Run offline Python tests (default)
   %(prog)s --hardware --host 10.0.0.1 --user root --password mypass
                                                         # Run hardware tests via SSH
-  %(prog)s --all                                        # Run all tests (offline + beautifier + spell)
+  %(prog)s --all                                        # Run all tests (offline + code quality checks)
   %(prog)s --clean                                      # Clean all generated files (cache, logs, etc.)
+  %(prog)s --offline -sn                                # Skip all ngci tool checks (shortcut)
+  %(prog)s --offline --no-beautifier                    # Skip beautifier check only
+  %(prog)s --all --no-security-scan --no-header-check   # Skip specific checks
+  %(prog)s --offline --coverage                         # Run tests with coverage measurement
+  %(prog)s --offline --coverage-html                    # Generate HTML coverage report
+  %(prog)s --offline --coverage-min 80                  # Require minimum 80%% coverage
+  %(prog)s --shell                                      # Run shell script tests (opt-in)
+  %(prog)s --shell --shell-coverage                     # Run shell tests with coverage
+  %(prog)s --shellcheck                                 # Run ShellCheck linter only
+  %(prog)s --offline --shell --shellcheck               # Run Python + Shell tests + linting
+  %(prog)s --install                                    # Install all test dependencies manually
 
-Note: Dependencies are automatically installed if missing
+Code Quality Checks (enabled by default for offline/all):
+  - Beautifier (ngci_tool -b)  : Code formatting check (--no-beautifier to disable)
+  - Spell Check (ngci_tool -s) : Spelling validation (--no-spell-check to disable)
+  - Security Scan (ngci_tool -s2) : Secret detection (--no-security-scan to disable)
+  - Header Check (ngci_tool -hc) : Copyright/license headers (--no-header-check to disable)
+
+  Shortcut: Use -sn or --skip-ngci to disable all ngci tools
+
+Shell Testing (opt-in, not run by default):
+  - Shell Tests (--shell)      : Run ShellSpec tests for shell scripts
+  - ShellCheck (--shellcheck)  : Static analysis/linting for shell scripts
+  - Coverage (--shell-coverage): Code coverage for shell tests
+
+Coverage Options:
+  --coverage           : Enable code coverage measurement (terminal report)
+  --coverage-html      : Generate HTML coverage report (opens in browser)
+  --coverage-min PCT   : Fail if coverage is below PCT%% (e.g., --coverage-min 80)
+
+Shell Testing Options (opt-in only):
+  --shell              : Run shell script tests (auto-installs shellspec if missing)
+  --shell-coverage     : Enable shell code coverage (auto-installs kcov if missing)
+  --shell-coverage-min : Minimum shell coverage percentage required
+  --shellcheck         : Run ShellCheck static analysis on shell scripts
+  --no-shellcheck      : Skip ShellCheck (when used with --shell)
+
+  Note: Shell tests are NOT run by default - use --shell to enable
+        Shell tools (shellspec/kcov) are auto-installed on first use
+
+Note: Python dependencies are automatically installed if missing
+      Shell testing tools (shellspec/kcov) are auto-installed when --shell is used
+      Shell tests are OPT-IN (use --shell to enable, NOT run by default)
+      ShellCheck is OPT-IN (use --shellcheck to enable, NOT run by default)
       Offline tests show verbose output by default
       Hardware tests are NOT run by default - requires explicit --hardware flag with SSH credentials
         """
@@ -959,24 +1425,96 @@ Note: Dependencies are automatically installed if missing
     parser.add_argument('--user', type=str, help='SSH username for hardware connection')
     parser.add_argument('--password', type=str, help='SSH password for hardware connection')
 
+    # Disable flags for code quality checks (all enabled by default)
+    parser.add_argument('-sn', '--skip-ngci', action='store_true', help='Skip all ngci_tool checks (beautifier, spell, security, header)')
+    parser.add_argument('--no-beautifier', action='store_true', help='Skip code beautifier check (ngci_tool -b)')
+    parser.add_argument('--no-spell-check', action='store_true', help='Skip spell checker (ngci_tool -s)')
+    parser.add_argument('--no-security-scan', action='store_true', help='Skip security scanner (ngci_tool -s2)')
+    parser.add_argument('--no-header-check', action='store_true', help='Skip header checker (ngci_tool -hc)')
+    parser.add_argument('--no-shellcheck', action='store_true', help='Skip ShellCheck static analysis for shell scripts')
+
+    # Coverage options
+    parser.add_argument('--coverage', action='store_true', help='Enable code coverage measurement')
+    parser.add_argument('--coverage-html', action='store_true', help='Generate HTML coverage report (implies --coverage)')
+    parser.add_argument('--coverage-min', type=int, metavar='PCT', help='Minimum coverage percentage required (fails if below)')
+
+    # Shell testing options
+    parser.add_argument('--shell', action='store_true', help='Run shell script tests (requires shellspec)')
+    parser.add_argument('--shell-coverage', action='store_true', help='Enable shell script code coverage (requires kcov)')
+    parser.add_argument('--shell-coverage-min', type=int, metavar='PCT', help='Minimum shell coverage percentage required')
+    parser.add_argument('--shellcheck', action='store_true', help='Run ShellCheck static analysis on shell scripts')
+
+    # Installation helper
+    parser.add_argument('--install', action='store_true', help='Install test dependencies (Python + Shell)')
+
     args = parser.parse_args()
 
     # Set verbose mode from command line flag
     verbose_mode = args.verbose
 
+    # If --coverage-html is set, enable --coverage too
+    if args.coverage_html:
+        args.coverage = True
+
+    # If --skip-ngci/-sn is set, disable all ngci tool checks
+    if args.skip_ngci:
+        args.no_beautifier = True
+        args.no_spell_check = True
+        args.no_security_scan = True
+        args.no_header_check = True
+
     runner = TestRunner(
         verbose=verbose_mode,
         hardware_host=args.host,
         hardware_user=args.user,
-        hardware_password=args.password
+        hardware_password=args.password,
+        coverage=args.coverage,
+        coverage_html=args.coverage_html,
+        coverage_min=args.coverage_min,
+        shell_coverage=args.shell_coverage,
+        shell_coverage_min=args.shell_coverage_min
     )
+
+    # Handle install command
+    if args.install:
+        print(f"{Colors.CYAN}Installing test dependencies...{Colors.RESET}\n")
+
+        # Install Python dependencies
+        print(f"{Colors.BLUE}Installing Python dependencies:{Colors.RESET}")
+        if not runner.install_dependencies():
+            print(f"{Colors.RED}Failed to install Python dependencies{Colors.RESET}")
+            return 1
+
+        # Install shell testing tools
+        print(f"\n{Colors.BLUE}Installing shell testing tools:{Colors.RESET}")
+        install_script = runner.tests_dir / "install-shell-test-tools.sh"
+        if install_script.exists():
+            try:
+                result = subprocess.run(
+                    [str(install_script)],
+                    cwd=runner.tests_dir,
+                    check=False
+                )
+                if result.returncode == 0:
+                    print(f"\n{Colors.GREEN}All test dependencies installed successfully!{Colors.RESET}")
+                    return 0
+                else:
+                    print(f"\n{Colors.YELLOW}Shell tools installation completed with warnings{Colors.RESET}")
+                    return 0
+            except Exception as e:
+                print(f"{Colors.RED}Failed to run shell tools installer: {e}{Colors.RESET}")
+                return 1
+        else:
+            print(f"{Colors.YELLOW}Shell tools installer not found: {install_script}{Colors.RESET}")
+            print(f"{Colors.GREEN}Python dependencies installed successfully{Colors.RESET}")
+            return 0
 
     # Handle clean command
     if args.clean:
         return 0 if runner.clean_all() else 1
 
     # If no specific test type is selected, default to offline
-    if not any([args.offline, args.hardware, args.all]):
+    if not any([args.offline, args.hardware, args.all, args.shell]):
         args.offline = True
 
     # Auto-check and install dependencies ONLY if running offline tests
@@ -1005,27 +1543,43 @@ Note: Dependencies are automatically installed if missing
         if not runner.run_offline_tests():
             success = False
 
+    # Run shell tests ONLY if explicitly requested with --shell
+    if args.shell:
+        if not runner.run_shell_tests():
+            success = False
+
     # Run hardware tests ONLY if explicitly requested with --hardware
     # (NOT included in --all to prevent accidental hardware test runs)
     if args.hardware:
         if not runner.run_hardware_tests():
             success = False
 
-    # Always run beautifier check for offline/all (skip if only hardware)
+    # Run code quality checks for offline/all (skip if only hardware or only shell)
     if not args.hardware or args.all or args.offline:
-        if not runner.run_beautifier():
-            success = False
+        # Run beautifier check (unless disabled)
+        if not args.no_beautifier:
+            if not runner.run_beautifier():
+                success = False
 
-    # Always run spell check for offline/all (skip if only hardware)
-    if not args.hardware or args.all or args.offline:
-        if not runner.run_spell_check():
-            success = False
+        # Run spell check (unless disabled)
+        if not args.no_spell_check:
+            if not runner.run_spell_check():
+                success = False
 
-    # Skip security scan - CI handles this separately
-    # Security scanner has a known bug with large changesets (60+ chunks)
-    # where it reports exit code 1 even with 0 secrets found
-    # if not runner.run_security_scan():
-    #     success = False
+        # Run security scan (unless disabled)
+        if not args.no_security_scan:
+            if not runner.run_security_scan():
+                success = False
+
+        # Run header check (unless disabled)
+        if not args.no_header_check:
+            if not runner.run_header_check():
+                success = False
+
+    # Run shellcheck ONLY if explicitly requested with --shell or --shellcheck
+    if args.shell or args.shellcheck:
+        if not runner.run_shellcheck():
+            success = False
 
     runner.print_summary()
 

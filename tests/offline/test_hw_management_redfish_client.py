@@ -750,6 +750,148 @@ class TestEdgeCases:
         assert ret == RedfishClient.ERR_CODE_OK
 
 
+class TestMissingCoverageLines:
+    """Tests to cover specific missing lines for 80%+ coverage"""
+
+    def test_build_change_user_password_after_factory_cmd(self, basic_redfish_client):
+        """Test _build_change_user_password_after_factory_cmd"""
+        cmd = basic_redfish_client._build_change_user_password_after_factory_cmd(
+            'admin', 'oldpass', 'newpass'
+        )
+        assert 'curl' in cmd
+        assert '-X PATCH' in cmd
+        assert 'Password' in cmd
+        assert 'newpass' in cmd
+
+    def test_build_delete_cmd(self, basic_redfish_client):
+        """Test _build_delete_cmd"""
+        # Set token using the property
+        basic_redfish_client._RedfishClient__token = 'test_token'
+        cmd = basic_redfish_client._build_delete_cmd('admin_user')
+        assert 'curl' in cmd
+        assert '-X DELETE' in cmd
+        assert 'admin_user' in cmd
+        assert 'test_token' in cmd
+
+    def test_exec_curl_cmd_error_regex_match(self, basic_redfish_client, mock_subprocess):
+        """Test error string parsing with regex"""
+        # Set token to bypass login
+        basic_redfish_client._RedfishClient__token = 'test_token'
+        
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (b'', b'curl: (7) Failed to connect')
+        mock_process.returncode = 7
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret, out, err = basic_redfish_client.exec_curl_cmd('curl test')
+        assert err == 'Failed to connect'  # Should extract error from curl output
+
+    def test_login_with_none_password(self, basic_redfish_client, mock_subprocess):
+        """Test login with password=None (uses default)"""
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            b'{"token": "test_token"}',
+            b''
+        )
+        mock_process.returncode = 0
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret = basic_redfish_client.login(password=None)
+        assert ret == RedfishClient.ERR_CODE_OK
+
+    def test_login_already_logged_in(self, basic_redfish_client, mock_subprocess):
+        """Test login when already logged in"""
+        # Set token to simulate already logged in
+        basic_redfish_client._RedfishClient__token = 'existing_token'
+        
+        ret = basic_redfish_client.login()
+        assert ret == RedfishClient.ERR_CODE_OK
+        # Should not execute curl (already has token)
+
+    def test_build_change_user_password_cmd(self, basic_redfish_client):
+        """Test _build_change_user_password_cmd"""
+        basic_redfish_client._RedfishClient__token = 'test_token'
+        cmd = basic_redfish_client._build_change_user_password_cmd('testuser', 'newpassword')
+        assert 'curl' in cmd
+        assert 'testuser' in cmd
+        assert 'newpassword' in cmd
+        assert '-X PATCH' in cmd
+
+    def test_get_http_request_type(self, basic_redfish_client):
+        """Test __get_http_request_type with different patterns"""
+        # Test -X GET
+        req_type = basic_redfish_client._RedfishClient__get_http_request_type('curl -X GET ...')
+        assert req_type == 'GET'
+        
+        # Test --request POST
+        req_type = basic_redfish_client._RedfishClient__get_http_request_type('curl --request POST ...')
+        assert req_type == 'POST'
+        
+        # Test default (no explicit method)
+        req_type = basic_redfish_client._RedfishClient__get_http_request_type('curl ...')
+        assert req_type is None  # No match
+
+    def test_build_post_cmd_with_json_data(self, basic_redfish_client):
+        """Test __build_post_cmd with JSON data"""
+        basic_redfish_client._RedfishClient__token = 'test_token'
+        data = {'key': 'value', 'nested': {'inner': 123}}
+        cmd = basic_redfish_client._RedfishClient__build_post_cmd('/test/endpoint', data)
+        assert 'curl' in cmd
+        assert '-X POST' in cmd
+        assert '/test/endpoint' in cmd
+        assert 'test_token' in cmd
+
+    def test_has_login_false(self, basic_redfish_client):
+        """Test has_login when not logged in"""
+        basic_redfish_client._RedfishClient__token = None
+        assert not basic_redfish_client.has_login()
+
+    def test_has_login_true(self, basic_redfish_client):
+        """Test has_login when logged in"""
+        basic_redfish_client._RedfishClient__token = 'some_token'
+        assert basic_redfish_client.has_login()
+
+    def test_exec_curl_cmd_with_no_regex_match(self, basic_redfish_client, mock_subprocess):
+        """Test error parsing when regex doesn't match"""
+        basic_redfish_client._RedfishClient__token = 'test_token'
+        
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (b'', b'Unknown error format')
+        mock_process.returncode = 1
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret, out, err = basic_redfish_client.exec_curl_cmd('curl test')
+        # Error should be returned as-is when regex doesn't match
+        assert 'Unknown error format' in err
+
+    def test_login_with_custom_password(self, basic_redfish_client, mock_subprocess):
+        """Test login with explicit password parameter"""
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            b'{"token": "new_token"}',
+            b''
+        )
+        mock_process.returncode = 0
+        mock_subprocess.Popen.return_value = mock_process
+
+        ret = basic_redfish_client.login(password='custom_pass')
+        assert ret == RedfishClient.ERR_CODE_OK
+
+    def test_login_with_default_password(self, basic_redfish_client, mock_subprocess):
+        """Test login uses default password when None passed"""
+        mock_process = MagicMock()
+        mock_process.communicate.return_value = (
+            b'{"token": "default_token"}',
+            b''
+        )
+        mock_process.returncode = 0
+        mock_subprocess.Popen.return_value = mock_process
+
+        # Login with default password (password=None means use self.__password)
+        ret = basic_redfish_client.login(password=None)
+        assert ret == RedfishClient.ERR_CODE_OK
+
+
 # =============================================================================
 # TEST MAIN
 # =============================================================================
