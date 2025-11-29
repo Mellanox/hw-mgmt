@@ -1,6 +1,6 @@
 {
 	"name": "Rosalind",
-	"labels_HI180_alternativies" : {
+	"labels_HI180_alternatives" : {
 		"pwr_conv1": {
 			"mp29502" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},

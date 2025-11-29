@@ -72,7 +72,7 @@ def check_dpu_index(dpu_index):
     """
     dpu_count = get_dpu_count()
 
-    if dpu_count is -1:
+    if dpu_count == -1:
         return False
 
     if 0 < dpu_index <= dpu_count:

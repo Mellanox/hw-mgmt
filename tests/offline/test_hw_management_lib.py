@@ -919,6 +919,339 @@ class TestEdgeCasesAndErrors:
                 assert "Test message" in f.read()
 
 
+class TestErrorConditionsAndValidation:
+    """Test error conditions and validation to improve coverage"""
+
+    def test_invalid_syslog_level(self, log_file):
+        """Test initialization with invalid syslog_level"""
+        with pytest.raises(ValueError, match="Invalid syslog_level"):
+            HW_Mgmt_Logger(
+                log_file=log_file,
+                log_level=HW_Mgmt_Logger.INFO,
+                syslog_level=99999  # Invalid level
+            )
+
+    def test_log_directory_not_exists(self, temp_dir):
+        """Test error when log directory doesn't exist"""
+        non_existent_dir = os.path.join(temp_dir, "nonexistent", "subdir")
+        log_file = os.path.join(non_existent_dir, "test.log")
+
+        with pytest.raises(PermissionError, match="Log directory does not exist"):
+            HW_Mgmt_Logger(log_file=log_file)
+
+    def test_log_directory_not_writable(self, temp_dir):
+        """Test error when log directory is not writable"""
+        log_dir = os.path.join(temp_dir, "readonly")
+        os.makedirs(log_dir)
+        os.chmod(log_dir, 0o444)  # Read-only
+
+        log_file = os.path.join(log_dir, "test.log")
+
+        try:
+            with pytest.raises(PermissionError, match="Cannot write to log directory"):
+                HW_Mgmt_Logger(log_file=log_file)
+        finally:
+            os.chmod(log_dir, 0o755)  # Restore permissions for cleanup
+
+    def test_set_param_with_invalid_log_level(self, log_file):
+        """Test set_param with invalid log_level"""
+        logger = HW_Mgmt_Logger(log_file=log_file)
+
+        with pytest.raises(ValueError, match="Invalid log_level"):
+            logger.set_param(log_level=99999)
+
+        logger.stop()
+
+    def test_set_loglevel_with_all_valid_levels(self, log_file):
+        """Test set_loglevel covers all valid levels"""
+        logger = HW_Mgmt_Logger(log_file=log_file)
+
+        # Test all valid levels
+        for level in [HW_Mgmt_Logger.DEBUG, HW_Mgmt_Logger.INFO,
+                      HW_Mgmt_Logger.NOTICE, HW_Mgmt_Logger.WARNING,
+                      HW_Mgmt_Logger.ERROR, HW_Mgmt_Logger.CRITICAL,
+                      HW_Mgmt_Logger.NOTSET]:
+            logger.set_loglevel(level)
+            assert logger.logger.level == level
+
+        logger.stop()
+
+    def test_logger_without_log_file(self):
+        """Test logger with log_file=None"""
+        logger = HW_Mgmt_Logger(log_file=None, log_level=HW_Mgmt_Logger.INFO)
+
+        logger.info("Test message")
+        logger.debug("Debug message")
+        logger.error("Error message")
+
+        logger.stop()
+
+    def test_logger_suspend_multiple_times(self, log_file):
+        """Test suspending multiple times"""
+        logger = HW_Mgmt_Logger(log_file=log_file)
+
+        logger.suspend()
+        logger.suspend()  # Second suspend should be safe
+        logger.info("Suspended message")
+        logger.resume()
+        logger.resume()  # Second resume should be safe
+        logger.info("Resumed message")
+
+        logger.stop()
+
+    def test_set_param_change_to_none_log_file(self, log_file):
+        """Test set_param changing from file to None"""
+        logger = HW_Mgmt_Logger(log_file=log_file)
+        logger.info("First message")
+
+        # Change to None
+        logger.set_param(log_file=None)
+        logger.info("Second message")
+
+        logger.stop()
+
+    def test_log_file_without_directory(self, temp_dir):
+        """Test log file in current directory (empty log_dir)"""
+        import os
+        orig_cwd = os.getcwd()
+        try:
+            os.chdir(temp_dir)
+            logger = HW_Mgmt_Logger(log_file="test.log")
+            logger.info("Test message")
+            logger.stop()
+            assert os.path.exists("test.log")
+        finally:
+            os.chdir(orig_cwd)
+
+    def test_syslog_without_initialization(self, log_file):
+        """Test syslog_log when syslog is not initialized"""
+        logger = HW_Mgmt_Logger(log_file=log_file, syslog_level=None)
+        # This should not crash when _syslog is None
+        logger.syslog_log(HW_Mgmt_Logger.INFO, "Test message")
+        logger.stop()
+
+    def test_syslog_write_exception(self, log_file, mock_syslog):
+        """Test exception handling in syslog write"""
+        logger = HW_Mgmt_Logger(
+            log_file=log_file,
+            syslog_level=HW_Mgmt_Logger.INFO
+        )
+
+        # Mock syslog to raise exception
+        mock_syslog['syslog'].side_effect = Exception("Syslog error")
+
+        # Should not crash, just print warning
+        logger.syslog_log(HW_Mgmt_Logger.INFO, "Test")
+        logger.stop()
+
+    def test_handler_close_exception(self, log_file):
+        """Test exception handling when closing handlers"""
+        from unittest.mock import patch
+        logger = HW_Mgmt_Logger(log_file=log_file)
+
+        # Patch the handler's close method to raise an exception
+        with patch.object(logger.logger.handlers[0], 'close', side_effect=ValueError("Close error")):
+            # Should handle exception gracefully (catches ValueError and IOError)
+            logger.stop()
+
+        # Verify logger still cleaned up properly
+        assert len(logger.logger.handlers) == 0
+
+    def test_logging_with_different_syslog_levels(self, log_file):
+        """Test syslog logging with different levels"""
+        logger = HW_Mgmt_Logger(
+            log_file=log_file,
+            log_level=HW_Mgmt_Logger.DEBUG,
+            syslog_level=HW_Mgmt_Logger.INFO
+        )
+
+        # Test different levels that go to syslog
+        logger.error("Error message")  # ERROR
+        logger.warning("Warning message")  # WARNING
+        logger.info("Info message")  # INFO
+        logger.notice("Notice message")  # NOTICE
+        logger.debug("Debug message")  # DEBUG (won't go to syslog)
+
+        logger.stop()
+
+    def test_logging_exception_handling(self, log_file):
+        """Test exception handling during log_handler call"""
+        from unittest.mock import patch
+        import warnings
+
+        # Suppress ResourceWarning for this test
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ResourceWarning)
+
+            logger = HW_Mgmt_Logger(
+                log_file=log_file,
+                log_level=HW_Mgmt_Logger.INFO,
+                syslog_level=None  # Disable syslog to simplify test
+            )
+
+            try:
+                # Mock logger.log to raise exception
+                with patch.object(logger.logger, 'log', side_effect=IOError("Logging error")):
+                    # Should handle error gracefully and not crash
+                    # The code prints error but doesn't re-raise
+                    try:
+                        logger.log_handler(HW_Mgmt_Logger.INFO, "Test message")
+                    except Exception as e:
+                        pytest.fail(f"Exception should have been caught but was raised: {e}")
+            finally:
+                # Ensure proper cleanup
+                logger.stop()
+
+    def test_push_syslog_with_lock(self, log_file):
+        """Test _push_syslog uses lock correctly"""
+        logger = HW_Mgmt_Logger(
+            log_file=log_file,
+            syslog_level=HW_Mgmt_Logger.INFO
+        )
+
+        # Call _push_syslog directly
+        msg, emit = logger._push_syslog("Test", id="test_id", repeat=3)
+        assert isinstance(msg, str)
+        assert isinstance(emit, bool)
+
+        logger.stop()
+
+    def test_log_with_repeat_zero(self, log_file):
+        """Test logging with repeat=0 (no emission)"""
+        logger = HW_Mgmt_Logger(log_file=log_file)
+
+        # Log with repeat=0 should not emit
+        logger.log_handler(HW_Mgmt_Logger.INFO, "Message", id="test", log_repeat=0)
+
+        logger.stop()
+
+
+class TestRepeatedTimerCoverage:
+    """Test RepeatedTimer to improve coverage"""
+
+    def test_auto_start_true(self):
+        """Test RepeatedTimer with auto_start=True"""
+        from hw_management_lib import RepeatedTimer
+        counter = {'count': 0}
+
+        def increment():
+            counter['count'] += 1
+
+        timer = RepeatedTimer(0.01, increment, auto_start=True)
+        time.sleep(0.05)
+        timer.stop()
+
+        assert counter['count'] > 0
+
+    def test_destructor_cleanup(self):
+        """Test __del__ method"""
+        from hw_management_lib import RepeatedTimer
+
+        def dummy():
+            pass
+
+        timer = RepeatedTimer(0.1, dummy)
+        timer.start()
+        # Delete should call stop
+        del timer
+
+    def test_exception_in_periodic_task(self):
+        """Test exception handling in periodic task"""
+        from hw_management_lib import RepeatedTimer
+
+        def raise_error():
+            raise ValueError("Task error")
+
+        timer = RepeatedTimer(0.01, raise_error)
+        timer.start()
+        time.sleep(0.05)
+        timer.stop()
+        # Should not crash
+
+    def test_start_with_immediately_run_true(self):
+        """Test start with immediately_run=True"""
+        from hw_management_lib import RepeatedTimer
+        counter = {'count': 0}
+
+        def increment():
+            counter['count'] += 1
+
+        timer = RepeatedTimer(1.0, increment)  # Long interval
+        timer.start(immediately_run=True)
+
+        # Should have run once immediately
+        assert counter['count'] >= 1
+        timer.stop()
+
+    def test_start_when_already_running(self):
+        """Test start when thread is already alive"""
+        from hw_management_lib import RepeatedTimer
+
+        def dummy():
+            pass
+
+        timer = RepeatedTimer(0.1, dummy)
+        timer.start()
+
+        # Second start should return early
+        timer.start()
+
+        assert timer.is_running()
+        timer.stop()
+
+    def test_stop_from_same_thread(self):
+        """Test stopping from within the timer thread (avoid deadlock)"""
+        from hw_management_lib import RepeatedTimer
+
+        timer_ref = {'timer': None}
+
+        def stop_self():
+            if timer_ref['timer']:
+                timer_ref['timer'].stop()
+
+        timer = RepeatedTimer(0.01, stop_self)
+        timer_ref['timer'] = timer
+        timer.start()
+        time.sleep(0.05)
+        # Should not deadlock
+
+    def test_thread_still_alive_after_timeout(self):
+        """Test warning when thread doesn't stop in time"""
+        from hw_management_lib import RepeatedTimer
+        import io
+        import sys
+
+        def long_running():
+            time.sleep(10)  # Longer than timeout
+
+        timer = RepeatedTimer(0.1, long_running)
+        timer.start()
+        time.sleep(0.05)  # Let it start
+
+        # Capture stdout
+        old_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+
+        result = timer.stop()
+
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        # May or may not timeout depending on timing
+        # Just ensure it doesn't crash
+
+    def test_stop_when_not_running(self):
+        """Test stop when timer was never started"""
+        from hw_management_lib import RepeatedTimer
+
+        def dummy():
+            pass
+
+        timer = RepeatedTimer(0.1, dummy)
+        result = timer.stop()  # Should return True
+        assert result
+
+
 # =============================================================================
 # TEST MAIN
 # =============================================================================

@@ -117,7 +117,7 @@
 		},
 	"labels_scale_HI162_rev1_array" : {
 	},
-	"labels_HI166_alternativies" :{
+	"labels_HI166_alternatives" :{
 		"pwr_conv1": {
 			"pmbus" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
@@ -277,7 +277,7 @@
 		},
 	"labels_scale_HI166_rev1_array" : {
 	},
-	"labels_HI167_alternativies" :{
+	"labels_HI167_alternatives" :{
 		"pwr_conv1": {
 			"pmbus" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
@@ -437,7 +437,7 @@
 	},
 	"labels_scale_HI167_rev1_array" : {
 	},
-	"labels_HI169_alternativies" :{
+	"labels_HI169_alternatives" :{
 		"pwr_conv1": {
 			"pmbus" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
@@ -597,7 +597,7 @@
 	},
 	"labels_scale_HI169_rev1_array" : {
 	},
-	"labels_HI170_alternativies" :{
+	"labels_HI170_alternatives" :{
 		"pwr_conv1": {
 			"pmbus" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
@@ -757,7 +757,7 @@
 	},
 	"labels_scale_HI170_rev1_array" : {
 	},
-	"labels_HI176_alternativies" : {
+	"labels_HI176_alternatives" : {
 		"pwr_conv1": {
 			"mp29502" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},
@@ -857,7 +857,7 @@
 	},
 	"labels_scale_HI176_rev1_array" : {
 	},
-	"labels_HI177_alternativies" : {
+	"labels_HI177_alternatives" : {
 		"pwr_conv1": {
 			"mp29502" : {
 				"in1": {"name": "PDB-1+Conv+Vol+In+1"},

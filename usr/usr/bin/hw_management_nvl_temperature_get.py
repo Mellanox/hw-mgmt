@@ -75,7 +75,7 @@ IOCTL_NVSWITCH_GET_TEMPERATURE = 3229901851
 
 def print_log(log, verbose=0):
     if verbose <= args.verbose:
-        print log
+        print(log)
 
 
 def chunks(l, n):
@@ -149,7 +149,7 @@ if temperature_results["status"][args.sensor] != 0:
         args.nv_id, args.sensor, temperature_results["status"][args.sensor]), 1)
     nvlink_fd.close()
 
-print temperature_results["temp"][args.sensor]
+print(temperature_results["temp"][args.sensor])
 
 nvlink_fd.close()
 sys.exit(0)
