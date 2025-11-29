@@ -36,10 +36,10 @@ def load_json(json_file):
 def process_BOM_dictionary(dictionary, bom_filename, sku):
     if not sku:
         return dictionary
-    alternativies_label_name = f"labels_{sku}_alternativies"
-    if alternativies_label_name not in dictionary:
+    alternatives_label_name = f"labels_{sku}_alternatives"
+    if alternatives_label_name not in dictionary:
         return dictionary
-    alternativies_dict = dictionary[alternativies_label_name]
+    alternatives_dict = dictionary[alternatives_label_name]
 
     labels_dict = dictionary[f"labels_{sku}_rev1_array"]
     labels_scale_dict = dictionary[f"labels_scale_{sku}_rev1_array"]
@@ -60,11 +60,11 @@ def process_BOM_dictionary(dictionary, bom_filename, sku):
             # example : mp2891
             component_type = component_lines[0]
 
-            if component_name in alternativies_dict.keys():
-                if component_type not in alternativies_dict[component_name].keys():
+            if component_name in alternatives_dict.keys():
+                if component_type not in alternatives_dict[component_name].keys():
                     # Missing definition for component type
                     continue
-                comp_attr_dict = alternativies_dict[component_name][component_type]
+                comp_attr_dict = alternatives_dict[component_name][component_type]
                 for comp_attr, val in comp_attr_dict.items():
                     label_name = f"{component_name}_{comp_attr}"
                     labels_dict[label_name] = val["name"]

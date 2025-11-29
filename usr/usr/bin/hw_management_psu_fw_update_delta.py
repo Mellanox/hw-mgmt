@@ -273,7 +273,7 @@ FW_HEADER = {
 }
 
 
-def parce_header_delta(data_list):
+def parse_header_delta(data_list):
     """
     @summary: Parse Delta FW file header.
     """
@@ -285,7 +285,7 @@ def parce_header_delta(data_list):
     print(FW_HEADER)
 
 
-def parce_header_acbel(data_list):
+def parse_header_acbel(data_list):
     """
     @summary: Parse Acbel FW file header.
     """
@@ -390,9 +390,9 @@ def update_delta(i2c_bus, i2c_addr, fw_filename):
             mfr_model = psu_upd_cmn.pmbus_read_mfr_model(i2c_bus, i2c_addr)
             # Read FW image header for blocksize and delay time.
             if mfr_model_is_acbel(mfr_model):
-                parce_header_acbel(data_list)
+                parse_header_acbel(data_list)
             else:
-                parce_header_delta(data_list)
+                parse_header_delta(data_list)
 
             # Write FW
             delta_fw_file_burn(i2c_bus, i2c_addr, fw_filename)

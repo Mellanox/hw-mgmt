@@ -10,8 +10,11 @@ __pycache__/
 # Test artifacts
 tests/logs/
 tests/__pycache__/
+tests/htmlcov/
+tests/shell/coverage/
 .pytest_cache/
 .benchmarks/
+.coverage
 
 # Build artifacts
 *.egg-info/

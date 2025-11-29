@@ -145,7 +145,7 @@ def parse_status(line, patch_name):
     status_dict.update(PATCH_RULES[status])
     # parse status line
     if len(line_arr) > 1:
-        # parce additional rule per OS
+        # parse additional rule per OS
         for rule in line_arr[1:]:
             rule = rule.strip()
             try:

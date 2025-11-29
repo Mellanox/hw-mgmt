@@ -108,9 +108,9 @@ def check_power_supply_status(i2c_bus, i2c_addr):
         # print("check_power_supply_status: {}".format(ret))
         ps_status = [int(i, 16) for i in ret.split()]
         bootoader_mode = ps_status[1] & 1 << 2
-        bootload_complette = ps_status[1] & 1 << 1
+        bootload_complete = ps_status[1] & 1 << 1
         power_down = ps_status[1] & 1 << 0
-        print("bootoader_mode:{0}, bootload_complette:{1}, power_down:{2}".format(bootoader_mode, bootload_complette, power_down))
+        print("bootoader_mode:{0}, bootload_complete:{1}, power_down:{2}".format(bootoader_mode, bootload_complete, power_down))
 
 
 upgrade_status_dict = {
