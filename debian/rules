@@ -81,7 +81,6 @@ override_dh_systemd_start:
 	dh_systemd_start --name=hw-management-sysfs-monitor
 	dh_systemd_start --name=hw-management-fast-sysfs-monitor
 	dh_systemd_start --name=hw-management-blacklist-generator
-	dh_systemd_start --name=hw-management-fast-sysfs-monitor
 
 override_dh_strip_nondeterminism:
 

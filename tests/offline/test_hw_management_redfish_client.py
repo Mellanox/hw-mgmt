@@ -407,7 +407,6 @@ class TestBMCAccessorInitialization:
     def test_simple_constants(self):
         """Simple: Verify BMCAccessor constants"""
         assert BMCAccessor.CURL_PATH == '/usr/bin/curl'
-        assert BMCAccessor.BMC_INTERNAL_IP_ADDR == '10.0.1.1'
         assert BMCAccessor.BMC_ADMIN_ACCOUNT == 'admin'
         assert BMCAccessor.BMC_DEFAULT_PASSWORD == '0penBmc'
 
@@ -424,16 +423,17 @@ class TestBMCAccessorGetIPAddr:
     """Tests for get_ip_addr() method"""
 
     def test_simple_default_ip(self, mock_subprocess):
-        """Simple: Return default IP when redis fails"""
+        """Simple: Return default IP when usb0 detection fails"""
         mock_subprocess.run.return_value = MagicMock(returncode=1, stdout='', stderr='')
 
         with patch.object(BMCAccessor, 'get_login_password', return_value='****'):
             accessor = BMCAccessor()
             ip = accessor.get_ip_addr()
-            assert ip == BMCAccessor.BMC_INTERNAL_IP_ADDR
+            assert ip == "0.0.0.0"
 
-    def test_medium_redis_ip(self, mock_subprocess):
-        """Medium: Return IP from redis"""
+    def test_medium_usb0_ip(self, mock_subprocess):
+        """Medium: Return BMC IP derived from usb0 interface"""
+        # Simulate usb0 IP: 192.168.1.100 -> BMC IP: 192.168.1.1
         mock_subprocess.run.return_value = MagicMock(
             returncode=0,
             stdout='192.168.1.100\n',
@@ -443,7 +443,7 @@ class TestBMCAccessorGetIPAddr:
         with patch.object(BMCAccessor, 'get_login_password', return_value='****'):
             accessor = BMCAccessor()
             ip = accessor.get_ip_addr()
-            assert ip == '192.168.1.100'
+            assert ip == '192.168.1.1'  # Last byte replaced with '1'
 
 
 class TestBMCAccessorPasswordGeneration:
