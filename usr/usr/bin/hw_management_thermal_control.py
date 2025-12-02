@@ -3173,7 +3173,13 @@ class ThermalManagement(hw_management_file_op):
     # ---------------------------------------------------------------------
     def _attention_fan_insertion_recovery(self):
         pwm = self.read_pwm(100)
+        if pwm <= self.fan_steady_state_pwm:
+            self.log.info("Recovery is not needed. Fan speed {}% is already <= steady state pwm: {}%".format(pwm, self.fan_steady_state_pwm), repeat=1)
+            return
+
         self.log.notice("Attention fan not started after insertion: Setting pwm to {}% from {}%".format(self.fan_steady_state_pwm, pwm), repeat=1)
+        if self.pwm_worker_timer and self.pwm_worker_timer.is_running():
+            self.pwm_worker_timer.stop()
         self._update_chassis_fan_speed(self.fan_steady_state_pwm, force=True)
         self.log.info("Waiting {}s for newly inserted fan to stabilize".format(self.fan_steady_state_delay))
         timeout = current_milli_time() + 1000 * self.fan_steady_state_delay
@@ -3181,6 +3187,8 @@ class ThermalManagement(hw_management_file_op):
             self.exit.wait(1)
         self.log.info("Resuming normal operation: Setting pwm back to {}%".format(pwm))
         self._update_chassis_fan_speed(pwm, force=True)
+        if self.pwm_worker_timer:
+            self.pwm_worker_timer.start()
 
     # ----------------------------------------------------------------------
     def _update_psu_fan_speed(self, pwm):
@@ -3249,8 +3257,8 @@ class ThermalManagement(hw_management_file_op):
             self.log.notice("PWM target changed from {} to PWM {} {}".format(self.pwm_target, pwm, reason))
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
-            if self.pwm_worker_timer:
-                self.pwm_worker_timer.start(True)
+            if self.pwm_worker_timer and not self.pwm_worker_timer.is_running():
+                self.pwm_worker_timer.start()
             else:
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
