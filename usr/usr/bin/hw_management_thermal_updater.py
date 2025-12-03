@@ -52,7 +52,7 @@ try:
     import re
     import argparse
     import traceback
-    from hw_management_lib import HW_Mgmt_Logger as Logger
+    from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write
     from collections import Counter
     from hw_management_platform_config import (
         PLATFORM_CONFIG,
@@ -225,8 +225,8 @@ def asic_temp_reset(asic_name, f_asic_src_path):
     }
     for suffix, value in file_paths.items():
         f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("{}\n".format(value))
+        atomic_file_write(f_name, str(value + "\n")
+
 
 # ----------------------------------------------------------------------
 
@@ -245,13 +245,13 @@ def asic_temp_populate(arg_list, arg):
     @param arg: Unused parameter (for interface compatibility)
     """
     for asic_name, asic_attr in arg_list.items():
-        cntrs_obj = asic_attr.get("counters")
+        cntrs_obj=asic_attr.get("counters")
         if not cntrs_obj:
-            cntrs_obj = Counter()
-            asic_attr["counters"] = cntrs_obj
+            cntrs_obj=Counter()
+            asic_attr["counters"]=cntrs_obj
 
         LOGGER.debug("{} temp_populate".format(asic_name))
-        f_asic_src_path = asic_attr["fin"]
+        f_asic_src_path=asic_attr["fin"]
 
         # Check if ASIC not ready (SDK is not started)
         if not is_asic_ready(asic_name, asic_attr):
@@ -263,12 +263,12 @@ def asic_temp_populate(arg_list, arg):
                 asic_temp_reset(asic_name, f_asic_src_path)
             continue
         else:
-            cntrs_obj["ASIC_NOT_READY"] = 0
+            cntrs_obj["ASIC_NOT_READY"]=0
             LOGGER.info(None, id="{} not_ready".format(asic_name))
             LOGGER.info(None, id="{} ASIC_NOT_READY".format(asic_name))
 
         # If link to asic temperature already exists - nothing to do
-        f_dst_name = "/var/run/hw-management/thermal/{}".format(asic_name)
+        f_dst_name="/var/run/hw-management/thermal/{}".format(asic_name)
         if os.path.islink(f_dst_name):
             LOGGER.notice("{} link exists".format(asic_name), id="{} asic_link_exists".format(asic_name))
             continue
@@ -277,16 +277,16 @@ def asic_temp_populate(arg_list, arg):
 
         # Read temperature values
         try:
-            f_src_input = os.path.join(f_asic_src_path, "temperature/input")
+            f_src_input=os.path.join(f_asic_src_path, "temperature/input")
             with open(f_src_input, 'r') as f:
-                val = f.read()
-            temperature = sdk_temp2degree(int(val))
-            temperature_min = CONST.ASIC_TEMP_MIN_DEF
-            temperature_max = CONST.ASIC_TEMP_MAX_DEF
-            temperature_fault = CONST.ASIC_TEMP_FAULT_DEF
-            temperature_crit = CONST.ASIC_TEMP_CRIT_DEF
+                val=f.read()
+            temperature=sdk_temp2degree(int(val))
+            temperature_min=CONST.ASIC_TEMP_MIN_DEF
+            temperature_max=CONST.ASIC_TEMP_MAX_DEF
+            temperature_fault=CONST.ASIC_TEMP_FAULT_DEF
+            temperature_crit=CONST.ASIC_TEMP_CRIT_DEF
         except (OSError, ValueError) as e:
-            error_message = str(e)
+            error_message=str(e)
             LOGGER.notice("{} {}".format(f_src_input, error_message), id="{} read fail".format(asic_name))
             cntrs_obj["ASIC_READ_ERROR"] += 1
             if cntrs_obj["ASIC_READ_ERROR"] >= CONST.ASIC_READ_ERR_RETRY_COUNT:
@@ -295,11 +295,11 @@ def asic_temp_populate(arg_list, arg):
                 asic_temp_reset(asic_name, f_asic_src_path)
             continue
         else:
-            cntrs_obj["ASIC_READ_ERROR"] = 0
+            cntrs_obj["ASIC_READ_ERROR"]=0
             LOGGER.info(None, id="{} read fail".format(asic_name))
             LOGGER.info(None, id="{} ASIC_READ_ERROR".format(asic_name))
 
-        file_paths = {
+        file_paths={
             "": temperature,
             "_temp_norm": temperature_min,
             "_temp_crit": temperature_max,
@@ -309,10 +309,12 @@ def asic_temp_populate(arg_list, arg):
 
         # Write the temperature data to files
         for suffix, value in file_paths.items():
-            f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-            with open(f_name, 'w', encoding="utf-8") as f:
-                f.write("{}\n".format(value))
-                LOGGER.debug(f"Write {asic_name}{suffix}: {value}")
+            f_name="/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
+            try:
+                atomic_file_write(f_name, str(value) + "\n")
+            except Exception as e:
+                LOGGER.error(f"Error writing {f_name}: {e}")
+                continue
 
 # ----------------------------------------------------------------------
 
@@ -331,20 +333,20 @@ def module_temp_populate(arg_list, _dummy):
                      - "fout_idx_offset": Offset for output file indexing
     @param _dummy: Unused parameter (for interface compatibility)
     """
-    fin = arg_list["fin"]
-    module_count = arg_list["module_count"]
-    offset = arg_list["fout_idx_offset"]
+    fin=arg_list["fin"]
+    module_count=arg_list["module_count"]
+    offset=arg_list["fout_idx_offset"]
     LOGGER.debug("module_temp_populate")
     for idx in range(module_count):
-        module_name = "module{}".format(idx + offset)
-        f_dst_name = "/var/run/hw-management/thermal/{}_temp_input".format(module_name)
+        module_name="module{}".format(idx + offset)
+        f_dst_name="/var/run/hw-management/thermal/{}_temp_input".format(module_name)
         if os.path.islink(f_dst_name):
             LOGGER.notice("skip link: {}".format(module_name), id="{} link_exists".format(module_name))
             continue
         else:
             LOGGER.notice(None, id="{} link_exists".format(module_name))
 
-        f_src_path = fin.format(idx)
+        f_src_path=fin.format(idx)
         # If control mode is SW - skip temperature reading (independent mode)
         if is_module_host_management_mode(f_src_path):
             LOGGER.notice("{} independent mode".format(module_name), id="{} independent_mode".format(module_name))
@@ -353,67 +355,67 @@ def module_temp_populate(arg_list, _dummy):
             LOGGER.notice(None, id="{} independent_mode".format(module_name))
 
         # Check if module is present
-        module_present = 0
-        f_src_present = os.path.join(f_src_path, "present")
+        module_present=0
+        f_src_present=os.path.join(f_src_path, "present")
         try:
             with open(f_src_present, 'r') as f:
-                module_present = int(f.read().strip())
+                module_present=int(f.read().strip())
         except (OSError, ValueError) as e:
-            error_message = str(e)
+            error_message=str(e)
             LOGGER.warning("{} {}".format(f_src_present, error_message), id="{} present_read_fail".format(module_name))
         else:
             LOGGER.notice(None, id="{} present_read_fail".format(module_name))
 
         # Default temperature values
-        temperature = "0"
-        temperature_emergency = "0"
-        temperature_fault = "0"
-        temperature_trip_crit = "0"
-        temperature_crit = "0"
-        cooling_level_input = None
-        cooling_level_warning = None
+        temperature="0"
+        temperature_emergency="0"
+        temperature_fault="0"
+        temperature_trip_crit="0"
+        temperature_crit="0"
+        cooling_level_input=None
+        cooling_level_warning=None
 
         if module_present:
-            f_src_input = os.path.join(f_src_path, "temperature/input")
-            f_src_crit = os.path.join(f_src_path, "temperature/threshold_hi")
-            f_src_hcrit = os.path.join(f_src_path, "temperature/threshold_critical_hi")
-            f_src_cooling_level_input = os.path.join(f_src_path, "temperature/tec/cooling_level")
-            f_src_cooling_level_warning = os.path.join(f_src_path, "temperature/tec/warning_cooling_level")
+            f_src_input=os.path.join(f_src_path, "temperature/input")
+            f_src_crit=os.path.join(f_src_path, "temperature/threshold_hi")
+            f_src_hcrit=os.path.join(f_src_path, "temperature/threshold_critical_hi")
+            f_src_cooling_level_input=os.path.join(f_src_path, "temperature/tec/cooling_level")
+            f_src_cooling_level_warning=os.path.join(f_src_path, "temperature/tec/warning_cooling_level")
 
             if os.path.isfile(f_src_cooling_level_input):
                 try:
                     with open(f_src_cooling_level_input, 'r') as f:
-                        cooling_level_input = f.read()
+                        cooling_level_input=f.read()
                 except OSError:
                     pass
 
             if os.path.isfile(f_src_cooling_level_warning):
                 try:
                     with open(f_src_cooling_level_warning, 'r') as f:
-                        cooling_level_warning = f.read()
+                        cooling_level_warning=f.read()
                 except OSError:
                     pass
 
             try:
                 with open(f_src_input, 'r') as f:
-                    val = f.read()
-                temperature = sdk_temp2degree(int(val))
+                    val=f.read()
+                temperature=sdk_temp2degree(int(val))
 
                 if os.path.isfile(f_src_crit):
                     with open(f_src_crit, 'r') as f:
-                        val = f.read()
-                    temperature_crit = sdk_temp2degree(int(val))
+                        val=f.read()
+                    temperature_crit=sdk_temp2degree(int(val))
                 else:
-                    temperature_crit = CONST.MODULE_TEMP_MAX_DEF
+                    temperature_crit=CONST.MODULE_TEMP_MAX_DEF
 
                 if os.path.isfile(f_src_hcrit):
                     with open(f_src_hcrit, 'r') as f:
-                        val = f.read()
-                        temperature_emergency = sdk_temp2degree(int(val))
+                        val=f.read()
+                        temperature_emergency=sdk_temp2degree(int(val))
                 else:
-                    temperature_emergency = temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
+                    temperature_emergency=temperature_crit + CONST.MODULE_TEMP_EMERGENCY_OFFSET
 
-                temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
+                temperature_trip_crit=CONST.MODULE_TEMP_CRIT_DEF
 
             except (OSError, ValueError):
                 pass
@@ -421,7 +423,7 @@ def module_temp_populate(arg_list, _dummy):
             LOGGER.notice(None, id="{} read_fail".format(module_name), repeat=0)
 
         # Write the temperature data to files
-        file_paths = {
+        file_paths={
             "_temp_input": temperature,  # SDK sysfs temperature/input
             "_temp_crit": temperature_crit,  # SDK sysfs temperature/threshold_hi, CMIS bytes 132-133 TempMonHighWarningTreshold
             "_temp_emergency": temperature_emergency,  # SDK sysfs temperature/threshold_critical_hi, CMIS bytes 128-129 TempMonHighAlarmTreshold
@@ -433,11 +435,13 @@ def module_temp_populate(arg_list, _dummy):
         }
 
         for suffix, value in file_paths.items():
-            f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
+            f_name="/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
             if value is not None:
-                with open(f_name, 'w', encoding="utf-8") as f:
-                    f.write("{}\n".format(value))
-                    LOGGER.debug(f"Write {module_name}{suffix}: {value}")
+                try:
+                    atomic_file_write(f_name, str(value) + "\n")
+                except Exception as e:
+                    LOGGER.error(f"Error writing {f_name}: {e}")
+                    continue
 
     return
 
@@ -452,12 +456,12 @@ def update_thermal_attr(attr_prop):
     at the configured polling interval. It invokes the appropriate thermal function
     (e.g., asic_temp_populate, module_temp_populate) to read and update temperature data.
     """
-    ts = time.time()
+    ts=time.time()
     if ts >= attr_prop["ts"]:
         # update timestamp
-        attr_prop["ts"] = ts + attr_prop["poll"]
-        fn_name = attr_prop["fn"]
-        argv = attr_prop["arg"]
+        attr_prop["ts"]=ts + attr_prop["poll"]
+        fn_name=attr_prop["fn"]
+        argv=attr_prop["arg"]
 
         try:
             globals()[fn_name](argv, None)
@@ -477,7 +481,7 @@ def main():
     updates hw-management thermal sysfs.
     """
 
-    CMD_PARSER = argparse.ArgumentParser(description="HW Management Thermal Updater")
+    CMD_PARSER=argparse.ArgumentParser(description="HW Management Thermal Updater")
     CMD_PARSER.add_argument("--version", action="version", version="%(prog)s ver:{}".format(VERSION))
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest="log_file",
@@ -497,22 +501,22 @@ def main():
                             type=int, default=20)
     CMD_PARSER.add_argument("-s", "--system_type", nargs='?', help="System type (optional) for custom system emulation.")
 
-    args = vars(CMD_PARSER.parse_args())
+    args=vars(CMD_PARSER.parse_args())
     global LOGGER
-    LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+    LOGGER=Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
 
     if args["system_type"] is None:
         try:
             with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
-                product_sku = f.read()
+                product_sku=f.read()
         except OSError as e:
-            product_sku = ""
+            product_sku=""
     else:
-        product_sku = args["system_type"]
-    product_sku = product_sku.strip()
+        product_sku=args["system_type"]
+    product_sku=product_sku.strip()
 
     LOGGER.notice("hw-management-thermal-updater: load config ({})".format(product_sku))
-    thermal_attr = thermal_config["def"]
+    thermal_attr=thermal_config["def"]
     for key, val in thermal_config.items():
         if re.match(key, product_sku):
             thermal_attr.extend(val)
@@ -524,11 +528,11 @@ def main():
             for attr in thermal_attr:
                 update_thermal_attr(attr)
             try:
-                log_level_filename = os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
+                log_level_filename=os.path.join(CONST.HW_MGMT_FOLDER_DEF, CONST.LOG_LEVEL_FILENAME)
                 if os.path.isfile(log_level_filename):
                     with open(log_level_filename, 'r', encoding="utf-8") as f:
-                        log_level = f.read().rstrip('\n')
-                        log_level = int(log_level)
+                        log_level=f.read().rstrip('\n')
+                        log_level=int(log_level)
                         LOGGER.set_loglevel(log_level)
             except (OSError, ValueError):
                 # Expected errors when reading/parsing log level file
