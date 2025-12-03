@@ -38,9 +38,30 @@ from logging.handlers import RotatingFileHandler
 import syslog
 from threading import Lock
 import time
+import tempfile
 
 
 # ----------------------------------------------------------------------
+
+def atomic_file_write(file_name, value):
+    """
+    @summary:
+        Write value to file atomically
+    @param file_name: name of file
+    @param value: value to write
+    """
+    fd, f_path_tmp = tempfile.mkstemp(dir=os.path.dirname(file_name), prefix='.tmp_')
+    try:
+        with os.fdopen(fd, 'w', encoding="utf-8") as f:
+            f.write("{}".format(value))
+        os.replace(f_path_tmp, file_name)  # Atomic on POSIX
+    except Exception as e:
+        os.unlink(f_path_tmp)  # Cleanup on failure
+        raise Exception(f"Error writing {file_name}: {e}")
+
+# ----------------------------------------------------------------------
+
+
 def current_milli_time():
     """
     @summary:

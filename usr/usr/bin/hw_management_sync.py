@@ -44,6 +44,7 @@ try:
     import argparse
     import traceback
     from hw_management_lib import HW_Mgmt_Logger as Logger
+    from hw_management_lib import atomic_file_write
     from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
@@ -680,9 +681,8 @@ def asic_temp_populate(arg_list, arg):
         # Write the temperature data to files
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-            with open(f_name, 'w', encoding="utf-8") as f:
-                f.write("{}\n".format(value))
-                LOGGER.debug(f"Write {asic_name}{suffix}: {value}")
+            atomic_file_write(f_name, str(value) + "\n")
+            LOGGER.debug(f"Write {asic_name}{suffix}: {value}")
 
     asic_chipup_completed_fname = os.path.join("/var/run/hw-management/config", "asic_chipup_completed")
     asic_num_fname = os.path.join("/var/run/hw-management/config", "asic_num")
@@ -704,11 +704,8 @@ def asic_temp_populate(arg_list, arg):
     else:
         asics_init_done = 0
 
-    with open(asics_init_done_fname, 'w+', encoding="utf-8") as f:
-        f.write(str(asics_init_done) + "\n")
-
-    with open(asic_chipup_completed_fname, 'w', encoding="utf-8") as f:
-        f.write(str(asic_chipup_completed) + "\n")
+    atomic_file_write(asics_init_done_fname, str(asics_init_done) + "\n")
+    atomic_file_write(asic_chipup_completed_fname, str(asic_chipup_completed) + "\n")
 
 # ----------------------------------------------------------------------
 
@@ -801,15 +798,13 @@ def module_temp_populate(arg_list, _dummy):
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
             if value is not None:
-                with open(f_name, 'w', encoding="utf-8") as f:
-                    f.write("{}\n".format(value))
-                    LOGGER.debug(f"Write {module_name}{suffix}: {value}")
+                atomic_file_write(f_name, str(value) + "\n")
+                LOGGER.debug(f"Write {module_name}{suffix}: {value}")
         module_updated = True
 
     if module_updated:
         LOGGER.debug("{} module_counter ({}) updated".format(module_name, module_count))
-        with open("/var/run/hw-management/config/module_counter", 'w+', encoding="utf-8") as f:
-            f.write("{}\n".format(module_count))
+        atomic_file_write("/var/run/hw-management/config/module_counter", str(module_count) + "\n")
     return
 
 # ----------------------------------------------------------------------
