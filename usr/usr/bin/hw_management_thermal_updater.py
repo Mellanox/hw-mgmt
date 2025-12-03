@@ -52,7 +52,7 @@ try:
     import re
     import argparse
     import traceback
-    from hw_management_lib import HW_Mgmt_Logger as Logger
+    from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write
     from collections import Counter
     from hw_management_platform_config import (
         PLATFORM_CONFIG,
@@ -225,8 +225,8 @@ def asic_temp_reset(asic_name, f_asic_src_path):
     }
     for suffix, value in file_paths.items():
         f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-        with open(f_name, 'w', encoding="utf-8") as f:
-            f.write("{}\n".format(value))
+        atomic_file_write(f_name, str(value) + "\n")
+
 
 # ----------------------------------------------------------------------
 
@@ -310,9 +310,11 @@ def asic_temp_populate(arg_list, arg):
         # Write the temperature data to files
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-            with open(f_name, 'w', encoding="utf-8") as f:
-                f.write("{}\n".format(value))
-                LOGGER.debug(f"Write {asic_name}{suffix}: {value}")
+            try:
+                atomic_file_write(f_name, str(value) + "\n")
+            except Exception as e:
+                LOGGER.error(f"Error writing {f_name}: {e}")
+                continue
 
 # ----------------------------------------------------------------------
 
@@ -435,9 +437,11 @@ def module_temp_populate(arg_list, _dummy):
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
             if value is not None:
-                with open(f_name, 'w', encoding="utf-8") as f:
-                    f.write("{}\n".format(value))
-                    LOGGER.debug(f"Write {module_name}{suffix}: {value}")
+                try:
+                    atomic_file_write(f_name, str(value) + "\n")
+                except Exception as e:
+                    LOGGER.error(f"Error writing {f_name}: {e}")
+                    continue
 
     return
 
