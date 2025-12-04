@@ -87,7 +87,8 @@ declare -A regulator_arr=( \
 	["g"]="mp2891" \
 	["h"]="xdpe1a2g7" \
 	["i"]="mp2855" \
-	["j"]="mp29816")
+	["j"]="mp29816" \
+	["k"]="mp2845")
 
 declare -A a2d_arr=( \
 	["0"]="dummy" \
@@ -539,6 +540,61 @@ declare -A n61xxld_swb_alternatives=( \
 	["mp29502_0"]="mp29502 0x2e 7 pwr_conv1" \
 	["mp29502_1"]="mp29502 0x2c 7 pwr_conv2")
 
+declare -A sn66xxld_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x60 16 voltmon1" \
+	["mp29816_1"]="mp29816 0x61 16 voltmon2" \
+	["mp29816_2"]="mp29816 0x62 16 voltmon3" \
+	["mp29816_3"]="mp29816 0x63 16 voltmon4" \
+	["mp29816_4"]="mp29816 0x64 16 voltmon5" \
+	["mp29816_5"]="mp29816 0x65 16 voltmon6" \
+	["mp29816_6"]="mp29816 0x66 16 voltmon7" \
+	["mp29816_7"]="mp29816 0x67 16 voltmon8" \
+	["mp29816_8"]="mp29816 0x68 16 voltmon9" \
+	["mp29816_9"]="mp29816 0x69 16 voltmon10" \
+	["mp29816_10"]="mp29816 0x61 17 voltmon11" \
+	["mp29816_11"]="mp29816 0x62 17 voltmon12" \
+	["mp29816_12"]="mp29816 0x63 17 voltmon13" \
+	["mp29816_13"]="mp29816 0x64 17 voltmon14" \
+	["mp29816_14"]="mp29816 0x65 17 voltmon15" \
+	["mp29816_15"]="mp29816 0x66 17 voltmon16" \
+	["mp29816_16"]="mp29816 0x67 17 voltmon17" \
+	["mp29816_17"]="mp29816 0x69 17 voltmon18" \
+	["mp29816_18"]="mp29816 0x69 17 voltmon19" \
+	["mp29816_19"]="mp29816 0x6a 17 voltmon20" \
+	["xdpe1a2g7_0"]="xdpe1a2g7 0x60 16 voltmon1" \
+	["xdpe1a2g7_1"]="xdpe1a2g7 0x61 16 voltmon2" \
+	["xdpe1a2g7_2"]="xdpe1a2g7 0x62 16 voltmon3" \
+	["xdpe1a2g7_3"]="xdpe1a2g7 0x63 16 voltmon4" \
+	["xdpe1a2g7_4"]="xdpe1a2g7 0x64 16 voltmon5" \
+	["xdpe1a2g7_5"]="xdpe1a2g7 0x65 16 voltmon6" \
+	["xdpe1a2g7_6"]="xdpe1a2g7 0x66 16 voltmon7" \
+	["xdpe1a2g7_7"]="xdpe1a2g7 0x67 16 voltmon8" \
+	["xdpe1a2g7_8"]="xdpe1a2g7 0x68 16 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7 0x69 16 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7 0x61 17 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7 0x62 17 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7 0x63 17 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7 0x64 17 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7 0x65 17 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7 0x66 17 voltmon16" \
+	["xdpe1a2g7_16"]="xdpe1a2g7 0x67 17 voltmon17" \
+	["xdpe1a2g7_17"]="xdpe1a2g7 0x68 17 voltmon18" \
+	["xdpe1a2g7_18"]="xdpe1a2g7 0x69 17 voltmon19" \
+	["xdpe1a2g7_19"]="xdpe1a2g7 0x6a 17 voltmon20")
+
+declare -A sn66xxld_pwr_alternatives=( \
+	["raa228004_0"]="raa228004 0x60 7 pdb_pwr_conv1" \
+	["mp29502_0"]="mp29502 0x2e 7 pdb_pwr_conv1" \
+	["lm5066i_0"]="lm5066i 0x12 7 pdb_hotswap1" \
+	["mp5926_0"]="mp5926 0x12 7 pdb_hotswap1" \
+	["tmp451_1"]="tmp451 0x4c 7 pdb_mosfet_amb1")
+
+# Devices located on SN66XX_LD platform board
+declare -A sn66xxld_platform_alternatives=( \
+	["24c512_1"]="24c512 0x51 1 vpd_info" \
+	["mp2845_0"]="mp2845 0x69 6 comex_voltmon1" \
+	["mp2975_1"]="mp2975 0x6a 6 comex_voltmon2")
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -787,7 +843,7 @@ devtr_check_supported_system_init_alternatives()
 		$AMD_SNW_CPU)
 			sku=$(< $sku_file)
 			case "$sku" in
-			HI181|HI182)
+			HI181|HI182|HI185)
 				for key in "${!sn58xxld_comex_amd_snw_alternatives[@]}"; do
 						comex_alternatives["$key"]="${sn58xxld_comex_amd_snw_alternatives["$key"]}"
 				done
@@ -1137,6 +1193,40 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn58xxld_pwr_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${sn58xxld_pwr_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
+		VMOD0025)
+			case $sku in
+			HI183)
+				for key in "${!sn66xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn66xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
+				done
+				;;
+			HI185)
+				for key in "${!sn66xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn66xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!platform_type2_alternatives[@]}"; do
+					platform_alternatives["$key"]="${platform_type2_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
 				done
 				;;
 			*)
