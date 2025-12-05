@@ -1,0 +1,40 @@
+ {
+	"name": "msn4700d",
+	"dmin" : {
+		"C2P": {
+			"untrusted": {"-127:25": 30, "26:35": 40, "36:120": 50},
+			"fan_err": {
+				"tacho": {"-127:20": 30, "21:35": 40, "36:120": 50},
+				"present": {"-127:20": 30, "21:35": 40, "36:120": 50},
+				"direction": {"-127:20": 30, "21:35": 40, "36:120": 50}
+			},
+			"psu_err":  {
+				"present": {"-127:20": 30, "21:35": 40, "36:120": 50},
+				"direction": {"-127:20": 30, "21:35": 40, "36:120": 50}
+			},
+			"sensor_read_error" : {"-127:120": 80}
+		}
+	},
+	"psu_fan_pwm_decode" : {"0:10": 10, "11:21": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 60, "71:80": 60, "81:90": 60, "91:100": 60},
+	"fan_trend" : {
+		"C2P": {
+			"0" : {"rpm_min":5400, "rpm_max":23000, "slope": 220, "pwm_min" : 20, "pwm_max_reduction" : 3},
+			"1" : {"rpm_min":4800, "rpm_max":20500, "slope": 195, "pwm_min" : 20, "pwm_max_reduction" : 3}}
+	},
+	"dev_parameters" : {
+		"asic\\d*":           {"pwm_min": 20, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 20, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
+		"module\\d+":     {"pwm_min": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 50, "val_min": 30000, "val_max": 50000, "poll_time": 30},
+		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!85000", "val_max": "!125000",  "poll_time": 60},
+		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},
+		"ibc\\d+":         {"pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000", "poll_time": 60}
+	},
+	"dev_tune" : {
+        "module\\d+": {
+            "PINEWAVE:T-OH8CNT-NMT" : {"val_max_offset": -7000}
+        }
+    },
+	"sensor_list" : ["asic1", "cpu", "drwr1", "drwr2", "drwr3", "drwr4", "drwr5", "drwr6", "pdb_pwr1",
+	                 "sensor_amb", "voltmon1", "voltmon2", "voltmon3", "voltmon5", "voltmon7"]
+}

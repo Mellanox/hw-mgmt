@@ -108,21 +108,20 @@ declare -A msn27002_alternatives=(["pmbus_0"]="pmbus 0x27 5 voltmon1" \
 				  ["24c32_0"]="24c32 0x51 8 vpd_info" \
 				  ["24c512_0"]="24c512 0x51 8 vpd_info")
 
-#declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
-#					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
-#					 ["xdpe12284_1"]="xdpe12284 0x64 5 voltmon2" \
-#					 ["xdpe12284_2"]="xdpe12284 0x66 5 voltmon3" \
-#					 ["xdpe12284_3"]="xdpe12284 0x68 5 voltmon4" \
-#					 ["xdpe12284_4"]="xdpe12284 0x6a 5 voltmon5" \
-#					 ["xdpe12284_5"]="xdpe12284 0x6c 5 voltmon6" \
-#					 ["xdpe12284_6"]="xdpe12284 0x6e 5 voltmon7" \
-#					 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
-#					 ["mp2975_1"]="mp2975 0x64 5 voltmon2" \
-#					 ["mp2975_2"]="mp2975 0x66 5 voltmon3" \
-#					 ["mp2975_3"]="mp2975 0x6a 5 voltmon4" \
-#					 ["mp2975_4"]="mp2975 0x6e 5 voltmon5" \
-#					 ["tmp102_0"]="tmp102 0x4a 7 port_amb" \
-#					 ["24c32_0"]="24c32 0x51 8 vpd_info")
+declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
+					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
+					 ["xdpe12284_1"]="xdpe12284 0x64 5 voltmon2" \
+					 ["xdpe12284_2"]="xdpe12284 0x66 5 voltmon3" \
+					 ["xdpe12284_3"]="xdpe12284 0x68 5 voltmon4" \
+					 ["xdpe12284_4"]="xdpe12284 0x6a 5 voltmon5" \
+					 ["xdpe12284_5"]="xdpe12284 0x6c 5 voltmon6" \
+					 ["xdpe12284_6"]="xdpe12284 0x6e 5 voltmon7" \
+					 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
+					 ["mp2975_1"]="mp2975 0x64 5 voltmon2" \
+					 ["mp2975_2"]="mp2975 0x66 5 voltmon3" \
+					 ["mp2975_3"]="mp2975 0x6a 5 voltmon5" \
+					 ["mp2975_4"]="mp2975 0x6e 5 voltmon7" \
+					 ["24c32_0"]="24c32 0x51 8 vpd_info")
 
 declare -A mqm97xx_alternatives=(["mp2975_0"]="mp2975 0x62 5 voltmon1" \
 				 ["mp2888_1"]="mp2888 0x66 5 voltmon3" \
@@ -928,8 +927,19 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!mqm97xx_alternatives[@]}"; do
 					swb_alternatives["$key"]="${mqm97xx_alternatives["$key"]}"
 				done
-				for key in "${!pwr_type3_alternatives[@]}"; do
+				for key in "${!pwr_type4_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${pwr_type4_alternatives["$key"]}"
+				done
+				;;
+			HI184)	# MSN4700 DGX
+				for key in "${!msn4700_msn4600_alternatives[@]}"; do
+					swb_alternatives["$key"]="${msn4700_msn4600_alternatives["$key"]}"
+				done
+				for key in "${!q3401_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${q3401_pwr_alternatives["$key"]}"
+				done
+				for key in "${!port_type0_alternatives[@]}"; do
+					port_alternatives["$key"]="${port_type0_alternatives["$key"]}"
 				done
 				;;
 			*)
