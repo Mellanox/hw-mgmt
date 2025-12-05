@@ -1,7 +1,7 @@
-From 817b5cfab9f1eef11a244020caf1987bb37f682e Mon Sep 17 00:00:00 2001
+From f2bc9d6d5c041ce6f1e7df091f5c00838d8932d4 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Mon, 9 Dec 2024 13:38:05 +0200
-Subject: [PATCH 55/78] platform: mellanox: Downstream: Add support DGX flavor
+Subject: [PATCH 17/40] platform: mellanox: Downstream: Add support DGX flavor
  of next-generation 800GB/s ethernet switch.
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -16,14 +16,110 @@ Key changes:
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 28 ++++++++++++++++++++++++++++
- 1 file changed, 28 insertions(+)
+ drivers/platform/mellanox/mlx-platform.c | 96 ++++++++++++++++++++++++++++++++
+ 1 file changed, 96 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index de3dbaf..3472c99 100644
+index b2ea7e8..a595643 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -7871,6 +7871,27 @@ static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
+@@ -824,6 +824,16 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_psu_items_data[] = {
+ 	},
+ };
+ 
++/* Platform hotplug dgx data */
++static struct mlxreg_core_data mlxplat_mlxcpld_dgx_psu_items_data[] = {
++	{
++		.label = "pdb1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
++	},
++};
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_items_data[] = {
+ 	{
+ 		.label = "pwr1",
+@@ -873,6 +883,15 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_ng800_items_data[] =
+ 	},
+ };
+ 
++static struct mlxreg_core_data mlxplat_mlxcpld_dgx_pwr_items_data[] = {
++	{
++		.label = "pwr1",
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = BIT(0),
++		.hpdev.nr = MLXPLAT_CPLD_NR_NONE ,
++	},
++};
++
+ static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_items_data[] = {
+ 	{
+ 		.label = "fan1",
+@@ -1496,6 +1515,45 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ext_items[] = {
+ 	}
+ };
+ 
++static struct mlxreg_core_item mlxplat_mlxcpld_ext_dgx_items[] = {
++	{
++		.data = mlxplat_mlxcpld_dgx_psu_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PSU_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PSU_OFFSET,
++		.mask = MLXPLAT_CPLD_PSU_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_dgx_psu_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_dgx_pwr_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_PWR_MASK_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
++		.mask = MLXPLAT_CPLD_PWR_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_dgx_pwr_items_data),
++		.inversed = 0,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_ng_fan_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_FAN_OFFSET,
++		.mask = MLXPLAT_CPLD_FAN_NG_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_fan_items_data),
++		.inversed = 1,
++		.health = false,
++	},
++	{
++		.data = mlxplat_mlxcpld_default_asic_items_data,
++		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
++		.reg = MLXPLAT_CPLD_LPC_REG_ASIC_HEALTH_OFFSET,
++		.mask = MLXPLAT_CPLD_ASIC_MASK,
++		.count = ARRAY_SIZE(mlxplat_mlxcpld_default_asic_items_data),
++		.inversed = 0,
++		.health = true,
++	},
++};
++
+ static struct mlxreg_core_item mlxplat_mlxcpld_ng800_items[] = {
+ 	{
+ 		.data = mlxplat_mlxcpld_default_ng_psu_items_data,
+@@ -1547,6 +1605,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
+ 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
+ };
+ 
++ static
++struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_dgx_ext_data = {
++	.items = mlxplat_mlxcpld_ext_dgx_items,
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_ext_dgx_items),
++	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
++	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
++	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
++	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
++};
++
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ng800_data = {
+ 	.items = mlxplat_mlxcpld_ng800_items,
+@@ -7871,6 +7939,27 @@ static int __init mlxplat_dmi_ng800_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -51,7 +147,7 @@ index de3dbaf..3472c99 100644
  static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8072,6 +8093,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8072,6 +8161,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  		},
  	},
  	{
