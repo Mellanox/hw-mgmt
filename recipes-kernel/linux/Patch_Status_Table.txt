@@ -703,15 +703,15 @@ Kernel-6.1
 |0088-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
 |0089-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
 |0090-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
-|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted                      |            |                                                |
-|0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted                      |            |                                                |
+|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  | d00f779eb09a9b     | Feature upstream                         |            |                                                |
+|0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  | 783259e9b19dba     | Feature upstream                         |            |                                                |
 |0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
 |0094-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
-|0095-platform-mellanox-nvsw-sn2201-Add-support-for-new-sy.patch  |                    | Downstream accepted                      |            |                                                |
+|0095-platform-mellanox-nvsw-sn2201-Add-support-for-new-sy.patch  | 56b0bb7f906907     | Feature upstream                         |            |                                                |
 |0096-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Downstream accepted;skip[sonic,cumulus]  |            | Add dedicated match for QMB8700                |
-|0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted					  |            | SN5640                                         |
+|0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  | 317bbe169c468b     | Feature upstream                         |            | SN5640                                         |
 |0098-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
-|0099-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0099-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5600d                                        |
 |0100-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted					  |            |                                          |
 |0101-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted					  |            |                                                |
 |0102-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted					  |            |                                                |
@@ -719,6 +719,7 @@ Kernel-6.1
 |0104-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Downstream accepted                      |            | mp2869                                         |
 |0105-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Downstream accepted                      |            | mp29502                                        |
 |0106-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  |                    | Downstream accepted                      |            |                                                |
+|0107-platform-mellanox-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.patch  |                    | XXXXXXXXXXXXXXXXXXX                      |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |

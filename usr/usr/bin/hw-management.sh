@@ -1062,8 +1062,8 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100|HI122|HI123|MSN3700|MSN3700C)
-							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
+						HI116|HI112|HI124|HI100|HI122|HI123|HI184|MSN3700|MSN3700C)
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700,NSN4700d
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1670,9 +1670,9 @@ msn4700d_specific()
 	# Only reverse fans are supported
 	echo C2P > "$config_path"/system_flow_capability
 
-	echo 7 > "$config_path"/fan_drwr_num
-	max_tachos=14
-	hotplug_fans=7
+	echo 6 > "$config_path"/fan_drwr_num
+	max_tachos=12
+	hotplug_fans=6
 
 	hotplug_psus=0
 	hotplug_pwrs=0
@@ -3291,7 +3291,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)
