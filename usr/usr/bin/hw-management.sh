@@ -647,6 +647,7 @@ n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
+msn4700d_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
@@ -1008,8 +1009,8 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100|HI122|HI123|MSN3700|MSN3700C)
-							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
+						HI116|HI112|HI124|HI100|HI122|HI123|HI184|MSN3700|MSN3700C)
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700,NSN4700d
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1591,6 +1592,50 @@ msn47xx_specific()
 	echo 3 > $config_path/cpld_num
 }
 
+msn4700d_specific()
+{
+	if [ ! -e "$devtree_file" ]; then
+		system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*AaEeFdGeRcRcTb-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
+		devtr_check_smbios_device_description "$system_ver_str" "0" ""
+	fi
+	lm_sensors_config="$lm_sensors_configs_path/msn4700d_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700d.json"
+
+	max_tachos=12
+	hotplug_fans=6
+	hotplug_pwrs=0
+	hotplug_psus=0
+	hotplug_pdbs=1
+	psu_count=0
+	minimal_unsupported=1
+
+	echo 3 > "$config_path"/cpld_num
+	echo 6 > "$config_path"/fan_drwr_num
+
+	# Set according to front fan max.
+	echo 29700 > "$config_path"/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 5650 > "$config_path"/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 29700 > "$config_path"/fan_front_max_speed
+	echo 6150 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 27500 > "$config_path"/fan_rear_max_speed
+	echo 5650 > "$config_path"/fan_rear_min_speed
+
+	# Only reverse fans are supported
+	echo C2P > "$config_path"/system_flow_capability
+
+	named_busses+=("${msn4700d_named_busses[@]}")
+	add_come_named_busses $ndr_cpu_bus_offset
+	echo 0 > "$config_path"/labels_ready
+	echo 17 > "$config_path"/reset_attr_num
+	echo -n "${named_busses[@]}" > "$config_path"/named_busses
+}
+
 msn46xx_specific()
 {
 	if [ -e "$devtree_file" ]; then
@@ -1945,11 +1990,16 @@ msn_spc3_common()
 		HI142)
 			p4697_specific
 		;;
+		HI184)
+			msn4700d_specific
+		;;
 		*)
 			msn47xx_specific
 		;;
 	esac
-	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	if [ ! -f $config_path/reset_attr_num ]; then
+		echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	fi
 }
 
 bf3_common()
@@ -3279,7 +3329,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160)
+	HI122|HI123|HI124|HI126|HI156|HI160|HI184)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)

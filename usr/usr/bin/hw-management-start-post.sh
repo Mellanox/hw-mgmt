@@ -116,7 +116,7 @@ service_file_path=$(systemctl status hw-management-tc.service | grep hw-manageme
 if [ -f $service_file_path ]; then
 	md5sum_orig=$(md5sum $service_file_path | awk '{print $1}')
 	case $sku in
-		HI172|HI171|HI179)	# Systems allowed to use new hw-management-tc
+		HI172|HI171|HI179|HI184)	# Systems allowed to use new hw-management-tc
 			tc_version="2.5"
 			tc_executable="hw_management_thermal_control_2_5.py"
 			;;
