@@ -49,16 +49,17 @@ bin_path=$hw_management_path/bin
 dynamic_boards_path=$config_path/dynamic_boards
 udev_ready=$hw_management_path/.udev_ready
 LOCKFILE="/var/run/hw-management-chassis.lock"
-if [ -d /sys/devices/virtual/dmi/id ]; then
-	board_type_file=/sys/devices/virtual/dmi/id/board_name
-	sku_file=/sys/devices/virtual/dmi/id/product_sku
-	system_ver_file=/sys/devices/virtual/dmi/id/product_version
+dev_dmi_path=/sys/devices/virtual/dmi/id
+if [ -d $dev_dmi_path ]; then
+	board_type_file=$dev_dmi_path/board_name
+	sku_file=$dev_dmi_path/product_sku
+	system_ver_file=$dev_dmi_path/product_version
 else
-	board_type_file=/var/run/hw-management/config/pn
-	sku_file=/var/run/hw-management/config/hid
-	system_ver_file=/var/run/hw-management/config/bom
+	board_type_file=$config_path/pn
+	sku_file=$config_path/hid
+	system_ver_file=$config_path/bom
 fi
-pn_file=/sys/devices/virtual/dmi/id/product_name
+pn_file=$dev_dmi_path/product_name
 devtree_file=$config_path/devtree
 dpu2host_events_file=$config_path/dpu_to_host_events
 dpu_events_file=$config_path/dpu_events
