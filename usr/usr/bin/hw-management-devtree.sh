@@ -864,6 +864,8 @@ devtr_check_supported_system_init_alternatives()
 				;;
 			esac
 			;;
+		$AMD_V3000_CPU)
+			;;
 		$DNV_CPU)
 			# Silent exit
 			return 1
