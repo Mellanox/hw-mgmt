@@ -69,7 +69,7 @@ process_blacklist()
 
 	# Extend with system specific records.
 	case $SKU in
-	HI180|HI181|HI182)
+	HI180|HI181|HI182|HI183)
 		# Designware I2C controller driver should not be blackisted.
 		# This gurantees that Designware driver is loaded by ACPI before platform driver.
 		# Platform driver relies on the existence of i2c-0 bus created by Designware driver.
@@ -77,6 +77,8 @@ process_blacklist()
 		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
+		echo blacklist i2c_piix4 >> $BLACKLIST_FILE
+		echo blacklist i2c_i801 >> $BLACKLIST_FILE
 		;;
 	HI176)
 		# Blacklist Designware, ASF I2C controller drivers and ipmi
