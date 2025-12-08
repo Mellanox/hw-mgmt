@@ -3951,9 +3951,17 @@ case $ACTION in
 			exit 0
 		fi
 		do_start
+		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
+		# of asic chipup for the restart scenario.
+		check_asic_chipup_status && do_chip_up_down 1 1
 	;;
 	stop)
 		if [ -d /var/run/hw-management ]; then
+			# In SPC1/SPC2 switches that uses minimal driver, storing the state
+			# of asic chipup for the restart scenario.
+			if [ -f "$config_path/asic_chipup_completed" ]; then
+				cp "$config_path/asic_chipup_completed" $asic_chipup_status
+			fi
 			echo 1 > $config_path/stopping
 			if [ ! -f "$config_path/asic_num" ]; then
 				asic_num=1
@@ -4035,6 +4043,9 @@ case $ACTION in
 		do_stop
 		sleep 3
 		do_start
+		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
+		# of asic chipup for the restart scenario.
+		check_asic_chipup_status && do_chip_up_down 1 1
 	;;
 	reset-cause)
 		for f in $system_path/reset_*;
