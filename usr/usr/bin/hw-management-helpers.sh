@@ -81,6 +81,7 @@ vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
 fixup_hook_script=/usr/local/bin/hw-management-fixup.sh
+asic_chipup_status=/run/.asic_chipup_completed
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -1036,4 +1037,17 @@ run_fixup_script()
 		log_info "${stage}-init fixup hook completed with exit status $status"
 		echo $status > ${config_path}/fixup-status-${stage}
 	fi
+}
+
+check_asic_chipup_status()
+{
+	local chipup_status=0
+
+	if [ -f "$asic_chipup_status" ]; then
+		chipup_status=$(< "$asic_chipup_status")
+		if [ $chipup_status -eq 1 ]; then
+			return 0
+		fi
+	fi
+	return 1
 }
