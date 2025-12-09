@@ -3016,6 +3016,7 @@ load_modules()
 
 set_config_data()
 {
+	local asic_num=0
 	for ((idx=1; idx<=psu_count; idx+=1)); do
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
@@ -3047,6 +3048,13 @@ set_config_data()
 	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
 		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
 	fi
+	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
+	for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
+		echo 0 > $config_path/asic"$asic_id"_ready
+		if [ $asic_id -eq 1 ]; then
+			echo 0 > $config_path/asic_ready
+		fi
+	done
 }
 
 connect_platform()
