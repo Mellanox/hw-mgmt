@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0050.2930
+- Tue, 09 Dec 2025
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4710734, hw-mgmt: scripts: Update sensors configuration of SN5640/SN5610 systems, 572a4d4
+    o #4647791, hw-mgmgt: script: Fix race conditions for write in thermal updater, 6e5a7ad
+    o #4661922, hw-mgmt: thermal: Fix recovery flow for special attention FAN, 8075535
+    o #4686090, hw-mgmt: sensors: Fix msn4700 lmsensors config, 34c0003
+    o #4497061, Revert ASIC temperature reading fix to prevent critical regression, f7672c3
+    o #4761522, feat: Restore missing platform configurations (HI176, HI177, HI179, HI180), 8ef7e18
+    o #N/A, hw-mgmt: patches: Add new platform driver for SN58XX_LD platforms, 8c7c3c2
+    o #N/A, hw-mgmt: rules: Update UDEV rules to handle usb0 interface, b2d7c6b
+    o #N/A, hw-mgmt: scripts: Add loading of ISL68137 VR driver on X86 systems, 777777e
+    o #N/A, hw-mgmt: sensors: Add sensors configuration file for SN58XX_LD platforms, ac7ed0d
+    o #N/A, hw-mgmt: scripts: Add leakage event support for SN58XX_LD platforms, ca30c2b
+    o #N/A, hw-mgmt: scripts: Add initial support for SN58XX_LD Ethernet platforms, 9a50063
+    o #N/A, hw-mgmt: scripts: Add SN58XX_LD platforms to module blacklist service, 66e6bd0
+    o #N/A, hw-mgmt: scripts: Update redfish client to get BMC IP dynamically, 36f68dc
+    o #N/A, hw-mgmt: virtual: Add support for SN5810_LD virtual platform, 089b6c5
+    o #4761522, test: Add comprehensive test coverage and quality infrastructure, 610fb1d
+    o #4677548, hw-mgmt: thermal: TC fix attention_fans config for Q3400, dbafc15
+    o #4571615, hw-mgmt: thermal: TC fix attention_fans config for SN4280, 038b3b5
+    o #N/A, hw-mgmgt: debian: Add hw-mgmt-sync controller service, aeff84f
+    o #4546995, Refactor hw-management: Split sync service into peripheral and thermal updaters, 00ba92f
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.2930/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0050.1930
 - Sun, 31 Aug 2025
 --------------------------------------------------------------------------------
