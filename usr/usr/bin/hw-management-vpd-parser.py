@@ -744,19 +744,37 @@ def save_fru(fru_dict, out_filename):
     @param out_filename: output filename
     @return: None
     """
+    # Get the directory of the output file for the temporary file
+    out_dir = os.path.dirname(out_filename) or '.'
+    tmp_filename = None
+
     try:
-        out_file = open(out_filename, 'w+')
-    except IOError as err:
+        # Create a temporary file in the same directory as the target file
+        # This ensures the rename operation is atomic (same filesystem)
+        with tempfile.NamedTemporaryFile(mode='w', dir=out_dir, delete=False) as tmp_file:
+            tmp_filename = tmp_file.name
+
+            # Write all FRU data to the temporary file
+            for item in fru_dict['items']:
+                if item[0]:
+                    tmp_file.write("{:<25}{}\n".format(item[0] + ":", str(item[1]).rstrip()))
+                else:
+                    tmp_file.write("{}\n".format(str(item[1]).rstrip()))
+
+        # Atomically rename the temporary file to the target filename
+        # On POSIX systems, this is an atomic operation
+        os.replace(tmp_filename, out_filename)
+
+    except (IOError, OSError) as err:
         print("I/O error({0}): {1} with log file {2}".format(err.errno,
                                                              err.strerror,
                                                              out_filename))
-    for item in fru_dict['items']:
-        if item[0]:
-            out_file.write("{:<25}{}\n".format(item[0] + ":", str(item[1]).rstrip()))
-        else:
-            out_file.write("{}\n".format(str(item[1]).rstrip()))
-
-    out_file.close()
+        # Clean up temporary file if it exists
+        if tmp_filename and os.path.exists(tmp_filename):
+            try:
+                os.remove(tmp_filename)
+            except OSError:
+                pass
 
 
 def load_fru_bin(file_name):
