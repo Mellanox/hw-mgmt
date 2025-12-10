@@ -1,4 +1,4 @@
-From c40cc71e36821a4429d1304d3b024185c27e6885 Mon Sep 17 00:00:00 2001
+From 4c3e8bae5bca0bcb5ec973fa4292c62c3eafe3d8 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -22,12 +22,12 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Kconfig             |   39 +
  drivers/platform/mellanox/Makefile            |    4 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
- drivers/platform/mellanox/nvsw-core.c         |  678 ++++
+ drivers/platform/mellanox/nvsw-core.c         |  686 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  945 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  865 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  903 ++++++
  drivers/platform/mellanox/nvsw.h              |  294 ++
- 9 files changed, 6370 insertions(+), 4 deletions(-)
+ 9 files changed, 6416 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -2957,10 +2957,10 @@ index 000000000..96908494c
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
 new file mode 100644
-index 000000000..048ec3bd2
+index 000000000..602a7fd85
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-core.c
-@@ -0,0 +1,678 @@
+@@ -0,0 +1,686 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3453,6 +3453,7 @@ index 000000000..048ec3bd2
 +							  sizeof(*nvsw_core->regio_data));
 +		if (IS_ERR(nvsw_core->regio)) {
 +			err = PTR_ERR(nvsw_core->regio);
++			dev_err(nvsw_core->dev, "Failed to register mlxreg-io driver\n");
 +			goto fail_platform_io_register;
 +		}
 +	}
@@ -3479,6 +3480,7 @@ index 000000000..048ec3bd2
 +								   sizeof(*nvsw_core->led_data));
 +		if (IS_ERR(nvsw_core->led)) {
 +			err = PTR_ERR(nvsw_core->led);
++			dev_err(nvsw_core->dev, "Failed to register leds-mlxreg driver\n");
 +			goto fail_platform_leds_register;
 +		}
 +	}
@@ -3508,6 +3510,7 @@ index 000000000..048ec3bd2
 +								  sizeof(*nvsw_core->wd_data[i]));
 +			if (IS_ERR(nvsw_core->wd[i])) {
 +				err = PTR_ERR(nvsw_core->wd[i]);
++				dev_err(nvsw_core->dev, "Failed to register mlx-wdt driver\n");
 +				goto fail_platform_wd_register;
 +			}
 +		}
@@ -3564,6 +3567,11 @@ index 000000000..048ec3bd2
 +	switch (nvsw_core->regmap_type) {
 +	case REGMAP_I2C:
 +		nvsw_core->regmap = devm_regmap_init_i2c(nvsw_core->client, &nvsw_regmap_i2c_conf);
++		if (IS_ERR(nvsw_core->regmap)) {
++			dev_err(nvsw_core->dev, "Failed to create I2C regmap\n");
++			err = PTR_ERR(nvsw_core->regmap);
++			return err;
++		}
 +		break;
 +	case REGMAP_IO:
 +		if (nvsw_core->port_map) {
@@ -5308,10 +5316,10 @@ index 000000000..07f604d11
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..b1a6dd21c
+index 000000000..4d54f9f50
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,865 @@
+@@ -0,0 +1,903 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -5370,6 +5378,7 @@ index 000000000..b1a6dd21c
 +static struct mlxreg_core_platform_data *nvsw_wd_data[NVSW_WD_MAX];
 +static int mux_num;
 +static enum nvsw_core_hid_type nvsw_host_hid;
++static struct platform_device *nvsw_host_pdev;
 +
 +/* Platform register access data */
 +static struct mlxreg_core_data nvsw_host_spc6_regs_io_data[] = {
@@ -6018,35 +6027,29 @@ index 000000000..b1a6dd21c
 +	},
 +};
 +
++/* Callback is used to indicate that all adapter devices have been created. */
++static int
++nvsw_host_spc6_completion_notify(void *handle, struct i2c_adapter *parent,
++				  struct i2c_adapter *adapters[])
++{
++	return 0;
++}
++
 +/* Mux init/exit callbacks. */
 +static int nvsw_host_spc6_mux_topology_init(struct nvsw_core *nvsw_core)
 +{
 +	int i, err;
 +
-+	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_BUS_NR);
-+	if (!nvsw_host_mux_i2c_adapter) {
-+		dev_err(nvsw_core->dev, "Failed to get adapter for bus %d\n", NVSW_I2C_MUX_BUS_NR);
-+		err = -EFAULT;
-+		goto i2c_get_adapter_fail;
-+	}
-+
-+	/* Create device at the top of host I2C tree.*/
-+	nvsw_host_mux_i2c_client = i2c_new_client_device(nvsw_host_mux_i2c_adapter,
-+						   nvsw_host_mux_brdinfo);
-+	if (IS_ERR(nvsw_host_mux_i2c_client)) {
-+		dev_err(nvsw_core->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
-+			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_BUS_NR, nvsw_host_mux_brdinfo->addr);
-+		err = PTR_ERR(nvsw_host_mux_i2c_client);
-+		goto i2c_new_device_fail;
-+	}
-+	nvsw_core->client = nvsw_host_mux_i2c_client;
-+
 +	/* Create mux infrastructure. */
 +	for (i = 0; i < nvsw_core->mux_num; i++) {
++		nvsw_host_mux_data[i]->handle = nvsw_core;
++		nvsw_host_mux_data[i]->completion_notify =
++			nvsw_host_spc6_completion_notify;
 +		nvsw_core->mux[i] =
-+			platform_device_register_resndata(nvsw_core->dev, "i2c-mux-mlxcpld", i, NULL,
++			platform_device_register_resndata(&nvsw_host_mux_i2c_client->dev,
++							  "i2c-mux-mlxcpld", i, NULL,
 +							  0, nvsw_host_mux_data[i],
-+							  sizeof(nvsw_host_mux_data[i]));
++							  sizeof(*nvsw_host_mux_data[i]));
 +		if (IS_ERR(nvsw_core->mux[i])) {
 +			dev_err(nvsw_core->dev, "Failed to create mux infra\n");
 +			err = PTR_ERR(nvsw_core->mux[i]);
@@ -6061,10 +6064,7 @@ index 000000000..b1a6dd21c
 +		platform_device_unregister(nvsw_core->mux[i]);
 +	i2c_unregister_device(nvsw_host_mux_i2c_client);
 +	nvsw_host_mux_i2c_client = NULL;
-+i2c_new_device_fail:
-+	i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+	nvsw_host_mux_i2c_adapter = NULL;
-+i2c_get_adapter_fail:
++
 +	return err;
 +}
 +
@@ -6087,7 +6087,21 @@ index 000000000..b1a6dd21c
 +
 +static int __init nvsw_host_dmi_spc6_switch_matched(const struct dmi_system_id *dmi)
 +{
-+	int i;
++	int i, err;
++
++    /* Allocate the platform device structure */
++	nvsw_host_pdev =
++		platform_device_alloc(NVSW_HOST_DEVICE_NAME, PLATFORM_DEVID_NONE);
++	if (!nvsw_host_pdev) {
++		return -ENOMEM;
++    }
++
++	/* Register the device with the platform bus */
++	err = platform_device_add(nvsw_host_pdev);
++	if (err) {
++		platform_device_put(nvsw_host_pdev);
++		return err;
++	}
 +
 +	/* Set system configuration. */
 +	nvsw_host_hid = HID183;
@@ -6118,8 +6132,31 @@ index 000000000..b1a6dd21c
 +
 +static int nvsw_host_probe(struct platform_device *pdev)
 +{
++	int i, err;
 +	struct nvsw_core *nvsw_core;
-+	int i;
++
++	/* Get I2C adapter at the top of host I2C tree */
++	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_BUS_NR);
++	if (!nvsw_host_mux_i2c_adapter) {
++		dev_err(nvsw_core->dev, "Failed to get adapter for bus %d\n",
++				NVSW_I2C_MUX_BUS_NR);
++		return -EFAULT;
++	}
++
++	/* Create device at the top of host I2C tree */
++	nvsw_host_mux_brdinfo->platform_data = nvsw_host_mux_data;
++	nvsw_host_mux_i2c_client = i2c_new_client_device(nvsw_host_mux_i2c_adapter,
++						   nvsw_host_mux_brdinfo);
++	if (IS_ERR(nvsw_host_mux_i2c_client)) {
++		dev_err(nvsw_core->dev,
++			"Failed to create client %s at bus %d at addr 0x%02x\n",
++			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_BUS_NR,
++		    nvsw_host_mux_brdinfo->addr);
++		err = PTR_ERR(nvsw_host_mux_i2c_client);
++		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
++		nvsw_host_mux_i2c_adapter = NULL;
++		return err;
++	}
 +
 +	nvsw_core = devm_kzalloc(&pdev->dev, sizeof(*nvsw_core), GFP_KERNEL);
 +	if (!nvsw_core)
@@ -6129,6 +6166,7 @@ index 000000000..b1a6dd21c
 +	nvsw_core->dev = &pdev->dev;
 +	nvsw_core->hid = nvsw_host_hid;
 +	nvsw_core->regmap_type = REGMAP_I2C;
++	nvsw_core->client = nvsw_host_mux_i2c_client;
 +	nvsw_core->mux_num = mux_num;
 +	for (i = 0; i < ARRAY_SIZE(nvsw_wd_data); i++)
 +		nvsw_core->wd_data[i] = nvsw_wd_data[i];
@@ -6160,10 +6198,18 @@ index 000000000..b1a6dd21c
 +
 +static int __init nvsw_host_init(void)
 +{
++	int err;
++
 +	if (!dmi_check_system(nvsw_host_dmi_table))
 +		return -ENODEV;
 +
-+	return platform_driver_register(&nvsw_host_driver);
++	err = platform_driver_register(&nvsw_host_driver);
++	if (err) {
++		if (nvsw_host_pdev)
++			platform_device_unregister(nvsw_host_pdev);
++	}
++
++	return err;
 +}
 +module_init(nvsw_host_init);
 +
