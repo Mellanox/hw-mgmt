@@ -885,6 +885,10 @@ if [ "$1" == "add" ]; then
 				sodimm3_addr='001e'
 				sodimm4_addr='001f'
 			;;
+			$AMD_V3000_CPU)
+				sodimm1_addr='0052'
+				sodimm2_addr='0053'
+			;;
 			*)
 				exit 0
 			;;

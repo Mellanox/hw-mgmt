@@ -2768,7 +2768,7 @@ sn66xxld_specific()
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
 	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
+	i2c_comex_mon_bus_default=5
 	named_busses+=(${sn66xxld_named_busses[@]})
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
@@ -3490,9 +3490,18 @@ set_sodimms()
 {
 	local i2c_dir
 	local i2c_bus
-	amd_snw_sodimm_ts_addr=(0x1a 0x1b 0x1e 0x1f)
+	local amd_snw_sodimm_ts_addr=(0x1a 0x1b 0x1e 0x1f)
+	local amd_v3000_sodimm_ts_addr=(0x52 0x53)
+	local sodimm_dev
+	local sodimm_ts_addr
 
-	if [ "$cpu_type" != "$AMD_SNW_CPU" ]; then
+	if [ "$cpu_type" = "$AMD_SNW_CPU" ]; then
+		sodimm_dev=$amd_snw_i2c_sodimm_dev
+		sodimm_ts_addr=$amd_snw_sodimm_ts_addr
+	elif [ "$cpu_type" = "$AMD_V3000_CPU" ]; then
+		sodimm_dev=$amd_v3000_i2c_sodimm_dev
+		sodimm_ts_addr=$amd_v3000_sodimm_ts_addr
+	else
 		return 0
 	fi
 
@@ -3501,7 +3510,7 @@ set_sodimms()
 		sleep 0.5
 	fi
 
-	i2c_dir=$(ls -1d "$amd_snw_i2c_sodimm_dev"/i2c-*)
+	i2c_dir=$(ls -1d "$sodimm_dev"/i2c-*)
 	i2c_bus="${i2c_dir##*-}"
 	if check_simx; then
 		# i2c-designware emulattion is not available. For the virtual
@@ -3513,11 +3522,11 @@ set_sodimms()
 		return 1
 	fi
 
-	for ((i=0; i<${#amd_snw_sodimm_ts_addr[@]}; i+=1)); do
-		j=$(echo ${amd_snw_sodimm_ts_addr[$i]} | cut -b 3-)
-		i2cdetect -y -a -r $i2c_bus ${amd_snw_sodimm_ts_addr[$i]} ${amd_snw_sodimm_ts_addr[$i]} | grep -qi $j
+	for ((i=0; i<${#sodimm_ts_addr[@]}; i+=1)); do
+		j=$(echo ${sodimm_ts_addr[$i]} | cut -b 3-)
+		i2cdetect -y -a -r $i2c_bus ${sodimm_ts_addr[$i]} ${sodimm_ts_addr[$i]} | grep -qi $j
 		if [ $? -eq 0 ]; then
-			echo "jc42" "${amd_snw_sodimm_ts_addr[$i]}" > /sys/bus/i2c/devices/i2c-$i2c_bus/new_device
+			echo "jc42" "${sodimm_ts_addr[$i]}" > /sys/bus/i2c/devices/i2c-$i2c_bus/new_device
 		fi
 	done
 }

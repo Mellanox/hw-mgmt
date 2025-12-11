@@ -148,6 +148,7 @@ AMD_V3000_CPU=0x1944
 AMD_FRNG_CPU=0x1A44
 ARMv7_CPU=0xC07
 amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
+amd_v3000_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:03
 n5110_mctp_bus="0"
 n5110_mctp_addr="1040"
 
