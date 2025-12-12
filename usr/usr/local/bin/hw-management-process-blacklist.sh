@@ -54,22 +54,17 @@ blacklist amd_sfh"
 # Get system SKU
 SKU=$(cat /sys/devices/virtual/dmi/id/product_sku 2>/dev/null)
 BLACKLIST_FILE="/etc/modprobe.d/hw-management.conf"
+MODULE_LOAD_FILE="/etc/modules-load.d/05-hw-management-modules.conf"
 
 # Function to process blacklist.
 process_blacklist()
 {
-	# Check if running as root
-	if [ "$(id -u)" != "0" ]; then
-		echo "This script must be run as root" 1>&2
-		exit 1
-	fi
-
 	# Copy all common records to $BLACKLIST_FILE.
 	echo "$__default_blacklist" > $BLACKLIST_FILE
 
 	# Extend with system specific records.
 	case $SKU in
-	HI180|HI181|HI182|HI183)
+	HI180|HI181|HI182)
 		# Designware I2C controller driver should not be blackisted.
 		# This gurantees that Designware driver is loaded by ACPI before platform driver.
 		# Platform driver relies on the existence of i2c-0 bus created by Designware driver.
@@ -77,8 +72,23 @@ process_blacklist()
 		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
+		;;
+	HI183)
+		# Prevent various i2c bus drivers from loading before Designware driver
+		# to gurantee the correct i2c bus numbering order
+		echo blacklist i2c_asf >> $BLACKLIST_FILE
+		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
 		echo blacklist i2c_piix4 >> $BLACKLIST_FILE
 		echo blacklist i2c_i801 >> $BLACKLIST_FILE
+
+		# Make sure to load Designware I2C driver early, before platform driver
+		echo i2c_designware_platform >> $MODULE_LOAD_FILE
+
+		# Create soft dependency between platform driver and Designware driver.
+		# Platform driver relies on the of i2c bus created by Designware driver.
+		# This instructs the kernel module loader that whenever nvsw_host_spc6
+		# is being loaded, it must load i2c_designware_platform first.
+		echo softdep nvsw_host_spc6 pre: i2c_designware_platform >> $BLACKLIST_FILE
 		;;
 	HI176)
 		# Blacklist Designware, ASF I2C controller drivers and ipmi
@@ -99,7 +109,12 @@ process_blacklist()
 	esac
 }
 
+# Check if running as root
+if [ "$(id -u)" != "0" ]; then
+	echo "This script must be run as root" 1>&2
+	exit 1
+fi
+
 # Process blacklist
 process_blacklist
-
 echo "Blacklist file generated at $BLACKLIST_FILE"
