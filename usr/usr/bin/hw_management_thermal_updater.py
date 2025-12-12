@@ -5,7 +5,7 @@
 # pylint: disable=R0913:
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -52,6 +52,8 @@ try:
     import re
     import argparse
     import traceback
+    import signal
+    import threading
     from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write
     from collections import Counter
     from hw_management_platform_config import (
@@ -149,6 +151,8 @@ thermal_config = _build_thermal_config()
 
 # Module-level singleton for logging
 LOGGER = None
+
+EXIT = threading.Event()
 
 # ----------------------------------------------------------------------
 
@@ -473,6 +477,20 @@ def update_thermal_attr(attr_prop):
 # ----------------------------------------------------------------------
 
 
+def handle_shutdown(sig, _frame):
+    """
+    @summary: Handle application signal
+    @param sig: Signal
+    @param _frame: Unused frame
+    """
+    EXIT.set()
+    LOGGER.notice("hw-management-thermal-updater: received signal {}, stopping main loop".format(sig))
+
+    return
+
+# ----------------------------------------------------------------------
+
+
 def main():
     """
     @summary: Hardware Management Thermal Updater Main Loop
@@ -522,8 +540,13 @@ def main():
             thermal_attr.extend(val)
             break
 
+    EXIT.clear()
+    signal.signal(signal.SIGTERM, handle_shutdown)
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGHUP, handle_shutdown)
+
     LOGGER.notice("hw-management-thermal-updater: start main loop")
-    while True:
+    while not EXIT.is_set():
         try:
             for attr in thermal_attr:
                 update_thermal_attr(attr)
@@ -544,7 +567,9 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        time.sleep(1)
+        EXIT.wait(timeout=1)
+
+    LOGGER.notice("hw-management-thermal-updater: stopped main loop")
 
 
 if __name__ == '__main__':
