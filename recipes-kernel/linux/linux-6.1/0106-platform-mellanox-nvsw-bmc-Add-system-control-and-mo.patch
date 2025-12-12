@@ -1,4 +1,4 @@
-From cb1c6378cfba4c70c49da5d27b4372d659b2e653 Mon Sep 17 00:00:00 2001
+From a73135599e77543950338c4dee4b8a70177d375d Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +25,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  686 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  945 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  802 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  797 +++++
  drivers/platform/mellanox/nvsw.h              |  294 ++
- 9 files changed, 6315 insertions(+), 4 deletions(-)
+ 9 files changed, 6310 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5316,10 +5316,10 @@ index 000000000..07f604d11
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..6880d34b4
+index 000000000..3114dfca8
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,802 @@
+@@ -0,0 +1,797 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -6028,11 +6028,6 @@ index 000000000..6880d34b4
 +{
 +	int i, err;
 +	struct nvsw_core *nvsw_core;
-+
-+	if (!pdev) {
-+		pr_err("nvsw_host_probe: missing pdev\n");
-+		return -EFAULT;
-+	}
 +
 +	/* Get I2C adapter at the top of host I2C tree */
 +	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_BUS_NR);
