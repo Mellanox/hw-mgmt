@@ -43,6 +43,8 @@ try:
     import re
     import argparse
     import traceback
+    import signal
+    import threading
     from hw_management_lib import HW_Mgmt_Logger as Logger
     from collections import Counter
 
@@ -82,6 +84,9 @@ class CONST(object):
     # File which defined current level filename.
     # User can dynamically change loglevel without svc restarting.
     LOG_LEVEL_FILENAME = "config/log_level"
+
+
+EXIT = threading.Event()
 
 
 def _build_attrib_list():
@@ -558,6 +563,18 @@ def write_module_counter(product_sku):
         LOGGER.warning("Failed to write module_counter: {}".format(e))
 
 
+def handle_shutdown(sig, _frame):
+    """
+    @summary: Handle application signal
+    @param sig: Signal number
+    @param _frame: Unused frame
+    """
+    EXIT.set()
+    LOGGER.notice("hw-management-peripheral-updater: received signal {}, stopping main loop".format(sig))
+
+    return
+
+
 def main():
     """
     @summary: Update attributes
@@ -615,8 +632,13 @@ def main():
     for attr in sys_attr:
         init_attr(attr)
 
+    signal.signal(signal.SIGTERM, handle_shutdown)
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGHUP, handle_shutdown)
+    EXIT.clear()
+
     LOGGER.notice("hw-management-peripheral-updater: start main loop")
-    while True:
+    while not EXIT.is_set():
         try:
             for attr in sys_attr:
                 update_peripheral_attr(attr)
@@ -637,7 +659,10 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        time.sleep(1)
+        EXIT.wait(timeout=1)
+
+    LOGGER.notice("hw-management-peripheral-updater: stopped main loop")
+    return
 
 
 if __name__ == '__main__':
