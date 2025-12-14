@@ -1,4 +1,4 @@
-From a73135599e77543950338c4dee4b8a70177d375d Mon Sep 17 00:00:00 2001
+From a0d07ff66bd09adcb6c0dfbd2594d00a03ee517b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -26,8 +26,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  945 ++++++
  drivers/platform/mellanox/nvsw-host-spc6.c    |  797 +++++
- drivers/platform/mellanox/nvsw.h              |  294 ++
- 9 files changed, 6310 insertions(+), 4 deletions(-)
+ drivers/platform/mellanox/nvsw.h              |  295 ++
+ 9 files changed, 6311 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5316,7 +5316,7 @@ index 000000000..07f604d11
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..3114dfca8
+index 000000000..94182952b
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
 @@ -0,0 +1,797 @@
@@ -5998,7 +5998,7 @@ index 000000000..3114dfca8
 +	}
 +
 +	/* Set system configuration. */
-+	nvsw_host_hid = HID183;
++	nvsw_host_hid = HID193;
 +	mux_num = ARRAY_SIZE(nvsw_host_spc6_mux_data);
 +	for (i = 0; i < mux_num; i++)
 +		nvsw_host_mux_data[i] = &nvsw_host_spc6_mux_data[i];
@@ -6016,7 +6016,7 @@ index 000000000..3114dfca8
 +		.callback = nvsw_host_dmi_spc6_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0025"),
-+			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI183"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
 +		},
 +	},
 +	{ }
@@ -6119,10 +6119,10 @@ index 000000000..3114dfca8
 +
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 new file mode 100644
-index 000000000..f80e399a8
+index 000000000..f6dc2c821
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw.h
-@@ -0,0 +1,294 @@
+@@ -0,0 +1,295 @@
 +/* SPDX-License-Identifier: GPL-2.0+
 + *
 + * Nvidia BMC platform driver
@@ -6354,6 +6354,7 @@ index 000000000..f80e399a8
 +	HID182,
 +	HID183,
 +	HID185,
++	HID193,
 +};
 +
 + /* The system register map type. */
