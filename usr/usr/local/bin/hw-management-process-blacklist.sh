@@ -73,7 +73,7 @@ process_blacklist()
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
 		;;
-	HI183)
+	HI193|HI185)
 		# Prevent various i2c bus drivers from loading before Designware driver
 		# to gurantee the correct i2c bus numbering order
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
