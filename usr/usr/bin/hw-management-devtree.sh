@@ -550,18 +550,16 @@ declare -A sn66xxld_swb_alternatives=( \
 	["mp29816_5"]="mp29816 0x65 15 voltmon6" \
 	["mp29816_6"]="mp29816 0x66 15 voltmon7" \
 	["mp29816_7"]="mp29816 0x67 15 voltmon8" \
-	["mp29816_8"]="mp29816 0x68 15 voltmon9" \
-	["mp29816_9"]="mp29816 0x69 15 voltmon10" \
-	["mp29816_10"]="mp29816 0x61 16 voltmon11" \
-	["mp29816_11"]="mp29816 0x62 16 voltmon12" \
-	["mp29816_12"]="mp29816 0x63 16 voltmon13" \
-	["mp29816_13"]="mp29816 0x64 16 voltmon14" \
-	["mp29816_14"]="mp29816 0x65 16 voltmon15" \
-	["mp29816_15"]="mp29816 0x66 16 voltmon16" \
-	["mp29816_16"]="mp29816 0x67 16 voltmon17" \
-	["mp29816_17"]="mp29816 0x69 16 voltmon18" \
-	["mp29816_18"]="mp29816 0x69 16 voltmon19" \
-	["mp29816_19"]="mp29816 0x6a 16 voltmon20" \
+	["mp29816_10"]="mp29816 0x61 16 voltmon9" \
+	["mp29816_11"]="mp29816 0x62 16 voltmon10" \
+	["mp29816_12"]="mp29816 0x63 16 voltmon11" \
+	["mp29816_13"]="mp29816 0x64 16 voltmon12" \
+	["mp29816_14"]="mp29816 0x65 16 voltmon13" \
+	["mp29816_15"]="mp29816 0x66 16 voltmon14" \
+	["mp29816_16"]="mp29816 0x67 16 voltmon14" \
+	["mp29816_17"]="mp29816 0x69 16 voltmon16" \
+	["mp29816_18"]="mp29816 0x69 16 voltmon17" \
+	["mp29816_19"]="mp29816 0x6a 16 voltmon18" \
 	["xdpe1a2g7_0"]="xdpe1a2g7 0x60 15 voltmon1" \
 	["xdpe1a2g7_1"]="xdpe1a2g7 0x61 15 voltmon2" \
 	["xdpe1a2g7_2"]="xdpe1a2g7 0x62 15 voltmon3" \
@@ -570,18 +568,23 @@ declare -A sn66xxld_swb_alternatives=( \
 	["xdpe1a2g7_5"]="xdpe1a2g7 0x65 15 voltmon6" \
 	["xdpe1a2g7_6"]="xdpe1a2g7 0x66 15 voltmon7" \
 	["xdpe1a2g7_7"]="xdpe1a2g7 0x67 15 voltmon8" \
-	["xdpe1a2g7_8"]="xdpe1a2g7 0x68 15 voltmon9" \
-	["xdpe1a2g7_9"]="xdpe1a2g7 0x69 15 voltmon10" \
-	["xdpe1a2g7_10"]="xdpe1a2g7 0x61 16 voltmon11" \
-	["xdpe1a2g7_11"]="xdpe1a2g7 0x62 16 voltmon12" \
-	["xdpe1a2g7_12"]="xdpe1a2g7 0x63 16 voltmon13" \
-	["xdpe1a2g7_13"]="xdpe1a2g7 0x64 16 voltmon14" \
-	["xdpe1a2g7_14"]="xdpe1a2g7 0x65 16 voltmon15" \
-	["xdpe1a2g7_15"]="xdpe1a2g7 0x66 16 voltmon16" \
-	["xdpe1a2g7_16"]="xdpe1a2g7 0x67 16 voltmon17" \
-	["xdpe1a2g7_17"]="xdpe1a2g7 0x68 16 voltmon18" \
-	["xdpe1a2g7_18"]="xdpe1a2g7 0x69 16 voltmon19" \
-	["xdpe1a2g7_19"]="xdpe1a2g7 0x6a 16 voltmon20")
+	["xdpe1a2g7_10"]="xdpe1a2g7 0x61 16 voltmon9" \
+	["xdpe1a2g7_11"]="xdpe1a2g7 0x62 16 voltmon10" \
+	["xdpe1a2g7_12"]="xdpe1a2g7 0x63 16 voltmon11" \
+	["xdpe1a2g7_13"]="xdpe1a2g7 0x64 16 voltmon12" \
+	["xdpe1a2g7_14"]="xdpe1a2g7 0x65 16 voltmon13" \
+	["xdpe1a2g7_15"]="xdpe1a2g7 0x66 16 voltmon14" \
+	["xdpe1a2g7_16"]="xdpe1a2g7 0x67 16 voltmon14" \
+	["xdpe1a2g7_17"]="xdpe1a2g7 0x68 16 voltmon16" \
+	["xdpe1a2g7_18"]="xdpe1a2g7 0x69 16 voltmon17" \
+	["xdpe1a2g7_19"]="xdpe1a2g7 0x6a 16 voltmon18")
+
+# Devices located on SN66XX_LD port board
+declare -A sn66xxld_port_alternatives=( \
+	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
+	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
+	["xdpe1a2g7_0"]="xdpe1a2g7 0x68 15 voltmon19" \
+	["xdpe1a2g7_1"]="xdpe1a2g7 0x69 15 voltmon20")
 
 # Devices located on SN66XX_LD power board
 declare -A sn66xxld_pwr_alternatives=( \
@@ -1219,6 +1222,9 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
 				done
+				for key in "${!sn66xxld_port_alternatives[@]}"; do
+					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
+				done
 				;;
 			HI185)
 				for key in "${!sn66xxld_swb_alternatives[@]}"; do
@@ -1231,6 +1237,10 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_port_alternatives[@]}"; do
+					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
 				done
 				;;
 			*)
