@@ -2746,7 +2746,7 @@ sn66xxld_specific()
 	# SN6600_LD
 	HI193|HI185)
 		cpld_num=4
-		leakage_count=4
+		leakage_count=2
 		i2c_asic_bus_default=5
 		hotplug_pdbs=2
 		;;
