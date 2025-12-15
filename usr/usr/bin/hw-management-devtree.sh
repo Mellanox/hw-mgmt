@@ -578,7 +578,8 @@ declare -A sn66xxld_swb_alternatives=( \
 	["xdpe1a2g7_14"]="xdpe1a2g7 0x67 16 voltmon14" \
 	["xdpe1a2g7_15"]="xdpe1a2g7 0x68 16 voltmon16" \
 	["xdpe1a2g7_16"]="xdpe1a2g7 0x69 16 voltmon17" \
-	["xdpe1a2g7_17"]="xdpe1a2g7 0x6a 16 voltmon18")
+	["xdpe1a2g7_17"]="xdpe1a2g7 0x6a 16 voltmon18" \
+	["24c512_0"]="24c512 0x51 24 swb_info")
 
 # Devices located on SN66XX_LD port board
 declare -A sn66xxld_port_alternatives=( \
