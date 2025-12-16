@@ -594,7 +594,7 @@ declare -A sn66xxld_pwr_alternatives=( \
 	["mp29502_0"]="mp29502 0x2e 6 pdb_pwr_conv1" \
 	["lm5066i_0"]="lm5066i 0x12 6 pdb_hotswap1" \
 	["mp5926_0"]="mp5926 0x12 6 pdb_hotswap1" \
-	["tmp451_1"]="tmp451 0x4c 6 pdb_mosfet_amb1")
+	["tmp451_0"]="tmp451 0x4c 6 pdb_temp1")
 
 # Devices located on SN66XX_LD platform board
 declare -A sn66xxld_platform_alternatives=( \
