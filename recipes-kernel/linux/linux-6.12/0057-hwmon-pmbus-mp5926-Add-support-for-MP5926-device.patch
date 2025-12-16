@@ -1,8 +1,7 @@
-From 228bd9ebb65446d2947195655a3657cbba33ce99 Mon Sep 17 00:00:00 2001
+From e5d678169c052940009201338af7832fdc672ca2 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 3 Dec 2025 19:18:38 +0200
-Subject: [PATCH hwmon-next 2/2] hwmon: (pmbus/mp5926): Add support for device
- MP5926
+Subject: [PATCH 2/2] hwmon: (pmbus/mp5926): Add support for device MP5926
 
 Add support for MPS device MP5926.
 
@@ -14,15 +13,15 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  drivers/hwmon/pmbus/Kconfig  |   9 ++
  drivers/hwmon/pmbus/Makefile |   1 +
- drivers/hwmon/pmbus/mp5926.c | 192 +++++++++++++++++++++++++++++++++++
+ drivers/hwmon/pmbus/mp5926.c | 192 +++++++++++++++++++++++++++++++++++++++++++
  3 files changed, 202 insertions(+)
  create mode 100644 drivers/hwmon/pmbus/mp5926.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
-index c26b19e3d0e6..66c83ed64fb1 100644
+index 946613e..08c9e7b 100644
 --- a/drivers/hwmon/pmbus/Kconfig
 +++ b/drivers/hwmon/pmbus/Kconfig
-@@ -398,6 +398,15 @@ config SENSORS_MP5920
+@@ -426,6 +426,15 @@ config SENSORS_MP5920
  	  This driver can also be built as a module. If so, the module will
  	  be called mp5920.
  
@@ -39,10 +38,10 @@ index c26b19e3d0e6..66c83ed64fb1 100644
  	tristate "MPS MP5990"
  	help
 diff --git a/drivers/hwmon/pmbus/Makefile b/drivers/hwmon/pmbus/Makefile
-index fec1bf832535..5b1d67f26242 100644
+index c716461..1a641d9 100644
 --- a/drivers/hwmon/pmbus/Makefile
 +++ b/drivers/hwmon/pmbus/Makefile
-@@ -42,6 +42,7 @@ obj-$(CONFIG_SENSORS_MP2975)	+= mp2975.o
+@@ -45,6 +45,7 @@ obj-$(CONFIG_SENSORS_MP2975)	+= mp2975.o
  obj-$(CONFIG_SENSORS_MP2993)	+= mp2993.o
  obj-$(CONFIG_SENSORS_MP5023)	+= mp5023.o
  obj-$(CONFIG_SENSORS_MP5920)	+= mp5920.o
@@ -52,7 +51,7 @@ index fec1bf832535..5b1d67f26242 100644
  obj-$(CONFIG_SENSORS_MPQ7932)	+= mpq7932.o
 diff --git a/drivers/hwmon/pmbus/mp5926.c b/drivers/hwmon/pmbus/mp5926.c
 new file mode 100644
-index 000000000000..626d945be5b6
+index 00000000..626d945
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/mp5926.c
 @@ -0,0 +1,192 @@
@@ -249,5 +248,5 @@ index 000000000000..626d945be5b6
 +MODULE_LICENSE("GPL");
 +MODULE_IMPORT_NS(PMBUS);
 -- 
-2.34.1
+2.8.4
 
