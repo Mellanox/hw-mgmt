@@ -852,7 +852,7 @@ devtr_check_supported_system_init_alternatives()
 		$AMD_SNW_CPU)
 			sku=$(< $sku_file)
 			case "$sku" in
-			HI181|HI182|HI185)
+			HI181|HI182)
 				for key in "${!sn58xxld_comex_amd_snw_alternatives[@]}"; do
 						comex_alternatives["$key"]="${sn58xxld_comex_amd_snw_alternatives["$key"]}"
 				done
@@ -1221,22 +1221,6 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn66xxld_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
-				done
-
-				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
-					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
-				done
-				for key in "${!sn66xxld_port_alternatives[@]}"; do
-					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
-				done
-				;;
-			HI185)
-				for key in "${!sn66xxld_swb_alternatives[@]}"; do
-					swb_alternatives["$key"]="${sn66xxld_swb_alternatives["$key"]}"
-				done
-
-				for key in "${!platform_type2_alternatives[@]}"; do
-					platform_alternatives["$key"]="${platform_type2_alternatives["$key"]}"
 				done
 
 				for key in "${!sn66xxld_pwr_alternatives[@]}"; do

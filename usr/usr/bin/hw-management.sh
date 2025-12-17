@@ -2753,7 +2753,7 @@ sn66xxld_specific()
 {
 	case $sku in
 	# SN6600_LD
-	HI193|HI185)
+	HI193)
 		cpld_num=4
 		leakage_count=2
 		i2c_asic_bus_default=5
@@ -3315,7 +3315,7 @@ set_asic_pci_id()
 	HI180)
 		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
 		;;
-	HI193|HI185)
+	HI193)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
 	*)
@@ -3626,7 +3626,7 @@ pre_devtr_init()
 		;;
 	VMOD0025)
 		case $sku in
-		HI193|HI185)
+		HI193)
 			echo 2 >  "$config_path"/pwr_brd_num
 			echo 1 >  "$config_path"/pwr_brd_bus_offset
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
