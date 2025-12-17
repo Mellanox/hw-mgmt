@@ -1,7 +1,7 @@
-From 509f23639fc2c60df25171533f8166cf169d7d3d Mon Sep 17 00:00:00 2001
+From b7b417857005ecd5ef3bdd599e1bc1067b5cc512 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Mon, 9 Dec 2024 11:42:37 +0200
-Subject: [PATCH 07/15] platform: mellanox: Downstream: Add support for new
+Subject: [PATCH 14/30] platform: mellanox: Downstream: Add support for new
  Nvidia IB DGX system based on class VMOD0010
 
 This system is based on Nvidia QM9700 64x400G QTM-2 IB switch, with the
@@ -13,14 +13,14 @@ Key changes:
 
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 456 +++++++++++++++++++++++++++++++
+ drivers/platform/mellanox/mlx-platform.c | 456 +++++++++++++++++++++++
  1 file changed, 456 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 5796e46..9346c76 100644
+index da62d9bc9560..d5c3a0cb820e 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -822,6 +822,16 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_psu_items_data[] = {
+@@ -821,6 +821,16 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_psu_items_data[] = {
  	},
  };
  
@@ -37,7 +37,7 @@ index 5796e46..9346c76 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_items_data[] = {
  	{
  		.label = "pwr1",
-@@ -871,6 +881,15 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_ng800_items_data[] =
+@@ -870,6 +880,15 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_pwr_ng800_items_data[] =
  	},
  };
  
@@ -53,7 +53,7 @@ index 5796e46..9346c76 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_default_fan_items_data[] = {
  	{
  		.label = "fan1",
-@@ -1594,6 +1613,45 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ext_items[] = {
+@@ -1493,6 +1512,45 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ext_items[] = {
  	}
  };
  
@@ -99,10 +99,11 @@ index 5796e46..9346c76 100644
  static struct mlxreg_core_item mlxplat_mlxcpld_ng800_items[] = {
  	{
  		.data = mlxplat_mlxcpld_default_ng_psu_items_data,
-@@ -2081,6 +2139,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
+@@ -1979,6 +2037,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
+ 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
  };
  
- static
++static
 +struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_dgx_ext_data = {
 +	.items = mlxplat_mlxcpld_ext_dgx_items,
 +	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ext_dgx_items),
@@ -112,11 +113,10 @@ index 5796e46..9346c76 100644
 +	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_ASIC2,
 +};
 +
-+static
+ static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ng800_data = {
  	.items = mlxplat_mlxcpld_ng800_items,
- 	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ng800_items),
-@@ -5256,6 +5324,361 @@ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
+@@ -5027,6 +5095,361 @@ static struct mlxreg_core_platform_data mlxplat_default_ng_regs_io_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_regs_io_data),
  };
  
@@ -478,7 +478,7 @@ index 5796e46..9346c76 100644
  /* Platform register access for modular systems families data */
  static struct mlxreg_core_data mlxplat_mlxcpld_modular_regs_io_data[] = {
  	{
-@@ -8117,6 +8540,32 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
+@@ -7786,6 +8209,32 @@ static int __init mlxplat_dmi_ng400_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -511,20 +511,20 @@ index 5796e46..9346c76 100644
  static int __init mlxplat_dmi_modular_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8421,6 +8870,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8054,6 +8503,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI142"),
  		},
  	},
- 	{
++	{
 +		.callback = mlxplat_dmi_ng400_dgx_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI173"),
 +		},
 +	},
-+	{
+ 	{
  		.callback = mlxplat_dmi_ng400_matched,
  		.matches = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0010"),
 -- 
-2.8.4
+2.47.3
 

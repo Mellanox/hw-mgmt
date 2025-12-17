@@ -1,7 +1,7 @@
-From eac1c07fc7de496ce02ce2e84bb32dd7db7449d0 Mon Sep 17 00:00:00 2001
+From a56c9de380bbe70f679ffebc3d47572c7ec760dd Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 14 Jan 2024 14:21:57 +0000
-Subject: [PATCH 2/3] platform: mellanox: Introduce support of Nvidia L1 tray
+Subject: [PATCH 21/30] platform: mellanox: Introduce support of Nvidia L1 tray
  DGX switch
 
 Add support for new L1 tray DGX switch node providing L1
@@ -20,14 +20,14 @@ of the all required platform driver.
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 206 +++++++++++++++++++++++
- 1 file changed, 206 insertions(+)
+ drivers/platform/mellanox/mlx-platform.c | 205 +++++++++++++++++++++++
+ 1 file changed, 205 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index dacb42492..ab7951511 100644
+index 39cf4b23a9d4..6e9062be49c2 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -3129,6 +3129,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {
+@@ -3028,6 +3028,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {
  	},
  };
  
@@ -53,7 +53,7 @@ index dacb42492..ab7951511 100644
  static struct mlxreg_core_item mlxplat_mlxcpld_rack_switch_items[] = {
  	{
  		.data = mlxplat_mlxcpld_ext_psu_items_data,
-@@ -3571,6 +3590,82 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
+@@ -3470,6 +3489,82 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT,
  };
  
@@ -133,10 +133,10 @@ index dacb42492..ab7951511 100644
 +	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT,
 +};
 +
- static struct spi_board_info rack_switch_switch_spi_board_info[] = {
+ /* Platform led default data */
+ static struct mlxreg_core_data mlxplat_mlxcpld_default_led_data[] = {
  	{
- 		.modalias       = "spidev",
-@@ -4336,6 +4431,86 @@ static struct mlxreg_core_platform_data mlxplat_l1_switch_led_data = {
+@@ -4107,6 +4202,86 @@ static struct mlxreg_core_platform_data mlxplat_l1_switch_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_l1_switch_led_data),
  };
  
@@ -223,7 +223,7 @@ index dacb42492..ab7951511 100644
  /* Platform led data for XDR systems */
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  	{
-@@ -8743,6 +8918,30 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -8384,6 +8559,29 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -246,7 +246,6 @@ index dacb42492..ab7951511 100644
 +	mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config_rack_switch;
 +	pm_power_off = mlxplat_poweroff;
 +	mlxplat_reboot_nb = &mlxplat_reboot_default_nb;
-+	mlxplat_spi = rack_switch_switch_spi_board_info;
 +
 +	return mlxplat_register_platform_device();
 +}
@@ -254,7 +253,7 @@ index dacb42492..ab7951511 100644
  static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8961,6 +9160,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8595,6 +8793,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
  		},
  	},
@@ -269,5 +268,5 @@ index dacb42492..ab7951511 100644
  		.callback = mlxplat_dmi_xdr_matched,
  		.matches = {
 -- 
-2.44.0
+2.47.3
 

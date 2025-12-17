@@ -1,8 +1,8 @@
-From 529ed9fc5192525355c0280984f631b3bd7d55b1 Mon Sep 17 00:00:00 2001
+From 1ba270abc9b460cb2cca163d7ecb633bbab17f4d Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 17:02:32 +0200
-Subject: [PATCH platform-next v2 6/8] platform: mellanox: mlx-platform: Add
- support for Q3450-LD Nvidia XDR switch
+Subject: [PATCH 26/30] platform: mellanox: mlx-platform: Add support for
+ Q3450-LD Nvidia XDR switch
 
 Q3450-LD is XDR Infiniband CPO switch with 144 XDR ports, based on
 Nvidia Quantum-3 ASIC. It provides up-to 800Gbps full bidirectional
@@ -20,14 +20,14 @@ Q3450-LD Features:
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 322 +++++++++++++++++++++--
- 1 file changed, 294 insertions(+), 28 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 294 +++++++++++++++++++++++
+ 1 file changed, 294 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 979bc93dae6b..7608a6a25029 100644
+index 7afc86e43f64..07bef9606e23 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -38,6 +38,7 @@
+@@ -37,6 +37,7 @@
  #define MLXPLAT_CPLD_LPC_REG_CPLD3_PN1_OFFSET	0x09
  #define MLXPLAT_CPLD_LPC_REG_CPLD4_PN_OFFSET	0x0a
  #define MLXPLAT_CPLD_LPC_REG_CPLD4_PN1_OFFSET	0x0b
@@ -35,7 +35,7 @@ index 979bc93dae6b..7608a6a25029 100644
  #define MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET	0x17
  #define MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET	0x19
  #define MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET	0x1b
-@@ -54,6 +55,7 @@
+@@ -53,6 +54,7 @@
  #define MLXPLAT_CPLD_LPC_REG_LED7_OFFSET	0x26
  #define MLXPLAT_CPLD_LPC_REG_LED8_OFFSET	0x27
  #define MLXPLAT_CPLD_LPC_REG_CPLD7_PN_OFFSET	0x28
@@ -43,7 +43,7 @@ index 979bc93dae6b..7608a6a25029 100644
  #define MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION	0x2a
  #define MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET	0x2b
  #define MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET	0x2d
-@@ -179,6 +181,7 @@
+@@ -178,6 +180,7 @@
  #define MLXPLAT_CPLD_LPC_REG_WD3_TMR_OFFSET	0xd1
  #define MLXPLAT_CPLD_LPC_REG_WD3_TLEFT_OFFSET	0xd2
  #define MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET	0xd3
@@ -51,7 +51,7 @@ index 979bc93dae6b..7608a6a25029 100644
  #define MLXPLAT_CPLD_LPC_REG_CPLD6_MVER_OFFSET	0xd9
  #define MLXPLAT_CPLD_LPC_REG_I2C_CH1_OFFSET	0xdb
  #define MLXPLAT_CPLD_LPC_REG_I2C_CH2_OFFSET	0xda
-@@ -2182,6 +2185,124 @@ static struct mlxreg_core_item mlxplat_mlxcpld_xdr_items[] = {
+@@ -2081,6 +2084,124 @@ static struct mlxreg_core_item mlxplat_mlxcpld_xdr_items[] = {
  	},
  };
  
@@ -176,7 +176,7 @@ index 979bc93dae6b..7608a6a25029 100644
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
  	.items = mlxplat_mlxcpld_ext_items,
-@@ -2222,6 +2343,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_xdr_data = {
+@@ -2121,6 +2242,16 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_xdr_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_FRU | MLXPLAT_CPLD_LOW_AGGR_MASK_MULTI_ASICS,
  };
  
@@ -193,42 +193,7 @@ index 979bc93dae6b..7608a6a25029 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
  	{
  		.label = "pwr1",
-@@ -3720,34 +3851,6 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_g3_switch_data = {
- 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW | MLXPLAT_CPLD_LOW_AGGR_MASK_PWR_BUT,
- };
- 
--/* Platform hotplug for L1 scale out switch systems family data */
--static struct mlxreg_core_data mlxplat_mlxcpld_leakage_items_data[] = {
--	{
--		.label = "leakage1",
--		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
--		.mask = BIT(0),
--		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
--	},
--	{
--		.label = "leakage2",
--		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
--		.mask = BIT(1),
--		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
--	},
--	{
--		.label = "leakage_rope1",
--		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
--		.mask = BIT(2),
--		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
--	},
--	{
--		.label = "leakage_rope2",
--		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
--		.mask = BIT(3),
--		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
--	},
--};
--
- static struct spi_board_info rack_switch_switch_spi_board_info[] = {
- 	{
- 		.modalias       = "spidev",
-@@ -4767,6 +4870,68 @@ static struct mlxreg_core_platform_data mlxplat_xdr_led_data = {
+@@ -4510,6 +4641,68 @@ static struct mlxreg_core_platform_data mlxplat_xdr_led_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_xdr_led_data),
  };
  
@@ -297,7 +262,7 @@ index 979bc93dae6b..7608a6a25029 100644
  /* Platform led data for L1 scale out switch systems */
  static struct mlxreg_core_data mlxplat_mlxcpld_l1_scale_out_led_data[] = {
  	{
-@@ -5149,6 +5314,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4892,6 +5085,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.bit = GENMASK(7, 0),
  		.mode = 0444,
  	},
@@ -310,7 +275,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	{
  		.label = "cpld1_pn",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET,
-@@ -5191,6 +5362,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4934,6 +5133,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0444,
  		.regnum = 2,
  	},
@@ -324,7 +289,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	{
  		.label = "cpld1_version_min",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_MVER_OFFSET,
-@@ -5227,6 +5405,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4970,6 +5176,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.bit = GENMASK(7, 0),
  		.mode = 0444,
  	},
@@ -337,7 +302,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	{
  		.label = "asic_reset",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
-@@ -5264,6 +5448,54 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -5007,6 +5219,54 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0644,
  		.secured = 1,
  	},
@@ -392,7 +357,7 @@ index 979bc93dae6b..7608a6a25029 100644
      {
  		.label = "leakage_status_clear",
  		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
-@@ -8656,6 +8888,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8298,6 +8558,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_VER_OFFSET:
@@ -400,7 +365,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -8668,6 +8901,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8310,6 +8571,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN1_OFFSET:
@@ -408,7 +373,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -8802,6 +9036,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
+@@ -8444,6 +8706,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
@@ -416,7 +381,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -8856,6 +9091,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8498,6 +8761,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_VER_OFFSET:
@@ -424,7 +389,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD1_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD2_PN_OFFSET:
-@@ -8868,6 +9104,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8510,6 +8774,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_PN1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD6_PN1_OFFSET:
@@ -432,7 +397,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_RESET_GP3_OFFSET:
-@@ -8994,6 +9231,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
+@@ -8636,6 +8901,7 @@ static bool mlxplat_mlxcpld_volatile_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD3_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_MVER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_MVER_OFFSET:
@@ -440,7 +405,7 @@ index 979bc93dae6b..7608a6a25029 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9912,6 +10150,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9523,6 +9789,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -468,7 +433,7 @@ index 979bc93dae6b..7608a6a25029 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -10118,6 +10377,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9721,6 +10008,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
  		},
  	},
@@ -483,5 +448,5 @@ index 979bc93dae6b..7608a6a25029 100644
  		.callback = mlxplat_dmi_xdr_matched,
  		.matches = {
 -- 
-2.34.1
+2.47.3
 

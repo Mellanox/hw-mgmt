@@ -1,10 +1,8 @@
-From edf1951c7f5e87a9b6c2ad82bd97866012f552a6 Mon Sep 17 00:00:00 2001
+From 30f8fe13f3964726d4e7129ad77ce0ab67ae2d34 Mon Sep 17 00:00:00 2001
 From: Ciju Rajan K <crajank@nvidia.com>
 Date: Tue, 25 Mar 2025 11:20:04 +0200
-Subject: [PATCH 01/22] From 4b17e10a22771fcd2dbb4754c43200af2fc69425 Mon Sep
- 17 00:00:00 2001 From: Ciju Rajan K <crajank@nvidia.com> Date: Tue, 18 Mar
- 2025 21:15:00 +0200 Subject: platform/mellanox: mlxreg-dpu: Introduce
- completion callback
+Subject: [PATCH 20/30] platform/mellanox: mlxreg-dpu: Introduce completion
+ callback
 
 DPU auxiliary powering can cause interrupt flooding because
 DPU interrupt handlers are not configured yet, while middle
@@ -26,10 +24,10 @@ Signed-off-by: Ciju Rajan K <crajank@nvidia.com>
  3 files changed, 37 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index b1713d805..d2dfdac34 100644
+index 098ae7a91a16..39cf4b23a9d4 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -2198,6 +2198,8 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
+@@ -2098,6 +2098,8 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
  	},
  };
  
@@ -38,7 +36,7 @@ index b1713d805..d2dfdac34 100644
  
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_lc_act = {
-@@ -3334,6 +3336,23 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
+@@ -3234,6 +3236,23 @@ static struct mlxreg_core_item mlxplat_mlxcpld_smart_switch_items[] = {
  	},
  };
  
@@ -62,7 +60,7 @@ index b1713d805..d2dfdac34 100644
  static
  struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_smart_switch_data = {
  	.items = mlxplat_mlxcpld_smart_switch_items,
-@@ -3371,24 +3390,28 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_data[] = {
+@@ -3271,24 +3290,28 @@ static struct mlxreg_core_data mlxplat_mlxcpld_smart_switch_dpu_data[] = {
  		.hpdev.brdinfo = &mlxplat_mlxcpld_smart_switch_dpu_devs[0],
  		.hpdev.nr = MLXPLAT_CPLD_NR_DPU_BASE,
  		.slot = 1,
@@ -92,7 +90,7 @@ index b1713d805..d2dfdac34 100644
  	},
  };
  
-@@ -8018,8 +8041,6 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
+@@ -7699,8 +7722,6 @@ static const struct reg_default mlxplat_mlxcpld_regmap_smart_switch[] = {
  	{ MLXPLAT_CPLD_LPC_REG_WD1_ACT_OFFSET, 0x00 },
  	{ MLXPLAT_CPLD_LPC_REG_WD2_ACT_OFFSET, 0x00 },
  	{ MLXPLAT_CPLD_LPC_REG_WD3_ACT_OFFSET, 0x00 },
@@ -101,7 +99,7 @@ index b1713d805..d2dfdac34 100644
  };
  
  struct mlxplat_mlxcpld_regmap_context {
-@@ -9333,6 +9354,7 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
+@@ -8981,6 +9002,7 @@ static int mlxplat_post_init(struct mlxplat_priv *priv)
  	/* Add DPU drivers. */
  	for (j = 0; j < MLXPLAT_CPLD_DPU_MAX_DEVS; j++) {
  		if (mlxplat_dpu_data[j]) {
@@ -110,7 +108,7 @@ index b1713d805..d2dfdac34 100644
  				platform_device_register_resndata(&mlxplat_dev->dev, "mlxreg-dpu",
  								  j, NULL, 0, mlxplat_dpu_data[j],
 diff --git a/drivers/platform/mellanox/mlxreg-dpu.c b/drivers/platform/mellanox/mlxreg-dpu.c
-index b7685012d..aa8923c49 100644
+index 665fb410e451..c79531481e82 100644
 --- a/drivers/platform/mellanox/mlxreg-dpu.c
 +++ b/drivers/platform/mellanox/mlxreg-dpu.c
 @@ -581,6 +581,14 @@ static int mlxreg_dpu_probe(struct platform_device *pdev)
@@ -129,7 +127,7 @@ index b7685012d..aa8923c49 100644
  regcache_sync_fail:
  devm_regmap_init_i2c_fail:
 diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
-index 67dddacfa..e8f2032b3 100644
+index 67dddacfa8fa..e8f2032b3e8e 100644
 --- a/include/linux/platform_data/mlxreg.h
 +++ b/include/linux/platform_data/mlxreg.h
 @@ -136,6 +136,8 @@ struct mlxreg_hotplug_device {
@@ -151,5 +149,5 @@ index 67dddacfa..e8f2032b3 100644
  
  /**
 -- 
-2.44.0
+2.47.3
 
