@@ -1494,7 +1494,7 @@ new file mode 100755
 index 00000000..b0fc4dd
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx_core.h
-@@ -0,0 +1,506 @@
+@@ -0,0 +1,505 @@
 +/*
 + *________________________________________________________________________________________________________
 + *Copyright (c) 2017 InvenSense Inc. All rights reserved.
@@ -2000,7 +2000,6 @@ index 00000000..b0fc4dd
 +int icp201xx_OTP_bootup_cfg(struct icp201xx_state *st);
 +
 +#endif  /*#ifndef _INV_ICP201XX_CORE_H_ */
-+
 diff --git a/drivers/iio/pressure/icp201xx_i2c.c b/drivers/iio/pressure/icp201xx_i2c.c
 new file mode 100755
 index 00000000..269696f
@@ -2170,7 +2169,7 @@ new file mode 100755
 index 00000000..c077d16
 --- /dev/null
 +++ b/drivers/iio/pressure/icp201xx_i2c.h
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,62 @@
 +/*
 + * ________________________________________________________________________________________________________
 + * Copyright (c) 2015-2015 InvenSense Inc. All rights reserved.
@@ -2233,8 +2232,6 @@ index 00000000..c077d16
 +int icp201xx_reg_update(struct icp201xx_state *st, u8 reg_addr, u8 mask, u8 pos, u8 val);
 +
 +#endif /* _INV_ICP201XX_INTERFACE_H_ */
-+
-+
 -- 
 2.8.4
 
