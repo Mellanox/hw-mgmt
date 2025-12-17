@@ -3502,7 +3502,7 @@ new file mode 100644
 index 00000000..ffe248b
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,745 @@
+@@ -0,0 +1,744 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -4247,13 +4247,12 @@ index 00000000..ffe248b
 +MODULE_AUTHOR("Vadim Pasternak <vadimp@mellanox.com>");
 +MODULE_DESCRIPTION("Nvidia platform driver");
 +MODULE_LICENSE("Dual BSD/GPL");
-+
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 new file mode 100644
 index 00000000..b1ae4db
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw.h
-@@ -0,0 +1,260 @@
+@@ -0,0 +1,259 @@
 +/* SPDX-License-Identifier: GPL-2.0+
 + *
 + * Nvidia BMC platform driver
@@ -4513,7 +4512,6 @@ index 00000000..b1ae4db
 +void nvsw_core_exit(struct nvsw_core *nvsw_core);
 +
 +#endif /* !defined(__NVSW_H__) */
-+
 -- 
 2.8.4
 
