@@ -1,8 +1,8 @@
-From 275e85ac97abb0c04e38087641adcf1434af24dc Mon Sep 17 00:00:00 2001
+From 87ceaecb68faf751dcaadc177085a25361411af7 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Thu, 22 May 2025 19:32:19 +0300
-Subject: [PATCH] platform: mellanox: Downstream: Add support for Q3401-RD
- Nvidia XDR DGX flavor switch.
+Subject: [PATCH 28/30] platform: mellanox: Downstream: Add support for
+ Q3401-RD Nvidia XDR DGX flavor switch.
 
 This system is based on Nvidia Q3400 Nvidia Quantum-3 36x800Gb/s Switch, with the
 following key changes:
@@ -18,10 +18,10 @@ Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
  1 file changed, 251 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 7608a6a25029..9c31c2f4554a 100644
+index 07bef9606e23..117fb5d7ce87 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
-@@ -756,6 +756,40 @@ static struct i2c_mux_reg_platform_data mlxplat_xdr_mux_data[] = {
+@@ -755,6 +755,40 @@ static struct i2c_mux_reg_platform_data mlxplat_xdr_mux_data[] = {
  	},
  };
  
@@ -62,7 +62,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  /* Platform channels for L1 scale out system family */
  static const int mlxplat_l1_scale_out_channels[] = {
  	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-@@ -2185,6 +2219,82 @@ static struct mlxreg_core_item mlxplat_mlxcpld_xdr_items[] = {
+@@ -2084,6 +2118,82 @@ static struct mlxreg_core_item mlxplat_mlxcpld_xdr_items[] = {
  	},
  };
  
@@ -145,7 +145,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_leakage_items_data[] = {
  	{
  		.label = "leakage1",
-@@ -2353,6 +2463,17 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_xdr_liq_data = {
+@@ -2252,6 +2362,17 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_xdr_liq_data = {
  	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_FRU | MLXPLAT_CPLD_LOW_AGGR_MASK_MULTI_ASICS,
  };
  
@@ -163,7 +163,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
  	{
  		.label = "pwr1",
-@@ -5950,6 +6071,24 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+@@ -5721,6 +5842,24 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
  		.bit = GENMASK(7, 0),
  		.mode = 0444,
  	},
@@ -188,7 +188,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  	{
  		.label = "cpld1_pn",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET,
-@@ -5978,6 +6117,27 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+@@ -5749,6 +5888,27 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
  		.mode = 0444,
  		.regnum = 2,
  	},
@@ -216,7 +216,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  	{
  		.label = "cpld1_version_min",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_MVER_OFFSET,
-@@ -6002,12 +6162,43 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+@@ -5773,12 +5933,43 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
  		.bit = GENMASK(7, 0),
  		.mode = 0444,
  	},
@@ -260,7 +260,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  	{
  		.label = "reset_long_pb",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_CAUSE_OFFSET,
-@@ -6184,6 +6375,27 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+@@ -5955,6 +6146,27 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
  		.bit = 1,
  		.mode = 0444,
  	},
@@ -288,7 +288,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  	{
  		.label = "fan_dir",
  		.reg = MLXPLAT_CPLD_LPC_REG_FAN_DIRECTION,
-@@ -6246,6 +6458,30 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
+@@ -6017,6 +6229,30 @@ static struct mlxreg_core_data mlxplat_mlxcpld_dgx_ng_regs_io_data[] = {
  		.mask = GENMASK(7, 0) & ~BIT(5),
  		.mode = 0644,
  	},
@@ -319,7 +319,7 @@ index 7608a6a25029..9c31c2f4554a 100644
  	{
  		.label = "config1",
  		.reg = MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET,
-@@ -10132,15 +10368,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9771,15 +10007,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  			mlxplat_mlxcpld_xdr_pwr_items_data[i].hpdev.nr =
  			mlxplat_mlxcpld_xdr_pwr_nr_fixup[i];
  	}
@@ -351,5 +351,5 @@ index 7608a6a25029..9c31c2f4554a 100644
  	for (i = 0; i < ARRAY_SIZE(mlxplat_mlxcpld_wd_set_type2); i++)
  		mlxplat_wd_data[i] = &mlxplat_mlxcpld_wd_set_type2[i];
 -- 
-2.20.1
+2.47.3
 
