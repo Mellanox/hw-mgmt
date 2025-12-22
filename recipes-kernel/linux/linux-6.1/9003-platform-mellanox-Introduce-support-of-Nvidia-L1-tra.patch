@@ -1,4 +1,4 @@
-From a56c9de380bbe70f679ffebc3d47572c7ec760dd Mon Sep 17 00:00:00 2001
+From 4529b610829a79906db1227f01b8bc4f53f56859 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 14 Jan 2024 14:21:57 +0000
 Subject: [PATCH 21/30] platform: mellanox: Introduce support of Nvidia L1 tray
@@ -24,7 +24,7 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 205 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 39cf4b23a9d4..6e9062be49c2 100644
+index 4c3d124c34ab..59c64d6d8dde 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -3028,6 +3028,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {
@@ -223,7 +223,7 @@ index 39cf4b23a9d4..6e9062be49c2 100644
  /* Platform led data for XDR systems */
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  	{
-@@ -8384,6 +8559,29 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -8393,6 +8568,29 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -253,7 +253,7 @@ index 39cf4b23a9d4..6e9062be49c2 100644
  static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8595,6 +8793,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8604,6 +8802,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
  		},
  	},

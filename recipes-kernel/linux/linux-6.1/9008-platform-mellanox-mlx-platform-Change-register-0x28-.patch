@@ -1,4 +1,4 @@
-From 73fbd9ababe6f3ea3dd5c130467ac66b4759adbe Mon Sep 17 00:00:00 2001
+From 179e964a15f79ba89b74a3d8f3d000f993727b7c Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 12:49:33 +0200
 Subject: [PATCH 25/30] platform: mellanox: mlx-platform: Change register 0x28
@@ -14,7 +14,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 6a112c07c9be..7afc86e43f64 100644
+index d27ed601c3e9..f332174ee98a 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -52,7 +52,7 @@

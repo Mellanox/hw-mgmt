@@ -1,4 +1,4 @@
-From 07cb53304cd679924dcfbb009a86e357ff14b951 Mon Sep 17 00:00:00 2001
+From bfc3256c67fb1cb5c645284e5f61d682832648c2 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Fri, 11 Oct 2024 11:16:01 +0300
 Subject: [PATCH 22/30] platform: mellanox: Downstream: Introduce support of
@@ -21,7 +21,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 1055 insertions(+), 99 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 6e9062be49c2..6a112c07c9be 100644
+index 59c64d6d8dde..d27ed601c3e9 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -52,6 +52,7 @@
@@ -1328,7 +1328,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  static int __init mlxplat_register_platform_device(void)
  {
  	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, -1,
-@@ -8658,6 +9547,39 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
+@@ -8667,6 +9556,39 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
  	return mlxplat_register_platform_device();
  }
  
@@ -1368,7 +1368,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  static int __init mlxplat_dmi_ng400_hi171_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8812,6 +9734,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8821,6 +9743,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_MATCH(DMI_BOARD_NAME, "VMOD0019"),
  		},
  	},
@@ -1409,7 +1409,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  	{
  		.callback = mlxplat_dmi_ng400_hi171_matched,
  		.matches = {
-@@ -8914,8 +9870,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8923,8 +9879,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	int i, shift = 0;
  
  	/* Scan adapters from expected id to verify it is free. */
@@ -1420,7 +1420,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  	     mlxplat_max_adap_num; i++) {
  		search_adap = i2c_get_adapter(i);
  		if (search_adap) {
-@@ -8924,7 +9880,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8933,7 +9889,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  		}
  
  		/* Return if expected parent adapter is free. */
@@ -1429,7 +1429,7 @@ index 6e9062be49c2..6a112c07c9be 100644
  			return 0;
  		break;
  	}
-@@ -8946,7 +9902,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8955,7 +9911,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	}
  
  	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */

@@ -1,7 +1,7 @@
-From 6d9cf63a6ee7cb553612c1f7bdff322076b1820c Mon Sep 17 00:00:00 2001
+From db025639ade2e8fef74d45ca58c0815cbc6176d3 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Fri, 11 Oct 2024 11:16:01 +0300
-Subject: [PATCH 36/40] platform: mellanox: Downstream: Introduce support of
+Subject: [PATCH 26/30] platform: mellanox: Downstream: Introduce support of
  Nvidia next genration L1 tray switch
 
 Add support for new L1 tray switch node providing L1 connectivity for
@@ -17,11 +17,11 @@ of the all required platform driver.
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 1136 +++++++++++++++++++++++++++---
+ drivers/platform/mellanox/mlx-platform.c | 1136 ++++++++++++++++++++--
  1 file changed, 1038 insertions(+), 98 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 0773d59..0dcd5da 100644
+index 7351ec3621ad..9f620ee8a9f8 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -52,6 +52,7 @@
@@ -234,19 +234,19 @@ index 0773d59..0dcd5da 100644
  /* Platform register access default */
  static struct mlxreg_core_data mlxplat_mlxcpld_default_regs_io_data[] = {
  	{
-@@ -4861,6 +4995,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4860,6 +4994,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mode = 0644,
  		.secured = 1,
  	},
- 	{
++	{
 +		.label = "leakage_status_clear",
 +		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(3),
 +		.mode = 0644,
 +	},
-+	{
+ 	{
  		.label = "erot1_recovery",
  		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
- 		.mask = GENMASK(7, 0) & ~BIT(6),
 @@ -6800,137 +6940,691 @@ static struct mlxreg_core_platform_data mlxplat_smart_switch_regs_io_data = {
  		.counter = ARRAY_SIZE(mlxplat_mlxcpld_smart_switch_regs_io_data),
  };
@@ -1310,7 +1310,7 @@ index 0773d59..0dcd5da 100644
  static int __init mlxplat_register_platform_device(void)
  {
  	mlxplat_dev = platform_device_register_simple(MLX_PLAT_DEVICE_NAME, -1,
-@@ -8609,6 +9482,39 @@ static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_
+@@ -8618,6 +9491,39 @@ static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_
  	return 1;
  }
  
@@ -1350,10 +1350,11 @@ index 0773d59..0dcd5da 100644
  static int __init mlxplat_dmi_ng400_hi171_matched(const struct dmi_system_id *dmi)
  {
  	unsigned int i;
-@@ -8795,6 +9701,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8803,6 +9709,40 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0019"),
  		},
  	},
- 	{
++	{
 +		.callback = mlxplat_dmi_l1_scale_out_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0021"),
@@ -1387,11 +1388,10 @@ index 0773d59..0dcd5da 100644
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0021"),
 +		},
 +	},
-+	{
+ 	{
  		.callback = mlxplat_dmi_ng400_hi171_matched,
  		.matches = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0022"),
-@@ -8896,8 +9836,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8905,8 +9845,8 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	int i, shift = 0;
  
  	/* Scan adapters from expected id to verify it is free. */
@@ -1402,7 +1402,7 @@ index 0773d59..0dcd5da 100644
  	     mlxplat_max_adap_num; i++) {
  		search_adap = i2c_get_adapter(i);
  		if (search_adap) {
-@@ -8906,7 +9846,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8915,7 +9855,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  		}
  
  		/* Return if expected parent adapter is free. */
@@ -1411,7 +1411,7 @@ index 0773d59..0dcd5da 100644
  			return 0;
  		break;
  	}
-@@ -8928,7 +9868,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
+@@ -8937,7 +9877,7 @@ static int mlxplat_mlxcpld_verify_bus_topology(int *nr)
  	}
  
  	/* Shift bus only if mux provided by 'mlxplat_mux_data'. */
@@ -1421,5 +1421,5 @@ index 0773d59..0dcd5da 100644
  
  	return 0;
 -- 
-2.8.4
+2.47.3
 

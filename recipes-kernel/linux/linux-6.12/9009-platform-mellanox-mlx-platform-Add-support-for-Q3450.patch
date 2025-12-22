@@ -1,7 +1,7 @@
-From 1f6836e1fb147b8e2f41b477b06523bc474dfff2 Mon Sep 17 00:00:00 2001
+From 07a9c75234a1a433f137a6ce7eeea64f0dbbecfb Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Tue, 5 Aug 2025 16:44:01 +0300
-Subject: [PATCH 38/40] platform: mellanox: mlx-platform: Add support for
+Subject: [PATCH 28/30] platform: mellanox: mlx-platform: Add support for
  Q3450-LD Nvidia XDR switch
 
 Q3450-LD is XDR Infiniband CPO switch with 144 XDR ports, based on
@@ -20,11 +20,11 @@ Q3450-LD Features:
 Signed-off-by: Felix Radensky <fradensky@nvidia.com>
 Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 295 ++++++++++++++++++++++++++++++-
+ drivers/platform/mellanox/mlx-platform.c | 295 ++++++++++++++++++++++-
  1 file changed, 294 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 1f7d945..b97f71e 100644
+index f30ea04f2758..f45c4069d7da 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -37,6 +37,7 @@
@@ -262,50 +262,51 @@ index 1f7d945..b97f71e 100644
  /* Platform led data for L1 scale out switch systems */
  static struct mlxreg_core_data mlxplat_mlxcpld_l1_scale_out_led_data[] = {
  	{
-@@ -4880,6 +5073,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4879,6 +5072,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.bit = GENMASK(7, 0),
  		.mode = 0444,
  	},
- 	{
++	{
 +		.label = "cpld7_version",
 +		.reg = MLXPLAT_CPLD_LPC_REG_CPLD7_VER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
 +	},
-+	{
+ 	{
  		.label = "cpld1_pn",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_PN_OFFSET,
- 		.bit = GENMASK(15, 0),
-@@ -4922,6 +5121,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4921,6 +5120,13 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mode = 0444,
  		.regnum = 2,
  	},
- 	{
++	{
 +		.label = "cpld7_pn",
 +		.reg = MLXPLAT_CPLD_LPC_REG_CPLD7_PN_OFFSET,
 +		.bit = GENMASK(15, 0),
 +		.mode = 0444,
 +		.regnum = 2,
 +	},
-+	{
+ 	{
  		.label = "cpld1_version_min",
  		.reg = MLXPLAT_CPLD_LPC_REG_CPLD1_MVER_OFFSET,
+@@ -4957,6 +5163,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.bit = GENMASK(7, 0),
-@@ -4958,6 +5164,12 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
  		.mode = 0444,
  	},
- 	{
++	{
 +		.label = "cpld7_version_min",
 +		.reg = MLXPLAT_CPLD_LPC_REG_CPLD7_MVER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
 +	},
-+	{
+ 	{
  		.label = "asic_reset",
  		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP2_OFFSET,
- 		.mask = GENMASK(7, 0) & ~BIT(3),
-@@ -4995,6 +5207,54 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+@@ -4994,6 +5206,54 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
+ 		.mode = 0644,
  		.secured = 1,
  	},
- 	{
++	{
 +		.label = "leakage1",
 +		.reg = MLXPLAT_CPLD_LPC_REG_LEAK_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -353,10 +354,9 @@ index 1f7d945..b97f71e 100644
 +		.mask = GENMASK(7, 0) & ~BIT(7),
 +		.mode = 0444,
 +	},
-+	{
+ 	{
  		.label = "leakage_status_clear",
  		.reg = MLXPLAT_CPLD_LPC_REG_PWM_CONTROL_OFFSET,
- 		.mask = GENMASK(7, 0) & ~BIT(3),
 @@ -8269,6 +8529,7 @@ static bool mlxplat_mlxcpld_readable_reg(struct device *dev, unsigned int reg)
  	case MLXPLAT_CPLD_LPC_REG_CPLD4_VER_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_CPLD5_VER_OFFSET:
@@ -413,7 +413,7 @@ index 1f7d945..b97f71e 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9409,6 +9674,27 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
+@@ -9418,6 +9683,27 @@ static int __init mlxplat_dmi_l1_switch_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -441,20 +441,20 @@ index 1f7d945..b97f71e 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9688,6 +9974,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9696,6 +9982,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
  		},
  	},
- 	{
++	{
 +		.callback = mlxplat_dmi_xdr_liq_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI175"),
 +		},
 +	},
-+	{
+ 	{
  		.callback = mlxplat_dmi_xdr_matched,
  		.matches = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
 -- 
-2.8.4
+2.47.3
 

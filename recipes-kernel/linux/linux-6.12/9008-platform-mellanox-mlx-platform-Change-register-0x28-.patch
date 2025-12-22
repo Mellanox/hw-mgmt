@@ -1,7 +1,7 @@
-From f333ff4268556c8b0000acdd7a7bdf8ee842f953 Mon Sep 17 00:00:00 2001
+From 5e9f769e52d12ad25cb1a6dc81ad0df6b58d8bc7 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 12:49:33 +0200
-Subject: [PATCH 37/40] platform: mellanox: mlx-platform: Change register 0x28
+Subject: [PATCH 27/30] platform: mellanox: mlx-platform: Change register 0x28
  name
 
 Register 0x28 was repurposed on new systems. Change its name
@@ -14,7 +14,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 0dcd5da..1f7d945 100644
+index 9f620ee8a9f8..f30ea04f2758 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -52,7 +52,7 @@
@@ -53,5 +53,5 @@ index 0dcd5da..1f7d945 100644
  	case MLXPLAT_CPLD_LPC_REG_GP0_RO_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_GPCOM0_OFFSET:
 -- 
-2.8.4
+2.47.3
 

@@ -1,7 +1,7 @@
-From 19ad28e576e07b02c5dc6107b022b5208ffd61ee Mon Sep 17 00:00:00 2001
+From b69e6f996d21ac72c3e97032857e8f7b95d17867 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 14 Jan 2024 14:21:57 +0000
-Subject: [PATCH 34/40] platform: mellanox: Introduce support of Nvidia L1 tray
+Subject: [PATCH 24/30] platform: mellanox: Introduce support of Nvidia L1 tray
  DGX switch
 
 Add support for new L1 tray DGX switch node providing L1
@@ -20,11 +20,11 @@ of the all required platform driver.
 Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 205 +++++++++++++++++++++++++++++++
+ drivers/platform/mellanox/mlx-platform.c | 205 +++++++++++++++++++++++
  1 file changed, 205 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 54f52d7..0773d59 100644
+index dd8b6841d994..7351ec3621ad 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -2531,6 +2531,25 @@ static struct mlxreg_core_data mlxplat_mlxcpld_erot_error_items_data[] = {
@@ -223,7 +223,7 @@ index 54f52d7..0773d59 100644
  /* Platform led data for XDR systems */
  static struct mlxreg_core_data mlxplat_mlxcpld_xdr_led_data[] = {
  	{
-@@ -8387,6 +8562,29 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
+@@ -8396,6 +8571,29 @@ static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *d
  	return mlxplat_register_platform_device();
  }
  
@@ -253,20 +253,20 @@ index 54f52d7..0773d59 100644
  static int __init mlxplat_dmi_bf3_comex_default_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -8578,6 +8776,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -8586,6 +8784,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+ 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
  		},
  	},
- 	{
++	{
 +		.callback = mlxplat_dmi_l1_g3_switch_matched,
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0017"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
 +		},
 +	},
-+	{
+ 	{
  		.callback = mlxplat_dmi_xdr_matched,
  		.matches = {
- 			DMI_MATCH(DMI_BOARD_NAME, "VMOD0018"),
 -- 
-2.8.4
+2.47.3
 

@@ -1,4 +1,4 @@
-From 1ba270abc9b460cb2cca163d7ecb633bbab17f4d Mon Sep 17 00:00:00 2001
+From 76fbd24b4e0271aad6674ef9477b816f8a090104 Mon Sep 17 00:00:00 2001
 From: Felix Radensky <fradensky@nvidia.com>
 Date: Mon, 13 Jan 2025 17:02:32 +0200
 Subject: [PATCH 26/30] platform: mellanox: mlx-platform: Add support for
@@ -24,7 +24,7 @@ Reviewed-by: Vadim Pasternak <vadimp@nvidia.com>
  1 file changed, 294 insertions(+)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 7afc86e43f64..07bef9606e23 100644
+index f332174ee98a..95b6708dd5cd 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -37,6 +37,7 @@
@@ -405,7 +405,7 @@ index 7afc86e43f64..07bef9606e23 100644
  	case MLXPLAT_CPLD_LPC_REG_PWM1_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM2_OFFSET:
  	case MLXPLAT_CPLD_LPC_REG_PWM3_OFFSET:
-@@ -9523,6 +9789,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9532,6 +9798,27 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  	return mlxplat_register_platform_device();
  }
  
@@ -433,7 +433,7 @@ index 7afc86e43f64..07bef9606e23 100644
  static int __init mlxplat_dmi_smart_switch_matched(const struct dmi_system_id *dmi)
  {
  	int i;
-@@ -9721,6 +10008,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
+@@ -9730,6 +10017,13 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
  			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI159"),
  		},
  	},

@@ -1,4 +1,4 @@
-From 87ceaecb68faf751dcaadc177085a25361411af7 Mon Sep 17 00:00:00 2001
+From 83a9204f74c2c44b9802aa196946722f5c1a2316 Mon Sep 17 00:00:00 2001
 From: Oleksandr Shamray <oleksandrs@nvidia.com>
 Date: Thu, 22 May 2025 19:32:19 +0300
 Subject: [PATCH 28/30] platform: mellanox: Downstream: Add support for
@@ -18,7 +18,7 @@ Signed-off-by: Oleksandr Shamray <oleksandrs@nvidia.com>
  1 file changed, 251 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index 07bef9606e23..117fb5d7ce87 100644
+index 95b6708dd5cd..43e5e289634f 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -755,6 +755,40 @@ static struct i2c_mux_reg_platform_data mlxplat_xdr_mux_data[] = {
@@ -319,7 +319,7 @@ index 07bef9606e23..117fb5d7ce87 100644
  	{
  		.label = "config1",
  		.reg = MLXPLAT_CPLD_LPC_REG_CONFIG1_OFFSET,
-@@ -9771,15 +10007,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
+@@ -9780,15 +10016,24 @@ static int __init mlxplat_dmi_xdr_matched(const struct dmi_system_id *dmi)
  			mlxplat_mlxcpld_xdr_pwr_items_data[i].hpdev.nr =
  			mlxplat_mlxcpld_xdr_pwr_nr_fixup[i];
  	}
