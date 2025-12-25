@@ -599,8 +599,8 @@ declare -A sn66xxld_pwr_alternatives=( \
 # Devices located on SN66XX_LD platform board
 declare -A sn66xxld_platform_alternatives=( \
 	["24c512_1"]="24c512 0x51 1 vpd_info" \
-	["jc42_0"]="jc42 0x52 2 somdimm_temp1" \
-	["jc42_1"]="jc42 0x53 2 somdimm_temp2" \
+	["jc42_0"]="jc42 0x52 10 somdimm_temp1" \
+	["jc42_1"]="jc42 0x53 10 somdimm_temp2" \
 	["mp2845_0"]="mp2845 0x69 5 comex_voltmon1" \
 	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2")
 
