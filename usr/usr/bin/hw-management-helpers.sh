@@ -1041,3 +1041,52 @@ run_fixup_script()
 		echo $status > ${config_path}/fixup-status-${stage}
 	fi
 }
+
+# SODIMM temperatures (C) for setting in scale 1000
+SODIMM_TEMP_CRIT=95000
+SODIMM_TEMP_MAX=85000
+SODIMM_TEMP_MIN=0
+SODIMM_TEMP_HYST=6000
+
+set_sodimm_temp_limits()
+{
+	# SODIMM temp reading is not supported on Broadwell-DE Comex
+	# and on BF# Comex.
+	# Broadwell-DE Comex can be installed interchangeably with new
+	# Coffee Lake Comex on part of systems e.g. on Anaconda.
+	# Thus check by CPU type and not by system type.
+	case $cpu_type in
+		$BDW_CPU|$BF3_CPU)
+			return 0
+			;;
+		*)
+			;;
+	esac
+
+	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
+		modprobe jc42 > /dev/null 2>&1
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			while : ; do
+				sleep 1
+				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
+			done
+		else
+			return 1
+		fi
+	fi
+
+	if ! ls /sys/bus/i2c/drivers/jc42 | grep -q '^[0-9][0-9]*' ||
+	   ! find /sys/bus/i2c/drivers/jc42/[0-9][0-9]*/ | grep -q hwmon; then
+		return 1
+	fi
+
+	for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9][0-9]*; do
+		echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
+		echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
+		echo $SODIMM_TEMP_MIN > "$temp_sens"/hwmon/hwmon*/temp1_min
+		echo $SODIMM_TEMP_HYST > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
+	done
+
+	return 0
+}

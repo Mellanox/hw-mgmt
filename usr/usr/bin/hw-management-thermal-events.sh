@@ -888,6 +888,7 @@ if [ "$1" == "add" ]; then
 			$AMD_V3000_CPU)
 				sodimm1_addr='0052'
 				sodimm2_addr='0053'
+				set_sodimm_temp_limits
 			;;
 			*)
 				exit 0
