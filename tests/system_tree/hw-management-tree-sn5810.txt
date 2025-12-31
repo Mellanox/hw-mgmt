@@ -1,0 +1,738 @@
+/var/run/hw-management/:
+total 8
+drwxr-xr-x 15 root root  360 Dec 30 10:03 .
+drwxr-xr-x 25 root root  820 Dec 31 13:11 ..
+drwxr-xr-x  2 root root 2100 Dec 30 10:03 alarm
+drwxr-xr-x  2 root root   80 Dec 30 10:02 bin
+drwxr-xr-x  3 root root  720 Dec 30 10:03 config
+drwxr-xr-x  2 root root  120 Dec 30 10:03 eeprom
+drwxr-xr-x  2 root root 6020 Dec 30 10:03 environment
+drwxr-xr-x  2 root root  100 Dec 30 10:03 events
+-rw-r--r--  1 root root    6 Dec 30 10:03 fast_sysfs_labels_rdy
+drwxr-xr-x  2 root root   40 Dec 30 10:02 firmware
+drwxr-xr-x  2 root root   60 Dec 30 10:03 jtag
+drwxr-xr-x  2 root root  620 Dec 30 10:03 led
+drwxr-xr-x  2 root root   80 Dec 30 10:02 power
+-rw-r--r--  1 root root    6 Dec 30 10:03 sysfs_labels_rdy
+drwxr-xr-x  2 root root 1520 Dec 30 10:03 system
+drwxr-xr-x  2 root root 1460 Dec 30 10:03 thermal
+-rw-r--r--  1 root root    0 Dec 30 10:02 .udev_ready
+drwxr-xr-x  4 root root   80 Dec 30 10:03 watchdog
+
+/var/run/hw-management/alarm:
+total 0
+drwxr-xr-x  2 root root 2100 Dec 30 10:03 .
+drwxr-xr-x 15 root root  360 Dec 30 10:03 ..
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon1_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/curr1_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon1_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/curr2_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon1_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in1_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 comex_voltmon1_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in2_crit_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 comex_voltmon1_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in3_crit_alarm
+lrwxrwxrwx  1 root root   94 Dec 30 10:03 comex_voltmon1_temp1_crit_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/temp1_crit_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon2_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/curr1_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon2_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/curr2_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 comex_voltmon2_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in1_crit_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 comex_voltmon2_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in2_crit_alarm
+lrwxrwxrwx  1 root root   90 Dec 30 10:03 comex_voltmon2_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/power1_alarm
+lrwxrwxrwx  1 root root   94 Dec 30 10:03 comex_voltmon2_temp1_crit_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/temp1_crit_alarm
+lrwxrwxrwx  1 root root   93 Dec 30 10:03 comex_voltmon2_temp1_max_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/temp1_max_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 pdb_hotswap1_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/curr1_max_alarm
+lrwxrwxrwx  1 root root   90 Dec 30 10:03 pdb_hotswap1_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in1_max_alarm
+lrwxrwxrwx  1 root root   90 Dec 30 10:03 pdb_hotswap1_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in3_min_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 pdb_hotswap1_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/power1_alarm
+lrwxrwxrwx  1 root root   93 Dec 30 10:03 pdb_hotswap1_temp1_crit_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/temp1_crit_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 pdb_hotswap1_temp1_max_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/temp1_max_alarm
+lrwxrwxrwx  1 root root   93 Dec 30 10:03 pdb_pwr_conv1_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr1_crit_alarm
+lrwxrwxrwx  1 root root   93 Dec 30 10:03 pdb_pwr_conv1_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr2_crit_alarm
+lrwxrwxrwx  1 root root   91 Dec 30 10:03 pdb_pwr_conv1_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in1_crit_alarm
+lrwxrwxrwx  1 root root   91 Dec 30 10:03 pdb_pwr_conv1_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in3_crit_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 pdb_pwr_conv1_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/power1_alarm
+lrwxrwxrwx  1 root root   93 Dec 30 10:03 pdb_pwr_conv1_temp1_crit_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/temp1_crit_alarm
+lrwxrwxrwx  1 root root   92 Dec 30 10:03 pdb_pwr_conv1_temp1_max_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/temp1_max_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon10_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon11_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/power1_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr1_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr3_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr4_alarm
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in1_alarm
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in2_alarm
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon1_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/power1_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr1_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr3_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr4_alarm
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in1_alarm
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in2_alarm
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon2_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon3_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon4_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon5_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon6_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon7_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon8_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/power1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr1_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr3_alarm
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr4_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in1_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in2_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in2_alarm
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in3_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in3_alarm
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon9_power1_alarm -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/power1_alarm
+
+/var/run/hw-management/bin:
+total 36
+drwxr-xr-x  2 root root    80 Dec 30 10:02 .
+drwxr-xr-x 15 root root   360 Dec 30 10:03 ..
+-rwxr-xr-x  1 root root 16847 Dec 30 10:02 hw_management_dpu_thermal_update.py
+-rwxr-xr-x  1 root root 12480 Dec 30 10:02 hw_management_independent_mode_update.py
+
+/var/run/hw-management/config:
+total 128
+drwxr-xr-x  3 root root 720 Dec 30 10:03 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+-rw-r--r--  1 root root   1 Dec 30 10:02 asic1_pci_bus_id
+-rw-r--r--  1 root root   2 Dec 30 10:02 asic_chipup_counter
+-rw-r--r--  1 root root   2 Dec 30 10:02 asic_control
+-rw-r--r--  1 root root   2 Dec 30 10:02 asic_num
+-rw-r--r--  1 root root   2 Dec 30 10:02 chipdown_delay
+-rw-r--r--  1 root root   2 Dec 30 10:02 chipup_delay
+-rw-r--r--  1 root root   2 Dec 30 10:02 cpld_num
+-rw-r--r--  1 root root   6 Dec 30 10:02 cpu_type
+-rw-r--r--  1 root root 451 Dec 30 10:02 devtree
+-rw-r--r--  1 root root   2 Dec 30 10:03 dummy_psus_supported
+drwxr-xr-x  2 root root  40 Dec 30 10:02 dynamic_boards
+-rw-r--r--  1 root root   2 Dec 30 10:03 events_ready
+-rw-r--r--  1 root root   2 Dec 30 10:02 fan_drwr_num
+-rw-r--r--  1 root root   3 Dec 30 10:02 fan_speed_tolerance
+-rw-r--r--  1 root root   2 Dec 30 10:02 gearbox_counter
+-rw-r--r--  1 root root   2 Dec 30 10:02 hotplug_fans
+-rw-r--r--  1 root root   2 Dec 30 10:02 hotplug_linecards
+-rw-r--r--  1 root root   2 Dec 30 10:02 hotplug_pdbs
+-rw-r--r--  1 root root   2 Dec 30 10:02 hotplug_psus
+-rw-r--r--  1 root root   2 Dec 30 10:02 hotplug_pwrs
+-rw-r--r--  1 root root   2 Dec 30 10:02 i2c_bus_def_off_eeprom_cpu
+-rw-r--r--  1 root root   2 Dec 30 10:02 i2c_bus_offset
+-rw-r--r--  1 root root   3 Dec 30 10:02 i2c_comex_mon_bus_default
+-rw-r--r--  1 root root   7 Dec 30 10:03 jtag_ro_reg
+-rw-r--r--  1 root root   7 Dec 30 10:03 jtag_rw_reg
+-rw-r--r--  1 root root   2 Dec 30 10:02 leakage_counter
+lrwxrwxrwx  1 root root  48 Dec 30 10:03 lm_sensors_config -> /etc/hw-management-sensors/sn58xxld_sensors.conf
+-rw-r--r--  1 root root   2 Dec 30 10:02 minimal_unsupported
+-rw-r--r--  1 root root   2 Dec 30 10:02 module_counter
+-rw-r--r--  1 root root 119 Dec 30 10:02 named_busses
+-rw-r--r--  1 root root   3 Dec 30 10:02 reset_attr_num
+-rw-r--r--  1 root root   2 Dec 30 10:03 reset_attr_ready
+-rw-r--r--  1 root root  61 Dec 30 10:03 tc_config.json
+-rw-r--r--  1 root root   3 Dec 30 10:02 thermal_delay
+
+/var/run/hw-management/config/dynamic_boards:
+total 0
+drwxr-xr-x 2 root root  40 Dec 30 10:02 .
+drwxr-xr-x 3 root root 720 Dec 30 10:03 ..
+
+/var/run/hw-management/eeprom:
+total 8
+drwxr-xr-x  2 root root  120 Dec 30 10:03 .
+drwxr-xr-x 15 root root  360 Dec 30 10:03 ..
+-rw-r--r--  1 root root  454 Dec 30 10:03 cpu_data
+lrwxrwxrwx  1 root root   71 Dec 30 10:03 cpu_info -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-70/70-0050/eeprom
+-rw-r--r--  1 root root 1829 Dec 30 10:03 vpd_data
+lrwxrwxrwx  1 root root   53 Dec 30 10:03 vpd_info -> /sys/devices/platform/AMDI0010:01/i2c-1/1-0051/eeprom
+
+/var/run/hw-management/environment:
+total 0
+drwxr-xr-x  2 root root 6020 Dec 30 10:03 .
+drwxr-xr-x 15 root root  360 Dec 30 10:03 ..
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon1_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/curr1_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon1_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/curr2_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon1_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 comex_voltmon1_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in2_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon1_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in2_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon1_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in2_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 comex_voltmon1_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in3_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon1_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in3_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon1_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon2_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/curr1_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon2_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/curr2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 comex_voltmon2_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in1_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon2_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 comex_voltmon2_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in2_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon2_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in2_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon2_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/in2_lcrit
+lrwxrwxrwx  1 root root   90 Dec 30 10:03 comex_voltmon2_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/power1_input
+lrwxrwxrwx  1 root root   90 Dec 30 10:03 comex_voltmon2_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/power2_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_hotswap1_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_hotswap1_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/curr1_max
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_hotswap1_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in1_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_hotswap1_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in1_input
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_hotswap1_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in1_min
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_hotswap1_in1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in1_max
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_hotswap1_in1_min -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in1_min
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_hotswap1_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in3_input
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_hotswap1_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in3_min
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_hotswap1_in2_min -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/in3_min
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 pdb_hotswap1_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 pdb_hotswap1_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/power1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 pdb_pwr_conv1_curr1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_pwr_conv1_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 pdb_pwr_conv1_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr2_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_pwr_conv1_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/curr2_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 pdb_pwr_conv1_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in1_lcrit
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_pwr_conv1_in1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in1_max
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 pdb_pwr_conv1_in1_min -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in1_min
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 pdb_pwr_conv1_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 pdb_pwr_conv1_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/power1_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 pdb_pwr_conv1_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/power2_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon10_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon10_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon10_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon10_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon10_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon10_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon10_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon10_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon10_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon11_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon11_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon11_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon11_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon11_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon11_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon11_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon11_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon11_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/power3_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr1_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr1_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon1_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr3_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr3_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr3_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr3_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon1_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr4_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr4_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr4_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/curr4_max
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 voltmon1_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in1_crit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in1_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in1_lcrit
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 voltmon1_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in2_crit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in2_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in2_lcrit
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 voltmon1_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in3_crit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in3_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/in3_lcrit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon1_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/power1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon1_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/power1_max
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon1_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/power2_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon1_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/power3_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr1_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr1_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon2_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr3_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr3_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr3_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr3_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon2_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr4_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr4_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr4_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/curr4_max
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 voltmon2_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in1_crit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in1_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in1_lcrit
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 voltmon2_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in2_crit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in2_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in2_lcrit
+lrwxrwxrwx  1 root root   84 Dec 30 10:03 voltmon2_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in3_crit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in3_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/in3_lcrit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon2_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/power1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon2_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/power1_max
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon2_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/power2_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon2_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon3_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon3_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon3_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon3_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon3_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon3_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon3_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon3_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon3_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon4_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon4_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon4_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon4_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon4_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon4_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon4_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon4_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon4_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon5_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon5_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon5_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon5_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon5_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon5_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon5_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon5_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon5_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon6_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon6_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon6_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon6_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon6_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon6_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon6_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon6_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon6_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon7_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon7_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon7_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon7_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon7_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon7_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon7_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon7_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon7_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon8_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon8_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon8_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon8_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon8_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon8_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon8_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon8_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon8_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/power3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_curr1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon9_curr2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr3_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr3_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr3_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_curr2_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr3_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon9_curr3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr4_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr4_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_curr3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr4_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_curr3_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/curr4_max
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon9_in1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in1_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in1_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon9_in2_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in2_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in2_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in2_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in2_lcrit
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon9_in3_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in3_crit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in3_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_in3_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/in3_lcrit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon9_power1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/power1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon9_power1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/power1_max
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon9_power2_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/power2_input
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 voltmon9_power3_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/power3_input
+
+/var/run/hw-management/events:
+total 12
+drwxr-xr-x  2 root root 100 Dec 30 10:03 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+-rw-r--r--  1 root root   2 Dec 30 10:03 leakage1
+-rw-r--r--  1 root root   2 Dec 30 10:03 leakage2
+-rw-r--r--  1 root root   2 Dec 30 10:03 pdb1
+
+/var/run/hw-management/firmware:
+total 0
+drwxr-xr-x  2 root root  40 Dec 30 10:02 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+
+/var/run/hw-management/jtag:
+total 0
+drwxr-xr-x  2 root root  60 Dec 30 10:03 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+lrwxrwxrwx  1 root root  64 Dec 30 10:03 jtag_enable -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/jtag_enable
+
+/var/run/hw-management/led:
+total 24
+drwxr-xr-x  2 root root 620 Dec 30 10:03 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+-rw-r--r--  1 root root   5 Dec 30 10:03 led_power
+lrwxrwxrwx  1 root root  76 Dec 30 10:03 led_power_amber -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/brightness
+lrwxrwxrwx  1 root root  75 Dec 30 10:03 led_power_amber_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/delay_off
+lrwxrwxrwx  1 root root  74 Dec 30 10:03 led_power_amber_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/delay_on
+lrwxrwxrwx  1 root root  73 Dec 30 10:03 led_power_amber_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/trigger
+-rw-r--r--  1 root root  41 Dec 30 10:03 led_power_capability
+lrwxrwxrwx  1 root root  76 Dec 30 10:03 led_power_green -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/brightness
+lrwxrwxrwx  1 root root  75 Dec 30 10:03 led_power_green_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/delay_off
+lrwxrwxrwx  1 root root  74 Dec 30 10:03 led_power_green_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/delay_on
+lrwxrwxrwx  1 root root  73 Dec 30 10:03 led_power_green_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/trigger
+lrwxrwxrwx  1 root root  46 Dec 30 10:03 led_power_state -> /usr/bin/hw-management-led-state-conversion.sh
+-rw-r--r--  1 root root   5 Dec 30 10:03 led_status
+lrwxrwxrwx  1 root root  77 Dec 30 10:03 led_status_amber -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/brightness
+lrwxrwxrwx  1 root root  76 Dec 30 10:03 led_status_amber_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/delay_off
+lrwxrwxrwx  1 root root  75 Dec 30 10:03 led_status_amber_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/delay_on
+lrwxrwxrwx  1 root root  74 Dec 30 10:03 led_status_amber_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/trigger
+-rw-r--r--  1 root root  41 Dec 30 10:03 led_status_capability
+lrwxrwxrwx  1 root root  77 Dec 30 10:03 led_status_green -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/brightness
+lrwxrwxrwx  1 root root  76 Dec 30 10:03 led_status_green_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/delay_off
+lrwxrwxrwx  1 root root  75 Dec 30 10:03 led_status_green_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/delay_on
+lrwxrwxrwx  1 root root  74 Dec 30 10:03 led_status_green_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/trigger
+lrwxrwxrwx  1 root root  46 Dec 30 10:03 led_status_state -> /usr/bin/hw-management-led-state-conversion.sh
+-rw-r--r--  1 root root   5 Dec 30 10:03 led_uid
+lrwxrwxrwx  1 root root  73 Dec 30 10:03 led_uid_blue -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/brightness
+lrwxrwxrwx  1 root root  72 Dec 30 10:03 led_uid_blue_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/delay_off
+lrwxrwxrwx  1 root root  71 Dec 30 10:03 led_uid_blue_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/delay_on
+lrwxrwxrwx  1 root root  70 Dec 30 10:03 led_uid_blue_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/trigger
+-rw-r--r--  1 root root  21 Dec 30 10:03 led_uid_capability
+lrwxrwxrwx  1 root root  46 Dec 30 10:03 led_uid_state -> /usr/bin/hw-management-led-state-conversion.sh
+
+/var/run/hw-management/power:
+total 0
+drwxr-xr-x  2 root root  80 Dec 30 10:02 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+lrwxrwxrwx  1 root root  38 Dec 30 10:02 pwr_consum -> /usr/bin/hw-management-power-helper.sh
+lrwxrwxrwx  1 root root  38 Dec 30 10:02 pwr_sys -> /usr/bin/hw-management-power-helper.sh
+
+/var/run/hw-management/system:
+total 12
+drwxr-xr-x  2 root root 1520 Dec 30 10:03 .
+drwxr-xr-x 15 root root  360 Dec 30 10:03 ..
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 asic1_pg_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic1_pg_fail
+lrwxrwxrwx  1 root root   64 Dec 30 10:03 asic1_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic1_reset
+lrwxrwxrwx  1 root root   65 Dec 30 10:03 asic2_health -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic2_health
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 asic2_pg_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic2_pg_fail
+lrwxrwxrwx  1 root root   64 Dec 30 10:03 asic2_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic2_reset
+lrwxrwxrwx  1 root root   65 Dec 30 10:03 asic3_health -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic3_health
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 asic3_pg_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic3_pg_fail
+lrwxrwxrwx  1 root root   64 Dec 30 10:03 asic3_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic3_reset
+lrwxrwxrwx  1 root root   65 Dec 30 10:03 asic4_health -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic4_health
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 asic4_pg_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic4_pg_fail
+lrwxrwxrwx  1 root root   64 Dec 30 10:03 asic4_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic4_reset
+lrwxrwxrwx  1 root root   64 Dec 30 10:03 asic_health -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic_health
+lrwxrwxrwx  1 root root   63 Dec 30 10:03 asic_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/asic_reset
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 aux_pwr_cycle -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/aux_pwr_cycle
+lrwxrwxrwx  1 root root   29 Dec 30 10:03 bmc_present -> /sys/class/gpio/gpio838/value
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 bmc_to_cpu_ctrl -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/bmc_to_cpu_ctrl
+lrwxrwxrwx  1 root root   29 Dec 30 10:03 boot_completed -> /sys/class/gpio/gpio836/value
+-rw-r--r--  1 root root   76 Dec 30 10:03 cpld
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 cpld1_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld1_pn
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 cpld1_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld1_version
+lrwxrwxrwx  1 root root   70 Dec 30 10:03 cpld1_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld1_version_min
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 cpld2_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld2_pn
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 cpld2_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld2_version
+lrwxrwxrwx  1 root root   70 Dec 30 10:03 cpld2_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld2_version_min
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 cpld3_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld3_pn
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 cpld3_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld3_version
+lrwxrwxrwx  1 root root   70 Dec 30 10:03 cpld3_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld3_version_min
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 cpld4_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld4_pn
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 cpld4_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld4_version
+lrwxrwxrwx  1 root root   70 Dec 30 10:03 cpld4_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpld4_version_min
+-rw-r--r--  1 root root   76 Dec 30 10:03 cpld_base
+lrwxrwxrwx  1 root root   29 Dec 30 10:03 cpu_erot_present -> /sys/class/gpio/gpio837/value
+lrwxrwxrwx  1 root root   67 Dec 30 10:03 cpu_mctp_ready -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpu_mctp_ready
+lrwxrwxrwx  1 root root   72 Dec 30 10:03 cpu_power_off_ready -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpu_power_off_ready
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 cpu_shutdown_req -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/cpu_shutdown_req
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 graceful_pwr_off -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/graceful_pwr_off
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 jtag_cap -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/jtag_cap
+lrwxrwxrwx  1 root root   64 Dec 30 10:03 jtag_enable -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/jtag_enable
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 leakage1 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/leakage1
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 leakage2 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/leakage2
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 leakage3 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/leakage3
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 leakage4 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/leakage4
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 leakage5 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/leakage5
+lrwxrwxrwx  1 root root   29 Dec 30 10:03 nvme_present -> /sys/class/gpio/gpio874/value
+lrwxrwxrwx  1 root root   72 Dec 30 10:03 pcie_asic_reset_dis -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pcie_asic_reset_dis
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 pdb1_pwr_status -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pdb1_pwr_status
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 pdb2_pwr_status -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pdb2_pwr_status
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 pdb3_pwr_status -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pdb3_pwr_status
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 pdb4_pwr_status -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pdb4_pwr_status
+lrwxrwxrwx  1 root root   59 Dec 30 10:03 port80 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/port80
+lrwxrwxrwx  1 root root   74 Dec 30 10:03 pwr_converter_prog_en -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pwr_converter_prog_en
+lrwxrwxrwx  1 root root   62 Dec 30 10:03 pwr_cycle -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pwr_cycle
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 pwr_down -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/pwr_down
+lrwxrwxrwx  1 root root   71 Dec 30 10:03 reset_asic_thermal -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_asic_thermal
+lrwxrwxrwx  1 root root   76 Dec 30 10:03 reset_aux_pwr_or_reload -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_aux_pwr_or_reload
+lrwxrwxrwx  1 root root   73 Dec 30 10:03 reset_comex_pwr_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_comex_pwr_fail
+lrwxrwxrwx  1 root root   72 Dec 30 10:03 reset_comex_thermal -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_comex_thermal
+lrwxrwxrwx  1 root root   66 Dec 30 10:03 reset_long_pb -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_long_pb
+lrwxrwxrwx  1 root root   67 Dec 30 10:03 reset_main_51v -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_main_51v
+lrwxrwxrwx  1 root root   67 Dec 30 10:03 reset_mgmt_pwr -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_mgmt_pwr
+lrwxrwxrwx  1 root root   67 Dec 30 10:03 reset_platform -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_platform
+lrwxrwxrwx  1 root root   77 Dec 30 10:03 reset_pwr_converter_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_pwr_converter_fail
+lrwxrwxrwx  1 root root   67 Dec 30 10:03 reset_short_pb -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_short_pb
+lrwxrwxrwx  1 root root   62 Dec 30 10:03 reset_soc -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_soc
+lrwxrwxrwx  1 root root   77 Dec 30 10:03 reset_swb_dc_dc_pwr_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_swb_dc_dc_pwr_fail
+lrwxrwxrwx  1 root root   65 Dec 30 10:03 reset_swb_wd -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_swb_wd
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 reset_sw_pwr_off -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_sw_pwr_off
+lrwxrwxrwx  1 root root   65 Dec 30 10:03 reset_system -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/reset_system
+-rw-r--r--  1 root root    4 Dec 30 10:03 sed_pba_ver
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 sgmii_phy_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/sgmii_phy_reset
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 shutdown_unlock -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/shutdown_unlock
+lrwxrwxrwx  1 root root   68 Dec 30 10:03 spi_chnl_select -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/spi_chnl_select
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 uart_sel -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/uart_sel
+lrwxrwxrwx  1 root root   59 Dec 30 10:03 vpd_wp -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon3/vpd_wp
+
+/var/run/hw-management/thermal:
+total 8
+drwxr-xr-x  2 root root 1460 Dec 30 10:03 .
+drwxr-xr-x 15 root root  360 Dec 30 10:03 ..
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 comex_voltmon1_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/temp1_crit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon1_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-0069/hwmon/hwmon6/temp1_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 comex_voltmon2_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/temp1_crit
+lrwxrwxrwx  1 root root   89 Dec 30 10:03 comex_voltmon2_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/temp1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 comex_voltmon2_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-69/69-006a/hwmon/hwmon7/temp1_max
+lrwxrwxrwx  1 root root   61 Dec 30 10:03 cpu_pack -> /sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon1/temp1_input
+-rw-r--r--  1 root root    7 Dec 30 10:03 cpu_pack_crit
+-rw-r--r--  1 root root    6 Dec 30 10:03 cpu_pack_max
+lrwxrwxrwx  1 root root   79 Dec 30 10:03 drivetemp -> /sys/devices/pci0000:00/0000:00:01.4/0000:01:00.0/nvme/nvme0/hwmon0/temp1_input
+lrwxrwxrwx  1 root root   78 Dec 30 10:03 drivetemp_crit -> /sys/devices/pci0000:00/0000:00:01.4/0000:01:00.0/nvme/nvme0/hwmon0/temp1_crit
+lrwxrwxrwx  1 root root   77 Dec 30 10:03 drivetemp_max -> /sys/devices/pci0000:00/0000:00:01.4/0000:01:00.0/nvme/nvme0/hwmon0/temp1_max
+lrwxrwxrwx  1 root root   77 Dec 30 10:03 drivetemp_min -> /sys/devices/pci0000:00/0000:00:01.4/0000:01:00.0/nvme/nvme0/hwmon0/temp1_min
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 pdb_hotswap1_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_hotswap1_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_hotswap1_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0012/hwmon/hwmon19/temp1_max
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_mosfet_amb1 -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-004c/hwmon/hwmon21/temp1_input
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 pdb_pwr_conv1_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_pwr_conv1_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/temp1_input
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 pdb_pwr_conv1_temp1_lcrit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/temp1_lcrit
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 pdb_pwr_conv1_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-7/7-0060/hwmon/hwmon20/temp1_max
+lrwxrwxrwx  1 root root   70 Dec 30 10:03 sodimm1_temp_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_crit
+lrwxrwxrwx  1 root root   76 Dec 30 10:03 sodimm1_temp_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_crit_alarm
+lrwxrwxrwx  1 root root   75 Dec 30 10:03 sodimm1_temp_crit_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_crit_hyst
+lrwxrwxrwx  1 root root   71 Dec 30 10:03 sodimm1_temp_input -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_input
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 sodimm1_temp_max -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_max
+lrwxrwxrwx  1 root root   75 Dec 30 10:03 sodimm1_temp_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_max_alarm
+lrwxrwxrwx  1 root root   74 Dec 30 10:03 sodimm1_temp_max_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_max_hyst
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 sodimm1_temp_min -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_min
+lrwxrwxrwx  1 root root   75 Dec 30 10:03 sodimm1_temp_min_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001a/hwmon/hwmon4/temp1_min_alarm
+lrwxrwxrwx  1 root root   70 Dec 30 10:03 sodimm2_temp_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_crit
+lrwxrwxrwx  1 root root   76 Dec 30 10:03 sodimm2_temp_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_crit_alarm
+lrwxrwxrwx  1 root root   75 Dec 30 10:03 sodimm2_temp_crit_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_crit_hyst
+lrwxrwxrwx  1 root root   71 Dec 30 10:03 sodimm2_temp_input -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_input
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 sodimm2_temp_max -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_max
+lrwxrwxrwx  1 root root   75 Dec 30 10:03 sodimm2_temp_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_max_alarm
+lrwxrwxrwx  1 root root   74 Dec 30 10:03 sodimm2_temp_max_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_max_hyst
+lrwxrwxrwx  1 root root   69 Dec 30 10:03 sodimm2_temp_min -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_min
+lrwxrwxrwx  1 root root   75 Dec 30 10:03 sodimm2_temp_min_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/2-001b/hwmon/hwmon5/temp1_min_alarm
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon10_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon10_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon10_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006c/hwmon/hwmon17/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon11_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon11_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon11_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006e/hwmon/hwmon18/temp1_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon1_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/temp1_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon1_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/temp1_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon1_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0062/hwmon/hwmon8/temp1_max
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon2_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/temp1_crit
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon2_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/temp1_input
+lrwxrwxrwx  1 root root   85 Dec 30 10:03 voltmon2_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0063/hwmon/hwmon9/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon3_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon3_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon3_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0064/hwmon/hwmon10/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon4_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon4_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon4_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0065/hwmon/hwmon11/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon5_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon5_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon5_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0066/hwmon/hwmon12/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon6_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon6_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon6_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0067/hwmon/hwmon13/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon7_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon7_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon7_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0068/hwmon/hwmon14/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon8_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon8_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon8_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-0069/hwmon/hwmon15/temp1_max
+lrwxrwxrwx  1 root root   87 Dec 30 10:03 voltmon9_temp1_crit -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/temp1_crit
+lrwxrwxrwx  1 root root   88 Dec 30 10:03 voltmon9_temp1_input -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/temp1_input
+lrwxrwxrwx  1 root root   86 Dec 30 10:03 voltmon9_temp1_max -> /sys/devices/platform/mlxplat/i2c_mlxcpld.5/i2c-5/i2c-9/9-006a/hwmon/hwmon16/temp1_max
+
+/var/run/hw-management/watchdog:
+total 0
+drwxr-xr-x  4 root root  80 Dec 30 10:03 .
+drwxr-xr-x 15 root root 360 Dec 30 10:03 ..
+drwxr-xr-x  2 root root 180 Dec 30 10:03 aux
+drwxr-xr-x  2 root root 180 Dec 30 10:03 main
+
+/var/run/hw-management/watchdog/aux:
+total 0
+drwxr-xr-x 2 root root 180 Dec 30 10:03 .
+drwxr-xr-x 4 root root  80 Dec 30 10:03 ..
+lrwxrwxrwx 1 root root  69 Dec 30 10:03 bootstatus -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/bootstatus
+lrwxrwxrwx 1 root root  67 Dec 30 10:03 identity -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/identity
+lrwxrwxrwx 1 root root  67 Dec 30 10:03 nowayout -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/nowayout
+lrwxrwxrwx 1 root root  64 Dec 30 10:03 state -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/state
+lrwxrwxrwx 1 root root  65 Dec 30 10:03 status -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/status
+lrwxrwxrwx 1 root root  67 Dec 30 10:03 timeleft -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/timeleft
+lrwxrwxrwx 1 root root  66 Dec 30 10:03 timeout -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/timeout
+
+/var/run/hw-management/watchdog/main:
+total 0
+drwxr-xr-x 2 root root 180 Dec 30 10:03 .
+drwxr-xr-x 4 root root  80 Dec 30 10:03 ..
+lrwxrwxrwx 1 root root  69 Dec 30 10:03 bootstatus -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/bootstatus
+lrwxrwxrwx 1 root root  67 Dec 30 10:03 identity -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/identity
+lrwxrwxrwx 1 root root  67 Dec 30 10:03 nowayout -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/nowayout
+lrwxrwxrwx 1 root root  64 Dec 30 10:03 state -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/state
+lrwxrwxrwx 1 root root  65 Dec 30 10:03 status -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/status
+lrwxrwxrwx 1 root root  67 Dec 30 10:03 timeleft -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/timeleft
+lrwxrwxrwx 1 root root  66 Dec 30 10:03 timeout -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/timeout

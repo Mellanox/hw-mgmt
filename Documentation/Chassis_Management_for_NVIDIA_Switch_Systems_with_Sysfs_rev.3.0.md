@@ -733,7 +733,11 @@ cat $bsp_path/config/hotplug_psus
 
 **Node name:** `$bsp_path/config/hotplug_pdbs`
 
-**Description:** Get the number of Power Distribution Boards
+**Description:** Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.
+
+Note: This attribute is primarily for liquid-cooled systems (SN58XX_LD family: SN5810_LD, SN5800_LD).
+PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present.
+It can be zero on air-cooled systems or systems without hot-pluggable PDBs.
 
 **Access:** Read only
 
@@ -742,7 +746,7 @@ cat $bsp_path/config/hotplug_psus
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-|      |          |        |
+| Status | Integer | 0-X (number of hot-pluggable PDBs) |
 
 **Example:** Get hot-plug PDB number:
 ```bash
@@ -2006,6 +2010,189 @@ cat $bsp_path/environment/voltmon1_in1_input
 cat $bsp_path/environment/voltmon1_power2_ input
 ```
 
+### Get PDB Hotswap Controller Current
+
+**Node name:** `$bsp_path/environment/pdb_hotswap<index>_curr<index>_input`
+
+**Description:** Get PDB (Power Distribution Board) hot-swap controller current measurement
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Current | Integer | Value in milliamps (mA) |
+
+**Example:** Get PDB hotswap 1 current input:
+```bash
+cat $bsp_path/environment/pdb_hotswap1_curr1_input
+```
+
+### Get PDB Hotswap Controller Voltage
+
+**Node name:** `$bsp_path/environment/pdb_hotswap<index>_in<index>_input`
+
+**Description:** Get PDB hot-swap controller voltage measurement
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Voltage | Integer | Value in millivolts (mV) |
+
+**Example:** Get PDB hotswap 1 input voltage:
+```bash
+cat $bsp_path/environment/pdb_hotswap1_in1_input
+```
+
+### Get PDB Hotswap Controller Power
+
+**Node name:** `$bsp_path/environment/pdb_hotswap<index>_power<index>_input`
+
+**Description:** Get PDB hot-swap controller power measurement
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Power | Integer | Value in microwatts (µW) |
+
+**Example:** Get PDB hotswap 1 power input:
+```bash
+cat $bsp_path/environment/pdb_hotswap1_power1_input
+```
+
+### Get PDB Hotswap Controller Thresholds
+
+**Node name:** `$bsp_path/environment/pdb_hotswap<index>_<sensor>_<threshold>`
+
+**Description:** Get PDB hot-swap controller threshold values (crit, lcrit, max, min)
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Threshold | Integer | Varies by sensor type |
+
+**Example:** Get PDB hotswap 1 current max threshold:
+```bash
+cat $bsp_path/environment/pdb_hotswap1_curr1_max
+cat $bsp_path/environment/pdb_hotswap1_in1_crit
+cat $bsp_path/environment/pdb_hotswap1_in1_lcrit
+```
+
+### Get PDB Power Converter Current
+
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_curr<index>_input`
+
+**Description:** Get PDB power converter current measurement (input or output)
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Current | Integer | Value in milliamps (mA) |
+
+**Example:** Get PDB power converter 1 current readings:
+```bash
+cat $bsp_path/environment/pdb_pwr_conv1_curr1_input
+cat $bsp_path/environment/pdb_pwr_conv1_curr2_input
+```
+
+### Get PDB Power Converter Voltage
+
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_in<index>_input`
+
+**Description:** Get PDB power converter voltage measurement (input or output)
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Voltage | Integer | Value in millivolts (mV) |
+
+**Example:** Get PDB power converter 1 voltage readings:
+```bash
+cat $bsp_path/environment/pdb_pwr_conv1_in1_input
+cat $bsp_path/environment/pdb_pwr_conv1_in2_input
+```
+
+### Get PDB Power Converter Power
+
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_power<index>_input`
+
+**Description:** Get PDB power converter power measurement (input or output)
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Power | Integer | Value in microwatts (µW) |
+
+**Example:** Get PDB power converter 1 power readings:
+```bash
+cat $bsp_path/environment/pdb_pwr_conv1_power1_input
+cat $bsp_path/environment/pdb_pwr_conv1_power2_input
+```
+
+### Get PDB Power Converter Thresholds
+
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_<sensor>_<threshold>`
+
+**Description:** Get PDB power converter threshold values (crit, lcrit, max, min)
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Threshold | Integer | Varies by sensor type |
+
+**Example:** Get PDB power converter 1 thresholds:
+```bash
+cat $bsp_path/environment/pdb_pwr_conv1_curr1_crit
+cat $bsp_path/environment/pdb_pwr_conv1_in1_max
+cat $bsp_path/environment/pdb_pwr_conv1_in1_min
+```
+
 ## Events
 
 ### Get FAN hot-plug event status
@@ -2073,6 +2260,31 @@ $bsp_path/config/hotplug_pwrs
 **Example:** Get Power1 cable hot-plug status:
 ```bash
 cat $bsp_path/events/pwr1
+```
+
+### PDB hot-plug event status
+
+**Node name:** `$bsp_path/events/pdb<index>`
+
+**Description:** Get hot-plug event status of PDB (Power Distribution Board) <index>
+Index max value corresponds to $bsp_path/config/hotplug_pdbs
+0 – PDB<index> was removed,
+1 – PDB<index> was inserted.
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Event | Integer | 0 / 1 |
+
+**Example:** Get PDB1 hot-plug status:
+```bash
+cat $bsp_path/events/pdb1
 ```
 
 ### DPU Ready event
@@ -2295,6 +2507,68 @@ Alarm set by PSU sensor itself (hw controlled attribte)
 **Example:** Get psu1_poer1_alarm
 ```bash
 $bsp_path/alarm/psu1_power1_alarm
+```
+
+### Get PDB Hotswap Controller alarm status
+
+**Node name:** `$bsp_path/alarm/pdb_hotswap<index>_<sensor_name>_alarm`
+
+**Description:** Get PDB (Power Distribution Board) hot-swap controller alarm status
+sensor_name: in, curr, power, temp.
+Alarm set by PDB hotswap controller sensor itself (hardware-controlled attribute)
+1 – alarm set
+0 – alarm clear
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD)
+
+**Access:** Read
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Alarm | Integer | 0 / 1 |
+
+**Example:** Get PDB hotswap 1 alarms:
+```bash
+cat $bsp_path/alarm/pdb_hotswap1_curr1_alarm
+cat $bsp_path/alarm/pdb_hotswap1_in1_alarm
+cat $bsp_path/alarm/pdb_hotswap1_power1_alarm
+cat $bsp_path/alarm/pdb_hotswap1_temp1_crit_alarm
+cat $bsp_path/alarm/pdb_hotswap1_temp1_max_alarm
+```
+
+### Get PDB Power Converter alarm status
+
+**Node name:** `$bsp_path/alarm/pdb_pwr_conv<index>_<sensor_name>_alarm`
+
+**Description:** Get PDB power converter alarm status
+sensor_name: in, curr, power, temp.
+Alarm set by PDB power converter sensor itself (hardware-controlled attribute)
+1 – alarm set
+0 – alarm clear
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Alarm | Integer | 0 / 1 |
+
+**Example:** Get PDB power converter 1 alarms:
+```bash
+cat $bsp_path/alarm/pdb_pwr_conv1_curr1_alarm
+cat $bsp_path/alarm/pdb_pwr_conv1_curr2_alarm
+cat $bsp_path/alarm/pdb_pwr_conv1_in1_alarm
+cat $bsp_path/alarm/pdb_pwr_conv1_in2_alarm
+cat $bsp_path/alarm/pdb_pwr_conv1_power1_alarm
+cat $bsp_path/alarm/pdb_pwr_conv1_temp1_crit_alarm
+cat $bsp_path/alarm/pdb_pwr_conv1_temp1_max_alarm
 ```
 
 ### Get CPU temp alarm status.
@@ -5412,6 +5686,122 @@ cat $bsp_path/thermal/psu1_power_status
 **Example:** Read PSU1 status:
 ```bash
 cat $bsp_path/thermal/psu1_status
+```
+
+### Read PDB Hotswap Controller Temperature
+
+**Node name:** `$bsp_path/thermal/pdb_hotswap<index>_temp<index>_input`
+
+**Description:** Read PDB (Power Distribution Board) hot-swap controller temperature
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Temperature | Integer | Value in millidegrees Celsius (m°C) |
+
+**Example:** Read PDB hotswap 1 temperature:
+```bash
+cat $bsp_path/thermal/pdb_hotswap1_temp1_input
+```
+
+### Read PDB Hotswap Controller Temperature Thresholds
+
+**Node name:** `$bsp_path/thermal/pdb_hotswap<index>_temp<index>_crit`
+`$bsp_path/thermal/pdb_hotswap<index>_temp<index>_max`
+
+**Description:** Read PDB hot-swap controller temperature critical and maximum thresholds
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Temperature | Integer | Value in millidegrees Celsius (m°C) |
+
+**Example:** Read PDB hotswap 1 temperature thresholds:
+```bash
+cat $bsp_path/thermal/pdb_hotswap1_temp1_crit
+cat $bsp_path/thermal/pdb_hotswap1_temp1_max
+```
+
+### Read PDB Power Converter Temperature
+
+**Node name:** `$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_input`
+
+**Description:** Read PDB power converter temperature
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Temperature | Integer | Value in millidegrees Celsius (m°C) |
+
+**Example:** Read PDB power converter 1 temperature:
+```bash
+cat $bsp_path/thermal/pdb_pwr_conv1_temp1_input
+```
+
+### Read PDB Power Converter Temperature Thresholds
+
+**Node name:** `$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_crit`
+`$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_lcrit`
+`$bsp_path/thermal/pdb_pwr_conv<index>_temp<index>_max`
+
+**Description:** Read PDB power converter temperature thresholds (critical, lower critical, maximum)
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Temperature | Integer | Value in millidegrees Celsius (m°C) |
+
+**Example:** Read PDB power converter 1 temperature thresholds:
+```bash
+cat $bsp_path/thermal/pdb_pwr_conv1_temp1_crit
+cat $bsp_path/thermal/pdb_pwr_conv1_temp1_lcrit
+cat $bsp_path/thermal/pdb_pwr_conv1_temp1_max
+```
+
+### Read PDB MOSFET Ambient Temperature
+
+**Node name:** `$bsp_path/thermal/pdb_mosfet_amb<index>`
+
+**Description:** Read PDB MOSFET ambient temperature sensor
+
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family)
+
+**Access:** Read only
+
+**Release version:** V.7.0050.3000
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| Temperature | Integer | Value in millidegrees Celsius (m°C) |
+
+**Example:** Read PDB MOSFET ambient temperature:
+```bash
+cat $bsp_path/thermal/pdb_mosfet_amb1
 ```
 
 ### Read System PWM1
