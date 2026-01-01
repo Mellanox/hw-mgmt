@@ -750,20 +750,17 @@ Kernel-6.12
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|0001-mlxbf-bootctl-Constify-struct-bin_attribute.patch           | 8ba0e61            | Feature upstream                         | 6.15.1     |                                                |
-|0002-platform-mellanox-mlxbf-pmc-Add-support-for-monitori.patch  | 5efc8009           | Feature upstream                         | 6.15.1     |                                                |
-|0003-platform-mellanox-mlxbf-pmc-Add-support-for-clock_me.patch  | 8e3b3e1            | Feature upstream                         | 6.15.1     |                                                |
-|0004-platform-mellanox-mlxbf-bootctl-use-sysfs_emit-inste.patch  | 9886f57            | Feature upstream                         | 6.15.1     |                                                |
+|0001-mlxbf-bootctl-Constify-struct-bin_attribute.patch           | 8ba0e61            | Feature upstream                         | 6.15.1     | BF3                                            |
+|0002-platform-mellanox-mlxbf-pmc-Add-support-for-monitori.patch  | 5efc8009           | Feature upstream                         | 6.15.1     | BF3                                            |
+|0003-platform-mellanox-mlxbf-pmc-Add-support-for-clock_me.patch  | 8e3b3e1            | Feature upstream                         | 6.15.1     | BF3                                            |
+|0004-platform-mellanox-mlxbf-bootctl-use-sysfs_emit-inste.patch  | 9886f57            | Feature upstream                         | 6.15.1     | BF3                                            |
 |0005-platform-mellanox-mlxreg-hotplug-use-sysfs_emit-inst.patch  | fcf1b6f            | Feature upstream                         | 6.15.1     |                                                |
-|0006-platform-mellanox-mlxreg-io-use-sysfs_emit-instead-o.patch  | ff44b1c            | Feature upstream                         | 6.15.1     |                                                |
-|0007-mlxbf-bootctl-Support-sysfs-entries-for-RTC-battery-.patch  | 5d40a85            | Feature upstream                         | 6.15.1     |                                                |
-|0008-mlxbf-bootctl-use-sysfs_emit_at-in-secure_boot_fuse_.patch  | b129005            | Feature upstream                         | 6.15.1     |                                                |
-|0009-platform-mellanox-mlxbf-pmc-Support-additional-PMC-b.patch  | 3acb492            | Feature upstream                         | 6.15.1     |                                                |
-|0010-platform-mellanox-nvsw-sn2200-Fix-.items-in-nvsw_sn2.patch  | 8e725ff            | Feature upstream                         | 6.15.1     |                                                |
-|0011-platform-mellanox-Fix-spelling-and-comment-clarity-i.patch  | c3ac7e3            | Feature upstream                         | 6.15.1     |                                                |
-|0012-platform-mellanox-mlxbf-pmc-Remove-newline-char-from.patch  | 44e6ca8            | Feature upstream                         | 6.12.41    |                                                |
-|0013-platform-mellanox-mlxbf-pmc-Validate-event-enable-in.patch  | f8c1311            | Feature upstream                         | 6.12.41    |                                                |
-|0014-platform-mellanox-mlxbf-pmc-Use-kstrtobool-to-check-.patch  | 0e2cebd            | Feature upstream                         | 6.12.41    |                                                |
+|0006-platform-mellanox-mlxreg-io-use-sysfs_emit-instead-o.patch  | ff44b1c            | Feature upstream                         | 6.15.1     | BF3                                            |
+|0007-mlxbf-bootctl-Support-sysfs-entries-for-RTC-battery-.patch  | 5d40a85            | Feature upstream                         | 6.15.1     | BF3                                            |
+|0008-mlxbf-bootctl-use-sysfs_emit_at-in-secure_boot_fuse_.patch  | b129005            | Feature upstream                         | 6.15.1     | BF3                                            |
+|0009-platform-mellanox-mlxbf-pmc-Support-additional-PMC-b.patch  | 3acb492            | Feature upstream                         | 6.15.1     | BF3                                            |
+|0010-platform-mellanox-nvsw-sn2200-Fix-.items-in-nvsw_sn2.patch  | 8e725ff            | Feature upstream                         | 6.15.1     | SN2201                                         |
+|0011-platform-mellanox-Fix-spelling-and-comment-clarity-i.patch  | c3ac7e3            | Feature upstream                         | 6.15.1     | BF3                                            |
 |0015-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
 |0016-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream accepted                      |            |                                                |
 |0017-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
@@ -773,7 +770,6 @@ Kernel-6.12
 |0021-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
 |0022-i2c-mux-Add-register-map-based-mux-driver.patch             | b04d17a            | Feature upstream                         | 6.15.1     |                                                |
 |0023-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream accepted                      |            |                                                |
-|0024-1-platform-x86-Fix-initialization-order-for-firmware_a.patch|                    | Feature upstream                         | 6.12.41    |                                                |
 |0024-mellanox-Relocate-mlx-platform-driver.patch                 | 8c03f64            | Feature upstream                         | 6.15.1     |                                                |
 |0025-platform-mellanox-mlx-platform-Cosmetic-changes.patch       | 749d3e0            | Feature upstream                         | 6.15.1     |                                                |
 |0026-platform-mellanox-Rename-field-to-improve-code-reada.patch  | 9815278            | Feature upstream                         | 6.15.1     |                                                |
@@ -787,7 +783,7 @@ Kernel-6.12
 |0034-platform-mellanox-Cosmetic-changes-to-improve-code-s.patch  | f48cf5e            | Feature upstream                         | 6.15.1     |                                                |
 |0035-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  | 317bbe1            | Feature upstream                         | 6.15.1     |                                                |
 |0036-platform-mellanox-mlxreg-dpu-Fix-smatch-warnings.patch      | f94ffc3            | Feature upstream                         | 6.15.1     |                                                |
-|0037-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted			  |            |                                                |
+|0037-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
 |0038-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
 |0039-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
 |0040-platform-mellanox-mlxreg-dpu-Introduce-completion-ca.patch  |                    | Downstream accepted                      |            |                                                |
