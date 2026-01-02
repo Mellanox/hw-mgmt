@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -92,17 +92,30 @@ log_message()
 usage()
 {
     echo "Usage: $0 [OPTIONS] <json_config_file>"
+    echo "   or: $0 --modify-bin <bin_file> <offset> <hex_data>"
     echo ""
     echo "Cartridge EEPROM Flashing Tool"
     echo ""
     echo "OPTIONS:"
-    echo "  --dry-run          Compare binary files with EEPROM content and report"
-    echo "                     mismatches without flashing (read-only mode)"
-    echo "  --validate-json    Validate JSON configuration file and exit"
-    echo "  --help             Display this help message"
+    echo "  --dry-run              Compare binary files with EEPROM content and report"
+    echo "                         mismatches without flashing (read-only mode)"
+    echo "  --validate-json        Validate JSON configuration file and exit"
+    echo "  --dump-current-content Dump current EEPROM content to /tmp/cartridge{n}_readback.bin"
+    echo "                         for all devices in JSON config (read-only mode)"
+    echo "  --modify-bin <file> <offset> <data>"
+    echo "                         Modify a single byte in binary file at specified offset"
+    echo "                         offset: decimal byte position (0-based)"
+    echo "                         data: hex value (e.g., 0x32 or 32)"
+    echo "  --help                 Display this help message"
     echo ""
     echo "Arguments:"
-    echo "  json_config_file   Path to JSON configuration file"
+    echo "  json_config_file       Path to JSON configuration file"
+    echo ""
+    echo "Examples:"
+    echo "  $0 config.json"
+    echo "  $0 --dry-run config.json"
+    echo "  $0 --dump-current-content config.json"
+    echo "  $0 --modify-bin cartridge.bin 29 0x32"
     echo ""
     echo "JSON Format:"
     echo "  {"
@@ -151,14 +164,14 @@ format_slave_addr()
     # This avoids "invalid octal number" errors for addresses like 0x50
     # Handle invalid hex gracefully
     local hex_addr="${addr#0x}"
-    
+
     # Validate hex characters only (0-9, a-f, A-F)
     if ! echo "$hex_addr" | grep -qE '^[0-9a-fA-F]+$'; then
         log_message "err" "Invalid hex address: $addr (contains non-hex characters)"
         echo "0000"
         return 1
     fi
-    
+
     # Safely convert with error handling
     local result
     if result=$(printf "%04x" "$((16#$hex_addr))" 2>/dev/null); then
@@ -245,7 +258,7 @@ ensure_device_exists()
         log_message "err" "Invalid device_type format: $device_type (must be alphanumeric)"
         return 1
     fi
-    
+
     # Use printf instead of echo to prevent command injection
     # Capture stderr from the sysfs write operation using a temp file
     # (stderr from redirection operations cannot be captured via command substitution)
@@ -310,7 +323,7 @@ dump_eeprom()
     local dd_err
     dd_err=$(dd if="$eeprom_path" of="$output_file" bs="$block_size" count="$block_count" iflag=fullblock 2>&1 >/dev/null)
     local dd_status=$?
-    
+
     if [[ $dd_status -ne 0 ]]; then
         log_message "err" "Failed to dump EEPROM from $eeprom_path: $dd_err"
         return 1
@@ -389,6 +402,7 @@ flash_eeprom()
     local eeprom_size="$4"
 
     local eeprom_path="/sys/class/i2c-dev/i2c-${bus}/device/${bus}-${slave_addr_formatted}/eeprom"
+    local device_path="/sys/class/i2c-dev/i2c-${bus}/device/${bus}-${slave_addr_formatted}"
 
     if [[ ! -f "$eeprom_path" ]]; then
         log_message "err" "EEPROM not accessible: $eeprom_path"
@@ -416,14 +430,136 @@ flash_eeprom()
 
     log_message "info" "Flashing EEPROM: $bin_file ($bin_size bytes) -> $eeprom_path ($eeprom_size bytes capacity)"
 
-    # Use 256-byte blocks for better performance
-    local block_size=256
-    local block_count=$(( (bin_size + block_size - 1) / block_size ))
+    # Step 1: Try to unbind and rebind the EEPROM driver FIRST to clear any caches
+    # This must happen BEFORE disabling write protection, as rebind recreates sysfs with defaults
+    local device_name="${bus}-${slave_addr_formatted}"
+    local unbind_path="/sys/bus/i2c/drivers/at24/unbind"
+    local bind_path="/sys/bus/i2c/drivers/at24/bind"
 
-    # Capture dd output to verify bytes written
+    if [[ -f "$unbind_path" ]] && [[ -f "$bind_path" ]]; then
+        log_message "info" "Unbinding EEPROM driver to clear cache (before modifying settings)"
+        if echo "$device_name" > "$unbind_path" 2>/dev/null; then
+            sleep 0.2
+            log_message "info" "Rebinding EEPROM driver"
+            if echo "$device_name" > "$bind_path" 2>/dev/null; then
+                sleep 0.5
+                log_message "info" "Driver rebound successfully"
+
+                # Wait for device to be fully initialized after rebind
+                local retry_count=0
+                local max_retries=10
+                while [[ $retry_count -lt $max_retries ]]; do
+                    if [[ -f "$eeprom_path" ]] && [[ -d "$device_path" ]]; then
+                        log_message "info" "Device ready after rebind"
+                        break
+                    fi
+                    sleep 0.2
+                    ((retry_count++))
+                done
+
+                if [[ $retry_count -ge $max_retries ]]; then
+                    log_message "warning" "Device not ready after rebind, but continuing"
+                fi
+            else
+                log_message "warning" "Failed to rebind driver, continuing anyway"
+            fi
+        else
+            log_message "info" "Driver unbind not needed or failed (device may be in use)"
+        fi
+    fi
+
+    # Step 2: Now check for write_protect attribute and disable it
+    # This happens AFTER driver rebind, so settings won't be destroyed
+    local wp_attr="${device_path}/write_protect"
+    local wp_original=""
+    if [[ -f "$wp_attr" ]]; then
+        wp_original=$(cat "$wp_attr" 2>/dev/null)
+        log_message "info" "Found write_protect attribute, current value: $wp_original"
+        if ! echo 0 > "$wp_attr" 2>/dev/null; then
+            log_message "warning" "Failed to disable write_protect attribute"
+        else
+            log_message "info" "Write protection disabled"
+        fi
+    else
+        log_message "info" "No write_protect attribute found in sysfs"
+    fi
+
+    # Check for nvmem write_protect (alternative location)
+    local nvmem_wp="${device_path}/nvmem0/write_protect"
+    local nvmem_wp_original=""
+    if [[ -f "$nvmem_wp" ]]; then
+        nvmem_wp_original=$(cat "$nvmem_wp" 2>/dev/null)
+        log_message "info" "Found nvmem write_protect: $nvmem_wp_original"
+        if ! echo 0 > "$nvmem_wp" 2>/dev/null; then
+            log_message "warning" "Failed to disable nvmem write_protect"
+        else
+            log_message "info" "nvmem write protection disabled"
+        fi
+    fi
+
+    # Helper function to restore write protection (called before any return)
+    restore_write_protection()
+    {
+        # Restore write_protect if it was changed
+        if [[ -n "$wp_original" ]] && [[ -f "$wp_attr" ]]; then
+            if ! echo "$wp_original" > "$wp_attr" 2>/dev/null; then
+                log_message "warning" "Failed to restore write_protect attribute to $wp_original"
+            else
+                log_message "info" "Write protection restored to: $wp_original"
+            fi
+        fi
+
+        # Restore nvmem write_protect if it was changed
+        if [[ -n "$nvmem_wp_original" ]] && [[ -f "$nvmem_wp" ]]; then
+            if ! echo "$nvmem_wp_original" > "$nvmem_wp" 2>/dev/null; then
+                log_message "warning" "Failed to restore nvmem write_protect to $nvmem_wp_original"
+            else
+                log_message "info" "nvmem write protection restored to: $nvmem_wp_original"
+            fi
+        fi
+    }
+
+    # Step 3: Save original permissions and set write permissions
+    # This happens AFTER driver rebind, so permissions won't be destroyed
+    local original_perms
+    original_perms=$(stat -c "%a" "$eeprom_path" 2>/dev/null)
+    if [[ -z "$original_perms" ]]; then
+        log_message "warning" "Could not read original EEPROM permissions, assuming 644"
+        original_perms="644"
+    fi
+
+    # Ensure EEPROM is writable
+    if ! chmod 666 "$eeprom_path" 2>/dev/null; then
+        log_message "err" "Failed to set write permissions on EEPROM: $eeprom_path"
+        restore_write_protection  # Restore before returning
+        return 1
+    fi
+
+    # For small EEPROMs (like 24c02 = 256 bytes), use byte-by-byte write for reliability
+    # Block writes can fail on some EEPROM drivers
     local dd_output
-    dd_output=$(dd if="$bin_file" of="$eeprom_path" bs="$block_size" count="$block_count" iflag=fullblock 2>&1)
-    local dd_status=$?
+    local dd_status
+
+    if [[ $bin_size -le 512 ]]; then
+        # Use bs=1 for small EEPROMs to ensure every byte is written
+        log_message "info" "Using byte-by-byte write for small EEPROM"
+        dd_output=$(dd if="$bin_file" of="$eeprom_path" bs=1 count="$bin_size" conv=fsync 2>&1)
+        dd_status=$?
+    else
+        # Use block size for larger EEPROMs
+        local block_size=256
+        local block_count=$(( (bin_size + block_size - 1) / block_size ))
+        dd_output=$(dd if="$bin_file" of="$eeprom_path" bs="$block_size" count="$block_count" iflag=fullblock conv=fsync 2>&1)
+        dd_status=$?
+    fi
+
+    # Restore original permissions
+    if ! chmod "$original_perms" "$eeprom_path" 2>/dev/null; then
+        log_message "warning" "Failed to restore original EEPROM permissions"
+    fi
+
+    # Always restore write protection before returning
+    restore_write_protection
 
     if [[ $dd_status -ne 0 ]]; then
         log_message "err" "Failed to flash EEPROM: $dd_output"
@@ -434,16 +570,16 @@ flash_eeprom()
 
     # Add delay for EEPROM write completion
     # EEPROM write cycle time varies by size: ~5ms per page (typically 32-128 bytes)
-    # Scale delay based on binary size for reliability
+    # Increase delays for better reliability
     local write_delay
     if [[ $bin_size -le 256 ]]; then
-        write_delay=0.5  # Small EEPROMs (24c01, 24c02)
+        write_delay=1.0  # Small EEPROMs (24c01, 24c02) - increased from 0.5
     elif [[ $bin_size -le 2048 ]]; then
-        write_delay=1.0  # Medium EEPROMs (24c04-24c16)
+        write_delay=2.0  # Medium EEPROMs (24c04-24c16) - increased from 1.0
     elif [[ $bin_size -le 8192 ]]; then
-        write_delay=2.0  # Large EEPROMs (24c32-24c64)
+        write_delay=3.0  # Large EEPROMs (24c32-24c64) - increased from 2.0
     else
-        write_delay=3.0  # Very large EEPROMs (24c128-24c512)
+        write_delay=5.0  # Very large EEPROMs (24c128-24c512) - increased from 3.0
     fi
 
     log_message "info" "Waiting ${write_delay}s for EEPROM write completion"
@@ -518,7 +654,7 @@ process_cartridge()
     # For proper comparison, truncate EEPROM dump to binary size
     log_message "info" "Comparing EEPROM content (first $bin_size bytes) with target binary"
     local temp_dump_truncated="${temp_dump}.cmp"
-    
+
     # Use optimized block size for truncation
     local trunc_block_size=256
     local trunc_block_count=$(( (bin_size + trunc_block_size - 1) / trunc_block_size ))
@@ -527,7 +663,7 @@ process_cartridge()
         rm -f "$temp_dump" "$temp_dump_truncated"
         return 1
     fi
-    
+
     # Truncate to exact size (use same fallback logic as dump_eeprom)
     if command -v truncate >/dev/null 2>&1; then
         if ! truncate -s "$bin_size" "$temp_dump_truncated" 2>/dev/null; then
@@ -545,13 +681,13 @@ process_cartridge()
         fi
         mv "$temp_final" "$temp_dump_truncated"
     fi
-    
+
     if compare_files "$temp_dump_truncated" "$bin_file"; then
         log_message "info" "EEPROM content matches target - skipping flash"
         rm -f "$temp_dump" "$temp_dump_truncated"
         return 2  # Return 2 to indicate skip
     fi
-    
+
     log_message "info" "EEPROM content differs from target"
     rm -f "$temp_dump_truncated"
 
@@ -575,6 +711,43 @@ process_cartridge()
     # Step 5: Verify flashing succeeded
     # Read back full EEPROM to detect any writes beyond expected bounds
     log_message "info" "Verifying flash operation"
+
+    # Unbind/rebind driver again before verification to ensure we read from hardware, not cache
+    local device_name="${bus}-${slave_addr_formatted}"
+    local unbind_path="/sys/bus/i2c/drivers/at24/unbind"
+    local bind_path="/sys/bus/i2c/drivers/at24/bind"
+
+    if [[ -f "$unbind_path" ]] && [[ -f "$bind_path" ]]; then
+        log_message "info" "Unbinding driver before verification to ensure fresh read from EEPROM"
+        if echo "$device_name" > "$unbind_path" 2>/dev/null; then
+            sleep 0.2
+            if echo "$device_name" > "$bind_path" 2>/dev/null; then
+                sleep 0.5
+                log_message "info" "Driver rebound for verification"
+
+                # Define paths for device readiness check (these are local to flash_eeprom, so redefine here)
+                local eeprom_path="/sys/class/i2c-dev/i2c-${bus}/device/${bus}-${slave_addr_formatted}/eeprom"
+                local device_path="/sys/class/i2c-dev/i2c-${bus}/device/${bus}-${slave_addr_formatted}"
+
+                # Wait for device to be fully initialized after rebind
+                local retry_count=0
+                local max_retries=10
+                while [[ $retry_count -lt $max_retries ]]; do
+                    if [[ -f "$eeprom_path" ]] && [[ -d "$device_path" ]]; then
+                        log_message "info" "Device ready for verification"
+                        break
+                    fi
+                    sleep 0.2
+                    ((retry_count++))
+                done
+
+                if [[ $retry_count -ge $max_retries ]]; then
+                    log_message "warning" "Device not ready after rebind, but continuing with verification"
+                fi
+            fi
+        fi
+    fi
+
     local verify_dump="${TEMP_DIR}/cartridge-${bus}-${slave_addr_formatted}-verify.bin"
     log_message "info" "Dumping full EEPROM ($eeprom_size bytes) for comprehensive verification"
     if ! dump_eeprom "$bus" "$slave_addr_formatted" "$verify_dump" "$eeprom_size"; then
@@ -586,31 +759,14 @@ process_cartridge()
     # Step 6: Compare verified content with target binary
     # Truncate verify dump to bin_size for comparison
     local verify_dump_truncated="${verify_dump}.cmp"
-    local verify_block_size=256
-    local verify_block_count=$(( (bin_size + verify_block_size - 1) / verify_block_size ))
-    if ! dd if="$verify_dump" of="$verify_dump_truncated" bs="$verify_block_size" count="$verify_block_count" iflag=fullblock 2>/dev/null; then
+
+    # Use dd to extract exactly bin_size bytes for comparison
+    if ! dd if="$verify_dump" of="$verify_dump_truncated" bs=1 count="$bin_size" 2>/dev/null; then
         log_message "err" "Failed to truncate verification dump for comparison"
         rm -f "$temp_dump" "$verify_dump" "$verify_dump_truncated"
         return 1
     fi
-    
-    # Truncate to exact size
-    if command -v truncate >/dev/null 2>&1; then
-        if ! truncate -s "$bin_size" "$verify_dump_truncated" 2>/dev/null; then
-            log_message "err" "Failed to adjust verification dump to exact size"
-            rm -f "$temp_dump" "$verify_dump" "$verify_dump_truncated"
-            return 1
-        fi
-    else
-        local verify_final="${verify_dump_truncated}.final"
-        if ! dd if="$verify_dump_truncated" of="$verify_final" bs=1 count="$bin_size" 2>/dev/null; then
-            log_message "err" "Failed to adjust verification dump to exact size (dd fallback)"
-            rm -f "$temp_dump" "$verify_dump" "$verify_dump_truncated" "$verify_final"
-            return 1
-        fi
-        mv "$verify_final" "$verify_dump_truncated"
-    fi
-    
+
     if compare_files "$verify_dump_truncated" "$bin_file"; then
         log_message "info" "Flash verification PASSED - EEPROM content matches target"
         rm -f "$verify_dump" "$verify_dump_truncated" "$temp_dump"
@@ -620,6 +776,301 @@ process_cartridge()
         rm -f "$temp_dump" "$verify_dump" "$verify_dump_truncated"
         return 1
     fi
+}
+
+# Function to dump current EEPROM content for all devices
+dump_current_content()
+{
+    local json_file="$1"
+
+    if [[ ! -f "$json_file" ]]; then
+        log_message "err" "JSON configuration file not found: $json_file"
+        return 1
+    fi
+
+    log_message "info" "Dumping Current EEPROM Content"
+    log_message "info" "=========================================="
+
+    # Validate JSON syntax
+    if ! jq empty "$json_file" >/dev/null 2>&1; then
+        log_message "err" "Invalid JSON syntax in file: $json_file"
+        return 1
+    fi
+
+    # Extract device count
+    local num_devices
+    num_devices=$(jq '.Devices | length // 0' "$json_file")
+
+    # Validate num_devices is numeric
+    if [[ -z "$num_devices" ]] || ! echo "$num_devices" | grep -qE '^[0-9]+$'; then
+        log_message "warning" "Invalid device count from JSON, defaulting to 0"
+        num_devices=0
+    fi
+
+    if [[ "$num_devices" -eq 0 ]]; then
+        log_message "err" "No devices found in JSON configuration"
+        return 1
+    fi
+
+    log_message "info" "Found $num_devices cartridge device(s) to dump"
+
+    local success_count=0
+    local failed_count=0
+
+    # Iterate through each device
+    local dev_idx=0
+    while [ $dev_idx -lt $num_devices ]; do
+        # Extract device information
+        local index
+        local device_type
+        local bus
+        local slave_addr
+
+        index=$(jq -r ".Devices[$dev_idx].Index" "$json_file")
+        device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file")
+        bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file")
+        slave_addr=$(jq -r ".Devices[$dev_idx].SlaveAddr" "$json_file")
+
+        log_message "info" "=========================================="
+        log_message "info" "Dumping Cartridge $index: $device_type at Bus $bus Addr $slave_addr"
+
+        # Validate extracted fields
+        if [[ -z "$device_type" ]] || [[ "$device_type" == "null" ]]; then
+            log_message "err" "Missing DeviceType for device $dev_idx"
+            failed_count=$((failed_count + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        if [[ -z "$bus" ]] || [[ "$bus" == "null" ]]; then
+            log_message "err" "Missing Bus for device $dev_idx"
+            failed_count=$((failed_count + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        if [[ -z "$slave_addr" ]] || [[ "$slave_addr" == "null" ]]; then
+            log_message "err" "Missing SlaveAddr for device $dev_idx"
+            failed_count=$((failed_count + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        # Get EEPROM size
+        local eeprom_size
+        eeprom_size=$(get_eeprom_size "$device_type")
+        log_message "info" "EEPROM size for $device_type: $eeprom_size bytes"
+
+        # Format slave address
+        local slave_addr_formatted
+        slave_addr_formatted=$(format_slave_addr "$slave_addr")
+        if [[ $? -ne 0 ]]; then
+            log_message "err" "Invalid slave address format: $slave_addr"
+            failed_count=$((failed_count + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        # Ensure device exists
+        if ! ensure_device_exists "$device_type" "$bus" "$slave_addr" "$slave_addr_formatted"; then
+            log_message "err" "Failed to ensure device exists"
+            failed_count=$((failed_count + 1))
+            dev_idx=$((dev_idx + 1))
+            continue
+        fi
+
+        # Output file name
+        local output_file="/tmp/cartridge${index}_readback.bin"
+
+        # Dump EEPROM
+        if dump_eeprom "$bus" "$slave_addr_formatted" "$output_file" "$eeprom_size"; then
+            log_message "info" "Successfully dumped to: $output_file"
+
+            # Show hex preview of first 64 bytes
+            if command -v hexdump >/dev/null 2>&1; then
+                log_message "info" "Preview (first 64 bytes):"
+                hexdump -C "$output_file" 2>/dev/null | head -4 | awk '{print "  " $0}' | logger -t "$LOG_TAG" -p "daemon.info"
+                hexdump -C "$output_file" 2>/dev/null | head -4 | awk '{print "  " $0}'
+            fi
+
+            success_count=$((success_count + 1))
+        else
+            log_message "err" "Failed to dump EEPROM"
+            failed_count=$((failed_count + 1))
+        fi
+
+        dev_idx=$((dev_idx + 1))
+    done
+
+    # Summary
+    log_message "info" "=========================================="
+    log_message "info" "Dump Summary:"
+    log_message "info" "  Total Devices:  $num_devices"
+    log_message "info" "  Success:        $success_count"
+    log_message "info" "  Failed:         $failed_count"
+    log_message "info" "=========================================="
+
+    if [[ $failed_count -gt 0 ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Function to modify a byte in a binary file
+modify_bin_file()
+{
+    local bin_file="$1"
+    local offset="$2"
+    local hex_data="$3"
+
+    echo "=========================================="
+    echo "Binary File Modifier"
+    echo "=========================================="
+
+    # Validate binary file exists
+    if [[ ! -f "$bin_file" ]]; then
+        echo "ERROR: Binary file not found: $bin_file"
+        return 1
+    fi
+
+    # Validate offset is numeric
+    if ! echo "$offset" | grep -qE '^[0-9]+$'; then
+        echo "ERROR: Offset must be a decimal number: $offset"
+        return 1
+    fi
+
+    # Get file size
+    local file_size
+    file_size=$(stat -c%s "$bin_file" 2>/dev/null || echo 0)
+
+    if [[ $file_size -eq 0 ]]; then
+        echo "ERROR: Binary file is empty or cannot read size"
+        return 1
+    fi
+
+    # Validate offset is within file bounds
+    if [[ $offset -ge $file_size ]]; then
+        echo "ERROR: Offset $offset is beyond file size ($file_size bytes)"
+        return 1
+    fi
+
+    # Parse hex data (remove 0x prefix if present)
+    local hex_value="${hex_data#0x}"
+    hex_value="${hex_value#0X}"
+
+    # Validate hex format
+    if ! echo "$hex_value" | grep -qE '^[0-9a-fA-F]{1,2}$'; then
+        echo "ERROR: Invalid hex data format: $hex_data (must be 1-2 hex digits)"
+        return 1
+    fi
+
+    # Ensure 2-digit format
+    if [[ ${#hex_value} -eq 1 ]]; then
+        hex_value="0${hex_value}"
+    fi
+
+    # Convert to uppercase for consistency
+    hex_value=$(echo "$hex_value" | tr '[:lower:]' '[:upper:]')
+
+    echo "File:         $bin_file"
+    echo "Size:         $file_size bytes"
+    echo "Offset:       $offset (0x$(printf '%x' $offset))"
+    echo ""
+
+    # Show current byte value
+    if command -v hexdump >/dev/null 2>&1; then
+        local current_byte
+        current_byte=$(hexdump -v -s "$offset" -n 1 -e '1/1 "%02X"' "$bin_file" 2>/dev/null)
+        echo "Current byte: 0x$current_byte"
+    fi
+
+    echo "New value:    0x$hex_value"
+    echo ""
+
+    # Create backup
+    local backup_file="${bin_file}.backup"
+    if ! cp "$bin_file" "$backup_file" 2>/dev/null; then
+        echo "ERROR: Failed to create backup file: $backup_file"
+        return 1
+    fi
+    echo "Backup created: $backup_file"
+
+    # Modify the byte using hex-to-binary conversion
+    # Use multiple methods with fallback to ensure portability and safety
+    # Avoid printf '%b' which interprets escape sequences and corrupts data
+    local write_success=0
+    local write_method=""
+
+    # Method 1: Try Python (most reliable for binary data)
+    if command -v python3 >/dev/null 2>&1; then
+        if python3 -c "import sys; sys.stdout.buffer.write(bytes.fromhex('${hex_value}'))" 2>/dev/null | \
+           dd of="$bin_file" bs=1 seek="$offset" count=1 conv=notrunc 2>/dev/null; then
+            write_success=1
+            write_method="python3"
+        fi
+    fi
+
+    # Method 2: Try xxd (reliable hex-to-binary conversion)
+    if [[ $write_success -eq 0 ]] && command -v xxd >/dev/null 2>&1; then
+        if echo "$hex_value" | xxd -r -p | dd of="$bin_file" bs=1 seek="$offset" count=1 conv=notrunc 2>/dev/null; then
+            write_success=1
+            write_method="xxd"
+        fi
+    fi
+
+    # Method 3: Try Perl (widely available, safe for binary)
+    if [[ $write_success -eq 0 ]] && command -v perl >/dev/null 2>&1; then
+        if perl -e "print pack('H*', '${hex_value}')" | dd of="$bin_file" bs=1 seek="$offset" count=1 conv=notrunc 2>/dev/null; then
+            write_success=1
+            write_method="perl"
+        fi
+    fi
+
+    # Method 4: Fallback to printf (avoid %b, use octal for safety)
+    # Convert hex to octal to avoid escape sequence interpretation
+    if [[ $write_success -eq 0 ]]; then
+        local octal_value=$(printf '%o' "0x${hex_value}")
+        if printf "\\${octal_value}" | dd of="$bin_file" bs=1 seek="$offset" count=1 conv=notrunc 2>/dev/null; then
+            write_success=1
+            write_method="printf-octal"
+        fi
+    fi
+
+    if [[ $write_success -eq 0 ]]; then
+        echo "ERROR: Failed to modify byte at offset $offset (no suitable method available)"
+        echo "Restoring from backup..."
+        mv "$backup_file" "$bin_file"
+        return 1
+    fi
+
+    echo "Byte modified successfully using $write_method"
+    echo ""
+
+    # Verify the modification
+    if command -v hexdump >/dev/null 2>&1; then
+        local new_byte
+        new_byte=$(hexdump -v -s "$offset" -n 1 -e '1/1 "%02X"' "$bin_file" 2>/dev/null)
+        echo "Verification:"
+        echo "  New byte value: 0x$new_byte"
+
+        if [[ "$new_byte" == "$hex_value" ]]; then
+            echo "  Status: SUCCESS - Byte modified correctly"
+        else
+            echo "  Status: FAILED - Byte value doesn't match expected"
+            echo "Restoring from backup..."
+            mv "$backup_file" "$bin_file"
+            return 1
+        fi
+    fi
+
+    echo ""
+    echo "=========================================="
+    echo "Modification completed successfully"
+    echo "Original file backed up to: $backup_file"
+    echo "=========================================="
+
+    return 0
 }
 
 # Function to validate JSON configuration
@@ -939,7 +1390,12 @@ process_json_config()
 main()
 {
     local validate_only=0
+    local dump_only=0
+    local modify_bin_mode=0
     local json_file=""
+    local modify_bin_file=""
+    local modify_offset=""
+    local modify_data=""
 
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
@@ -951,6 +1407,24 @@ main()
             --validate-json)
                 validate_only=1
                 shift
+                ;;
+            --dump-current-content)
+                dump_only=1
+                shift
+                ;;
+            --modify-bin)
+                modify_bin_mode=1
+                shift
+                # Expect 3 more arguments: file, offset, data
+                if [[ $# -lt 3 ]]; then
+                    echo "Error: --modify-bin requires 3 arguments: <file> <offset> <data>"
+                    usage
+                    exit 1
+                fi
+                modify_bin_file="$1"
+                modify_offset="$2"
+                modify_data="$3"
+                shift 3
                 ;;
             --help)
                 usage
@@ -973,7 +1447,16 @@ main()
         esac
     done
 
-    # Check if JSON file is provided
+    # Handle --modify-bin mode separately (doesn't require JSON file)
+    if [[ $modify_bin_mode -eq 1 ]]; then
+        if modify_bin_file "$modify_bin_file" "$modify_offset" "$modify_data"; then
+            exit 0
+        else
+            exit 1
+        fi
+    fi
+
+    # Check if JSON file is provided for other modes
     if [[ -z "$json_file" ]]; then
         echo "Error: JSON configuration file not specified"
         usage
@@ -992,6 +1475,24 @@ main()
         if validate_json_config "$json_file"; then
             exit 0
         else
+            exit 1
+        fi
+    fi
+
+    # If dump mode, dump and exit
+    if [[ $dump_only -eq 1 ]]; then
+        # Check dependencies
+        if ! check_dependencies; then
+            log_message "err" "Dependency check failed - exiting"
+            exit 1
+        fi
+
+        # Dump current content
+        if dump_current_content "$json_file"; then
+            log_message "info" "Dump Completed Successfully"
+            exit 0
+        else
+            log_message "err" "Dump Completed with Errors"
             exit 1
         fi
     fi
