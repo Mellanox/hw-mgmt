@@ -43,6 +43,20 @@ import tempfile
 from typing import Any, Dict, Set, Optional
 
 
+def read_dmi_data(dmi_field_name):
+    """
+    @summary:
+        Read DMI data from file
+    @param dmi_field_name: name of DMI field
+    @return: value of DMI field
+    Only allows fields: system_type, board_name, product_version, product_sku
+    """
+    dmi_file_name = f"/sys/devices/virtual/dmi/id/{dmi_field_name}"
+    if os.path.isfile(dmi_file_name):
+        with open(dmi_file_name, "r") as f:
+            return f.read().strip()
+    return ""
+
 # ----------------------------------------------------------------------
 
 def atomic_file_write(file_name, value):
@@ -551,7 +565,7 @@ class HW_Mgmt_Logger:
                     # new message not defined - use message from hash
                     msg = log_hash[id_hash]["msg"]
                     # add "finalization" mark to message
-                    msg = "message repeated {} times: [ {} ] and stopped".format(log_hash[id_hash]["count"], msg)
+                    msg = "message \"{}\" repeated {} times and stopped".format(msg, log_hash[id_hash]["count"])
                     # remove message from hash
                     del log_hash[id_hash]
                     log_emit = True

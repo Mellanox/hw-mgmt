@@ -45,7 +45,7 @@ try:
     import traceback
     import signal
     import threading
-    from hw_management_lib import HW_Mgmt_Logger as Logger
+    from hw_management_lib import HW_Mgmt_Logger as Logger, read_dmi_data
     from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
@@ -608,8 +608,7 @@ def main():
 
     if args["system_type"] is None:
         try:
-            with open("/sys/devices/virtual/dmi/id/product_sku", "r") as f:
-                product_sku = f.read()
+            product_sku = read_dmi_data("product_sku")
         except OSError as e:
             product_sku = ""
     else:
