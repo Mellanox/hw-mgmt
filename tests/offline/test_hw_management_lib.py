@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Comprehensive Test Suite for hw_management_lib.py
 # Tests all functions with simple, medium, and complex scenarios
@@ -444,8 +444,10 @@ class TestLogLevelMethods:
         with open(log_file) as f:
             content = f.read()
             # Should see the message repeated and the finalization
-            assert "message repeated" in content
-            assert "and stopped" in content
+            # New format: "Repeat msg (repeat=5, duration=Xs)"
+            assert "Repeat msg" in content
+            assert "repeat=" in content
+            assert "duration=" in content
 
 
 class TestSyslogLog:
@@ -616,8 +618,10 @@ class TestPushLogHash:
         # Finalize
         msg, emit = basic_logger._push_log_hash(basic_logger.log_hash, "", "id1", 0)
         assert emit is True
-        assert "message repeated" in msg
-        assert "and stopped" in msg
+        # New format: "Repeat (repeat=5, duration=Xs)"
+        assert "Repeat" in msg
+        assert "repeat=" in msg
+        assert "duration=" in msg
 
     def test_complex_none_message(self, basic_logger):
         """Complex: None message is handled gracefully"""
@@ -654,68 +658,267 @@ class TestPushLogHash:
 
 
 class TestHashGarbageCollect:
-    """Tests for hash_garbage_collect() method"""
+    """Tests for _msg_hash_garbage_collect() method"""
 
     def test_simple_empty_hash(self, basic_logger):
         """Simple: Garbage collect on empty hash"""
-        basic_logger._hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
         assert len(basic_logger.log_hash) == 0
 
     def test_medium_small_hash(self, basic_logger):
         """Medium: Garbage collect on small hash"""
-        # Add a few entries
-        for i in range(10):
-            basic_logger.log_hash[f"id_{i}"] = {
-                "count": 1,
-                "msg": f"Message {i}",
-                "ts": current_milli_time(),
-                "repeat": 2
-            }
+        from hw_management_lib import _MsgState
 
-        basic_logger._hash_garbage_collect(basic_logger.log_hash)
+        # Add a few entries
+        now = current_milli_time()
+        for i in range(10):
+            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                first_seen=now,
+                last_seen=now,
+                msg=f"Message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
         # Should not clear small hash
         assert len(basic_logger.log_hash) == 10
 
     def test_complex_exceed_max_size(self, basic_logger):
         """Complex: Hash exceeds MAX_MSG_HASH_SIZE (100)"""
-        # Add more than MAX_MSG_HASH_SIZE entries
-        for i in range(150):
-            basic_logger.log_hash[f"id_{i}"] = {
-                "count": 1,
-                "msg": f"Message {i}",
-                "ts": current_milli_time(),
-                "repeat": 2
-            }
+        from hw_management_lib import _MsgState
 
-        basic_logger._hash_garbage_collect(basic_logger.log_hash)
+        # Add more than MAX_MSG_HASH_SIZE entries
+        now = current_milli_time()
+        for i in range(150):
+            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                first_seen=now,
+                last_seen=now,
+                msg=f"Message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
         # Should clear the entire hash
         assert len(basic_logger.log_hash) == 0
 
     def test_complex_timeout_cleanup(self, basic_logger):
         """Complex: Cleanup of old messages (timeout)"""
+        from hw_management_lib import _MsgState
+
         current_time = current_milli_time()
 
         # Add mix of old and new messages
         for i in range(60):
             if i < 30:
                 # Old messages (> 60 min old)
-                ts = current_time - (basic_logger.MSG_HASH_TIMEOUT + 10000)
+                old_time = current_time - (basic_logger.MSG_HASH_TIMEOUT + 10000)
+                basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                    first_seen=old_time,
+                    last_seen=old_time,
+                    msg=f"Message {i}",
+                    max_repeat=2,
+                    seen_count=1
+                )
             else:
                 # Recent messages
-                ts = current_time - 1000
+                recent_time = current_time - 1000
+                basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                    first_seen=recent_time,
+                    last_seen=recent_time,
+                    msg=f"Message {i}",
+                    max_repeat=2,
+                    seen_count=1
+                )
 
-            basic_logger.log_hash[f"id_{i}"] = {
-                "count": 1,
-                "msg": f"Message {i}",
-                "ts": ts,
-                "repeat": 2
-            }
-
-        basic_logger._hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
 
         # Old messages should be removed, recent ones kept
         assert len(basic_logger.log_hash) < 60
         assert len(basic_logger.log_hash) >= 30
+
+
+class TestHashMessageCountOverload:
+    """Tests for hash message count overload scenarios"""
+
+    def test_exceed_max_hash_size_clear_all(self, basic_logger):
+        """Test: Hash exceeds MAX_MSG_HASH_SIZE (100) - should clear all messages"""
+        from hw_management_lib import _MsgState
+
+        # Add more than MAX_MSG_HASH_SIZE entries manually
+        now = current_milli_time()
+        for i in range(basic_logger.MAX_MSG_HASH_SIZE + 20):  # 120 entries
+            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                first_seen=now,
+                last_seen=now,
+                msg=f"Message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        # Verify hash is overloaded
+        assert len(basic_logger.log_hash) > basic_logger.MAX_MSG_HASH_SIZE
+
+        # Trigger garbage collection
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+
+        # Should clear the entire hash
+        assert len(basic_logger.log_hash) == 0
+
+    def test_exceed_timeout_hash_size_cleanup_expired(self, basic_logger):
+        """Test: Hash exceeds MAX_MSG_TIMEOUT_HASH_SIZE (50) but < 100 - should clean expired"""
+        from hw_management_lib import _MsgState
+
+        now = current_milli_time()
+        old_time = now - basic_logger.MSG_HASH_TIMEOUT - 10000  # Expired messages
+
+        # Add mix of expired and recent messages (total > 50 but < 100)
+        expired_count = 30
+        recent_count = 40
+        total_count = expired_count + recent_count
+
+        # Add expired messages
+        for i in range(expired_count):
+            basic_logger.log_hash[hash(f"expired_{i}")] = _MsgState(
+                first_seen=old_time,
+                last_seen=old_time,
+                msg=f"Expired message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        # Add recent messages
+        for i in range(recent_count):
+            basic_logger.log_hash[hash(f"recent_{i}")] = _MsgState(
+                first_seen=now,
+                last_seen=now,
+                msg=f"Recent message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        # Verify hash size is between thresholds
+        assert len(basic_logger.log_hash) == total_count
+        assert len(basic_logger.log_hash) > basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE
+        assert len(basic_logger.log_hash) < basic_logger.MAX_MSG_HASH_SIZE
+
+        # Trigger garbage collection
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+
+        # Expired messages should be removed, recent ones kept
+        assert len(basic_logger.log_hash) < total_count
+        assert len(basic_logger.log_hash) >= recent_count
+        assert len(basic_logger.log_hash) <= recent_count  # All expired should be gone
+
+    def test_natural_population_via_logging_api(self, basic_logger):
+        """Test: Natural hash population through logging API triggers garbage collection"""
+        # Use logging API to naturally populate hash
+        # This will trigger automatic garbage collection when adding new entries
+
+        # Add messages up to just below threshold
+        for i in range(basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE - 5):
+            basic_logger.info(f"Message {i}", id=f"msg_{i}", log_repeat=1)
+
+        # Hash should have entries
+        initial_size = len(basic_logger.log_hash)
+        assert initial_size > 0
+
+        # Add more messages to exceed threshold
+        for i in range(basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE - 5, basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE + 10):
+            basic_logger.info(f"Message {i}", id=f"msg_{i}", log_repeat=1)
+            # Garbage collection is called automatically when adding new entries
+
+        # Hash size should be managed (may have been cleaned up)
+        final_size = len(basic_logger.log_hash)
+        assert final_size <= basic_logger.MAX_MSG_HASH_SIZE
+
+    def test_hash_size_boundary_conditions(self, basic_logger):
+        """Test: Boundary conditions for hash size thresholds"""
+        from hw_management_lib import _MsgState
+
+        now = current_milli_time()
+
+        # Test exactly at MAX_MSG_TIMEOUT_HASH_SIZE
+        basic_logger.log_hash.clear()
+        for i in range(basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE):
+            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                first_seen=now,
+                last_seen=now,
+                msg=f"Message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        # Should not trigger cleanup (exactly at threshold, not exceeding)
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+        assert len(basic_logger.log_hash) == basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE
+
+        # Test exactly at MAX_MSG_HASH_SIZE
+        basic_logger.log_hash.clear()
+        for i in range(basic_logger.MAX_MSG_HASH_SIZE):
+            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
+                first_seen=now,
+                last_seen=now,
+                msg=f"Message {i}",
+                max_repeat=2,
+                seen_count=1
+            )
+
+        # Should not trigger full clear (exactly at threshold, not exceeding)
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+        assert len(basic_logger.log_hash) == basic_logger.MAX_MSG_HASH_SIZE
+
+        # Test one over MAX_MSG_HASH_SIZE
+        basic_logger.log_hash[hash("one_more")] = _MsgState(
+            first_seen=now,
+            last_seen=now,
+            msg="One more message",
+            max_repeat=2,
+            seen_count=1
+        )
+
+        # Should trigger full clear
+        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+        assert len(basic_logger.log_hash) == 0
+
+    def test_concurrent_hash_overload(self, basic_logger):
+        """Test: Concurrent access during hash overload"""
+        import threading
+
+        results = []
+        lock = threading.Lock()
+
+        def add_messages(thread_id, count):
+            """Add messages from a thread"""
+            for i in range(count):
+                msg_id = f"thread_{thread_id}_msg_{i}"
+                basic_logger.info(f"Message from thread {thread_id}", id=msg_id, log_repeat=1)
+                with lock:
+                    results.append(len(basic_logger.log_hash))
+
+        # Create multiple threads adding messages concurrently
+        threads = []
+        for thread_id in range(5):
+            t = threading.Thread(target=add_messages, args=(thread_id, 25))
+            threads.append(t)
+            t.start()
+
+        # Wait for all threads
+        for t in threads:
+            t.join()
+
+        # Hash should be managed (garbage collection may have occurred)
+        final_size = len(basic_logger.log_hash)
+        assert final_size <= basic_logger.MAX_MSG_HASH_SIZE
+
+        # Verify no corruption occurred - all entries should be _MsgState instances
+        from hw_management_lib import _MsgState
+        for key, msg_state in basic_logger.log_hash.items():
+            assert isinstance(msg_state, _MsgState)
+            assert hasattr(msg_state, 'msg')
+            assert hasattr(msg_state, 'seen_count')
+            assert hasattr(msg_state, 'last_seen')
 
 
 class TestResourceManagement:
@@ -834,8 +1037,9 @@ class TestConcurrencyAndPerformance:
         # Verify repeat finalization messages
         with open(log_file) as f:
             content = f.read()
-            # Should have finalization messages
-            assert "message repeated" in content
+            # Should have finalization messages with new format: "Repeat msg X (repeat=Y, duration=Zs)"
+            assert "repeat=" in content
+            assert "duration=" in content
 
 
 class TestEdgeCasesAndErrors:

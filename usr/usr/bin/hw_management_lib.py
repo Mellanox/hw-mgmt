@@ -40,10 +40,29 @@ import threading
 import time
 import json
 import tempfile
-from typing import Any, Dict, Set, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Set, Optional, Hashable
 
+
+def read_dmi_data(dmi_field_name):
+    """
+    @summary:
+        Read DMI data from file
+    @param dmi_field_name: name of DMI field
+    @return: value of DMI field
+    Only allows fields: system_type, board_name, product_version, product_sku
+    """
+    allowed_fields = {"system_type", "board_name", "product_version", "product_sku"}
+    if dmi_field_name not in allowed_fields:
+        return ""
+    dmi_file_name = f"/sys/devices/virtual/dmi/id/{dmi_field_name}"
+    if os.path.isfile(dmi_file_name):
+        with open(dmi_file_name, "r") as f:
+            return f.read().strip()
+    return ""
 
 # ----------------------------------------------------------------------
+
 
 def atomic_file_write(file_name, value):
     """
@@ -71,6 +90,15 @@ def current_milli_time():
     @return: int value time in milliseconds
     """
     return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
+
+
+@dataclass
+class _MsgState:
+    first_seen: float
+    last_seen: float
+    msg: str
+    max_repeat: int
+    seen_count: int = 0  # total times error was seen
 
 
 class HW_Mgmt_Logger:
@@ -167,8 +195,8 @@ class HW_Mgmt_Logger:
 
         self.log_repeat = log_repeat
         self.syslog_repeat = syslog_repeat
-        self.syslog_hash = {}    # hash array of the messages which was logged to syslog
-        self.log_hash = {}    # hash array of the messages which was logged to log
+        self.syslog_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to syslog
+        self.log_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to log
         self._lock = threading.Lock()  # Thread safety for all logger operations
 
         self._set_param(ident, log_file, log_level, syslog_level)
@@ -507,10 +535,10 @@ class HW_Mgmt_Logger:
             error_msg = log_msg if log_msg else syslog_msg
             print("Error logging message: {} - {}".format(error_msg, e))
 
-    def _hash_garbage_collect(self, log_hash):
+    def _msg_hash_garbage_collect(self, log_hash):
         """
         @summary:
-            Remove from log_hash all messages older than 60 minutes or if hash is too big
+            Remove from log_hash all messages older than MSG_HASH_TIMEOUT milliseconds or if hash is too big
         """
         hash_size = len(log_hash)
 
@@ -524,17 +552,17 @@ class HW_Mgmt_Logger:
 
         if hash_size > self.MAX_MSG_TIMEOUT_HASH_SIZE:
             # some messages were not cleaned up.
-            # remove messages older than MSG_HASH_TIMEOUT seconds
-            current_time = current_milli_time()
-            cutoff_time = current_time - self.MSG_HASH_TIMEOUT
+            # remove messages older than MSG_HASH_TIMEOUT milliseconds
+            now = current_milli_time()
+            cutoff_time = now - self.MSG_HASH_TIMEOUT
 
             # More efficient: build list of keys to delete and batch delete
-            expired_keys = [key for key, value in log_hash.items() if value["ts"] < cutoff_time]
+            expired_keys = [key for key, msg_state in log_hash.items() if msg_state.last_seen < cutoff_time]
 
             for key in expired_keys:
+                msg_state = log_hash.pop(key)
                 # Use print instead of logger to avoid potential circular logging issues
-                print("hash_garbage_collect: remove message \"{}\" from hash".format(log_hash[key]["msg"]))
-                del log_hash[key]
+                print("hash_garbage_collect: removed message \"{}\" last seen at {} from hash".format(msg_state.msg, msg_state.last_seen))
 
     def _push_syslog(self, msg="", id=None, repeat=None):
         with self._lock:
@@ -581,31 +609,39 @@ class HW_Mgmt_Logger:
             id_hash = None
 
         # msg is not empty
+        now = current_milli_time()
         if msg:
             if repeat == 0:
                 log_emit = False
             else:
                 if id_hash:
-                    if id_hash in log_hash:
-                        log_hash[id_hash]["count"] += 1
+                    msg_state = log_hash.get(id_hash)
+                    if msg_state:
+                        msg_state.last_seen = now
+                        msg_state.seen_count += 1
                     else:
-                        self._hash_garbage_collect(log_hash)
-                        log_hash[id_hash] = {"count": 1, "msg": msg, "ts": current_milli_time(), "repeat": repeat}
-                    log_hash[id_hash]["ts"] = current_milli_time()
-                    if log_hash[id_hash]["count"] <= repeat:
+                        msg_state = _MsgState(
+                            first_seen=now,
+                            last_seen=now,
+                            seen_count=1,
+                            msg=msg,
+                            max_repeat=repeat,
+                        )
+                        log_hash[id_hash] = msg_state
+                        self._msg_hash_garbage_collect(log_hash)
+                    if msg_state.seen_count <= msg_state.max_repeat:
                         log_emit = True
                 else:
                     log_emit = True
         # msg is empty. print finalize message to log if id_hash is defined
         else:
             if id_hash:
-                if id_hash in log_hash:
+                msg_state = log_hash.pop(id_hash, None)
+                if msg_state:
                     # new message not defined - use message from hash
-                    msg = log_hash[id_hash]["msg"]
                     # add "finalization" mark to message
-                    msg = "message repeated {} times: [ {} ] and stopped".format(log_hash[id_hash]["count"], msg)
-                    # remove message from hash
-                    del log_hash[id_hash]
+                    duration = int((now - msg_state.first_seen) / 1000)  # Convert milliseconds to seconds
+                    msg = "{} (repeat={}, duration={}s)".format(msg_state.msg, msg_state.seen_count, duration)
                     log_emit = True
 
         return msg, log_emit
