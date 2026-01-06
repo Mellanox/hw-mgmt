@@ -741,6 +741,94 @@ Kernel-6.1
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+Kernel-6.12
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-mlxbf-bootctl-Constify-struct-bin_attribute.patch           | 8ba0e61            | Feature upstream                         | 6.15.1     |                                                |
+|0002-platform-mellanox-mlxbf-pmc-Add-support-for-monitori.patch  | 5efc8009           | Feature upstream                         | 6.15.1     |                                                |
+|0003-platform-mellanox-mlxbf-pmc-Add-support-for-clock_me.patch  | 8e3b3e1            | Feature upstream                         | 6.15.1     |                                                |
+|0004-platform-mellanox-mlxbf-bootctl-use-sysfs_emit-inste.patch  | 9886f57            | Feature upstream                         | 6.15.1     |                                                |
+|0005-platform-mellanox-mlxreg-hotplug-use-sysfs_emit-inst.patch  | fcf1b6f            | Feature upstream                         | 6.15.1     |                                                |
+|0006-platform-mellanox-mlxreg-io-use-sysfs_emit-instead-o.patch  | ff44b1c            | Feature upstream                         | 6.15.1     |                                                |
+|0007-mlxbf-bootctl-Support-sysfs-entries-for-RTC-battery-.patch  | 5d40a85            | Feature upstream                         | 6.15.1     |                                                |
+|0008-mlxbf-bootctl-use-sysfs_emit_at-in-secure_boot_fuse_.patch  | b129005            | Feature upstream                         | 6.15.1     |                                                |
+|0009-platform-mellanox-mlxbf-pmc-Support-additional-PMC-b.patch  | 3acb492            | Feature upstream                         | 6.15.1     |                                                |
+|0010-platform-mellanox-nvsw-sn2200-Fix-.items-in-nvsw_sn2.patch  | 8e725ff            | Feature upstream                         | 6.15.1     |                                                |
+|0011-platform-mellanox-Fix-spelling-and-comment-clarity-i.patch  | c3ac7e3            | Feature upstream                         | 6.15.1     |                                                |
+|0012-platform-mellanox-mlxbf-pmc-Remove-newline-char-from.patch  | 44e6ca8            | Feature upstream                         | 6.12.41    |                                                |
+|0013-platform-mellanox-mlxbf-pmc-Validate-event-enable-in.patch  | f8c1311            | Feature upstream                         | 6.12.41    |                                                |
+|0014-platform-mellanox-mlxbf-pmc-Use-kstrtobool-to-check-.patch  | 0e2cebd            | Feature upstream                         | 6.12.41    |                                                |
+|0015-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
+|0016-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream accepted                      |            |                                                |
+|0017-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
+|0018-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
+|0019-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream accepted                      |            |                                                |
+|0020-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream accepted                      |            |                                                |
+|0021-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
+|0022-i2c-mux-Add-register-map-based-mux-driver.patch             | b04d17a            | Feature upstream                         | 6.15.1     |                                                |
+|0023-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream accepted                      |            |                                                |
+|0024-1-platform-x86-Fix-initialization-order-for-firmware_a.patch|                    | Feature upstream                         | 6.12.41    |                                                |
+|0024-mellanox-Relocate-mlx-platform-driver.patch                 | 8c03f64            | Feature upstream                         | 6.15.1     |                                                |
+|0025-platform-mellanox-mlx-platform-Cosmetic-changes.patch       | 749d3e0            | Feature upstream                         | 6.15.1     |                                                |
+|0026-platform-mellanox-Rename-field-to-improve-code-reada.patch  | 9815278            | Feature upstream                         | 6.15.1     |                                                |
+|0027-platform-mellanox-mlx-platform-Change-register-name.patch   | e75394b            | Feature upstream                         | 6.15.1     |                                                |
+|0028-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  | d00f779            | Feature upstream                         | 6.15.1     |                                                |
+|0029-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  | 783259e            | Feature upstream                         | 6.15.1     |                                                |
+|0030-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           | 6.12.53    |                                                |
+|0031-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0032-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
+|0033-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
+|0034-platform-mellanox-Cosmetic-changes-to-improve-code-s.patch  | f48cf5e            | Feature upstream                         | 6.15.1     |                                                |
+|0035-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  | 317bbe1            | Feature upstream                         | 6.15.1     |                                                |
+|0036-platform-mellanox-mlxreg-dpu-Fix-smatch-warnings.patch      | f94ffc3            | Feature upstream                         | 6.15.1     |                                                |
+|0037-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted			  |            |                                                |
+|0038-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
+|0039-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
+|0040-platform-mellanox-mlxreg-dpu-Introduce-completion-ca.patch  |                    | Downstream accepted                      |            |                                                |
+|0041-hwmon-add-MP2869-MP29608-MP29612-and-MP29816-series-.patch  |                    | Feature pending                          |            |                                                |
+|0042-hwmon-add-MP29502-driver.patch                              |                    | Feature pending                          |            |                                                |
+|0043-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
+|0044-platform_data-mlxreg-Add-non-sticky-bit-indication-f.patch  | 3a1f095            | Feature upstream                         | 6.15.1     |                                                |
+|0045-platform-mellanox-mlxreg-hotplug-Add-handling-of-non.patch  | 623a39e            | Feature upstream                         | 6.15.1     |                                                |
+|0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  | 51717e8            | Feature upstream                         | 6.15.1     |                                                |
+|0047-hwmon-mlxreg-fan-Prevent-fans-from-getting-stuck-at-.patch  | b82f116            | Feature upstream                         | 6.12.45    |                                                |
+|0048-UBUNTU-SAUCE-mlxbf_gige-add-RX_DMA-disable-to-NAPI-p.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0049-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0050-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0051-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0052-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
+|0053-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
+|0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
+|0054-1-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch|                    | Downstream accepted                      |            | MQM9701                                        |
+|0055-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
+|0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
+|8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
+|8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
+|8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|8003-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream accepted                      |            | IB only                                        |
+|8004-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
+|8005-i2c-mlxcpld-Downstream-WA-to-avoid-error-for-SMBUS-r.patch  |                    | Downstream accepted                      |            | HW bug WA: MUST for all systems until HW fix   |
+|8006-hwmon-mlxreg-fan-Downstream-Allow-fan-speed-setting-.patch  |                    | Downstream accepted                      |            | Fix for mlreg-fan cooling level granularity    |
+|8007-hwmon-emc2305-Downstream-Allow-fan-speed-setting-gra.patch  |                    | Downstream accepted                      |            | Fix for emc2305 cooling level granularity      |
+|8008-hwmon-mlxsw-Downstream-Allow-fan-speed-setting-granu.patch  |                    | Downstream accepted                      |            | Fix for mlxminimal cooling level granularity   |
+|8009-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
+|8010-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream accepted                      |            |                                                |
+|8011-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
+|8012-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
+|8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
+|9001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Rejected                                 |            | Add dedicated match for QMB8700                |
+|9002-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9003-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9004-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
+|9005-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
+|9006-mlxsw-core_hwmon-Fix-module-sensor-number-for-QM3200.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Legend:
 Feature upstream: Has commit Id in upstream
 Feature accepted: Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
