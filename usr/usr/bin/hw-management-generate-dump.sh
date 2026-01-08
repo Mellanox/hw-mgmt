@@ -74,7 +74,12 @@ fi
 
 dump_cmd "sensors" "sensors" "20"
 
-ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
+# Use tree or find to handle symlinks with special characters (exclude /sys/kernel/)
+if command -v tree >/dev/null 2>&1; then
+    tree -a -p -u -g -s -D -I 'kernel' /sys/ > $DUMP_FOLDER/sysfs_tree 2>&1
+else
+    find /sys/ -path '/sys/kernel' -prune -o -ls > $DUMP_FOLDER/sysfs_tree 2>&1
+fi
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
     timeout 140 find -L $HW_MGMT_FOLDER -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null
