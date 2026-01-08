@@ -2,7 +2,7 @@
 # pylint: disable=line-too-long
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -183,6 +183,7 @@ PLATFORM_CONFIG = {
     "HI181": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
     "HI182": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
@@ -190,6 +191,7 @@ PLATFORM_CONFIG = {
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage5", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE5 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
     ],
 }
 
