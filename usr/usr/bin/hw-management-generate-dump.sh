@@ -1,7 +1,7 @@
 #!/bin/sh
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -74,7 +74,9 @@ fi
 
 dump_cmd "sensors" "sensors" "20"
 
-ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
+# Use find to handle symlinks with special characters (exclude /sys/kernel/)
+find /sys/ -path '/sys/kernel' -prune -o -ls > $DUMP_FOLDER/sysfs_tree 2>&1
+
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
     timeout 140 find -L $HW_MGMT_FOLDER -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null
