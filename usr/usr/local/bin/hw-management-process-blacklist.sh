@@ -73,13 +73,16 @@ process_blacklist()
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
 		;;
-	HI193|HI185)
+	HI193)
 		# Prevent various i2c bus drivers from loading before Designware driver
 		# to gurantee the correct i2c bus numbering order
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
 		echo blacklist i2c_piix4 >> $BLACKLIST_FILE
 		echo blacklist i2c_i801 >> $BLACKLIST_FILE
+
+		# Prevent thunderbolt driver from loading to avoid kernel crashes
+		echo blacklist thunderbolt >> $BLACKLIST_FILE
 
 		# Make sure to load Designware I2C driver early, before platform driver
 		echo i2c_designware_platform >> $MODULE_LOAD_FILE
