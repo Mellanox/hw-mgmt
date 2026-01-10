@@ -1,4 +1,4 @@
-From 66ca083593adc27abc9741afb9ec79da8af1aafe Mon Sep 17 00:00:00 2001
+From f63b398112d63d42535526a6e6775c32b71d5902 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -22,11 +22,11 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Kconfig             |   29 +
  drivers/platform/mellanox/Makefile            |    3 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
- drivers/platform/mellanox/nvsw-core.c         |  678 ++++
+ drivers/platform/mellanox/nvsw-core.c         |  685 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
- drivers/platform/mellanox/nvsw-host-spc5.c    |  938 ++++++
+ drivers/platform/mellanox/nvsw-host-spc5.c    |  944 ++++++
  drivers/platform/mellanox/nvsw.h              |  293 ++
- 8 files changed, 5486 insertions(+), 4 deletions(-)
+ 8 files changed, 5499 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -2944,10 +2944,10 @@ index 000000000..96908494c
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
 new file mode 100644
-index 000000000..048ec3bd2
+index 000000000..1012da6a6
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-core.c
-@@ -0,0 +1,678 @@
+@@ -0,0 +1,685 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3440,6 +3440,7 @@ index 000000000..048ec3bd2
 +							  sizeof(*nvsw_core->regio_data));
 +		if (IS_ERR(nvsw_core->regio)) {
 +			err = PTR_ERR(nvsw_core->regio);
++			dev_err(nvsw_core->dev, "Failed to register mlxreg-io driver\n");
 +			goto fail_platform_io_register;
 +		}
 +	}
@@ -3451,8 +3452,9 @@ index 000000000..048ec3bd2
 +								   PLATFORM_DEVID_NONE, NULL, 0,
 +								   nvsw_core->fan_data,
 +								   sizeof(*nvsw_core->fan_data));
-+		if (IS_ERR(nvsw_core->fan_data)) {
-+			err = PTR_ERR(nvsw_core->fan_data);
++		if (IS_ERR(nvsw_core->fan)) {
++			err = PTR_ERR(nvsw_core->fan);
++			dev_err(nvsw_core->dev, "Failed to register mlxreg-fan driver\n");
 +			goto fail_platform_fan_register;
 +		}
 +	}
@@ -3466,6 +3468,7 @@ index 000000000..048ec3bd2
 +								   sizeof(*nvsw_core->led_data));
 +		if (IS_ERR(nvsw_core->led)) {
 +			err = PTR_ERR(nvsw_core->led);
++			dev_err(nvsw_core->dev, "Failed to register leds-mlxreg driver\n");
 +			goto fail_platform_leds_register;
 +		}
 +	}
@@ -3482,6 +3485,7 @@ index 000000000..048ec3bd2
 +							  sizeof(*nvsw_core->hotplug_data));
 +		if (IS_ERR(nvsw_core->hotplug)) {
 +			err = PTR_ERR(nvsw_core->hotplug);
++			dev_err(nvsw_core->dev, "Failed to register mlxreg-hotplug driver\n");
 +			goto fail_platform_hotplug_register;
 +		}
 +	}
@@ -3495,6 +3499,7 @@ index 000000000..048ec3bd2
 +								  sizeof(*nvsw_core->wd_data[i]));
 +			if (IS_ERR(nvsw_core->wd[i])) {
 +				err = PTR_ERR(nvsw_core->wd[i]);
++				dev_err(nvsw_core->dev, "Failed to register mlx-wdt driver\n");
 +				goto fail_platform_wd_register;
 +			}
 +		}
@@ -3505,6 +3510,8 @@ index 000000000..048ec3bd2
 +fail_platform_wd_register:
 +	while (i--)
 +		platform_device_unregister(nvsw_core->wd[i]);
++	if (nvsw_core->hotplug_data)
++		platform_device_unregister(nvsw_core->hotplug);
 +fail_platform_hotplug_register:
 +	if (nvsw_core->led_data)
 +		platform_device_unregister(nvsw_core->led);
@@ -3566,7 +3573,7 @@ index 000000000..048ec3bd2
 +	}
 +
 +	if (IS_ERR(nvsw_core->regmap)) {
-+		dev_err(nvsw_core->dev, "Failed to create regmap");
++		dev_err(nvsw_core->dev, "Failed to create regmap\n");
 +		return PTR_ERR(nvsw_core->regmap);
 +	}
 +
@@ -3574,7 +3581,7 @@ index 000000000..048ec3bd2
 +	regcache_mark_dirty(nvsw_core->regmap);
 +	err = regcache_sync(nvsw_core->regmap);
 +	if (err) {
-+		dev_err(nvsw_core->dev, "Failed to sync regmap");
++		dev_err(nvsw_core->dev, "Failed to sync regmap\n");
 +		return err;
 +	}
 +
@@ -3582,7 +3589,7 @@ index 000000000..048ec3bd2
 +	if (nvsw_core->set_reg_default) {
 +		err = nvsw_core->set_reg_default(nvsw_core->regmap);
 +		if (err) {
-+			dev_err(nvsw_core->dev, "Failed to set default regmap");
++			dev_err(nvsw_core->dev, "Failed to set default regmap\n");
 +			return err;
 +		}
 +	}
@@ -4344,10 +4351,10 @@ index 000000000..bf12509b2
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc5.c b/drivers/platform/mellanox/nvsw-host-spc5.c
 new file mode 100644
-index 000000000..90b07ea21
+index 000000000..70c58b57c
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc5.c
-@@ -0,0 +1,938 @@
+@@ -0,0 +1,944 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -4899,6 +4906,12 @@ index 000000000..90b07ea21
 +		.label = "port80",
 +		.reg = NVSW_REG_GP1_RO_OFFSET,
 +		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "bios_active_image",
++		.reg = NVSW_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
 +		.mode = 0444,
 +	},
 +	{
