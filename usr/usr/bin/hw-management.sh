@@ -3515,6 +3515,7 @@ pre_devtr_init()
 		HI158|HI175|HI178)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
+			echo 1 > "$config_path"/swb_brd_pdb_bus_offset
 			;;
 		HI179)
 			echo 2 > "$config_path"/swb_brd_num
