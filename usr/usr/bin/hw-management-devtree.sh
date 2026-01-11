@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -1214,6 +1214,7 @@ devtr_check_board_components()
 	local board_str=$1
 	local board_num=1
 	local board_bus_offset=0
+	local board_pdb_bus_offset=
 	local board_vr_num=
 	local board_pwr_conv_num=
 	local board_hotswap_num=
@@ -1260,6 +1261,9 @@ devtr_check_board_components()
 			fi
 			if [ -e "$config_path"/swb_brd_bus_offset ]; then
 				board_bus_offset=$(< $config_path/swb_brd_bus_offset)
+			fi
+			if [ -e "$config_path"/swb_brd_pdb_bus_offset ]; then
+				board_pdb_bus_offset=$(< $config_path/swb_brd_pdb_bus_offset)
 			fi
 			if [ -e "$config_path"/swb_brd_vr_num ]; then
 				board_vr_num=$(< $config_path/swb_brd_vr_num)
@@ -1537,7 +1541,11 @@ devtr_check_board_components()
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					if [ $board_bus_offset -ne 0 ]; then
-						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
+						if [ ! -z "$board_pdb_bus_offset" ]; then
+							curr_component[2]=$((curr_component[2]+board_pdb_bus_offset*brd))
+						else
+							curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
+						fi
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_pwr_conv_num}" ]; then
@@ -1583,7 +1591,11 @@ devtr_check_board_components()
 				for ((brd=0, n=1; brd<board_num; brd++, n++)) do
 					curr_component=(${board_alternatives[$alternative_key]})
 					if [ $board_bus_offset -ne 0 ]; then
-						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
+						if [ ! -z "$board_pdb_bus_offset" ]; then
+							curr_component[2]=$((curr_component[2]+board_pdb_bus_offset*brd))
+						else
+							curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
+						fi
 					fi
 					if [ ! -z "${board_name_pfx}" ]; then
 						if [ -z "${board_hotswap_num}" ]; then
