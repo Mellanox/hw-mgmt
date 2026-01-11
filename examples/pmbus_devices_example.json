@@ -1,0 +1,25 @@
+{
+  "devices": [
+    {
+      "Name": "mp29816",
+      "Description": "MPS voltage regulator on bus 16",
+      "BusNumber": 16,
+      "SlaveAddr": "0x60",
+      "NumPages": 2
+    },
+    {
+      "Name": "mp29816",
+      "Description": "MPS voltage regulator on bus 16",
+      "BusNumber": 16,
+      "SlaveAddr": "0x61",
+      "NumPages": 2
+    },
+    {
+      "Name": "mp29816",
+      "Description": "MPS voltage regulator on bus 16",
+      "BusNumber": 16,
+      "SlaveAddr": "0x63",
+      "NumPages": 2
+    }
+  ]
+}
