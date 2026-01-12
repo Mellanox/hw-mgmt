@@ -712,6 +712,7 @@ Kernel-6.1
 |0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted                      |            | SN5640                                         |
 |0098-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
 |0099-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0099-1-platform-mellanox-mlx-platform-Add-support-DGX-flav.patch |                    | Downstream accepted                      |            | SN4700d                                        |
 |0100-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
 |0101-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
 |0102-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
@@ -802,11 +803,12 @@ Kernel-6.12
 |0049-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0050-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0051-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
-|0052-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
-|0053-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
+|0052-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            | BF3                                            |
+|0053-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            | QM3400                                         |
 |0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
 |0054-1-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch|                    | Downstream accepted                      |            | MQM9701                                        |
 |0055-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0055-1-platform-mellanox-mlx-platform-Add-support-DGX-flavo.patch|                    | Downstream accepted                      |            | SN4700d                                       |
 |0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
