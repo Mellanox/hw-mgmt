@@ -87,6 +87,7 @@ class CONST(object):
 
 
 EXIT = threading.Event()
+sig_condition_name = ""
 
 
 def _build_attrib_list():
@@ -569,8 +570,13 @@ def handle_shutdown(sig, _frame):
     @param sig: Signal number
     @param _frame: Unused frame
     """
+    global sig_condition_name
+    try:
+        sig_condition_name = signal.Signals(sig).name
+    except (ValueError, AttributeError):
+        sig_condition_name = str(sig)
+
     EXIT.set()
-    LOGGER.notice("hw-management-peripheral-updater: received signal {}, stopping main loop".format(sig))
 
     return
 
@@ -661,7 +667,7 @@ def main():
 
         EXIT.wait(timeout=1)
 
-    LOGGER.notice("hw-management-peripheral-updater: stopped main loop")
+    LOGGER.notice("hw-management-peripheral-updater: stopped main loop ({})".format(sig_condition_name))
     return
 
 
