@@ -5,7 +5,7 @@
 # pylint: disable=R0913:
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -87,6 +87,7 @@ class CONST(object):
 
 
 EXIT = threading.Event()
+_sig_condition_name = ""
 
 
 def _build_attrib_list():
@@ -569,10 +570,13 @@ def handle_shutdown(sig, _frame):
     @param sig: Signal number
     @param _frame: Unused frame
     """
-    EXIT.set()
-    LOGGER.notice("hw-management-peripheral-updater: received signal {}, stopping main loop".format(sig))
+    global _sig_condition_name
+    try:
+        _sig_condition_name = signal.Signals(sig).name
+    except (ValueError, AttributeError):
+        _sig_condition_name = str(sig)
 
-    return
+    EXIT.set()
 
 
 def main():
@@ -661,7 +665,7 @@ def main():
 
         EXIT.wait(timeout=1)
 
-    LOGGER.notice("hw-management-peripheral-updater: stopped main loop")
+    LOGGER.notice("hw-management-peripheral-updater: stopped main loop ({})".format(_sig_condition_name))
     return
 
 
