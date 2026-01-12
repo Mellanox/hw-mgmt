@@ -153,6 +153,7 @@ thermal_config = _build_thermal_config()
 LOGGER = None
 
 EXIT = threading.Event()
+sig_condition_name = ""
 
 # ----------------------------------------------------------------------
 
@@ -484,7 +485,8 @@ def handle_shutdown(sig, _frame):
     @param _frame: Unused frame
     """
     EXIT.set()
-    LOGGER.notice("hw-management-thermal-updater: received signal {}, stopping main loop".format(sig))
+    global sig_condition_name
+    sig_condition_name = signal.Signals(sig).name
 
     return
 
@@ -569,7 +571,7 @@ def main():
 
         EXIT.wait(timeout=1)
 
-    LOGGER.notice("hw-management-thermal-updater: stopped main loop")
+    LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(sig_condition_name))
 
 
 if __name__ == '__main__':
