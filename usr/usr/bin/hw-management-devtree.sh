@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -199,17 +199,17 @@ declare -A sn5640_alternatives=(["mp2891_0"]="mp2891 0x62 5 voltmon1" \
 				["mp2891_8"]="mp2891 0x6a 5 voltmon9" \
 				["mp2891_9"]="mp2891 0x6c 5 voltmon10" \
 				["mp2891_10"]="mp2891 0x6e 5 voltmon11" \
-				["xdpe1a2g7_0"]="xdpe1a2g7 0x62 5 voltmon1" \
-				["xdpe1a2g7_1"]="xdpe1a2g7 0x63 5 voltmon2" \
-				["xdpe1a2g7_2"]="xdpe1a2g7 0x64 5 voltmon3" \
-				["xdpe1a2g7_3"]="xdpe1a2g7 0x65 5 voltmon4" \
-				["xdpe1a2g7_4"]="xdpe1a2g7 0x66 5 voltmon5" \
-				["xdpe1a2g7_5"]="xdpe1a2g7 0x67 5 voltmon6" \
-				["xdpe1a2g7_6"]="xdpe1a2g7 0x68 5 voltmon7" \
-				["xdpe1a2g7_7"]="xdpe1a2g7 0x69 5 voltmon8" \
-				["xdpe1a2g7_8"]="xdpe1a2g7 0x6a 5 voltmon9" \
-				["xdpe1a2g7_9"]="xdpe1a2g7 0x6c 5 voltmon10" \
-				["xdpe1a2g7_10"]="xdpe1a2g7 0x6e 5 voltmon11" \
+				["xdpe1a2g7_0"]="xdpe1a2g7b 0x62 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7b 0x63 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7b 0x64 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7b 0x65 5 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7b 0x66 5 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7b 0x67 5 voltmon6" \
+				["xdpe1a2g7_6"]="xdpe1a2g7b 0x68 5 voltmon7" \
+				["xdpe1a2g7_7"]="xdpe1a2g7b 0x69 5 voltmon8" \
+				["xdpe1a2g7_8"]="xdpe1a2g7b 0x6a 5 voltmon9" \
+				["xdpe1a2g7_9"]="xdpe1a2g7b 0x6c 5 voltmon10" \
+				["xdpe1a2g7_10"]="xdpe1a2g7b 0x6e 5 voltmon11" \
 				["tmp102_0"]="tmp102 0x4a 7 port_amb" \
 				["adt75_0"]="adt75 0x4a 7 port_amb" \
 				["stts751_0"]="stts751 0x4a 7 port_amb" \
@@ -254,12 +254,12 @@ declare -A q3400_alternatives=( \
 				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
 				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
 				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
-				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
-				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
-				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
-				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6")
+				["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6")
 
 declare -A q3200_alternatives=( \
 				["mp2891_0"]="mp2891 0x66 5 voltmon1" \
@@ -268,12 +268,12 @@ declare -A q3200_alternatives=( \
 				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
 				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
 				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
-				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
-				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
-				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
-				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+				["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6" \
 				["24c512_0"]="24c512 0x51 8 vpd_info")
 
 declare -A q3450_alternatives=( \
@@ -283,12 +283,12 @@ declare -A q3450_alternatives=( \
 				["mp2891_3"]="mp2891 0x66 21 voltmon4" \
 				["mp2891_4"]="mp2891 0x68 21 voltmon5" \
 				["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
-				["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
-				["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
-				["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
-				["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
-				["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-				["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+				["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
+				["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
+				["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
+				["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
+				["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
+				["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6" \
 				["raa228004_0"]="raa228004 0x60 3 pwr_conv" \
 				["lm5066i_0"]="lm5066i 0x16 3 hotswap" )
 
@@ -334,12 +334,12 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_6"]="mp2891 0x66 37 voltmon7" \
 						["mp2891_7"]="mp2891 0x68 37 voltmon8" \
 						["mp2891_8"]="mp2891 0x6c 37 voltmon9" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6" \
 						["adt75_0"]="adt75 0x4a 7 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
 						["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
@@ -349,18 +349,24 @@ declare -A n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 					   	["24c512_0"]="24c512 0x51 11 swb_info")
 
 
-declare -A gb3000_swb_alternatives=(["mp29816_0"]="mp29816 0x66 5 voltmon1" \
+declare -A gb300_swb_alternatives=(["mp29816_0"]="mp29816 0x66 5 voltmon1" \
 						["mp29816_1"]="mp29816 0x68 5 voltmon2" \
 						["mp29816_2"]="mp29816 0x6c 5 voltmon3" \
 						["mp29816_3"]="mp29816 0x66 21 voltmon4" \
 						["mp29816_4"]="mp29816 0x68 21 voltmon5" \
 						["mp29816_5"]="mp29816 0x6c 21 voltmon6" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6" \
+						["mp2891_0"]="mp2891 0x66 5 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 5 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 5 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 21 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 21 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 21 voltmon6" \
 						["24c512_0"]="24c512 0x51 11 swb_info" \
 						["lm5066i_0"]="lm5066i 0x12 4 pdb_hotswap1" \
 				   		["lm5066_0"]="lm5066i 0x12 4 pdb_hotswap1" \
@@ -377,15 +383,15 @@ declare -A gb200hd_swb_alternatives=(["mp2891_0"]="mp2891 0x66 5 voltmon1" \
 						["mp2891_6"]="mp2891 0x66 51 voltmon7" \
 						["mp2891_7"]="mp2891 0x68 51 voltmon8" \
 						["mp2891_8"]="mp2891 0x6c 51 voltmon9" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 5 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 5 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 5 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 21 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 21 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 21 voltmon6" \
-						["xdpe1a2g7_6"]="xdpe1a2g7 0x66 51 voltmon7" \
-						["xdpe1a2g7_7"]="xdpe1a2g7 0x68 51 voltmon8" \
-						["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 51 voltmon9" \
+						["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 5 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 5 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 5 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 21 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 21 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 21 voltmon6" \
+						["xdpe1a2g7_6"]="xdpe1a2g7b 0x66 51 voltmon7" \
+						["xdpe1a2g7_7"]="xdpe1a2g7b 0x68 51 voltmon8" \
+						["xdpe1a2g7_8"]="xdpe1a2g7b 0x6c 51 voltmon9" \
 						["adt75_0"]="adt75 0x4a 7 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 7 swb_asic2" \
 						["tmp102_0"]="tmp102 0x4a 7 swb_asic1" \
@@ -400,12 +406,12 @@ declare -A bmc_n5110ld_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" 
 						["mp2891_3"]="mp2891 0x66 19 voltmon4" \
 						["mp2891_4"]="mp2891 0x68 19 voltmon5" \
 						["mp2891_5"]="mp2891 0x6c 19 voltmon6" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 19 voltmon6" \
 						["adt75_0"]="adt75 0x4a 21 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 21 swb_asic2" \
 						["tmp102_0"]="tmp102 0x4a 21 swb_asic1" \
@@ -419,12 +425,18 @@ declare -A bmc_gb300_swb_alternatives=(["mp29816_0"]="mp29816 0x66 17 voltmon1" 
 						["mp29816_3"]="mp29816 0x66 19 voltmon4" \
 						["mp29816_4"]="mp29816 0x68 19 voltmon5" \
 						["mp29816_5"]="mp29816 0x6c 19 voltmon6" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
+						["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 19 voltmon6" \
+						["mp2891_0"]="mp2891 0x66 17 voltmon1" \
+						["mp2891_1"]="mp2891 0x68 17 voltmon2" \
+						["mp2891_2"]="mp2891 0x6c 17 voltmon3" \
+						["mp2891_3"]="mp2891 0x66 19 voltmon4" \
+						["mp2891_4"]="mp2891 0x68 19 voltmon5" \
+						["mp2891_5"]="mp2891 0x6c 19 voltmon6" \
 						["24c512_0"]="24c512 0x51 36 swb_info" \
 						["raa228004_0"]="raa228004 0x60 18 pwr_conv1" \
 				   		["mp29502_0"]="mp29502 0x2e 18 pwr_conv1" \
@@ -441,15 +453,15 @@ declare -A bmc_gb200hd_swb_alternatives=(["mp2891_0"]="mp2891 0x66 17 voltmon1" 
 						["mp2891_6"]="mp2891 0x66 25 voltmon7" \
 						["mp2891_7"]="mp2891 0x68 25 voltmon8" \
 						["mp2891_8"]="mp2891 0x6c 25 voltmon9" \
-						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 17 voltmon1" \
-						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 17 voltmon2" \
-						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 17 voltmon3" \
-						["xdpe1a2g7_3"]="xdpe1a2g7 0x66 19 voltmon4" \
-						["xdpe1a2g7_4"]="xdpe1a2g7 0x68 19 voltmon5" \
-						["xdpe1a2g7_5"]="xdpe1a2g7 0x6c 19 voltmon6" \
-						["xdpe1a2g7_6"]="xdpe1a2g7 0x66 25 voltmon7" \
-						["xdpe1a2g7_7"]="xdpe1a2g7 0x68 25 voltmon8" \
-						["xdpe1a2g7_8"]="xdpe1a2g7 0x6c 25 voltmon9" \
+						["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 17 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 17 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 17 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7b 0x66 19 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7b 0x68 19 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7b 0x6c 19 voltmon6" \
+						["xdpe1a2g7_6"]="xdpe1a2g7b 0x66 25 voltmon7" \
+						["xdpe1a2g7_7"]="xdpe1a2g7b 0x68 25 voltmon8" \
+						["xdpe1a2g7_8"]="xdpe1a2g7b 0x6c 25 voltmon9" \
 						["adt75_0"]="adt75 0x4a 21 swb_asic1" \
 						["adt75_1"]="adt75 0x4b 21 swb_asic2" \
 						["tmp102_0"]="tmp102 0x4a 21 swb_asic1" \
@@ -976,8 +988,8 @@ devtr_check_supported_system_init_alternatives()
 				done
 				;;
 			HI176)
-				for key in "${!gb3000_swb_alternatives[@]}"; do
-					swb_alternatives["$key"]="${gb3000_swb_alternatives["$key"]}"
+				for key in "${!gb300_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${gb300_swb_alternatives["$key"]}"
 				done
 
 				for key in "${!gb300_pwr_type1_alternatives[@]}"; do
