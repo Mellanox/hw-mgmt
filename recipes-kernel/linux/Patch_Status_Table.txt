@@ -276,8 +276,7 @@ Kernel-5.10
 |0265-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0266-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
 |0267-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
-|0268-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Feature pending                          |            |                                                |
-|0269-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream accepted                      |            |                                                |
+|0268-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream;skip[ALL]                     |            |                                                |
 |0270-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
 |0271-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
 |0272-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
@@ -661,8 +660,8 @@ Kernel-6.1
 |0043-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
 |0044-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
 |0045-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
-|0046-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream accepted                      |            |                                                |
-|0047-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream accepted                      |            |                                                |
+|0046-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream;skip[ALL]                     |            |                                                |
+|0047-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream;skip[ALL]                     |            |                                                |
 |0048-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Downstream accepted                      |            |                                                |
 |0049-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Downstream accepted                      |            |                                                |
 |0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
@@ -717,6 +716,7 @@ Kernel-6.1
 |0103-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                         |
 |0104-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Downstream accepted                      |            | mp2869                                         |
 |0105-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Downstream accepted                      |            | mp29502                                        |
+|0106-hwmon-pmbus-xdpe1a2g7b-XDPE1A2G7B-Digital-Multi-phas.patch  |                    | Downstream accepted                      |            | xdpe1a2g7b                                     |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
