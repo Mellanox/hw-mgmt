@@ -1,4 +1,99 @@
 ================================================================================
+- V.7.0050.3000
+- Tue, 13 Jan 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o Add support for SN58XX_LD liquid-cooled Ethernet platforms
+    o Add support for SN5810_LD virtual platform
+    o Add ThermalControl v2.5 with module EEPROM-based configuration support for SPC4/5 systems
+    o Add hw-mgmt-sync controller service with peripheral and thermal updaters
+    o Add signalling for ASIC readiness
+    o Add support for kernel 6.12.41/6.12.44 minor versions
+    o Add new pmbus drivers for MP2845 and MP5926 voltage regulator devices
+    o Add Cartridge EEPROM Flash Tool
+    o Add system EEPROM update script
+    o Add voltage regulator device flashing utility
+    o Add script for updating list of voltage regulators by single request
+    o Add tool for kernel I2C trace decoding (pmbus device)
+    o Add support for running fixups hooks in hw-mgmt dump
+    o Add support reading Critical TH for module temperature
+    o Add module vendor info retrieval for independent mode
+    o Add BMC default user password initialization
+    o Add ISL68137 VR driver loading on X86 systems
+    o Add scales for current and power measurement for GB300 NVLink systems
+    o Add I2C bus ownership check and reporting for VMOD0021 systems
+    o Add comprehensive test coverage and quality infrastructure
+
+- Bug fixes
+    o #4828481 hw-mgmt: scripts: Fix generate dump failed on sys folder
+    o #4744091 hw-mgmt: scripts: Fix voltmon5 address conflict with DPU
+    o #4738257 hw-mgmt: scripts: Make creation of parsed VPD files atomic
+    o #4662187 hw-mgmt: scripts: Restore ASIC chipup status on restart
+    o #4710734 hw-mgmt: scripts: Update sensors configuration of SN5640/SN5610 systems
+    o #4647791 hw-mgmt: scripts: Fix race conditions for write in thermal updater
+    o #4661922 hw-mgmt: thermal: Fix recovery flow for special attention FAN
+    o #4686090 hw-mgmt: sensors: Fix MSN4700 lmsensors config
+    o #4497061 Revert ASIC temperature reading fix to prevent critical regression
+    o #4761522 Restore missing platform configurations (HI176, HI177, HI179, HI180)
+    o #4677548 hw-mgmt: thermal: TC fix attention_fans config for Q3400
+    o #4571615 hw-mgmt: thermal: TC fix attention_fans config for SN4280
+    o #4546995 Refactor hw-management: Split sync service into peripheral and thermal updaters
+    o hw-mgmt: thermal: ThermalControl memory usage optimization
+    o hw-mgmt: thermal: Fix FAN speed tolerance
+    o hw-mgmt: thermal: Fix TEC module support
+    o hw-mgmt: thermal: Fix module present status update and lcrit validation
+    o hw-mgmt: thermal: Fix thermal data for SN5600
+    o hw-mgmt: thermal: Fix thermal config name for MSN2700-A1
+    o hw-mgmt: thermal: TC fix PCH thermal sensor availability
+    o hw-mgmt: thermal: Fix thermal config default parameters apply for swbX_voltmon
+    o hw-mgmt: thermal: TC removed unsupported ASIC sensor from Q3450 config
+    o hw-mgmt: thermal: Fix misprint in Q3450 thermal config
+    o hw-mgmt: scripts: Fix peripheral/thermal updater service crash on exit
+    o hw-mgmt: scripts: Fix detection of PDB devices on Q3450 systems
+    o hw-mgmt: scripts: Fix creation of ASIC init attributes for SN58XX_LD
+    o hw-mgmt: scripts: Fix ASIC PCIE mapping for N61XX_LD platform
+    o hw-mgmt: scripts: Fix for sodimm temp attribute
+    o hw-mgmt: scripts: Fix SN4280 sensors config
+    o hw-mgmt: sensors: Fix typo in sensors names for NVLink systems
+    o hw-mgmt: sensors: Rename PMIC-7 sensor for GB300 NVLink systems
+    o hw-mgmt: sensors: Remove PSU power2_cap attribute
+    o hw-mgmt: rules: Fix usb0 interface rule to work with kernel 6.12
+    o hw-mgmt: service: Fix service start-limit issue
+    o hw-mgmt: scripts: Re-instantiate mlxreg-dpu devices
+    o hw-mgmt: scripts: Improve logging for thermal and peripheral updater service
+    o hw-mgmt: scripts: ThermalControl optimize logging
+
+- Kernel Patches for New Features:
+    o Add pmbus drivers for new MPS devices (MP2845, MP5926) for GB300, NV144 and new systems
+        recipes-kernel/linux/linux-6.1/0107-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch
+        recipes-kernel/linux/linux-6.1/0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch
+        recipes-kernel/linux/linux-6.12/0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch
+        recipes-kernel/linux/linux-6.12/0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch
+    o Add SN58XX_LD platform driver for kernel 6.1 and 6.12
+        recipes-kernel/linux/linux-6.1/0091-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+        recipes-kernel/linux/linux-6.12/0050-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+    o Update N61XX_LD platform driver with new reset causes and attributes
+        recipes-kernel/linux/linux-6.1/0091-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+    o #4616243 Add support for kernel 6.12.41/6.12.44 minor version
+        recipes-kernel/linux/linux-6.12/0026-Fix-initialization-order-for-firmware_a.patch
+    o #5360318 hw-mgmt: kernel 6.1: mp2975: Clear interrupts at probe
+        recipes-kernel/linux/linux-6.1/0106-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch
+    o Fix SN5640 LED platform data for kernel 6.12
+    o Fix DPU boot_progress read issue for kernel 6.12
+    o Fix DPU dpuX_pwr_force access privileges for kernel 6.12
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.3000/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0050.2935
 - Thu, 08 Jan 2026
 --------------------------------------------------------------------------------
