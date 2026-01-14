@@ -1,6 +1,6 @@
-########################################################################
+##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -126,6 +126,9 @@ class HW_Mgmt_Logger:
 
     LOG_REPEAT_UNLIMITED = 4294836225
 
+    # Logging error alerting interval (in seconds)
+    LOGGING_ERROR_ALERT_INTERVAL = 300  # Re-alert every 5 minutes (300 seconds)
+
     def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=LOG_REPEAT_UNLIMITED, syslog_repeat=LOG_REPEAT_UNLIMITED):
         """
         Initialize the Hardware Management Logger.
@@ -151,6 +154,10 @@ class HW_Mgmt_Logger:
         self._suspend = True
         self._syslog = None
         self._syslog_min_log_priority = self.CRITICAL  # Initialize to high level
+
+        # Track logging errors to avoid spam but re-alert periodically
+        self._logging_error_alerted = False
+        self._logging_error_last_alert_time = 0
 
         # Validate repeat parameters
         if log_repeat < 0:
@@ -315,6 +322,51 @@ class HW_Mgmt_Logger:
                                                 backupCount=self.MAX_LOG_FILE_BACKUP_COUNT)
 
             logger_fh.setFormatter(formatter)
+
+            # Reuse original handleError but add timed suppression to avoid spam
+            # Note: Python's default handleError prints traceback to stderr but does NOT raise exception
+            # This means the application will NOT crash even with original handleError
+            original_handle_error = logger_fh.handleError
+
+            def timed_error_handler(record):
+                """Wrap original handleError with time-based suppression."""
+                current_time = time.time()
+
+                # Thread-safe check and update of error state
+                with self._lock:
+                    # Check if enough time has passed since last alert to re-alert
+                    time_since_last_alert = current_time - self._logging_error_last_alert_time
+                    if self._logging_error_alerted and time_since_last_alert < self.LOGGING_ERROR_ALERT_INTERVAL:
+                        return  # Already alerted recently, suppress the error output
+
+                    # Determine if this is the first error (send to syslog) or a retry (no syslog)
+                    is_first_error = not self._logging_error_alerted
+
+                    # Update alert status
+                    self._logging_error_alerted = True
+                    self._logging_error_last_alert_time = current_time
+
+                # Call the original handleError (prints traceback but doesn't crash app)
+                # Done outside lock to avoid holding lock during I/O
+                original_handle_error(record)
+
+                # Add syslog alert ONLY for the first error occurrence
+                if is_first_error:
+                    try:
+                        exc_type, exc_value, _ = sys.exc_info()
+                        if exc_type and self._syslog:
+                            # Create concise message: just error type and errno
+                            if exc_type == OSError and hasattr(exc_value, 'errno'):
+                                msg = "Logging error: OSError errno {}".format(exc_value.errno)
+                            else:
+                                msg = "Logging error: {}".format(exc_type.__name__)
+
+                            self._syslog.syslog(syslog.LOG_ERR, msg)
+
+                    except Exception:
+                        pass  # Don't let syslog errors break the handler
+
+            logger_fh.handleError = timed_error_handler
             self.logger.addHandler(logger_fh)
 
         if syslog_level:
