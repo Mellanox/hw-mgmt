@@ -87,7 +87,7 @@ process_blacklist()
 {
 	# Process system specific records.
 	case $SKU in
-	HI180|HI181|HI182|HI193)
+	HI180|HI181|HI182|HI185|HI193)
 		# Prevent various i2c bus drivers from loading before Designware driver
 		# to guarantee the correct i2c bus numbering order
 		ensure_line_exists "blacklist i2c_asf" "$BLACKLIST_FILE"
