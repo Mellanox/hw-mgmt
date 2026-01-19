@@ -1,4 +1,4 @@
-From 984090311edebbf7f3b246230f567847540b66bd Mon Sep 17 00:00:00 2001
+From 102d4beb0d3813ea47699eab05c1494520ac971a Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 14 Jan 2026 19:19:20 +0200
 Subject: [PATCH backport 6.1 1/1] hwmon:(pmbus/xdpe1a2g7b) XDPE1A2G7B Digital
@@ -9,12 +9,12 @@ Controller.
 
 Signed-off-by: Ashish Yadav <ashish.yadav@infineon.com>
 ---
- drivers/hwmon/pmbus/Kconfig      |  9 +++
- drivers/hwmon/pmbus/Makefile     |  1 +
- drivers/hwmon/pmbus/pmbus.h      |  2 +-
- drivers/hwmon/pmbus/pmbus_core.c |  4 ++
- drivers/hwmon/pmbus/xdpe1a2g7b.c | 97 ++++++++++++++++++++++++++++++++
- 5 files changed, 112 insertions(+), 1 deletion(-)
+ drivers/hwmon/pmbus/Kconfig      |   9 ++
+ drivers/hwmon/pmbus/Makefile     |   1 +
+ drivers/hwmon/pmbus/pmbus.h      |   2 +-
+ drivers/hwmon/pmbus/pmbus_core.c |   4 +
+ drivers/hwmon/pmbus/xdpe1a2g7b.c | 109 +++++++++++++++++++++++++++++++
+ 5 files changed, 124 insertions(+), 1 deletion(-)
  create mode 100644 drivers/hwmon/pmbus/xdpe1a2g7b.c
 
 diff --git a/drivers/hwmon/pmbus/Kconfig b/drivers/hwmon/pmbus/Kconfig
@@ -78,11 +78,11 @@ index 4b73c7b27..43502f730 100644
  }
 diff --git a/drivers/hwmon/pmbus/xdpe1a2g7b.c b/drivers/hwmon/pmbus/xdpe1a2g7b.c
 new file mode 100644
-index 000000000..c7e230dc8
+index 000000000..fccca5a8a
 --- /dev/null
 +++ b/drivers/hwmon/pmbus/xdpe1a2g7b.c
-@@ -0,0 +1,97 @@
-+// SPDX-License-Identifier: GPL-2.0+
+@@ -0,0 +1,109 @@
++// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Hardware monitoring driver for Infineon Multi-phase Digital VR Controllers
 + *
@@ -97,30 +97,27 @@ index 000000000..c7e230dc8
 +#include "pmbus.h"
 +
 +#define XDPE1A2G7B_PAGE_NUM 2
-+#define XDPE122_NVIDIA_195MV 0x1E /* NVIDIA mode 1.95mV */
-+
-+static struct pmbus_driver_info xdpe1a2g7b_info = {
-+	.pages = XDPE1A2G7B_PAGE_NUM,
-+	.format[PSC_VOLTAGE_IN] = linear,
-+	.format[PSC_VOLTAGE_OUT] = vid,
-+	.format[PSC_TEMPERATURE] = linear,
-+	.format[PSC_CURRENT_IN] = linear,
-+	.format[PSC_CURRENT_OUT] = linear,
-+	.format[PSC_POWER] = linear,
-+	.func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
-+		   PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
-+		   PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
-+		   PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
-+	.func[1] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
-+		   PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
-+		   PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
-+};
++#define XDPE1A2G7B_NVIDIA_195MV 0x1E /* NVIDIA mode 1.95mV, VID step is 5mV */
 +
 +static int xdpe1a2g7b_identify(struct i2c_client *client,
 +			       struct pmbus_driver_info *info)
 +{
 +	u8 vout_params;
-+	int i, ret;
++	int i, ret, vout_mode;
++
++	vout_mode = pmbus_read_byte_data(client, 0, PMBUS_VOUT_MODE);
++	if (vout_mode >= 0 && vout_mode != 0xff) {
++		switch (vout_mode >> 5) {
++		case 0:
++			info->format[PSC_VOLTAGE_OUT] = linear;
++			return 0;
++		case 1:
++			info->format[PSC_VOLTAGE_OUT] = vid;
++			break;
++		default:
++			return -ENODEV;
++		}
++	}
 +
 +	for (i = 0; i < info->pages; i++) {
 +		/* Read the register with VOUT for VID Code Type. */
@@ -129,9 +126,8 @@ index 000000000..c7e230dc8
 +			return ret;
 +
 +		vout_params = ret & GENMASK(4, 0);
-+
 +		switch (vout_params) {
-+		case XDPE122_NVIDIA_195MV:
++		case XDPE1A2G7B_NVIDIA_195MV:
 +			info->vrm_version[i] = nvidia195mv;
 +			break;
 +		default:
@@ -142,6 +138,23 @@ index 000000000..c7e230dc8
 +	return 0;
 +}
 +
++static struct pmbus_driver_info xdpe1a2g7b_info = {
++	.pages = XDPE1A2G7B_PAGE_NUM,
++	.identify = xdpe1a2g7b_identify,
++	.format[PSC_VOLTAGE_IN] = linear,
++	.format[PSC_TEMPERATURE] = linear,
++	.format[PSC_CURRENT_IN] = linear,
++	.format[PSC_CURRENT_OUT] = linear,
++	.format[PSC_POWER] = linear,
++	.func[0] = PMBUS_HAVE_VIN | PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT |
++		   PMBUS_HAVE_IIN | PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT |
++		   PMBUS_HAVE_TEMP | PMBUS_HAVE_TEMP2 | PMBUS_HAVE_STATUS_TEMP |
++		   PMBUS_HAVE_POUT | PMBUS_HAVE_PIN | PMBUS_HAVE_STATUS_INPUT,
++	.func[1] = PMBUS_HAVE_VOUT | PMBUS_HAVE_STATUS_VOUT | PMBUS_HAVE_IIN |
++		   PMBUS_HAVE_IOUT | PMBUS_HAVE_STATUS_IOUT | PMBUS_HAVE_PIN |
++		   PMBUS_HAVE_POUT | PMBUS_HAVE_STATUS_INPUT,
++};
++
 +static int xdpe1a2g7b_probe(struct i2c_client *client)
 +{
 +	struct pmbus_driver_info *info;
@@ -150,8 +163,6 @@ index 000000000..c7e230dc8
 +			    GFP_KERNEL);
 +	if (!info)
 +		return -ENOMEM;
-+
-+	info->identify = xdpe1a2g7b_identify;
 +
 +	return pmbus_do_probe(client, info);
 +}
@@ -179,6 +190,7 @@ index 000000000..c7e230dc8
 +MODULE_DESCRIPTION("PMBus driver for Infineon XDPE1A2G7B");
 +MODULE_LICENSE("GPL");
 +MODULE_IMPORT_NS(PMBUS);
++
 -- 
 2.34.1
 
