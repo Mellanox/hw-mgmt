@@ -120,6 +120,7 @@ reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
 sn58xx_reset_attr_num=15
+sn66xx_reset_attr_num=14
 n61xx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
