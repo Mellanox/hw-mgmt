@@ -49,7 +49,8 @@ blacklist cfg80211
 blacklist cdc_subset
 blacklist delta_i2c_ismt
 blacklist i2c_hid_acpi
-blacklist amd_sfh"
+blacklist amd_sfh
+blacklist snd_hda_intel"
 
 # Get system SKU
 SKU=$(cat /sys/devices/virtual/dmi/id/product_sku 2>/dev/null)
@@ -73,7 +74,7 @@ process_blacklist()
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
 		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
 		;;
-	HI193|HI185)
+	HI193)
 		# Prevent various i2c bus drivers from loading before Designware driver
 		# to gurantee the correct i2c bus numbering order
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
