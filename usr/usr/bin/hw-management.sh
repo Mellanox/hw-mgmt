@@ -2577,7 +2577,11 @@ sn58xxld_specific()
 	esac
 
 	echo 0 > $config_path/i2c_bus_offset
-	lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors.conf"
+	if [[ $(uname -r) == 6.1.* ]]; then
+		lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors_6.1.conf"
+	else
+		lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors.conf"
+	fi
 	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
 
 	echo $cpld_num > $config_path/cpld_num
