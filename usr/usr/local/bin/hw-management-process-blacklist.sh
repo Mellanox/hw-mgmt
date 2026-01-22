@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -83,13 +83,20 @@ process_blacklist()
 		echo blacklist i2c_i801 >> $BLACKLIST_FILE
 
 		# Make sure to load Designware I2C driver early, before platform driver
-		echo i2c_designware_platform >> $MODULE_LOAD_FILE
-
-		# Create soft dependency between platform driver and Designware driver.
-		# Platform driver relies on the of i2c bus created by Designware driver.
-		# This instructs the kernel module loader that whenever nvsw_host_spc6
-		# is being loaded, it must load i2c_designware_platform first.
-		echo softdep nvsw_host_spc6 pre: i2c_designware_platform >> $BLACKLIST_FILE
+		# Add after header lines only if not already listed
+		if ! grep -q "i2c_designware_platform" "$MODULE_LOAD_FILE" 2>/dev/null; then
+			if [ -f "$MODULE_LOAD_FILE" ] && grep -q "^#" "$MODULE_LOAD_FILE"; then
+				# Find the last header line (starting with #) and insert after it
+				last_header_line=$(grep -n "^#" "$MODULE_LOAD_FILE" | tail -1 | cut -d: -f1)
+				sed -i "${last_header_line}a i2c_designware_platform" "$MODULE_LOAD_FILE"
+			elif [ -f "$MODULE_LOAD_FILE" ]; then
+				# No header exists, insert at the beginning
+				sed -i '1i i2c_designware_platform' "$MODULE_LOAD_FILE"
+			else
+				# File doesn't exist, create it
+				echo i2c_designware_platform > $MODULE_LOAD_FILE
+			fi
+		fi
 		;;
 	HI176)
 		# Blacklist Designware, ASF I2C controller drivers and ipmi
