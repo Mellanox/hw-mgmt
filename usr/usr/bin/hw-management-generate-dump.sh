@@ -37,7 +37,7 @@
 
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
-board_type=`cat /sys/devices/virtual/dmi/id/board_name`
+board_type=$(cat /sys/devices/virtual/dmi/id/board_name 2>/dev/null || echo "")
 REGMAP_FILE="/sys/kernel/debug/regmap/mlxplat/registers"
 REGMAP_FILE_ARM64="/sys/kernel/debug/regmap/MLNXBF49:00/registers"
 CPLD_IOREG_RANGE=256
@@ -51,88 +51,89 @@ dump_cmd () {
 	timeout=$3
 	cmd_name=${cmd%% *}
 
-	if [ -x "$(command -v $cmd_name)" ];
+	if [ -x "$(command -v "$cmd_name")" ];
 	then
 		# ignore shellcheck message SC2016. Arguments should be single-quoted (')
-		run_cmd="$cmd 1> $DUMP_FOLDER/$output_fname 2> $DUMP_FOLDER/$output_fname"
+		run_cmd="$cmd 1> \"$DUMP_FOLDER/$output_fname\" 2> \"$DUMP_FOLDER/$output_fname\""
 		timeout "$timeout" bash -c "$run_cmd"
 	fi
 }
 
-rm -rf $DUMP_FOLDER
-mkdir $DUMP_FOLDER
+rm -rf "$DUMP_FOLDER"
+mkdir -p "$DUMP_FOLDER"
 
 arch=$(uname -m)
 if [ "$arch" = "aarch64" ]; then
-	regmap_plat_path=/sys/kernel/debug/regmap/MLNXBF49:00
-	REGMAP_FILE=${REGMAP_FILE_ARM64}
+	regmap_plat_path="/sys/kernel/debug/regmap/MLNXBF49:00"
+	REGMAP_FILE="${REGMAP_FILE_ARM64}"
 	CPLD_IOREG_RANGE=512
 else
-	regmap_plat_path=/sys/kernel/debug/regmap/mlxplat
+	regmap_plat_path="/sys/kernel/debug/regmap/mlxplat"
 	CPLD_IOREG_RANGE=256
 fi
 
 dump_cmd "sensors" "sensors" "20"
 
 # Use find to handle symlinks with special characters (exclude /sys/kernel/)
-find /sys/ -path '/sys/kernel' -prune -o -ls > $DUMP_FOLDER/sysfs_tree 2>&1
+find /sys/ -path '/sys/kernel' -prune -o -ls > "$DUMP_FOLDER/sysfs_tree" 2>&1 || true
 
-if [ -d $HW_MGMT_FOLDER ]; then
-    ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
-    timeout 140 find -L $HW_MGMT_FOLDER -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null
-    timeout 80 find $HW_MGMT_FOLDER/eeprom/ -type l -exec ls -la {} \; -exec hexdump -C {} \; > $DUMP_FOLDER/hw-management_fru_dump 2> /dev/null
+if [ -d "$HW_MGMT_FOLDER" ]; then
+    ls -Rla "$HW_MGMT_FOLDER" > "$DUMP_FOLDER/hw-management_tree"
+    timeout 140 find -L "$HW_MGMT_FOLDER" -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > "$DUMP_FOLDER/hw-management_val" 2> /dev/null
+    timeout 80 find "$HW_MGMT_FOLDER/eeprom/" -type l -exec ls -la {} \; -exec hexdump -C {} \; > "$DUMP_FOLDER/hw-management_fru_dump" 2> /dev/null
 fi
 
-if [ -z $MODE ] || [ $MODE != "compact" ]; then
-	[ -f var/log/syslog ] && cp /var/log/syslog $DUMP_FOLDER
-	[ -e /run/log/journal ] && cp -R /run/log/journal $DUMP_FOLDER/journal
-	dump_cmd "journalctl" "journalctl" "45"
+if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
+	dump_cmd "journalctl -o short-precise --no-pager" "journalctl" "45"
 	dump_cmd "sx_sdk --version" "sx_sdk_ver" "10"
 fi
 
-[ -f /var/log/tc_log ] && cp /var/log/tc_* $DUMP_FOLDER/
-[ -f /var/log/hw_management_sync_log ] && cp /var/log/hw_management_sync_log* $DUMP_FOLDER/
-[ -f /var/log/chipup_i2c_trace_log ] && cp /var/log/chipup_i2c_trace_* $DUMP_FOLDER/
-[ -f /var/log/udev_events.log ] && cp -a /var/log/udev* $DUMP_FOLDER/
-[ -f /var/log/hw_mgmt_cpldreg.log ] && cp /var/log/hw_mgmt_cpldreg.log $DUMP_FOLDER/
-uname -a > $DUMP_FOLDER/sys_version
-mkdir $DUMP_FOLDER/bin/
-cp /usr/bin/hw?management* $DUMP_FOLDER/bin/
-cp /usr/local/bin/hw?management* $DUMP_FOLDER/bin/
-cat /etc/os-release >> $DUMP_FOLDER/sys_version
-cat /proc/interrupts > $DUMP_FOLDER/interrupts
+[ -f /var/log/tc_log ] && cp /var/log/tc_* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/hw_management_sync_log ] && cp /var/log/hw_management_sync_log* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/chipup_i2c_trace_log ] && cp /var/log/chipup_i2c_trace_* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/udev_events.log ] && cp -a /var/log/udev* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/hw_mgmt_cpldreg.log ] && cp /var/log/hw_mgmt_cpldreg.log "$DUMP_FOLDER/" 2>/dev/null || true
+uname -a > "$DUMP_FOLDER/sys_version"
+mkdir "$DUMP_FOLDER/bin/"
+cp /usr/bin/hw?management* "$DUMP_FOLDER/bin/" 2>/dev/null || true
+cp /usr/local/bin/hw?management* "$DUMP_FOLDER/bin/" 2>/dev/null || true
+
+cat /etc/os-release >> "$DUMP_FOLDER/sys_version"
+cat /proc/interrupts > "$DUMP_FOLDER/interrupts"
 case $board_type in
 VMOD0014)
 	if [ -f "/sys/kernel/debug/regmap/2-0041/registers" ]; then
-		cat /sys/kernel/debug/regmap/2-0041/registers > $DUMP_FOLDER/registers
+		cat /sys/kernel/debug/regmap/2-0041/registers > "$DUMP_FOLDER/registers"
 	fi
 	if [ -f "/sys/kernel/debug/regmap/2-0041/access" ]; then
-		cat /sys/kernel/debug/regmap/2-0041/access > $DUMP_FOLDER/access
+		cat /sys/kernel/debug/regmap/2-0041/access > "$DUMP_FOLDER/access"
 	fi
 	;;
 *)
 	if [ -f "${regmap_plat_path}/registers" ]; then
-		cat ${regmap_plat_path}/registers > $DUMP_FOLDER/registers
+		cat "${regmap_plat_path}/registers" > "$DUMP_FOLDER/registers"
 	fi
 
 	if [ -f "${regmap_plat_path}/access" ]; then
-		 cat ${regmap_plat_path}/access > $DUMP_FOLDER/access
+		cat "${regmap_plat_path}/access" > "$DUMP_FOLDER/access"
 	fi
 	;;
 esac
 
-dump_cmd "iorw -b 0x2500 -r -l$CPLD_IOREG_RANGE" "cpld_reg_direct_dump" "5"
+dump_cmd "iorw -b 0x2500 -r -l${CPLD_IOREG_RANGE}" "cpld_reg_direct_dump" "5"
 dump_cmd "dmesg" "dmesg" "10"
 dump_cmd "dmidecode" "dmidecode" "5"
 dump_cmd "lsmod" "lsmod" "3"
 dump_cmd "lspci -vvv" "lspci" "5"
 dump_cmd "top -SHb -n 1 | tail -n +8 | sort -nrk 11" "top" "5"
 dump_cmd "iio_info" "iio_info" "5"
-dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
+dump_cmd "cat ${REGMAP_FILE} 2>/dev/null" "cpld_dump" "5"
 dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
+dump_cmd "systemctl status hw-management* --no-pager" "hw-management_svc_status" "5"
+dump_cmd "ip addr" "ip_addr" "5"
 
 # Kill all the leftout child processes before creating the dump archive
-pkill -P $dump_process_pid
+pkill -P "$dump_process_pid" 2>/dev/null || true
 
-tar czf /tmp/hw-mgmt-dump.tar.gz -C $DUMP_FOLDER .
-rm -rf $DUMP_FOLDER
+tar -cf /tmp/hw-mgmt-dump.tar.gz -I 'gzip -9' -C "$DUMP_FOLDER" .
+rm -rf "$DUMP_FOLDER"
