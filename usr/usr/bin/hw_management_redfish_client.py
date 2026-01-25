@@ -565,54 +565,81 @@ class BMCAccessor(object):
         ret = self.rf_client.login()
         return ret
 
-    def login(self, password=None):
-        print("Login to BMC")
-        cp = []
-        try:
-            cp.append("A")  # try with BMC_NOS_ACCOUNT and TPM password")
-            ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
-            if ret == RedfishClient.ERR_CODE_OK:
-                cp.append("Z1")
-                return ret
+    def login(self, password=None, max_retries=10, retry_delay=5):
+        """
+        Login to BMC with retry mechanism
 
-            cp.append("B")  # try with BMC_NOS_ACCOUNT and bmc account default password")
-            ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
-            if ret == RedfishClient.ERR_CODE_OK:
-                cp.append("Z2")
-                ret = self.reset_user_password(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
-                if ret == RedfishClient.ERR_CODE_OK:
-                    cp.append("Z2")
-                else:
-                    cp.append("Z'1")
-                return ret
+        Args:
+            password: Optional password override
+            max_retries: Maximum number of login attempts (default: 5)
+            retry_delay: Delay in seconds between retries (default: 5)
 
-            cp.append("C")  # login as admin and tpm pwd")
-            ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, self.get_login_password())
-            if ret != RedfishClient.ERR_CODE_OK:
-                cp.append("C1")  # login as admin and default pwd")
-                ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
-                if ret != RedfishClient.ERR_CODE_OK:
-                    cp.append("Z'2")
-                    return ret
+        Returns:
+            Error code indicating login success or failure
+        """
+        for attempt in range(1, max_retries + 1):
+            if attempt > 1:
+                print(f"Login attempt {attempt} of {max_retries}")
+                time.sleep(retry_delay)
+            else:
+                print("Login to BMC")
 
-            cp.append("D")  # add BMC_NOS_ACCOUNT with tpm pwd")
-            self.rf_client.update_credentials(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
-            ret = self.rf_client.login()
-
-            ret = self.create_user(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
-            if ret == RedfishClient.ERR_CODE_OK:
+            cp = []
+            try:
+                cp.append("A")  # try with BMC_NOS_ACCOUNT and TPM password")
                 ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
                 if ret == RedfishClient.ERR_CODE_OK:
-                    cp.append("Z3")
+                    cp.append("Z1")
                     return ret
+
+                cp.append("B")  # try with BMC_NOS_ACCOUNT and bmc account default password")
+                ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, BMCAccessor.BMC_NOS_ACCOUNT_DEFAULT_PASSWORD)
+                if ret == RedfishClient.ERR_CODE_OK:
+                    cp.append("Z2")
+                    ret = self.reset_user_password(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+                    if ret == RedfishClient.ERR_CODE_OK:
+                        cp.append("Z2")
+                    else:
+                        cp.append("Z'1")
+                    return ret
+
+                cp.append("C")  # login as admin and tpm pwd")
+                ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, self.get_login_password())
+                if ret != RedfishClient.ERR_CODE_OK:
+                    cp.append("C1")  # login as admin and default pwd")
+                    ret = self.try_rf_login(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
+                    if ret != RedfishClient.ERR_CODE_OK:
+                        cp.append("Z'2")
+                        # Don't return yet, continue to retry
+                        if attempt < max_retries:
+                            continue
+                        return ret
+
+                cp.append("D")  # add BMC_NOS_ACCOUNT with tpm pwd")
+                self.rf_client.update_credentials(BMCAccessor.BMC_ADMIN_ACCOUNT, BMCAccessor.BMC_DEFAULT_PASSWORD)
+                ret = self.rf_client.login()
+
+                ret = self.create_user(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+                if ret == RedfishClient.ERR_CODE_OK:
+                    ret = self.try_rf_login(BMCAccessor.BMC_NOS_ACCOUNT, self.get_login_password())
+                    if ret == RedfishClient.ERR_CODE_OK:
+                        cp.append("Z3")
+                        return ret
+                    else:
+                        cp.append("Z'3")
+                        if attempt < max_retries:
+                            continue
+                        return ret
                 else:
-                    cp.append("Z'3")
+                    cp.append("Z'4")
+                    if attempt < max_retries:
+                        continue
                     return ret
-            else:
-                cp.append("Z'4")
-                return ret
-        finally:
-            if any("'" in item for item in cp):
-                print(f"-- BMC Login Fail, Flow: {'->'.join(cp)}")
-            else:
-                print(f"-- BMC Login Pass, Flow: {'->'.join(cp)}")
+            finally:
+                if any("'" in item for item in cp):
+                    print(f"-- BMC Login Fail, Flow: {'->'.join(cp)}")
+                else:
+                    print(f"-- BMC Login Pass, Flow: {'->'.join(cp)}")
+
+        # If we've exhausted all retries, return the last error code
+        return ret
