@@ -2907,7 +2907,14 @@ check_system()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	if check_bmc_is_supported; then
 		pushd /usr/bin
-		python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+		for ((i=1; i<=10; i++)); do
+			if ping -c 1 169.254.0.1 >& /dev/null; then
+				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+				break
+			fi
+			echo "Pinging BMC failed, i=$i"
+			sleep 3
+		done
 		popd
 	fi
 }
