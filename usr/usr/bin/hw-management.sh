@@ -2930,7 +2930,15 @@ check_system()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	if check_bmc_is_supported; then
 		pushd /usr/bin
-		python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+		for ((i=1; i<=5; i++)); do
+			local bmc_ip_addr=$(ip addr show usb0| grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+			if [ -n "${bmc_ip_addr}" ] && ping -c 1 ${bmc_ip_addr} >& /dev/null; then
+				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+				break
+			fi
+			echo "Pinging BMC failed, i=$i"
+			sleep 3
+		done
 		popd
 	fi
 }
