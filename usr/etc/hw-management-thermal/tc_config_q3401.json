@@ -16,6 +16,7 @@
 			"1" : {"rpm_min":2741, "rpm_max":12603, "slope": 123.3, "pwm_min" : 20, "pwm_max_reduction" : 10}
 			}
 	}, 
+	"general_config" : {"tec_module_supported" : true},
 	"dev_parameters" : {
 		"asic\\d*":       {"pwm_min": 30, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":100}, 
 		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 30, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":100},
