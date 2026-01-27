@@ -1775,8 +1775,6 @@ class thermal_module_tec_sensor(system_device):
         """
         @summary: handle sensor input
         """
-        pwm = self.pwm_min
-
         required_files = {
             'cooling_level': "thermal/{}_cooling_level_input".format(self.base_file_name),
             'cooling_level_max': "thermal/{}_cooling_level_warning".format(self.base_file_name),
@@ -1801,24 +1799,32 @@ class thermal_module_tec_sensor(system_device):
                     self.fread_err.handle_err(fpath, cause="value")
                     return
 
-        # validate cooling_level
-        if self.is_crit_range_violation(self.cooling_level, required_files['cooling_level']):
+        # if cooling_level_max is 0 - module not present or invalid
+        if self.cooling_level_max == 0:
+            self.log.debug("{} cooling_level_max is 0".format(self.name))
             return
 
-        try:
-            cooling_level_norm = int(self.cooling_level * 100 / self.cooling_level_max)
-        except (ValueError, TypeError, ZeroDivisionError):
-            self.fread_err.handle_err(required_files['cooling_level_max'], cause="value")
-            self.log.error("{} cooling_level_max is 0".format(self.name))
+        # validate cooling_level
+        if self.is_crit_range_violation(self.cooling_level, required_files['cooling_level']):
+            self.fread_err.handle_err(required_files['cooling_level'], cause="crit range")
             return
+
+        cooling_level_norm = int(self.cooling_level * 100 / self.cooling_level_max)
+        if cooling_level_norm > self.pwm_max:
+            self.log.warning("{} cooling_level_norm is greater than {}. Setting to {}".format(self.name,
+                                                                                              self.pwm_max,
+                                                                                              self.pwm_max))
+            cooling_level_norm = self.pwm_max
+        elif cooling_level_norm < self.pwm_min:
+            self.log.debug("{} cooling_level_norm is less than pwm_min".format(self.name))
+            cooling_level_norm = self.pwm_min
 
         self.update_value(cooling_level_norm)
         for fname, fpath in required_files.items():
             self.fread_err.handle_err(fpath, reset=True)
 
         # calculate PWM value
-        pwm = self.calculate_pwm_formula()
-        self.pwm = pwm
+        self.pwm = self.calculate_pwm_formula()
 
     # ----------------------------------------------------------------------
     def collect_err(self):
@@ -1853,11 +1859,11 @@ class thermal_module_tec_sensor(system_device):
         cooling_level = self.cooling_level
         cooling_level_max = self.cooling_level_max
 
-        value_str = "temp:{: <4}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(temperature,
+        value_str = "temp:{: <3}, cooling_lvl:{: <3}, cooling_lvl_max:{: <3}".format(temperature,
                                                                                      cooling_level,
                                                                                      cooling_level_max)
 
-        info_str = "\"{: <8}\" {: <54}, faults:[{}], pwm: {}, {}".format(self.name,
+        info_str = "\"{: <8}\" {: <46}, faults:[{}], pwm: {}, {}".format(self.name,
                                                                          value_str,
                                                                          self.get_fault_list_str(),
                                                                          self.pwm,
@@ -3353,9 +3359,18 @@ class ThermalManagement(hw_management_file_op):
             self.log.notice("PWM target changed from {} to PWM {} {}".format(self.pwm_target, pwm, reason))
             self._update_psu_fan_speed(pwm)
             self.pwm_target = pwm
-            if self.pwm_worker_timer and not self.pwm_worker_timer.is_running():
-                self.pwm_worker_timer.start()
+            if self.pwm_worker_timer:
+                if not self.pwm_worker_timer.is_running():
+                    # Timer exists but not running, start it for gradual PWM changes
+                    self.pwm_worker_timer.start()
+                elif pwm > self.pwm:
+                    # Timer is running but going UP - immediate update for safety
+                    self.pwm = pwm
+                    self._update_chassis_fan_speed(self.pwm)
+                # else: Timer is running and going DOWN - let timer handle gradual reduction
+                # (pwm_target already updated, _pwm_worker will pick it up on next iteration)
             else:
+                # Timer doesn't exist (shouldn't happen after init), immediate update as fallback
                 self.pwm = pwm
                 self._update_chassis_fan_speed(self.pwm)
         elif current_milli_time() > self.pwm_validate_timeout:
