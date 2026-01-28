@@ -609,7 +609,7 @@ declare -A sn58xxld_pwr_alternatives=( \
 				   ["mp29502_0"]="mp29502 0x60 7 pdb_pwr_conv1" \
 				   ["lm5066i_0"]="lm5066i 0x12 7 pdb_hotswap1" \
 				   ["mp5926_0"]="mp5926 0x12 7 pdb_hotswap1" \
-				   ["tmp451_1"]="tmp451 0x4c 7 pdb_mosfet_amb1")
+				   ["tmp451_1"]="tmp451 0x4c 7 pdb_temp1")
 
 declare -A q3401_pwr_alternatives=( \
 				   ["raa228004_0"]="raa228004 0x60 4 pdb_pwr_conv1" \
