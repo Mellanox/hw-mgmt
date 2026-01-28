@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -79,6 +79,7 @@ optional arguments:
 #############################
 import sys
 import argparse
+import os
 import os.path
 import subprocess
 import struct
@@ -86,6 +87,7 @@ import binascii
 import zlib
 import tempfile
 import shutil
+import stat
 
 
 #############################
@@ -761,8 +763,12 @@ def save_fru(fru_dict, out_filename):
                 else:
                     tmp_file.write("{}\n".format(str(item[1]).rstrip()))
 
+        # Set permissions on temporary file to allow read access for all users (rw-r--r--)
+        # This must be done before rename to maintain atomicity
+        os.chmod(tmp_filename, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+
         # Atomically rename the temporary file to the target filename
-        # On POSIX systems, this is an atomic operation
+        # On POSIX systems, this is an atomic operation that preserves permissions
         os.replace(tmp_filename, out_filename)
 
     except (IOError, OSError) as err:
