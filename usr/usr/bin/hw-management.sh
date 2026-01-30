@@ -3050,9 +3050,17 @@ set_config_data()
 	fi
 	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
 	for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
-		echo 0 > $config_path/asic"$asic_id"_ready
+		# If SDK already started during hw-mgmt init we should update asic_ready to 1
+		# Use temperature label file as flag to check if SDK already started
+		sdk_asic_idx=$((asic_id-1))
+		if [ -f "/sys/module/sx_core/asic${sdk_asic_idx}/temperature/label" ]; then
+			asic_ready_status=1
+		else
+			asic_ready_status=0
+		fi
+		echo "$asic_ready_status" > "$config_path"/asic"$asic_id"_ready
 		if [ $asic_id -eq 1 ]; then
-			echo 0 > $config_path/asic_ready
+			echo "$asic_ready_status" > "$config_path"/asic_ready
 		fi
 	done
 }
