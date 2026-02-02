@@ -6,8 +6,13 @@
 #
 
 Describe 'VR DPC update entrypoint + read-vr JSON'
-  dpc_update="/auto/sysgwork/btamish/hw-mgmt/usr/usr/bin/hw-management-dpc-update.sh"
-  read_vr="/auto/sysgwork/btamish/hw-mgmt/usr/usr/bin/hw-management-read-vr-model-version.sh"
+  # Resolve repo root from this spec file location:
+  #   tests/shell/spec/ -> repo root is ../../..
+  spec_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+  repo_root="$(cd "${spec_dir}/../../.." >/dev/null 2>&1 && pwd -P)"
+
+  dpc_update="${repo_root}/usr/usr/bin/hw-management-dpc-update.sh"
+  read_vr="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
 
   setup_test_env() {
     TEST_TMPDIR="$(mktemp -d)"
@@ -96,7 +101,7 @@ EOF
     It 'accepts --verify before tar path'
       build_test_pkg
       [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='/auto/sysgwork/btamish/hw-mgmt/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' --verify '${TAR_PATH}'"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' --verify '${TAR_PATH}'"
       The status should be success
       The output should include "VERIFY PASSED."
     End
@@ -104,7 +109,7 @@ EOF
     It 'accepts --verify after tar path'
       build_test_pkg
       [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='/auto/sysgwork/btamish/hw-mgmt/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' '${TAR_PATH}' --verify"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' '${TAR_PATH}' --verify"
       The status should be success
       The output should include "VERIFY PASSED."
     End
@@ -113,7 +118,7 @@ EOF
   Describe 'debug output separation'
     It 'writes debug logs to stderr without contaminating JSON stdout'
       [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='/auto/sysgwork/btamish/hw-mgmt/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEBUG=1 bash '${dpc_update}' --show --json"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEBUG=1 bash '${dpc_update}' --show --json"
       The status should be success
       The output should start with "["
       The output should not include "DEBUG"
