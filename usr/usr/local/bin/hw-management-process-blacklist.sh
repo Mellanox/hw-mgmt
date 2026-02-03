@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,66 +31,92 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-__default_blacklist="
-##################################################################################
-# Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-#
-options at24 io_limit=32
-options gpio_ich gpiobase=0
-options i2c_i801 disable_features=0x10
-blacklist i2c_ismt
-blacklist ee1004
-blacklist nvidia
-blacklist nvidia_modeset
-blacklist nvidia_drm
-blacklist pcspkr
-blacklist i2c_piix4
-blacklist cfg80211
-blacklist cdc_subset
-blacklist delta_i2c_ismt"
-
 # Get system SKU
 SKU=$(cat /sys/devices/virtual/dmi/id/product_sku 2>/dev/null)
 BLACKLIST_FILE="/etc/modprobe.d/hw-management.conf"
+MODULE_LOAD_FILE="/etc/modules-load.d/05-hw-management-modules.conf"
+
+# Function to ensure a line exists in the file
+ensure_line_exists()
+{
+	local line="$1"
+	local file="$2"
+
+	# Add line if it doesn't exist
+	if ! grep -Fxq "$line" "$file" 2>/dev/null; then
+		echo "$line" >> "$file"
+	fi
+}
+
+# Function to ensure a line does not exist in the file
+ensure_line_removed()
+{
+	local line="$1"
+	local file="$2"
+
+	# Remove line if it exists
+	if grep -Fxq "$line" "$file" 2>/dev/null; then
+		sed -i "\|^${line}$|d" "$file"
+	fi
+}
+
+# Function to add module at the beginning of modules file (after header lines)
+add_module_at_beginning()
+{
+	local module="$1"
+	local file="$2"
+
+	# Add after header lines only if not already listed
+	if ! grep -q "$module" "$file" 2>/dev/null; then
+		if [ -f "$file" ] && grep -q "^#" "$file"; then
+			# Find the last header line (starting with #) and insert after it
+			last_header_line=$(grep -n "^#" "$file" | tail -1 | cut -d: -f1)
+			sed -i "${last_header_line}a $module" "$file"
+		elif [ -f "$file" ]; then
+			# No header exists, insert at the beginning
+			sed -i "1i $module" "$file"
+		else
+			# File doesn't exist, create it
+			echo "$module" > "$file"
+		fi
+	fi
+}
 
 # Function to process blacklist.
 process_blacklist()
 {
-	# Check if running as root
-	if [ "$(id -u)" != "0" ]; then
-		echo "This script must be run as root" 1>&2
-		exit 1
-	fi
-
-	# Copy all common records to $BLACKLIST_FILE.
-	echo "$__default_blacklist" > $BLACKLIST_FILE
-
-	# Extend with system specific records.
+	# Process system specific records.
 	case $SKU in
-	HI180|HI181|HI182)
-		# Designware I2C controller driver should not be blackisted.
-		# This gurantees that Designware driver is loaded by ACPI before platform driver.
-		# Platform driver relies on the existence of i2c-0 bus created by Designware driver.
-		# ASF driver should be blacklisted to guarantee that Designware is loaded before ASF.
-		# ASF bus is used by MCTP, this loading order ensures that MCTP will use i2c bus 4.
-		echo blacklist i2c_asf >> $BLACKLIST_FILE
-		echo blacklist i2c-diolan-u2c >> $BLACKLIST_FILE
+	HI180|HI181|HI182|HI193)
+		# Prevent various i2c bus drivers from loading before Designware driver
+		# to guarantee the correct i2c bus numbering order
+		ensure_line_exists "blacklist i2c_asf" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c-diolan-u2c" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c_piix4" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c_i801" "$BLACKLIST_FILE"
+
+		# Ensure Designware is NOT blacklisted for these SKUs
+		ensure_line_removed "blacklist i2c_designware_platform" "$BLACKLIST_FILE"
+		ensure_line_removed "blacklist i2c_designware_core" "$BLACKLIST_FILE"
+
+		# Ensure Designware I2C driver is loaded early
+		add_module_at_beginning "i2c_designware_platform" "$MODULE_LOAD_FILE"
 		;;
 	HI176)
 		# Blacklist Designware, ASF I2C controller drivers and ipmi
-		echo blacklist i2c_designware_platform >> $BLACKLIST_FILE
-		echo blacklist i2c_designware_core >> $BLACKLIST_FILE
-		echo blacklist i2c_asf >> $BLACKLIST_FILE
-		echo blacklist ipmi_si >> $BLACKLIST_FILE
-		echo blacklist ipmi_ssif >> $BLACKLIST_FILE
-		echo blacklist ipmi_devintf >> $BLACKLIST_FILE
-		echo blacklist ipmi_msghandler >> $BLACKLIST_FILE
+		ensure_line_exists "blacklist i2c_designware_platform" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c_designware_core" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c_asf" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist ipmi_si" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist ipmi_ssif" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist ipmi_devintf" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist ipmi_msghandler" "$BLACKLIST_FILE"
 		;;
 	*)
 		# Blacklist Designware and ASF I2C controller drivers
-		echo blacklist i2c_designware_platform >> $BLACKLIST_FILE
-		echo blacklist i2c_designware_core >> $BLACKLIST_FILE
-		echo blacklist i2c_asf >> $BLACKLIST_FILE
+		ensure_line_exists "blacklist i2c_designware_platform" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c_designware_core" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist i2c_asf" "$BLACKLIST_FILE"
 		;;
 	esac
 }
@@ -98,4 +124,4 @@ process_blacklist()
 # Process blacklist
 process_blacklist
 
-echo "Blacklist file generated at $BLACKLIST_FILE"
+echo "Blacklist file updated at $BLACKLIST_FILE"
