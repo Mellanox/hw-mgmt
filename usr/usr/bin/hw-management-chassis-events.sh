@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -509,6 +509,20 @@ function set_fan_direction()
 	esac
 }
 
+# Set fan direction for all fans
+function set_fan_direction_for_all_fans()
+{
+	local -r max_tachos=$(<"$config_path"/max_tachos)
+	for ((i=1; i<="$max_tachos"; i+=1)); do
+		if [ -L "${thermal_path}"/fan"${i}"_status ]; then
+			# check if fan status is set
+			status=$(< "${thermal_path}"/fan"${i}"_status)
+			if [ "$status" -eq 1 ]; then
+				set_fan_direction "fan${i}" 1
+			fi
+		fi
+	done
+}
 
 # Get FAN direction based on VPD PN field
 #
@@ -1159,14 +1173,16 @@ if [ "$1" == "add" ]; then
 			done
 			handle_cpld_versions "$cpld_num"
 		fi
-		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
-			if [ -L $thermal_path/fan"$i"_status ]; then
-				status=$(< $thermal_path/fan"$i"_status)
-				if [ "$status" -eq 1 ]; then
-					set_fan_direction fan"${i}" 1
-				fi
-			fi
-		done
+
+		# Set fan direction for all fans.
+		# Wait for fan status attributes to be created (indicated by fan_status_ready flag).
+		if [ -f "$config_path"/fan_status_ready ] && [ "$(< "$config_path"/fan_status_ready)" -eq 1 ]; then
+			set_fan_direction_for_all_fans
+		else
+			# Fan status attributes are not created yet, postpone fan dir initialization in background by 5 seconds.
+			nohup bash -c 'sleep 5 && source hw-management-chassis-events.sh && set_fan_direction_for_all_fans' >/dev/null 2>&1 &
+		fi
+		rm -f "$config_path"/fan_status_ready || true
 
 		# Handle linecard.
 		if [ "$linecard" -ne 0 ]; then
