@@ -2,7 +2,7 @@
 
 ###########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -612,7 +612,6 @@ if [ "$1" == "add" ]; then
 				(( fan_drwr_num++ ))
 			fi
 		done
-
 		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
 			get_fixed_fans_direction
 			dir=$?
@@ -625,6 +624,8 @@ if [ "$1" == "add" ]; then
 		else
 			echo $fan_drwr_num > $config_path/fan_drwr_num
 		fi
+		# Set temporary flag in fs to indicate that fanX_status is set for all fans
+		echo 1 > "$config_path"/fan_status_ready
 
 		for ((i=1; i<=max_psus; i+=1)); do
 			if [ -f "$3""$4"/psu$i ]; then
