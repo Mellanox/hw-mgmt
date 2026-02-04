@@ -1,6 +1,6 @@
 
 ###########################################################################
-# Copyright (c) 2018-2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -636,6 +636,10 @@ SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*
 # BF3 any voltmon including COMEX
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/MLNXBF49:00/i2c_mlxcpld*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmonX %S %p"
+
+# any temp sensor on AMD CPU systems without i2c_mlxcpld driver
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-004[c-f]/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add tempX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-004[c-f]/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm tempX %S %p"
 
 # any voltmon on AMD CPU systems without i2c_mlxcpld driver
 SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/AMDI*:*/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmonX %S %p"
