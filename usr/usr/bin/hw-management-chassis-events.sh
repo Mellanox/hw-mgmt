@@ -813,9 +813,18 @@ function handle_fantray_led_event()
 function check_cpld_attrs_num()
 {
    board=$(cat /sys/devices/virtual/dmi/id/board_name)
+   sku=$(< /sys/devices/virtual/dmi/id/product_sku)
    cpld_num=$(cat $config_path/cpld_num)
    case "$board" in
    VMOD0001|VMOD0003)
+       cpld_num=$((cpld_num-1))
+       ;;
+   *)
+       ;;
+   esac
+
+   case "$sku" in
+   HI180)
        cpld_num=$((cpld_num-1))
        ;;
    *)
