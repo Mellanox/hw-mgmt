@@ -528,6 +528,49 @@ declare -A n61xxld_swb_alternatives=( \
 						["mp29502_0"]="mp29502 0x2e 7 pwr_conv1" \
 						["mp29502_1"]="mp29502 0x2c 7 pwr_conv2")
 
+declare -A n63xxld_swb_alternatives=( \
+						["mp29816_0"]="mp29816 0x66 8 voltmon1" \
+						["mp29816_1"]="mp29816 0x68 8 voltmon2" \
+						["mp29816_2"]="mp29816 0x6c 8 voltmon3" \
+						["mp29816_3"]="mp29816 0x6e 8 voltmon4" \
+						["mp29816_4"]="mp29816 0x66 24 voltmon5" \
+						["mp29816_5"]="mp29816 0x68 24 voltmon6" \
+						["mp29816_6"]="mp29816 0x6c 24 voltmon7" \
+						["mp29816_7"]="mp29816 0x6e 24 voltmon8" \
+						["mp29816_8"]="mp29816 0x66 40 voltmon9" \
+						["mp29816_9"]="mp29816 0x68 40 voltmon10" \
+						["mp29816_10"]="mp29816 0x6c 40 voltmon11" \
+						["mp29816_11"]="mp29816 0x6e 40 voltmon12" \
+						["mp29816_12"]="mp29816 0x66 56 voltmon13" \
+						["mp29816_13"]="mp29816 0x68 56 voltmon14" \
+						["mp29816_14"]="mp29816 0x6c 56 voltmon15" \
+						["mp29816_15"]="mp29816 0x6e 56 voltmon16" \
+						["xdpe1a2g7_0"]="xdpe1a2g7 0x66 8 voltmon1" \
+						["xdpe1a2g7_1"]="xdpe1a2g7 0x68 8 voltmon2" \
+						["xdpe1a2g7_2"]="xdpe1a2g7 0x6c 8 voltmon3" \
+						["xdpe1a2g7_3"]="xdpe1a2g7 0x6e 8 voltmon4" \
+						["xdpe1a2g7_4"]="xdpe1a2g7 0x66 24 voltmon5" \
+						["xdpe1a2g7_5"]="xdpe1a2g7 0x68 24 voltmon6" \
+						["xdpe1a2g7_6"]="xdpe1a2g7 0x6c 24 voltmon7" \
+						["xdpe1a2g7_7"]="xdpe1a2g7 0x6e 24 voltmon8" \
+						["xdpe1a2g7_8"]="xdpe1a2g7 0x66 40 voltmon9" \
+						["xdpe1a2g7_9"]="xdpe1a2g7 0x68 40 voltmon10" \
+						["xdpe1a2g7_10"]="xdpe1a2g7 0x6c 40 voltmon11" \
+						["xdpe1a2g7_11"]="xdpe1a2g7 0x6e 40 voltmon12" \
+						["xdpe1a2g7_12"]="xdpe1a2g7 0x66 56 voltmon13" \
+						["xdpe1a2g7_13"]="xdpe1a2g7 0x68 56 voltmon14" \
+						["xdpe1a2g7_14"]="xdpe1a2g7 0x6c 56 voltmon15" \
+						["xdpe1a2g7_15"]="xdpe1a2g7 0x6e 56 voltmon16" \
+						["24c512_0"]="24c512 0x51 14 swb_info" \
+						["lm5066i_0"]="lm5066i 0x12 7 pdb_hotswap1" \
+						["lm5066i_1"]="lm5066i 0x12 23 pdb_hotswap2" \
+						["mp5926_0"]="mp5926 0x12 7 pdb_hotswap1" \
+						["mp5926_1"]="mp5926 0x12 23 pdb_hotswap2" \
+						["raa228004_0"]="raa228004 0x60 7 pwr_conv1" \
+						["raa228004_1"]="raa228004 0x60 23 pwr_conv2" \
+						["mp29502_0"]="mp29502 0x2e 7 pwr_conv1" \
+						["mp29502_1"]="mp29502 0x2e 23 pwr_conv2")
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -1169,6 +1212,15 @@ devtr_check_supported_system_init_alternatives()
 			HI180)
 				for key in "${!n61xxld_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${n61xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!n61xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n61xxld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI185)
+				for key in "${!n63xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${n63xxld_swb_alternatives["$key"]}"
 				done
 
 				for key in "${!n61xxld_platform_alternatives[@]}"; do
