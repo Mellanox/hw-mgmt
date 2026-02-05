@@ -1,4 +1,4 @@
-From 4d6fea95ebc34f53337d0e7d7391d030599bb5a4 Mon Sep 17 00:00:00 2001
+From da13e0aa7fe7160b6d09651cbf4c00c003108ff3 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -22,12 +22,12 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Kconfig             |   39 +
  drivers/platform/mellanox/Makefile            |    4 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
- drivers/platform/mellanox/nvsw-core.c         |  694 ++++
+ drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
- drivers/platform/mellanox/nvsw-host-spc5.c    |  938 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  822 +++++
- drivers/platform/mellanox/nvsw.h              |  296 ++
- 9 files changed, 6338 insertions(+), 4 deletions(-)
+ drivers/platform/mellanox/nvsw-host-spc5.c    |  944 ++++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  828 +++++
+ drivers/platform/mellanox/nvsw.h              |  297 ++
+ 9 files changed, 6350 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -55,7 +55,7 @@ index 8e6c0bc60..3cc1097bb 100644
            - nuvoton,w83773g
              # OKI ML86V7667 video decoder
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index 14c14c9c2..f7fcb1f99 100644
+index 14c14c9c2..7d3230021 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
 @@ -113,6 +113,45 @@ config MLXBF_PMC
@@ -98,8 +98,8 @@ index 14c14c9c2..f7fcb1f99 100644
 +	help
 +	 Say Y here to include support for the FPGA/CPLD logic by host CPU
 +	 equipped on Nvidia SPC6 ethernet switches.
-+	  This driver can also be built as a module. If so the module
-+	  will be called nvsw-host-spc6.
++	 This driver can also be built as a module. If so the module
++	 will be called nvsw-host-spc6.
 +
  config NVSW_SN2201
  	tristate "Nvidia SN2201 platform driver support"
@@ -2957,10 +2957,10 @@ index 000000000..96908494c
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
 new file mode 100644
-index 000000000..4f91c9862
+index 000000000..0dae7e076
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-core.c
-@@ -0,0 +1,694 @@
+@@ -0,0 +1,693 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3473,8 +3473,9 @@ index 000000000..4f91c9862
 +								   PLATFORM_DEVID_NONE, NULL, 0,
 +								   nvsw_core->fan_data,
 +								   sizeof(*nvsw_core->fan_data));
-+		if (IS_ERR(nvsw_core->fan_data)) {
-+			err = PTR_ERR(nvsw_core->fan_data);
++		if (IS_ERR(nvsw_core->fan)) {
++			err = PTR_ERR(nvsw_core->fan);
++			dev_err(nvsw_core->dev, "Failed to register mlxreg-fan driver\n");
 +			goto fail_platform_fan_register;
 +		}
 +	}
@@ -3505,6 +3506,7 @@ index 000000000..4f91c9862
 +							  sizeof(*nvsw_core->hotplug_data));
 +		if (IS_ERR(nvsw_core->hotplug)) {
 +			err = PTR_ERR(nvsw_core->hotplug);
++			dev_err(nvsw_core->dev, "Failed to register mlxreg-hotplug driver\n");
 +			goto fail_platform_hotplug_register;
 +		}
 +	}
@@ -3529,6 +3531,8 @@ index 000000000..4f91c9862
 +fail_platform_wd_register:
 +	while (i--)
 +		platform_device_unregister(nvsw_core->wd[i]);
++	if (nvsw_core->hotplug_data)
++		platform_device_unregister(nvsw_core->hotplug);
 +fail_platform_hotplug_register:
 +	if (nvsw_core->led_data)
 +		platform_device_unregister(nvsw_core->led);
@@ -3575,11 +3579,6 @@ index 000000000..4f91c9862
 +	switch (nvsw_core->regmap_type) {
 +	case REGMAP_I2C:
 +		nvsw_core->regmap = devm_regmap_init_i2c(nvsw_core->client, &nvsw_regmap_i2c_conf);
-+		if (IS_ERR(nvsw_core->regmap)) {
-+			dev_err(nvsw_core->dev, "Failed to create I2C regmap\n");
-+			err = PTR_ERR(nvsw_core->regmap);
-+			return err;
-+		}
 +		break;
 +	case REGMAP_IO:
 +		if (nvsw_core->port_map) {
@@ -3595,7 +3594,7 @@ index 000000000..4f91c9862
 +	}
 +
 +	if (IS_ERR(nvsw_core->regmap)) {
-+		dev_err(nvsw_core->dev, "Failed to create regmap");
++		dev_err(nvsw_core->dev, "Failed to create regmap\n");
 +		return PTR_ERR(nvsw_core->regmap);
 +	}
 +
@@ -3603,7 +3602,7 @@ index 000000000..4f91c9862
 +	regcache_mark_dirty(nvsw_core->regmap);
 +	err = regcache_sync(nvsw_core->regmap);
 +	if (err) {
-+		dev_err(nvsw_core->dev, "Failed to sync regmap");
++		dev_err(nvsw_core->dev, "Failed to sync regmap\n");
 +		return err;
 +	}
 +
@@ -3611,7 +3610,7 @@ index 000000000..4f91c9862
 +	if (nvsw_core->set_reg_default) {
 +		err = nvsw_core->set_reg_default(nvsw_core->regmap);
 +		if (err) {
-+			dev_err(nvsw_core->dev, "Failed to set default regmap");
++			dev_err(nvsw_core->dev, "Failed to set default regmap\n");
 +			return err;
 +		}
 +	}
@@ -4373,10 +4372,10 @@ index 000000000..bf12509b2
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc5.c b/drivers/platform/mellanox/nvsw-host-spc5.c
 new file mode 100644
-index 000000000..88204b719
+index 000000000..70c58b57c
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc5.c
-@@ -0,0 +1,938 @@
+@@ -0,0 +1,944 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -4931,6 +4930,12 @@ index 000000000..88204b719
 +		.mode = 0444,
 +	},
 +	{
++		.label = "bios_active_image",
++		.reg = NVSW_REG_GPCOM0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
 +		.label = "jtag_cap",
 +		.reg = NVSW_REG_FU_CAP_OFFSET,
 +		.mask = NVSW_FU_CAP_MASK,
@@ -5317,10 +5322,10 @@ index 000000000..88204b719
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..11efcdcc6
+index 000000000..48d398576
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,822 @@
+@@ -0,0 +1,828 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -6079,8 +6084,11 @@ index 000000000..11efcdcc6
 +	}
 +
 +	nvsw_core = devm_kzalloc(&pdev->dev, sizeof(*nvsw_core), GFP_KERNEL);
-+	if (!nvsw_core)
++	if (!nvsw_core) {
++		i2c_unregister_device(nvsw_host_mux_i2c_client);
++		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
 +		return -ENOMEM;
++	}
 +
 +	/* Set system configuration. */
 +	nvsw_core->dev = &pdev->dev;
@@ -6136,6 +6144,9 @@ index 000000000..11efcdcc6
 +static void __exit nvsw_host_exit(void)
 +{
 +	platform_driver_unregister(&nvsw_host_driver);
++
++	if (nvsw_host_pdev)
++		platform_device_unregister(nvsw_host_pdev);
 +}
 +module_exit(nvsw_host_exit);
 +
@@ -6145,10 +6156,10 @@ index 000000000..11efcdcc6
 +
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 new file mode 100644
-index 000000000..2e9b505f7
+index 000000000..3fbe4cc02
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw.h
-@@ -0,0 +1,296 @@
+@@ -0,0 +1,297 @@
 +/* SPDX-License-Identifier: GPL-2.0+
 + *
 + * Nvidia BMC platform driver
@@ -6231,7 +6242,7 @@ index 000000000..2e9b505f7
 +#define NVSW_REG_VR2_ALERT_OFFSET	0x255e
 +#define NVSW_REG_VR2_ALERT_EVENT_OFFSET	0x255f
 +#define NVSW_REG_VR2_ALERT_MASK_OFFSET	0x2560
-+#define NVSW_REG_PS_DC_OK_OFFSET	0x2567
++#define NVSW_REG_PS_DC_OK_OFFSET		0x2567
 +#define NVSW_REG_PS_DC_OK_EVENT_OFFSET	0x2568
 +#define NVSW_REG_PS_DC_OK_MASK_OFFSET	0x2569
 +#define NVSW_REG_CPLD8_PN_OFFSET	0x2573
@@ -6360,7 +6371,8 @@ index 000000000..2e9b505f7
 +#define NVSW_UART_SEL_MASK		GENMASK(7, 6)
 +#define NVSW_BIOS_STATUS_MASK		GENMASK(3, 1)
 +#define NVSW_REG_RESET_MASK		BIT(1)
-+#define NVSW_MASTER_MASK		BIT(5)
++#define NVSW_MASTER_MASK                BIT(5)
++
 +#define NVSW_FU_CAP_MASK		GENMASK(1, 0)
 +#define NVSW_WD_RESET_ACT_MASK		GENMASK(7, 1)
 +#define NVSW_WD_FAN_ACT_MASK		(GENMASK(7, 0) & ~BIT(4))
