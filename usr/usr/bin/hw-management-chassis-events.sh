@@ -1338,12 +1338,14 @@ if [ "$1" == "add" ]; then
 			fi
 			;;
 		swb_info)
-			if [ "$board_type" == "VMOD0021" ] || [ "$board_type" == "VMOD0023" ]; then
+			case "$board_type" in
+				VMOD0021|VMOD0023|VMOD0025)
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/swb_data
 				fi
-			fi
-			;;			
+				;;
+			esac
+			;;
 		*)
 			;;
 		esac

@@ -77,6 +77,7 @@ declare -A thermal_arr=( \
 	["i"]="tmp411" \
 	["j"]="tmp1075" \
 	["k"]="tmp451" \
+	["l"]="jc42" \
 )
 
 declare -A regulator_arr=( \
@@ -91,6 +92,7 @@ declare -A regulator_arr=( \
 	["h"]="xdpe1a2g7" \
 	["i"]="mp2855" \
 	["j"]="mp29816" \
+	["k"]="mp2845" \
 )
 
 declare -A a2d_arr=( \
@@ -616,6 +618,73 @@ declare -A n63xxld_swb_alternatives=( \
 	["mp29502_1"]="mp29502 0x2e 23 pwr_conv2" \
 )
 
+# Devices located on SN66XX_LD switch board
+declare -A sn66xxld_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x61 15 voltmon1" \
+	["mp29816_1"]="mp29816 0x62 15 voltmon2" \
+	["mp29816_2"]="mp29816 0x63 15 voltmon3" \
+	["mp29816_3"]="mp29816 0x64 15 voltmon4" \
+	["mp29816_4"]="mp29816 0x65 15 voltmon5" \
+	["mp29816_5"]="mp29816 0x66 15 voltmon6" \
+	["mp29816_6"]="mp29816 0x67 15 voltmon7" \
+	["mp29816_7"]="mp29816 0x6a 15 voltmon8" \
+	["mp29816_8"]="mp29816 0x60 16 voltmon9" \
+	["mp29816_9"]="mp29816 0x61 16 voltmon10" \
+	["mp29816_10"]="mp29816 0x62 16 voltmon11" \
+	["mp29816_11"]="mp29816 0x63 16 voltmon12" \
+	["mp29816_12"]="mp29816 0x64 16 voltmon13" \
+	["mp29816_13"]="mp29816 0x65 16 voltmon14" \
+	["mp29816_14"]="mp29816 0x66 16 voltmon15" \
+	["mp29816_15"]="mp29816 0x67 16 voltmon16" \
+	["mp29816_16"]="mp29816 0x68 16 voltmon17" \
+	["mp29816_17"]="mp29816 0x69 16 voltmon18" \
+	["xdpe1a2g7_0"]="xdpe1a2g7 0x61 15 voltmon1" \
+	["xdpe1a2g7_1"]="xdpe1a2g7 0x62 15 voltmon2" \
+	["xdpe1a2g7_2"]="xdpe1a2g7 0x63 15 voltmon3" \
+	["xdpe1a2g7_3"]="xdpe1a2g7 0x64 15 voltmon4" \
+	["xdpe1a2g7_4"]="xdpe1a2g7 0x65 15 voltmon5" \
+	["xdpe1a2g7_5"]="xdpe1a2g7 0x66 15 voltmon6" \
+	["xdpe1a2g7_6"]="xdpe1a2g7 0x67 15 voltmon7" \
+	["xdpe1a2g7_7"]="xdpe1a2g7 0x6a 15 voltmon8" \
+	["xdpe1a2g7_8"]="xdpe1a2g7 0x61 16 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7 0x62 16 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7 0x63 16 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7 0x64 16 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7 0x65 16 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7 0x66 16 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7 0x67 16 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7 0x68 16 voltmon16" \
+	["xdpe1a2g7_16"]="xdpe1a2g7 0x69 16 voltmon17" \
+	["xdpe1a2g7_17"]="xdpe1a2g7 0x6a 16 voltmon18" \
+	["24c512_0"]="24c512 0x51 24 swb_info" \
+)
+
+# Devices located on SN66XX_LD port board
+declare -A sn66xxld_port_alternatives=( \
+	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
+	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
+	["xdpe1a2g7_0"]="xdpe1a2g7 0x68 15 voltmon19" \
+	["xdpe1a2g7_1"]="xdpe1a2g7 0x69 15 voltmon20" \
+)
+
+# Devices located on SN66XX_LD power board
+declare -A sn66xxld_pwr_alternatives=( \
+	["raa228004_0"]="raa228004 0x60 6 pdb_pwr_conv1" \
+	["mp29502_0"]="mp29502 0x2e 6 pdb_pwr_conv1" \
+	["lm5066i_0"]="lm5066i 0x12 6 pdb_hotswap1" \
+	["mp5926_0"]="mp5926 0x12 6 pdb_hotswap1" \
+	["tmp451_0"]="tmp451 0x4c 6 pdb_temp1" \
+)
+
+# Devices located on SN66XX_LD platform board
+declare -A sn66xxld_platform_alternatives=( \
+	["24c512_1"]="24c512 0x51 1 vpd_info" \
+	["jc42_0"]="jc42 0x52 10 somdimm_temp1" \
+	["jc42_1"]="jc42 0x53 10 somdimm_temp2" \
+	["mp2845_0"]="mp2845 0x69 5 comex_voltmon1" \
+	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2" \
+)
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -901,6 +970,8 @@ devtr_check_supported_system_init_alternatives()
 				fi
 				;;
 			esac
+			;;
+		$AMD_V3000_CPU)
 			;;
 		$DNV_CPU)
 			# Silent exit
@@ -1240,6 +1311,31 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn58xxld_pwr_alternatives[@]}"; do
 					pwr_alternatives["$key"]="${sn58xxld_pwr_alternatives["$key"]}"
+				done
+				;;
+			*)
+				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
+				return 1
+				;;
+			esac
+			;;
+		VMOD0025)
+			case $sku in
+			HI193)
+				for key in "${!sn66xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn66xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_pwr_alternatives[@]}"; do
+					pwr_alternatives["$key"]="${sn66xxld_pwr_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_port_alternatives[@]}"; do
+					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
 				done
 				;;
 			*)
