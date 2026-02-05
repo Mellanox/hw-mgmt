@@ -107,7 +107,7 @@ class CONST(object):
     # File which defined current level filename.
     # User can dynamically change loglevel without TC restarting.
     LOG_LEVEL_FILENAME = "config/tc_log_level"
-     # File which define TC report period. TC should be restarted to apply changes in this file
+    # File which define TC report period. TC should be restarted to apply changes in this file
     PERIODIC_REPORT_FILE = "config/periodic_report"
     # suspend control file path
     SUSPEND_FILE = "config/suspend"
@@ -202,6 +202,7 @@ class CONST(object):
     MLXREG_SET_CMD_STR = "yes |  mlxreg -d  {pcidev} --reg_name MFSC --indexes \"pwm=0x0\" --set \"pwm_duty_cycle={pwm}\""
     MLXREG_GET_CMD_STR = "mlxreg -d {pcidev} --reg_name MFSC --get --indexes \"pwm=0x0\" | grep pwm | head -n 1 | cut -d '|' -f 2"
 
+
 """
 Default sensor  configuration.
 Defined per sensor name. Sensor name can be defined with the regexp mask.
@@ -224,103 +225,103 @@ input_smooth_level - soothing level for sensor input value reading. Formula to c
 """
 
 SENSOR_DEF_CONFIG = {
-    r'psu\d+_fan':      {"type": "psu_fan_sensor",
-                         "val_min": 4500, "val_max": 20000, "poll_time": 5,
-                         "input_suffix": "_fan1_speed_get", "refresh_attr_period": 1 * 60
-                        },
-    r'drwr\d+':         {"type": "fan_sensor",
+    r'psu\d+_fan': {"type": "psu_fan_sensor",
+                    "val_min": 4500, "val_max": 20000, "poll_time": 5,
+                    "input_suffix": "_fan1_speed_get", "refresh_attr_period": 1 * 60
+                    },
+    r'drwr\d+': {"type": "fan_sensor",
                          "val_min": 4500, "val_max": 20000, "poll_time": 5,
                          "refresh_attr_period": 1 * 60
-                        },
-    r'module\d+':       {"type": "thermal_module_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
-                         "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
-                        },
-    r'gearbox\d+':      {"type": "thermal_module_sensor",
+                 },
+    r'module\d+': {"type": "thermal_module_sensor",
+                   "pwm_min": 30, "pwm_max": 100, "val_min": 60000, "val_max": 80000,
+                   "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 20,
+                   "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 1 * 60
+                   },
+    r'gearbox\d+': {"type": "thermal_module_sensor",
+                    "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
+                    "val_lcrit": 5, "val_hcrit": 150000, "poll_tme": 6,
+                    "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
+                    },
+    r'asic\d*': {"type": "thermal_asic_sensor",
                          "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
-                         "val_lcrit": 5, "val_hcrit": 150000,  "poll_tme": 6,
-                         "input_suffix": "_temp_input", "value_hyst": 2, "refresh_attr_period": 30 * 60
-                        },
-    r'asic\d*':         {"type": "thermal_asic_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                          "value_hyst": 2, "input_smooth_level": 1
-                        },
+                 },
     r'(cpu_pack|cpu_core\d+)': {"type": "thermal_sensor",
                                 "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "90000",
                                 "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                                 "value_hyst": 5, "input_smooth_level": 3
-                               },
-    r'sodimm\d_temp':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!75000", "val_max": 85000,
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
-                         "input_suffix": "_input", "input_smooth_level": 2
-                        },
-    r'pch':             {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 60, "val_min": 50000, "val_max": 85000,
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 10,
-                         "input_suffix": "_temp", "value_hyst": 2, "input_smooth_level": 2, "enable": 0
-                        },
-    r'comex_amb':       {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
-                        },
-    r'sensor_amb':      {"type": "ambiant_thermal_sensor",  "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000, 
-                         "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
-                         "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0, "input_smooth_level": 1
-                        },
-    r'psu\d+_temp':     {"type": "thermal_sensor",
-                         "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
-                        },
+                                },
+    r'sodimm\d_temp': {"type": "thermal_sensor",
+                       "pwm_min": 30, "pwm_max": 100, "val_min": "!75000", "val_max": 85000,
+                       "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
+                       "input_suffix": "_input", "input_smooth_level": 2
+                       },
+    r'pch': {"type": "thermal_sensor",
+             "pwm_min": 30, "pwm_max": 60, "val_min": 50000, "val_max": 85000,
+             "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 10,
+             "input_suffix": "_temp", "value_hyst": 2, "input_smooth_level": 2, "enable": 0
+             },
+    r'comex_amb': {"type": "thermal_sensor",
+                   "pwm_min": 30, "pwm_max": 60, "val_min": 45000, "val_max": 85000, "value_hyst": 2, "poll_time": 3, "enable": 0
+                   },
+    r'sensor_amb': {"type": "ambiant_thermal_sensor", "pwm_min": 30, "pwm_max": 60, "val_min": 20000, "val_max": 50000,
+                    "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 30,
+                    "base_file_name": {CONST.C2P: CONST.PORT_SENS, CONST.P2C: CONST.FAN_SENS}, "value_hyst": 0, "input_smooth_level": 1
+                    },
+    r'psu\d+_temp': {"type": "thermal_sensor",
+                     "val_min": 45000, "val_max": 85000, "poll_time": 30, "enable": 0
+                     },
     r'voltmon\d+_temp': {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                          "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3,
                          "input_suffix": "_input"
-                        },
-    r'drivetemp':       {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 60
-                        },
-    r'ibc\d+':          {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60, 
-                         "input_suffix": "_input"
-                        },
-    r'ctx_amb\d*':      {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
-                         "input_suffix": "_input"
-                        },
+                         },
+    r'drivetemp': {"type": "thermal_sensor",
+                   "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                   "val_lcrit": 0, "val_hcrit": 120000, "poll_time": 60
+                   },
+    r'ibc\d+': {"type": "thermal_sensor",
+                "pwm_min": 30, "pwm_max": 100, "val_min": "!80000", "val_max": "!110000",
+                "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60,
+                "input_suffix": "_input"
+                },
+    r'ctx_amb\d*': {"type": "thermal_sensor",
+                    "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 3,
+                    "input_suffix": "_input"
+                    },
     r'hotswap\d+_temp': {"type": "thermal_sensor",
                          "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30, 
+                         "val_lcrit": -10000, "val_hcrit": 150000, "poll_time": 30,
                          "input_suffix": "_input"
+                         },
+    r'bmc\d+_temp': {"type": "thermal_sensor",
+                     "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
+                     "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
+                     },
+    r'dpu\\d+_module': {"type": "dpu_module",
+                        "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000",
+                        "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list": []
                         },
-    r'bmc\d+_temp':     {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 30,
-                        },
-    r'dpu\\d+_module':  {"type": "dpu_module",
-                         "pwm_min": 20, "pwm_max": 30, "val_min": "!70000", "val_max": "!95000",
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 5, "child_sensors_list" : []
-                        },
-    r'dpu\d+_cx_amb':   {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", 
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3},
-    r'dpu\d+_cpu':      {"type": "thermal_sensor",
-                         "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000", 
-                         "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_smooth_level": 1
-                        },
+    r'dpu\d+_cx_amb': {"type": "thermal_sensor",
+                       "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000",
+                       "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3},
+    r'dpu\d+_cpu': {"type": "thermal_sensor",
+                    "pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "105000",
+                    "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_smooth_level": 1
+                    },
     r'dpu\d+_sodimm\d+': {"type": "thermal_sensor",
                           "pwm_min": 30, "pwm_max": 70
-                         },
+                          },
     r'dpu\d+_drivetemp': {"type": "thermal_sensor",
                           "pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000",
                           "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 60
-                         },
+                          },
     r'dpu\d+_voltmon\d+_temp': {"type": "thermal_sensor",
-                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", 
+                                "pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000",
                                 "val_lcrit": 0, "val_hcrit": 150000, "poll_time": 3, "input_suffix": "_input"
-                               },
+                                },
 }
 
 # PSU/FAN redundancy define example:
@@ -364,7 +365,7 @@ DMIN_TABLE_DEFAULT = {
             CONST.PRESENT: {"-127:120": 100},
             CONST.DIRECTION: {"-127:120": 100}
         },
-        CONST.PSU_ERR:  {
+        CONST.PSU_ERR: {
             CONST.PRESENT: {"-127:120": 100},
             CONST.DIRECTION: {"-127:120": 100},
         },
@@ -377,7 +378,7 @@ DMIN_TABLE_DEFAULT = {
             CONST.PRESENT: {"-127:120": 100},
             CONST.DIRECTION: {"-127:120": 100}
         },
-        CONST.PSU_ERR:  {
+        CONST.PSU_ERR: {
             CONST.PRESENT: {"-127:120": 100},
             CONST.DIRECTION: {"-127:120": 100},
         },
@@ -385,7 +386,7 @@ DMIN_TABLE_DEFAULT = {
     }
 }
 
-ASIC_CONF_DEFAULT = {"1":  {"pwm_control": False, "fan_control": False}}
+ASIC_CONF_DEFAULT = {"1": {"pwm_control": False, "fan_control": False}}
 
 
 # ----------------------------------------------------------------------
@@ -637,7 +638,7 @@ class Logger(object):
         try:
             if self.logger:
                 self.logger.debug(msg_prefix + msg)
-        except:
+        except BaseException:
             pass
         self.logger_emit = True
 
@@ -657,7 +658,7 @@ class Logger(object):
         try:
             if self.logger:
                 self.logger.info(msg_prefix + msg)
-        except:
+        except BaseException:
             pass
         self.logger_emit = True
 
@@ -677,7 +678,7 @@ class Logger(object):
         try:
             if self.logger:
                 self.logger.log(logging.INFO + 5, msg_prefix + msg)
-        except:
+        except BaseException:
             pass
         self.logger_emit = True
 
@@ -697,7 +698,7 @@ class Logger(object):
         try:
             if self.logger:
                 self.logger.warning(msg_prefix + msg)
-        except:
+        except BaseException:
             pass
         self.logger_emit = True
 
@@ -717,7 +718,7 @@ class Logger(object):
         try:
             if self.logger:
                 self.logger.error(msg_prefix + msg)
-        except:
+        except BaseException:
             pass
         self.logger_emit = True
 
@@ -863,7 +864,7 @@ class hw_managemet_file_op(object):
         if self.check_file(filename):
             try:
                 val = int(self.read_file(filename)) / scale
-            except:
+            except BaseException:
                 pass
         return val
 
@@ -985,11 +986,11 @@ class hw_managemet_file_op(object):
         try:
             mlxreg_get_cmd = CONST.MLXREG_GET_CMD_STR.format(pcidev=self.asic_pcidev)
             self.log.debug("get mlxreg pwm cmd:{}".format(mlxreg_get_cmd))
-            subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True, 
-                                                            check=False, 
-                                                            stdout=subprocess.PIPE, 
-                                                            stderr=subprocess.PIPE, 
-                                                            text=True)
+            subprocess.run('{} | grep pwm'.format(mlxreg_get_cmd), shell=True,
+                           check=False,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           text=True)
             ret = result.stdout
             pwm = int(ret.strip(), 16)
             pwm_out = int(pwm / 2.55 + 0.5)
@@ -1059,6 +1060,7 @@ class iterate_err_counter():
 
     # ----------------------------------------------------------------------
 
+
 class system_device(hw_managemet_file_op):
     """
     @summary: base class for system sensors
@@ -1118,7 +1120,6 @@ class system_device(hw_managemet_file_op):
         self.fault_list_dynamic_filtered = []
         self.fault_list_dynamic = []
         self.dynamic_filter_ena = False
-
 
     # ----------------------------------------------------------------------
     def start(self):
@@ -1326,7 +1327,7 @@ class system_device(hw_managemet_file_op):
             val = self.get_file_val(filename, default_val)
         try:
             val = int(val) / scale
-        except:
+        except BaseException:
             pass
         self.log.debug("Set {} {} : {}".format(self.name, trh_type, val))
         return val
@@ -1407,9 +1408,9 @@ class system_device(hw_managemet_file_op):
         """
         @summary: return error list passed dynamic filter
         """
-        return list(set(self.fault_list_static_filtered  + self.fault_list_dynamic_filtered))
+        return list(set(self.fault_list_static_filtered + self.fault_list_dynamic_filtered))
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def set_dynamic_filter_ena(self, ena):
         """
         @summary: Enable for ignore errors marked in dynamic_mask_fault_list
@@ -1419,7 +1420,7 @@ class system_device(hw_managemet_file_op):
             return
         self.dynamic_filter_ena = ena
         if ena:
-            self.mask_fault_list = list(set(self.static_mask_fault_list  + self.dynamic_mask_fault_list))
+            self.mask_fault_list = list(set(self.static_mask_fault_list + self.dynamic_mask_fault_list))
         else:
             self.mask_fault_list = self.static_mask_fault_list
 
@@ -1516,12 +1517,12 @@ class thermal_sensor(system_device):
         else:
             try:
                 value = self.read_file_int(self.file_input, self.scale)
-                if self.val_hcrit != None and value >= self.val_hcrit:
+                if self.val_hcrit is not None and value >= self.val_hcrit:
                     self.log.warn("{} value({}) >= hcrit({})".format(self.name,
                                                                      value,
                                                                      self.val_hcrit))
                     self.fread_err.handle_err(self.file_input)
-                elif self.val_lcrit != None and value <= self.val_lcrit:
+                elif self.val_lcrit is not None and value <= self.val_lcrit:
                     self.log.warn("{} value({}) <= lcrit({})".format(self.name,
                                                                      value,
                                                                      self.val_lcrit))
@@ -1693,7 +1694,7 @@ class thermal_asic_sensor(thermal_module_sensor):
     def __init__(self, cmd_arg, sys_config, name, tc_logger):
         thermal_module_sensor.__init__(self, cmd_arg, sys_config, name, tc_logger)
         self.asic_fault_err = iterate_err_counter(tc_logger, name, CONST.SENSOR_FREAD_FAIL_TIMES)
-        
+
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
@@ -1717,19 +1718,19 @@ class thermal_asic_sensor(thermal_module_sensor):
             try:
                 value = self.read_file_int(temp_read_file, self.scale)
                 if value == 0:
-                    self.log.error("{} Incorrect value: {} in the file: {}). Emergency error!".format(self.name, 
-                                                                                        value, 
-                                                                                        temp_read_file))
+                    self.log.error("{} Incorrect value: {} in the file: {}). Emergency error!".format(self.name,
+                                                                                                      value,
+                                                                                                      temp_read_file))
                     self.asic_fault_err.handle_err(temp_read_file)
                 else:
                     self.asic_fault_err.handle_err(temp_read_file, reset=True)
 
-                if self.val_hcrit != None and value >= self.val_hcrit:
+                if self.val_hcrit is not None and value >= self.val_hcrit:
                     self.log.warn("{} value({}) >= hcrit({})".format(self.name,
                                                                      value,
                                                                      self.val_hcrit))
                     self.fread_err.handle_err(temp_read_file)
-                elif self.val_lcrit != None and value <= self.val_lcrit:
+                elif self.val_lcrit is not None and value <= self.val_lcrit:
                     self.log.warn("{} value({}) =< lcrit({})".format(self.name,
                                                                      value,
                                                                      self.val_lcrit))
@@ -1740,7 +1741,7 @@ class thermal_asic_sensor(thermal_module_sensor):
                     if self.value > self.val_max:
                         self.log.warn("{} value({}) >= max({})".format(self.name,
                                                                        self.value,
-                                                                      self.val_max))
+                                                                       self.val_max))
                     elif self.value < self.val_min:
                         self.log.debug("{} value {}".format(self.name, self.value))
             except BaseException:
@@ -1760,6 +1761,7 @@ class thermal_asic_sensor(thermal_module_sensor):
 
         if self.asic_fault_err.check_err():
             self.append_fault(CONST.EMERGENCY)
+
 
 class psu_fan_sensor(system_device):
     """
@@ -1986,8 +1988,8 @@ class fan_sensor(system_device):
         self.tacho_cnt = self.sensors_config.get("tacho_cnt", 1)
         if self.tacho_cnt > len(self.drwr_param):
             self.log.warn("{} tacho per FAN modlue mismatch: get {}, defined in config {}".format(self.name,
-                                                                                           self.tacho_cnt,
-                                                                                           len(self.drwr_param)))
+                                                                                                  self.tacho_cnt,
+                                                                                                  len(self.drwr_param)))
             self.log.info("{} init tacho_cnt from config: {}".format(self.name,
                                                                      len(self.drwr_param)))
             self.tacho_cnt = len(self.drwr_param)
@@ -2220,7 +2222,7 @@ class fan_sensor(system_device):
         if not name:
             try:
                 name = self.name.split(':')[0]
-            except:
+            except BaseException:
                 name = self.name
         blk_filename = "thermal/{}_blacklist".format(name)
         if self.check_file(blk_filename):
@@ -2401,7 +2403,7 @@ class ambiant_thermal_sensor(system_device):
         """
         @summary: Return sensor value. Value type depends from sensor type and can be: Celsius degree, rpm, ...
         """
-        min_sens_value =  min(self.value_dict.values())
+        min_sens_value = min(self.value_dict.values())
         if min_sens_value != CONST.AMB_TEMP_ERR_VAL:
             return self.value
         else:
@@ -2421,12 +2423,12 @@ class ambiant_thermal_sensor(system_device):
             else:
                 try:
                     value = self.read_file_int(sens_file_name, self.scale)
-                    if self.val_hcrit != None and value >= self.val_hcrit:
+                    if self.val_hcrit is not None and value >= self.val_hcrit:
                         self.log.warn("{} value({}) >= hcrit({})".format(self.name,
                                                                          value,
                                                                          self.val_hcrit))
                         self.fread_err.handle_err(sens_file_name)
-                    elif self.val_lcrit != None and value <= self.val_lcrit:
+                    elif self.val_lcrit is not None and value <= self.val_lcrit:
                         self.log.warn("{} value({}) <= lcrit({})".format(self.name,
                                                                          value,
                                                                          self.val_lcrit))
@@ -2575,26 +2577,26 @@ class ThermalManagement(hw_managemet_file_op):
     functions which adding sensor configuration by the sensor name
     """
     ADD_SENSOR_HANDLER = {r'psu\d+': "add_psu_sensor",
-                          r'drwr\d+':"add_fan_drwr_sensor",
-                          r'module\d*':"add_module_sensor",
-                          r'cpu':"add_cpu_sensor",
-                          r'voltmon\d+':"add_voltmon_sensor",
+                          r'drwr\d+': "add_fan_drwr_sensor",
+                          r'module\d*': "add_module_sensor",
+                          r'cpu': "add_cpu_sensor",
+                          r'voltmon\d+': "add_voltmon_sensor",
                           r'swb\d+_voltmon\d+': "add_swb_voltmon_sensor",
-                          r'asic\d+':"add_asic_sensor",
-                          r'sodimm\d+':"add_sodimm_sensor",
-                          r'sensor_amb':"add_amb_sensor",
-                          r'drivetemp':"add_drivetemp_sensor",
-                          r'ibc\d*':"add_ibc_sensor",
-                          r'ctx_amb\d*':"add_connectx_sensor",
-                          r'hotswap\d+':"add_hotswap_sensor",
-                          r'bmc\d+':"add_bmc_sensor",
-                          r'dpu\d*_cpu':"add_DPU_cpu_sensor",
-                          r'dpu\d*_sodimm\d+':"add_DPU_sodimm_sensor",
-                          r'dpu\d*_drivetemp':"add_DPU_drivetemp_sensor",
-                          r'dpu\d*_voltmon\d+':"add_DPU_voltmon_sensor",
-                          r'dpu\d*_cx_amb':"add_DPU_cx_amb_sensor",
-                          r'dpu\d *_module':"add_DPU_module"
-                         }
+                          r'asic\d+': "add_asic_sensor",
+                          r'sodimm\d+': "add_sodimm_sensor",
+                          r'sensor_amb': "add_amb_sensor",
+                          r'drivetemp': "add_drivetemp_sensor",
+                          r'ibc\d*': "add_ibc_sensor",
+                          r'ctx_amb\d*': "add_connectx_sensor",
+                          r'hotswap\d+': "add_hotswap_sensor",
+                          r'bmc\d+': "add_bmc_sensor",
+                          r'dpu\d*_cpu': "add_DPU_cpu_sensor",
+                          r'dpu\d*_sodimm\d+': "add_DPU_sodimm_sensor",
+                          r'dpu\d*_drivetemp': "add_DPU_drivetemp_sensor",
+                          r'dpu\d*_voltmon\d+': "add_DPU_voltmon_sensor",
+                          r'dpu\d*_cx_amb': "add_DPU_cx_amb_sensor",
+                          r'dpu\d *_module': "add_DPU_module"
+                          }
 
     def __init__(self, cmd_arg, tc_logger):
         """
@@ -2724,17 +2726,17 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.error("Missing max tachos config.", 1)
             sys.exit(1)
         # Find ASIC pci device fio
-        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True, 
-                                                            check=False, 
-                                                            stdout=subprocess.PIPE, 
-                                                            stderr=subprocess.PIPE, 
-                                                            text=True)
+        result = subprocess.run('find /dev/mst -name "*pciconf0"', shell=True,
+                                check=False,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True)
         # Get the output
-        mst_dev = result.stdout 
+        mst_dev = result.stdout
         if "_pciconf0" in mst_dev:
             self.asic_pcidev = mst_dev.strip()
         else:
-            self.asic_pcidev = None       
+            self.asic_pcidev = None
 
         # Collect FAN DRWR sensors
         try:
@@ -2780,22 +2782,22 @@ class ThermalManagement(hw_managemet_file_op):
             bom_file_array = bom_file_data.split()
         else:
             bom_file_array = []
-            
+
         try:
             for i in range(0, len(bom_file_array), 4):
-                component_lines = bom_file_array[i:i+4]
+                component_lines = bom_file_array[i:i + 4]
                 if len(component_lines) != 4:
                     break
-                #component_name example: voltmon1, pwr_conv1 ...
+                # component_name example: voltmon1, pwr_conv1 ...
                 component_name = component_lines[3]
                 res = re.match(r'(voltmon[0-9]+)', component_name)
                 if res:
                     sensor_list.append(res.group(1))
-    
+
                 res = re.match(r'pwr_conv([0-9]+)', component_name)
                 if res:
                     sensor_list.append("ibc{}".format(res.group(1)))
-        except:
+        except BaseException:
             pass
 
         # Add cpu sensor
@@ -2810,8 +2812,7 @@ class ThermalManagement(hw_managemet_file_op):
         sensor_list.append("sensor_amb")
 
         # remove duplications & soort
-        sensor_list = list(set(sensor_list))
-        sensor_list.sort()
+        sensor_list = sorted(set(sensor_list))
 
         self.log.info("Sensors enabled on system: {}".format(sensor_list))
         self.sys_config[CONST.SYS_CONF_SENSOR_LIST_PARAM] = sensor_list
@@ -2872,7 +2873,7 @@ class ThermalManagement(hw_managemet_file_op):
         """
         for dev_obj in self.dev_obj_list:
             child_list = dev_obj.get_child_list()
-            for child_name in  child_list:
+            for child_name in child_list:
                 child_obj = self._get_dev_obj(child_name)
                 if child_obj:
                     dev_obj.add_child_obj(child_obj)
@@ -3127,7 +3128,7 @@ class ThermalManagement(hw_managemet_file_op):
                 try:
                     tacho_cnt = self.read_file("config/max_tachos")
                     ret = bool(int(tacho_cnt))
-                except:
+                except BaseException:
                     self.log.notice("Can't read config/max_tachos. None-numeric value: {}".format(tacho_cnt))
                     ret = False
         return ret
@@ -3232,9 +3233,9 @@ class ThermalManagement(hw_managemet_file_op):
                     sys_config["platform_support"] = 0
         else:
             self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
-                                                                                          self.board_type,
-                                                                                          self.sku,
-                                                                                          self.system_ver), 1)
+                                                                                                             self.board_type,
+                                                                                                             self.sku,
+                                                                                                             self.system_ver), 1)
             sys_config["platform_support"] = 0
 
         # 1. Init dmin table
@@ -3287,7 +3288,7 @@ class ThermalManagement(hw_managemet_file_op):
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.PSU_ERR])
         err_mask = None
         if exclusion_conf:
-            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\d+_fan", "min_err_cnt" : 2, "curr_err_cnt" : 0}
+            self.dev_err_exclusion_conf[CONST.PSU_ERR] = {"name_mask": "psu\\d+_fan", "min_err_cnt": 2, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.PSU_ERR_LIST
@@ -3302,7 +3303,7 @@ class ThermalManagement(hw_managemet_file_op):
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.FAN_ERR])
         err_mask = None
         if exclusion_conf:
-            self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": "drwr\d+", "min_err_cnt" : 2, "curr_err_cnt": 0}
+            self.dev_err_exclusion_conf[CONST.FAN_ERR] = {"name_mask": "drwr\\d+", "min_err_cnt": 2, "curr_err_cnt": 0}
             err_mask = exclusion_conf.get("err_mask", None)
             if not err_mask:
                 err_mask = CONST.DRWR_ERR_LIST
@@ -3336,7 +3337,7 @@ class ThermalManagement(hw_managemet_file_op):
 
     # ----------------------------------------------------------------------
     def add_asic_sensor(self, name):
-        asic_basename = "asic" if  name == "asic1" else name
+        asic_basename = "asic" if name == "asic1" else name
         self._sensor_add_config("thermal_asic_sensor", name, {"base_file_name": asic_basename})
 
     # ----------------------------------------------------------------------
@@ -3512,7 +3513,7 @@ class ThermalManagement(hw_managemet_file_op):
                 ambient_sensor = self._get_dev_obj("sensor_amb")
                 self.amb_tmp = ambient_sensor.get_value()
 
-            self.write_file("config/thermal_enforced_full_spped", "0\n")   
+            self.write_file("config/thermal_enforced_full_spped", "0\n")
 
     # ----------------------------------------------------------------------
     def stop(self, reason=""):
@@ -3743,9 +3744,9 @@ def str2bool_argparse(val):
 
 
 class RawTextArgumentDefaultsHelpFormatter(
-        argparse.ArgumentDefaultsHelpFormatter,
-        argparse.RawTextHelpFormatter
-    ):
+    argparse.ArgumentDefaultsHelpFormatter,
+    argparse.RawTextHelpFormatter
+):
     """
         @summary:
             Formatter class for pretty print ArgumentParser help
