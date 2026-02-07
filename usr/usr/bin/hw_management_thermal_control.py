@@ -1,36 +1,15 @@
 #!/usr/bin/python
-# pylint: disable=line-too-long
-# pylint: disable=C0103
-########################################################################
-# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
 #
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-# 3. Neither the names of the copyright holders nor the names of its
-#    contributors may be used to endorse or promote products derived from
-#    this software without specific prior written permission.
-#
-# Alternatively, this software may be distributed under the terms of the
-# GNU General Public License ("GPL") version 2 as published by the Free
-# Software Foundation.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
 #
 
 """
@@ -390,8 +369,11 @@ DMIN_TABLE_DEFAULT = {
 
 ASIC_CONF_DEFAULT = {"1": {"pwm_control": False, "fan_control": False}}
 
+_sig_condition_name = "-"
 
 # ----------------------------------------------------------------------
+
+
 def str2bool(val):
     """
     @summary:
@@ -2671,7 +2653,6 @@ class ThermalManagement(hw_managemet_file_op):
         signal.signal(signal.SIGINT, self.sig_handler)
         signal.signal(signal.SIGHUP, self.sig_handler)
         self.exit = Event()
-        self.exit_flag = False
 
         self.load_configuration()
         if not str2bool(self.sys_config.get("platform_support", 1)):
@@ -2679,6 +2660,8 @@ class ThermalManagement(hw_managemet_file_op):
             self.log.notice("Set TC to idle.")
             while True:
                 self.exit.wait(60)
+                if self.exit.is_set():
+                    return
 
         if not self.is_pwm_exists():
             self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is requiured for TC run\nWaiting for ASIC init", 1)
@@ -2686,6 +2669,8 @@ class ThermalManagement(hw_managemet_file_op):
                 self.log.notice("Wait...")
                 self.exit.wait(10)
             self.log.notice("PWM control activated", 1)
+            if self.exit.is_set():
+                return
 
         # Set PWM to the default state while we are waiting for system configuration
         self.log.notice("Set FAN PWM {}".format(self.pwm_target), 1)
@@ -2703,12 +2688,16 @@ class ThermalManagement(hw_managemet_file_op):
                 else:
                     self.log.info("Set PWM successful")
                     break
+                if self.exit.is_set():
+                    return
 
         if not self.is_fan_tacho_init():
             self.log.notice("Missing FAN tacho (probably ASIC not inited yet). FANs is requiured for TC run\nWaiting for ASIC init", 1)
             while not self.is_fan_tacho_init():
                 self.log.notice("Wait...")
                 self.exit.wait(10)
+                if self.exit.is_set():
+                    return
 
         self.log.notice("Mellanox thermal control is waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), 1)
         timeout = current_milli_time() + 1000 * CONST.THERMAL_WAIT_FOR_CONFIG
@@ -2716,6 +2705,8 @@ class ThermalManagement(hw_managemet_file_op):
             if not self.write_pwm(self.pwm_target):
                 self.log.info("Set PWM failed. Possible SDK is not started")
             self.exit.wait(2)
+            if self.exit.is_set():
+                return
 
         self._collect_hw_info()
         self.amb_tmp = CONST.TEMP_INIT_VAL_DEF
@@ -3216,15 +3207,12 @@ class ThermalManagement(hw_managemet_file_op):
             Signal handler for termination signals
         """
         if sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
-            self.exit_flag = True
-            self.log.close_tc_log_handler()
-            if self.sys_config.get("platform_support", 1):
-                self.stop(reason="SIG {}".format(sig))
-
-            self.log.notice("Thermal control stopped", 1)
-            self.log.logger_emit = False
-            self.log.stop()
-            os._exit(0)
+            global _sig_condition_name
+            try:
+                _sig_condition_name = signal.Signals(sig).name
+            except (ValueError, AttributeError):
+                _sig_condition_name = str(sig)
+            self.exit.set()
 
     # ----------------------------------------------------------------------
     def load_configuration(self):
@@ -3599,7 +3587,7 @@ class ThermalManagement(hw_managemet_file_op):
         self.log.notice("********************************", 1)
         module_scan_timeout = 0
         # main loop
-        while not self.exit.is_set() or not self.exit_flag:
+        while not self.exit.is_set():
             try:
                 log_level = int(self.read_file(CONST.LOG_LEVEL_FILENAME))
                 if log_level != self.cmd_arg["verbosity"]:
@@ -3837,9 +3825,17 @@ if __name__ == '__main__':
     thermal_management = None
     try:
         thermal_management = ThermalManagement(args, logger)
-        thermal_management.init()
-        thermal_management.start(reason="init")
-        thermal_management.run()
+        if not thermal_management.exit.is_set():
+            thermal_management.init()
+            thermal_management.start(reason="init")
+            thermal_management.run()
+
+        logger.notice("Thermal control stopped by signal {}".format(_sig_condition_name), 1)
+        if (thermal_management is not None and
+                hasattr(thermal_management, 'sys_config') and
+                thermal_management.sys_config.get("platform_support", 1)):
+            thermal_management.stop(reason="SIG {}".format(_sig_condition_name))
+
     except BaseException as e:
         logger.info(traceback.format_exc())
         if thermal_management:
