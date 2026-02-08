@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -67,7 +67,7 @@ process_blacklist()
 
 	# Extend with system specific records.
 	case $SKU in
-	HI180|HI181|HI182)
+	HI180|HI181|HI182|HI185)
 		# Designware I2C controller driver should not be blackisted.
 		# This gurantees that Designware driver is loaded by ACPI before platform driver.
 		# Platform driver relies on the existence of i2c-0 bus created by Designware driver.

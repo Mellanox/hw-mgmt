@@ -1,8 +1,10 @@
-From 5b163368a6c1972a1cd58acd65ae24fbca71ca81 Mon Sep 17 00:00:00 2001
+From e527e397780e589e886c2cbe9435e566d41d0aa9 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
-Subject: [PATCH platform-next 1/1] platform/mellanox: nvsw-bmc: Add system
- control and monitoring driver for Nvidia BMC
+Subject: [PATCH platform-next 1/1] From
+ 5b163368a6c1972a1cd58acd65ae24fbca71ca81 Mon Sep 17 00:00:00 2001 Subject:
+ [PATCH platform-next 1/1] platform/mellanox: nvsw-bmc: Add system  control
+ and monitoring driver for Nvidia BMC
 
 The driver allows system control and monitoring of Nvidia switches
 through CPLD/FPGA devices from Based Management Controller SoC.
@@ -23,10 +25,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/Makefile            |    3 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2831 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  678 ++++
- drivers/platform/mellanox/nvsw-host-l1.c      |  737 +++++
+ drivers/platform/mellanox/nvsw-host-l1.c      |  736 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  938 ++++++
  drivers/platform/mellanox/nvsw.h              |  294 ++
- 8 files changed, 5514 insertions(+), 4 deletions(-)
+ 8 files changed, 5513 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -34,10 +36,10 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  create mode 100644 drivers/platform/mellanox/nvsw.h
 
 diff --git a/Documentation/devicetree/bindings/trivial-devices.yaml b/Documentation/devicetree/bindings/trivial-devices.yaml
-index 8e6c0bc6..3cc1097b 100644
+index 74d30c8f..1e1d5c81 100644
 --- a/Documentation/devicetree/bindings/trivial-devices.yaml
 +++ b/Documentation/devicetree/bindings/trivial-devices.yaml
-@@ -293,10 +293,10 @@ properties:
+@@ -291,10 +291,10 @@ properties:
            - national,lm85
              # I2C ±0.33°C Accurate, 12-Bit + Sign Temperature Sensor and Thermal Window Comparator
            - national,lm92
@@ -3628,10 +3630,10 @@ index 00000000..048ec3bd
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/drivers/platform/mellanox/nvsw-host-l1.c b/drivers/platform/mellanox/nvsw-host-l1.c
 new file mode 100644
-index 00000000..a312aa19
+index 00000000..6b9837e1
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-l1.c
-@@ -0,0 +1,737 @@
+@@ -0,0 +1,736 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -3719,7 +3721,6 @@ index 00000000..a312aa19
 +		.reg = NVSW_REG_CPLD2_VER_OFFSET,
 +		.bit = GENMASK(7, 0),
 +		.mode = 0444,
-+	},
 +	},
 +	{
 +		.label = "cpld3_version",
