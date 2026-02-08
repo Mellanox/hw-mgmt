@@ -1,4 +1,4 @@
-From 36ed80b5846d5324d4aab22e2a27f3f2876abe92 Mon Sep 17 00:00:00 2001
+From 6a9f1e150d07c9276a67d1272bde84103eae380b Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jul 2024 23:50:27 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +25,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  744 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  943 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  827 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  836 +++++
  drivers/platform/mellanox/nvsw.h              |  296 ++
- 9 files changed, 6323 insertions(+)
+ 9 files changed, 6332 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5292,10 +5292,10 @@ index 000000000..e54bd4109
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..d60fd2a9b
+index 000000000..880c7760e
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,827 @@
+@@ -0,0 +1,836 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -6048,16 +6048,13 @@ index 000000000..d60fd2a9b
 +			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_BUS_NR,
 +		    nvsw_host_mux_brdinfo->addr);
 +		err = PTR_ERR(nvsw_host_mux_i2c_client);
-+		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+		nvsw_host_mux_i2c_adapter = NULL;
-+		return err;
++		goto i2c_new_client_device_fail;
 +	}
 +
 +	nvsw_core = devm_kzalloc(&pdev->dev, sizeof(*nvsw_core), GFP_KERNEL);
 +	if (!nvsw_core) {
-+		i2c_unregister_device(nvsw_host_mux_i2c_client);
-+		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+		return -ENOMEM;
++		err = -ENOMEM;
++		goto nvsw_host_probe_fail;
 +	}
 +
 +	/* Set system configuration. */
@@ -6074,7 +6071,16 @@ index 000000000..d60fd2a9b
 +	nvsw_core->mux_exit = nvsw_host_spc6_mux_topology_exit;
 +	platform_set_drvdata(pdev, nvsw_core);
 +
-+	return nvsw_core_init(nvsw_core);
++	err = nvsw_core_init(nvsw_core);
++	if (!err)
++		return 0;
++
++nvsw_host_probe_fail:
++		i2c_unregister_device(nvsw_host_mux_i2c_client);
++i2c_new_client_device_fail:
++		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
++		nvsw_host_mux_i2c_adapter = NULL;
++		return err;
 +}
 +
 +static void nvsw_host_remove(struct platform_device *pdev)
@@ -6082,6 +6088,9 @@ index 000000000..d60fd2a9b
 +	struct nvsw_core *nvsw_core = platform_get_drvdata(pdev);
 +
 +	nvsw_core_exit(nvsw_core);
++	i2c_unregister_device(nvsw_host_mux_i2c_client);
++	i2c_put_adapter(nvsw_host_mux_i2c_adapter);
++	nvsw_host_mux_i2c_adapter = NULL;
 +}
 +
 +static struct platform_driver nvsw_host_driver = {
