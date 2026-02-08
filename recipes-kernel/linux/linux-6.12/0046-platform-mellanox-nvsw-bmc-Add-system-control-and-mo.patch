@@ -1,4 +1,4 @@
-From a550d7a39ff9f8c22cf6750c13649d44d8adba38 Mon Sep 17 00:00:00 2001
+From 429771746b9cb839cf821ccf5d3aa8a97fb1a879 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jul 2024 23:50:27 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -19,15 +19,15 @@ This control includes:
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
  .../devicetree/bindings/trivial-devices.yaml  |    5 +
- drivers/platform/mellanox/Kconfig             |   48 +
- drivers/platform/mellanox/Makefile            |    5 +
+ drivers/platform/mellanox/Kconfig             |   38 +
+ drivers/platform/mellanox/Makefile            |    4 +
  drivers/platform/mellanox/nvsw-bmc-hid162.c   | 2773 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  744 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  943 ++++++
  drivers/platform/mellanox/nvsw-host-spc6.c    |  836 +++++
  drivers/platform/mellanox/nvsw.h              |  296 ++
- 9 files changed, 6343 insertions(+)
+ 9 files changed, 6332 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -52,27 +52,10 @@ index a190c5676..14568bd0f 100644
            - nuvoton,w83773g
              # OKI ML86V7667 video decoder
 diff --git a/drivers/platform/mellanox/Kconfig b/drivers/platform/mellanox/Kconfig
-index e3afbe62c..f7b5a4284 100644
+index e3afbe62c..6cbda147a 100644
 --- a/drivers/platform/mellanox/Kconfig
 +++ b/drivers/platform/mellanox/Kconfig
-@@ -82,6 +82,16 @@ config MLXBF_TMFIFO
- 	  platform driver support for the TmFifo which supports console
- 	  and networking based on the virtio framework.
- 
-+config MLXBF_PTM
-+	tristate "BlueField Power and Thermal Management debugfs interface"
-+	depends on ARM64
-+	depends on DEBUG_FS
-+	help
-+		If you say yes to this option, support will added for the
-+		mlxbf-ptm driver.  This driver provides debugfs interface
-+		to userspace with information related to power and thermal
-+		management of the Bluefield device.
-+
- config MLXBF_BOOTCTL
- 	tristate "Mellanox BlueField Firmware Boot Control driver"
- 	depends on ARM64
-@@ -105,6 +115,44 @@ config MLXBF_PMC
+@@ -105,6 +105,44 @@ config MLXBF_PMC
  	  to performance monitoring counters within various blocks in the
  	  Mellanox BlueField SoC via a sysfs interface.
  
@@ -118,15 +101,10 @@ index e3afbe62c..f7b5a4284 100644
  	tristate "Nvidia SN2201 platform driver support"
  	depends on HWMON && I2C
 diff --git a/drivers/platform/mellanox/Makefile b/drivers/platform/mellanox/Makefile
-index e86723b44..e26f268e6 100644
+index e86723b44..123edaa99 100644
 --- a/drivers/platform/mellanox/Makefile
 +++ b/drivers/platform/mellanox/Makefile
-@@ -7,8 +7,13 @@ obj-$(CONFIG_MLX_PLATFORM)	+= mlx-platform.o
- obj-$(CONFIG_MLXBF_BOOTCTL)	+= mlxbf-bootctl.o
- obj-$(CONFIG_MLXBF_PMC)		+= mlxbf-pmc.o
- obj-$(CONFIG_MLXBF_TMFIFO)	+= mlxbf-tmfifo.o
-+obj-$(CONFIG_MLXBF_PTM)	+= mlxbf-ptm.o
- obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
+@@ -11,4 +11,8 @@ obj-$(CONFIG_MLXREG_DPU)	+= mlxreg-dpu.o
  obj-$(CONFIG_MLXREG_HOTPLUG)	+= mlxreg-hotplug.o
  obj-$(CONFIG_MLXREG_IO) += mlxreg-io.o
  obj-$(CONFIG_MLXREG_LC) += mlxreg-lc.o
@@ -5314,7 +5292,7 @@ index 000000000..e54bd4109
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..ae853d725
+index 000000000..880c7760e
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
 @@ -0,0 +1,836 @@
@@ -6070,15 +6048,13 @@ index 000000000..ae853d725
 +			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_BUS_NR,
 +		    nvsw_host_mux_brdinfo->addr);
 +		err = PTR_ERR(nvsw_host_mux_i2c_client);
-+		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+		nvsw_host_mux_i2c_adapter = NULL;
-+		return err;
++		goto i2c_new_client_device_fail;
 +	}
 +
 +	nvsw_core = devm_kzalloc(&pdev->dev, sizeof(*nvsw_core), GFP_KERNEL);
 +	if (!nvsw_core) {
 +		err = -ENOMEM;
-+		goto release_i2c;
++		goto nvsw_host_probe_fail;
 +	}
 +
 +	/* Set system configuration. */
@@ -6096,14 +6072,15 @@ index 000000000..ae853d725
 +	platform_set_drvdata(pdev, nvsw_core);
 +
 +	err = nvsw_core_init(nvsw_core);
-+	if (err)
-+		goto release_i2c;
++	if (!err)
++		return 0;
 +
-+	return 0;
-+release_i2c:
-+	i2c_unregister_device(nvsw_host_mux_i2c_client);
-+	i2c_put_adapter(nvsw_host_mux_i2c_adapter);
-+	return err;
++nvsw_host_probe_fail:
++		i2c_unregister_device(nvsw_host_mux_i2c_client);
++i2c_new_client_device_fail:
++		i2c_put_adapter(nvsw_host_mux_i2c_adapter);
++		nvsw_host_mux_i2c_adapter = NULL;
++		return err;
 +}
 +
 +static void nvsw_host_remove(struct platform_device *pdev)
@@ -6113,6 +6090,7 @@ index 000000000..ae853d725
 +	nvsw_core_exit(nvsw_core);
 +	i2c_unregister_device(nvsw_host_mux_i2c_client);
 +	i2c_put_adapter(nvsw_host_mux_i2c_adapter);
++	nvsw_host_mux_i2c_adapter = NULL;
 +}
 +
 +static struct platform_driver nvsw_host_driver = {
