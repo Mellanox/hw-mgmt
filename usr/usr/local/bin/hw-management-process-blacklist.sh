@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@
 
 __default_blacklist="
 ##################################################################################
-# Copyright (c) 2018-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 options at24 io_limit=32
 options gpio_ich gpiobase=0
@@ -91,6 +91,7 @@ process_blacklist()
 		echo blacklist i2c_designware_platform >> $BLACKLIST_FILE
 		echo blacklist i2c_designware_core >> $BLACKLIST_FILE
 		echo blacklist i2c_asf >> $BLACKLIST_FILE
+		echo blacklist mlxreg_dpu >> $BLACKLIST_FILE
 		;;
 	esac
 }
