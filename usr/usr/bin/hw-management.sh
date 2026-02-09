@@ -1010,7 +1010,7 @@ add_cpu_board_to_connection_table()
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
 						HI116|HI112|HI124|HI100|HI122|HI123|HI184|MSN3700|MSN3700C)
-							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700,NSN4700d
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700, SN4700d
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1997,8 +1997,8 @@ msn_spc3_common()
 			msn47xx_specific
 		;;
 	esac
-	if [ ! -f $config_path/reset_attr_num ]; then
-		echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
+	if [ ! -f "$config_path/reset_attr_num" ]; then
+		echo "$reset_dflt_attr_num" > "$config_path/reset_attr_num"
 	fi
 }
 
@@ -2821,6 +2821,10 @@ system_cleanup_specific()
 
 check_system()
 {
+	# Reset reset_attr_num if it exists.
+	if [ -f "$config_path/reset_attr_num" ]; then
+		rm -f "$config_path"/reset_attr_num
+	fi
 	# Check ODM
 	case $board_type in
 		VMOD0001)
