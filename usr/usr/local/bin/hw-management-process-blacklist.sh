@@ -117,6 +117,7 @@ process_blacklist()
 		ensure_line_exists "blacklist i2c_designware_platform" "$BLACKLIST_FILE"
 		ensure_line_exists "blacklist i2c_designware_core" "$BLACKLIST_FILE"
 		ensure_line_exists "blacklist i2c_asf" "$BLACKLIST_FILE"
+		ensure_line_exists "blacklist mlxreg_dpu" "$BLACKLIST_FILE"
 		;;
 	esac
 }
