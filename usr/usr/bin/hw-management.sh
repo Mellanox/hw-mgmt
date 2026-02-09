@@ -2417,6 +2417,7 @@ qm_qm3_common()
 
 smart_switch_common()
 {
+	modprobe mlxreg-dpu
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
