@@ -788,7 +788,7 @@ Kernel-6.12
 |0034-platform-mellanox-Cosmetic-changes-to-improve-code-s.patch  | f48cf5e            | Feature upstream                         | 6.15.1     |                                                |
 |0035-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  | 317bbe1            | Feature upstream                         | 6.15.1     |                                                |
 |0036-platform-mellanox-mlxreg-dpu-Fix-smatch-warnings.patch      | f94ffc3            | Feature upstream                         | 6.15.1     |                                                |
-|0037-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted			  |            |                                                |
+|0037-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
 |0038-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
 |0039-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
 |0040-platform-mellanox-mlxreg-dpu-Introduce-completion-ca.patch  |                    | Downstream accepted                      |            |                                                |
@@ -808,9 +808,10 @@ Kernel-6.12
 |0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
 |0054-1-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch|                    | Downstream accepted                      |            | MQM9701                                        |
 |0055-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
-|0055-1-platform-mellanox-mlx-platform-Add-support-DGX-flavo.patch|                    | Downstream accepted                      |            | SN4700d                                       |
+|0055-1-platform-mellanox-mlx-platform-Add-support-DGX-flavo.patch|                    | Downstream accepted                      |            | SN4700d                                        |
 |0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
+|0058-PCI-DOE-Poll-DOE-Busy-bit-for-up-to-1-second-in-pci.patch   | 86efc62            | Feature upstream                         | 6.13.0     |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
