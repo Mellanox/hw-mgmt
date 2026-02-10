@@ -188,6 +188,7 @@ class CONST:
     PSU_COUNT_DEF = 2
     FAN_DRWR_COUNT_DEF = 6
     FAN_TACHO_COUNT_DEF = 6
+    PDB_COUNT_DEF = 0
     MODULE_COUNT_MAX = 128
 
     # Consistent file read  errors for set error state
@@ -3047,8 +3048,10 @@ class ThermalManagement(hw_management_file_op):
         self.max_tachos = CONST.FAN_TACHO_COUNT_DEF
         self.fan_drwr_num = CONST.FAN_DRWR_COUNT_DEF
         self.psu_count = CONST.PSU_COUNT_DEF
-        self.psu_pwr_count = CONST.PSU_COUNT_DEF
+        self.pwr_count = CONST.PSU_COUNT_DEF
+        self.pdb_count = CONST.PDB_COUNT_DEF
         self.fan_flow_capability = CONST.UNKNOWN
+
         self.asic_counter = 1
 
         if self.check_file("config/system_flow_capability"):
@@ -3105,10 +3108,19 @@ class ThermalManagement(hw_management_file_op):
             sys.exit(1)
 
         try:
-            self.psu_pwr_count = int(self.read_file("config/hotplug_pwrs"))
+            self.pwr_count = int(self.read_file("config/hotplug_pwrs"))
         except (ValueError, TypeError, OSError, IOError):
             self.log.error("Missing hotplug_pwrs config.", repeat=1)
             sys.exit(1)
+
+        if self.check_file("config/hotplug_pdbs"):
+            try:
+                self.pdb_count = int(self.read_file("config/hotplug_pdbs"))
+            except (ValueError, TypeError, OSError, IOError):
+                self.log.error("Missing hotplug_pdbs config.", repeat=1)
+                sys.exit(1)
+        else:
+            self.pdb_count = 0
 
         # Collect voltmon sensors
         file_list = os.listdir("{}/thermal".format(self.cmd_arg[CONST.HW_MGMT_ROOT]))
@@ -3295,10 +3307,12 @@ class ThermalManagement(hw_management_file_op):
             Set PSU fan depending of current cooling state
         @return: pwm value calculated based on PSU state
         """
-        for psu_idx in range(1, self.psu_pwr_count + 1):
-            psu_obj = self._get_dev_obj("psu{}_fan".format(psu_idx))
-            if psu_obj:
-                psu_obj.set_pwm(pwm)
+        is_psu_system = self.pwr_count > 0 and self.psu_count > 0
+        if is_psu_system:
+            for psu_idx in range(1, self.pwr_count + 1):
+                psu_obj = self._get_dev_obj("psu{}_fan".format(psu_idx))
+                if psu_obj:
+                    psu_obj.set_pwm(pwm)
 
     # ----------------------------------------------------------------------
     def _update_chassis_fan_speed(self, pwm_val, force=False):
@@ -3716,6 +3730,16 @@ class ThermalManagement(hw_management_file_op):
 
     # ----------------------------------------------------------------------
     def add_psu_sensor(self, name):
+        """
+        @summary: Add PSU sensor
+        @param name: PSU name
+        @return: None
+        """
+        is_psu_system = self.pwr_count > 0 and self.psu_count > 0
+        if not is_psu_system:
+            self.log.notice("PSU system not detected. Skipping {} sensor addition.".format(name), repeat=1)
+            return
+
         psu_name = "{}_fan".format(name)
         in_file = name
         exclusion_conf = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_REDUNDANCY_PARAM, CONST.PSU_ERR])
