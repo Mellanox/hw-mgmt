@@ -1603,7 +1603,7 @@ msn4700d_specific()
 
 	max_tachos=12
 	hotplug_fans=6
-	hotplug_pwrs=0
+	hotplug_pwrs=1
 	hotplug_psus=0
 	hotplug_pdbs=1
 	psu_count=0
@@ -1770,7 +1770,7 @@ mqm97xx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_mqm9701.json"
 		lm_sensors_config="$lm_sensors_configs_path/mqm9701_sensors.conf"
 		hotplug_psus=0
-		hotplug_pwrs=0
+		hotplug_pwrs=1
 		hotplug_pdbs=1
 		psu_count=0
 		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
@@ -2164,7 +2164,7 @@ sn5600d_specific()
 	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
 	max_tachos=8
 	hotplug_fans=4
-	hotplug_pwrs=0
+	hotplug_pwrs=1
 	hotplug_psus=0
 	hotplug_pdbs=1
 	psu_count=0
@@ -2394,7 +2394,7 @@ qm3xx1_specific()
 
 	max_tachos=16
 	hotplug_fans=8
-	hotplug_pwrs=0
+	hotplug_pwrs=1
 	hotplug_psus=0
 	psu_count=0
 	hotplug_pdbs=1
