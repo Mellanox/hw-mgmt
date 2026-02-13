@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,13 +30,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# These rules handle USB net up/down events.
+# These rules handle USB net events.
 
-# Rename interface from ethN to usb0
+# Rename USB network interface from ethN to usb0
 SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="eth*|usb*", NAME="usb0"
 
-# Bring up the USB network interface when it is plugged in.
-SUBSYSTEM=="net", ACTION=="add", NAME=="usb0", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 up"
-
-# Bring down the USB network interface when it is plugged out
-SUBSYSTEM=="net", ACTION=="remove", NAME=="usb0", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 down"
+# Bring up USB network interface
+SUBSYSTEM=="net", ACTION=="add", NAME=="usb0", RUN+="/usr/bin/hw-management-ifupdown.sh usb0"

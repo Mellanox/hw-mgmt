@@ -1,6 +1,6 @@
 #!/bin/bash
 ###########################################################################
-# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,18 +30,28 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# This script is executed by udev rules to up/down USB network interface
+# This script is executed by udev rule to bring up USB network interface
+# Usage: hw-management-ifupdown.sh <interface>
 
-ACTION=$2
+source /usr/bin/hw-management-helpers.sh
+
 INTERFACE=$1
 
-if [ -z "${ACTION}" ] || [ -z "${INTERFACE}" ]; then
-	echo "Missing parameters"
+if [ -z "${INTERFACE}" ]; then
+	log_err "Missing interface parameter"
 	exit 1
 fi
 
 if [ ! -e /sys/class/net/${INTERFACE} ] ||
    [ ! -e /etc/network/interfaces ]; then
+	log_info "Interface ${INTERFACE} is missing"
+	exit 0
+fi
+
+# Skip early if interface is already administratively up
+FLAGS=$(cat /sys/class/net/${INTERFACE}/flags 2>/dev/null)
+if [ -n "${FLAGS}" ] && [ $((FLAGS & 1)) -eq 1 ]; then
+	log_info "Interface ${INTERFACE} is already up"
 	exit 0
 fi
 
@@ -49,13 +59,21 @@ AUTO=$(ifquery -l 2>/dev/null)
 HOTPLUG=$(ifquery -l --allow=hotplug 2>/dev/null)
 
 if ! echo $AUTO $HOTPLUG | grep -q ${INTERFACE}; then
+	log_info "Configuration of interface ${INTERFACE} is missing"
 	exit 0
 fi
 
-if [ "${ACTION}" = "up" ]; then
-	ifup ${INTERFACE}
-else
-	ifdown ${INTERFACE}
-fi
+# Retry ifup to work around locking conflicts with Debian networking service
+MAX_RETRIES=5
+RETRY_DELAY=2
+for ((i=1; i<=MAX_RETRIES; i++)); do
+	if ifup ${INTERFACE}; then
+		log_info "ifup ${INTERFACE} succeded on attempt $i"
+		exit 0
+	fi
+	log_info "Attempt $i to ifup ${INTERFACE} failed. Retrying in ${RETRY_DELAY} seconds..."
+	[ "$i" -lt "$MAX_RETRIES" ] && sleep "${RETRY_DELAY}"
+done
 
-exit 0
+log_err "Failed to ifup interface ${INTERFACE}"
+exit 1
