@@ -158,22 +158,25 @@ SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_HIGHEST}!="", ACTION=="cha
 SUBSYSTEM=="thermal", KERNEL=="thermal_zone*", ENV{TZ_DOWN}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-thermal-events.sh change thermal_zone %S %p %k down"
 
 # PS units power cables when power source is connected
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu1 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu1 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu2 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu2 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu3 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu3 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu4 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu4 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu5 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu5 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu6 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu6 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu7 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu7 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu8 %p %k %S %n"
-SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu8 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0059/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu1 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu2 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-0058/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu2 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu3 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005b/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu3 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu4 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005a/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu4 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu5 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005d/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu5 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu6 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005c/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu6 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu7 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005e/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu7 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add psu8 %p %k %S %n"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/*-005f/hwmon/hwmon*", ENV{IS_PSU_EVENT}="1", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm psu8 %p %k %S %n"
+
+#TRIGGER
+ENV{IS_PSU_EVENT}=="1", RUN+="/usr/local/bin/psu_check.sh"
 
 
 # BF3 PS units power cables when power source is connected
