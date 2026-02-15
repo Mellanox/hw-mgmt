@@ -1,4 +1,4 @@
-From 6a9f1e150d07c9276a67d1272bde84103eae380b Mon Sep 17 00:00:00 2001
+From 5d8aa75f8d85f56e4712ce642f73ed3966e5aa56 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jul 2024 23:50:27 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +25,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  744 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  943 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  836 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  857 +++++
  drivers/platform/mellanox/nvsw.h              |  296 ++
- 9 files changed, 6332 insertions(+)
+ 9 files changed, 6353 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5292,10 +5292,10 @@ index 000000000..e54bd4109
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..880c7760e
+index 000000000..f63eda23c
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,836 @@
+@@ -0,0 +1,857 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -6017,6 +6017,27 @@ index 000000000..880c7760e
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0025"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
++			},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI191"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI183"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI195"),
 +		},
 +	},
 +	{ }

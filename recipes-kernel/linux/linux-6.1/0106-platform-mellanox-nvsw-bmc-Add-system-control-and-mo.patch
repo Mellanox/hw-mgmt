@@ -1,4 +1,4 @@
-From 623b439e3a16cc80da30f5cd3ab7940965601dfd Mon Sep 17 00:00:00 2001
+From 55bc44d990382b1e32307cb4c435031a0b174525 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +25,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  944 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  837 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  858 +++++
  drivers/platform/mellanox/nvsw.h              |  297 ++
- 9 files changed, 6359 insertions(+), 4 deletions(-)
+ 9 files changed, 6380 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5322,10 +5322,10 @@ index 000000000..fed143cdf
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..6e867ccd4
+index 000000000..5da179f62
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,837 @@
+@@ -0,0 +1,858 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -6047,6 +6047,27 @@ index 000000000..6e867ccd4
 +		.matches = {
 +			DMI_MATCH(DMI_BOARD_NAME, "VMOD0025"),
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI191"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI183"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI195"),
 +		},
 +	},
 +	{ }
