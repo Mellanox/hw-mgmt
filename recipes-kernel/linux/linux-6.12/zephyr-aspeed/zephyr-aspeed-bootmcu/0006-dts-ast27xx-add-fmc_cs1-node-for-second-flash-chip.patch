@@ -1,0 +1,36 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Mon, 20 Jan 2026 00:00:00 +0000
+Subject: [PATCH] dts: ast27xx: add fmc_cs1 node for second flash chip
+
+Add fmc_cs1 device tree node to support the second SPI NOR flash chip
+on chip select 1 of the FMC controller.
+
+Upstream-Status: Pending
+
+Signed-off-by: Paul Srisoontorn <psrisoontorn@nvidia.com>
+---
+ dts/riscv/aspeed/ast27xx.dtsi | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/dts/riscv/aspeed/ast27xx.dtsi b/dts/riscv/aspeed/ast27xx.dtsi
+index abcdef0..1234567 100644
+--- a/dts/riscv/aspeed/ast27xx.dtsi
++++ b/dts/riscv/aspeed/ast27xx.dtsi
+@@ -126,6 +126,15 @@
+ 				jedec-id = [];
+ 				write-block-size = <4096>;
+ 			};
++
++			fmc_cs1: fmc@1 {
++				compatible = "jedec,spi-nor";
++				reg = <1>;
++				spi-max-buswidth = <1>;
++				spi-max-frequency = <25000000>;
++				jedec-id = [];
++				write-block-size = <4096>;
++			};
+ 		};
+ 
+ 		spi0: spi@14010000 {
+-- 
+2.25.1

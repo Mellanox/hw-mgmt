@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Dmitrijs Novikovs <dnovikovs@nvidia.com>
+Date: Thu, 12 Feb 2026 10:00:00 +0000
+Subject: [PATCH] ast2700: configure UART via i2c before boot
+
+Configure UART baud rate via I2C before SPI boot on AST2700.
+
+Upstream-Status: Pending
+
+---
+ include/configs/evb_ast2700.h | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/evb_ast2700.h b/include/configs/evb_ast2700.h
+index 202ff58cf7..a65681f941 100644
+--- a/include/configs/evb_ast2700.h
++++ b/include/configs/evb_ast2700.h
+@@ -15,7 +15,11 @@
+ #define CFG_SYS_UBOOT_BASE		CONFIG_TEXT_BASE
+ 
+ #define CFG_EXTRA_ENV_SETTINGS \
+-	"bootspi=fdt addr ${fdtspiaddr} && fdt header get fitsize totalsize && " \
++	"spc6_preboot_i2c=" \
++	"if i2c dev 14 && i2c mw 0x31 0x2531.2 0x01; then echo CPLD UART baud rate set to 9600; " \
++	"else echo Warning: CPLD UART baud rate configuration failed on bus 14; fi\0" \
++	"bootspi=run spc6_preboot_i2c; " \
++	"fdt addr ${fdtspiaddr} && fdt header get fitsize totalsize && " \
+ 	"cp.b ${fdtspiaddr} ${loadaddr} ${fitsize} && bootm ${loadaddr}; " \
+ 	"echo Error loading kernel FIT image\0" \
+ 	"loadaddr=" STR(CONFIG_SYS_LOAD_ADDR) "\0"	\
+-- 
+2.34.1
+

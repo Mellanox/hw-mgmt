@@ -1,0 +1,82 @@
+###########################################################################
+# Copyright (c) 2020, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+# These rules catch attributes related to the line card components: ASIC
+# and port thermal zone mode, cooling device current state, statues of
+# hot-pluggable devices, FAN faults, port temperature fault, system ambient
+# temperatures. When trigger is matched, rule related data is to be passed to
+# the event handler.
+
+# I2C infrastructure.
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-34/34-0032/i2c-mux-mlxcpld.34", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 1 34 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-34/34-0032/i2c-mux-mlxcpld.34", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 1 34 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-35/35-0032/i2c-mux-mlxcpld.35", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 2 35 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-35/35-0032/i2c-mux-mlxcpld.35", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 2 35 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-36/36-0032/i2c-mux-mlxcpld.36", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 3 36 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-36/36-0032/i2c-mux-mlxcpld.36", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 3 36 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-37/37-0032/i2c-mux-mlxcpld.37", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 4 37 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-37/37-0032/i2c-mux-mlxcpld.37", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 4 37 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-38/38-0032/i2c-mux-mlxcpld.38", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 5 38 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-38/38-0032/i2c-mux-mlxcpld.38", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 5 38 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-39/39-0032/i2c-mux-mlxcpld.39", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 6 39 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-39/39-0032/i2c-mux-mlxcpld.39", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 6 39 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-40/40-0032/i2c-mux-mlxcpld.40", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 7 40 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-40/40-0032/i2c-mux-mlxcpld.40", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 7 40 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-41/41-0032/i2c-mux-mlxcpld.41", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add lc_topo 8 41 %S %p"
+SUBSYSTEM=="platform", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-41/41-0032/i2c-mux-mlxcpld.41", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh remove lc_topo 8 41 %S %p"
+
+# Line card events.
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add linecard %S %p"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm linecard %S %p"
+
+# Register space IO access attributes
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032/mlxreg-io.*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0032/mlxreg-io.*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
+
+# Voltage controllers mp2975
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm voltmon2 %S %p"
+
+# Hot swap lm25066
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add hotswap %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld*/i2c-*/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm hotswap %S %p"
+
+# LED
+SUBSYSTEM=="leds", KERNEL=="pcicard*:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="pcicard*:*:green", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="pcicard*:*:orange", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="pcicard*:*:orange", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm led %S %p %k"
+

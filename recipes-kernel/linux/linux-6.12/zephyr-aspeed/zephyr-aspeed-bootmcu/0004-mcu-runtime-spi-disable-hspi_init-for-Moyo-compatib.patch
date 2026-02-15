@@ -1,0 +1,20 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Tue, 03 Feb 2026 13:23:29 
+Subject: [PATCH] mcu-runtime: spi: disable hspi_init for Moyo compatibility
+Upstream-Status: Pending
+Signed-off-by: Alex Fickle <afickle@nvidia.com>
+diff --git a/apps/mcu-runtime/src/spi.c b/apps/mcu-runtime/src/spi.c
+index 8713649b8b2a0dc7145da252fe27038abb4cda1d..1f4f8acb9672569846ac287b31cef561460d2b0d 100644
+--- a/apps/mcu-runtime/src/spi.c
++++ b/apps/mcu-runtime/src/spi.c
+@@ -141,7 +141,9 @@ static void hspi_init(void)
+ 
+ static int spi_init(struct device *dev)
+ {
+-	hspi_init();
++	// hspi_init() changes the SPI configuration from user FIFO mode to normal mode
++	// which prevents Moyo's SPI from working correctly.
++	// hspi_init();
+ 
+         return 0;
+ }

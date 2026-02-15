@@ -1,1 +1,0 @@
-https://git.kernel.org/pub/scm/linux/kernel/git/pdx86/platform-drivers-x86.git/commit/?h=fixes&id=8e3938cff0191c810b2abd827313c090fe09d166

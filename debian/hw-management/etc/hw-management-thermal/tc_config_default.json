@@ -1,0 +1,55 @@
+ {
+	"name": "default",
+	"dmin" : {
+		"C2P": {
+			"untrusted": {"-127:120": 100},
+			"fan_err": {
+				"tacho": {"-127:120": 100},
+				"present": {"-127:120": 100},
+				"direction": {"-127:120": 100}
+			},
+			"psu_err":  {
+				"present": {"-127:120": 100},
+				"direction": {"-127:120": 100}
+			},
+			"sensor_read_error" :  {"-127:120": 100}
+		},
+		"P2C": {
+			"untrusted": {"-127:120": 100},
+			"fan_err": {
+				"tacho": {"-127:120": 100},
+				"direction": {"-127:120": 100},
+				"present": {"-127:120": 100}
+			},
+			"psu_err":  {
+				"present": {"-127:120": 100},
+				"direction": {"-127:120": 100}
+			},
+			"sensor_read_error" :  {"-127:120": 100}
+		}
+	},
+	"psu_fan_pwm_decode" : {"0:10": 10, "11:20": 20, "21:30": 30, "31:40": 40, "41:50": 50, "51:60": 60,  "61:70": 70, "71:80": 80, "81:90": 90, "91:100": 100},
+	"fan_trend" : {
+        "C2P": {
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10}},
+		"P2C": {
+			"0" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10},
+			"1" : {"rpm_min":0, "rpm_max":0, "slope": 150, "pwm_min" : 101, "pwm_max_reduction" : 10}
+		}
+	},
+	"dev_parameters" : {
+		"asic\\d*":           {"pwm_min": 20, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 3, "sensor_read_error":80}, 
+		"(cpu_pack|cpu_core\\d+)": {"pwm_min": 20, "pwm_max" : 100,  "val_min": "!70000", "val_max": "!100000", "poll_time": 3, "sensor_read_error":80},
+		"module\\d+":     {"pwm_min": 20, "pwm_max" : 100, "val_min":60000, "val_max":80000, "poll_time": 20},
+		"sensor_amb":     {"pwm_min": 20, "pwm_max" : 50, "val_min": 30000, "val_max": 50000, "poll_time": 30},
+		"voltmon\\d+_temp": {"pwm_min": 20, "pwm_max": 100, "val_min": "!70000", "val_max": "!125000",  "poll_time": 60},
+		"sodimm\\d_temp" :{"pwm_min": 20, "pwm_max" : 70, "val_min": "!70000", "val_max": 95000, "poll_time": 60},	 
+		"gearbox\\d+":    {"pwm_min": 20, "pwm_max" : 100, "val_min":"!70000", "val_max":"!105000", "poll_time": 6},
+		"pch":            {"pwm_min": 20, "pwm_max" : 100, "val_min": 50000, "val_max": 85000, "poll_time": 10, "enable" : 0},
+		"comex_amb":      {"pwm_min": 20, "pwm_max" : 100, "val_min": 45000, "val_max": 85000, "poll_time": 10, "enable" : 0}
+	},
+	"sensor_list" : ["asic1", "cpu", "sensor_amb"]
+}
+
+ 

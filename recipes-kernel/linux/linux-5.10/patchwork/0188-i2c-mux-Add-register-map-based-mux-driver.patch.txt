@@ -1,1 +1,0 @@
-patchwork_link: https://patchwork.ozlabs.org/project/linux-i2c/patch/20230215195322.21955-1-vadimp@nvidia.com/

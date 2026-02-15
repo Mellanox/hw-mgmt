@@ -1,0 +1,126 @@
+// SPDX-License-Identifier: GPL-2.0+
+/dts-v1/;
+
+#include "ast2700-evb.dts"
+
+/ {
+	model = "AST2700-A1 Switch BMC";
+
+	aliases {
+		ethernet0 = &mac2;  /* Main port with PHY */
+	};
+
+	/* take effect only when CONFIG_ENV_IS_IN_MMC is enabled */
+	config {
+		u-boot,mmc-env-offset = <0x0>;
+	};
+};
+
+&mdio0 {
+	status = "disabled";
+};
+
+&mdio1 {
+	status = "disabled";
+};
+
+&pcie2 {
+	status = "disabled";
+};
+
+&mac0 {
+	status = "disabled";
+};
+
+&mac1 {
+	status = "disabled";
+};
+
+&mdio2 {
+	status = "okay";
+	reset-gpios = <&exp0 10 GPIO_ACTIVE_LOW>;
+	reset-delay-us = <30000>;
+	reset-post-delay-us = <30000>;
+
+	ethphy2: ethernet-phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0>;
+	};
+};
+
+&sgmii {
+	status = "okay";
+};
+
+&mac2 {
+	status = "okay";
+	phy-mode = "sgmii";
+	phy-handle = <&ethphy2>;
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
+};
+
+&i2c5 {
+	status = "okay";
+	exp0: pcal6524@20 {
+		status = "okay";
+		compatible = "nxp,pcal6524";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gpio-line-names =
+			"RSRVD_0", "GP_EROT_RST_IN_L",
+			"GP_3V3_BMC_PHY_PG", "GP_BMC_PWR_CYCLE_3V3_MASK_L",
+			"GP_BMC_SPI_BUF_OE_L", "GP_BMC_SPI_TPM_BUF_OE_L",
+			"SE_CPLD_EROT_BOOT_COMPLETE", "GP_BMC_WP_CTRL_L",
+			"GP_BMC_REC_SPI_MUX1_SEL", "RSRVD_1",
+			"S_BMC_GPIO_PHY_RST_L", "GP_JTAG_BMC_CPLD_BURN_EN_L",
+			"GP_PWR_BANK_PRESENT_L", "RSRVD_2",
+			"RSRVD_3", "RSRVD_4",
+			"RSRVD_5", "RSRVD_6",
+			"RSRVD_7", "GP_PROD_CS_FLASH0_EN",
+			"RSRVD_8", "GP_PROD_CS_FLASH1_EN",
+			"RSRVD_9", "RSRVD_10";
+	};
+};
+
+&fmc {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fwspi_quad_default>;
+
+	flash@0 {
+		status = "okay";
+		spi-max-frequency = <50000000>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
+	};
+
+	flash@1 {
+		status = "okay";
+		spi-max-frequency = <50000000>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
+	};
+};
+
+&spi0 {
+	status = "disabled";
+};
+
+&spi1 {
+	status = "disabled";
+};
+
+&spi2 {
+	status = "disabled";
+};
+
+&i2c14 {
+	status = "okay";
+};

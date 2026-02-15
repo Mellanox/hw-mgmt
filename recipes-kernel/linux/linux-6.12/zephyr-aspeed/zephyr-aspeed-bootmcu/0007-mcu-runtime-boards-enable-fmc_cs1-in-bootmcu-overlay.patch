@@ -1,0 +1,33 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Mon, 20 Jan 2026 00:00:00 +0000
+Subject: [PATCH] mcu-runtime: boards: enable fmc_cs1 in bootmcu overlay
+
+Enable the second SPI NOR flash chip (fmc_cs1) in the AST2700 bootmcu
+board overlay configuration.
+
+Upstream-Status: Pending
+
+Signed-off-by: Paul Srisoontorn <psrisoontorn@nvidia.com>
+---
+ apps/mcu-runtime/boards/ast2700_evb_ast2700_bootmcu.overlay | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/apps/mcu-runtime/boards/ast2700_evb_ast2700_bootmcu.overlay b/apps/mcu-runtime/boards/ast2700_evb_ast2700_bootmcu.overlay
+index abcdef0..1234567 100644
+--- a/apps/mcu-runtime/boards/ast2700_evb_ast2700_bootmcu.overlay
++++ b/apps/mcu-runtime/boards/ast2700_evb_ast2700_bootmcu.overlay
+@@ -92,6 +92,12 @@
+ 	spi-max-frequency = <25000000>;
+ };
+ 
++&fmc_cs1 {
++	status = "okay";
++	spi-max-buswidth = <1>;
++	spi-max-frequency = <25000000>;
++};
++
+ &spi0 {
+ 	status = "okay";
+ 	timing-calibration-disabled;
+-- 
+2.25.1

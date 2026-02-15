@@ -1,1 +1,0 @@
-https://patchwork.kernel.org/project/linux-hwmon/patch/20230824164006.26868-1-vadimp@nvidia.com/

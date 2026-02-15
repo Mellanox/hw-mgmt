@@ -1,0 +1,47 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Wed, 19 Nov 2025 00:00:00 +0000
+Subject: [PATCH] env: force bootcmd and bootargs to use default values
+
+Force bootcmd and bootargs to always use their compiled-in default
+values, ignoring any values stored in the environment. This ensures
+the boot configuration cannot be tampered with while allowing other
+environment variables to function normally.
+
+Users can still use 'setenv' or 'fw_setenv' to modify these
+variables, but the modifications will have no effect - the boot process
+will ALWAYS use the default values compiled into U-Boot (CONFIG_BOOTCOMMAND
+and CONFIG_BOOTARGS from bootcmd.cfg).
+
+Upstream-Status: Pending
+
+Signed-off-by: Paul Srisoontorn <psrisoontorn@nvidia.com>
+---
+ env/common.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/env/common.c b/env/common.c
+index 1234567890..abcdefabcd 100644
+--- a/env/common.c
++++ b/env/common.c
+@@ -112,6 +112,19 @@
+  */
+ char *env_get(const char *name)
+ {
++	/*
++	 * Force bootcmd and bootargs to always return their default values
++	 * This prevents environment tampering while allowing other variables
++	 * to work normally
++	 */
++#if defined(CONFIG_BOOTCOMMAND)
++	if (name && strcmp(name, "bootcmd") == 0)
++		return CONFIG_BOOTCOMMAND;
++#endif
++#if defined(CONFIG_BOOTARGS)
++	if (name && strcmp(name, "bootargs") == 0)
++		return CONFIG_BOOTARGS;
++#endif
+	if (gd->flags & GD_FLG_ENV_READY) { /* after import into hashtable */
+		struct env_entry e, *ep;
+
+--
+2.17.1

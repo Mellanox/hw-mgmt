@@ -1,0 +1,34 @@
+{
+    "devices": [
+        {
+            "bus": 15,
+            "address": "0x4c",
+            "driver": "sbtsi",
+            "description": "CPU temperature sensor interface"
+        },
+        {
+            "bus": 0,
+            "address": "0x50",
+            "driver": "24c512",
+            "description": "System VPD EEPROM"
+        },
+        {
+            "bus": 5,
+            "address": "0x51",
+            "driver": "24c512",
+            "description": "System VPD EEPROM (HID/BOM data)"
+        },
+        {
+            "bus": 4,
+            "address": "0x48",
+            "driver": "lm75",
+            "description": "Temperature sensor"
+        },
+        {
+            "bus": 4,
+            "address": "0x50",
+            "driver": "24c02",
+            "description": "BMC FRU EEPROM containing MAC address"
+        }
+    ]
+}

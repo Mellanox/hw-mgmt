@@ -1,0 +1,94 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Mon, 12 Jan 2026 00:00:00 +0000
+Subject: [PATCH] dts: ast2700: ssp: use DRAM for IPC memory regions
+
+Relocate IPC memory regions from SRAM to DRAM with larger 1MB buffers
+to match the IPC channel definitions in ipm.h.
+
+Memory region relocations:
+  - ipc_bootmcu_data:        0x70004000 (4K) -> 0x1000000 (1M)
+  - ipc_bootmcu_ro_data:     0x70002000 (4K) -> 0x1100000 (1M)
+  - ipc_bootmcu_caliptra:    0x70005000 (4K) -> 0x1200000 (1M)
+  - ipc_bootmcu_ro_caliptra: 0x70003000 (4K) -> 0x1300000 (1M)
+  - dram_nc_region:          0x1000000 (16M) -> 0x1400000 (12M)
+
+Upstream-Status: Pending
+
+Signed-off-by: Paul Srisoontorn <psrisoontorn@nvidia.com>
+---
+ boards/aspeed/ast2700_evb/ast2700_evb_ast2700_ssp.dts | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_ssp.dts b/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_ssp.dts
+index abcdef0..1234567 100644
+--- a/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_ssp.dts
++++ b/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_ssp.dts
+@@ -26,11 +26,11 @@
+ 		reg = <0x20000 DT_SIZE_K(16384 - 128)>;
+ 	};
+ 
+-	/* non-cached DMA memory */
+-	dram_nc_region: memory@1000000 {
++	/* non-cached DMA memory - starts after IPC regions (0x1400000) */
++	dram_nc_region: memory@1400000 {
+ 		compatible = "zephyr,memory-region";
+ 		device_type = "memory";
+-		reg = <0x1000000 DT_SIZE_K(16384)>;
++		reg = <0x1400000 DT_SIZE_K(12288)>;
+ 		zephyr,memory-region = "RAM_NC";
+ 	};
+ 
+@@ -53,31 +53,32 @@
+ 		zephyr,memory-region = "IPC_SHARE_MEM_LOCAL_NS_CA35_DATA";
+ 	};
+ 
+-	ipc_bootmcu_ro_data: memory@70002000 {
++	/* DRAM IPC shared memory regions */
++	ipc_bootmcu_ro_data: memory@1100000 {
+ 		compatible = "zephyr,memory-region";
+ 		device_type = "memory";
+-		reg = <0x70002000 DT_SIZE_K(4)>;
++		reg = <0x1100000 DT_SIZE_M(1)>;
+ 		zephyr,memory-region = "IPC_SHARE_MEM_REMOTE_BOOTMCU_DATA";
+ 	};
+ 
+-	ipc_bootmcu_ro_caliptra: memory@70003000 {
++	ipc_bootmcu_ro_caliptra: memory@1300000 {
+ 		compatible = "zephyr,memory-region";
+ 		device_type = "memory";
+-		reg = <0x70003000 DT_SIZE_K(4)>;
++		reg = <0x1300000 DT_SIZE_M(1)>;
+ 		zephyr,memory-region = "IPC_SHARE_MEM_REMOTE_BOOTMCU_CALIPTRA";
+ 	};
+ 
+-	ipc_bootmcu_data: memory@70004000 {
++	ipc_bootmcu_data: memory@1000000 {
+ 		compatible = "zephyr,memory-region";
+ 		device_type = "memory";
+-		reg = <0x70004000 DT_SIZE_K(4)>;
++		reg = <0x1000000 DT_SIZE_M(1)>;
+ 		zephyr,memory-region = "IPC_SHARE_MEM_LOCAL_BOOTMCU_DATA";
+ 	};
+ 
+-	ipc_bootmcu_caliptra: memory@70005000 {
++	ipc_bootmcu_caliptra: memory@1200000 {
+ 		compatible = "zephyr,memory-region";
+ 		device_type = "memory";
+-		reg = <0x70005000 DT_SIZE_K(4)>;
++		reg = <0x1200000 DT_SIZE_M(1)>;
+ 		zephyr,memory-region = "IPC_SHARE_MEM_LOCAL_BOOTMCU_CALIPTRA";
+ 	};
+ 
+@@ -120,8 +121,8 @@
+ 
+ &ipc1_bootmcu {
+ 	status = "okay";
+-	shmem_ch0 = <0x70002000 0x70003000 0x1000 0x1000>;
+-	shmem_ch1 = <0x70004000 0x70005000 0x1000 0x1000>;
++	shmem_ch0 = <0x1000000 0x1100000 0x100000 0x100000>;
++	shmem_ch1 = <0x1200000 0x1300000 0x100000 0x100000>;
+ };
+ 
+ &intc_global {
+-- 
+2.25.1

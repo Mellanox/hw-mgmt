@@ -1,0 +1,19 @@
+[Unit]
+Description=HW management Lables Monitor
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+
+StartLimitIntervalSec=1200
+StartLimitBurst=10
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "/usr/bin/hw-management-sysfs-monitor.sh start"
+ExecStop=/bin/sh -c "/usr/bin/hw-management-sysfs-monitor.sh stop"
+
+Restart=on-failure
+RestartSec=60s
+
+[Install]
+WantedBy=multi-user.target

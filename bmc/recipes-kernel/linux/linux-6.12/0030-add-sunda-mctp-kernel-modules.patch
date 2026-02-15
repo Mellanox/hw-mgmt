@@ -1,0 +1,2611 @@
+From 6fab308c271ba6fffefc0d9c6b4ba23821080285 Mon Sep 17 00:00:00 2001
+From: Alex Fickle <afickle@nvidia.com>
+Date: Wed, 10 Dec 2025 17:06:54 -0600
+Subject: [PATCH] add sunda mctp kernel modules
+
+Upstream-Status: Pending
+Signed-off-by: Dmitrijs Novikovs <dnovikovs@nvidia.com>
+---
+ drivers/net/mctp/Kconfig                      |   14 +
+ drivers/net/mctp/Makefile                     |    2 +
+ drivers/net/mctp/nvidia-ast27xx-irot.c        | 1122 +++++++++++++++
+ drivers/net/mctp/nvidia-optee-vrot.c          | 1264 +++++++++++++++++
+ drivers/net/mctp/nvidia_irot_ast27xx_msg_ns.h |  151 ++
+ 5 files changed, 2553 insertions(+)
+ create mode 100644 drivers/net/mctp/nvidia-ast27xx-irot.c
+ create mode 100644 drivers/net/mctp/nvidia-optee-vrot.c
+ create mode 100644 drivers/net/mctp/nvidia_irot_ast27xx_msg_ns.h
+
+diff --git a/drivers/net/mctp/Kconfig b/drivers/net/mctp/Kconfig
+index 7b3c16a49435..d172dda28e30 100644
+--- a/drivers/net/mctp/Kconfig
++++ b/drivers/net/mctp/Kconfig
+@@ -75,6 +75,20 @@ config MCTP_TRANSPORT_PCIE_VDM
+ 	  Provides a driver to access MCTP devices over PCIe VDM transport,
+ 	  from DMTF specification DSP0238.
+ 
++config NVIDIA_AST27XX_IROT
++	tristate "NVIDIA AST27XX IROT support"
++	depends on ARCH_ASPEED
++	help
++	  Enable support for NVIDIA AST27XX IRoT. Select this option if you want
++	  to use the NVIDIA IRoT functionality on systems based on the ASPEED architecture.
++
++config NVIDIA_OPTEE_VROT
++	tristate "NVIDIA OPTEE VROT support"
++	depends on OPTEE
++	help
++	  Enable support for NVIDIA OPTEE VRoT. Select this option if you want
++	  to use the NVIDIA VRoT functionality running on OPTEE.
++
+ endmenu
+ 
+ endif
+diff --git a/drivers/net/mctp/Makefile b/drivers/net/mctp/Makefile
+index d4e86727d749..d30efad0e441 100644
+--- a/drivers/net/mctp/Makefile
++++ b/drivers/net/mctp/Makefile
+@@ -6,3 +6,5 @@ obj-$(CONFIG_MCTP_TRANSPORT_SPI) += mctp-spi.o
+ obj-$(CONFIG_MCTP_TRANSPORT_USB) += mctp-usb.o
+ obj-$(CONFIG_MCTP_TRANSPORT_USB) += mctp-usb-error-inject.o
+ obj-$(CONFIG_MCTP_TRANSPORT_PCIE_VDM) += mctp-pcie-vdm.o
++obj-$(CONFIG_NVIDIA_AST27XX_IROT) += nvidia-ast27xx-irot.o
++obj-$(CONFIG_NVIDIA_OPTEE_VROT) += nvidia-optee-vrot.o
+diff --git a/drivers/net/mctp/nvidia-ast27xx-irot.c b/drivers/net/mctp/nvidia-ast27xx-irot.c
+new file mode 100644
+index 000000000000..9b7d325cdcfa
+--- /dev/null
++++ b/drivers/net/mctp/nvidia-ast27xx-irot.c
+@@ -0,0 +1,1122 @@
++/// @file
++/// @brief Kernel module for MCTP communication with NVIDIA's IRoT for ASPEED's ast27xx series of BMC.
++/// @details
++/// Enable with the following device tree to create a mctp device called mctpirot0.
++/// @code{.dts}
++/// / {
++///   mctpirot0 {
++///     compatible = "nvidia,ast27xx,irot";
++///     mboxes = <&mbox0 0>;
++///     mbox-names = "irot";
++///     status = "okay";
++///   };
++/// };
++///
++/// &mbox0 {
++///   status = "okay";
++/// };
++/// @endcode
++
++#include <linux/io.h>
++#include <linux/jiffies.h>
++#include <linux/kthread.h>
++#include <linux/mailbox_client.h>
++#include <linux/module.h>
++#include <linux/mutex.h>
++#include <linux/netdevice.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/rtnetlink.h>
++#include <linux/semaphore.h>
++#include <linux/wait.h>
++#include <net/mctp.h>
++#include <net/mctpdevice.h>
++#include <uapi/linux/if_arp.h>
++
++#include "nvidia_irot_ast27xx_msg_ns.h"
++
++#define NVIDIA_IROT_QUEUE_SIZE 20
++
++#define NVIDIA_IROT_MCTP_LOG_ENABLED 0
++
++#if NVIDIA_IROT_MCTP_LOG_ENABLED
++/// @brief The max number of bytes to log per packet.
++/// @note 10 is a decent value as gets most header and protocol specific status codes.
++#define NVIDIA_IROT_MCTP_LOG_BYTES 10
++#endif
++
++#define LOG_IMPL(lvl, fmt, ...) \
++	printk(lvl "NVIDIA-AST27XX-IROT: " fmt "\n", ##__VA_ARGS__)
++
++/// @brief Helper logging macros.
++/// @details Has the same API as printf() and a newline is automatically appended.
++/// @{
++#define LOG_INF(...) LOG_IMPL(KERN_INFO, __VA_ARGS__)
++#define LOG_WRN(...) LOG_IMPL(KERN_WARNING, __VA_ARGS__)
++#define LOG_ERR(...) LOG_IMPL(KERN_ERR, __VA_ARGS__)
++/// @}
++
++/// @brief State shared between the mailbox callback and worker threads.
++struct nvidia_irot_driver_shared_state {
++	/// @brief Shared memory.
++	/// @details Its sizes will be zero if not initialized.
++	/// @note Is written to only once.
++	struct nvidia_irot_message_data_buffers shmem;
++
++	/// @brief The pending MCTP read, if one exists.
++	/// @details pending_read.header.command will be zero if no read is pending.
++	struct nvidia_irot_message pending_read;
++
++	/// @brief The pending MCTP write, if one exists.
++	/// @details pending_write.header.command will be zero if no write is pending.
++	struct nvidia_irot_message pending_write;
++
++	/// @brief A ping that we've recieved that needs responding to.
++	/// @details rx_ping.command will be zero if no ping needs responding to.
++	struct nvidia_irot_message rx_ping;
++
++	/// @brief If one of our responses gets dropped we may get a duplicate command.
++	/// The mailbox callback deduplicates the command handling but we need to send back a response.
++	/// This variable holds the response.
++	/// @details duplicate_response.command will be zero if no response needs to be sent.
++	struct nvidia_irot_message duplicate_response;
++};
++
++/// @brief State that is private for worker threads.
++struct nvidia_irot_driver_worker_state {
++	/// @brief Uncacheable RAM address from memremap for reading MCTP packets.
++	/// @note Is written to only once.
++	const void *rx_addr;
++
++	/// @brief Uncacheable RAM address from memremap for writing MCTP packets.
++	/// @note Is written to only once.
++	void *tx_addr;
++
++	/// @brief The next counter to use for mailbox command output.
++	u32 next_tx_counter;
++};
++
++/// @brief State that is private to the mailbox callback.
++struct nvidia_irot_driver_mailbox_state {
++	/// @brief The counter of the most recent rx message.
++	u32 prev_rx_counter;
++
++	/// @brief Set to false if there is no prev_rx_counter.
++	bool has_prev_rx_counter;
++};
++
++/// @brief Driver type.
++struct nvidia_irot_driver {
++	/// @brief Spin lock that protects shared_state.
++	/// @warning Must not suspend when holding this lock.
++	struct spinlock shared_spin;
++
++	/// @brief Shared state.
++	/// @details shared_spin must be held when interacting with this state.
++	struct nvidia_irot_driver_shared_state shared_state;
++
++	/// @brief Mutex that protects worker_state.
++	struct mutex worker_mutex;
++
++	/// @brief State used only by worker functions.
++	/// @details worker_mutex must be held when interacting with this state.
++	struct nvidia_irot_driver_worker_state worker_state;
++
++	/// @brief State that is private to the mailbox rx callback.
++	/// @details As it is private requires no locking.
++	struct nvidia_irot_driver_mailbox_state mailbox_state;
++
++	/// @brief Signals to the driver probe function that shared memory is
++	/// ready to be set up.
++	struct semaphore probe_sem;
++
++	/// @brief RX worker wait queue.
++	wait_queue_head_t rx_worker_wq;
++
++	/// @brief Set to 1 if the rx_worker has work to do.
++	atomic_t rx_work_ready;
++
++	/// @brief wait queue that is woken when tx_queue is pushed to.
++	wait_queue_head_t tx_queue_ready_wq;
++
++	/// @brief wait queue that is woken when shared memory becomes available.
++	wait_queue_head_t tx_shmem_ready_wq;
++
++	/// @brief Set to 1 when shared memory becomes ready.
++	atomic_t tx_shmem_ready;
++
++	/// @brief Mailbox objects.
++	/// @{
++	struct mbox_client mbox_client;
++	struct mbox_chan *mbox_chan;
++	/// @}
++
++	/// @brief Worker threads.
++	/// @{
++	struct task_struct *rx_worker;
++	struct task_struct *tx_worker;
++	/// @}
++
++	/// @brief Network device used by the linux kernel for this driver.
++	struct net_device *netdev;
++
++	/// @brief Packet queue from the network device to the tx worker thread.
++	struct sk_buff_head tx_queue;
++};
++
++static int copy_to_shmem(struct nvidia_irot_message_span dst_phy,
++			 void *dst_virt, const struct sk_buff *src)
++{
++	if (src == NULL) {
++		return -EINVAL;
++	}
++	if (dst_phy.size < src->len) {
++		return -EINVAL;
++	}
++	if (dst_virt == NULL) {
++		return -EFAULT;
++	}
++	const int ret = skb_copy_bits(src, 0, dst_virt, src->len);
++	dma_wmb();
++	return ret;
++}
++
++static int copy_from_shmem(struct sk_buff *dst,
++			   struct nvidia_irot_message_span src_phy,
++			   const void *src_virt)
++{
++	if (src_virt == NULL) {
++		return -EFAULT;
++	}
++	dma_rmb();
++	(void)skb_put_data(dst, src_virt, src_phy.size);
++	return 0;
++}
++
++/// @brief Sends a message over mailbox.
++/// @param driver The driver managing the mailbox.
++/// @param msg The message to send.
++/// @retval 0 On success.
++/// @returns -errno on error.
++static int send_message(struct nvidia_irot_driver *driver,
++			const struct nvidia_irot_message *msg)
++{
++	if (driver == NULL || driver->mbox_chan == NULL || msg == NULL) {
++		return -EINVAL;
++	}
++	const int ret = mbox_send_message(driver->mbox_chan, (void *)msg);
++	if (ret < 0) {
++		LOG_ERR("mbox_send_message failed, ret: %d", ret);
++		return ret;
++	}
++	return 0;
++}
++
++/// @brief Extracts a physical address from a nvidia_irot_message_span.
++static resource_size_t addr_from_span(struct nvidia_irot_message_span shmem)
++{
++	return (((resource_size_t)shmem.address.high) << 32U) |
++	       shmem.address.low;
++}
++
++/// @brief Gets a copy of a driver's shared_state and handles all generic data processing.
++/// @pre driver->worker_mutex is held, driver->shared_spin is not held.
++/// @post The lock state is the same as on entry. driver->worker_mutex is never dropped by this function.
++/// @param driver The driver managing the IPC connection.
++/// @param [out] shared_state_copy A copy of the shared state extracted by this function.
++static void worker_locked_handle_shared_state(
++	struct nvidia_irot_driver *driver,
++	struct nvidia_irot_driver_shared_state *shared_state_copy)
++{
++	// copy out shared_state with the lock held
++	spin_lock_irq(&driver->shared_spin);
++	memcpy(shared_state_copy, &driver->shared_state,
++	       sizeof(*shared_state_copy));
++	spin_unlock_irq(&driver->shared_spin);
++
++	// process the shared state
++
++	// init shared memory regions if needed
++	// NOTE: shmem is write once so can use our local copy.
++	// TODO: should we bounds check the addresses we get from IRoT?
++	if (driver->worker_state.rx_addr == NULL &&
++	    shared_state_copy->shmem.a35_read.size != 0) {
++		driver->worker_state.rx_addr = memremap(
++			addr_from_span(shared_state_copy->shmem.a35_read),
++			shared_state_copy->shmem.a35_read.size, MEMREMAP_WC);
++	}
++	if (driver->worker_state.tx_addr == NULL &&
++	    shared_state_copy->shmem.a35_write.size != 0) {
++		driver->worker_state.tx_addr = memremap(
++			addr_from_span(shared_state_copy->shmem.a35_write),
++			shared_state_copy->shmem.a35_write.size, MEMREMAP_WC);
++	}
++
++	// handle pings if needed
++	if (shared_state_copy->rx_ping.command == nvidia_irot_cc_ping) {
++		struct nvidia_irot_message response = NVIDIA_IROT_MESSAGE_INIT;
++		response.command = nvidia_irot_cc_ping_rsp;
++		response.data.value = shared_state_copy->rx_ping.data.value;
++		if (0 == send_message(driver, &response)) {
++			// Sending the ping response succeeded.
++			// Clear the in flight ping only if the counter still matches.
++			// If the counters do not match a new ping request came in
++			// which can be handled by a future caller of this function.
++			shared_state_copy->rx_ping.command = 0;
++			spin_lock_irq(&driver->shared_spin);
++			if (driver->shared_state.rx_ping.data.value ==
++			    shared_state_copy->rx_ping.data.value) {
++				driver->shared_state.rx_ping.command = 0;
++			}
++			spin_unlock_irq(&driver->shared_spin);
++		}
++	}
++
++	// handle duplicate command responses if needed
++	// NOTE: duplicate_response is only written to by the mailbox callback
++	//       if it is cleared and is only cleared by worker_mutex owner.
++	//       So we have exclusive write access so can use our local copy.
++	if (shared_state_copy->duplicate_response.command != 0) {
++		if (0 == send_message(driver,
++				      &shared_state_copy->duplicate_response)) {
++			// success, clear the scheduled response.
++			shared_state_copy->duplicate_response.command = 0;
++			spin_lock_irq(&driver->shared_spin);
++			driver->shared_state.duplicate_response.command = 0;
++			spin_unlock_irq(&driver->shared_spin);
++		}
++	}
++}
++
++/// @brief Gets the start offset of a allocation from within a region.
++/// @param region The region containing the allocation.
++/// @param allocation The allocation that must be fully contained within the region.
++/// @returns The offset on success.
++/// @returns -errno value on failure.
++static ssize_t get_start_offset(struct nvidia_irot_message_span region,
++				struct nvidia_irot_message_span allocation)
++{
++	const resource_size_t region_start = addr_from_span(region);
++	const resource_size_t region_end = region_start + region.size;
++	if (region_end < region_start) {
++		// region wrap around
++		return -EFAULT;
++	}
++	const resource_size_t allocation_start = addr_from_span(allocation);
++	const resource_size_t allocation_end =
++		allocation_start + allocation.size;
++	if (allocation_end < allocation_start) {
++		// allocation wrap around
++		return -EFAULT;
++	}
++	if (allocation_start < region_start) {
++		// allocation starts too soon
++		return -EFAULT;
++	}
++	if (allocation_end > region_end) {
++		// allocation goes for too long
++		return -EFAULT;
++	}
++	return allocation_start - region_start;
++}
++
++/// @brief Call at the end of device_read() to finialize global state and buffer management.
++/// @details If the read succeeded the pending read the IRoT is informed and the pending read is cleared.
++///          If the read failed another reader will be awoken.
++/// @pre driver->worker_mutex is held.
++/// @post No locks are held.
++/// @param driver The driver managing the read.
++/// @param result The result of the read.
++/// @param message The message that was read.
++/// @returns result unless an error was detected.
++static ssize_t finish_read_and_unlock(struct nvidia_irot_driver *driver,
++				      ssize_t result,
++				      const struct nvidia_irot_message *message)
++{
++	if (result >= 0 && result != message->data.mctp.packet.size) {
++		// success return code that does not match message size, convert to fault.
++		result = -EFAULT;
++	}
++
++	if (result >= 0) {
++		// success
++
++		// clear the pending read
++		spin_lock_irq(&driver->shared_spin);
++		driver->shared_state.pending_read.command = 0;
++		spin_unlock_irq(&driver->shared_spin);
++
++		// free the shared memory via mailbox command
++		struct nvidia_irot_message response = NVIDIA_IROT_MESSAGE_INIT;
++		response.command = nvidia_irot_cc_mctp_done;
++		response.data.value = message->data.mctp.counter;
++		// dropped ACKs are handled by IRoT retransmission and command deduplication
++		(void)send_message(driver, &response);
++
++		mutex_unlock(&driver->worker_mutex);
++		return result;
++	}
++
++	// failure, a future reader will handle this
++	mutex_unlock(&driver->worker_mutex);
++	return result;
++}
++
++struct nvidia_irot_netdev_priv {
++	struct nvidia_irot_driver *driver;
++};
++
++netdev_tx_t nvidia_irot_start_xmit(struct sk_buff *skb, struct net_device *dev)
++{
++	netdev_tx_t status = NETDEV_TX_BUSY;
++
++	struct nvidia_irot_netdev_priv *const private = netdev_priv(dev);
++	struct nvidia_irot_driver *const driver = private->driver;
++
++	unsigned long flags;
++
++#if NVIDIA_IROT_MCTP_LOG_ENABLED
++	// Log the first up to NVIDIA_IROT_MCTP_LOG_BYTES bytes of skb as hex bytes separated by spaces
++	{
++		int n = skb->len < NVIDIA_IROT_MCTP_LOG_BYTES ?
++				skb->len :
++				NVIDIA_IROT_MCTP_LOG_BYTES;
++		u8 data[NVIDIA_IROT_MCTP_LOG_BYTES] = { 0 };
++		skb_copy_bits(skb, 0, data, n);
++		char hexbuf[3 * NVIDIA_IROT_MCTP_LOG_BYTES + 1] = { 0 };
++		int i;
++		for (i = 0; i < n; ++i) {
++			snprintf(hexbuf + i * 3, 4, "%02x ", data[i]);
++		}
++		if (n > 0)
++			hexbuf[3 * n - 1] = '\0'; // Remove trailing space
++		LOG_INF("L->I: %s", hexbuf);
++	}
++#endif
++
++	// locking the queue for the entire push so we can atomically inspect
++	// the length to manage the network interface queue enable state.
++	spin_lock_irqsave(&driver->tx_queue.lock, flags);
++	if (skb_queue_len(&driver->tx_queue) >= NVIDIA_IROT_QUEUE_SIZE) {
++		// error: queue already full
++		status = NETDEV_TX_BUSY;
++		LOG_WRN("mctp tx queue overflow");
++		netif_stop_queue(dev);
++	} else {
++		// push the packet
++		status = NETDEV_TX_OK;
++		__skb_queue_tail(&driver->tx_queue, skb);
++		if (skb_queue_len(&driver->tx_queue) ==
++		    NVIDIA_IROT_QUEUE_SIZE) {
++			// stop the queue to prevent excessive RAM usage
++			netif_stop_queue(dev);
++		}
++	}
++	spin_unlock_irqrestore(&driver->tx_queue.lock, flags);
++
++	if (status == NETDEV_TX_OK) {
++		wake_up(&driver->tx_queue_ready_wq);
++	}
++	return status;
++}
++
++int nvidia_irot_open(struct net_device *dev)
++{
++	netif_start_queue(dev);
++	return 0;
++}
++
++int nvidia_irot_stop(struct net_device *dev)
++{
++	netif_stop_queue(dev);
++	return 0;
++}
++
++static struct net_device_ops nvidia_irot_nops = {
++	.ndo_start_xmit = nvidia_irot_start_xmit,
++	.ndo_open = nvidia_irot_open,
++	.ndo_stop = nvidia_irot_stop,
++};
++
++void nvidia_irot_netdev_setup(struct net_device *dev)
++{
++	dev->type = ARPHRD_MCTP;
++
++	// NOTE: will be replaced outside of setup
++	dev->min_mtu = 68;
++	dev->max_mtu = 68;
++	dev->mtu = 68;
++
++	dev->hard_header_len = 0;
++	dev->tx_queue_len = NVIDIA_IROT_QUEUE_SIZE;
++	dev->netdev_ops = &nvidia_irot_nops;
++
++	dev->addr_len = 0;
++}
++
++static int nvidia_irot_create_mctp_dev(struct nvidia_irot_driver *driver,
++				       const char *name)
++{
++	driver->netdev = alloc_netdev(sizeof(struct nvidia_irot_netdev_priv),
++				      name, NET_NAME_PREDICTABLE,
++				      nvidia_irot_netdev_setup);
++	if (!driver->netdev) {
++		return -ENOMEM;
++	}
++
++	spin_lock_irq(&driver->shared_spin);
++	const u32 mtu = driver->shared_state.shmem.mtu_limit;
++	spin_unlock_irq(&driver->shared_spin);
++	if (mtu >= 68) {
++		driver->netdev->min_mtu = mtu;
++		driver->netdev->max_mtu = mtu;
++		driver->netdev->mtu = mtu;
++	}
++
++	struct nvidia_irot_netdev_priv *priv = netdev_priv(driver->netdev);
++	priv->driver = driver;
++
++	const int ret = mctp_register_netdev(driver->netdev, NULL,
++					     MCTP_PHYS_BINDING_VENDOR);
++	if (ret) {
++		free_netdev(driver->netdev);
++		driver->netdev = NULL;
++		return ret;
++	}
++	return 0;
++}
++
++/// @brief Gets the driver managing a mailbox client.
++/// @details There are two methods to identify the mailbox client:
++/// container_of, and dev_get_drvdata(client->dev).
++/// This function does both and ensures they match.
++/// @retval NULL On error.
++static struct nvidia_irot_driver *
++nvidia_irot_driver_of_mbox(struct mbox_client *client)
++{
++	if (client == NULL) {
++		LOG_ERR("null client input to %s", __func__);
++		return NULL;
++	}
++
++	void *const driver_from_container_of =
++		container_of(client, struct nvidia_irot_driver, mbox_client);
++
++	if (client->dev == NULL) {
++		LOG_ERR("null client->dev input to %s", __func__);
++		return NULL;
++	}
++	void *const driver_from_devdata = dev_get_drvdata(client->dev);
++
++	if (driver_from_container_of != driver_from_devdata) {
++		LOG_ERR("container_of and dev_get_drvdata(client->dev) disagree in %s",
++			__func__);
++		return NULL;
++	}
++	return (struct nvidia_irot_driver *)driver_from_devdata;
++}
++
++static void wake_rx_worker(struct nvidia_irot_driver *driver)
++{
++	atomic_xchg(&driver->rx_work_ready, 1);
++	wake_up(&driver->rx_worker_wq);
++}
++
++/// @brief Handles a duplicate command by scheduling a response
++/// without scheduling command handling.
++/// @details Performs no IO and does not suspend as is
++/// called from a callback that does not allow this.
++/// @pre driver->shared_spin is locked by the caller.
++/// @param driver The driver handling the mailbox.
++/// @param command The duplicate command.
++static void
++locked_handle_duplicate_rx_command(struct nvidia_irot_driver *driver,
++				   const struct nvidia_irot_message *command)
++{
++	struct nvidia_irot_message *staged_response =
++		&driver->shared_state.duplicate_response;
++
++	if (staged_response->command != 0) {
++		// already have a duplicate response schedule
++		return;
++	}
++	if (command->command != nvidia_irot_cc_mctp) {
++		// currently this is the only command that needs duplication logic.
++		return;
++	}
++
++	// build the response
++	struct nvidia_irot_message response = NVIDIA_IROT_MESSAGE_INIT;
++	response.command = nvidia_irot_cc_mctp_done;
++	response.data.value = command->data.mctp.counter;
++
++	*staged_response = response;
++
++	// wake the worker to handle the response
++	wake_rx_worker(driver);
++}
++
++/// @brief Handles a read message.
++/// @details Performs no IO and does not suspend as is
++/// called from a callback that does not allow this.
++/// @pre driver->shared_spin is locked by the caller.
++/// @details Called from a mailbox callback so must not block.
++/// @param driver The driver managing the mailbox.
++/// @param message The read message.
++static void locked_handle_rx_message(struct nvidia_irot_driver *driver,
++				     const struct nvidia_irot_message *message)
++{
++	switch (message->command) {
++	case nvidia_irot_cc_ping:
++		// ping: stage and wake the worker
++		// NOTE: don't need duplicate command checking as ping command handling does nothing.
++		driver->shared_state.rx_ping = *message;
++		wake_rx_worker(driver);
++		return;
++
++	case nvidia_irot_cc_mctp_buffer:
++		// got buffer addresses, check for duplicate
++		if (driver->shared_state.shmem.a35_read.size != 0) {
++			return;
++		}
++		if (driver->shared_state.shmem.a35_write.size != 0) {
++			return;
++		}
++		// is not a duplicate, inform the startup code
++		driver->shared_state.shmem = message->data.buffers;
++		up(&driver->probe_sem);
++		return;
++
++	case nvidia_irot_cc_mctp:
++		// new mctp packet
++		if (driver->shared_state.pending_read.command != 0) {
++			// read already pending, drop
++			return;
++		}
++		if (driver->mailbox_state.has_prev_rx_counter &&
++		    driver->mailbox_state.prev_rx_counter ==
++			    message->data.mctp.counter) {
++			// duplicate command, send response with no processing
++			locked_handle_duplicate_rx_command(driver, message);
++			return;
++		}
++		// stage the packet and wake a reader
++		driver->shared_state.pending_read = *message;
++		driver->mailbox_state.has_prev_rx_counter = true;
++		driver->mailbox_state.prev_rx_counter =
++			message->data.mctp.counter;
++		wake_rx_worker(driver);
++		return;
++
++	case nvidia_irot_cc_mctp_done:
++		// tx buffer emptied
++		if (driver->shared_state.pending_write.command == 0) {
++			// no write was pending, ignore
++			return;
++		}
++		if (driver->shared_state.pending_write.data.mctp.counter !=
++		    message->data.value) {
++			// message counter missmatch, ignore
++			return;
++		}
++		// unstage the pending write and wake writers
++		driver->shared_state.pending_write.command = 0;
++		atomic_xchg(&driver->tx_shmem_ready, 1);
++		wake_up(&driver->tx_shmem_ready_wq);
++		return;
++
++	default:
++		// unexpected message type, ignore
++		return;
++	}
++}
++
++/// @brief Callback for when we recive a notification from the IRoT that
++/// shared memory has been updated.
++/// @param client The mailbox client handling notification receptions.
++/// @param data The 32-byte message sent over IPC.
++static void nvidia_irot_on_notification(struct mbox_client *client, void *data)
++{
++	struct nvidia_irot_driver *const driver =
++		nvidia_irot_driver_of_mbox(client);
++	if (!driver) {
++		return;
++	}
++	struct nvidia_irot_message message;
++	memcpy(&message, data, sizeof(message));
++	unsigned long flags;
++	spin_lock_irqsave(&driver->shared_spin, flags);
++	locked_handle_rx_message(driver, &message);
++	spin_unlock_irqrestore(&driver->shared_spin, flags);
++}
++
++static int nvidia_irot_load_mailbox(struct device *dev,
++				    struct nvidia_irot_driver *driver)
++{
++	struct mbox_chan *chan = NULL;
++	struct mbox_client *client = &driver->mbox_client;
++
++	// bind mailbox to this device
++	client->dev = dev;
++
++	// bind notification RX callback
++	client->rx_callback = nvidia_irot_on_notification;
++
++	// on tx wait for the IRoT to clear the notification
++	client->tx_done = NULL;
++	client->tx_block = true;
++	client->tx_tout = 250;
++
++	// Request mailbox channel
++	chan = mbox_request_channel_byname(client, "irot");
++	if (IS_ERR(chan)) {
++		dev_err(dev, "Failed to request mailbox channel\n");
++		return PTR_ERR(chan);
++	}
++
++	// Store mailbox info in driver
++	driver->mbox_chan = chan;
++
++	dev_info(dev, "Mailbox channel configured successfully\n");
++
++	return 0;
++}
++
++/// @brief Handles reading a message from shared memory.
++/// @returns The length of the read message on success.
++/// @returns A negative status code on failure.
++static ssize_t worker_locked_handle_read(
++	struct nvidia_irot_driver *driver,
++	struct nvidia_irot_driver_shared_state *shared_state_copy)
++{
++	ssize_t ret = -EINVAL;
++
++	if (shared_state_copy->pending_read.command != nvidia_irot_cc_mctp ||
++	    shared_state_copy->pending_read.data.mctp.packet.size == 0) {
++		return -EINVAL;
++	}
++
++	const size_t length =
++		shared_state_copy->pending_read.data.mctp.packet.size;
++	const ssize_t offset = get_start_offset(
++		shared_state_copy->shmem.a35_read,
++		shared_state_copy->pending_read.data.mctp.packet);
++	if (offset < 0) {
++		// TODO: Should we clear the pending transaction if it is invalid?
++		// This is kind of a fatal error currently.
++		LOG_ERR("bad read from shared memory");
++		return -EINVAL;
++	}
++
++	struct sk_buff *skb;
++	skb = netdev_alloc_skb(driver->netdev, length);
++	if (!skb) {
++		LOG_ERR("failed to allocate skb for read packet");
++		return -ENOMEM;
++	}
++	skb->protocol = htons(ETH_P_MCTP);
++	ret = copy_from_shmem(skb,
++			      shared_state_copy->pending_read.data.mctp.packet,
++			      driver->worker_state.rx_addr + offset);
++	if (ret != 0) {
++		LOG_ERR("failed to copy read packet from shared memory");
++		kfree_skb(skb);
++		return -EINVAL;
++	}
++	skb_reset_mac_header(skb);
++	skb_reset_network_header(skb);
++
++	struct mctp_skb_cb *const cb = __mctp_cb(skb);
++	cb->halen = 0;
++
++#if NVIDIA_IROT_MCTP_LOG_ENABLED
++	{
++		int n = skb->len < NVIDIA_IROT_MCTP_LOG_BYTES ?
++				skb->len :
++				NVIDIA_IROT_MCTP_LOG_BYTES;
++		u8 data[NVIDIA_IROT_MCTP_LOG_BYTES] = { 0 };
++		skb_copy_bits(skb, 0, data, n);
++		char hexbuf[3 * NVIDIA_IROT_MCTP_LOG_BYTES + 1] = { 0 };
++		int i;
++		for (i = 0; i < n; ++i) {
++			snprintf(hexbuf + i * 3, 4, "%02x ", data[i]);
++		}
++		if (n > 0)
++			hexbuf[3 * n - 1] = '\0'; // Remove trailing space
++		LOG_INF("I->L: %s", hexbuf);
++	}
++#endif
++
++	ret = netif_receive_skb(skb);
++	if (ret != NET_RX_SUCCESS) {
++		LOG_ERR("netif_rx failed with %d", (int)ret);
++		// NOTE: skb seems to still be freed by a failed netif_receive_skb.
++		return -EINVAL;
++	}
++	return length;
++}
++
++static int nvidia_irot_rx_worker(void *data)
++{
++	struct nvidia_irot_driver *const driver = data;
++
++	for (;;) {
++		wait_event_interruptible(
++			driver->rx_worker_wq,
++			kthread_should_stop() ||
++				atomic_read(&driver->rx_work_ready));
++		if (kthread_should_stop()) {
++			return 0;
++		}
++		atomic_xchg(&driver->rx_work_ready, 0);
++		struct nvidia_irot_driver_shared_state state;
++		mutex_lock(&driver->worker_mutex);
++		worker_locked_handle_shared_state(driver, &state);
++		const int ret = worker_locked_handle_read(driver, &state);
++		(void)finish_read_and_unlock(driver, ret, &state.pending_read);
++	}
++
++	// unreachable
++	BUG();
++}
++
++static ssize_t worker_locked_handle_write(
++	struct nvidia_irot_driver *driver,
++	const struct nvidia_irot_driver_shared_state *shared_state_copy,
++	struct sk_buff *skb)
++{
++	int ret = -EINVAL;
++	const size_t count = skb->len;
++	if (count == 0) {
++		// empty packets make no sense
++		return -EINVAL;
++	}
++
++	if (count > shared_state_copy->shmem.mtu_limit) {
++		LOG_ERR("attempted to write mctp packet of length %zu to irot with mtu limit of %u",
++			count, shared_state_copy->shmem.mtu_limit);
++		return -EINVAL;
++	}
++
++	// write to shmem
++	ret = copy_to_shmem(shared_state_copy->shmem.a35_write,
++			    driver->worker_state.tx_addr, skb);
++	if (ret < 0) {
++		LOG_ERR("copy_to_shmem failed");
++		return ret;
++	}
++
++	// build the IPC message
++	struct nvidia_irot_message message = NVIDIA_IROT_MESSAGE_INIT;
++	message.command = nvidia_irot_cc_mctp;
++	message.data.mctp.counter = driver->worker_state.next_tx_counter++;
++	message.data.mctp.packet.address =
++		shared_state_copy->shmem.a35_write.address;
++	message.data.mctp.packet.size = count;
++
++	// stage the pending write
++	spin_lock_irq(&driver->shared_spin);
++	driver->shared_state.pending_write = message;
++	spin_unlock_irq(&driver->shared_spin);
++
++	// perform the write
++	ret = send_message(driver, &message);
++	if (ret < 0) {
++		// send failed, clear the pending write
++		spin_lock_irq(&driver->shared_spin);
++		driver->shared_state.pending_write.command = 0;
++		spin_unlock_irq(&driver->shared_spin);
++		return ret;
++	}
++
++	// successfully sent, mailbox callback will clear pending_write
++	return count;
++}
++
++static int nvidia_irot_tx_worker(void *data)
++{
++	struct nvidia_irot_driver *const driver = data;
++	struct sk_buff *skb = NULL;
++
++	for (;;) {
++		// get a packet to send
++		while (!skb) {
++			wait_event_interruptible(
++				driver->tx_queue_ready_wq,
++				!skb_queue_empty(&driver->tx_queue) ||
++					kthread_should_stop());
++			if (kthread_should_stop()) {
++				return 0;
++			}
++
++			skb = skb_dequeue(&driver->tx_queue);
++			netif_start_queue(driver->netdev);
++			if (skb) {
++				break;
++			}
++		}
++		// we now have a packet to write
++
++		// wait for shared memory to be ready for a written packet
++		struct nvidia_irot_driver_shared_state shared_state_copy;
++		for (;;) {
++			wait_event_interruptible(
++				driver->tx_shmem_ready_wq,
++				kthread_should_stop() ||
++					atomic_read(&driver->tx_shmem_ready));
++			if (kthread_should_stop()) {
++				kfree_skb(skb);
++				return 0;
++			}
++			atomic_xchg(&driver->tx_shmem_ready, 0);
++
++			mutex_lock(&driver->worker_mutex);
++			worker_locked_handle_shared_state(driver,
++							  &shared_state_copy);
++			if (driver->worker_state.tx_addr != NULL &&
++			    shared_state_copy.pending_write.command == 0) {
++				// shmem is init and no write is pending, allow the write.
++				// NOTE: pending_write is only cleared by mailbox callback,
++				//       so since we hold worker_mutex and know that pending_write is
++				//       clear we have exclusive write access.
++				break;
++			}
++			mutex_unlock(&driver->worker_mutex);
++
++			// loop to reload and recheck state after notification
++		}
++		// We now hold the worker_mutex and tx buffer ownership.
++
++		// send the packet
++		const ssize_t status = worker_locked_handle_write(
++			driver, &shared_state_copy, skb);
++		mutex_unlock(&driver->worker_mutex);
++		if (status < 0) {
++			// TODO: could attempt to send again, but have never seen this error
++			LOG_ERR("failed to send MCTP packet, status: %d",
++				(int)status);
++		}
++		kfree_skb(skb);
++		skb = NULL;
++	}
++
++	// unreachable
++	BUG();
++}
++
++/// @brief Inits shared memory by requesting the IRoT to send buffer
++/// information and waiting for its response.
++static int nvidia_irot_init_shmem(struct nvidia_irot_driver *driver)
++{
++	// NOTE: worker_mutex does not need to be held by
++	// this function as no workers are started yet.
++
++	struct nvidia_irot_driver_shared_state shared_state_copy;
++	shared_state_copy.shmem.mtu_limit = 0;
++
++	int i;
++	for (i = 0; i < 3; ++i) {
++		// request memory buffers from the IRoT
++		struct nvidia_irot_message message = NVIDIA_IROT_MESSAGE_INIT;
++		message.command = nvidia_irot_cc_get_mctp_buffers;
++		const int ret = send_message(driver, &message);
++		if (ret < 0) {
++			LOG_ERR("failed to send startup IPC message, ret: %d",
++				ret);
++			return ret;
++		}
++
++		// wait for the response
++		const u64 end_jiffies64 = get_jiffies_64() + (5 * HZ);
++		while (time_is_after_jiffies64(end_jiffies64)) {
++			(void)down_timeout(&driver->probe_sem, HZ);
++			worker_locked_handle_shared_state(driver,
++							  &shared_state_copy);
++			if (shared_state_copy.shmem.mtu_limit != 0) {
++				// success, got shared memory info
++				break;
++			}
++		}
++
++		if (shared_state_copy.shmem.mtu_limit == 0) {
++			LOG_WRN("timed out waiting for IRoT buffer information");
++		} else {
++			break;
++		}
++	}
++
++	if (shared_state_copy.shmem.mtu_limit == 0) {
++		LOG_ERR("Timeout waiting for IRoT to provide shared memory buffers");
++		return -ETIMEDOUT;
++	}
++	return 0;
++}
++
++/// @brief Performs cleanup for our custom driver bound to the given platform_device.
++/// @param pdev The device having its driver cleaned up.
++/// @note The driver can be in any stage of initialization including completely unbound.
++static void clean_driver(struct platform_device *pdev)
++{
++	if (pdev == NULL) {
++		return;
++	}
++
++	struct nvidia_irot_driver *const driver =
++		(struct nvidia_irot_driver *)platform_get_drvdata(pdev);
++	if (driver == NULL) {
++		return;
++	}
++
++	// remove worker threads
++	if (driver->rx_worker) {
++		if (0 != kthread_stop(driver->rx_worker)) {
++			LOG_ERR("failed to stop rx worker thread");
++		}
++		driver->rx_worker = NULL;
++	}
++	if (driver->tx_worker) {
++		if (0 != kthread_stop(driver->tx_worker)) {
++			LOG_ERR("failed to stop tx worker thread");
++		}
++		driver->tx_worker = NULL;
++	}
++
++	// remove network device
++	if (driver->netdev) {
++		// Stop the queue to prevent new packets
++		netif_tx_disable(driver->netdev);
++
++		// Purge any remaining packets in the queue
++		skb_queue_purge(&driver->tx_queue);
++
++		// Explicitly bring the device down if it's still running
++		rtnl_lock();
++		if (netif_running(driver->netdev)) {
++			dev_close(driver->netdev);
++		}
++		rtnl_unlock();
++
++		// Unregister the netdev - this should handle final cleanup
++		mctp_unregister_netdev(driver->netdev);
++		free_netdev(driver->netdev);
++		driver->netdev = NULL;
++	}
++
++	// free shared memory
++	// NOTE: workers are stopped so can use worker_state freely
++	if (driver->worker_state.rx_addr) {
++		memunmap((void *)driver->worker_state.rx_addr);
++		driver->worker_state.rx_addr = NULL;
++	}
++	if (driver->worker_state.tx_addr) {
++		memunmap(driver->worker_state.tx_addr);
++		driver->worker_state.tx_addr = NULL;
++	}
++
++	// release mailbox
++	if (driver->mbox_chan) {
++		mbox_free_channel(driver->mbox_chan);
++		driver->mbox_chan = NULL;
++	}
++
++	// the driver is always heap allocated and we have exclusive ownership of it, free it.
++	platform_set_drvdata(pdev, NULL);
++	kfree(driver);
++};
++
++static int nvidia_irot_probe(struct platform_device *pdev)
++{
++	struct device *const dev = &pdev->dev;
++	dev_info(dev, "Probe starting for device: %s\n", dev_name(dev));
++
++	int ret = -EINVAL;
++	struct nvidia_irot_driver *const driver =
++		kzalloc(sizeof(struct nvidia_irot_driver), GFP_KERNEL);
++	if (!driver) {
++		dev_err(dev, "Failed to allocate memory for driver\n");
++		return -ENOMEM;
++	}
++
++	platform_set_drvdata(pdev, driver);
++	spin_lock_init(&driver->shared_spin);
++	mutex_init(&driver->worker_mutex);
++	sema_init(&driver->probe_sem, 0);
++	init_waitqueue_head(&driver->rx_worker_wq);
++	atomic_set(&driver->rx_work_ready, 0);
++	init_waitqueue_head(&driver->tx_queue_ready_wq);
++	init_waitqueue_head(&driver->tx_shmem_ready_wq);
++	skb_queue_head_init(&driver->tx_queue);
++
++	ret = nvidia_irot_load_mailbox(dev, driver);
++	if (ret != 0) {
++		dev_err(dev, "Failed to load mailbox.\n");
++		clean_driver(pdev);
++		return ret;
++	}
++
++	ret = nvidia_irot_init_shmem(driver);
++	if (ret < 0) {
++		dev_err(dev, "failed to establish shared memory, ret: %d\n",
++			ret);
++		clean_driver(pdev);
++		return ret;
++	}
++
++	// Signal that shared memory is ready for TX operations
++	atomic_set(&driver->tx_shmem_ready, 1);
++	wake_up(&driver->tx_shmem_ready_wq);
++
++	ret = nvidia_irot_create_mctp_dev(driver, dev_name(dev));
++	if (ret < 0) {
++		dev_err(dev, "failed to create mctp device, ret: %d\n", ret);
++		clean_driver(pdev);
++		return ret;
++	}
++	driver->rx_worker = kthread_run(nvidia_irot_rx_worker, driver,
++					"%s-rx-worker", dev_name(dev));
++	if (IS_ERR(driver->rx_worker)) {
++		dev_err(dev, "Failed to create rx worker thread.\n");
++		driver->rx_worker = NULL;
++		clean_driver(pdev);
++		return -EINVAL;
++	}
++	driver->tx_worker = kthread_run(nvidia_irot_tx_worker, driver,
++					"%s-tx-worker", dev_name(dev));
++	if (IS_ERR(driver->tx_worker)) {
++		dev_err(dev, "Failed to create tx worker thread.\n");
++		driver->tx_worker = NULL;
++		clean_driver(pdev);
++		return -EINVAL;
++	}
++
++	dev_info(dev, "Probe successful for device: %s\n", dev_name(dev));
++	return 0;
++}
++
++static void nvidia_irot_remove(struct platform_device *pdev)
++{
++	dev_info(&pdev->dev, "Removing device: %s\n", dev_name(&pdev->dev));
++	clean_driver(pdev);
++	dev_info(&pdev->dev, "Device removed: %s\n", dev_name(&pdev->dev));
++}
++
++static const struct of_device_id nvidia_irot_match[] = {
++	{ .compatible = "nvidia,ast27xx,irot" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, nvidia_irot_match);
++
++static struct platform_driver nvidia_irot_driver = {
++    .probe = nvidia_irot_probe,
++    .remove = nvidia_irot_remove,
++    .driver =
++        {
++            .name = "nvidia-ast27xx-irot",
++            .of_match_table = nvidia_irot_match,
++        },
++};
++
++module_platform_driver(nvidia_irot_driver);
++
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("NVIDIA IRoT MCTP Driver for ASPEED AST27xx BMC");
+diff --git a/drivers/net/mctp/nvidia-optee-vrot.c b/drivers/net/mctp/nvidia-optee-vrot.c
+new file mode 100644
+index 000000000000..e0c714024bec
+--- /dev/null
++++ b/drivers/net/mctp/nvidia-optee-vrot.c
+@@ -0,0 +1,1264 @@
++/// @file
++/// @brief Kernel module for MCTP communication with NVIDIA's VRoT.
++/// @details VRoTs are optee Trusted Applications that each manage a single endpoint.
++/// Enable with the following device tree to create a mctp device called mctpvrot0.
++/// @code{.dts}
++/// {
++/// 	mctpvrot0 {
++/// 		compatible = "nvidia,optee,vrot";
++/// 		nvidia,ta-uuid = "14fe76f6-6114-499c-9b81-f90ebde9c50c";
++/// 		nvidia,mctp-uuid = "14fe76f6-6114-499c-9b81-f90ebde9c50c";
++/// 		nvidia,mctp-mtu = <5000>;
++/// 		nvidia,mctp-protocol-versions = <0x1 0xF1F0F000
++/// 		                                 0x5 0x0
++/// 		                                 0x7e 0xF1F0FF00>;
++/// 		status = "okay";
++/// 	};
++/// };
++/// @endcode
++///
++/// Device Tree Properties:
++/// - nvidia,ta-uuid: The UUID of the trusted application.
++/// - nvidia,mctp-uuid: The UUID used in the GET UUID MCTP control message.
++/// - nvidia,mctp-mtu: The max transmission unit for MCTP communication.
++/// - nvidia,mctp-protocol-versions: A mapping of supported MCTP procotols
++///     to the version that should be reported in a Get MCTP Version Support command.
++///     Use zero to not respond to version requests.
++///     Non-zero values are formatted in the standard MCTP version format.
++///     The example devicetree reports PLDM version 1.0.0 SPDM version unknown
++///     and vendor defined 1.0.
++
++#include <linux/build_bug.h>
++#include <linux/device.h>
++#include <linux/kernel.h>
++#include <linux/kthread.h>
++#include <linux/module.h>
++#include <linux/netdevice.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/rtnetlink.h>
++#include <linux/spinlock.h>
++#include <linux/tee_drv.h>
++#include <linux/uuid.h>
++#include <linux/wait.h>
++#include <net/mctp.h>
++#include <net/mctpdevice.h>
++#include <uapi/linux/if_arp.h>
++
++#define HEARTBEAT_COMMAND_INTERVAL_MS 30000
++#define TEE_IOCTL_PARAM_ATTR_TYPE_NONE 0
++
++#define LOG_IMPL(lvl, fmt, ...) \
++	printk(lvl "NVIDIA-OPTEE-VROT: " fmt "\n", ##__VA_ARGS__)
++
++/// @brief Helper logging macros.
++/// @details Has the same API as printf().
++/// @{
++#ifdef DEBUG
++#define LOG_INF(...) LOG_IMPL(KERN_INFO, __VA_ARGS__)
++#else
++#define LOG_INF(...) \
++	do {         \
++	} while (0)
++#endif
++#define LOG_WRN(...) LOG_IMPL(KERN_WARNING, __VA_ARGS__)
++#define LOG_ERR(...) LOG_IMPL(KERN_ERR, __VA_ARGS__)
++/// @}
++
++#define TA_COMMAND_ID_WRITE_PACKET 0
++#define TA_COMMAND_ID_HANDLE_NON_ATOMIC_OPERATION 1
++#define TA_COMMAND_ID_HEARTBEAT 3
++
++#define NVIDIA_VROT_QUEUE_SIZE 20
++
++#define NVIDIA_VROT_MAX_PROTOCOLS 10
++
++/// @brief Entries that are encoded in the nvidia,mctp-protocol-versions property.
++/// @details The property is an array of u32.
++/// Odd indexes represent protocol IDs and even indexes are the version of the protocol.
++/// Is needed because the VRoTs do not implement the control MCTP protocol so we
++/// fake it in the kernel module.
++/// @note Entries should not be provided for the control protocol or base MCTP version
++/// as that is controlled by this module.
++struct nvidia_ta_mctp_protocol_version {
++	/// @brief The MCTP protocol ID.
++	/// @example 1 is PLDM, 5 is SPDM.
++	u8 protocol;
++	/// @brief The version number.
++	/// @note Use 0 if you do not which to respond to a
++	/// Get MCTP Version Support command for this protocol.
++	/// @note This is a u32 in native endianness, using a u8[4] to reduce padding.
++	/// @example 0xF1F0F000 is 1.0.0.
++	u8 version[4];
++};
++
++/// @brief Immutable config taken from device tree.
++struct nvidia_ta_mctp_config {
++	/// @brief nvidia,ta-uuid property.
++	/// @details The UUID of the trusted application that acts as a VRoT.
++	uuid_t ta_uuid;
++	/// @brief nvidia,mctp-uuid property.
++	/// @details The UUID to use in response to a Get Endpoint UUID MCTP Control Message.
++	uuid_t mctp_uuid;
++	/// @brief nvidia,mctp-mtu property.
++	/// @details The max allowed MTU for the VRoT trusted application.
++	/// @note Is not discovered at startup via TEE function calls because we want to delay
++	/// TA initialization to as late as possible to allow for tee-supplicant to be started
++	//  which may occur after kernel module loading.
++	u32 mtu;
++	/// @brief The number of valid entries in protocols.
++	u32 protocols_size;
++	/// @brief nvidia,mctp-protocol-versions property.
++	struct nvidia_ta_mctp_protocol_version
++		protocols[NVIDIA_VROT_MAX_PROTOCOLS];
++};
++
++/// @brief State used by callbacks.
++struct nvidia_ta_mctp_driver {
++	/// @brief Info from device tree.
++	struct nvidia_ta_mctp_config config;
++
++	/// @brief Trusted execution context.
++	struct tee_context *tee_ctx;
++	/// @brief Shared Memory with the trusted environment.
++	struct tee_shm *tee_pool;
++	/// @brief Trusted execution session id.
++	u32 tee_session_id;
++
++	/// @brief Network device used by the linux kernel for this driver.
++	struct net_device *netdev;
++
++	/// @brief Worker task for handling MCTP packets.
++	struct task_struct *worker_task;
++
++	/// @brief wait queue that is woken when tx_queue is pushed to
++	wait_queue_head_t wq;
++
++	/// @brief Packet queue from the network device to the tx worker thread.
++	struct sk_buff_head tx_queue;
++
++	/// @brief The timestamp when we should service non-atomic work.
++	/// @details Is only valid if non_atomic is true.
++	u64 non_atomic_work_jiffies_64;
++
++	/// @brief The timestamp when we should next send a heartbeat.
++	/// @details Is only valid if tee_initialized is true.
++	u64 next_heartbeat_jiffies_64;
++
++	/// @brief If the tee is initialized. Used to deduplicate initialization since since we initialize once on first write (to ensure TEE-Supplicant is running)
++	u32 tee_initialized : 1;
++
++	/// @brief Non-atomic operation flag
++	u32 non_atomic : 1;
++};
++
++/// @brief Private state for the mctp network device.
++struct nvidia_vrot_netdev_priv {
++	struct nvidia_ta_mctp_driver *driver;
++};
++
++static inline void log_buffer_hex_chunks(const char *prefix, const void *buf,
++					 size_t count)
++{
++#ifndef DEBUG
++	(void)prefix;
++	(void)buf;
++	(void)count;
++#else
++#define CHUNK_SIZE 16
++	const unsigned char *ubuf = (const unsigned char *)buf;
++	size_t i, j;
++	char line[CHUNK_SIZE *
++		  3]; // 2 chars per byte + 1 space or null terminator per byte
++	for (i = 0; i < count; i += CHUNK_SIZE) {
++		size_t chunk = (count - i > CHUNK_SIZE) ? CHUNK_SIZE :
++							  (count - i);
++		size_t pos = 0;
++		for (j = 0; j < chunk; j++) {
++			pos += sprintf(&line[pos], "%02x%s", ubuf[i + j],
++				       (j < chunk - 1) ? " " : "");
++		}
++		line[pos] = '\0';
++		LOG_INF("%s [%04zu-%04zu]: %s", prefix, i, i + chunk - 1, line);
++	}
++#undef CHUNK_SIZE
++#endif
++}
++
++static int optee_ctx_match(struct tee_ioctl_version_data *ver, const void *data)
++{
++	switch (ver->impl_id) {
++	case TEE_IMPL_ID_OPTEE:
++		return 1;
++	default:
++		return 0;
++	}
++}
++
++static int open_ta_session(struct nvidia_ta_mctp_driver *driver)
++{
++	int ret;
++	struct tee_ioctl_open_session_arg sess_arg;
++	memset(&sess_arg, 0, sizeof(sess_arg));
++
++	if (driver == NULL) {
++		LOG_ERR("open_ta_session: driver is NULL");
++		return -EIO;
++	}
++
++	export_uuid(sess_arg.uuid, &driver->config.ta_uuid);
++	sess_arg.clnt_login = TEE_IOCTL_LOGIN_PUBLIC;
++	sess_arg.num_params = 0;
++	/* Open the session */
++	ret = tee_client_open_session(driver->tee_ctx, &sess_arg, NULL);
++	if (ret < 0) {
++		LOG_ERR("Failed to open OP-TEE session");
++		return -EINVAL;
++	}
++
++	if (sess_arg.ret != 0) {
++		LOG_ERR("Session open failed with TA error: 0x%x",
++			sess_arg.ret);
++		return -EINVAL;
++	}
++
++	/* Store the session ID */
++	driver->tee_session_id = sess_arg.session;
++	LOG_INF("Kernel: OP-TEE session opened with ID: %u",
++		driver->tee_session_id);
++
++	return 0;
++}
++
++static int send_heartbeat_command_to_tee(struct nvidia_ta_mctp_driver *driver)
++{
++	driver->next_heartbeat_jiffies_64 =
++		get_jiffies_64() +
++		msecs_to_jiffies(HEARTBEAT_COMMAND_INTERVAL_MS);
++
++	struct tee_ioctl_invoke_arg invoke_arg = {
++		.func = TA_COMMAND_ID_HEARTBEAT,
++		.session = driver->tee_session_id,
++		.num_params = 4
++	};
++
++	struct tee_param params[4] = { { 0 } };
++	void *va;
++	int ret;
++
++	// Get virtual address of shared memory
++	va = tee_shm_get_va(driver->tee_pool, 0);
++	if (IS_ERR(va)) {
++		LOG_ERR("Failed to get virtual address: %ld", PTR_ERR(va));
++		return -EINVAL;
++	}
++	// Setup parameter for TA
++	// only parameter is the shared memory buffer to hold the vrot state
++	params[0].attr = TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INOUT;
++	params[0].u.memref.shm = driver->tee_pool;
++	params[0].u.memref.shm_offs = 0;
++	params[0].u.memref.size = driver->config.mtu;
++
++	// Setup parameters 1-3: TYPE_NONE
++	params[1].attr = TEE_IOCTL_PARAM_ATTR_TYPE_NONE;
++	params[2].attr = TEE_IOCTL_PARAM_ATTR_TYPE_NONE;
++	params[3].attr = TEE_IOCTL_PARAM_ATTR_TYPE_NONE;
++
++	LOG_INF("Sending param types: p0=0x%llx, p1=0x%llx, p2=0x%llx, p3=0x%llx",
++		params[0].attr, params[1].attr, params[2].attr, params[3].attr);
++
++	// Invoke TA
++	ret = tee_client_invoke_func(driver->tee_ctx, &invoke_arg, params);
++	LOG_INF("TA invocation returned: ret=%d, invoke_arg.ret=0x%x", ret,
++		invoke_arg.ret);
++	if (ret < 0 || invoke_arg.ret != 0) {
++		if (ret < 0) {
++			LOG_ERR("TA invocation failed: ret=%d. Check if TA is available and initialized on the system.",
++				ret);
++			return -EIO;
++		}
++		if (invoke_arg.ret != 0) {
++			LOG_ERR("TA invocation returned error: ta_ret=0x%x",
++				invoke_arg.ret);
++		}
++		return -EIO;
++	}
++
++	LOG_INF("TA invocation completed");
++	size_t out_size = params[0].u.memref.size;
++
++	// at this point, we have the data in the shared memory from the tee invocation.
++	char *vrot_state = tee_shm_get_va(driver->tee_pool, 0);
++	if (vrot_state == NULL) {
++		LOG_ERR("Failed to get virtual address of shared memory");
++		return -EFAULT;
++	}
++
++	log_buffer_hex_chunks("VRoT state", vrot_state, out_size);
++	return 0;
++}
++
++static int init_tee(struct nvidia_ta_mctp_driver *driver)
++{
++	int ret;
++	if (driver == NULL) {
++		LOG_ERR("init_tee: driver is NULL");
++		return -EIO;
++	}
++
++	if (driver->tee_initialized) {
++		return 0; // Already initialized
++	}
++
++	driver->tee_ctx =
++		tee_client_open_context(NULL, optee_ctx_match, NULL, NULL);
++	if (IS_ERR_OR_NULL(driver->tee_ctx)) {
++		LOG_ERR("Failed to open TEE context: %ld",
++			PTR_ERR(driver->tee_ctx));
++		return -ENODEV;
++	}
++
++	ret = open_ta_session(driver);
++	if (ret < 0) {
++		tee_client_close_context(driver->tee_ctx);
++		driver->tee_ctx = NULL;
++		return ret;
++	}
++
++	driver->tee_pool =
++		tee_shm_alloc_kernel_buf(driver->tee_ctx, driver->config.mtu);
++	if (IS_ERR_OR_NULL(driver->tee_pool)) {
++		LOG_ERR("Failed to allocate shared memory: %ld",
++			PTR_ERR(driver->tee_pool));
++		tee_client_close_session(driver->tee_ctx,
++					 driver->tee_session_id);
++		tee_client_close_context(driver->tee_ctx);
++		driver->tee_ctx = NULL;
++		driver->tee_session_id = 0;
++		return -ENOMEM;
++	}
++
++	LOG_INF("Shared memory allocated: size=%zu", driver->tee_pool->size);
++	driver->tee_initialized = true;
++	// want an immediate heartbeat
++	driver->next_heartbeat_jiffies_64 = get_jiffies_64();
++	return 0;
++}
++
++static int invoke_ta_function(struct nvidia_ta_mctp_driver *driver,
++			      struct sk_buff *skb, int command_id,
++			      size_t *out_size)
++{
++	if (driver == NULL) {
++		LOG_ERR("invoke_ta_function: driver is NULL");
++		return -EIO;
++	}
++
++	size_t count = 0;
++	if (skb) {
++		count = skb->len;
++	}
++
++	struct tee_ioctl_invoke_arg invoke_arg = {
++		.func = command_id,
++		.session = driver->tee_session_id,
++		.num_params = 4
++	};
++
++	struct tee_param params[4] = { { 0 } };
++	void *va;
++	int ret;
++
++	if (!driver->tee_pool || !driver->tee_ctx) {
++		LOG_ERR("Shared memory or context not initialized");
++		return -EINVAL;
++	}
++
++	// Get virtual address of shared memory
++	va = tee_shm_get_va(driver->tee_pool, 0);
++	if (IS_ERR(va)) {
++		LOG_ERR("Failed to get virtual address: %ld", PTR_ERR(va));
++		return -EINVAL;
++	}
++
++	// Copy input data to shared memory
++	if (count > driver->tee_pool->size) {
++		LOG_WRN("Input size (%zu) exceeds shared memory size (%zu)",
++			count, driver->tee_pool->size);
++		count = driver->tee_pool->size;
++	}
++
++	// copy input data to shared memory
++	if (count != 0) {
++		skb_copy_bits(skb, 0, va, count);
++		log_buffer_hex_chunks("Tx to TA", va, count);
++	}
++
++	// Setup parameter for TA
++	// first parameter is the shared memory buffer
++	params[0].attr = TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INOUT;
++	params[0].u.memref.shm = driver->tee_pool;
++	params[0].u.memref.shm_offs = 0;
++	params[0].u.memref.size = count;
++
++	// second parameter will be used to get bool indicating whether the TA is handling a non-atomic operation, and a delay for invoking the TA again
++	params[1].attr = TEE_IOCTL_PARAM_ATTR_TYPE_VALUE_OUTPUT;
++	params[1].u.value.a = 0;
++	params[1].u.value.b = 0;
++
++	// Setup parameters 2-3: TYPE_NONE for now
++	params[2].attr = TEE_IOCTL_PARAM_ATTR_TYPE_NONE;
++	params[3].attr = TEE_IOCTL_PARAM_ATTR_TYPE_NONE;
++
++	LOG_INF("Sending param types: p0=0x%llx, p1=0x%llx, p2=0x%llx, p3=0x%llx",
++		params[0].attr, params[1].attr, params[2].attr, params[3].attr);
++	LOG_INF("Sending size: %zu", count);
++
++	// Invoke TA
++	ret = tee_client_invoke_func(driver->tee_ctx, &invoke_arg, params);
++	LOG_INF("TA invocation returned: ret=%d, invoke_arg.ret=0x%x", ret,
++		invoke_arg.ret);
++	if (ret < 0 || invoke_arg.ret != 0) {
++		*out_size = 0;
++		driver->non_atomic = false;
++		driver->non_atomic_work_jiffies_64 = 0;
++		if (ret < 0) {
++			LOG_ERR("TA invocation failed: ret=%d. Check if TA is available and initialized on the system.",
++				ret);
++			return -EIO;
++		}
++		if (invoke_arg.ret != 0) {
++			LOG_ERR("TA invocation returned error: ta_ret=0x%x",
++				invoke_arg.ret);
++			return -EIO;
++		}
++	}
++
++	LOG_INF("TA invocation completed");
++	*out_size = params[0].u.memref.size;
++	driver->non_atomic = (bool)params[1].u.value.a;
++	const u32 delay = params[1].u.value.b;
++	if (driver->non_atomic) {
++		driver->non_atomic_work_jiffies_64 = get_jiffies_64() + delay;
++		LOG_INF("TA is handling a non-atomic operation, delay: %u",
++			delay);
++	} else {
++		driver->non_atomic_work_jiffies_64 = 0;
++	}
++	return count;
++}
++
++static int handle_data_from_ta(struct nvidia_ta_mctp_driver *driver,
++			       size_t size)
++{
++	int ret = -EINVAL;
++
++	const char *const shared_mem_data = tee_shm_get_va(driver->tee_pool, 0);
++	if (shared_mem_data == NULL) {
++		LOG_ERR("Failed to get virtual address of shared memory");
++		return -EFAULT;
++	}
++
++	if (size <= 4) {
++		LOG_ERR("Response size too small for MCTP packet: %u",
++			(unsigned)size);
++		return -EINVAL;
++	}
++
++	log_buffer_hex_chunks("Rx from TA", shared_mem_data, size);
++
++	struct sk_buff *skb;
++	skb = netdev_alloc_skb(driver->netdev, size);
++	if (!skb) {
++		LOG_ERR("failed to allocate skb for read packet");
++		return -ENOMEM;
++	}
++	skb->protocol = htons(ETH_P_MCTP);
++	(void)skb_put_data(skb, shared_mem_data, size);
++	skb_reset_mac_header(skb);
++	skb_reset_network_header(skb);
++
++	struct mctp_skb_cb *const cb = __mctp_cb(skb);
++	cb->halen = 0;
++
++	ret = netif_receive_skb(skb);
++	if (ret != NET_RX_SUCCESS) {
++		LOG_ERR("netif_rx failed with %d", (int)ret);
++		// NOTE: skb is already freed by netif_receive_skb on error
++		return -EINVAL;
++	}
++	return 0;
++}
++
++static void nvidia_ta_write_to_tee(struct nvidia_ta_mctp_driver *driver,
++				   struct sk_buff *skb, int command_id)
++{
++	int ret = -EINVAL;
++	LOG_INF("nvidia_ta_write_to_tee: Writing to TEE");
++	ret = init_tee(driver); // Initialize on first write
++	if (ret < 0) {
++		LOG_ERR("Kernel: TEE initialization failed: %d", ret);
++		return;
++	}
++
++	size_t out_size = 0;
++	ret = invoke_ta_function(driver, skb, command_id, &out_size);
++	if (ret < 0) {
++		LOG_ERR("Kernel: Failed to invoke TA function: %d", ret);
++		return;
++	}
++
++	if (out_size == 0) {
++		return;
++	}
++
++	ret = handle_data_from_ta(driver, out_size);
++	if (ret < 0) {
++		LOG_ERR("Kernel: Failed to handle data read from TA: %d", ret);
++		return;
++	}
++}
++
++/// @brief Performs cleanup for our custom driver bound to the given platform_device.
++/// @param pdev The device having its driver cleaned up.
++/// @note The driver can be in any stage of initialization including completely unbound.
++static void clean_driver(struct platform_device *pdev)
++{
++	if (pdev == NULL) {
++		return;
++	}
++
++	struct nvidia_ta_mctp_driver *const driver =
++		(struct nvidia_ta_mctp_driver *)platform_get_drvdata(pdev);
++	if (driver == NULL) {
++		return;
++	}
++
++	// perform any needed cleanup
++	// Stop the worker thread first
++	if (driver->worker_task != NULL) {
++		kthread_stop(driver->worker_task);
++		driver->worker_task = NULL;
++	}
++
++	// Ensure network device is down and purge any pending packets
++	if (driver->netdev != NULL) {
++		// Stop the queue to prevent new packets
++		netif_tx_disable(driver->netdev);
++
++		// Purge any remaining packets in the queue
++		skb_queue_purge(&driver->tx_queue);
++
++		// Explicitly bring the device down if it's still running
++		rtnl_lock();
++		if (netif_running(driver->netdev)) {
++			dev_close(driver->netdev);
++		}
++		rtnl_unlock();
++
++		// Unregister the netdev - this should handle final cleanup
++		mctp_unregister_netdev(driver->netdev);
++		free_netdev(driver->netdev);
++		driver->netdev = NULL;
++	}
++
++	if (driver->tee_initialized) {
++		tee_client_close_session(driver->tee_ctx,
++					 driver->tee_session_id);
++		driver->tee_initialized = false;
++	}
++	if (driver->tee_pool != NULL) {
++		tee_shm_free(driver->tee_pool);
++		driver->tee_pool = NULL;
++	}
++	if (driver->tee_ctx != NULL) {
++		tee_client_close_context(driver->tee_ctx);
++		driver->tee_ctx = NULL;
++	}
++
++	// the driver is always heap allocated and we have exclusive ownership of it, free it.
++	platform_set_drvdata(pdev, NULL);
++	kfree(driver);
++}
++
++netdev_tx_t nvidia_vrot_start_xmit(struct sk_buff *skb, struct net_device *dev)
++{
++	netdev_tx_t status = NETDEV_TX_BUSY;
++
++	struct nvidia_vrot_netdev_priv *const priv = netdev_priv(dev);
++	struct nvidia_ta_mctp_driver *const driver = priv->driver;
++
++	unsigned long flags;
++
++	// locking the queue for the entire push so we can atomically inspect
++	// the length to manage the network interface queue enable state.
++	spin_lock_irqsave(&driver->tx_queue.lock, flags);
++	if (skb_queue_len(&driver->tx_queue) >= NVIDIA_VROT_QUEUE_SIZE) {
++		// error: queue already full
++		status = NETDEV_TX_BUSY;
++		LOG_WRN("mctp tx queue overflow");
++		netif_stop_queue(dev);
++	} else {
++		// push the packet
++		status = NETDEV_TX_OK;
++		__skb_queue_tail(&driver->tx_queue, skb);
++		if (skb_queue_len(&driver->tx_queue) ==
++		    NVIDIA_VROT_QUEUE_SIZE) {
++			// stop the queue to prevent excessive RAM usage
++			netif_stop_queue(dev);
++		}
++	}
++	spin_unlock_irqrestore(&driver->tx_queue.lock, flags);
++
++	if (status == NETDEV_TX_OK) {
++		wake_up(&driver->wq);
++	}
++	return status;
++}
++
++int nvidia_vrot_open(struct net_device *dev)
++{
++	// TODO: could start/resume worker threads
++	netif_start_queue(dev);
++	return 0;
++}
++
++int nvidia_vrot_stop(struct net_device *dev)
++{
++	// TODO: could stop worker threads
++	netif_stop_queue(dev);
++	return 0;
++}
++
++static struct net_device_ops nvidia_vrot_nops = {
++	.ndo_start_xmit = nvidia_vrot_start_xmit,
++	.ndo_open = nvidia_vrot_open,
++	.ndo_stop = nvidia_vrot_stop,
++};
++
++// mctp header byte indexes
++static const size_t nv_mctp_ver_index = 0;
++static const size_t nv_mctp_dst_index = 1;
++static const size_t nv_mctp_src_index = 2;
++static const size_t nv_mctp_flags_index = 3;
++
++// only support version 1 packets with no reserved bits set
++static const u8 nv_mctp_expected_version_byte = 1;
++
++// flag bits of interest
++static const u8 nv_mctp_som_bit = 1 << 7;
++static const u8 nv_mctp_eom_bit = 1 << 6;
++static const u8 nv_mctp_to_bit = 1 << 3;
++
++// control header bytes
++static const size_t nv_mctp_ctrl_msg_type_index = 4;
++static const size_t nv_mctp_ctrl_flags_index = 5;
++static const size_t nv_mctp_ctrl_cc_index = 6;
++static const size_t nv_mctp_ctrl_rsp_index = 7;
++
++// control header values
++static const u8 nv_mctp_ctrl_msg_type = 0;
++
++// ctrl flags bits of interest
++static const u8 nv_mctp_ctrl_req_bit = 1 << 7;
++static const u8 nv_mctp_ctrl_datagram_bit = 1 << 6;
++
++// used ctrl response codes
++static const u8 nv_mctp_ctrl_rsp_ok = 0;
++static const u8 nv_mctp_ctrl_rsp_error = 1;
++static const u8 nv_mctp_ctrl_rsp_bad_data = 2;
++static const u8 nv_mctp_ctrl_rsp_bad_cmd = 5;
++
++// control header sizes
++static const size_t nv_mctp_ctrl_cmd_data_start = 7;
++static const size_t nv_mctp_ctrl_rsp_data_start = 8;
++
++// must have entire header
++static const size_t nv_min_ctrl_req_size = nv_mctp_ctrl_cmd_data_start;
++// must always fit in a min MTU packet
++#define NV_MAX_CTRL_MSG_SIZE 68
++
++static bool nvidia_ta_is_control_request(struct sk_buff *skb)
++{
++	if (skb->len < nv_min_ctrl_req_size) {
++		return false;
++	}
++	if (skb->len > NV_MAX_CTRL_MSG_SIZE) {
++		return false;
++	}
++
++	unsigned char data[NV_MAX_CTRL_MSG_SIZE] = { 0 };
++	if (0 != skb_copy_bits(skb, 0, data, nv_min_ctrl_req_size)) {
++		LOG_WRN("skb_copy_bits failed when detecting packet type");
++		return false;
++	}
++	if (data[nv_mctp_ver_index] != nv_mctp_expected_version_byte) {
++		return false;
++	}
++
++	const u8 required_bits = nv_mctp_som_bit | nv_mctp_eom_bit |
++				 nv_mctp_to_bit;
++	if ((data[nv_mctp_flags_index] & required_bits) != required_bits) {
++		return false;
++	}
++	if (data[nv_mctp_ctrl_msg_type_index] != nv_mctp_ctrl_msg_type) {
++		// different packet type
++		return false;
++	}
++	return true;
++}
++
++static int
++nvidia_ta_handle_control_request(struct nvidia_ta_mctp_driver *driver,
++				 const struct sk_buff *skb)
++{
++	// Ensure buffer is large enough for maximum control responses
++	BUILD_BUG_ON(nv_mctp_ctrl_rsp_data_start + 16 >
++		     NV_MAX_CTRL_MSG_SIZE); // Get Endpoint UUID
++	BUILD_BUG_ON(nv_mctp_ctrl_rsp_data_start + 1 +
++			     NVIDIA_VROT_MAX_PROTOCOLS >
++		     NV_MAX_CTRL_MSG_SIZE); // Get Message Type Support
++
++	LOG_INF("handling control message...");
++
++	unsigned char cmd[NV_MAX_CTRL_MSG_SIZE] = { 0 };
++	if (skb_copy_bits(skb, 0, cmd, skb->len) != 0) {
++		return -EFAULT;
++	}
++	log_buffer_hex_chunks("Control CMD", cmd, skb->len);
++
++	unsigned char rsp[NV_MAX_CTRL_MSG_SIZE] = { 0 };
++
++	// fill MCTP header
++	rsp[nv_mctp_ver_index] = cmd[nv_mctp_ver_index];
++	rsp[nv_mctp_dst_index] = cmd[nv_mctp_src_index];
++	rsp[nv_mctp_src_index] = cmd[nv_mctp_dst_index];
++	rsp[nv_mctp_flags_index] = cmd[nv_mctp_flags_index] & ~nv_mctp_to_bit;
++
++	// fill control header
++	rsp[nv_mctp_ctrl_msg_type_index] = cmd[nv_mctp_ctrl_msg_type_index];
++	rsp[nv_mctp_ctrl_flags_index] = cmd[nv_mctp_ctrl_flags_index] &
++					~nv_mctp_ctrl_req_bit;
++	rsp[nv_mctp_ctrl_cc_index] = cmd[nv_mctp_ctrl_cc_index];
++	rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_error;
++
++	// payload-less length
++	size_t rsp_len = nv_mctp_ctrl_rsp_data_start;
++
++	// supporting only mandatory and actually used commands
++	switch (cmd[nv_mctp_ctrl_cc_index]) {
++	case 1:
++		LOG_INF("Set Endpoint ID");
++		rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_ok;
++		// accepted + no pool
++		rsp[nv_mctp_ctrl_rsp_data_start + 0] = 0;
++		// echo back EID, is 2nd data byte in command
++		rsp[nv_mctp_ctrl_rsp_data_start + 1] =
++			cmd[nv_mctp_ctrl_cmd_data_start + 1];
++		// no pool
++		rsp[nv_mctp_ctrl_rsp_data_start + 2] = 0;
++		rsp_len = nv_mctp_ctrl_rsp_data_start + 3;
++		break;
++
++	case 2:
++		LOG_INF("Get Endpoint ID");
++		rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_ok;
++		// echo back endpoint ID
++		rsp[nv_mctp_ctrl_rsp_data_start + 0] = cmd[nv_mctp_dst_index];
++		// simple endpoint + dynamic ID
++		rsp[nv_mctp_ctrl_rsp_data_start + 1] = 0;
++		// no transport specific info
++		rsp[nv_mctp_ctrl_rsp_data_start + 2] = 0;
++		rsp_len = nv_mctp_ctrl_rsp_data_start + 3;
++		break;
++
++	case 3:
++		LOG_INF("Get Endpoint UUID");
++		rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_ok;
++		memcpy(&rsp[nv_mctp_ctrl_rsp_data_start],
++		       &driver->config.mctp_uuid, 16);
++		rsp_len = nv_mctp_ctrl_rsp_data_start + 16;
++		break;
++
++	case 4: {
++		LOG_INF("Get Version Support");
++		u32 version = 0;
++		switch (cmd[nv_mctp_ctrl_cmd_data_start]) {
++		case 0x00:
++			// control version 1.3.1
++			version = 0xF1F3F100;
++			break;
++
++		case 0xFF:
++			// base version 1.3.1
++			version = 0xF1F3F100;
++			break;
++
++		default:
++			// other protocols, use version set via device tree
++			for (u32 i = 0; i < driver->config.protocols_size;
++			     ++i) {
++				if (driver->config.protocols[i].protocol ==
++				    cmd[nv_mctp_ctrl_cmd_data_start]) {
++					memcpy(&version,
++					       driver->config.protocols[i]
++						       .version,
++					       4);
++					break;
++				}
++			}
++			break;
++		}
++
++		if (version == 0) {
++			// version unknown, error
++			rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_bad_data;
++		} else {
++			rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_ok;
++			// versions are stored locally in native endianness, but MCTP wants big endian.
++			version = cpu_to_be32(version);
++			memcpy(&rsp[nv_mctp_ctrl_rsp_data_start], &version,
++			       sizeof(version));
++			rsp_len = nv_mctp_ctrl_rsp_data_start + sizeof(version);
++		}
++		break;
++	}
++
++	case 5:
++		LOG_INF("Get Message Type Support");
++		rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_ok;
++		rsp[nv_mctp_ctrl_rsp_data_start + 0] =
++			driver->config.protocols_size;
++		for (u32 i = 0; i < driver->config.protocols_size; ++i) {
++			rsp[nv_mctp_ctrl_rsp_data_start + 1 + i] =
++				driver->config.protocols[i].protocol;
++		}
++		rsp_len = nv_mctp_ctrl_rsp_data_start + 1 +
++			  driver->config.protocols_size;
++		break;
++
++	default:
++		LOG_WRN("Unsupported control command: 0x%02X",
++			cmd[nv_mctp_ctrl_cc_index]);
++		rsp[nv_mctp_ctrl_rsp_index] = nv_mctp_ctrl_rsp_bad_cmd;
++		break;
++	}
++
++	log_buffer_hex_chunks("Control RSP", rsp, rsp_len);
++
++	struct sk_buff *rsp_skb;
++	rsp_skb = netdev_alloc_skb(driver->netdev, rsp_len);
++	if (!rsp_skb) {
++		LOG_ERR("failed to allocate skb for read packet");
++		return -ENOMEM;
++	}
++	rsp_skb->protocol = htons(ETH_P_MCTP);
++	(void)skb_put_data(rsp_skb, rsp, rsp_len);
++	skb_reset_mac_header(rsp_skb);
++	skb_reset_network_header(rsp_skb);
++
++	struct mctp_skb_cb *const cb = __mctp_cb(rsp_skb);
++	cb->halen = 0;
++
++	const int ret = netif_receive_skb(rsp_skb);
++	if (ret != NET_RX_SUCCESS) {
++		LOG_ERR("netif_rx failed with %d", (int)ret);
++		// NOTE: skb is already freed by netif_receive_skb on error
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++enum nvidia_ta_timeout_cause {
++	/// @brief There is no reason to ever timeout.
++	NVIDIA_TA_TIMEOUT_NONE,
++	/// @brief Should timeout to process delayed work.
++	NVIDIA_TA_TIMEOUT_WORK_TO_DO,
++	/// @brief Should timeout to send a heartbeat.
++	NVIDIA_TA_TIMEOUT_HEARTBEAT,
++};
++
++struct nvidia_ta_timeout {
++	enum nvidia_ta_timeout_cause cause;
++	/// @note Will be MAX_SCHEDULE_TIMEOUT if cause is none.
++	u32 duration_jiffies;
++};
++
++static struct nvidia_ta_timeout
++nvidia_ta_get_next_timeout(struct nvidia_ta_mctp_driver *driver)
++{
++	const u64 now = get_jiffies_64();
++
++	bool should_timeout = false;
++	u32 jiffies_til_work = (u32)-1;
++	if (driver->tee_initialized && driver->non_atomic) {
++		should_timeout = true;
++		if (driver->non_atomic_work_jiffies_64 < now) {
++			jiffies_til_work = 0;
++		} else {
++			u64 diff = driver->non_atomic_work_jiffies_64 - now;
++			jiffies_til_work =
++				(u32)min_t(u64, diff, MAX_SCHEDULE_TIMEOUT);
++		}
++	}
++
++	u32 jiffies_til_heartbeat = (u32)-1;
++	if (driver->tee_initialized) {
++		should_timeout = true;
++		if (driver->next_heartbeat_jiffies_64 < now) {
++			jiffies_til_heartbeat = 0;
++		} else {
++			u64 diff = driver->next_heartbeat_jiffies_64 - now;
++			jiffies_til_heartbeat =
++				(u32)min_t(u64, diff, MAX_SCHEDULE_TIMEOUT);
++		}
++	}
++
++	if (!should_timeout) {
++		struct nvidia_ta_timeout timeout = {
++			.cause = NVIDIA_TA_TIMEOUT_NONE,
++			.duration_jiffies = MAX_SCHEDULE_TIMEOUT,
++		};
++		return timeout;
++	}
++
++	if (jiffies_til_work <= jiffies_til_heartbeat) {
++		struct nvidia_ta_timeout timeout = {
++			.cause = NVIDIA_TA_TIMEOUT_WORK_TO_DO,
++			.duration_jiffies = jiffies_til_work,
++		};
++		return timeout;
++	}
++
++	struct nvidia_ta_timeout timeout = {
++		.cause = NVIDIA_TA_TIMEOUT_HEARTBEAT,
++		.duration_jiffies = jiffies_til_heartbeat,
++	};
++	return timeout;
++}
++
++static int nvidia_ta_worker(void *data)
++{
++	struct nvidia_ta_mctp_driver *driver = data;
++
++	struct sk_buff *skb = NULL;
++
++	for (;;) {
++		struct nvidia_ta_timeout timeout;
++
++		// attempt to get a packet to send until we need to handle a non-atomic operation or heartbeat
++		while (!skb) {
++			timeout = nvidia_ta_get_next_timeout(driver);
++			if (timeout.cause != NVIDIA_TA_TIMEOUT_NONE &&
++			    timeout.duration_jiffies == 0) {
++				// already past a deadline, handle it without blocking
++				break;
++			}
++			bool timeout_expired = false;
++			if (timeout.cause == NVIDIA_TA_TIMEOUT_NONE) {
++				// wait forever
++				wait_event_interruptible(
++					driver->wq,
++					!skb_queue_empty(&driver->tx_queue) ||
++						kthread_should_stop());
++			} else {
++				// wait with timeout
++				const int wait_status =
++					wait_event_interruptible_timeout(
++						driver->wq,
++						!skb_queue_empty(
++							&driver->tx_queue) ||
++							kthread_should_stop(),
++						timeout.duration_jiffies);
++				if (wait_status == 0) {
++					timeout_expired = true;
++				}
++			}
++			if (kthread_should_stop()) {
++				return 0;
++			}
++			if (timeout_expired) {
++				// hit timeout, break to handle delayed work or heartbeat
++				break;
++			}
++
++			// got woken up before timeout, check for a packet
++			skb = skb_dequeue(&driver->tx_queue);
++			netif_start_queue(driver->netdev);
++			if (skb) {
++				break;
++			}
++		}
++
++		if (!skb) {
++			// handle the cause of the timeout
++			switch (timeout.cause) {
++			case NVIDIA_TA_TIMEOUT_WORK_TO_DO:
++				nvidia_ta_write_to_tee(
++					driver, NULL,
++					TA_COMMAND_ID_HANDLE_NON_ATOMIC_OPERATION);
++				break;
++
++			case NVIDIA_TA_TIMEOUT_HEARTBEAT:
++				send_heartbeat_command_to_tee(driver);
++				break;
++
++			default:
++				LOG_WRN("unexpected read timeout cause: %d",
++					(int)timeout.cause);
++				break;
++			}
++		} else if (nvidia_ta_is_control_request(skb)) {
++			// handle control packet locally
++			const int ret =
++				nvidia_ta_handle_control_request(driver, skb);
++			if (ret != 0) {
++				LOG_ERR("nvidia_ta_handle_control_request failed, ret: %d",
++					ret);
++			}
++		} else {
++			// forward non-control packet
++			nvidia_ta_write_to_tee(driver, skb,
++					       TA_COMMAND_ID_WRITE_PACKET);
++		}
++
++		if (skb) {
++			kfree_skb(skb);
++			skb = NULL;
++		}
++	}
++
++	return 0;
++}
++
++void nvidia_vrot_netdev_setup(struct net_device *dev)
++{
++	dev->type = ARPHRD_MCTP;
++
++	// NOTE: MTU reconfigured outside of setup
++	dev->min_mtu = 68;
++	dev->max_mtu = 68;
++	dev->mtu = 68;
++
++	dev->hard_header_len = 0;
++	dev->tx_queue_len = NVIDIA_VROT_QUEUE_SIZE;
++	dev->netdev_ops = &nvidia_vrot_nops;
++
++	dev->addr_len = 0;
++}
++
++/// @brief Initializes the endpoint driver.
++/// @param [in,out] driver Endpoint driver. driver->config is already init.
++/// @param [in] name The name to use for the network device and worker thread.
++/// @returns 0 on success, -error code on failure.
++static int
++nvidia_ta_mctp_init_endpoint(struct nvidia_ta_mctp_driver *const driver,
++			     const char *name)
++{
++	int result = -1;
++
++	init_waitqueue_head(&driver->wq);
++	skb_queue_head_init(&driver->tx_queue);
++
++	driver->non_atomic = false;
++	driver->non_atomic_work_jiffies_64 = 0;
++	driver->next_heartbeat_jiffies_64 = 0;
++	driver->tee_initialized = false;
++
++	// create the mctp network device
++	driver->netdev = alloc_netdev(sizeof(struct nvidia_vrot_netdev_priv),
++				      name, NET_NAME_PREDICTABLE,
++				      nvidia_vrot_netdev_setup);
++	if (!driver->netdev) {
++		LOG_ERR("failed to allocate netdev");
++		return -ENOMEM;
++	}
++	driver->netdev->min_mtu = driver->config.mtu;
++	driver->netdev->mtu = driver->config.mtu;
++	driver->netdev->max_mtu = driver->config.mtu;
++	struct nvidia_vrot_netdev_priv *priv = netdev_priv(driver->netdev);
++	priv->driver = driver;
++	result = mctp_register_netdev(driver->netdev, NULL,
++				      MCTP_PHYS_BINDING_VENDOR);
++	if (result) {
++		free_netdev(driver->netdev);
++		driver->netdev = NULL;
++		LOG_ERR("failed to register netdev");
++		return result;
++	}
++
++	driver->worker_task =
++		kthread_run(nvidia_ta_worker, driver, "%s-worker", name);
++	if (IS_ERR(driver->worker_task)) {
++		LOG_ERR("failed to start worker thread");
++		driver->worker_task = NULL;
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static int nvidia_vrot_load_devicetree(struct platform_device *pdev,
++				       struct nvidia_ta_mctp_config *config)
++{
++	if (!pdev) {
++		LOG_ERR("platform_device pointer is NULL");
++		return -EINVAL;
++	}
++
++	const struct device_node *np = pdev->dev.of_node;
++	int ret = 0;
++
++	if (!np || !config) {
++		LOG_ERR("Missing device tree node or config struct");
++		return -EINVAL;
++	}
++
++	// Parse nvidia,ta-uuid
++	const char *ta_uuid_str;
++	ret = of_property_read_string(np, "nvidia,ta-uuid", &ta_uuid_str);
++	if (ret) {
++		LOG_ERR("Failed to read nvidia,ta-uuid from device tree");
++		return ret;
++	}
++	ret = uuid_parse(ta_uuid_str, &config->ta_uuid);
++	if (ret) {
++		LOG_ERR("Failed to parse ta_uuid string '%s'", ta_uuid_str);
++		return -EINVAL;
++	}
++
++	// Parse nvidia,mctp-uuid
++	const char *mctp_uuid_str;
++	ret = of_property_read_string(np, "nvidia,mctp-uuid", &mctp_uuid_str);
++	if (ret) {
++		LOG_ERR("Failed to read nvidia,mctp-uuid from device tree");
++		return ret;
++	}
++	ret = uuid_parse(mctp_uuid_str, &config->mctp_uuid);
++	if (ret) {
++		LOG_ERR("Failed to parse mctp_uuid string '%s'", mctp_uuid_str);
++		return -EINVAL;
++	}
++
++	// Parse nvidia,mctp-mtu
++	ret = of_property_read_u32(np, "nvidia,mctp-mtu", &config->mtu);
++	if (ret) {
++		LOG_ERR("Failed to read nvidia,mctp-mtu from device tree");
++		return ret;
++	}
++	if (config->mtu < 68 || config->mtu > 65536) {
++		LOG_ERR("Invalid nvidia,mctp-mtu value %u (must be between 68 and 65536)",
++			config->mtu);
++		return -EINVAL;
++	}
++
++	// Parse nvidia,mctp-protocol-versions (array of u32)
++	const __be32 *prop;
++	int len;
++	prop = of_get_property(np, "nvidia,mctp-protocol-versions", &len);
++	if (!prop || len < 0) {
++		LOG_ERR("Failed to get nvidia,mctp-protocol-versions from device tree");
++		return -EINVAL;
++	}
++	int num_entries = len / sizeof(u32);
++	if (num_entries % 2 != 0) {
++		LOG_ERR("nvidia,mctp-protocol-versions must have even number of entries (protocol/version pairs), got %d",
++			num_entries);
++		return -EINVAL;
++	}
++	config->protocols_size = num_entries / 2;
++	if (config->protocols_size > NVIDIA_VROT_MAX_PROTOCOLS) {
++		LOG_ERR("protocols_size (%u) exceeds max supported %d",
++			config->protocols_size, NVIDIA_VROT_MAX_PROTOCOLS);
++		return -EINVAL;
++	}
++
++	for (u32 i = 0; i < config->protocols_size; ++i) {
++		const u32 protocol = be32_to_cpu(prop[i * 2]);
++		const u32 version = be32_to_cpu(prop[i * 2 + 1]);
++		if (protocol > 0xFF) {
++			LOG_ERR("protocol value 0x%x at index %u exceeds u8 range",
++				protocol, i);
++			return -EINVAL;
++		}
++		if (protocol == 0x00) {
++			LOG_ERR("protocol value 0x%x at index %u is reserved (control protocol)",
++				protocol, i);
++			return -EINVAL;
++		}
++		if (protocol == 0xFF) {
++			LOG_ERR("protocol value 0x%x at index %u is reserved (base version)",
++				protocol, i);
++			return -EINVAL;
++		}
++		config->protocols[i].protocol = (u8)protocol;
++		memcpy(config->protocols[i].version, &version, sizeof(version));
++	}
++
++	return 0;
++}
++
++static int nvidia_vrot_probe(struct platform_device *pdev)
++{
++	int ret = -1;
++	struct device *const dev = &pdev->dev;
++	dev_info(dev, "Probe starting for device: %s\n", dev_name(dev));
++
++	struct nvidia_ta_mctp_driver *const driver =
++		kzalloc(sizeof(struct nvidia_ta_mctp_driver), GFP_KERNEL);
++	if (!driver) {
++		dev_err(dev, "Failed to allocate memory for driver\n");
++		return -ENOMEM;
++	}
++	platform_set_drvdata(pdev, driver);
++
++	ret = nvidia_vrot_load_devicetree(pdev, &driver->config);
++	if (ret != 0) {
++		dev_err(dev,
++			"Failed to load device tree properties for device '%s' (devicetree path: %s), ret: %d\n",
++			dev_name(dev), of_node_full_name(dev->of_node), ret);
++		clean_driver(pdev);
++		return ret;
++	}
++
++	ret = nvidia_ta_mctp_init_endpoint(driver, dev_name(dev));
++	if (ret != 0) {
++		dev_err(dev,
++			"failed to init endpoint for device '%s' (devicetree path: %s), ret: %d\n",
++			dev_name(dev), of_node_full_name(dev->of_node), ret);
++		clean_driver(pdev);
++		return ret;
++	}
++
++	dev_info(dev, "Probe successful for device: %s\n", dev_name(dev));
++	return 0;
++}
++
++static void nvidia_vrot_remove(struct platform_device *pdev)
++{
++	dev_info(&pdev->dev, "Removing device: %s\n", dev_name(&pdev->dev));
++	clean_driver(pdev);
++	dev_info(&pdev->dev, "Device removed: %s\n", dev_name(&pdev->dev));
++}
++
++static const struct of_device_id nvidia_vrot_match[] = {
++	{ .compatible = "nvidia,optee,vrot" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, nvidia_vrot_match);
++
++static struct platform_driver nvidia_vrot_driver = {
++	.probe = nvidia_vrot_probe,
++	.remove = nvidia_vrot_remove,
++	.driver =
++		{
++			.name = "nvidia-optee-vrot",
++			.of_match_table = nvidia_vrot_match,
++		},
++};
++
++module_platform_driver(nvidia_vrot_driver);
++
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("NVIDIA VRoT MCTP Trusted Application Driver");
+diff --git a/drivers/net/mctp/nvidia_irot_ast27xx_msg_ns.h b/drivers/net/mctp/nvidia_irot_ast27xx_msg_ns.h
+new file mode 100644
+index 000000000000..3278dbe81437
+--- /dev/null
++++ b/drivers/net/mctp/nvidia_irot_ast27xx_msg_ns.h
+@@ -0,0 +1,151 @@
++/// @file
++/// @brief Message types for the nvidia IRoT <-> A35 IPC connection.
++/// @details These messages are restricted to 32 bytes but can contain pointers.
++/// @note The messages are always padded to 32 bytes. For future compatibility
++/// all unused fields must be written zero and read ignored.
++
++#pragma once
++
++#ifdef __KERNEL__
++#include <linux/types.h>
++typedef u32 nvidia_irot_message_u32;
++#else
++#include <stdint.h>
++typedef uint32_t nvidia_irot_message_u32;
++#endif
++
++/// @brief Command codes.
++/// @details Commands are even and responses are odd.
++///  See nvidia_irot_message_data for info on the data payload for each command.
++/// @note Zero is intentially not used.
++enum nvidia_irot_command_code {
++	/// @brief A ping.
++	/// @note In the future this command may be expanded to be used in feature
++	/// detection as it contains a large number of reserved bytes.
++	/// @note If multiple pings are in flight then the responder should respond
++	/// to them in order, but if any responses are dropped then prefer to drop
++	/// older ones.
++	nvidia_irot_cc_ping = 2,
++	/// @brief Response to the ping.
++	nvidia_irot_cc_ping_rsp,
++
++	/// @brief Request for the IRoT to send buffer addresses.
++	nvidia_irot_cc_get_mctp_buffers,
++	/// @brief The requested buffer addresses.
++	/// @note This response should never change unless the system reboots.
++	nvidia_irot_cc_mctp_buffer,
++
++	/// @brief A new MCTP message.
++	nvidia_irot_cc_mctp,
++	/// @brief Notification that the MCTP message has been processed and its
++	/// buffer is free to be used.
++	nvidia_irot_cc_mctp_done,
++};
++
++/// @brief Memory address in the A35's physical address space.
++/// @note Is encoded in two u32 to avoid alignment and padding issues.
++struct nvidia_irot_message_address {
++	/// @brief The low 32 bits of the address.
++	nvidia_irot_message_u32 low;
++	/// @brief The high 32 bits of the address.
++	nvidia_irot_message_u32 high;
++};
++
++/// @brief Memory region in the A35's physical address space.
++struct nvidia_irot_message_span {
++	/// @brief Start address.
++	struct nvidia_irot_message_address address;
++	/// @brief Size in bytes.
++	nvidia_irot_message_u32 size;
++};
++
++/// @brief Empty message.
++struct nvidia_irot_message_data_empty {};
++
++/// @brief Information about the shared buffers between the IRoT and A35.
++struct nvidia_irot_message_data_buffers {
++	/// @brief Used to compute the maximum transmission unit.
++	/// @details The read_mtu is min(mtu_limit, a35_read.size) and
++	/// the write_mtu is min(mtu_limit, a35_write.size).
++	nvidia_irot_message_u32 mtu_limit;
++	/// @brief Span for the A35 to read from.
++	struct nvidia_irot_message_span a35_read;
++	/// @brief Span for the A35 to write into.
++	struct nvidia_irot_message_span a35_write;
++};
++
++/// @brief MCTP packet message data.
++struct nvidia_irot_message_data_mctp {
++	/// @brief MCTP packet counter.
++	/// @details Must be echoed back in the response to the message.
++	/// Additionally if two messages are received back to back they
++	/// must be deduplicated but the response must still be sent.
++	nvidia_irot_message_u32 counter;
++	/// @brief Span of memory that contains the MCTP packet.
++	/// @details The span must be fully contained within the expected
++	/// region from the nvidia_irot_cc_mctp_buffer message.
++	/// If the packet is out of bounds the memory must not be accessed.
++	struct nvidia_irot_message_span packet;
++};
++
++/// @brief Data payload for IPC messages.
++union nvidia_irot_message_data {
++	/// @brief Raw arguments.
++	/// @details Used only for initializing and debugging.
++	nvidia_irot_message_u32 args[7];
++
++	/// @brief Empty payload.
++	/// @details Used in the message types:
++	///  - nvidia_irot_cc_get_mctp_buffers
++	struct nvidia_irot_message_data_empty empty;
++
++	/// @brief A single value.
++	/// @details Used in the message types:
++	///  - nvidia_irot_cc_ping: for a value that is echoed back.
++	///  - nvidia_irot_cc_ping_rsp: for the value that is echoed back.
++	///  - nvidia_irot_cc_mctp_done: for the packet counter.
++	nvidia_irot_message_u32 value;
++
++	/// @brief Shared buffer information.
++	/// @details Used in the message types:
++	///  - nvidia_irot_cc_mctp_buffer
++	struct nvidia_irot_message_data_buffers buffers;
++
++	/// @brief Mctp packet.
++	/// @details Used in the message types:
++	///  - nvidia_irot_cc_mctp
++	struct nvidia_irot_message_data_mctp mctp;
++};
++
++/// @brief 32-byte IPC message type.
++struct nvidia_irot_message {
++	/// @brief The nvidia_irot_command_code.
++	/// @note Zero is used for empty locally, but should never be sent over IPC.
++	nvidia_irot_message_u32 command;
++	/// @brief The data payload.
++	union nvidia_irot_message_data data;
++};
++
++/// @brief Initializer for struct nvidia_irot_message.
++/// @details Zeros out all fields.
++#define NVIDIA_IROT_MESSAGE_INIT                       \
++	{                                              \
++		.command = 0, .data = {.args = { 0 } } \
++	}
++
++#if defined(__cplusplus)
++#define NVIDIA_IROT_MESSAGE_STATIC_ASSERT(expr) static_assert(expr);
++#elif __STDC_VERSION__ >= 202311L
++#define NVIDIA_IROT_MESSAGE_STATIC_ASSERT(expr) static_assert(expr);
++#elif __STDC_VERSION__ >= 201112L
++#define NVIDIA_IROT_MESSAGE_STATIC_ASSERT(expr) _Static_assert(expr);
++#else
++#define NVIDIA_IROT_MESSAGE_STATIC_ASSERT(expr)
++#endif
++
++// Ensure that our message struct is exactly 32 bytes.
++// Some APIs unconditionally copy the max 32 bytes size so both
++// undersized type and oversized types would be a problem.
++NVIDIA_IROT_MESSAGE_STATIC_ASSERT(sizeof(struct nvidia_irot_message) == 32)
++
++#undef NVIDIA_IROT_MESSAGE_STATIC_ASSERT
+-- 
+2.34.1
+

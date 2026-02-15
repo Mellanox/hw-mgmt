@@ -1,0 +1,35 @@
+From 14fc5f39f8d85c3399223d3048433035bbcb77be Mon Sep 17 00:00:00 2001
+From: Jian-Lin Li <jianlinl@nvidia.com>
+Date: Wed, 11 Feb 2026 22:46:43 +0800
+Subject: [PATCH] Force using MMC for environment variables
+
+By default, U-Boot only enables MMC for environment variables
+when booting from MMC. Since vr-nvl-{bmc,hmc} boots from SPI flash now
+This patch is required to decouple the environment location
+from the boot source and force storage to the eMMC.
+
+Upstream-Status: Inappropriate [embedded specific]
+Signed-off-by: Jian-Lin Li <jianlinl@nvidia.com>
+---
+ arch/arm/mach-aspeed/ast2700/platform.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/mach-aspeed/ast2700/platform.c b/arch/arm/mach-aspeed/ast2700/platform.c
+index 9a460ee705..c0554ed973 100644
+--- a/arch/arm/mach-aspeed/ast2700/platform.c
++++ b/arch/arm/mach-aspeed/ast2700/platform.c
+@@ -20,6 +20,11 @@ enum env_location env_get_location(enum env_operation op, int prio)
+ 	if (prio)
+ 		return env_loc;
+ 
++#ifdef CONFIG_ENV_IS_IN_MMC
++	if (IS_ENABLED(CONFIG_ENV_IS_IN_MMC))
++		return ENVL_MMC;
++#endif
++
+ 	if (IS_ENABLED(CONFIG_ENV_IS_NOWHERE)) {
+ 		env_loc = ENVL_NOWHERE;
+ 	} else {
+-- 
+2.43.0
+

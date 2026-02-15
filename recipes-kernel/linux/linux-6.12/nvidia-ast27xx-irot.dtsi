@@ -1,0 +1,25 @@
+/ {
+    // reserved memory for RAM loaded firmware from bali
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		rofs_memory: ramrofs@403920000 {
+			reg = <0x00000004 0x03920000  0x0 0x030A0000>;
+			no-map;
+		};
+	};
+
+	// Add a platform device node for IRoT.
+	mctpirot0 {
+		compatible = "nvidia,ast27xx,irot";
+		mboxes = <&mbox0 0>;
+		mbox-names = "irot";
+		status = "okay";
+	};
+};
+
+&mbox0 {
+	status = "okay";
+};

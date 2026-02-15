@@ -1,0 +1,24 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Tue, 03 Feb 2026 13:37:54
+Subject: [PATCH] mcu-runtime: ssp_tsp: enable I-cache only for SSP
+
+Enable I-cache and disable D-cache for SSP to avoid coherency issues.
+
+Upstream-Status: Pending
+Signed-off-by: Alex Fickle <afickle@nvidia.com>
+diff --git a/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c b/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c
+index b611f1320a68ce2c228556db7af7068ad254b974..3adf06e146094ce16770e3bd05e8d35dbe1616a4 100644
+--- a/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c
++++ b/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c
+@@ -84,9 +84,8 @@ int ssp_init(mem_addr_t load_addr)
+         sys_write32(GENMASK(31, 0), (mm_reg_t)&scu->ssp_ctrl_3);
+         sys_write32(GENMASK(31, 0), (mm_reg_t)&scu->ssp_ctrl_4);
+ 
+-        /* Disable i & d cache by default */
+-        sys_write32(SCU0_SSP_TSP_CTRL_ICACHE_EN | SCU0_SSP_TSP_CTRL_DCACHE_EN,
+-                    (mm_reg_t)&scu->ssp_ctrl_6);
++	/* Enable I cache only (disable D-cache to avoid coherency issues) */
++	sys_write32(SCU0_SSP_TSP_CTRL_ICACHE_EN, (mm_reg_t)&scu->ssp_ctrl_6);
+ 
+ 	return 0;
+ }

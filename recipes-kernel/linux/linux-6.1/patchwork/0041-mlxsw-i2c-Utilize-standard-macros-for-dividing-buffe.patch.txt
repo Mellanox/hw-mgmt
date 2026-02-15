@@ -1,1 +1,0 @@
-https://github.com/jpirko/linux_mlxsw/commit/da27e5f14b284ae5e3730df19971618725671dd7

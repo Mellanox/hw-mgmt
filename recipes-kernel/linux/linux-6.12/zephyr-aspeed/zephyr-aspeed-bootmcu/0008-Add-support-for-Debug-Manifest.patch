@@ -1,0 +1,1682 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Tue, 03 Feb 2026 14:48:31 
+Subject: [PATCH] Add support for Debug Manifest
+Upstream-Status: Pending
+Signed-off-by: Alex Fickle <afickle@nvidia.com>
+diff --git a/apps/mcu-runtime/src/CMakeLists.txt b/apps/mcu-runtime/src/CMakeLists.txt
+index 9fbbe074fcb9e64d20ecdb999808259288780f3c..729d4f3bd188b159a3a6da13f328aea93bcccb94 100644
+--- a/apps/mcu-runtime/src/CMakeLists.txt
++++ b/apps/mcu-runtime/src/CMakeLists.txt
+@@ -61,6 +61,11 @@ target_sources(app PRIVATE
+ 	manifest.c
+ 	manifest_image.c
+ 	manifest_image_sig.c
++	debug_manifest.c
++	tlv.c
++	storage.c
++	cptra_crypto.c
++	debugtoken.c
+ 	ast_loader.c
+ 	wdt.c
+ 	# extrst.c
+diff --git a/apps/mcu-runtime/src/cptra_crypto.c b/apps/mcu-runtime/src/cptra_crypto.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..ca37b7edeeac5a2fb2a559f4d3283fc73daf983e
+--- /dev/null
++++ b/apps/mcu-runtime/src/cptra_crypto.c
+@@ -0,0 +1,88 @@
++#include <cptra_crypto.h>
++#include <string.h>
++#include <zephyr/crypto/crypto.h>
++#include <zephyr/crypto/hash.h>
++#include <zephyr/crypto/ecdsa.h>
++#include <zephyr/drivers/cptra.h>
++#include <zephyr/logging/log.h>
++
++LOG_MODULE_REGISTER(cptra_crypto, CONFIG_LOG_DEFAULT_LEVEL);
++
++#define CPTRA_HASH_DRV_NAME DEVICE_DT_NAME(DT_INST(0, aspeed_cptra_sha))
++#define CPTRA_ECDSA_DRV_NAME DEVICE_DT_NAME(DT_INST(0, aspeed_cptra_ecdsa))
++
++int cptra_sha384(uint8_t *data, uint32_t size, uint8_t *digest)
++{
++	struct hash_ctx ini = {0};
++	struct hash_pkt pkt = {0};
++	const struct device *dev = device_get_binding(CPTRA_HASH_DRV_NAME);
++
++	if (!dev) {
++		LOG_ERR("Hash device not found");
++		return -1;
++	}
++
++	ini.flags = crypto_query_hwcaps(dev);
++	pkt.in_buf = data;
++	pkt.in_len = size;  /* NO PADDING - hash exact size */
++	pkt.out_buf = digest;
++
++	if (hash_begin_session(dev, &ini, CRYPTO_HASH_ALGO_SHA384) ||
++		hash_update(&ini, &pkt) ||
++		hash_compute(&ini, &pkt) ||
++		hash_free_session(dev, &ini))
++	{
++		LOG_ERR("SHA384 calculation failed");
++		return -1;
++	}
++
++	return 0;
++}
++
++int cptra_ecdsa384_verify(uint8_t *data, uint32_t data_size,
++						  const uint8_t *pubkey_x, const uint8_t *pubkey_y,
++						  const uint8_t *sig_r, const uint8_t *sig_s)
++{
++	uint8_t digest[48] = {0};
++	uint32_t r_be[12] = {0};
++	uint32_t s_be[12] = {0};
++	uint32_t x_be[12] = {0};
++	uint32_t y_be[12] = {0};
++	int ret = 0;
++	struct ecdsa_ctx ini = {0};
++	struct ecdsa_pkt pkt = {
++		.r = (char *)r_be,
++		.s = (char *)s_be,
++		.m_len = 48,
++		.r_len = 48,
++		.s_len = 48,
++	};
++	struct ecdsa_key ek = {
++		.curve_id = ECC_CURVE_NIST_P384,
++		.qx = (char *)x_be,
++		.qy = (char *)y_be,
++	};
++	const struct device *dev = device_get_binding(CPTRA_ECDSA_DRV_NAME);
++
++	/* Public key and signature are in BIG-ENDIAN format */
++	/* Caliptra ECDSA hardware expects BIG-ENDIAN, so copy directly */
++	memcpy(x_be, pubkey_x, 48);
++	memcpy(y_be, pubkey_y, 48);
++	memcpy(r_be, sig_r, 48);
++	memcpy(s_be, sig_s, 48);
++
++	/* Hash WITHOUT padding */
++	ret = cptra_sha384(data, data_size, digest);
++	if (ret)
++		return ret;
++
++	ret = ecdsa_begin_session(dev, &ini, &ek);
++	if (ret)
++		return ret;
++
++	ret = ecdsa_verify(&ini, &pkt);
++
++	ecdsa_free_session(dev, &ini);
++
++	return ret;
++}
+diff --git a/apps/mcu-runtime/src/debug_manifest.c b/apps/mcu-runtime/src/debug_manifest.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..b66a230f504096fc461a48dda3e31c2fe2e395bc
+--- /dev/null
++++ b/apps/mcu-runtime/src/debug_manifest.c
+@@ -0,0 +1,186 @@
++#include <debug_manifest.h>
++#include <debugtoken.h>
++#include <tlv.h>
++#include <manifest.h>
++#include <cptra_crypto.h>
++
++#include <string.h>
++#include <zephyr/sys/byteorder.h>
++#include <zephyr/logging/log.h>
++
++LOG_MODULE_REGISTER(debug_manifest, CONFIG_LOG_DEFAULT_LEVEL);
++
++static const char debug_manifest_magic_string[] = "SOC Debug FW Manifest";
++
++bool debug_manifest_detect(struct cptra_soc_manifest *manifest,
++						   struct debug_manifest_info *info)
++{
++	uint8_t expected_magic_digest[DBG_TOKEN_SHA384_SIZE];
++	bool found_magic = false;
++	bool found_pubkey_hash = false;
++	uint32_t i;
++
++	if (!info)
++	{
++		return false;
++	}
++
++	memset(info, 0, sizeof(*info));
++
++	if (!manifest || manifest->ime_count == 0)
++	{
++		return false;
++	}
++
++	/* Calculate expected digest for magic string */
++	if (cptra_sha384((uint8_t *)debug_manifest_magic_string,
++					 sizeof(debug_manifest_magic_string) - 1,  /* Exclude null terminator */
++					 expected_magic_digest) != 0)
++	{
++		LOG_ERR("Failed to calculate debug manifest magic hash");
++		return false;
++	}
++
++	/* Scan IME entries for debug manifest markers */
++	for (i = 0; i < manifest->ime_count; i++)
++	{
++		struct cptra_manifest_ime *ime = &manifest->imc[i];
++
++		if (ime->fw_id == DEBUG_MANIFEST_MAGIC_FWID)
++		{
++			/* Check if digest matches SHA384("SOC Debug FW Manifest") */
++			if (memcmp(ime->digest, expected_magic_digest,
++					   DBG_TOKEN_SHA384_SIZE) == 0)
++			{
++				found_magic = true;
++				LOG_DBG("Found debug manifest magic marker");
++			}
++		}
++		else if (ime->fw_id == DEBUG_MANIFEST_PUBKEY_HASH_FWID)
++		{
++			/* Save pubkey hash for later verification */
++			memcpy(info->pubkey_hash, ime->digest, DBG_TOKEN_SHA384_SIZE);
++			info->has_pubkey_hash = true;
++			found_pubkey_hash = true;
++			LOG_DBG("Found debug manifest pubkey hash marker");
++		}
++	}
++
++	info->is_debug_manifest = found_magic && found_pubkey_hash;
++	return info->is_debug_manifest;
++}
++
++int debug_manifest_verify_token(const uint8_t *manifest_pubkey_hash,
++								const uint8_t *manifest_keys,
++								size_t manifest_keys_size)
++{
++	uint8_t apfw_pubkey[DBG_TOKEN_ECC384_PUBKEY_SIZE];
++	uint8_t pubkey_buf[DBG_TOKEN_ECC384_PUBKEY_SIZE + 4];
++	uint8_t computed_hash[DBG_TOKEN_SHA384_SIZE];
++	int ret;
++
++	if (!manifest_pubkey_hash)
++	{
++		LOG_ERR("Manifest pubkey hash not provided");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	/* Step 1: Load and authenticate token */
++	ret = dbg_token_load_and_auth(DBG_TOKEN_TYPE_FLASH_DEBUG_FW);
++	if (ret != DBG_TOKEN_SUCCESS)
++	{
++		LOG_ERR("Token load/auth failed");
++		return ret;
++	}
++
++	/* Step 2: Retrieve APFW pubkey and verify hash binding */
++	ret = dbg_token_retrieve_apfw_key(apfw_pubkey, sizeof(apfw_pubkey));
++	if (ret != DBG_TOKEN_SUCCESS)
++	{
++		LOG_ERR("Failed to retrieve APFW pubkey");
++		return ret;
++	}
++
++	/* Calculate SHA384 of pubkey */
++	memcpy(pubkey_buf, apfw_pubkey, DBG_TOKEN_ECC384_PUBKEY_SIZE);
++	if (cptra_sha384(pubkey_buf, DBG_TOKEN_ECC384_PUBKEY_SIZE, computed_hash) != 0)
++	{
++		LOG_ERR("Failed to hash APFW pubkey");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	/* Verify hash matches manifest's 0xFFFFFFFE digest */
++	if (memcmp(computed_hash, manifest_pubkey_hash, DBG_TOKEN_SHA384_SIZE) != 0)
++	{
++		LOG_ERR("Token pubkey hash mismatch vs manifest binding");
++		return DBG_TOKEN_ERR_PUBKEY_MISMATCH;
++	}
++
++	LOG_INF("Token pubkey hash matches manifest binding");
++
++	/*
++	 * Step 3: Verify token-config signature over manifest keys
++	 *
++	 * Purpose: Bind the debug token to specific firmware manifest keys
++	 *
++	 * - DATA: manifest_keys (288 bytes) = concatenated public keys from SoC manifest
++	 *         Contains: manifest_vendor_ecc_key (96) + manifest_owner_ecc_key (96) +
++	 *                   manifest_vendor_lms_key (96)
++	 * - SIGNATURE: cfg_sig from token TLV 0x000A (96 bytes, ECDSA P-384 sig)
++	 * - PUBLIC KEY: apfw_pubkey from token payload (96 bytes)
++	 *
++	 * The token signer signs the manifest keys using the Debug private key.
++	 * This signature is verified using the corresponding Debug public key from the token.
++	 * This binds the debug token to this specific firmware manifest configuration.
++	 */
++	if (manifest_keys && manifest_keys_size == DEBUG_MANIFEST_KEYS_CONCAT_SIZE)
++	{
++		uint8_t token_buf[DBG_TOKEN_MAX_TLV_SIZE];
++		size_t token_len;
++		const uint8_t *cfg_sig;
++		size_t cfg_sig_len;
++		uint8_t keys_buf[DEBUG_MANIFEST_KEYS_CONCAT_SIZE];
++
++		/* Read token from flash */
++		ret = dbg_token_read_from_flash(token_buf,
++										 sizeof(token_buf), &token_len);
++		if (ret != DBG_TOKEN_SUCCESS)
++		{
++			LOG_ERR("Failed to read debug token");
++			return ret;
++		}
++
++		/* Find token-config TLV (0x000A) containing the signature */
++		if (tlv_decode(token_buf, token_len, &cfg_sig, &cfg_sig_len,
++					   TLV_TYPE_TOKEN_CONFIGURATION) != TLV_SUCCESS)
++		{
++			LOG_ERR("Missing token configuration TLV (0x000A)");
++			return DBG_TOKEN_ERR_CONFIG_SIG_FAILED;
++		}
++
++		if (cfg_sig_len != DBG_TOKEN_ECC384_SIG_SIZE)
++		{
++			LOG_ERR("Token config signature length mismatch: %zu", cfg_sig_len);
++			return DBG_TOKEN_ERR_CONFIG_SIG_FAILED;
++		}
++
++		/* Copy manifest keys to buffer */
++		memcpy(keys_buf, manifest_keys, manifest_keys_size);
++
++		/* Verify signature over manifest keys using APFW pubkey */
++		ret = cptra_ecdsa384_verify(keys_buf, manifest_keys_size,
++									apfw_pubkey,
++									apfw_pubkey + DBG_TOKEN_ECC384_XY_SIZE,
++									cfg_sig,
++									cfg_sig + DBG_TOKEN_ECC384_SIG_RS_SIZE);
++		if (ret != 0)
++		{
++			LOG_ERR("Token config signature verification failed");
++			return DBG_TOKEN_ERR_CONFIG_SIG_FAILED;
++		}
++
++		LOG_INF("Token config signature verified successfully");
++	}
++
++	return DBG_TOKEN_SUCCESS;
++}
+diff --git a/apps/mcu-runtime/src/debugtoken.c b/apps/mcu-runtime/src/debugtoken.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..7051fa25492c33aeea0ec235a4301352b33df808
+--- /dev/null
++++ b/apps/mcu-runtime/src/debugtoken.c
+@@ -0,0 +1,357 @@
++#include <string.h>
++#include <debugtoken.h>
++#include <tlv.h>
++#include <storage.h>
++#include <manifest.h>
++#include <cptra_crypto.h>
++
++#include <zephyr/sys/byteorder.h>
++#include <zephyr/crypto/crypto.h>
++#include <zephyr/crypto/ecdsa.h>
++#include <zephyr/logging/log.h>
++
++LOG_MODULE_REGISTER(debugtoken, CONFIG_LOG_DEFAULT_LEVEL);
++
++/*
++ * Static buffers to hold loaded debug token data.
++ */
++static uint8_t token_payload[DBG_TOKEN_MAX_TLV_SIZE]
++	__attribute__((aligned(8)));
++static size_t token_payload_len;
++
++/*
++ * Debug token signing public key (ECC P-384).
++ * This key is used to verify the debug token's signature.
++ */
++static const uint8_t token_pubkey[DBG_TOKEN_ECC384_PUBKEY_SIZE]
++	__attribute__((aligned(8))) = {
++		0xe0, 0x4f, 0x2d, 0xac, 0x98, 0x26, 0x22, 0x30, 0x0a, 0x42, 0x4b, 0x88,
++		0x82, 0x81, 0xfd, 0x74, 0x22, 0xd0, 0x58, 0x92, 0x6b, 0xf1, 0x7f, 0x7a,
++		0xef, 0xa1, 0x05, 0x0b, 0x9f, 0xa4, 0xae, 0x7e, 0x93, 0x0c, 0x47, 0x4d,
++		0x16, 0x34, 0x68, 0xcc, 0xa1, 0xd3, 0x0c, 0xe1, 0xfa, 0xea, 0x32, 0xec,
++		0x45, 0xd0, 0x83, 0x3c, 0x54, 0x25, 0x96, 0x04, 0x0c, 0xbe, 0x18, 0x01,
++		0x14, 0x5c, 0xe8, 0x77, 0x15, 0x16, 0x94, 0x84, 0xa8, 0xad, 0xe0, 0x64,
++		0xc4, 0x90, 0x9d, 0x71, 0x6a, 0x2e, 0xd0, 0x05, 0x25, 0x41, 0x37, 0x7f,
++		0xc1, 0xd0, 0xd9, 0x77, 0x64, 0x7a, 0x54, 0x0c, 0x21, 0xc2, 0xee, 0xda};
++
++/*
++ * Parse the TLV structure header to determine total token size.
++ *
++ * The TLV structure header contains:
++ * - identifier[4]: "TLV1"
++ * - version: major/minor
++ * - size: size of TLV transcript (excluding this fixed header)
++ *
++ * @param token_buffer  Buffer containing TLV data
++ * @param token_buffer_len  Length of buffer
++ * @param out_total_size  Output: total size including header
++ *
++ * @return true on success, false if invalid
++ */
++static bool parse_tlv_total_size(const uint8_t *token_buffer,
++								 size_t token_buffer_len,
++								 size_t *out_total_size)
++{
++	const struct tlv_structure_header *hdr;
++
++	*out_total_size = 0;
++
++	if (token_buffer == NULL ||
++		token_buffer_len < sizeof(struct tlv_structure_header))
++	{
++		return false;
++	}
++
++	hdr = (const struct tlv_structure_header *)token_buffer;
++
++	/* Verify TLV structure identifier "TLV1" */
++	if (hdr->identifier[0] != TLV_STRUCTURE_IDENTIFIER_0 ||
++		hdr->identifier[1] != TLV_STRUCTURE_IDENTIFIER_1 ||
++		hdr->identifier[2] != TLV_STRUCTURE_IDENTIFIER_2 ||
++		hdr->identifier[3] != TLV_STRUCTURE_IDENTIFIER_3)
++	{
++		return false;
++	}
++
++	/* Verify version */
++	if (hdr->version.major != TLV_STRUCTURE_VERSION_MAJOR ||
++		hdr->version.minor != TLV_STRUCTURE_VERSION_MINOR)
++	{
++		return false;
++	}
++
++	/* Calculate total size: header + TLV transcript size */
++	size_t total = sizeof(*hdr) + (size_t)hdr->size;
++	if (total == 0 || total > token_buffer_len)
++	{
++		return false;
++	}
++
++	*out_total_size = total;
++	return true;
++}
++
++bool dbg_token_is_in_flash(void)
++{
++	bool exists = false;
++	enum storage_status status;
++
++	/* Use storage API to check if item exists */
++	status = storage_item_exists(STORAGE_ITEM_DEBUG_TOKEN_IROT, &exists);
++	if (status != STORAGE_OK)
++	{
++		return false;
++	}
++
++	return exists;
++}
++
++int dbg_token_read_from_flash(uint8_t *token_data,
++							   size_t token_data_cap,
++							   size_t *token_data_len)
++{
++	enum storage_status status;
++	size_t read_length = 0;
++	size_t total_size = 0;
++
++	if (!token_data || !token_data_len)
++	{
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	*token_data_len = 0;
++
++	/* Use storage API to read item with primary/backup fallback */
++	status = storage_read_item(STORAGE_ITEM_DEBUG_TOKEN_IROT, token_data, token_data_cap,
++							   &read_length);
++
++	switch (status)
++	{
++	case STORAGE_OK:
++		break;
++	case STORAGE_ERR_DOES_NOT_EXIST:
++		LOG_ERR("Debug token not installed");
++		return DBG_TOKEN_ERR_NOT_INSTALLED;
++	case STORAGE_ERR_SIZE:
++		LOG_ERR("Token buffer too small");
++		return DBG_TOKEN_ERR_INVALID_FORMAT;
++	default:
++		LOG_ERR("Failed to read debug token (status=%d)", status);
++		return DBG_TOKEN_ERR_READ_FAILED;
++	}
++
++	/*
++	 * Variable-length token support:
++	 * - read_length is the number of bytes stored for the item.
++	 * - Determine the authoritative token size from TLV header's size field.
++	 */
++	if (!parse_tlv_total_size(token_data, read_length, &total_size))
++	{
++		LOG_ERR("Invalid TLV header or size (read_length=%zu)",
++				read_length);
++		return DBG_TOKEN_ERR_INVALID_FORMAT;
++	}
++
++	if (total_size > token_data_cap)
++	{
++		LOG_ERR("Debug token exceeds buffer capacity (total_size=%zu)",
++				total_size);
++		return DBG_TOKEN_ERR_INVALID_FORMAT;
++	}
++
++	if (total_size > read_length)
++	{
++		LOG_ERR("Debug token header size exceeds stored length "
++				"(total_size=%zu, read_length=%zu)",
++				total_size, read_length);
++		return DBG_TOKEN_ERR_INVALID_FORMAT;
++	}
++
++	*token_data_len = total_size;
++	return DBG_TOKEN_SUCCESS;
++}
++
++bool dbg_token_get_type(uint16_t *token_type)
++{
++	const uint8_t *type_data;
++	size_t type_len;
++	int ret;
++
++	if (!token_type)
++	{
++		return false;
++	}
++
++	if (!dbg_token_is_in_flash())
++	{
++		LOG_ERR("Token not installed in flash");
++		return false;
++	}
++
++	/* Load token if not already loaded */
++	ret = dbg_token_read_from_flash(token_payload,
++									 sizeof(token_payload),
++									 &token_payload_len);
++	if (ret != DBG_TOKEN_SUCCESS)
++	{
++		LOG_ERR("Failed to read token from flash");
++		return false;
++	}
++
++	/* Decode token type TLV */
++	if (tlv_decode(token_payload, token_payload_len,
++				   &type_data, &type_len, TLV_TYPE_TOKEN_TYPE) != TLV_SUCCESS ||
++		type_len != sizeof(uint32_t))
++	{
++		LOG_ERR("Failed to decode token type TLV");
++		return false;
++	}
++
++	*token_type = (uint16_t)(*type_data);
++	LOG_DBG("Token type: %d", *token_type);
++	return true;
++}
++
++int dbg_token_get_signing_pubkey(uint8_t *pub_key, size_t pub_key_size)
++{
++	if (!pub_key)
++	{
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	if (pub_key_size != DBG_TOKEN_ECC384_PUBKEY_SIZE)
++	{
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	memcpy(pub_key, token_pubkey, pub_key_size);
++	return DBG_TOKEN_SUCCESS;
++}
++
++int dbg_token_auth(const uint8_t *token_buffer,
++					size_t token_buffer_size,
++					const uint8_t *pubkey)
++{
++	const uint8_t *alg_type;
++	const uint8_t *signature;
++	size_t alg_type_len, sig_len;
++	size_t msg_size;
++
++	if (!token_buffer || token_buffer_size == 0 || !pubkey)
++	{
++		LOG_ERR("Invalid parameters");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	/* Find and validate signature algorithm */
++	if (tlv_decode(token_buffer, token_buffer_size,
++				   &alg_type, &alg_type_len,
++				   TLV_TYPE_NV_SIGNATURE_ALGORITHM) != TLV_SUCCESS ||
++		alg_type_len != 1)
++	{
++		LOG_ERR("Failed to decode signature algorithm TLV");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	if (*alg_type != TLV_SIG_ALG_ECDSA_P384)
++	{
++		LOG_ERR("Unsupported signature algorithm: %d", *alg_type);
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	/* Find signature */
++	if (tlv_decode(token_buffer, token_buffer_size,
++				   &signature, &sig_len,
++				   TLV_TYPE_NV_SIGNATURE) != TLV_SUCCESS ||
++		sig_len != DBG_TOKEN_ECC384_SIG_SIZE)
++	{
++		LOG_ERR("Failed to find valid signature in token");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	/* Message is entire buffer excluding signature TLV */
++	if (token_buffer_size < TLV_HEADER_SIZE + DBG_TOKEN_ECC384_SIG_SIZE)
++	{
++		LOG_ERR("Token buffer too small");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++	msg_size = token_buffer_size - TLV_HEADER_SIZE - DBG_TOKEN_ECC384_SIG_SIZE;
++
++	/* Verify ECDSA signature using generic crypto API */
++	if (cptra_ecdsa384_verify((uint8_t *)token_buffer, msg_size,
++							  pubkey, pubkey + DBG_TOKEN_ECC384_XY_SIZE,
++							  signature, signature + DBG_TOKEN_ECC384_SIG_RS_SIZE) != 0)
++	{
++		LOG_ERR("Signature verification of debug token failed");
++		return DBG_TOKEN_ERR_SIGNATURE_FAILED;
++	}
++
++	return DBG_TOKEN_SUCCESS;
++}
++
++int dbg_token_load_and_auth(enum debugtoken_type token_type)
++{
++	uint16_t installed_token_type;
++	int ret;
++
++	if (!dbg_token_get_type(&installed_token_type))
++	{
++		LOG_ERR("Failed to get token type");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	if (installed_token_type != (uint16_t)token_type)
++	{
++		LOG_ERR("Token type mismatch: got %d, expected %d",
++				installed_token_type, token_type);
++		return DBG_TOKEN_ERR_UNSUPPORTED_TYPE;
++	}
++
++	/* Authenticate token signature */
++	ret = dbg_token_auth(token_payload,
++						  token_payload_len,
++						  token_pubkey);
++	if (ret != DBG_TOKEN_SUCCESS)
++	{
++		LOG_ERR("Token authentication failed");
++		/* Clear local buffer on failure */
++		memset(token_payload, 0, sizeof(token_payload));
++		token_payload_len = 0;
++		return ret;
++	}
++
++	LOG_INF("Debug token loaded and authenticated successfully");
++	return DBG_TOKEN_SUCCESS;
++}
++
++int dbg_token_retrieve_apfw_key(uint8_t *pubkey, size_t pubkey_size)
++{
++	const uint8_t *token_pub_key;
++	size_t token_pub_key_len;
++
++	if (!pubkey || pubkey_size != DBG_TOKEN_ECC384_PUBKEY_SIZE)
++	{
++		LOG_ERR("Invalid params to retrieve_apfw_key");
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	if (token_payload_len == 0)
++	{
++		LOG_ERR("Token not loaded");
++		return DBG_TOKEN_ERR_NOT_INSTALLED;
++	}
++
++	/* Extract pubkey from token payload TLV */
++	if (tlv_decode(token_payload, token_payload_len,
++				   &token_pub_key, &token_pub_key_len,
++				   TLV_TYPE_TOKEN_PAYLOAD) != TLV_SUCCESS ||
++		token_pub_key_len != DBG_TOKEN_ECC384_PUBKEY_SIZE)
++	{
++		LOG_ERR("Failed to decode pubkey from token (len=%zu)",
++				token_pub_key_len);
++		return DBG_TOKEN_ERR_INTERNAL;
++	}
++
++	memcpy(pubkey, token_pub_key, pubkey_size);
++	return DBG_TOKEN_SUCCESS;
++}
+diff --git a/apps/mcu-runtime/src/include/cptra_crypto.h b/apps/mcu-runtime/src/include/cptra_crypto.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..11d31baa703b4e1916fe758a0c3bbf31b4fa8a3d
+--- /dev/null
++++ b/apps/mcu-runtime/src/include/cptra_crypto.h
+@@ -0,0 +1,36 @@
++#pragma once
++
++#include <stdint.h>
++
++/**
++ * Compute SHA-384 hash without 4-byte padding.
++ *
++ * This function hashes the exact input data without adding alignment padding.
++ * Use this for data that may not be 4-byte aligned (e.g., debug tokens).
++ *
++ * @param data       Input data to hash
++ * @param size       Size of input data in bytes
++ * @param digest     Output buffer for 48-byte SHA-384 digest
++ *
++ * @return 0 on success, negative error code on failure
++ */
++int cptra_sha384(uint8_t *data, uint32_t size, uint8_t *digest);
++
++/**
++ * Verify ECDSA P-384 signature without 4-byte padding.
++ *
++ * This function verifies an ECDSA signature over data that may not be 4-byte aligned.
++ * All public key and signature components are expected in BIG-ENDIAN format.
++ *
++ * @param data       Input data that was signed
++ * @param data_size  Size of input data in bytes
++ * @param pubkey_x   Public key X coordinate (48 bytes, big-endian)
++ * @param pubkey_y   Public key Y coordinate (48 bytes, big-endian)
++ * @param sig_r      Signature R component (48 bytes, big-endian)
++ * @param sig_s      Signature S component (48 bytes, big-endian)
++ *
++ * @return 0 on success (signature valid), negative error code on failure
++ */
++int cptra_ecdsa384_verify(uint8_t *data, uint32_t data_size,
++						  const uint8_t *pubkey_x, const uint8_t *pubkey_y,
++						  const uint8_t *sig_r, const uint8_t *sig_s);
+diff --git a/apps/mcu-runtime/src/include/debug_manifest.h b/apps/mcu-runtime/src/include/debug_manifest.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..d30423fa992d593ef94921a3a53c37731bd401b6
+--- /dev/null
++++ b/apps/mcu-runtime/src/include/debug_manifest.h
+@@ -0,0 +1,64 @@
++#pragma once
++
++#include <stdint.h>
++#include <stdbool.h>
++#include <debugtoken.h>
++#include <manifest.h>
++
++/*
++ * Debug manifest detection constants.
++ * A debug manifest contains two special IME entries:
++ * 1. FWID 0xFFFFFFFF with digest = SHA384("SOC Debug FW Manifest")
++ * 2. FWID 0xFFFFFFFE with digest = hash of debug token public key
++ */
++#define DEBUG_MANIFEST_MAGIC_FWID 0xFFFFFFFFu
++#define DEBUG_MANIFEST_PUBKEY_HASH_FWID 0xFFFFFFFEu
++
++/*
++ * Size of concatenated manifest keys for token-config verification:
++ * vendor_ecc(96) + vendor_lms(48) + owner_ecc(96) + owner_lms(48) = 288 bytes
++ */
++#define DEBUG_MANIFEST_KEYS_CONCAT_SIZE 288
++
++/*
++ * Debug manifest detection result
++ */
++struct debug_manifest_info
++{
++	bool is_debug_manifest;
++	bool has_pubkey_hash;
++	uint8_t pubkey_hash[DBG_TOKEN_SHA384_SIZE];
++};
++
++/**
++ * Detect if a SOC manifest is a debug manifest.
++ *
++ * A debug manifest contains two special IME entries:
++ * 1. FWID 0xFFFFFFFF with digest = SHA384("SOC Debug FW Manifest")
++ * 2. FWID 0xFFFFFFFE with digest = debug token public key hash
++ *
++ * @param[in]  manifest  SOC manifest to check
++ * @param[out] info      Detection result
++ *
++ * @return true if both markers are found, indicating a debug manifest.
++ */
++bool debug_manifest_detect(struct cptra_soc_manifest *manifest,
++						   struct debug_manifest_info *info);
++
++/**
++ * Verify debug token for manifest authentication.
++ *
++ * Steps:
++ * 1. Load and authenticate token from flash
++ * 2. Retrieve APFW public key and verify hash binding
++ * 3. Verify token-config signature over manifest keys
++ *
++ * @param[in] manifest_pubkey_hash Expected pubkey hash from manifest
++ * @param[in] manifest_keys        Concatenated manifest keys (optional)
++ * @param[in] manifest_keys_size   Size of manifest_keys
++ *
++ * @return DBG_TOKEN_SUCCESS on success, error code otherwise.
++ */
++int debug_manifest_verify_token(const uint8_t *manifest_pubkey_hash,
++								const uint8_t *manifest_keys,
++								size_t manifest_keys_size);
+diff --git a/apps/mcu-runtime/src/include/debugtoken.h b/apps/mcu-runtime/src/include/debugtoken.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..962a9d57366b4f7cb09accd75edfd5e3e6d4e12a
+--- /dev/null
++++ b/apps/mcu-runtime/src/include/debugtoken.h
+@@ -0,0 +1,137 @@
++#pragma once
++
++#include <stdint.h>
++#include <stdbool.h>
++#include <stddef.h>
++#include <tlv.h>
++
++/*
++ * Debug token error codes.
++ */
++enum debugtoken_error
++{
++	DBG_TOKEN_SUCCESS = 0,
++	DBG_TOKEN_ERR_INTERNAL = 0x1000,
++	DBG_TOKEN_ERR_INVALID_FORMAT = 0x1001,
++	DBG_TOKEN_ERR_SIGNATURE_FAILED = 0x1002,
++	DBG_TOKEN_ERR_INVALID_NONCE = 0x1003,
++	DBG_TOKEN_ERR_INVALID_LIFECYCLE = 0x1004,
++	DBG_TOKEN_ERR_UNSUPPORTED_TYPE = 0x1005,
++	DBG_TOKEN_ERR_STORAGE = 0x1006,
++	DBG_TOKEN_ERR_RATCHET_CHECK = 0x1007,
++	DBG_TOKEN_ERR_PROCESSING = 0x1008,
++	DBG_TOKEN_ERR_FEATURE_DISABLED = 0x1009,
++	DBG_TOKEN_ERR_FEATURE_DISABLED_POLICY = 0x100A,
++	DBG_TOKEN_ERR_FW_VERSION_MISMATCH = 0x100B,
++	DBG_TOKEN_ERR_INVALID_SERIAL = 0x100C,
++	DBG_TOKEN_ERR_INVALID_PSID = 0x100D,
++	DBG_TOKEN_ERR_ALREADY_INSTALLED = 0x100E,
++	DBG_TOKEN_ERR_NOT_INSTALLED = 0x100F,
++	DBG_TOKEN_ERR_READ_FAILED = 0x1010,
++	DBG_TOKEN_ERR_PUBKEY_MISMATCH = 0x1011,
++	DBG_TOKEN_ERR_CONFIG_SIG_FAILED = 0x1012,
++};
++
++/*
++ * Debug token types.
++ */
++enum debugtoken_type
++{
++	DBG_TOKEN_TYPE_INVALID = 0,
++	DBG_TOKEN_TYPE_FLASH_DEBUG_FW = 1,
++	DBG_TOKEN_TYPE_DIAGNOSTIC_EN = 2,
++	DBG_TOKEN_TYPE_WPDISABLE = 4,
++};
++
++/*
++ * Debug token slots.
++ * Note: BootMCU only uses IRoT slot
++ */
++enum debugtoken_slot
++{
++	DBG_TOKEN_SLOT_IROT = 0,
++	DBG_TOKEN_SLOT_VROT = 1,
++};
++
++/*
++ * Crypto sizes.
++ */
++#define DBG_TOKEN_SHA384_SIZE 48
++#define DBG_TOKEN_ECC384_XY_SIZE 48			/* Single pubkey coordinate (X or Y) */
++#define DBG_TOKEN_ECC384_PUBKEY_SIZE 96		/* Full pubkey (X + Y) */
++#define DBG_TOKEN_ECC384_SIG_RS_SIZE 48		/* Single signature component */
++#define DBG_TOKEN_ECC384_SIG_SIZE 96		/* Full signature (R + S) */
++
++/* Maximum TLV debug token size */
++#define DBG_TOKEN_MAX_TLV_SIZE 512
++
++/**
++ * Check if debug token is present in flash.
++ *
++ * @return true if token is detected in flash, false otherwise.
++ */
++bool dbg_token_is_in_flash(void);
++
++/**
++ * Read token from flash into provided buffer.
++ *
++ * @param[out] token_data        Buffer to hold token data
++ * @param[in]  token_data_cap    Capacity of token_data buffer
++ * @param[out] token_data_len    Actual length of token read
++ *
++ * @return DBG_TOKEN_SUCCESS on success, error code otherwise.
++ */
++int dbg_token_read_from_flash(uint8_t *token_data,
++							   size_t token_data_cap,
++							   size_t *token_data_len);
++
++/**
++ * Get the type of installed token.
++ *
++ * @param[out] token_type  Retrieved token type
++ *
++ * @return true on success, false on failure.
++ */
++bool dbg_token_get_type(uint16_t *token_type);
++
++/**
++ * Get the public key used to verify token signatures.
++ *
++ * @param[out] pub_key       Buffer to hold public key
++ * @param[in]  pub_key_size  Size of pub_key buffer (must be 96)
++ *
++ * @return DBG_TOKEN_SUCCESS on success, error code otherwise.
++ */
++int dbg_token_get_signing_pubkey(uint8_t *pub_key, size_t pub_key_size);
++
++/**
++ * Authenticate token signature.
++ *
++ * @param[in] token_buffer      Token data in TLV format
++ * @param[in] token_buffer_size Size of token buffer
++ * @param[in] pubkey            Public key for signature verification
++ *
++ * @return DBG_TOKEN_SUCCESS on success, error code otherwise.
++ */
++int dbg_token_auth(const uint8_t *token_buffer,
++					size_t token_buffer_size,
++					const uint8_t *pubkey);
++
++/**
++ * Load token from flash and authenticate it.
++ *
++ * @param[in] token_type  Expected token type
++ *
++ * @return DBG_TOKEN_SUCCESS on success, error code otherwise.
++ */
++int dbg_token_load_and_auth(enum debugtoken_type token_type);
++
++/**
++ * Retrieve the APFW signing public key from token payload.
++ *
++ * @param[out] pubkey       Buffer to hold public key (96 bytes)
++ * @param[in]  pubkey_size  Size of pubkey buffer
++ *
++ * @return DBG_TOKEN_SUCCESS on success, error code otherwise.
++ */
++int dbg_token_retrieve_apfw_key(uint8_t *pubkey, size_t pubkey_size);
+diff --git a/apps/mcu-runtime/src/include/storage.h b/apps/mcu-runtime/src/include/storage.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..e95631ed9bcded9fa966bc34fa52e6728617b6de
+--- /dev/null
++++ b/apps/mcu-runtime/src/include/storage.h
+@@ -0,0 +1,57 @@
++#ifndef _STORAGE_H
++#define _STORAGE_H
++
++#include <stddef.h>
++#include <stdbool.h>
++#include <stdint.h>
++
++/*
++ * Storage item types.
++ */
++enum storage_item {
++	STORAGE_ITEM_PERSISTENT_DATA_STORE,
++	STORAGE_ITEM_VIRTUAL_SERIAL_NUMBER,
++	STORAGE_ITEM_DEBUG_TOKEN_IROT,
++	STORAGE_ITEM_DEBUG_TOKEN_VROT,
++};
++
++/*
++ * Storage status codes.
++ */
++enum storage_status {
++	STORAGE_OK = 0,
++	STORAGE_ERR_BAD_ITEM,
++	STORAGE_ERR_NULL_POINTER,
++	STORAGE_ERR_SIZE,
++	STORAGE_ERR_DOES_NOT_EXIST,
++	STORAGE_ERR_IO,
++};
++
++/**
++ * Check if an item exists in storage.
++ *
++ * @param[in]  id      Item identifier
++ * @param[out] exists  Set to true if the item exists
++ *
++ * @return STORAGE_OK on success, error code otherwise.
++ */
++enum storage_status storage_item_exists(enum storage_item id, bool *exists);
++
++/**
++ * Read an item from storage.
++ *
++ * Reads from primary flash first, falls back to backup if primary fails.
++ *
++ * @param[in]  id          Item identifier
++ * @param[out] dest        Destination buffer
++ * @param[in]  capacity    Size of destination buffer
++ * @param[out] read_length Number of bytes read
++ *
++ * @return STORAGE_OK on success, error code otherwise.
++ */
++enum storage_status storage_read_item(enum storage_item id,
++				      void *dest,
++				      size_t capacity,
++				      size_t *read_length);
++
++#endif /* _STORAGE_H */
+diff --git a/apps/mcu-runtime/src/include/tlv.h b/apps/mcu-runtime/src/include/tlv.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..59dfea8e3c731a49de19fb13554c7e89c476656b
+--- /dev/null
++++ b/apps/mcu-runtime/src/include/tlv.h
+@@ -0,0 +1,151 @@
++#ifndef _TLV_H
++#define _TLV_H
++
++#include <stdint.h>
++#include <stddef.h>
++
++/* TLV structure identifier: "TLV1" */
++#define TLV_STRUCTURE_IDENTIFIER_0 0x54
++#define TLV_STRUCTURE_IDENTIFIER_1 0x4C
++#define TLV_STRUCTURE_IDENTIFIER_2 0x56
++#define TLV_STRUCTURE_IDENTIFIER_3 0x31
++
++#define TLV_STRUCTURE_VERSION_MAJOR 0x0001
++#define TLV_STRUCTURE_VERSION_MINOR 0x0000
++
++/* TLV header size in bytes */
++#define TLV_HEADER_SIZE (sizeof(struct tlv_header))
++
++/* Maximum TLV data length (16-bit length field) */
++#define MAX_TLV_DATA_LEN 65535
++
++/* TLV error codes */
++enum tlv_error {
++	TLV_SUCCESS = 0,
++	TLV_ERROR_INVALID_BUFFER = -1,
++	TLV_ERROR_INVALID_TYPE = -2,
++	TLV_ERROR_INVALID_LENGTH = -3,
++	TLV_ERROR_INVALID_DATA = -4,
++	TLV_ERROR_NOT_FOUND = -5,
++	TLV_ERROR_INVALID_ARGS = -6,
++};
++
++/* TLV type definitions */
++enum tlv_type {
++	/* Common types */
++	TLV_TYPE_DEVICE_TYPE = 0x0001,           /* 2 bytes */
++	TLV_TYPE_NONCE = 0x0002,                 /* 16 bytes */
++	TLV_TYPE_DEVICE_SERIAL_NUMBER = 0x0003,  /* 8 bytes */
++	TLV_TYPE_FIRMWARE_VERSION = 0x0005,      /* 4 bytes */
++	TLV_TYPE_DEVICE_LIFECYCLE = 0x0007,      /* 2 bytes */
++	TLV_TYPE_MAGIC_NUMBER = 0x0008,          /* 4 bytes - "BALI" */
++	TLV_TYPE_TOKEN_TYPE = 0x0009,            /* 4 bytes */
++	/*
++	 * Opaque token configuration blob (variable-length).
++	 *
++	 * Current uses differ by product/workflow:
++	 * - IRoT debug-manifest workflow: carries a 96-byte ECDSA-P384 signature
++	 *   used to bind the debug token to a SoC manifest.
++	 * - VRoT debug-manifest workflow: carries a 16-byte AP manifest GUID so the
++	 *   correct installed debug token can be selected per-AP.
++	 *
++	 * Consumers MUST validate the length and interpret accordingly.
++	 */
++	TLV_TYPE_TOKEN_CONFIGURATION = 0x000A,   /* Variable length */
++	TLV_TYPE_NV_SIGNATURE = 0x000B,          /* Variable length (l1) */
++	TLV_TYPE_TOKEN_INSTALL_STATUS = 0x000D,  /* 1 byte */
++	TLV_TYPE_TOKEN_PROCESS_STATUS = 0x000E,  /* 1 byte */
++	TLV_TYPE_TOKEN_TYPE_SUBTYPE_LIST = 0x0016, /* 8 bytes */
++	TLV_TYPE_TOKEN_PAYLOAD = 0x0017,         /* Variable length (l0) */
++
++	/* Extended types */
++	TLV_TYPE_TOKEN_VERSION = 0x4801,         /* 2 bytes */
++	TLV_TYPE_NV_SIGNATURE_ALGORITHM = 0x4802, /* 1 byte (0 for ECDSA P-384, 1 for LMS) */
++	/* AP debug-manifest workflow types (VRoT): per-signer public keys */
++	TLV_TYPE_VENDOR_ECC_PUBKEY = 0x4803,     /* 96 bytes (P-384 X||Y) */
++	TLV_TYPE_VENDOR_LMS_PUBKEY = 0x4804,     /* 48 bytes (raw) */
++	TLV_TYPE_OWNER_ECC_PUBKEY = 0x4805,      /* 96 bytes (P-384 X||Y) */
++	TLV_TYPE_OWNER_LMS_PUBKEY = 0x4806,      /* 48 bytes (raw) */
++};
++
++/* Signature algorithm types */
++enum tlv_signature_algorithm {
++	TLV_SIG_ALG_ECDSA_P384 = 0,
++	TLV_SIG_ALG_LMS = 1,
++};
++
++/* TLV structure header (32 bytes) */
++struct tlv_structure_header {
++	uint8_t identifier[4];
++	struct {
++		uint16_t major;
++		uint16_t minor;
++	} version;
++	uint32_t size;
++	uint8_t reserved[20];
++};
++
++/* TLV entry header (4 bytes) */
++struct tlv_header {
++	uint16_t type;
++	uint16_t length;
++};
++
++/**
++ * Encode data into TLV format
++ *
++ * @param data Pointer to the data to encode
++ * @param data_len Length of the data in bytes
++ * @param tlv_buffer Buffer to store the encoded TLV data
++ * @param tlv_buffer_len Size of tlv_buffer
++ * @param tlv_buffer_offset Pointer to current offset, updated with new offset
++ * @param type TLV type to encode
++ *
++ * @return TLV_SUCCESS on success, error code otherwise
++ */
++int tlv_encode(const uint8_t *data, size_t data_len, uint8_t *tlv_buffer,
++	       size_t tlv_buffer_len, size_t *tlv_buffer_offset, uint16_t type);
++
++/**
++ * Decode TLV format data
++ *
++ * @param tlv_buffer Buffer containing the TLV encoded data
++ * @param tlv_buffer_len Length of the TLV buffer in bytes
++ * @param data Pointer to store the decoded data (points into tlv_buffer)
++ * @param data_len Pointer to store the length of decoded data
++ * @param type TLV type to decode
++ *
++ * @return TLV_SUCCESS on success, error code otherwise
++ */
++int tlv_decode(const uint8_t *tlv_buffer, size_t tlv_buffer_len,
++	       const uint8_t **data, size_t *data_len, enum tlv_type type);
++
++/**
++ * Compare two TLV buffers for a given type
++ *
++ * @param data1 First buffer to compare
++ * @param data1_len Length of the first buffer
++ * @param data2 Second buffer to compare
++ * @param data2_len Length of the second buffer
++ * @param type TLV type to compare
++ *
++ * @return TLV_SUCCESS if equal, error code otherwise
++ */
++int tlv_compare(const uint8_t *data1, size_t data1_len,
++		const uint8_t *data2, size_t data2_len, enum tlv_type type);
++
++/**
++ * Update data in TLV buffer
++ *
++ * @param tlv_buffer Buffer containing TLV encoded data
++ * @param tlv_buffer_len Length of the TLV buffer
++ * @param type TLV type to update
++ * @param data Pointer to the new data
++ * @param data_len Length of the data in bytes
++ *
++ * @return TLV_SUCCESS on success, error code otherwise
++ */
++int tlv_update_data(uint8_t *tlv_buffer, size_t tlv_buffer_len,
++		    enum tlv_type type, uint8_t *data, size_t data_len);
++
++#endif /* _TLV_H */
+diff --git a/apps/mcu-runtime/src/manifest_image_sig.c b/apps/mcu-runtime/src/manifest_image_sig.c
+index 851b866d04dd41bed0043aa2de00d2b6b51855a3..b640a82e791ce568488d88156139ec095b476ca4 100644
+--- a/apps/mcu-runtime/src/manifest_image_sig.c
++++ b/apps/mcu-runtime/src/manifest_image_sig.c
+@@ -5,6 +5,8 @@
+  */
+ #include <ast_loader.h>
+ #include <manifest.h>
++#include <debug_manifest.h>
++#include <debugtoken.h>
+ #include <platform.h>
+ #include <scu.h>
+ 
+@@ -207,9 +209,76 @@ int cptra_verify_soc_manifest(struct cptra_soc_manifest *manifest)
+ {
+ 	struct cptra_set_auth_manifest_oa output = {0};
+ 	const struct device *dev = device_get_binding(CPTRA_MISC_DRV_NAME);
++	struct debug_manifest_info dbg_info;
++	int ret;
+ 
+-	if (!cptra_manifest_sec_en())
+-		return CPTRA_SUCCESS;
++	/*
++	 * Debug manifest gating checks - must be performed BEFORE calling
++	 * caliptra_set_auth_manifest(), otherwise Caliptra could accept a
++	 * debug manifest even when no debug token is present.
++	 *
++	 * Rules:
++	 * 1. If no debug token is installed, reject debug manifests
++	 * 2. If debug token is installed, require debug manifest markers
++	 */
++	bool is_debug_manifest = debug_manifest_detect(manifest, &dbg_info);
++	bool debug_token_present = dbg_token_is_in_flash();
++
++	LOG_INF("is_debug_manifest=%d, debug_token_present=%d",
++		is_debug_manifest, debug_token_present);
++
++	if (!debug_token_present)
++	{
++		/* No debug token: reject debug manifests */
++		if (is_debug_manifest)
++		{
++			LOG_ERR("Debug manifest found but no debug token installed");
++			return CPTRA_ERR_SOC_MANIFEST_VFY;
++		}
++	}
++	else
++	{
++		/* Debug token installed: require debug manifest markers */
++		if (!is_debug_manifest)
++		{
++			LOG_ERR("Debug token installed but manifest is not a debug manifest");
++			return CPTRA_ERR_SOC_MANIFEST_VFY;
++		}
++
++		/*
++		 * Extract manifest public keys for token-config verification.
++		 * Order: vendor_ecc + vendor_lms + owner_ecc + owner_lms
++		 */
++		static uint8_t manifest_keys[DEBUG_MANIFEST_KEYS_CONCAT_SIZE];
++		uint8_t *ptr = manifest_keys;
++
++		memcpy(ptr, manifest->preamble.manifest_vendor_ecc384_key,
++			   sizeof(manifest->preamble.manifest_vendor_ecc384_key));
++		ptr += sizeof(manifest->preamble.manifest_vendor_ecc384_key);
++		memcpy(ptr, manifest->preamble.manifest_vendor_lms_key,
++			   sizeof(manifest->preamble.manifest_vendor_lms_key));
++		ptr += sizeof(manifest->preamble.manifest_vendor_lms_key);
++		memcpy(ptr, manifest->preamble.manifest_owner_ecc384_key,
++			   sizeof(manifest->preamble.manifest_owner_ecc384_key));
++		ptr += sizeof(manifest->preamble.manifest_owner_ecc384_key);
++		memcpy(ptr, manifest->preamble.manifest_owner_lms_key,
++			   sizeof(manifest->preamble.manifest_owner_lms_key));
++
++		/*
++		 * Full debug token verification:
++		 * 1. Load and authenticate token from flash
++		 * 2. Verify token pubkey hash matches manifest's 0xFFFFFFFE IME entry
++		 * 3. Verify token-config signature over manifest keys
++		 */
++		ret = debug_manifest_verify_token(dbg_info.pubkey_hash,
++										  manifest_keys,
++										  sizeof(manifest_keys));
++		if (ret != DBG_TOKEN_SUCCESS)
++		{
++			LOG_ERR("Debug token verification failed (ret=%d)", ret);
++			return CPTRA_ERR_SOC_MANIFEST_VFY;
++		}
++	}
+ 
+ 	auth_input.manifest_size = sizeof(struct cptra_manifest_preamble) + sizeof(manifest->ime_count) +
+ 			      sizeof(manifest->imc);
+diff --git a/apps/mcu-runtime/src/storage.c b/apps/mcu-runtime/src/storage.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..3fffaafe40ef3123151f44695dee89995150a171
+--- /dev/null
++++ b/apps/mcu-runtime/src/storage.c
+@@ -0,0 +1,246 @@
++#include <string.h>
++#include <storage.h>
++
++#include <zephyr/device.h>
++#include <zephyr/drivers/flash.h>
++#include <zephyr/sys/byteorder.h>
++#include <zephyr/logging/log.h>
++
++LOG_MODULE_REGISTER(storage, CONFIG_LOG_DEFAULT_LEVEL);
++
++/*
++ * Flash device names for primary and backup regions.
++ * Primary: fmc@0 (chip 0)
++ * Backup:  fmc@1 (chip 1)
++ */
++#define FLASH_DEV_PRIMARY  "fmc@0"
++#define FLASH_DEV_BACKUP   "fmc@1"
++
++/*
++ * Storage layout constants.
++ */
++#define ITEM_SIZE          (32 * 1024)         /* 32KB per item */
++#define PRIMARY_STORAGE_END (64 * 1024 * 1024) /* 64MB */
++
++/*
++ * Storage header tags.
++ */
++#define STORAGE_TAG_EMPTY   0x00  /* Empty item */
++#define STORAGE_TAG_RAW     0x01  /* Contains raw item data */
++#define STORAGE_TAG_ERASED  0xFF  /* Erased flash */
++
++/*
++ * Storage header structure (4 bytes).
++ */
++struct storage_header {
++	uint8_t tag;        /* Storage tag */
++	uint8_t reserved;   /* Reserved for future use */
++	uint16_t length;    /* Length of item data */
++} __attribute__((__packed__));
++
++/*
++ * Region descriptor for flash access.
++ */
++struct storage_region {
++	const char *dev_name;
++	uint32_t offset;
++	uint32_t size;
++};
++
++/*
++ * Duplicated region for primary/backup storage.
++ */
++struct duplicated_region {
++	struct storage_region primary;
++	struct storage_region backup;
++};
++
++/*
++ * Get storage regions for an item.
++ *
++ * Layout uses reverse indexing from end of flash:
++ *   reverseIndex=0: PersistentDataStore
++ *   reverseIndex=2: DebugToken_VRoT
++ *   reverseIndex=3: DebugToken_IRoT
++ *   reverseIndex=4: VirtualSerialNumber
++ */
++static enum storage_status get_storage_regions(enum storage_item id,
++					       struct duplicated_region *out)
++{
++	uint32_t reverse_index;
++
++	switch (id) {
++	case STORAGE_ITEM_PERSISTENT_DATA_STORE:
++		reverse_index = 0;
++		break;
++	case STORAGE_ITEM_DEBUG_TOKEN_VROT:
++		reverse_index = 2;
++		break;
++	case STORAGE_ITEM_DEBUG_TOKEN_IROT:
++		reverse_index = 3;
++		break;
++	case STORAGE_ITEM_VIRTUAL_SERIAL_NUMBER:
++		reverse_index = 4;
++		break;
++	default:
++		return STORAGE_ERR_BAD_ITEM;
++	}
++
++	uint32_t reverse_offset = (reverse_index + 1) * ITEM_SIZE;
++
++	out->primary.dev_name = FLASH_DEV_PRIMARY;
++	out->primary.offset = PRIMARY_STORAGE_END - reverse_offset;
++	out->primary.size = ITEM_SIZE;
++
++	out->backup.dev_name = FLASH_DEV_BACKUP;
++	out->backup.offset = PRIMARY_STORAGE_END - reverse_offset;
++	out->backup.size = ITEM_SIZE;
++
++	return STORAGE_OK;
++}
++
++/*
++ * Read header from a region.
++ */
++static enum storage_status read_header(const struct storage_region *region,
++				       struct storage_header *hdr)
++{
++	const struct device *dev;
++
++	dev = device_get_binding(region->dev_name);
++	if (!dev) {
++		LOG_DBG("Device %s not found", region->dev_name);
++		return STORAGE_ERR_IO;
++	}
++
++	if (flash_read(dev, region->offset, hdr, sizeof(*hdr)) != 0) {
++		LOG_DBG("Failed to read header from %s", region->dev_name);
++		return STORAGE_ERR_IO;
++	}
++
++	return STORAGE_OK;
++}
++
++/*
++ * Read item from a single region.
++ */
++static enum storage_status read_single_item(const struct storage_region *region,
++					    void *dest,
++					    size_t capacity,
++					    size_t *read_length)
++{
++	struct storage_header hdr;
++	const struct device *dev;
++	enum storage_status status;
++	uint16_t item_length;
++
++	if (!dest) {
++		return STORAGE_ERR_NULL_POINTER;
++	}
++
++	status = read_header(region, &hdr);
++	if (status != STORAGE_OK) {
++		return status;
++	}
++
++	if (hdr.tag != STORAGE_TAG_RAW) {
++		LOG_DBG("Item does not exist in %s (tag=%d)",
++			region->dev_name, hdr.tag);
++		return STORAGE_ERR_DOES_NOT_EXIST;
++	}
++
++	item_length = sys_le16_to_cpu(hdr.length);
++
++	if (item_length > capacity) {
++		LOG_ERR("Buffer too small: need %u, have %zu",
++			item_length, capacity);
++		return STORAGE_ERR_SIZE;
++	}
++
++	dev = device_get_binding(region->dev_name);
++	if (!dev) {
++		return STORAGE_ERR_IO;
++	}
++
++	/* Read data after header */
++	if (flash_read(dev, region->offset + sizeof(hdr),
++		       dest, item_length) != 0) {
++		LOG_ERR("Failed to read data from %s", region->dev_name);
++		return STORAGE_ERR_IO;
++	}
++
++	*read_length = item_length;
++	return STORAGE_OK;
++}
++
++enum storage_status storage_item_exists(enum storage_item id, bool *exists)
++{
++	struct duplicated_region regions;
++	struct storage_header hdr;
++	enum storage_status status;
++
++	if (!exists) {
++		return STORAGE_ERR_NULL_POINTER;
++	}
++
++	*exists = false;
++
++	status = get_storage_regions(id, &regions);
++	if (status != STORAGE_OK) {
++		return status;
++	}
++
++	/* Check primary */
++	status = read_header(&regions.primary, &hdr);
++	if (status == STORAGE_OK && hdr.tag == STORAGE_TAG_RAW) {
++		*exists = true;
++		return STORAGE_OK;
++	}
++
++	/* Check backup */
++	status = read_header(&regions.backup, &hdr);
++	if (status == STORAGE_OK && hdr.tag == STORAGE_TAG_RAW) {
++		*exists = true;
++		/* TODO: should restore primary from backup */
++		return STORAGE_OK;
++	}
++
++	return STORAGE_OK;
++}
++
++enum storage_status storage_read_item(enum storage_item id,
++				      void *dest,
++				      size_t capacity,
++				      size_t *read_length)
++{
++	struct duplicated_region regions;
++	enum storage_status status;
++
++	if (!dest || !read_length) {
++		return STORAGE_ERR_NULL_POINTER;
++	}
++
++	*read_length = 0;
++
++	status = get_storage_regions(id, &regions);
++	if (status != STORAGE_OK) {
++		return status;
++	}
++
++	/* Try primary first */
++	status = read_single_item(&regions.primary, dest, capacity, read_length);
++	if (status == STORAGE_OK) {
++		LOG_DBG("Read item from primary (%s)", regions.primary.dev_name);
++		return STORAGE_OK;
++	}
++
++	/* Fall back to backup */
++	status = read_single_item(&regions.backup, dest, capacity, read_length);
++	if (status == STORAGE_OK) {
++		LOG_DBG("Read item from backup (%s)", regions.backup.dev_name);
++		/* TODO: should restore primary from backup */
++		return STORAGE_OK;
++	}
++
++	return status;
++}
+diff --git a/apps/mcu-runtime/src/tlv.c b/apps/mcu-runtime/src/tlv.c
+new file mode 100644
+index 0000000000000000000000000000000000000000..33c740905b760bcf2d1852f51b8acbb841d6bf19
+--- /dev/null
++++ b/apps/mcu-runtime/src/tlv.c
+@@ -0,0 +1,187 @@
++#include <string.h>
++#include <zephyr/logging/log.h>
++#include "include/tlv.h"
++
++LOG_MODULE_REGISTER(tlv, LOG_LEVEL_INF);
++
++#define TLV_MAX_DATA_LEN 1024
++
++static const uint8_t tlv_structure_id[4] = {
++	TLV_STRUCTURE_IDENTIFIER_0,
++	TLV_STRUCTURE_IDENTIFIER_1,
++	TLV_STRUCTURE_IDENTIFIER_2,
++	TLV_STRUCTURE_IDENTIFIER_3
++};
++
++int tlv_encode(const uint8_t *data, size_t data_len, uint8_t *tlv_buffer,
++	       size_t tlv_buffer_len, size_t *tlv_buffer_offset, uint16_t type)
++{
++	struct tlv_header header;
++	size_t offset;
++	size_t required_size;
++
++	if (!data || !tlv_buffer) {
++		LOG_ERR("tlv_encode: invalid args");
++		return TLV_ERROR_INVALID_ARGS;
++	}
++
++	if (data_len > MAX_TLV_DATA_LEN || data_len == 0) {
++		LOG_ERR("tlv_encode: invalid data length");
++		return TLV_ERROR_INVALID_LENGTH;
++	}
++
++	if (data_len > tlv_buffer_len) {
++		LOG_ERR("tlv_encode: data length > tlv buffer length");
++		return TLV_ERROR_INVALID_BUFFER;
++	}
++
++	if (!tlv_buffer_offset || *tlv_buffer_offset >= tlv_buffer_len) {
++		LOG_ERR("tlv_encode: invalid tlv buffer offset");
++		return TLV_ERROR_INVALID_BUFFER;
++	}
++
++	required_size = TLV_HEADER_SIZE + data_len;
++	if (tlv_buffer_len < *tlv_buffer_offset + required_size) {
++		LOG_ERR("tlv_encode: tlv buffer length < required size");
++		return TLV_ERROR_INVALID_BUFFER;
++	}
++
++	header.type = type;
++	header.length = (uint16_t)data_len;
++
++	offset = *tlv_buffer_offset;
++	memcpy(&tlv_buffer[offset], &header, TLV_HEADER_SIZE);
++	offset += TLV_HEADER_SIZE;
++	memcpy(&tlv_buffer[offset], data, data_len);
++	offset += data_len;
++	*tlv_buffer_offset = offset;
++
++	return TLV_SUCCESS;
++}
++
++int tlv_decode(const uint8_t *tlv_buffer, size_t tlv_buffer_len,
++	       const uint8_t **data, size_t *data_len, enum tlv_type type)
++{
++	const struct tlv_structure_header *tlv_struct_hdr;
++	struct tlv_header header;
++	const uint8_t *tlv_data;
++	size_t tlv_data_len;
++
++	if (!tlv_buffer || !data || !data_len) {
++		return TLV_ERROR_INVALID_ARGS;
++	}
++
++	if (tlv_buffer_len < sizeof(struct tlv_structure_header)) {
++		LOG_DBG("tlv_decode: buffer length < header size");
++		return TLV_ERROR_INVALID_LENGTH;
++	}
++
++	tlv_struct_hdr = (const struct tlv_structure_header *)tlv_buffer;
++	if (memcmp(tlv_struct_hdr->identifier, tlv_structure_id,
++		   sizeof(tlv_structure_id)) != 0) {
++		LOG_DBG("tlv_decode: structure identifier mismatch");
++		return TLV_ERROR_INVALID_ARGS;
++	}
++
++	tlv_data = tlv_buffer + sizeof(struct tlv_structure_header);
++	tlv_data_len = tlv_buffer_len - sizeof(struct tlv_structure_header);
++
++	while (tlv_data_len >= TLV_HEADER_SIZE) {
++		memset(&header, 0, sizeof(header));
++		header.type = tlv_data[0] | (tlv_data[1] << 8);
++		header.length = tlv_data[2] | (tlv_data[3] << 8);
++		tlv_data += TLV_HEADER_SIZE;
++		tlv_data_len -= TLV_HEADER_SIZE;
++
++		if (tlv_data_len < header.length) {
++			LOG_DBG("tlv_decode: buffer length < entry length");
++			return TLV_ERROR_INVALID_LENGTH;
++		}
++
++		if (header.type == (uint16_t)type) {
++			*data_len = header.length;
++			*data = tlv_data;
++			return TLV_SUCCESS;
++		}
++
++		tlv_data += header.length;
++		tlv_data_len -= header.length;
++	}
++
++	return TLV_ERROR_NOT_FOUND;
++}
++
++int tlv_compare(const uint8_t *data1, size_t data1_len,
++		const uint8_t *data2, size_t data2_len, enum tlv_type type)
++{
++	const uint8_t *data1_ptr = NULL;
++	size_t data1_len_ptr = 0;
++	const uint8_t *data2_ptr = NULL;
++	size_t data2_len_ptr = 0;
++
++	if (!data1 || !data2) {
++		return TLV_ERROR_INVALID_ARGS;
++	}
++
++	if (tlv_decode(data1, data1_len, &data1_ptr, &data1_len_ptr, type)
++	    != TLV_SUCCESS) {
++		LOG_DBG("tlv_compare: data1 not found");
++		return TLV_ERROR_NOT_FOUND;
++	}
++
++	if (tlv_decode(data2, data2_len, &data2_ptr, &data2_len_ptr, type)
++	    != TLV_SUCCESS) {
++		LOG_DBG("tlv_compare: data2 not found");
++		return TLV_ERROR_NOT_FOUND;
++	}
++
++	if (data1_len_ptr != data2_len_ptr) {
++		LOG_DBG("tlv_compare: data1 and data2 length mismatch");
++		return TLV_ERROR_INVALID_LENGTH;
++	}
++
++	if (data1_len_ptr > TLV_MAX_DATA_LEN) {
++		LOG_DBG("tlv_compare: length > max data length");
++		return TLV_ERROR_INVALID_LENGTH;
++	}
++
++	if (memcmp(data1_ptr, data2_ptr, data1_len_ptr) != 0) {
++		LOG_DBG("tlv_compare: data1 and data2 mismatch");
++		return TLV_ERROR_INVALID_DATA;
++	}
++
++	return TLV_SUCCESS;
++}
++
++int tlv_update_data(uint8_t *tlv_buffer, size_t tlv_buffer_len,
++		    enum tlv_type type, uint8_t *data, size_t data_len)
++{
++	uint8_t *data_ptr;
++	size_t data_len_ptr;
++	int ret;
++
++	if (!tlv_buffer || !data || !data_len) {
++		LOG_ERR("tlv_update_data: invalid args");
++		return TLV_ERROR_INVALID_ARGS;
++	}
++
++	ret = tlv_decode(tlv_buffer, tlv_buffer_len,
++			 (const uint8_t **)&data_ptr, &data_len_ptr, type);
++	if (ret != TLV_SUCCESS) {
++		LOG_DBG("tlv_update_data: type not found");
++		return ret;
++	}
++
++	if (data_ptr == NULL) {
++		LOG_DBG("tlv_update_data: data pointer is null");
++		return TLV_ERROR_INVALID_ARGS;
++	}
++
++	if (data_len_ptr != data_len) {
++		LOG_DBG("tlv_update_data: invalid length");
++		return TLV_ERROR_INVALID_LENGTH;
++	}
++
++	memcpy(data_ptr, data, data_len);
++	return TLV_SUCCESS;
++}

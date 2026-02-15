@@ -1,0 +1,77 @@
+#!/bin/sh
+set -e
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -d /run/systemd/system ] ; then
+	deb-systemd-invoke stop 'hw-management-bmc-boot-complete.service' 'hw-management-bmc-early-i2c-init.service' 'hw-management-bmc-health-monitor.service' 'hw-management-bmc-i2c-slave-setup.service' 'hw-management-bmc-plat-specific-preps.service' 'hw-management-bmc-recovery-handler.service' 'hw-management-bmc-reset-cause-logger.service' 'hw-management-early-config.service' >/dev/null || true
+fi
+# End automatically added section

@@ -1,0 +1,13 @@
+/ {
+	// Add a platform device node for demo VRoT
+	mctpvrot0 {
+		compatible = "nvidia,optee,vrot";
+		nvidia,ta-uuid = "14fe76f6-6114-499c-9b81-f90ebde9c50c";
+		nvidia,mctp-uuid = "14fe76f6-6114-499c-9b81-f90ebde9c50c";
+		nvidia,mctp-mtu = <7168>;
+		nvidia,mctp-protocol-versions = <0x1 0xF1F0F000
+		                                 0x5 0x0
+		                                 0x7e 0xF1F0FF00>;
+		status = "okay";
+	};
+};

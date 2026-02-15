@@ -1,0 +1,12 @@
+Package: hw-management
+Version: 1.mlnx.7.0050.1930
+Architecture: amd64
+Maintainer: Yehuda Yehudai <yyehudai@nvidia.com>
+Installed-Size: 2659
+Depends: libc6 (>= 2.2.5), lm-sensors, lsb-base (>= 3.0-6), python2.7 | python3, python3-psutil, xxd, libiio-utils, dmidecode, i2c-tools
+Section: utils
+Priority: optional
+Homepage: http://www.nvidia.com
+Description: Thermal control and chassis management for Nvidia systems (host)
+ This package supports Nvidia switches family for chassis
+ management and thermal control on the host CPU.

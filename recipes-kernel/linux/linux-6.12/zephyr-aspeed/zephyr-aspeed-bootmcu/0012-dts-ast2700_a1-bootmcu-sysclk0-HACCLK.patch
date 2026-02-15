@@ -1,0 +1,29 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Mon, 12 Jan 2026 00:00:00 +0000
+Subject: [PATCH] dts: ast2700 bootmcu: sysclk0 HACCLK policy for SSP
+
+The Linux kernel's Common Clock Framework (CCF) automatically disables
+unused clocks. To prevent the HACE clock from being disabled, restrict
+it to SSP only. Configure SCU0 clock security so only SSP can manage
+the HACE clock (SCU0_CLK_GATE_HACCLK) via &sysclk0 ssp policy.
+
+Upstream-Status: Pending
+
+Signed-off-by: Paul Srisoontorn <psrisoontorn@nvidia.com>
+---
+ boards/aspeed/ast2700_evb/ast2700_evb_ast2700_a1_bootmcu.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_a1_bootmcu.dts b/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_a1_bootmcu.dts
+index abcdef0..1234567 100644
+--- a/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_a1_bootmcu.dts
++++ b/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_a1_bootmcu.dts
+@@ -135,7 +135,7 @@
+ &sysclk0 {
+ 	psp = <>;
+ 	sec-psp = <>;
+-	ssp = <>;
++	ssp = <SCU0_CLK_GATE_HACCLK>;
+ 	tsp = <>;
+ 	psp-ssp = <>;
+ 	ssp-tsp = <>;

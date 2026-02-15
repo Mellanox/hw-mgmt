@@ -1,0 +1,42 @@
+Upstream-Status: Pending
+
+From efe2c5914a0e4ae4365c150b64411459c48c868a Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 10 Apr 2025 16:10:50 +0300
+Subject: [PATCH openbmc 5/5] Aspeed:LPC-PCC update remove callback prototype
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/soc/aspeed/aspeed-lpc-pcc.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/soc/aspeed/aspeed-lpc-pcc.c b/drivers/soc/aspeed/aspeed-lpc-pcc.c
+index 86a5f631a0b4..438119e8194f 100644
+--- a/drivers/soc/aspeed/aspeed-lpc-pcc.c
++++ b/drivers/soc/aspeed/aspeed-lpc-pcc.c
+@@ -608,12 +608,11 @@ static int aspeed_pcc_probe(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
+-static int aspeed_pcc_remove(struct platform_device *pdev)
++static void aspeed_pcc_remove(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct aspeed_pcc *pcc = dev_get_drvdata(dev);
+ 	aspeed_pcc_disable(pcc, dev);
+-	return 0;
+ }
+ 
+ static const struct of_device_id aspeed_pcc_table[] = {
+@@ -627,7 +626,7 @@ static struct platform_driver aspeed_pcc_driver = {
+ 		.of_match_table = aspeed_pcc_table,
+ 	},
+ 	.probe = aspeed_pcc_probe,
+-	.remove = aspeed_pcc_remove,
++	.remove_new = aspeed_pcc_remove,
+ };
+ 
+ module_platform_driver(aspeed_pcc_driver);
+-- 
+2.34.1
+

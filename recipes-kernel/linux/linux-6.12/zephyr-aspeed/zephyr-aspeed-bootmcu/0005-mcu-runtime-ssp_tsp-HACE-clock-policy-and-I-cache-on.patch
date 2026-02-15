@@ -1,0 +1,63 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Tue, 03 Feb 2026 13:37:54 
+Subject: [PATCH] mcu-runtime: ssp_tsp: configure HACE clock policy and enable
+Upstream-Status: Pending
+Signed-off-by: Alex Fickle <afickle@nvidia.com>
+diff --git a/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c b/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c
+index b611f1320a68ce2c228556db7af7068ad254b974..3adf06e146094ce16770e3bd05e8d35dbe1616a4 100644
+--- a/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c
++++ b/apps/mcu-runtime/soc/ast2700/ssp_tsp_ast2700.c
+@@ -17,12 +17,41 @@ LOG_MODULE_REGISTER(ssp_tsp, CONFIG_SOC_FMC_LOG_LEVEL);
+ #define MAX_I_D_ADDRESS		MB(512)
+ #define TCM_SIZE		KB(8)
+ 
++/*
++ * SCU0 Clock Security Policy registers
++ * These control which security group (PSP/SSP/TSP) can manage each clock gate.
++ * The 3 registers encode a 3-bit security group ID per clock gate bit position.
++ *
++ * Clock controller base is at SCU0_REG + 0x240
++ * Security policy registers are at offsets +0x14, +0x18, +0x1C from clock controller
++ * Lock register is at offset +0xBD0 from clock controller
++ */
++#define SCU0_CLK_SEC_POLICY0 (SCU0_REG + 0x254) /* clk_ctrl + 0x14 */
++#define SCU0_CLK_SEC_POLICY1 (SCU0_REG + 0x258) /* clk_ctrl + 0x18 */
++#define SCU0_CLK_SEC_POLICY2 (SCU0_REG + 0x25C) /* clk_ctrl + 0x1C */
++#define SCU0_CLK_SEC_LOCK (SCU0_REG + 0x1010)	/* clk_ctrl + 0xBD0 */
++
++/* Clock gate IDs */
++#define SCU0_CLK_GATE_HACCLK 13
++
++/* Lock bits for clock security policy */
++#define SCU0_CLK_SEC_LOCK_VAL GENMASK(23, 21)
++
+ int ssp_init(mem_addr_t load_addr)
+ {
+ 	struct ast2700_scu0 *scu;
+ 	uint32_t reg_val;
+ 	uint64_t phy_addr;
+ 
++	/*
++	 * Configure SCU0 clock security policy for HACE clock (HACCLK).
++	 * This prevents other security domains from disabling the HACE clock.
++	 */
++	sys_set_bits(SCU0_CLK_SEC_POLICY1, BIT(SCU0_CLK_GATE_HACCLK));
++
++	/* Lock the clock security policy to prevent further modifications */
++	sys_write32(SCU0_CLK_SEC_LOCK_VAL, SCU0_CLK_SEC_LOCK);
++
+ 	if (load_addr != (mem_addr_t)DT_REG_ADDR(DT_NODELABEL(ssp_memory))) {
+ 		LOG_ERR("FIT load address %08lx doesn't match SSP reserved memory %08lx", load_addr,
+ 			(mem_addr_t)DT_REG_ADDR(DT_NODELABEL(ssp_memory)));
+@@ -85,9 +114,8 @@ int ssp_init(mem_addr_t load_addr)
+         sys_write32(GENMASK(31, 0), (mm_reg_t)&scu->ssp_ctrl_3);
+         sys_write32(GENMASK(31, 0), (mm_reg_t)&scu->ssp_ctrl_4);
+ 
+-        /* Disable i & d cache by default */
+-        sys_write32(SCU0_SSP_TSP_CTRL_ICACHE_EN | SCU0_SSP_TSP_CTRL_DCACHE_EN,
+-                    (mm_reg_t)&scu->ssp_ctrl_6);
++	/* Enable I cache only (disable D-cache to avoid coherency issues) */
++	sys_write32(SCU0_SSP_TSP_CTRL_ICACHE_EN, (mm_reg_t)&scu->ssp_ctrl_6);
+ 
+ 	return 0;
+ }

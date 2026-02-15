@@ -1,1 +1,0 @@
-https://patchwork.kernel.org/project/linux-hwmon/patch/TYZPR03MB7130A7F41D61BFB611DDF0C7FA479@TYZPR03MB7130.apcprd03.prod.outlook.com/

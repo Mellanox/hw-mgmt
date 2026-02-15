@@ -1,0 +1,3 @@
+# MCTP Interface Rules (BMC)
+# Handle MCTP over I3C (e.g. to Spectrum-6 ASICs). IRoT MCTP entry to be added later.
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="mctpi3c*", NAME="%E{INTERFACE}", RUN+="/bin/sh -c '/usr/bin/mctp link set $env{INTERFACE} up; /usr/bin/mctp addr add 11 dev $env{INTERFACE}'"

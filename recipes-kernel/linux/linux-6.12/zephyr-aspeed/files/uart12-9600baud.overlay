@@ -1,0 +1,3 @@
+&uart12 {
+	current-speed = <9600>;
+};

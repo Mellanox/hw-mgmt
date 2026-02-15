@@ -1,0 +1,13 @@
+[Unit]
+Description=Setup BMC I2C Slave Device for Recovery Interface
+After=multi-user.target
+Before=bmc-recovery-handler.service
+ConditionPathExists=/etc/bmc-recovery.conf
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/hw-management-bmc-i2c-slave-setup.sh
+
+[Install]
+WantedBy=multi-user.target

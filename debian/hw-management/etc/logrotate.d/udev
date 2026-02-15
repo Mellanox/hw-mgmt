@@ -1,0 +1,12 @@
+"/var/log/udev_events.log" {
+    size 1M
+    rotate 3
+    olddir /var/log/
+    copytruncate
+    compress
+    delaycompress
+    dateext
+    dateformat -%Y%m%d%H%M%S
+    missingok
+    notifempty
+}

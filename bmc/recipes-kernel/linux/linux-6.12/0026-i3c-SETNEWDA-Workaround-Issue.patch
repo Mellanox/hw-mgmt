@@ -1,0 +1,98 @@
+Upstream-Status: Pending
+
+From beeb39302beed5c7f9694ee60210f75dc281b36a Mon Sep 17 00:00:00 2001
+From: saptarsis <saptarsis@nvidia.com>
+Date: Wed, 17 Sep 2025 10:15:14 +0530
+Subject: [PATCH] i3c: SETNEWDA Workaround Issue
+
+As per the MIPI Specs, the SetNewDA command is having 7 most significant bit as the DA and the
+least bit filled with value 1. CX8 device appears to use SETNEWDA payload directly as the address
+instead of right-shifting it as per I3C spec.So introduced a workaround to skip the left-shift
+for SETNEWDA to work around this issue.
+
+Tracking Bug: https://nvbugspro.nvidia.com/bug/5526029
+
+Tested
+'''
+HotPlugOUT
+
+Cx8 Side:
+RESET CX8: mlxfwreset -d /dev/mst/mt4131_pciconf1 reset
+Reset level: 3, Reset type: 0, Reset sync: 0, Reset method: 0
+-I- Sending Reset Command To Fw             -Done
+-I- Stopping Driver                         -Done
+-I- Resetting PCI                           -Done
+-I- Starting Driver                         -Done
+-I- Restarting MST                          -Done
+-I- FW was loaded successfully.
+
+BMC Side:
+Sep 17 05:20:12 nvl144-sw-bmc mctpreactor[2310]: Removed MCTP endpoint from device: [ network: 1, EID: 100 | interface: mctpi3c2, address: 0x [ 01 20 10 23 15 b3 ] ]
+
+HotPlugIN
+
+CX8 Side:
+Hotjoin:
+python3 ./nvda_i3c_debugger.py -d /dev/mst/mt4131_pciconf1 -ihj 1 2 1 0
+I3C Hot Join:           ENABLED
+[root@hwhca2 i3c_tool]# python3 ./nvda_i3c_debugger.py -d /dev/mst/mt4131_pciconf1 -s 2
++----------+----------+------------+------------+--------+-----------+------------+----------+--------------+----------+--------------+----------+------------+------------+----------+--------+
+| GW Index |   Mode   | Slave Addr | Fifo Empty | IBI GW | CCC State | Target IBI | Hot Join | Dynamic Addr | Slave GW | CRSpace Mode | WR READY |    SCL     |    SDA     | PIN VOLT | POP TO |
++----------+----------+------------+------------+--------+-----------+------------+----------+--------------+----------+--------------+----------+------------+------------+----------+--------+
+|    2     | I3C Only |  9 (0x09)  |    Yes     |  Idle  |     0     |     EN     |    EN    |     DIS      |   Idle   |      No      |  Ready   | 0xffffffff | 0xffffffff |   1.8V   |   5    |
++----------+----------+------------+------------+--------+-----------+------------+----------+--------------+----------+--------------+----------+------------+------------+----------+--------+
+
+BMC Side:
+Sep 17 05:20:37 nvl144-sw-bmc mctpreactor[2310]: Added MCTP endpoint to device: [ network: 1, EID: 100 | interface: mctpi3c2, address: 0x [ 01 20 10 23 15 b3 ] ]
+Sep 17 05:20:37 nvl144-sw-bmc mctpreactor[2310]: DiscoveryNotify match registered for interface mctpi3c2.
+
+Fixes jira https://jirasw.nvidia.com/browse/DGXOPENBMC-18879
+
+Signed-off-by: saptarsis <saptarsis@nvidia.com>
+---
+ drivers/i3c/master.c | 22 +++++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/i3c/master.c b/drivers/i3c/master.c
+index 66cd6e6eba87..90999a3c5c47 100644
+--- a/drivers/i3c/master.c
++++ b/drivers/i3c/master.c
+@@ -1332,6 +1332,7 @@ static int i3c_master_setda_locked(struct i3c_master_controller *master,
+ 	struct i3c_ccc_setda *setda;
+ 	struct i3c_ccc_cmd cmd;
+ 	int ret;
++	bool is_hotjoin = current && current->comm[0] == 'k'; /* kworker for hotjoin */
+ 
+ 	if (!oldaddr || !newaddr)
+ 		return -EINVAL;
+@@ -1340,7 +1341,26 @@ static int i3c_master_setda_locked(struct i3c_master_controller *master,
+ 	if (!setda)
+ 		return -ENOMEM;
+ 
+-	setda->addr = newaddr << 1;
++	/*
++	 * WORKAROUND: CX8 device appears to use SETNEWDA payload directly
++	 * as the address instead of right-shifting it as per I3C spec.
++	 * Skip the left-shift for SETNEWDA to work around this issue.
++	 */
++	if (!setdasa) {
++		/* SETNEWDA workaround - don't shift the address */
++		setda->addr = newaddr;
++		if (is_hotjoin) {
++			dev_info(&master->dev, "[HOTJOIN] SETNEWDA WORKAROUND: oldaddr=0x%02x, newaddr=0x%02x, payload=0x%02x (no shift)\n",
++				 oldaddr, newaddr, setda->addr);
++		}
++	} else {
++		/* SETDASA - normal behavior with shift */
++		setda->addr = newaddr << 1;
++		if (is_hotjoin) {
++			dev_info(&master->dev, "[HOTJOIN] SETDASA: oldaddr=0x%02x, newaddr=0x%02x, shifted_addr=0x%02x\n",
++				 oldaddr, newaddr, setda->addr);
++		}
++	}
+ 	i3c_ccc_cmd_init(&cmd, false,
+ 			 setdasa ? I3C_CCC_SETDASA : I3C_CCC_SETNEWDA, &dest, 1,
+ 			 false, 0);
+-- 
+2.43.0
+

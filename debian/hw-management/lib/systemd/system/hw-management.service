@@ -1,0 +1,16 @@
+[Unit]
+Description=Chassis HW management service of Nvidia systems
+Documentation=man:hw-management.service(8)
+Wants=hw-management-sysfs-monitor.service
+Wants=hw-management-fast-sysfs-monitor.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStartPre=-/bin/sh -c "/usr/bin/hw-management-ready.sh"
+ExecStart=/bin/sh -c "/usr/bin/hw-management.sh start"
+ExecStop=/bin/sh -c "/usr/bin/hw-management.sh stop"
+ExecStopPost=/bin/sleep 3
+
+[Install]
+WantedBy=multi-user.target

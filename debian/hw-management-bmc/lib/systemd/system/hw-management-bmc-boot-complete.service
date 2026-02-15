@@ -1,0 +1,17 @@
+[Unit]
+Description=BMC Ready Configuration
+After=bmc-early-i2c-init.service
+Requires=bmc-early-i2c-init.service
+
+[Service]
+Restart=no
+RemainAfterExit=true
+Type=simple
+ExecStartPre=/usr/bin/env hw-management-bmc_ready_common.sh
+ExecStart=/usr/bin/env hw-management-i2c-boot-progress.sh
+SyslogIdentifier=bmc_ready
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=
+

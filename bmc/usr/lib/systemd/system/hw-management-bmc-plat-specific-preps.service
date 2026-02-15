@@ -1,0 +1,15 @@
+[Unit]
+Description=Platform specific changes in filesystem
+DefaultDependencies=no
+After=local-fs.target
+Before=basic.target
+Before=systemd-udevd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hw-management-bmc-plat-specific-preps.sh
+SyslogIdentifier=nvidia_plat_specific_preps
+RemainAfterExit=no
+
+[Install]
+WantedBy=basic.target

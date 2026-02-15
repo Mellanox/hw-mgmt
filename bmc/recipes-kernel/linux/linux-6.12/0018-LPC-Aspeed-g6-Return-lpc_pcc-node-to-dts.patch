@@ -1,0 +1,33 @@
+Upstream-Status: Pending
+
+From 44491876dbb26cc43f1d81794e4722e426c89854 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 10 Apr 2025 19:37:03 +0300
+Subject: [PATCH openbmc 1/1]  LPC: Aspeed:g6: Return lpc_pcc node to dts
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ arch/arm/boot/dts/aspeed/aspeed-g6.dtsi | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm/boot/dts/aspeed/aspeed-g6.dtsi b/arch/arm/boot/dts/aspeed/aspeed-g6.dtsi
+index 1be294576379..6ed1a7749d52 100644
+--- a/arch/arm/boot/dts/aspeed/aspeed-g6.dtsi
++++ b/arch/arm/boot/dts/aspeed/aspeed-g6.dtsi
+@@ -852,6 +852,13 @@ lpc: lpc@1e789000 {
+ 				#size-cells = <1>;
+ 				ranges = <0x0 0x1e789000 0x1000>;
+ 
++				lpc_pcc: lpc-pcc@0 {
++					compatible = "aspeed,ast2600-lpc-pcc";
++					reg = <0x0 0x140>;
++					interrupts = <8>;
++					status = "disabled";
++				};
++
+ 				kcs1: kcs@24 {
+ 					compatible = "aspeed,ast2500-kcs-bmc-v2";
+ 					reg = <0x24 0x1>, <0x30 0x1>, <0x3c 0x1>;
+-- 
+2.34.1
+

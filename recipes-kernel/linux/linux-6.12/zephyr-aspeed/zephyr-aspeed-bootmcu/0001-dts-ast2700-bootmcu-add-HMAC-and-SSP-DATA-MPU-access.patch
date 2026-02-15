@@ -1,0 +1,41 @@
+From: Paul Srisoontorn <psrisoontorn@nvidia.com>
+Date: Mon, 12 Jan 2026 00:00:00 +0000
+Subject: [PATCH] dts: ast2700: bootmcu: add HMAC and SSP_DATA MPU access
+
+Update MPU to allow HACE to access SSP and OPTEE memory regions for
+hash calculation.
+
+Add MPU_ID_SSP_DATA and MPU_ID_HMAC read-only access to the ca35-s
+protect region (OPTEE), and add MPU_ID_HMAC read-write access to the
+ssp protect region.
+
+Upstream-Status: Pending
+
+Signed-off-by: Paul Srisoontorn <psrisoontorn@nvidia.com>
+---
+ boards/aspeed/ast2700_evb/ast2700_evb_ast2700_bootmcu.dts | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_bootmcu.dts b/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_bootmcu.dts
+index abcdef0..1234567 100644
+--- a/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_bootmcu.dts
++++ b/boards/aspeed/ast2700_evb/ast2700_evb_ast2700_bootmcu.dts
+@@ -29,7 +29,7 @@
+ 		protect-name = "ca35-s";
+ 		protect-start = <0x30000000>;
+ 		protect-end = <0x31080000>;
+-		allow = <MPU_ID_CA35 S_READWRITE>, < MPU_ID_SLIM S_READWRITE>;
++		allow = <MPU_ID_CA35 S_READWRITE>, < MPU_ID_SLIM S_READWRITE>, <MPU_ID_SSP_DATA S_READONLY>, <MPU_ID_HMAC S_READONLY>;
+ 		status = "okay";
+ 	};
+ 
+@@ -41,6 +41,7 @@
+ 		protect-end = <0x2d000000>;
+ 		allow = <MPU_ID_SSP_INST S_READONLY>,
+ 			<MPU_ID_SSP_DATA S_READWRITE>,
++			<MPU_ID_HMAC S_READWRITE>,
+ 			<MPU_ID_SLIM S_READWRITE>;
+ 		status = "okay";
+ 	};
+-- 
+2.25.1

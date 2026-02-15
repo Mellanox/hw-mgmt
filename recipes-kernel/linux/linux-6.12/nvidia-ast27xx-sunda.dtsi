@@ -1,0 +1,8 @@
+
+#include "nvidia-ast27xx-irot.dtsi"
+#include "nvidia-optee-vrot.dtsi"
+
+// enable OTP for testing (might remove later)
+&otp {
+	status = "okay";
+};
