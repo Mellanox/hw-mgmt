@@ -121,6 +121,7 @@ smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
 sn58xx_reset_attr_num=15
 sn66xx_reset_attr_num=14
+sn68xx_reset_attr_num=14
 n61xx_reset_attr_num=17
 q3401_reset_attr_num=17
 chipup_retry_count=3
@@ -661,6 +662,7 @@ n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
 sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
+sn68xxld_named_busses=(asic1 4 pwr1 6 vr1 15 vpd 1 cpu-vr 5)
 
 ACTION=$1
 
@@ -2735,6 +2737,48 @@ sn66xxld_specific()
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
+sn68xxld_specific()
+{
+	case $sku in
+	# SN6810_LD Chipless
+	HI191)
+		cpld_num=3
+		leakage_count=2
+		i2c_asic_bus_default=5
+		hotplug_pdbs=1
+		;;
+	# SN6810_LD
+	HI183|HI195)
+		cpld_num=4
+		leakage_count=2
+		i2c_asic_bus_default=5
+		hotplug_pdbs=1
+		;;
+	esac
+
+	echo 0 > $config_path/i2c_bus_offset
+	lm_sensors_config="$lm_sensors_configs_path/sn68xxld_sensors.conf"
+	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+
+	echo $cpld_num > $config_path/cpld_num
+	echo 0 > $config_path/fan_drwr_num
+	psu_count=0
+	hotplug_fans=0
+	hotplug_pwrs=0
+	hotplug_psus=0
+	asic_control=0
+	max_tachos=0
+	health_events_count=0
+	minimal_unsupported=1
+	i2c_bus_def_off_eeprom_cpu=0
+	i2c_bus_def_off_eeprom_vpd=1
+	i2c_comex_mon_bus_default=5
+	named_busses+=(${sn68xxld_named_busses[@]})
+	echo -n "${named_busses[@]}" > $config_path/named_busses
+	echo "$sn68xx_reset_attr_num" > $config_path/reset_attr_num
+	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
+}
+
 system_cleanup_specific()
 {
 	case $board_type in
@@ -2812,6 +2856,9 @@ check_system()
 			;;
 		VMOD0025)
 			sn66xxld_specific
+			;;
+		VMOD0027)
+			sn68xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3277,6 +3324,9 @@ set_asic_pci_id()
 	HI193)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
+	HI183|HI195)
+		asic_pci_id="${spc6_pci_id}"
+		;;
 	*)
 		echo 1 > "$config_path"/asic_num
 		return
@@ -3587,6 +3637,19 @@ pre_devtr_init()
 		case $sku in
 		HI193)
 			echo 2 >  "$config_path"/pwr_brd_num
+			echo 1 >  "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		esac
+		;;
+	VMOD0027)
+		case $sku in
+		HI191|HI183|HI195)
+			echo 1 >  "$config_path"/swb_brd_num
+			echo 16 > "$config_path"/swb_brd_vr_num
+			echo 1 >  "$config_path"/pwr_brd_num
 			echo 1 >  "$config_path"/pwr_brd_bus_offset
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
 			echo 1 >  "$config_path"/pwr_brd_hotswap_num
@@ -3971,7 +4034,8 @@ case $ACTION in
 			exit 1
 		fi
 		# TEMPORARY hw-management mockup values for HI180 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI193" -o "$sku" == "HI183" -o "$sku" == "HI187" ]; then
+		if check_simx &&
+		   [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI193" -o "$sku" == "HI183" -o "$sku" == "HI187" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			process_simx_links
 			log_info "Created mock hw management tree, exiting."
