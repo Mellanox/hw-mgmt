@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: GPL-2.0+
+/dts-v1/;
+
+#include "ast2700-evb.dts"
+
+/ {
+	model = "AST2700-A1 Switch BMC";
+
+	aliases {
+		ethernet0 = &mac2;  /* Main port with PHY */
+	};
+};
+
+&mdio0 {
+	status = "disabled";
+};
+
+&mdio1 {
+	status = "disabled";
+};
+
+&pcie2 {
+	status = "disabled";
+};
+
+&mac0 {
+	status = "disabled";
+};
+
+&mac1 {
+	status = "disabled";
+};
+
+&mdio2 {
+	status = "okay";
+	reset-gpios = <&exp0 10 GPIO_ACTIVE_LOW>;
+	reset-delay-us = <30000>;
+	reset-post-delay-us = <30000>;
+
+	ethphy2: ethernet-phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0>;
+	};
+};
+
+&sgmii {
+	status = "okay";
+};
+
+&mac2 {
+	status = "okay";
+	phy-mode = "sgmii";
+	phy-handle = <&ethphy2>;
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
+};
+
+&i2c5 {
+	status = "okay";
+	exp0: pcal6524@20 {
+		status = "okay";
+		compatible = "nxp,pcal6524";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gpio-line-names =
+			"GP_USB_HUB_RTS_L_R", "FPGA_READY",
+			"GP_3V3_BMC_PHY_PG", "GP_PWR_BANK_PWR_KILL_L_R",
+			"L_JTAG_LVLSHFTR1_OE1_GPI0_L", "L_JTAG_LVLSHFTR1_OE2_GPI0_L",
+			"GP_BMC_FPGA_EROT_FATAL_ERROR_L", "GP_BMC_WP_CTRL_GPIO_L",
+			"GP_BMC_FPGA_EROT_RESET_IN_GPIO_L", "GP_BMC_FPGA_EROT_RECOV_GPIO_L",
+			"S_BMC_GPIO_PHY_RST_GPIO_L", "GP_JTAG_BMC_CPLD_BURN_EN_L",
+			"GP_PWR_BANK_PRESENT_L", "GP_PWR_BANK_PWR_KILL_L",
+			"GP_PWR_BANK_MCU_RESET_L", "GP_PWR_BANK_MCU_RECOVERY_L";
+	};
+};
+
+&fmc {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fwspi_quad_default>;
+
+	flash@0 {
+		status = "okay";
+		spi-max-frequency = <50000000>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
+	};
+
+	flash@1 {
+		status = "okay";
+		spi-max-frequency = <50000000>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
+	};
+};
+
+&spi0 {
+	status = "disabled";
+};
+
+&spi1 {
+	status = "disabled";
+};
+
+&spi2 {
+	status = "disabled";
+};
+
+&i2c12 {
+	status = "okay";
+};

@@ -1,0 +1,6 @@
+/etc/HI193/hw-management-a2d_leakage_config.json
+/etc/HI193/hw-management-platform_config
+/etc/HI193/hw-management-spc6-ast2700-a1-bmc/bmc-early-i2c-devices.json
+/etc/HI193/hw-management-spc6-ast2700-a1-bmc_ready.sh
+/etc/HI193/hw-management-spc6-ast2700-a1-hw-management-events.sh
+/etc/HI193/hw-management-spc6-bmc.conf

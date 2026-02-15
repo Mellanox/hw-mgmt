@@ -1,0 +1,99 @@
+###########################################################################
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+# These rules catch attributes related to DPU components:
+# health and power events .
+# When trigger is matched, rule related data is to be passed to
+# the event handler.
+
+# Hotplug devices statuses.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform//mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-thermal-events.sh add hotplug-ext %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform//mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-thermal-events.sh rm hotplug-ext %S %p"
+
+# DPU on/off events.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU1_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU1_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU1_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU1_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU2_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU2_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU2_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU2_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU3_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU3_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU3_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU3_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU4_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU4_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU4_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU4_READY 1"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU1_SHTDN_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU1_SHTDN_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU1_SHTDN_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU1_SHTDN_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU2_SHTDN_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU2_SHTDN_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU2_SHTDN_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU2_SHTDN_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU3_SHTDN_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU3_SHTDN_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU3_SHTDN_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU3_SHTDN_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU4_SHTDN_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU4_SHTDN_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/mlxreg-hotplug/hwmon/hwmon*", ENV{DPU4_SHTDN_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-event DPU4_SHTDN_READY 1"
+
+# DPU power events.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDDIO}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDDIO 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDDIO}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDDIO 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDD_CPU}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDD_CPU 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDD_CPU}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDD_CPU 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDD}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDD 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDD}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDD 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_1V8}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_1V8 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_1V8}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_1V8 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_COMPARATOR}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_COMPARATOR 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_COMPARATOR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_COMPARATOR 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDDQ}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDDQ 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_VDDQ}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_VDDQ 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_HVDD}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_HVDD 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_HVDD}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_HVDD 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_DVDD}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_DVDD 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{PG_DVDD}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event PG_DVDD 1 %S %p"
+
+# DPU health events
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{UFM_UPGRADE_DONE}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event UFM_UPGRADE_DONE 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{UFM_UPGRADE_DONE}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event UFM_UPGRADE_DONE 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDDQ_HOT_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDDQ_HOT_ALERT 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDDQ_HOT_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDDQ_HOT_ALERT 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDD_CPU_HOT_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDD_CPU_HOT_ALERT 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDD_CPU_HOT_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDD_CPU_HOT_ALERT 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDDQ_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDDQ_ALERT 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDDQ_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDDQ_ALERT 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDD_CPU_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDD_CPU_ALERT 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{VDD_CPU_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event VDD_CPU_ALERT 1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{THERMAL_TRIP}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event THERMAL_TRIP 0 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-hotplug.*/hwmon/hwmon*", ENV{THERMAL_TRIP}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-chassis-events.sh hotplug-dpu-event THERMAL_TRIP 1 %S %p"
+
+# Register space IO access attributes.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-io.*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068/mlxreg-io.*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm regio %S %p"
+
+# DPU topology events.
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068", ACTION=="add", RUN+="/usr/bin/hw-management-chassis-events.sh add dpu %S %p"
+SUBSYSTEM=="i2c", DEVPATH=="/devices/platform/mlxplat/i2c_mlxcpld.*/i2c-*/i2c-*/*-0068", ACTION=="remove", RUN+="/usr/bin/hw-management-chassis-events.sh rm dpu %S %p"

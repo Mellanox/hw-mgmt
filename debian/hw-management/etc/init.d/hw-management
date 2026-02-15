@@ -1,0 +1,81 @@
+#!/bin/bash
+########################################################################
+# Copyright (c) 2020 Mellanox Technologies. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+### BEGIN INIT INFO
+# Provides: hw-management
+# Required-Start: $local_fs $remote_fs $syslog hw-management-fast-sysfs-monitor
+# Required-Stop: $local_fs $remote_fs $syslog hw-management-fast-sysfs-monitor
+# Default-Start: 2 3 4 5
+# Default-Stop:  0 1 6
+# Short-Description: <Chassis Hardware management of Mellanox systems>
+# Description: <Chassis Hardware management of Mellanox systems>
+### END INIT INFO
+# Available options:
+# start	- load the kernel drivers required for chassis hardware management,
+#	  connect drivers to devices.
+# stop	- disconnect drivers from devices, unload kernel drivers, which has
+#	  been loaded.
+#
+
+. /lib/lsb/init-functions
+
+EXECUTABLE=hw-management.sh
+SERVICE=hw-management
+ACTION=$1
+
+__usage="
+Usage: $(basename $0) [Options]
+
+Options:
+	start		Start hw-management service, supposed to be
+			activated at initialization by system service
+			control.
+	stop		Stop hw-management service, supposed to be
+			activated at system shutdown by system service
+			control.
+	chipup		Manual activation of ASIC I2C driver.
+	chipdown	Manual de-activation of ASIC I2C driver.
+	chipupen	Set 'chipup_dis' attribute to zero.
+	chipupdis <n>	Set 'chipup_dis' attribute to <n>, when <n>
+	thermsuspend	Suspend thermal control (if thermal control is
+			activated by hw-management package.
+			Not relevant for users who disable hw-management
+			thermal control.
+	thermresume	Resume thermal control.
+			Not relevant for users who disable hw-management
+			thermal control.
+	restart
+	force-reload	Performs hw-management 'stop' and the 'start.
+"
+
+$EXECUTABLE $ACTION

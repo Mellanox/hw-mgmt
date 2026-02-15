@@ -1,0 +1,217 @@
+Upstream-Status: Pending
+
+From 1edd0035ccc1bd447d5506219b40c5d088e40db2 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 10 Jul 2025 14:41:02 +0300
+Subject: [PATCH 2/5] [PATCH bmc 01/12] platform/mellanox: Rename field to
+ improve code  readability
+
+Rename field 'counter' in 'mlxreg_core_hotplug_platform_data' to count.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlxreg-hotplug.c |  8 +++----
+ drivers/platform/mellanox/nvsw-sn2201.c    |  2 +-
+ drivers/platform/x86/mlx-platform.c        | 26 +++++++++++-----------
+ include/linux/platform_data/mlxreg.h       |  4 ++--
+ 4 files changed, 20 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlxreg-hotplug.c b/drivers/platform/mellanox/mlxreg-hotplug.c
+index 14a35fa758b1..c79a76d0f256 100644
+--- a/drivers/platform/mellanox/mlxreg-hotplug.c
++++ b/drivers/platform/mellanox/mlxreg-hotplug.c
+@@ -262,7 +262,7 @@ static int mlxreg_hotplug_attr_init(struct mlxreg_hotplug_priv_data *priv)
+ 	item = pdata->items;
+ 
+ 	/* Go over all kinds of items - psu, pwr, fan. */
+-	for (i = 0; i < pdata->counter; i++, item++) {
++	for (i = 0; i < pdata->count; i++, item++) {
+ 		if (item->capability) {
+ 			/*
+ 			 * Read group capability register to get actual number
+@@ -554,7 +554,7 @@ static void mlxreg_hotplug_work_handler(struct work_struct *work)
+ 		goto unmask_event;
+ 
+ 	/* Handle topology and health configuration changes. */
+-	for (i = 0; i < pdata->counter; i++, item++) {
++	for (i = 0; i < pdata->count; i++, item++) {
+ 		if (aggr_asserted & item->aggr_mask) {
+ 			if (item->health)
+ 				mlxreg_hotplug_health_work_helper(priv, item);
+@@ -603,7 +603,7 @@ static int mlxreg_hotplug_set_irq(struct mlxreg_hotplug_priv_data *priv)
+ 	pdata = dev_get_platdata(&priv->pdev->dev);
+ 	item = pdata->items;
+ 
+-	for (i = 0; i < pdata->counter; i++, item++) {
++	for (i = 0; i < pdata->count; i++, item++) {
+ 		/* Clear group presense event. */
+ 		ret = regmap_write(priv->regmap, item->reg +
+ 				   MLXREG_HOTPLUG_EVENT_OFF, 0);
+@@ -687,7 +687,7 @@ static void mlxreg_hotplug_unset_irq(struct mlxreg_hotplug_priv_data *priv)
+ 		     0);
+ 
+ 	/* Clear topology configurations. */
+-	for (i = 0; i < pdata->counter; i++, item++) {
++	for (i = 0; i < pdata->count; i++, item++) {
+ 		data = item->data;
+ 		/* Mask group presense event. */
+ 		regmap_write(priv->regmap, data->reg + MLXREG_HOTPLUG_MASK_OFF,
+diff --git a/drivers/platform/mellanox/nvsw-sn2201.c b/drivers/platform/mellanox/nvsw-sn2201.c
+index abe7be602f84..451d64c35c23 100644
+--- a/drivers/platform/mellanox/nvsw-sn2201.c
++++ b/drivers/platform/mellanox/nvsw-sn2201.c
+@@ -517,7 +517,7 @@ static struct mlxreg_core_item nvsw_sn2201_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data nvsw_sn2201_hotplug = {
+ 	.items = nvsw_sn2201_items,
+-	.counter = ARRAY_SIZE(nvsw_sn2201_items),
++	.count = ARRAY_SIZE(nvsw_sn2201_items),
+ 	.cell = NVSW_SN2201_SYS_INT_STATUS_OFFSET,
+ 	.mask = NVSW_SN2201_CPLD_AGGR_MASK_DEF,
+ };
+diff --git a/drivers/platform/x86/mlx-platform.c b/drivers/platform/x86/mlx-platform.c
+index 1a09f2dfb7bc..9c164685e371 100644
+--- a/drivers/platform/x86/mlx-platform.c
++++ b/drivers/platform/x86/mlx-platform.c
+@@ -852,7 +852,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_comex_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_data = {
+ 	.items = mlxplat_mlxcpld_default_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_default_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -892,7 +892,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_default_wc_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_wc_data = {
+ 	.items = mlxplat_mlxcpld_default_wc_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_wc_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_default_wc_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -902,7 +902,7 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_wc_data = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_comex_data = {
+ 	.items = mlxplat_mlxcpld_comex_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_comex_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_comex_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_CARR_DEF,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRCX_OFFSET,
+@@ -949,7 +949,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_msn21xx_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_msn21xx_data = {
+ 	.items = mlxplat_mlxcpld_msn21xx_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_msn21xx_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_msn21xx_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -1058,7 +1058,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_msn274x_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_msn274x_data = {
+ 	.items = mlxplat_mlxcpld_msn274x_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_msn274x_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_msn274x_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -1105,7 +1105,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_msn201x_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_msn201x_data = {
+ 	.items = mlxplat_mlxcpld_msn201x_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_msn201x_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_msn201x_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_DEF,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -1229,7 +1229,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_default_ng_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_default_ng_data = {
+ 	.items = mlxplat_mlxcpld_default_ng_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_default_ng_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -1389,7 +1389,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_ng800_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
+ 	.items = mlxplat_mlxcpld_ext_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ext_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_ext_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -1399,7 +1399,7 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ng800_data = {
+ 	.items = mlxplat_mlxcpld_ng800_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_ng800_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_ng800_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -2240,7 +2240,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_modular_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_modular_data = {
+ 	.items = mlxplat_mlxcpld_modular_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_modular_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_modular_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_MODULAR,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -2272,7 +2272,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_chassis_blade_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_chassis_blade_data = {
+ 	.items = mlxplat_mlxcpld_chassis_blade_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_chassis_blade_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_chassis_blade_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_COMEX,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -2363,7 +2363,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_rack_switch_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_rack_switch_data = {
+ 	.items = mlxplat_mlxcpld_rack_switch_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_rack_switch_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_rack_switch_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+@@ -2518,7 +2518,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_l1_switch_events_items[] = {
+ static
+ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_l1_switch_data = {
+ 	.items = mlxplat_mlxcpld_l1_switch_events_items,
+-	.counter = ARRAY_SIZE(mlxplat_mlxcpld_l1_switch_events_items),
++	.count = ARRAY_SIZE(mlxplat_mlxcpld_l1_switch_events_items),
+ 	.cell = MLXPLAT_CPLD_LPC_REG_AGGR_OFFSET,
+ 	.mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX,
+ 	.cell_low = MLXPLAT_CPLD_LPC_REG_AGGRLO_OFFSET,
+diff --git a/include/linux/platform_data/mlxreg.h b/include/linux/platform_data/mlxreg.h
+index a7270039ebee..8824c95c6d1a 100644
+--- a/include/linux/platform_data/mlxreg.h
++++ b/include/linux/platform_data/mlxreg.h
+@@ -219,7 +219,7 @@ struct mlxreg_core_platform_data {
+  * @items: same type components with the hotplug capability;
+  * @irq: platform interrupt number;
+  * @regmap: register map of parent device;
+- * @counter: number of the components with the hotplug capability;
++ * @count: number of the components with the hotplug capability;
+  * @cell: location of top aggregation interrupt register;
+  * @mask: top aggregation interrupt common mask;
+  * @cell_low: location of low aggregation interrupt register;
+@@ -234,7 +234,7 @@ struct mlxreg_core_hotplug_platform_data {
+ 	struct mlxreg_core_item *items;
+ 	int irq;
+ 	void *regmap;
+-	int counter;
++	int count;
+ 	u32 cell;
+ 	u32 mask;
+ 	u32 cell_low;
+-- 
+2.34.1
+

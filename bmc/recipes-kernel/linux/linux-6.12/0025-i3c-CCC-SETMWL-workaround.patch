@@ -1,0 +1,131 @@
+Upstream-Status: Pending
+
+From a88b74830c13ac42dd5140842501203d0cb05f91 Mon Sep 17 00:00:00 2001
+From: saptarsis <saptarsis@nvidia.com>
+Date: Thu, 11 Sep 2025 13:35:52 +0530
+Subject: [PATCH] i3c CCC : SETMWL workaround
+
+After DAA process, the CX8 device doesnt go to WR "Ready" Mode and stays in "NO" mode.
+We have added a SETMWL workaround to for the WR ready to "Ready" State.
+
+Bug to track the issue: https://nvbugspro.nvidia.com/bug/5526039
+
+Fixes jira https://jirasw.nvidia.com/browse/DGXOPENBMC-17477
+
+Tested
+'''
+MCTP enumeration works with this fix, without this CX communication
+would fail.
+
+root@nvl144-sw-bmc:/sys/bus/i3c/devices# busctl tree au.com.codeconstruct.MCTP1
+`- /au
+  `- /au/com
+    `- /au/com/codeconstruct
+      `- /au/com/codeconstruct/mctp1
+        |- /au/com/codeconstruct/mctp1/interfaces
+        | |- /au/com/codeconstruct/mctp1/interfaces/lo
+        | |- /au/com/codeconstruct/mctp1/interfaces/mctpi3c2
+        | |- /au/com/codeconstruct/mctp1/interfaces/mctpspi0_2
+        | `- /au/com/codeconstruct/mctp1/interfaces/mctpspi2_0
+        `- /au/com/codeconstruct/mctp1/networks
+          `- /au/com/codeconstruct/mctp1/networks/1
+            `- /au/com/codeconstruct/mctp1/networks/1/endpoints
+              |- /au/com/codeconstruct/mctp1/networks/1/endpoints/10
+              |- /au/com/codeconstruct/mctp1/networks/1/endpoints/100(Discovered EID)
+              |- /au/com/codeconstruct/mctp1/networks/1/endpoints/11
+              |- /au/com/codeconstruct/mctp1/networks/1/endpoints/16
+              `- /au/com/codeconstruct/mctp1/networks/1/endpoints/9
+
+root@nvl144-sw-bmc:/sys/bus/i3c/devices# pldmtool base GetPldmTypes -m 100
+{
+    "CompletionCode": "SUCCESS",
+    "PLDMTypes": [
+        {
+            "PLDM Type": "base",
+            "PLDM Type Code": 0
+        },
+        {
+            "PLDM Type": "platform",
+            "PLDM Type Code": 2
+        },
+        {
+            "PLDM Type": "fw_update",
+            "PLDM Type Code": 5
+        }
+    ]
+}
+'''
+
+Signed-off-by: saptarsis <saptarsis@nvidia.com>
+---
+ drivers/i3c/master/dw-i3c-master.c | 53 +++++++++++++++++++++++++++++-
+ 1 file changed, 52 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/i3c/master/dw-i3c-master.c b/drivers/i3c/master/dw-i3c-master.c
+index ded5974b7c4b..5a4d5c9b6a6a 100644
+--- a/drivers/i3c/master/dw-i3c-master.c
++++ b/drivers/i3c/master/dw-i3c-master.c
+@@ -2062,8 +2062,59 @@ static int dw_i3c_master_enable_ibi(struct i3c_dev_desc *dev)
+ 
+ 	rc = i3c_master_enec_locked(m, dev->info.dyn_addr, I3C_CCC_EVENT_SIR);
+ 
+-	if (rc)
++	if (rc) {
+ 		master->platform_ops->set_sir_enabled(master, dev, data->index, false);
++	} else {
++		/* 
++		 * WORKAROUND: Some devices don't immediately become write-ready after ENEC.
++		 * Add delay and ensure MWL is set to help device transition to write-ready state.
++		 */
++		pr_info("dw_i3c: Applying WR READY workaround for addr=0x%02x\n", dev->info.dyn_addr);
++		
++		/* Give device time to process ENEC internally */
++		usleep_range(100, 200);
++		
++		/* 
++		 * Active workaround: Send SETMWL to force device into write-ready state.
++		 * Some devices need explicit write length configuration after ENEC.
++		 */
++		pr_info("dw_i3c: Sending SETMWL to trigger WR READY state\n");
++		if (dev->info.max_write_len > 0) {
++			struct i3c_ccc_cmd ccc_cmd;
++			struct i3c_ccc_cmd_dest dest;
++			u8 mwl_data[2];
++			int setmwl_ret;
++			
++			/* Prepare SETMWL command manually (big-endian format) */
++			u16 mwl_be = cpu_to_be16(dev->info.max_write_len);
++			mwl_data[0] = (mwl_be >> 8) & 0xFF;  /* MSB first */
++			mwl_data[1] = mwl_be & 0xFF;         /* LSB second */
++			
++			dest.addr = dev->info.dyn_addr;
++			dest.payload.data = mwl_data;
++			dest.payload.len = 2;
++			
++			ccc_cmd.rnw = false;
++			ccc_cmd.id = I3C_CCC_SETMWL(false);  /* Directed SETMWL */
++			ccc_cmd.dests = &dest;
++			ccc_cmd.ndests = 1;
++			ccc_cmd.err = 0;
++			
++			pr_info("dw_i3c: SETMWL: setting MWL=%d (0x%02x%02x) for addr=0x%02x\n", 
++				dev->info.max_write_len, mwl_data[0], mwl_data[1], dev->info.dyn_addr);
++			
++			setmwl_ret = dw_i3c_master_send_ccc_cmd(m, &ccc_cmd);
++			pr_info("dw_i3c: SETMWL result: %d (should trigger WR READY)\n", setmwl_ret);
++			
++			/* Small delay after SETMWL */
++			usleep_range(100, 200);
++		} else {
++			pr_info("dw_i3c: No max_write_len available, using extended delay\n");
++			usleep_range(500, 1000);
++		}
++		
++		pr_info("dw_i3c: WR READY workaround completed for addr=0x%02x\n", dev->info.dyn_addr);
++	}
+ 
+ 	return rc;
+ }
+-- 
+2.43.0
+

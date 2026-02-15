@@ -1,0 +1,18 @@
+[Unit]
+Description=Hardware Management Sync controller (starts peripheral + thermal updaters)
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStart=/bin/systemctl start hw-management-peripheral-updater.service --no-block
+ExecStart=/bin/systemctl start hw-management-thermal-updater.service --no-block
+
+ExecStop=/bin/systemctl stop hw-management-peripheral-updater.service --no-block
+ExecStop=/bin/systemctl stop hw-management-thermal-updater.service --no-block
+
+[Install]
+WantedBy=multi-user.target

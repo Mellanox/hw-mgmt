@@ -1,0 +1,16 @@
+[Unit]
+Description=Hardware management early config (copy platform files from /etc/<HID> to /etc and /usr/bin)
+Documentation=file:///usr/share/doc/hw-management-bmc/README.md
+DefaultDependencies=no
+After=local-fs.target
+Before=systemd-modules-load.service
+Before=hw-management-bmc-early-i2c-init.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/hw-management-early-config.sh
+SyslogIdentifier=hw-management-early-config
+
+[Install]
+WantedBy=sysinit.target

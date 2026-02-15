@@ -1,0 +1,38 @@
+Upstream-Status: Pending
+
+From e1b2d616236d92c4ba401182aa67ca1ccb62308d Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Sun, 24 Nov 2024 16:50:18 +0200
+Subject: [PATCH BMC 15/15] Add LPC PCC driver to kernel config
+
+This driver enables the LPC PCC hardware on the ASPEED BMC,
+which is used to get the POST codes from the host CPU.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/soc/aspeed/Kconfig | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/soc/aspeed/Kconfig b/drivers/soc/aspeed/Kconfig
+index a90101c503c2..18adfdad66a6 100644
+--- a/drivers/soc/aspeed/Kconfig
++++ b/drivers/soc/aspeed/Kconfig
+@@ -24,6 +24,15 @@ config ASPEED_LPC_SNOOP
+ 	  allows the BMC to listen on and save the data written by
+ 	  the host to an arbitrary LPC I/O port.
+ 
++config ASPEED_LPC_PCC
++	tristate "ASPEED LPC PCC support"
++	select REGMAP
++	select MFD_SYSCON
++	default ARCH_ASPEED
++	help
++	  Enables the LPC PCC hardware on the ASPEED BMC, which
++	  is used to get the POST codes from the host CPU.
++
+ config ASPEED_UART_ROUTING
+ 	tristate "ASPEED uart routing control"
+ 	select REGMAP
+-- 
+2.34.1
+
