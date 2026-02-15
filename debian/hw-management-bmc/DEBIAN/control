@@ -1,0 +1,14 @@
+Package: hw-management-bmc
+Source: hw-management
+Version: 1.mlnx.7.0050.1930
+Architecture: amd64
+Maintainer: Yehuda Yehudai <yyehudai@nvidia.com>
+Installed-Size: 461
+Depends: systemd, udev
+Section: utils
+Priority: optional
+Homepage: http://www.nvidia.com
+Description: Hardware management and chassis services for Nvidia BMC (SONiC BMC)
+ This package provides BMC-side scripts, systemd units, udev rules,
+ and platform-specific config (e.g. HI193 / SPC6 AST2700) for use
+ with Microsoft Sonic BMC OS or other Debian-based BMC images.

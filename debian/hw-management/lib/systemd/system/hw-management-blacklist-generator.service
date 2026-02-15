@@ -1,0 +1,14 @@
+[Unit]
+Description=Dynamic Module Blacklist Generator
+DefaultDependencies=no
+Before=systemd-modules-load.service
+After=local-fs.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hw-management-process-blacklist.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

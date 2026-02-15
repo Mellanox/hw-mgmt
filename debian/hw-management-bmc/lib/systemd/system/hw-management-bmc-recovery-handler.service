@@ -1,0 +1,39 @@
+[Unit]
+Description=BMC I2C Recovery Command Handler
+Documentation=file:///usr/share/doc/bmc-recovery-handler/I2C_RECOVERY_BUS.README
+After=multi-user.target bmc-i2c-slave-setup.service
+Requires=bmc-i2c-slave-setup.service
+# Require configuration file to exist
+ConditionPathExists=/etc/bmc-recovery.conf
+# Platform-specific I2C device dependencies should be added via drop-in overrides
+# Example: After=sys-devices-platform-ahb-apb-bus@1e78a000-i2c@700.device
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/bmc-recovery.conf
+ExecStart=/usr/bin/hw-management-bmc-recovery-handler.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+User=root
+
+# Restart on failure
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/log /sys/bus/i2c/devices
+
+# Resource limits
+LimitNOFILE=1024
+LimitNPROC=64
+
+[Install]
+WantedBy=multi-user.target
+

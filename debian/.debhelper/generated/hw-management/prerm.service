@@ -1,0 +1,40 @@
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-sync" ] ; then
+	invoke-rc.d hw-management-sync stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-blacklist-generator" ] ; then
+	invoke-rc.d hw-management-blacklist-generator stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-fast-sysfs-monitor" ] ; then
+	invoke-rc.d hw-management-fast-sysfs-monitor stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-sysfs-monitor" ] ; then
+	invoke-rc.d hw-management-sysfs-monitor stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-thermal-updater" ] ; then
+	invoke-rc.d hw-management-thermal-updater stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-peripheral-updater" ] ; then
+	invoke-rc.d hw-management-peripheral-updater stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management-tc" ] ; then
+	invoke-rc.d hw-management-tc stop || exit 1
+fi
+# End automatically added section
+# Automatically added by dh_installinit/13.6ubuntu1
+if [ -z "${DPKG_ROOT:-}" ] && [ "$1" = remove ] && [ -x "/etc/init.d/hw-management" ] ; then
+	invoke-rc.d hw-management stop || exit 1
+fi
+# End automatically added section

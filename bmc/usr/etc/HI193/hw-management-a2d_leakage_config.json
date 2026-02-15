@@ -1,0 +1,59 @@
+[
+    {
+        "Name": "Chassis_0_LeakDetector_0_Mgmt",
+        "NumChnl": 2,
+        "ChnlNames": [
+            "Chassis_0_LeakDetector_0_A",
+            "Chassis_0_LeakDetector_0_B"
+        ],
+        "Device": [
+            {
+                "DeviceType": "MAX1363",
+                "Bus": 28,
+                "Address": "0x34",
+                "CfgReg": "0x00",
+                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
+            },
+            {
+                "DeviceType": "ADS7142",
+                "Bus": 28,
+                "Address": "0x49",
+                "CfgReg": "0x01",
+                "CfgRegVal": "0xc4 0x90",
+                "LoThreshReg": "0x02",
+                "LoThreshRegVal": "0x38 0x40",
+                "HiThreshReg": "0x03",
+                "HiThreshRegVal": "0x7f 0xf0"
+            }
+        ]
+    },
+    {
+        "Name": "Chassis_0_LeakDetector_1_Swb",
+        "NumChnl": 2,
+        "ChnlNames": [
+            "Chassis_0_LeakDetector_1_A",
+            "Chassis_0_LeakDetector_1_B"
+        ],
+        "Device": [
+            {
+                "DeviceType": "MAX1363",
+                "Bus": 29,
+                "Address": "0x34",
+                "CfgReg": "0x00",
+                "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
+            },
+            {
+                "DeviceType": "ADS7142",
+                "Bus": 29,
+                "Address": "0x48",
+                "CfgReg": "0x01",
+                "CfgRegVal": "0xc4 0x90",
+                "LoThreshReg": "0x02",
+                "LoThreshRegVal": "0x4b 0x00",
+                "HiThreshReg": "0x03",
+                "HiThreshRegVal": "0x7f 0xf0"
+            }
+        ]
+    }
+]
+

@@ -1,0 +1,20 @@
+[Unit]
+Description=Hw-management thermal updater service for ASIC and module temperature monitoring
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
+
+StartLimitIntervalSec=1200
+StartLimitBurst=5
+
+[Service]
+ExecStart=/bin/sh -c "/usr/bin/hw_management_thermal_updater.py"
+ExecStop=/bin/kill $MAINPID
+TimeoutStopSec=1
+
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,319 @@
+
+###########################################################################
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+# The below rules contains sysfs attributes, related to Mellanox thermal
+# control. These rules are supposed to catch the following attributes,
+# related to the next components: ASIC and port thermal zone mode, cooling
+# device current state,  statues of hot-pluggable devices, FAN faults, port
+# temperature fault, system ambient temperatures.
+# When trigger is matched, rule related data is to be passed to the event
+# handler.
+
+# Ambient temperatures (lm75, tmp102).
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add port_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0048/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm port_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add fan_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0049/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm fan_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add port_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm port_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add fan_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm fan_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add lr1_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm lr1_amb %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004d/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pdb_temp1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004d/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pdb_temp1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pdb_temp2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pdb_temp2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add tempX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-004f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm tempX %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add cx_amb %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-001f/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm cx_amb %S %p"
+
+# Hotplug devices statuses.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add hotplug %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm hotplug %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic up %S %p 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic1}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic up %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic2}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic up %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic3}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="2", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic up %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 2"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ATTR{asic4}=="3", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh change hotplug_asic down %S %p 2"
+
+# Hotplug events
+
+# Leakage events
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE1}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE1 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE1}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE1 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE2}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE2 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE2}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE2 1"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE_AGGR}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE_AGGR 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE_AGGR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE_AGGR 1"
+
+# Cartridge presence
+# Not relevant for ETH systems
+
+# System events
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{POWER_BUTTON}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event POWER_BUTTON 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{POWER_BUTTON}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event POWER_BUTTON 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{AMB_TEMP_SENSE}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event AMB_TEMP_SENSE 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{AMB_TEMP_SENSE}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event AMB_TEMP_SENSE 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GRACEFUL_POWER_OFF_REQ}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GRACEFUL_POWER_OFF_REQ 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GRACEFUL_POWER_OFF_REQ}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GRACEFUL_POWER_OFF_REQ 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_POWER_OFF_READY}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_POWER_OFF_READY 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_POWER_OFF_READY}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_POWER_OFF_READY 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_RESET}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_RESET 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_RESET}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_RESET 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{APML_SMB_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event APML_SMB_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{APML_SMB_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event APML_SMB_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_UNEXP_POWER_OFF}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_UNEXP_POWER_OFF 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_UNEXP_POWER_OFF}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_UNEXP_POWER_OFF 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{UID_PUSH_BUTTON}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event UID_PUSH_BUTTON 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{UID_PUSH_BUTTON}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event UID_PUSH_BUTTON 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_RST}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_RST 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_RST}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_RST 1"
+# BIOS status events
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_STARTED}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_STARTED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_STARTED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_STARTED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_ENDED}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_ENDED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_ENDED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_ENDED 1"
+
+# Hotplug power good and alert events
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDD_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDD_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDD_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDD_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDD_T_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDD_T_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDD_T_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDD_T_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_PL_DVDD_T_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_PL_DVDD_T_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_PL_DVDD_T_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_PL_DVDD_T_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_PL_AVDD_T_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_PL_AVDD_T_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_PL_AVDD_T_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_PL_AVDD_T_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_PL_HVDD_T_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_PL_HVDD_T_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_PL_HVDD_T_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_PL_HVDD_T_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDDHBID_T_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDDHBID_T_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDDHBID_T_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDDHBID_T_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{1V8_VDDIO_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event 1V8_VDDIO_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{1V8_VDDIO_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event 1V8_VDDIO_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_1V8_VDDQPS_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_1V8_VDDQPS_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_1V8_VDDQPS_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_1V8_VDDQPS_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_MISC_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_MISC_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_MISC_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_MISC_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_3V3_BMC_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_3V3_BMC_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_3V3_BMC_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_3V3_BMC_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_1V8_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_1V8_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_1V8_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_1V8_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{DDR_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event DDR_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{DDR_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event DDR_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{12V_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event 12V_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{12V_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event 12V_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_3V3_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_3V3_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_3V3_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_3V3_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_ALW_PWRGD}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_ALW_PWRGD 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_ALW_PWRGD}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_ALW_PWRGD 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDDCR_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDDCR_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDDCR_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDDCR_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC2_DVDD_PL0_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC2_DVDD_PL0_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC2_DVDD_PL0_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC2_DVDD_PL0_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{PDB_HSC_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event PDB_HSC_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{PDB_HSC_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event PDB_HSC_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{HSC0_SMB_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event HSC0_SMB_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{HSC0_SMB_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event HSC0_SMB_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BMC_TPM_PIRQ}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BMC_TPM_PIRQ 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BMC_TPM_PIRQ}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BMC_TPM_PIRQ 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_RESET_DEASSERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_RESET_DEASSERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{CPU_RESET_DEASSERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event CPU_RESET_DEASSERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_STARTED}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_STARTED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_STARTED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_STARTED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_BOOT_COMPLETED}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_BOOT_COMPLETED 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BIOS_BOOT_COMPLETED}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BIOS_BOOT_COMPLETED 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SMB_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SMB_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SMB_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SMB_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{HSC1_SMB_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event HSC1_SMB_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{HSC1_SMB_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event HSC1_SMB_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{PDB_FSD}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event PDB_FSD 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{PDB_FSD}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event PDB_FSD 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_3V3_OSC_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_3V3_OSC_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_3V3_OSC_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_3V3_OSC_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_3V3_OSC_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_3V3_OSC_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDRV_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDRV_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{GP_VDRV_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event GP_VDRV_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_HEALTH}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_HEALTH 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_HEALTH}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_HEALTH 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_TEMP_WARN}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_TEMP_WARN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_TEMP_WARN}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_TEMP_WARN 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_TEMP_SHTDN}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_TEMP_SHTDN 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_TEMP_SHTDN}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_TEMP_SHTDN 1"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SSD_I2C_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SSD_I2C_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SSD_I2C_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SSD_I2C_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{WD_EXP}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event WD_EXP 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{WD_EXP}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event WD_EXP 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{5V_USB}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event 5V_USB 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{5V_USB}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event 5V_USB 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SSD_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SSD_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SSD_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SSD_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BMC_PHY_PG}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BMC_PHY_PG 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{BMC_PHY_PG}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event BMC_PHY_PG 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE_AGGR}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE_AGGR 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{LEAKAGE_AGGR}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event LEAKAGE_AGGR 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{PSYS_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event PSYS_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{PSYS_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event PSYS_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_MEM}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_MEM 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDD_MEM}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDD_MEM 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SVI3_VR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SVI3_VR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{SVI3_VR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event SVI3_VR_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{THERMTRIP_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event THERMTRIP_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{THERMTRIP_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event THERMTRIP_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDDQ_VRHOT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDDQ_VRHOT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{VDDQ_VRHOT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event VDDQ_VRHOT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_VDD_PWR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_VDD_PWR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_VDD_PWR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_VDD_PWR_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_VDD_T0_7_PWR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_VDD_T0_7_PWR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_VDD_T0_7_PWR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_VDD_T0_7_PWR_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_DVDD_T0_7_PWR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_DVDD_T0_7_PWR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_DVDD_T0_7_PWR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_DVDD_T0_7_PWR_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_AVDD_T0_7_PWR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_AVDD_T0_7_PWR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_AVDD_T0_7_PWR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_AVDD_T0_7_PWR_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_HVDD_PWR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_HVDD_PWR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_HVDD_PWR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_HVDD_PWR_ALERT 1"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_VDDDHBID_PWR_ALERT}=="0", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_VDDDHBID_PWR_ALERT 0"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-hotplug/hwmon/hwmon*", ENV{ASIC1_VDDDHBID_PWR_ALERT}=="1", ACTION=="change", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh hotplug-event ASIC1_VDDDHBID_PWR_ALERT 1"
+
+# Register space attributes
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-io/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add regio %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0ff00.i2c-bus/i2c-14/14-0031/mlxreg-io/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm regio %S %p"
+
+# LED
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg*:*:green", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:amber", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:amber", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm led %S %p %k"
+
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:blue", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add led %S %p %k"
+SUBSYSTEM=="leds", KERNEL=="mlxreg:*:blue", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm led %S %p %k"
+
+# Voltage controllers ucd924, tps53679
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0027/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0027/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0041/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0041/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0070/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0070/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0071/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0071/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0072/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon3 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0072/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon3 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon4 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0073/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon4 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon1 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0062/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon1 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon2 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0064/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon2 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0066/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon3 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0066/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon3 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0068/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon4 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0068/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon4 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-006a/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon5 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-006a/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon5 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-006c/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon6 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-006c/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon6 %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-006e/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmon7 %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-006e/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmon7 %S %p"
+
+# any voltmon including COMEX
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add voltmonX %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-*/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm voltmonX %S %p"
+
+# Power-converters and hotswap devices. They are supported by generic pmbus driver. Exact name is found from devtree file.
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0010/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0010/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0011/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0011/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0012/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0012/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0013/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0013/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0015/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0016/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-0016/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-001b/hwmon/hwmon*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add pmbus %S %p"
+SUBSYSTEM=="hwmon", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*/*-001b/hwmon/hwmon*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm pmbus %S %p"
+
+# IIO (max1363)
+SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add a2d %S %p %k"
+SUBSYSTEM=="iio", KERNEL=="iio:device*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm a2d %S %p %k"
+
+# EEPROM
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-7]", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add eeprom %S %p"
+SUBSYSTEM=="i2c", KERNEL=="*-005[0-7]", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm eeprom %S %p"
+
+# WATCHDOG
+SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add watchdog %S %p"
+SUBSYSTEM=="watchdog", KERNEL=="watchdog*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm watchdog %S %p"
+
+# I2C links on main board
+SUBSYSTEM=="i2c-dev", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*", ACTION=="add", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh add i2c_link %S %p"
+SUBSYSTEM=="i2c-dev", DEVPATH=="/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f400.i2c-bus/i2c-*/i2c-*", ACTION=="remove", RUN+="/usr/bin/hw-management-spc6-ast2700-a1-hw-management-events.sh rm i2c_link %S %p"

@@ -1,1 +1,0 @@
-https://git.kernel.org/pub/scm/linux/kernel/git/pdx86/platform-drivers-x86.git/commit/?h=review-hans&id=da9a7f6ef0abcff12d2fc0381d7c0a7ac2c96c6d
