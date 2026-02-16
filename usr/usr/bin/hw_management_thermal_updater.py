@@ -184,9 +184,13 @@ def is_module_host_management_mode(f_module_path):
         with open(f_module_control_path, 'r') as f:
             # reading module control. 1 - SW(independent), 0 - FW(dependent)
             module_mode = int(f.read().strip())
-    except (OSError, ValueError):
+    except (OSError, ValueError) as e:
         # by default use FW control (dependent mode)
+        LOGGER.warning("{} read failed, using FW control: {} as default".format(f_module_control_path, e),
+                       id="{} read_fail".format(f_module_control_path))
         module_mode = CONST.SDK_FW_CONTROL
+    else:
+        LOGGER.notice(None, id="{} read_fail".format(f_module_control_path))
 
     # If control mode is FW, skip temperature reading (independent mode)
     return module_mode == CONST.SDK_SW_CONTROL
@@ -207,8 +211,12 @@ def is_asic_ready(asic_name, asic_attr):
         try:
             with open(f_asic_ready, 'r') as f:
                 asic_ready = int(f.read().strip())
-        except (OSError, ValueError):
+        except Exception as e:
+            LOGGER.warning("{} read failed: {}, assuming ready".format(f_asic_ready, e),
+                           id="{} read_fail".format(f_asic_ready))
             asic_ready = True
+        else:
+            LOGGER.notice(None, id="{} read_fail".format(f_asic_ready))
     return bool(asic_ready)
 
 # ----------------------------------------------------------------------
@@ -367,7 +375,7 @@ def module_temp_populate(arg_list, _dummy):
                 module_present = int(f.read().strip())
         except (OSError, ValueError) as e:
             error_message = str(e)
-            LOGGER.warning("{} {}".format(f_src_present, error_message), id="{} present_read_fail".format(module_name))
+            LOGGER.warning("{} read failed: {}".format(f_src_present, error_message), id="{} present_read_fail".format(module_name))
         else:
             LOGGER.notice(None, id="{} present_read_fail".format(module_name))
 
@@ -391,15 +399,21 @@ def module_temp_populate(arg_list, _dummy):
                 try:
                     with open(f_src_cooling_level_input, 'r') as f:
                         cooling_level_input = f.read()
-                except OSError:
-                    pass
+                except OSError as e:
+                    LOGGER.warning("{} read failed: {}".format(f_src_cooling_level_input, e),
+                                   id="{} read_fail".format(f_src_cooling_level_input))
+                else:
+                    LOGGER.notice(None, id="{} read_fail".format(f_src_cooling_level_input))
 
             if os.path.isfile(f_src_cooling_level_warning):
                 try:
                     with open(f_src_cooling_level_warning, 'r') as f:
                         cooling_level_warning = f.read()
-                except OSError:
-                    pass
+                except OSError as e:
+                    LOGGER.warning("{} read failed: {}".format(f_src_cooling_level_warning, e),
+                                   id="{} read_fail".format(f_src_cooling_level_warning))
+                else:
+                    LOGGER.notice(None, id="{} read_fail".format(f_src_cooling_level_warning))
 
             try:
                 with open(f_src_input, 'r') as f:
@@ -422,10 +436,14 @@ def module_temp_populate(arg_list, _dummy):
 
                 temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
 
-            except (OSError, ValueError):
-                pass
+            except (OSError, ValueError) as e:
+                error_message = str(e)
+                LOGGER.warning("{} {}".format(f_src_input, error_message),
+                               id="{} read_fail".format(module_name))
+            else:
+                LOGGER.info(None, id="{} read_fail".format(module_name))
         else:
-            LOGGER.notice(None, id="{} read_fail".format(module_name), repeat=0)
+            LOGGER.info(None, id="{} read_fail".format(module_name))
 
         # Write the temperature data to files
         file_paths = {
@@ -525,6 +543,9 @@ def main():
     args = vars(CMD_PARSER.parse_args())
     global LOGGER
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+    if LOGGER is None:
+        print("Failed to initialize logger. Stopping service.")
+        exit(1)
 
     if args["system_type"] is None:
         try:
