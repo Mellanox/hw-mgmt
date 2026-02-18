@@ -637,8 +637,7 @@ declare -A sn68xxld_swb_alternatives=( \
 	["xdpe1a2g7_12"]="xdpe1a2g7 0x6c 15 voltmon13" \
 	["xdpe1a2g7_13"]="xdpe1a2g7 0x6d 15 voltmon14" \
 	["xdpe1a2g7_14"]="xdpe1a2g7 0x6e 15 voltmon15" \
-	["xdpe1a2g7_15"]="xdpe1a2g7 0x6f 15 voltmon16" \
-	["24c512_0"]="24c512 0x51 24 swb_info")
+	["xdpe1a2g7_15"]="xdpe1a2g7 0x6f 15 voltmon16")
 
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
@@ -1277,7 +1276,7 @@ devtr_check_supported_system_init_alternatives()
 			case $sku in
 			HI191|H183|HI195)
 				for key in "${!sn68xxld_swb_alternatives[@]}"; do
-					swb_alternatives["$key"]="${sn66xxld_swb_alternatives["$key"]}"
+					swb_alternatives["$key"]="${sn68xxld_swb_alternatives["$key"]}"
 				done
 
 				for key in "${!sn66xxld_platform_alternatives[@]}"; do
