@@ -2740,15 +2740,8 @@ sn66xxld_specific()
 sn68xxld_specific()
 {
 	case $sku in
-	# SN6810_LD Chipless
-	HI191)
-		cpld_num=3
-		leakage_count=2
-		i2c_asic_bus_default=5
-		hotplug_pdbs=1
-		;;
 	# SN6810_LD
-	HI183|HI195)
+	HI191|HI183|HI195)
 		cpld_num=4
 		leakage_count=2
 		i2c_asic_bus_default=5
