@@ -808,14 +808,6 @@ function check_cpld_attrs_num()
        ;;
    esac
 
-   case "$sku" in
-   HI180)
-       cpld_num=$((cpld_num-1))
-       ;;
-   *)
-       ;;
-   esac
-
    return $cpld_num
 }
 
