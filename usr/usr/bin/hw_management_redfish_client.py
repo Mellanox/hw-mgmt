@@ -1,6 +1,6 @@
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -45,7 +45,9 @@ import time
 import re
 import shlex
 import os
+import sys
 import base64
+import fcntl
 
 # TBD:
 # Support token persistency later on and remove RedfishClient.__password
@@ -394,6 +396,11 @@ class BMCAccessor(object):
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
+    # Advisory lock for get_login_password() TPM usage (legacy and modern path).
+    # Serializes access when called async from multiple processes / permission levels.
+    LOCK_DIR = "/run/lock"
+    LOCK_FILE = "hw_management_get_login_password.lock"
+    FLOCK_TIMEOUT_SEC = 10
     LEGACY_PLATFORM_PATTERN = r'N5\d{3}_LD'
 
     def __init__(self):
@@ -445,19 +452,74 @@ class BMCAccessor(object):
         err_msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
         raise AttributeError(err_msg)
 
+    def _acquire_lock(self, timeout_sec=None):
+        """Acquire advisory lock for TPM usage.
+        Returns lock_fd (int). Caller must release with _release_lock(lock_fd).
+        Waits up to timeout_sec (default: FLOCK_TIMEOUT_SEC).
+        """
+        if timeout_sec is None:
+            timeout_sec = self.FLOCK_TIMEOUT_SEC
+
+        lock_path = os.path.join(self.LOCK_DIR, self.LOCK_FILE)
+        deadline = time.time() + timeout_sec
+        while True:
+            try:
+                lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
+            except OSError as e:
+                raise Exception(f"Cannot create lock file for TPM access: {e}") from e
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return lock_fd
+            except BlockingIOError:
+                os.close(lock_fd)
+                if time.time() >= deadline:
+                    raise Exception(
+                        f"Cannot acquire TPM lock within {timeout_sec}s (timeout)"
+                    )
+                time.sleep(0.2)
+            except OSError as e:
+                os.close(lock_fd)
+                raise Exception(f"Cannot acquire TPM lock: {e}") from e
+
+    def _release_lock(self, lock_fd):
+        """Release advisory TPM lock and close fd."""
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        try:
+            os.close(lock_fd)
+        except OSError:
+            pass
+
     def _handle_legacy_password(self):
-        """Handle legacy password generation for juliet platforms"""
+        """Handle legacy password generation for juliet platforms (e.g. N5500_LD)"""
         pass_len = 13
         attempt = 1
         max_attempts = 100
         max_repeat = int(3 + 0.09 * pass_len)
         hex_data = "1300NVOS-BMC-USER-Const"
+
+        lock_fd = self._acquire_lock()
+        try:
+            return self._handle_legacy_password_impl(
+                pass_len, attempt, max_attempts, max_repeat, hex_data)
+        finally:
+            self._release_lock(lock_fd)
+
+    def _handle_legacy_password_impl(self, pass_len, attempt, max_attempts, max_repeat, hex_data):
+        """Implementation of legacy password generation (called with lock held)."""
         os.makedirs(self.BMC_DIR, exist_ok=True)
         cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
-        subprocess.run(cmd, shell=True, check=True)
-
+        try:
+            subprocess.run(cmd, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Failed to write hex file: {e}")
         tpm_command = ["tpm2_createprimary", "-C", "o", "-u", f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
-        result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
+        try:
+            result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Failed to create primary with hex file: {e}")
 
         while attempt <= max_attempts:
             if attempt > 1:
@@ -465,7 +527,13 @@ class BMCAccessor(object):
                 mess = f"Password did not meet criteria; retrying with const: {const}"
                 # print(mess)
                 tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
-                result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
+                try:
+                    result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"[_handle_legacy_password] tpm2_createprimary (stdin, attempt={attempt}) failed: returncode={e.returncode}", file=sys.stderr)
+                    if e.stderr:
+                        print(f"[_handle_legacy_password] stderr: {e.stderr.strip()}", file=sys.stderr)
+                    raise Exception(f"Failed to create primary with stdin: {e}")
 
             symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
             symcipher_match = re.search(symcipher_pattern, result.stdout)
@@ -519,26 +587,32 @@ class BMCAccessor(object):
             with open('/sys/devices/virtual/dmi/id/product_name') as f:
                 platform_name = f.read().strip()
             if re.match(self.LEGACY_PLATFORM_PATTERN, platform_name.upper()):
-                return self._handle_legacy_password()
+                try:
+                    return self._handle_legacy_password()
+                except Exception as e:
+                    raise Exception(f"Failed to generate a valid password for legacy platform: {e}")
             else:
-                const = "1300NVOS-BMC-USER-Const"
-                tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
-                result = subprocess.run(tpm_command, shell=True,
-                                        capture_output=True, check=True,
-                                        text=True).stdout
-                match = re.search(r"symcipher:\s+([\da-fA-F]+)", result)
-                if not match:
-                    raise Exception("Symmetric cipher not found in TPM output")
-                # Extract symcipher and encode to base64
-                return base64.b64encode(bytes.fromhex(match.group(1))).decode("ascii")
+                lock_fd = self._acquire_lock()
+                try:
+                    const = "1300NVOS-BMC-USER-Const"
+                    tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
+                    result = subprocess.run(tpm_command, shell=True,
+                                            capture_output=True, check=True,
+                                            text=True).stdout
+                    match = re.search(r"symcipher:\s+([\da-fA-F]+)", result)
+                    if not match:
+                        raise Exception("Symmetric cipher not found in TPM output")
+                    # Extract symcipher and encode to base64
+                    return base64.b64encode(bytes.fromhex(match.group(1))).decode("ascii")
+                finally:
+                    self._release_lock(lock_fd)
+        # Lock is always released by inner finally before we get here.
         except subprocess.CalledProcessError as e:
-            # print(f"Error executing TPM command: {e}")
-            raise Exception("Failed to communicate with TPM")
+            raise Exception(f"Failed to communicate with TPM: {e}")
         except (FileNotFoundError, PermissionError) as e:
-            raise Exception("no platform name found")
+            raise Exception(f"No platform name found: {e}")
         except Exception as e:
-            # print(f"Error: {e}")
-            raise
+            raise Exception(f"Failed to generate a valid password: {e}")
 
     def create_user(self, user, password):
         cmd = self.rf_client.build_post_cmd(RedfishClient.REDFISH_URI_ACCOUNTS, {
