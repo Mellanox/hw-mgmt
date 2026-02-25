@@ -136,6 +136,9 @@ class HW_Mgmt_Logger:
     DEBUG = logging.DEBUG
     NOTSET = logging.NOTSET
 
+    VALID_LOG_LEVELS = [DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, NOTSET]
+    VALID_SYSLOG_LEVELS = [DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, NOTSET]
+
     LOG_FACILITY_DAEMON = syslog.LOG_DAEMON
     LOG_FACILITY_USER = syslog.LOG_USER
     LOG_OPTION_NDELAY = syslog.LOG_NDELAY
@@ -305,7 +308,38 @@ class HW_Mgmt_Logger:
             Used by services to adjust verbosity at runtime.
         @param log_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
         """
-        self.logger.setLevel(log_level)
+        if log_level in self.VALID_LOG_LEVELS:
+            self.logger.setLevel(log_level)
+
+    def set_syslog_level(self, syslog_level):
+        """
+        @summary:
+            Convenience method to set only the log level dynamically.
+            Used by services to adjust verbosity at runtime.
+        @param log_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
+        """
+        if syslog_level in self.VALID_SYSLOG_LEVELS:
+            self._syslog_min_log_priority = syslog_level
+
+    def set_log_repeat(self, log_repeat):
+        """
+        @summary:
+            Convenience method to set only the log repeat dynamically.
+            Used by services to adjust log repeat at runtime.
+        @param log_repeat: log repeat (0 = unlimited)
+        """
+        if log_repeat >= 0:
+            self.log_repeat = log_repeat
+
+    def set_syslog_repeat(self, syslog_repeat):
+        """
+        @summary:
+            Convenience method to set only the syslog repeat dynamically.
+            Used by services to adjust syslog repeat at runtime.
+        @param syslog_repeat: syslog repeat (0 = unlimited)
+        """
+        if syslog_repeat >= 0:
+            self.syslog_repeat = syslog_repeat
 
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
@@ -321,7 +355,7 @@ class HW_Mgmt_Logger:
             raise ValueError("log_file must be a string")
 
         # Validate log levels
-        valid_levels = [self.DEBUG, self.INFO, self.NOTICE, self.WARNING, self.ERROR, self.CRITICAL, self.NOTSET]
+        valid_levels = self.VALID_LOG_LEVELS
         if log_level not in valid_levels:
             raise ValueError(f"Invalid log_level: {log_level}. Must be one of {valid_levels}")
         if syslog_level and syslog_level not in valid_levels:
@@ -480,10 +514,10 @@ class HW_Mgmt_Logger:
         if self._suspend:
             return
 
-        if log_repeat is None:
+        if log_repeat is None or log_repeat < self.log_repeat:
             log_repeat = self.log_repeat
 
-        if syslog_repeat is None:
+        if syslog_repeat is None or syslog_repeat < self.syslog_repeat:
             syslog_repeat = self.syslog_repeat
 
         # Validate and normalize parameters

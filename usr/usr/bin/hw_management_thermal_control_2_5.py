@@ -108,6 +108,10 @@ class CONST:
     SYS_CONF_FAN_STEADY_ATTENTION_ITEMS = "attention_fans"
     SYS_CONF_DEV_TUNE = "dev_tune"
     DEV_CONF_EXTRA_PARAM = "extra_param"
+    SYS_CONF_SYSLOG_LEVEL = "syslog_level"
+    SYS_CONF_LOG_LEVEL = "log_level"
+    SYS_CONF_LOG_REPEAT = "log_repeat"
+    SYS_CONF_SYSLOG_REPEAT = "syslog_repeat"
 
     # *************************
     # Folders definition
@@ -3550,6 +3554,25 @@ class ThermalManagement(hw_management_file_op):
             self.log.info("TEC supported")
         else:
             self.log.info("TEC not supported")
+
+        syslog_level = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_SYSLOG_LEVEL])
+        log_level = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_LOG_LEVEL])
+
+        if syslog_level:
+            self.log.info("Setting syslog_level: {}".format(syslog_level))
+            self.log.set_syslog_level(syslog_level)
+        if log_level:
+            self.log.info("Setting log_level: {}".format(log_level))
+            self.log.set_loglevel(log_level)
+
+        syslog_repeat = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_SYSLOG_REPEAT])
+        log_repeat = get_dict_val_by_path(self.sys_config, [CONST.SYS_CONF_GENERAL_CONFIG_PARAM, CONST.SYS_CONF_LOG_REPEAT])
+        if syslog_repeat:
+            self.log.info("Setting syslog_repeat: {}".format(syslog_repeat))
+            self.log.set_syslog_repeat(syslog_repeat)
+        if log_repeat:
+            self.log.info("Setting log_repeat: {}".format(log_repeat))
+            self.log.set_log_repeat(log_repeat)
 
     # ----------------------------------------------------------------------
     def _get_dev_obj(self, name_mask):
