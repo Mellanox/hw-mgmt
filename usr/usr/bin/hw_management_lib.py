@@ -136,6 +136,9 @@ class HW_Mgmt_Logger:
     DEBUG = logging.DEBUG
     NOTSET = logging.NOTSET
 
+    VALID_LOG_LEVELS = [DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, NOTSET]
+    VALID_SYSLOG_LEVELS = [DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, NOTSET]
+
     LOG_FACILITY_DAEMON = syslog.LOG_DAEMON
     LOG_FACILITY_USER = syslog.LOG_USER
     LOG_OPTION_NDELAY = syslog.LOG_NDELAY
@@ -165,8 +168,8 @@ class HW_Mgmt_Logger:
         @param log_file: Path to log file, "stdout", "stderr", or None for no file logging
         @param log_level: Minimum level for file logging (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
         @param syslog_level: Minimum level for syslog logging, or None/0 to disable syslog
-        @param log_repeat: Default max repeat count for file messages (0 = unlimited)
-        @param syslog_repeat: Default max repeat count for syslog messages (0 = unlimited)
+        @param log_repeat: Default max repeat count for file messages
+        @param syslog_repeat: Default max repeat count for syslog messages
         """
         # Configure global logging only once (thread-safe)
         if not logging.getLogger().handlers:
@@ -232,8 +235,8 @@ class HW_Mgmt_Logger:
 
             @param msg: Message text to log
             @param id: Optional unique identifier for message grouping and repeat collapsing
-            @param repeat: Maximum times to repeat message to syslog (0 = unlimited)
-            @param log_repeat: Maximum times to repeat message to file (0 = unlimited)
+            @param repeat: Maximum times to repeat message to syslog
+            @param log_repeat: Maximum times to repeat message to file
             """
             self.log_handler(level_map[level], msg, id, log_repeat, repeat)
         return log_method
@@ -305,7 +308,38 @@ class HW_Mgmt_Logger:
             Used by services to adjust verbosity at runtime.
         @param log_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
         """
-        self.logger.setLevel(log_level)
+        if log_level in self.VALID_LOG_LEVELS:
+            self.logger.setLevel(log_level)
+
+    def set_syslog_level(self, syslog_level):
+        """
+        @summary:
+            Convenience method to set only the syslog level dynamically.
+            Used by services to adjust verbosity at runtime.
+        @param syslog_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
+        """
+        if syslog_level in self.VALID_SYSLOG_LEVELS:
+            self._syslog_min_log_priority = syslog_level
+
+    def set_log_repeat(self, log_repeat):
+        """
+        @summary:
+            Set default log repeat. this value will be used in case of
+            log_repeat is not set in log_handler call.
+        @param log_repeat: log repeat
+        """
+        if isinstance(log_repeat, int) and log_repeat >= 0:
+            self.log_repeat = log_repeat
+
+    def set_syslog_repeat(self, syslog_repeat):
+        """
+        @summary:
+            Set default syslog repeat. this value will be used in case of
+            syslog_repeat is not set in log_handler call.
+        @param syslog_repeat: syslog repeat
+        """
+        if isinstance(syslog_repeat, int) and syslog_repeat >= 0:
+            self.syslog_repeat = syslog_repeat
 
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
@@ -321,7 +355,7 @@ class HW_Mgmt_Logger:
             raise ValueError("log_file must be a string")
 
         # Validate log levels
-        valid_levels = [self.DEBUG, self.INFO, self.NOTICE, self.WARNING, self.ERROR, self.CRITICAL, self.NOTSET]
+        valid_levels = self.VALID_LOG_LEVELS
         if log_level not in valid_levels:
             raise ValueError(f"Invalid log_level: {log_level}. Must be one of {valid_levels}")
         if syslog_level and syslog_level not in valid_levels:
