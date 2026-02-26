@@ -25,6 +25,14 @@ TIMEOUT=30
 DEBUG=0
 MODE=""
 
+# When the kernel driver (e.g. xdpe1a2g7b) is bound, raw i2cget/i2cset cannot access the device.
+# We unbind the driver for verify/flash and rebind on exit.
+DRIVER_UNBIND_DEVID=""
+DRIVER_UNBIND_NAME=""
+# State file for unbind/rebind modes (so rebind can run in a separate invocation)
+UNBIND_STATE_FILE="/var/run/hw-management/vr_dpc_infineon_unbound"
+# Scratchpad (0xD0) accepts only a multi-byte block write; the I2C adapter must support i2ctransfer block writes.
+
 # PMBus/MFR Specific Commands
 PMBUS_PAGE=0x00
 PMBUS_OPERATION=0x01
@@ -38,18 +46,26 @@ MFR_DATE=0x9D
 MFR_SERIAL=0x9E
 MFR_DEVICE_ID=0xAD
 MFR_FW_COMMAND=0xFE
+MFR_FW_COMMAND_DATA=0xFD
 MFR_SPECIFIC_00=0xD0
+MFR_RPTR=0xCE
+MFR_REG_WRITE=0xDE
+MFR_REG_READ=0xDF
+# OTP partition 0 base (AN001 10.1)
+OTP_BASE=0x10020000
 STATUS_WORD=0x79
 STATUS_BYTE=0x78
+READ_VIN=0x88
 READ_VOUT=0x8B
 READ_IOUT=0x8C
 READ_TEMPERATURE_1=0x8D
 READ_POUT=0x96
+READ_PIN=0x97
 
-# Scratchpad programming commands
+# Scratchpad programming commands (AN001 Table 4; 0x12 = OTP_SECTION_INVALIDATE in doc examples)
 CMD_SCRATCHPAD_WRITE=0x01
 CMD_SCRATCHPAD_UPLOAD=0x02
-CMD_INVALIDATE_OTP=0x03
+CMD_INVALIDATE_OTP=0x12
 CMD_READ_OTP=0x04
 CMD_CHECK_OTP_SPACE=0x05
 
@@ -66,7 +82,10 @@ MODES:
     info        Read device information
     monitor     Monitor device telemetry
     dump        Dump device registers
-    parse       Parse configuration file
+    unbind      Unbind kernel driver for device (raw I2C access)
+    rebind      Rebind kernel driver previously unbound with 'unbind'
+    parse       Parse configuration file (or convert .txt/.mic to .bin with -o)
+    readback    Parse .txt config, read each section from device OTP, compare or save to read_NN.bin
     compare     Compare two configuration files
 
 FLASH MODE OPTIONS:
@@ -97,8 +116,23 @@ DUMP MODE OPTIONS:
     -a <addr>           Device I2C address
     -o <file>           Output file (optional)
 
+UNBIND MODE OPTIONS:
+    -b <bus>            I2C bus number
+    -a <addr>           Device I2C address (hex, e.g. 0x6c)
+
+REBIND MODE OPTIONS:
+    (none)              Rebinds the device saved by last 'unbind'
+
 PARSE MODE OPTIONS:
-    -f <file>           Configuration file path
+    -f <file>           Configuration file path (.bin = analyze; .txt/.mic = convert to binary)
+    -o <file>           Output .bin path when converting .txt/.mic (default: input name with .bin extension)
+
+READBACK MODE OPTIONS:
+    -f <file>           Configuration .txt/.mic file (defines sections to read)
+    -b <bus>            I2C bus number
+    -a <addr>           Device I2C address (hex)
+    -o <dir>            Output directory for read_NN.bin files (default: current dir). Each section is compared with config.
+    Note: Readback requires I2C/SMBus block write and block read. If your adapter does not support these, use another I2C adapter or skip readback.
 
 COMPARE MODE OPTIONS:
     -f <file1>          First configuration file
@@ -124,8 +158,12 @@ EXAMPLES:
     # Dump registers
     $(basename $0) dump -b 2 -a 0x40 -o dump.txt
 
-    # Parse config file
+    # Parse/analyze binary config or convert .txt to .bin
     $(basename $0) parse -f config.bin
+    $(basename $0) parse -f config.txt -o config.bin
+
+    # Readback: read each section from device OTP, save to read_NN.bin and compare with .txt
+    $(basename $0) readback -f config.txt -b 2 -a 0x6c -o ./readback
 
     # Compare configs
     $(basename $0) compare -f old.bin -c new.bin
@@ -202,7 +240,7 @@ i2c_read() {
     return 0
 }
 
-# Block write for larger data transfers
+# Multi-byte write: reg + data via i2ctransfer only (no SMBus block / i2cset block).
 i2c_block_write() {
     local bus=$1
     local addr=$2
@@ -211,15 +249,201 @@ i2c_block_write() {
     local data=("$@")
 
     if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
+        log_debug "DRY-RUN: i2ctransfer w$((${#data[@]}+1))@$addr $reg ${data[*]}"
         return 0
     fi
 
     log_debug "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
     if ! i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null; then
-        log_error "Failed block write to device"
+        log_error "Failed to write to device (i2ctransfer)"
         return 1
     fi
+    return 0
+}
+
+# Fallback for adapters that do not support multi-byte i2ctransfer: write each byte via i2cset to consecutive registers (reg+0, reg+1, ...).
+# Note: Many Infineon VRs do not accept single-byte writes to 0xD0; use word-by-word fallback instead.
+i2c_block_write_byte_by_byte() {
+    local bus=$1
+    local addr=$2
+    local reg=$3
+    shift 3
+    local data=("$@")
+    local i=0
+    local r
+
+    if [ $DRY_RUN -eq 1 ]; then
+        log_debug "DRY-RUN: i2cset byte-by-byte $((${#data[@]})) bytes at reg $reg"
+        return 0
+    fi
+
+    for b in "${data[@]}"; do
+        r=$(printf '0x%02x' $((reg + i)))
+        if ! i2cset -y $bus $addr $r $b 2>/dev/null; then
+            log_error "Failed to write byte at offset $i (reg $r) via i2cset"
+            return 1
+        fi
+        i=$((i + 1))
+        if [ $((i % 100)) -eq 0 ]; then
+            echo -n "."
+        fi
+    done
+    return 0
+}
+
+# Fallback: write 2 bytes at a time to reg using SMBus word write (i2cset ... reg value w).
+# Device must accept word writes to scratchpad and append; same reg used for each word.
+i2c_block_write_word_by_word() {
+    local bus=$1
+    local addr=$2
+    local reg=$3
+    shift 3
+    local data=("$@")
+    local n=${#data[@]}
+    local i=0
+    local word_val
+
+    if [ $DRY_RUN -eq 1 ]; then
+        log_debug "DRY-RUN: i2cset word-by-word $(( (n+1)/2 )) words at reg $reg"
+        return 0
+    fi
+
+    while [ $i -lt $n ]; do
+        local b0 b1
+        b0=${data[$i]}
+        if [ $((i + 1)) -lt $n ]; then
+            b1=${data[$((i+1))]}
+        else
+            b1=0x00
+        fi
+        word_val=$(( (b1 << 8) | (b0 & 0xff) ))
+        word_val=$((word_val & 0xFFFF))
+        if ! i2cset -y $bus $addr $reg $word_val w 2>/dev/null; then
+            log_error "Failed to write word at offset $i (reg $reg) via i2cset w"
+            return 1
+        fi
+        i=$((i + 2))
+        if [ $((i % 64)) -eq 0 ] || [ $i -ge $n ]; then
+            echo -n "."
+        fi
+    done
+    return 0
+}
+
+# Read one DWORD (4 bytes) from MFR_REG_READ; RPTR must be set and auto-increments.
+# Uses i2ctransfer (w1 reg, r4) only. Outputs space-separated hex bytes (no 0x), e.g. "00 00 00 04".
+read_otp_dword_hex() {
+    local bus=$1
+    local addr=$2
+    if [ $DRY_RUN -eq 1 ]; then
+        echo "00 00 00 00"
+        return 0
+    fi
+    local line
+    if command -v timeout &>/dev/null; then
+        line=$(timeout 3 i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
+    else
+        line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
+    fi
+    # i2ctransfer read output is hex bytes; normalize to space-separated without 0x
+    echo "$line" | sed 's/0x//g'
+}
+
+# Append 4 hex bytes (as from read_otp_dword_hex) as binary to file.
+hex_dword_to_file() {
+    local hex="$1"
+    local file="$2"
+    local b0 b1 b2 b3
+    read -r b0 b1 b2 b3 <<< "$hex"
+    printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' $((16#$b0)) $((16#$b1)) $((16#$b2)) $((16#$b3)))" >> "$file"
+}
+
+# Read num_bytes (multiple of 4) from OTP at current RPTR and append to file. RPTR must be set.
+read_otp_bytes_to_file() {
+    local bus=$1
+    local addr=$2
+    local num_bytes=$3
+    local out_file=$4
+    local count=$((num_bytes / 4))
+    local i
+    for ((i=0; i<count; i++)); do
+        local hex
+        hex=$(read_otp_dword_hex $bus $addr) || return 1
+        hex_dword_to_file "$hex" "$out_file"
+    done
+    return 0
+}
+
+# Find section by header_code and xvcode in OTP, read full section to out_file. AN001 10.1.
+# Returns 0 on success. OTP base 0x10020000; section layout: 4B header (byte0=hc, byte1=xv), 4B size (LE), then data.
+read_otp_section() {
+    local bus=$1
+    local addr=$2
+    local header_code=$3
+    local xvcode=$4
+    local out_file=$5
+    local addr_32=$((OTP_BASE))
+    local max_addr=$((OTP_BASE + 32768))
+    local max_iters=512
+    local iters=0
+
+    : > "$out_file" || return 1
+
+    if [ $DRY_RUN -eq 1 ]; then
+        log_debug "DRY-RUN: read_otp_section hc=$header_code xv=$xvcode"
+        return 0
+    fi
+
+    while (( addr_32 < max_addr && iters < max_iters )); do
+        iters=$((iters + 1))
+        set_rptr $bus $addr $addr_32 || return 1
+        local hd_hex sz_hex
+        hd_hex=$(read_otp_dword_hex $bus $addr) || return 1
+        sz_hex=$(read_otp_dword_hex $bus $addr) || return 1
+        local h0 h1 h2 h3 s0 s1 s2 s3
+        read -r h0 h1 h2 h3 <<< "$hd_hex"
+        read -r s0 s1 s2 s3 <<< "$sz_hex"
+        local size=$(( 16#$s0 + (16#$s1 << 8) + (16#$s2 << 16) + (16#$s3 << 24) ))
+        local hc=$((16#$h0))
+        local xv=$((16#$h1))
+        # Unprogrammed OTP often reads as 0xff; cap size to avoid overflow or huge skip
+        if [ "$size" -gt 32768 ]; then
+            size=8
+        fi
+        if [ "$hc" -eq "$header_code" ] && [ "$xv" -eq "$xvcode" ]; then
+            hex_dword_to_file "$hd_hex" "$out_file"
+            hex_dword_to_file "$sz_hex" "$out_file"
+            if [ $size -gt 8 ]; then
+                read_otp_bytes_to_file $bus $addr $((size - 8)) "$out_file" || return 1
+            fi
+            return 0
+        fi
+        if [ $size -le 0 ]; then
+            log_error "Invalid OTP section size 0 at 0x$(printf '%x' $addr_32)"
+            return 1
+        fi
+        addr_32=$((addr_32 + size))
+    done
+    if [ $iters -ge $max_iters ]; then
+        log_error "Section hc=$header_code xv=$xvcode not found (max iterations reached)"
+    else
+        log_error "Section hc=$header_code xv=$xvcode not found in OTP"
+    fi
+    return 1
+}
+
+# Set register pointer RPTR to 32-bit address (little-endian per AN001).
+# SMBus BLOCK_WRITE sends CommandCode, then Length (1 byte), then N data bytes.
+set_rptr() {
+    local bus=$1
+    local addr=$2
+    local addr_32=$3
+    local b0=$(( (addr_32)       & 0xff ))
+    local b1=$(( (addr_32 >> 8)  & 0xff ))
+    local b2=$(( (addr_32 >> 16) & 0xff ))
+    local b3=$(( (addr_32 >> 24) & 0xff ))
+    # BLOCK_WRITE(PMB_Addr, RPTR, 4, b0, b1, b2, b3) -> send reg, 0x04 (length), then 4 bytes
+    i2c_block_write $bus $addr $MFR_RPTR 0x04 0x$(printf '%02x' $b0) 0x$(printf '%02x' $b1) 0x$(printf '%02x' $b2) 0x$(printf '%02x' $b3) || return 1
     return 0
 }
 
@@ -253,7 +477,12 @@ detect_device() {
         return 0
     fi
 
-    if ! i2cdetect -y $I2C_BUS $DEVICE_ADDR $DEVICE_ADDR 2>/dev/null | grep -qi "$(printf '%02x' $((DEVICE_ADDR)))"; then
+    local i2c_out
+    i2c_out=$(i2cdetect -y $I2C_BUS $DEVICE_ADDR $DEVICE_ADDR 2>/dev/null)
+    local addr_hex
+    addr_hex=$(printf '%02x' $((DEVICE_ADDR)))
+    # Accept either the address hex (device probed) or "UU" (address in use by kernel driver)
+    if ! echo "$i2c_out" | grep -qi "$addr_hex" && ! echo "$i2c_out" | grep -q "UU"; then
         log_error "Device not detected at address $DEVICE_ADDR on bus $I2C_BUS"
         return 1
     fi
@@ -262,20 +491,104 @@ detect_device() {
     return 0
 }
 
-# Read device identification
+# Unbind kernel driver so raw i2cget/i2cset can access the device (device shows as UU when bound).
+# Idempotent: no-op if already unbound or unbind not possible. Sets globals for rebind on exit.
+unbind_driver_for_device() {
+    [ -n "$I2C_BUS" ] && [ -n "$DEVICE_ADDR" ] || return 0
+    [ $DRY_RUN -eq 1 ] && return 0
+    local addr_hex
+    addr_hex=$(printf '%02x' $((DEVICE_ADDR)))
+    local dev_id_4="${I2C_BUS}-$(printf '%04x' $((DEVICE_ADDR)))"
+    local dev_id_2="${I2C_BUS}-${addr_hex}"
+    local dev_path=""
+    for id in "$dev_id_4" "$dev_id_2"; do
+        if [ -d "/sys/bus/i2c/devices/$id" ]; then
+            dev_path="/sys/bus/i2c/devices/$id"
+            break
+        fi
+    done
+    [ -z "$dev_path" ] && return 0
+    [ -L "$dev_path/driver" ] || return 0
+    local driver_link
+    driver_link=$(readlink "$dev_path/driver" 2>/dev/null) || return 0
+    local driver_name
+    driver_name=$(basename "$driver_link" 2>/dev/null) || return 0
+    local unbind_file="/sys/bus/i2c/drivers/$driver_name/unbind"
+    [ -f "$unbind_file" ] || return 0
+    local dev_id
+    dev_id=$(basename "$dev_path")
+    if echo "$dev_id" > "$unbind_file" 2>/dev/null; then
+        DRIVER_UNBIND_DEVID="$dev_id"
+        DRIVER_UNBIND_NAME="$driver_name"
+        sleep 0.2
+    fi
+    return 0
+}
+
+# Rebind the driver if we had unbound it (so device works again under the kernel driver).
+rebind_driver_if_unbound() {
+    [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 0
+    local bind_file="/sys/bus/i2c/drivers/$DRIVER_UNBIND_NAME/bind"
+    if [ -f "$bind_file" ]; then
+        echo "$DRIVER_UNBIND_DEVID" > "$bind_file" 2>/dev/null
+    fi
+    DRIVER_UNBIND_DEVID=""
+    DRIVER_UNBIND_NAME=""
+    return 0
+}
+
+# Save unbound device info to state file (for 'rebind' mode in a separate run).
+save_unbind_state() {
+    [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 1
+    local dir
+    dir=$(dirname "$UNBIND_STATE_FILE")
+    mkdir -p "$dir" 2>/dev/null || return 1
+    echo "$DRIVER_UNBIND_DEVID" > "$UNBIND_STATE_FILE" 2>/dev/null || return 1
+    echo "$DRIVER_UNBIND_NAME" >> "$UNBIND_STATE_FILE" 2>/dev/null || return 1
+    return 0
+}
+
+# Load state file and rebind (for 'rebind' mode).
+rebind_driver_from_state_file() {
+    [ -f "$UNBIND_STATE_FILE" ] || return 1
+    DRIVER_UNBIND_DEVID=$(sed -n '1p' "$UNBIND_STATE_FILE" 2>/dev/null)
+    DRIVER_UNBIND_NAME=$(sed -n '2p' "$UNBIND_STATE_FILE" 2>/dev/null)
+    rm -f "$UNBIND_STATE_FILE" 2>/dev/null
+    [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 1
+    rebind_driver_if_unbound
+    return 0
+}
+
+# Read device identification (uses block read for MFR_* so output matches 'info')
 read_device_id() {
     log_info "Reading device identification..."
+    unbind_driver_for_device
 
     local mfr_id
-    mfr_id=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_ID) || return 1
+    mfr_id=$(read_device_info_block $I2C_BUS $DEVICE_ADDR $MFR_ID 2>/dev/null)
+    [ -z "$mfr_id" ] && mfr_id=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_ID 2>/dev/null)
+    if [ -z "$mfr_id" ]; then
+        log_error "Failed to read Manufacturer ID"
+        return 1
+    fi
     log_info "Manufacturer ID: $mfr_id"
 
     local mfr_model
-    mfr_model=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_MODEL) || return 1
+    mfr_model=$(read_device_info_block $I2C_BUS $DEVICE_ADDR $MFR_MODEL 2>/dev/null)
+    [ -z "$mfr_model" ] && mfr_model=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_MODEL 2>/dev/null)
+    if [ -z "$mfr_model" ]; then
+        log_error "Failed to read Model"
+        return 1
+    fi
     log_info "Model: $mfr_model"
 
     local mfr_rev
-    mfr_rev=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_REVISION) || return 1
+    mfr_rev=$(read_device_info_block $I2C_BUS $DEVICE_ADDR $MFR_REVISION 2>/dev/null)
+    [ -z "$mfr_rev" ] && mfr_rev=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_REVISION 2>/dev/null)
+    if [ -z "$mfr_rev" ]; then
+        log_error "Failed to read Revision"
+        return 1
+    fi
     log_info "Revision: $mfr_rev"
 
     return 0
@@ -315,16 +628,17 @@ check_otp_space() {
 
     log_debug "OTP space check result: $result"
 
-    if [ "$result" != "0x00" ]; then
-        log_warn "OTP space may be limited or full"
-    else
+    # 0x00 = success; 0xff = idle/no status clear (e.g. XDPE1A2G7B) – treat as OK
+    if [ "$result" = "0x00" ] || [ "$result" = "0xff" ]; then
         log_info "OTP space available"
+    else
+        log_warn "OTP space may be limited or full (status: $result)"
     fi
 
     return 0
 }
 
-# Invalidate existing OTP data
+# Invalidate existing OTP data. Per AN001: set 0xFD (param), then 0xFE (command). Use i2ctransfer for 0xFD, i2cset for 0xFE.
 invalidate_otp() {
     local invalidate_all=${1:-1}
 
@@ -334,18 +648,252 @@ invalidate_otp() {
         log_info "Invalidating specific OTP section..."
     fi
 
-    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_INVALIDATE_OTP $invalidate_all || return 1
+    if [ $DRY_RUN -eq 1 ]; then
+        log_debug "DRY-RUN: skip OTP invalidation"
+        return 0
+    fi
+
+    # AN001: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, invalidation_cmd). 0xfe,0xfe = all sections.
+    if [ $invalidate_all -eq 1 ]; then
+        # 1) Set MFR_FW_COMMAND_DATA (0xFD) to 0xfe 0xfe 0x00 0x00 (invalidate all)
+        local fd_ok=0
+        if i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 0xfe 0x00 0x00 2>/dev/null; then
+            fd_ok=1
+        else
+            # Fallback: four single-byte writes to 0xFD
+            log_info "Trying 4x single-byte write to 0xFD..."
+            if ( i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 2>/dev/null && \
+                 i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 2>/dev/null && \
+                 i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x00 2>/dev/null && \
+                 i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x00 2>/dev/null ); then
+                fd_ok=1
+            fi
+        fi
+        if [ $fd_ok -eq 0 ]; then
+            log_warn "Could not write to 0xFD (adapter may not support multi-byte or 0xFD). Trying command-only invalidation (0xFE)..."
+        fi
+        # 2) Send invalidation command (single byte to 0xFE)
+        if ! i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_INVALIDATE_OTP; then
+            log_error "OTP invalidation: failed to send command (0xFE)"
+            return 1
+        fi
+    else
+        log_error "OTP section invalidation (specific section) requires setting 0xFD with section; use invalidate all or adapter with i2ctransfer"
+        return 1
+    fi
     sleep 1
 
     local result
     result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || return 1
 
-    if [ "$result" != "0x00" ]; then
+    # 0x00 = success; 0xff = idle (e.g. XDPE1A2G7B)
+    if [ "$result" != "0x00" ] && [ "$result" != "0xff" ]; then
         log_error "OTP invalidation failed with code: $result"
         return 1
     fi
 
     log_info "OTP invalidation completed"
+    return 0
+}
+
+# Map AN001 Table 7 header code (first DWORD LSB) to short name and optional page (Loop A=0, B=1).
+# 0x04=Config, 0x07=PMBus LoopA, 0x09=PMBus LoopB, 0x0B=Partial PMBus, etc.
+section_type_name() {
+    local code=$1
+    case "$code" in
+        4)  echo "Config (0x04)" ;;
+        7)  echo "PMBus LoopA / page 0 (0x07)" ;;
+        9)  echo "PMBus LoopB / page 1 (0x09)" ;;
+        11) echo "Partial PMBus (0x0B)" ;;
+        *)  echo "header 0x$(printf '%02x' "$code")" ;;
+    esac
+}
+
+# Parse XDPE .txt/.mic config (AN001 format) to binary; write to output path.
+# Format: [Configuration Data] then rows "XXX DWORD0 DWORD1 DWORD2 DWORD3" (3-digit hex offset + 8-char hex DWORDs).
+# Each DWORD written as 4 bytes big-endian. Logs section name, type/page, and data count. Returns 0 on success.
+parse_txt_config_to_bin() {
+    local txt_file="$1"
+    local bin_file="$2"
+    local in_section=0
+    local byte_count=0
+    local current_section_name=""
+    local section_dwords=0
+    local section_first_dword=""
+
+    if [ ! -f "$txt_file" ]; then
+        log_error "Config file not found: $txt_file"
+        return 1
+    fi
+
+    : > "$bin_file" || { log_error "Cannot create temp binary: $bin_file"; return 1; }
+
+    log_section_summary() {
+        if [[ -n "$current_section_name" && $section_dwords -gt 0 ]]; then
+            local type_str=""
+            if [[ -n "$section_first_dword" ]]; then
+                local code=$((16#${section_first_dword:6:2}))
+                type_str=$(section_type_name "$code")
+            fi
+            log_info "  Section: $current_section_name"
+            [[ -n "$type_str" ]] && log_info "    Type / programming: $type_str"
+            log_info "    Data: $section_dwords DWORDs ($(( section_dwords * 4 )) bytes)"
+        fi
+    }
+
+    while IFS= read -r line; do
+        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [[ -z "$line" ]] && continue
+
+        if [[ "$line" =~ ^\[Configuration[[:space:]]Data\] ]]; then
+            in_section=1
+            log_info "Parsing [Configuration Data] from $txt_file"
+            echo ""
+            continue
+        fi
+        if [[ "$line" =~ ^\[End[[:space:]]Configuration[[:space:]]Data\] ]]; then
+            log_section_summary
+            break
+        fi
+        [[ $in_section -eq 0 ]] && continue
+
+        # Section header lines (//XV0 Config, //XV0 PMBus LoopA User, etc.)
+        if [[ "$line" =~ ^// ]]; then
+            log_section_summary
+            current_section_name="${line#//}"
+            current_section_name=$(echo "$current_section_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            section_dwords=0
+            section_first_dword=""
+            continue
+        fi
+
+        # Data row: 3 hex digits then one or more 8-char hex DWORDs
+        if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]]; then
+            local rest="${line#* }"
+            local dword
+            local row_dwords=0
+            for dword in $rest; do
+                dword=$(echo "$dword" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
+                [[ -z "$dword" ]] || [[ ${#dword} -ne 8 ]] && continue
+                [[ ! "$dword" =~ ^[0-9A-F]{8}$ ]] && continue
+                local b0 b1 b2 b3
+                [[ "${dword:0:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:2:2}" =~ ^[0-9A-F]{2}$ ]] && \
+                [[ "${dword:4:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:6:2}" =~ ^[0-9A-F]{2}$ ]] || continue
+                [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
+                b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
+                printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b0" "$b1" "$b2" "$b3")" >> "$bin_file" || return 1
+                byte_count=$((byte_count + 4))
+                row_dwords=$((row_dwords + 1))
+            done
+            section_dwords=$((section_dwords + row_dwords))
+        fi
+    done < "$txt_file"
+
+    if [[ $in_section -eq 0 ]]; then
+        log_error "No [Configuration Data] section found in $txt_file"
+        rm -f "$bin_file"
+        return 1
+    fi
+
+    echo ""
+    log_info "Total: $byte_count bytes written to binary"
+    return 0
+}
+
+# Parse .txt/.mic into one binary file per section (AN001). Writes section_0.bin, section_1.bin, ...
+# into out_dir and writes the list of paths to out_dir/section_list (one per line).
+# Returns 0 on success. Use for section-by-section flash to avoid device buffer overrun.
+parse_txt_config_to_section_files() {
+    local txt_file="$1"
+    local out_dir="$2"
+    local in_section=0
+    local current_section_name=""
+    local section_dwords=0
+    local section_first_dword=""
+    local section_index=0
+    local current_section_bin=""
+    local section_list_file="$out_dir/section_list"
+
+    if [ ! -f "$txt_file" ]; then
+        log_error "Config file not found: $txt_file"
+        return 1
+    fi
+    mkdir -p "$out_dir" || { log_error "Cannot create output dir: $out_dir"; return 1; }
+    : > "$section_list_file" || { log_error "Cannot create section list"; return 1; }
+
+    log_section_summary() {
+        if [[ -n "$current_section_name" && $section_dwords -gt 0 ]]; then
+            local type_str=""
+            if [[ -n "$section_first_dword" ]]; then
+                local code=$((16#${section_first_dword:6:2}))
+                type_str=$(section_type_name "$code")
+            fi
+            log_info "  Section: $current_section_name"
+            [[ -n "$type_str" ]] && log_info "    Type / programming: $type_str"
+            log_info "    Data: $section_dwords DWORDs ($(( section_dwords * 4 )) bytes)"
+        fi
+    }
+
+    start_section_file() {
+        current_section_bin="$out_dir/section_${section_index}.bin"
+        : > "$current_section_bin" || return 1
+        echo "$current_section_bin" >> "$section_list_file"
+    }
+
+    while IFS= read -r line; do
+        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [[ -z "$line" ]] && continue
+
+        if [[ "$line" =~ ^\[Configuration[[:space:]]Data\] ]]; then
+            in_section=1
+            log_info "Parsing [Configuration Data] for section-by-section flash from $txt_file"
+            echo ""
+            continue
+        fi
+        if [[ "$line" =~ ^\[End[[:space:]]Configuration[[:space:]]Data\] ]]; then
+            log_section_summary
+            break
+        fi
+        [[ $in_section -eq 0 ]] && continue
+
+        if [[ "$line" =~ ^// ]]; then
+            log_section_summary
+            current_section_name="${line#//}"
+            current_section_name=$(echo "$current_section_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            section_dwords=0
+            section_first_dword=""
+            start_section_file || return 1
+            section_index=$((section_index + 1))
+            continue
+        fi
+
+        if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]]; then
+            [[ -z "$current_section_bin" ]] && continue
+            local rest="${line#* }"
+            local dword
+            for dword in $rest; do
+                dword=$(echo "$dword" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
+                [[ -z "$dword" ]] || [[ ${#dword} -ne 8 ]] && continue
+                [[ ! "$dword" =~ ^[0-9A-F]{8}$ ]] && continue
+                local b0 b1 b2 b3
+                [[ "${dword:0:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:2:2}" =~ ^[0-9A-F]{2}$ ]] && \
+                [[ "${dword:4:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:6:2}" =~ ^[0-9A-F]{2}$ ]] || continue
+                [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
+                b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
+                printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b0" "$b1" "$b2" "$b3")" >> "$current_section_bin" || return 1
+                section_dwords=$((section_dwords + 1))
+            done
+        fi
+    done < "$txt_file"
+
+    if [[ $in_section -eq 0 ]]; then
+        log_error "No [Configuration Data] section found in $txt_file"
+        rm -rf "$out_dir"
+        return 1
+    fi
+
+    echo ""
+    log_info "Parsed $section_index section(s); list in $section_list_file"
     return 0
 }
 
@@ -361,7 +909,8 @@ write_to_scratchpad() {
     fi
 
     local file_size
-    file_size=$(stat -f %z "$data_file" 2>/dev/null || stat -c %s "$data_file" 2>/dev/null)
+    file_size=$(wc -c < "$data_file" 2>/dev/null)
+    [ -z "$file_size" ] && file_size=0
     log_info "Configuration file size: $file_size bytes"
 
     # Skip file processing in dry-run mode
@@ -370,21 +919,36 @@ write_to_scratchpad() {
         return 0
     fi
 
+    # Put device in scratchpad-write mode (required before writing to MFR_SPECIFIC_00 / 0xD0)
+    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_WRITE || return 1
+
     local block_size=32
     local blocks=$((file_size / block_size))
     local remainder=$((file_size % block_size))
 
     log_info "Writing $blocks blocks + $remainder bytes..."
 
+    local use_word_fallback=0
     local offset=0
+    local i
+
     for ((i=0; i<blocks; i++)); do
         local data_bytes
         data_bytes=$(od -An -tx1 -N$block_size -j$offset "$data_file" | tr -s ' ' | sed 's/^ //')
 
-        local data_array=($data_bytes)
+        local data_array=()
+        for b in $data_bytes; do data_array+=("0x$b"); done
 
         log_debug "Writing block $i at offset $offset"
-        i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" || return 1
+        if ! i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" 2>/dev/null; then
+            if [ $i -eq 0 ]; then
+                log_warn "Block write failed (adapter may not support multi-byte). Trying word-by-word (SMBus) write..."
+                use_word_fallback=1
+            else
+                return 1
+            fi
+            break
+        fi
 
         offset=$((offset + block_size))
         sleep 0.01
@@ -394,13 +958,28 @@ write_to_scratchpad() {
         fi
     done
 
-    if [ $remainder -gt 0 ]; then
-        local data_bytes
-        data_bytes=$(od -An -tx1 -N$remainder -j$offset "$data_file" | tr -s ' ' | sed 's/^ //')
-        local data_array=($data_bytes)
+    if [ $use_word_fallback -eq 1 ]; then
+        # Write entire scratchpad via i2cset word writes (2 bytes per write to same reg 0xD0)
+        log_info "Writing $file_size bytes word-by-word (SMBus) to 0xD0..."
+        local all_bytes
+        all_bytes=$(od -An -tx1 "$data_file" | tr -s ' ' | sed 's/^ //')
+        local data_array=()
+        for b in $all_bytes; do data_array+=("0x$b"); done
+        if ! i2c_block_write_word_by_word $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" 2>/dev/null; then
+            log_error "Word-by-word scratchpad write failed"
+            log_error "This device accepts only a multi-byte block write to 0xD0; the I2C adapter must support i2ctransfer block write (e.g. w33@addr)."
+            return 1
+        fi
+    else
+        if [ $remainder -gt 0 ]; then
+            local data_bytes
+            data_bytes=$(od -An -tx1 -N$remainder -j$offset "$data_file" | tr -s ' ' | sed 's/^ //')
+            local data_array=()
+            for b in $data_bytes; do data_array+=("0x$b"); done
 
-        log_debug "Writing final $remainder bytes"
-        i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" || return 1
+            log_debug "Writing final $remainder bytes"
+            i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" || return 1
+        fi
     fi
 
     echo ""
@@ -444,18 +1023,28 @@ verify_programming() {
     log_info "Verifying programmed configuration..."
 
     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_READ_OTP || return 1
-    sleep 0.5
 
-    local result
-    result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || return 1
+    local elapsed=0
+    local max_wait=${TIMEOUT:-30}
+    local result=""
 
-    if [ "$result" = "0x00" ]; then
-        log_info "Verification passed"
-        return 0
-    else
-        log_error "Verification failed with code: $result"
-        return 1
-    fi
+    while [ $elapsed -lt $max_wait ]; do
+        sleep 1
+        elapsed=$((elapsed + 1))
+        result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || continue
+        if [ "$result" = "0x00" ]; then
+            log_info "Verification passed"
+            return 0
+        fi
+        # Some parts (e.g. XDPE1A2G7B) leave 0xFE at 0xff when idle; treat as success
+        if [ "$result" = "0xff" ]; then
+            log_info "Verification passed (device status 0xff - idle/no status clear)"
+            return 0
+        fi
+    done
+
+    log_error "Verification failed with code: $result (expected 0x00 or 0xff after ${max_wait}s)"
+    return 1
 }
 
 # Reset device to load new configuration
@@ -474,6 +1063,8 @@ reset_device() {
 
 # Main programming sequence
 program_device() {
+    local flash_file config_bin_temp=""
+
     log_info "Starting programming sequence for $CONFIG_FILE"
     log_info "Target: I2C bus $I2C_BUS, address $DEVICE_ADDR"
     echo ""
@@ -493,7 +1084,7 @@ program_device() {
     check_otp_space || return 1
     echo ""
 
-    log_warn "This will erase existing configuration!"
+    log_warn "This will invalidate current OTP and program the new configuration (irreversible; effectively overwrites active config)."
     if [ $DRY_RUN -eq 0 ]; then
         # Interactive confirmation with input validation
         local confirm=""
@@ -516,36 +1107,95 @@ program_device() {
     fi
     echo ""
 
-    write_to_scratchpad "$CONFIG_FILE" || return 1
-    echo ""
+    # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
+    # .bin: single scratchpad write + upload
+    if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]]; then
+        config_bin_temp=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
+        if ! parse_txt_config_to_section_files "$CONFIG_FILE" "$config_bin_temp"; then
+            rm -rf "$config_bin_temp"
+            return 1
+        fi
+        section_bins=()
+        while IFS= read -r p; do
+            [[ -n "$p" ]] && section_bins+=("$p")
+        done < "$config_bin_temp/section_list"
+        if [ ${#section_bins[@]} -eq 0 ]; then
+            log_error "No sections to flash"
+            rm -rf "$config_bin_temp"
+            return 1
+        fi
+        log_info "Uploading ${#section_bins[@]} section(s) one by one (AN001 Section 6)"
+        echo ""
 
-    if [ $DRY_RUN -eq 0 ]; then
-        upload_scratchpad_to_otp || return 1
+        for i in "${!section_bins[@]}"; do
+            flash_file="${section_bins[$i]}"
+            log_info "--- Section $((i + 1))/${#section_bins[@]} ---"
+            write_to_scratchpad "$flash_file" || {
+                rm -rf "$config_bin_temp"
+                return 1
+            }
+            echo ""
+            if [ $DRY_RUN -eq 0 ]; then
+                upload_scratchpad_to_otp || {
+                    rm -rf "$config_bin_temp"
+                    return 1
+                }
+                # Soak between sections per AN001 (e.g. 2 ms/byte; use at least 1s)
+                if [ $i -lt $((${#section_bins[@]} - 1)) ]; then
+                    log_info "Waiting before next section..."
+                    sleep 2
+                fi
+            else
+                log_info "DRY-RUN: Skipping scratchpad upload for this section"
+            fi
+            echo ""
+        done
+        if [ $DRY_RUN -eq 1 ]; then
+            log_info "DRY-RUN: Would have uploaded ${#section_bins[@]} section(s)"
+        fi
     else
-        log_info "DRY-RUN: Skipping scratchpad upload to OTP"
+        flash_file="$CONFIG_FILE"
+        write_to_scratchpad "$flash_file" || return 1
+        echo ""
+        if [ $DRY_RUN -eq 0 ]; then
+            upload_scratchpad_to_otp || return 1
+        else
+            log_info "DRY-RUN: Skipping scratchpad upload to OTP"
+        fi
+        echo ""
     fi
-    echo ""
 
     if [ $DRY_RUN -eq 0 ]; then
-        verify_programming || return 1
+        verify_programming || {
+            [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
+            return 1
+        }
     else
         log_info "DRY-RUN: Skipping verification"
     fi
     echo ""
 
     if [ $DRY_RUN -eq 0 ]; then
-        enable_write_protect || return 1
+        enable_write_protect || {
+            [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
+            return 1
+        }
     else
         log_info "DRY-RUN: Skipping write protection enable"
     fi
     echo ""
 
     if [ $DRY_RUN -eq 0 ]; then
-        reset_device || return 1
+        reset_device || {
+            [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
+            return 1
+        }
     else
         log_info "DRY-RUN: Skipping device reset"
     fi
     echo ""
+
+    [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
 
     if [ $DRY_RUN -eq 1 ]; then
         log_info "DRY-RUN: Programming sequence completed (no actual writes performed)"
@@ -568,7 +1218,7 @@ parse_config_file() {
     echo ""
 
     local file_size
-    file_size=$(stat -f %z "$config_file" 2>/dev/null || stat -c %s "$config_file" 2>/dev/null)
+    file_size=$(wc -c < "$config_file" 2>/dev/null); [ -z "$file_size" ] && file_size=0
 
     echo "File Information:"
     echo "  Size: $file_size bytes"
@@ -601,6 +1251,91 @@ parse_config_file() {
     return 0
 }
 
+# Readback: parse .txt config, read each section from device OTP, save to read_NN.bin and/or compare with config.
+# Requires -f .txt/.mic -b bus -a addr. Optional -o out_dir (default: current dir).
+# XVcode 0 used for .txt. Compares each section with config and reports match/diff.
+readback_from_device() {
+    local txt_file="$CONFIG_FILE"
+    local bus="$I2C_BUS"
+    local addr="$DEVICE_ADDR"
+    local out_dir="${OUTPUT_FILE:-.}"
+    local tmpdir section_bins i hc section_path read_path
+
+    if [[ ! "$txt_file" =~ \.(txt|mic)$ ]]; then
+        log_error "Readback requires a .txt or .mic configuration file (-f)"
+        return 1
+    fi
+
+    log_info "Readback: parsing $txt_file and reading sections from device (bus $bus addr $addr)"
+    echo ""
+
+    unbind_driver_for_device
+
+    # Readback requires I2C/SMBus block write (to set RPTR) and block read (to read OTP). Probe once.
+    if [ $DRY_RUN -eq 0 ]; then
+        if ! set_rptr $bus $addr $((OTP_BASE)) 2>/dev/null; then
+            log_error "Readback requires I2C block write support (to set register pointer)."
+            log_error "Your controller may not support it. Use an I2C adapter with SMBus block transfer, or skip readback."
+            return 1
+        fi
+        if ! read_otp_dword_hex $bus $addr >/dev/null 2>&1; then
+            log_error "Readback requires I2C block read support (to read OTP)."
+            log_error "Your controller may not support it. Use an I2C adapter with SMBus block transfer, or skip readback."
+            return 1
+        fi
+        log_info "I2C block transfer probe OK, continuing readback."
+        echo ""
+    fi
+
+    tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
+
+    if ! parse_txt_config_to_section_files "$txt_file" "$tmpdir"; then
+        rm -rf "$tmpdir"
+        return 1
+    fi
+
+    section_bins=()
+    while IFS= read -r p; do
+        [[ -n "$p" ]] && section_bins+=("$p")
+    done < "$tmpdir/section_list"
+
+    mkdir -p "$out_dir" 2>/dev/null || true
+
+    for i in "${!section_bins[@]}"; do
+        section_path="${section_bins[$i]}"
+        read_path="$out_dir/read_$(printf '%02d' $i).bin"
+        # Header code = LSB of first DWORD in section (4th byte in our big-endian file)
+        hc=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
+        hc=$((16#${hc:6:2}))
+        log_info "Section $i: reading from OTP (header 0x$(printf '%02x' $hc)) -> $read_path"
+        if [ $DRY_RUN -eq 1 ]; then
+            log_info "DRY-RUN: Would read section and write to $read_path"
+        else
+            if ! read_otp_section $bus $addr $hc 0 "$read_path"; then
+                rm -rf "$tmpdir"
+                return 1
+            fi
+            local cfg_size dev_size
+            cfg_size=$(wc -c < "$section_path" 2>/dev/null); [ -z "$cfg_size" ] && cfg_size=0
+            dev_size=$(wc -c < "$read_path" 2>/dev/null); [ -z "$dev_size" ] && dev_size=0
+            if [ "$cfg_size" = "$dev_size" ]; then
+                if cmp -s "$section_path" "$read_path"; then
+                    log_info "  Match: config and device data identical"
+                else
+                    log_warn "  Diff: config and device data differ (same size)"
+                fi
+            else
+                log_warn "  Size mismatch: config ${cfg_size}B vs device ${dev_size}B"
+            fi
+        fi
+        echo ""
+    done
+
+    rm -rf "$tmpdir"
+    log_info "Readback complete. Device sections saved under $out_dir/read_*.bin"
+    return 0
+}
+
 # Scan I2C bus for Infineon devices
 scan_infineon_devices() {
     local bus=$1
@@ -617,19 +1352,28 @@ scan_infineon_devices() {
     i2cdetect -y $bus
     echo ""
 
-    log_info "Checking common Infineon addresses (0x40-0x4F)..."
+    log_info "Checking Infineon XDPE addresses (0x40-0x6F)..."
 
-    for addr in $(seq 64 79); do
+    for addr in $(seq 64 111); do
         local hex_addr
         hex_addr=$(printf "0x%02x" $addr)
+        local addr_hex
+        addr_hex=$(printf '%02x' $addr)
 
-        if i2cdetect -y $bus $addr $addr 2>/dev/null | grep -qi "$(printf '%02x' $addr)"; then
+        local scan_out
+        scan_out=$(i2cdetect -y $bus $addr $addr 2>/dev/null)
+        # Match cell value (space before addr_hex or UU) to avoid false positive on row label (e.g. "40:" for addr 0x40)
+        if echo "$scan_out" | grep -qE " (${addr_hex}|UU)( |$)"; then
             echo -e "${GREEN}Found device at $hex_addr${NC}"
 
             if command -v i2cget &> /dev/null; then
                 local mfr_id
-                mfr_id=$(i2cget -y $bus $hex_addr 0x99 2>/dev/null || echo "N/A")
-                echo "  MFR_ID: $mfr_id"
+                # Unbind driver briefly so we can read MFR_ID (device may show as UU when bound)
+                I2C_BUS=$bus DEVICE_ADDR=$hex_addr unbind_driver_for_device
+                mfr_id=$(read_device_info_block $bus $hex_addr 0x99 2>/dev/null)
+                [ -z "$mfr_id" ] && mfr_id=$(i2cget -y $bus $hex_addr 0x99 2>/dev/null)
+                rebind_driver_if_unbound
+                echo "  MFR_ID: ${mfr_id:-N/A}"
             fi
         fi
     done
@@ -637,13 +1381,48 @@ scan_infineon_devices() {
     return 0
 }
 
+# Read PMBus block register (length byte + data); output as string or hex if non-printable.
+# Usage: read_device_info_block bus addr reg
+read_device_info_block() {
+    local bus=$1
+    local addr=$2
+    local reg=$3
+    local block
+    block=$(i2cget -y "$bus" "$addr" "$reg" i 32 2>/dev/null) || return 1
+    [ -z "$block" ] && return 1
+    local first_byte
+    first_byte=$(echo "$block" | awk '{print $1}')
+    [ -z "$first_byte" ] && return 1
+    local len=$((first_byte))
+    [ "$len" -le 0 ] || [ "$len" -gt 31 ] && return 1
+    local rest
+    rest=$(echo "$block" | awk -v n="$len" '{ for (i=2; i<=n+1 && i<=NF; i++) printf "%s ", $i }')
+    [ -z "$rest" ] && return 1
+    local str=""
+    local hex
+    local all_printable=1
+    for hex in $rest; do
+        local b=$((hex))
+        if [ "$b" -ge 32 ] && [ "$b" -le 126 ]; then
+            str+=$(printf '%b' "$(printf '\\x%02x' $b)")
+        else
+            all_printable=0
+            str+=$(printf '\\x%02x' $b)
+        fi
+    done
+    if [ "$all_printable" -eq 1 ]; then
+        echo "$str"
+    else
+        # Contains non-printable bytes: show as hex list (rest is already "0xXX 0xYY ...")
+        echo "$rest"
+    fi
+    return 0
+}
+
 # Read and display device information
 read_device_info() {
     local bus=$1
     local addr=$2
-
-    log_info "Reading device information..."
-    echo ""
 
     if [ -z "$bus" ] || [ -z "$addr" ]; then
         log_error "Usage: info mode requires -b <bus> -a <address>"
@@ -654,38 +1433,43 @@ read_device_info() {
         addr="0x$addr"
     fi
 
+    I2C_BUS=$bus DEVICE_ADDR=$addr unbind_driver_for_device
+    log_info "Reading device information..."
+    echo ""
     echo "Device: Bus $bus, Address $addr"
     echo ""
 
-    local registers=(
-        "0x99:MFR_ID"
-        "0x9A:MFR_MODEL"
-        "0x9B:MFR_REVISION"
-        "0x9C:MFR_LOCATION"
-        "0x9D:MFR_DATE"
-        "0x9E:MFR_SERIAL"
-        "0xAD:MFR_DEVICE_ID"
-        "0x79:STATUS_WORD"
-        "0x78:STATUS_BYTE"
-        "0x01:OPERATION"
-        "0x10:WRITE_PROTECT"
-    )
-
-    echo "Register Values:"
-    for reg_info in "${registers[@]}"; do
-        local reg="${reg_info%%:*}"
-        local name="${reg_info##*:}"
-
+    local block_regs="0x99 0x9A 0x9B 0x9C 0x9D 0x9E 0xAD"
+    local reg_names="MFR_ID MFR_MODEL MFR_REVISION MFR_LOCATION MFR_DATE MFR_SERIAL MFR_DEVICE_ID"
+    local names_array=($reg_names)
+    local idx=0
+    for reg in $block_regs; do
+        local name="${names_array[$idx]}"
         local value
-        value=$(i2cget -y $bus $addr $reg 2>/dev/null || echo "N/A")
-
-        printf "  %-20s (%-6s): %s\n" "$name" "$reg" "$value"
+        value=$(read_device_info_block "$bus" "$addr" "$reg" 2>/dev/null)
+        if [ -n "$value" ]; then
+            printf "  %-20s (%-6s): %s\n" "$name" "$reg" "$value"
+        else
+            value=$(i2cget -y $bus $addr $reg 2>/dev/null || echo "N/A")
+            printf "  %-20s (%-6s): %s\n" "$name" "$reg" "$value"
+        fi
+        idx=$((idx + 1))
     done
+
+    local value
+    value=$(i2cget -y $bus $addr 0x79 w 2>/dev/null || echo "N/A")
+    printf "  %-20s (%-6s): %s\n" "STATUS_WORD" "0x79" "$value"
+    value=$(i2cget -y $bus $addr 0x78 2>/dev/null || echo "N/A")
+    printf "  %-20s (%-6s): %s\n" "STATUS_BYTE" "0x78" "$value"
+    value=$(i2cget -y $bus $addr 0x01 2>/dev/null || echo "N/A")
+    printf "  %-20s (%-6s): %s\n" "OPERATION" "0x01" "$value"
+    value=$(i2cget -y $bus $addr 0x10 2>/dev/null || echo "N/A")
+    printf "  %-20s (%-6s): %s\n" "WRITE_PROTECT" "0x10" "$value"
 
     return 0
 }
 
-# Monitor device telemetry
+# Monitor device telemetry (raw register values only)
 monitor_telemetry() {
     local bus=$1
     local addr=$2
@@ -700,39 +1484,57 @@ monitor_telemetry() {
         addr="0x$addr"
     fi
 
-    log_info "Monitoring device telemetry (Ctrl+C to stop)"
+    I2C_BUS=$bus DEVICE_ADDR=$addr unbind_driver_for_device
+    log_info "Monitoring device telemetry (press any key to exit and rebind driver)"
     log_info "Bus: $bus, Address: $addr, Interval: ${interval}s"
     echo ""
 
     while true; do
-        clear
+        # clear
         echo "=== Infineon XDPE Device Monitor ==="
         echo "Time: $(date)"
         echo "Bus: $bus, Address: $addr"
         echo ""
 
-        local vout
-        vout=$(i2cget -y $bus $addr $READ_VOUT w 2>/dev/null || echo "N/A")
-        echo "Output Voltage:    $vout"
+        for page in 0 1; do
+            echo "--- Page $page ---"
+            i2cset -y $bus $addr $PMBUS_PAGE $page 2>/dev/null
 
-        local iout
-        iout=$(i2cget -y $bus $addr $READ_IOUT w 2>/dev/null || echo "N/A")
-        echo "Output Current:    $iout"
+            local vout
+            vout=$(i2cget -y $bus $addr $READ_VOUT w 2>/dev/null || echo "N/A")
+            [[ "$vout" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Output Voltage:    $(printf '%5d' $((vout))) ($vout)" || echo "  Output Voltage:    $vout"
 
-        local temp
-        temp=$(i2cget -y $bus $addr $READ_TEMPERATURE_1 w 2>/dev/null || echo "N/A")
-        echo "Temperature:       $temp"
+            local vin
+            vin=$(i2cget -y $bus $addr $READ_VIN w 2>/dev/null || echo "N/A")
+            [[ "$vin" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Input Voltage:     $(printf '%5d' $((vin))) ($vin)" || echo "  Input Voltage:     $vin"
 
-        local pout
-        pout=$(i2cget -y $bus $addr $READ_POUT w 2>/dev/null || echo "N/A")
-        echo "Output Power:      $pout"
+            local iout
+            iout=$(i2cget -y $bus $addr $READ_IOUT w 2>/dev/null || echo "N/A")
+            [[ "$iout" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Output Current:    $(printf '%5d' $((iout))) ($iout)" || echo "  Output Current:    $iout"
 
-        local status
-        status=$(i2cget -y $bus $addr $STATUS_BYTE 2>/dev/null || echo "N/A")
-        echo "Status Byte:       $status"
+            local temp
+            temp=$(i2cget -y $bus $addr $READ_TEMPERATURE_1 w 2>/dev/null || echo "N/A")
+            [[ "$temp" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Temperature:       $(printf '%5d' $((temp))) ($temp)" || echo "  Temperature:       $temp"
 
-        sleep $interval
+            local pout
+            pout=$(i2cget -y $bus $addr $READ_POUT w 2>/dev/null || echo "N/A")
+            [[ "$pout" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Output Power:      $(printf '%5d' $((pout))) ($pout)" || echo "  Output Power:      $pout"
+
+            local pin
+            pin=$(i2cget -y $bus $addr $READ_PIN w 2>/dev/null || echo "N/A")
+            [[ "$pin" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Input Power:       $(printf '%5d' $((pin))) ($pin)" || echo "  Input Power:       $pin"
+
+            local status
+            status=$(i2cget -y $bus $addr $STATUS_BYTE 2>/dev/null || echo "N/A")
+            [[ "$status" =~ ^0x[0-9a-fA-F]+$ ]] && echo "  Status Byte:       $(printf '%5d' $((status))) ($status)" || echo "  Status Byte:       $status"
+            echo ""
+        done
+
+        echo "Press any key to exit (rebind driver)..."
+        read -t $interval -n 1 2>/dev/null && break
     done
+
+    return 0
 }
 
 # Dump all accessible registers
@@ -750,39 +1552,38 @@ dump_registers() {
         addr="0x$addr"
     fi
 
+    I2C_BUS=$bus DEVICE_ADDR=$addr unbind_driver_for_device
     log_info "Dumping registers from device at bus $bus, address $addr"
 
-    local output=""
-    output+="Infineon XDPE Register Dump\n"
-    output+="Date: $(date)\n"
-    output+="Bus: $bus, Address: $addr\n"
-    output+="\n"
-    output+="Reg    Value  ASCII\n"
-    output+="--------------------\n"
+    {
+        echo "Infineon XDPE Register Dump"
+        echo "Date: $(date)"
+        echo "Bus: $bus, Address: $addr"
+        echo ""
+        printf "%-8s %-10s %-6s\n" "Reg" "Value" "ASCII"
+        echo "----------------------------------------"
 
-    for reg in $(seq 0 255); do
-        local hex_reg
-        hex_reg=$(printf "0x%02x" $reg)
+        for reg in $(seq 0 255); do
+            local hex_reg
+            hex_reg=$(printf "0x%02x" $reg)
 
-        local value
-        value=$(i2cget -y $bus $addr $hex_reg 2>/dev/null)
+            local value
+            value=$(i2cget -y $bus $addr $hex_reg 2>/dev/null)
 
-        if [ $? -eq 0 ] && [ "$value" != "" ]; then
-            local dec_value=$((value))
-            local ascii=""
-            if [ $dec_value -ge 32 ] && [ $dec_value -le 126 ]; then
-                ascii=$(printf "\\x$(printf '%02x' $dec_value)")
+            if [ $? -eq 0 ] && [ -n "$value" ]; then
+                local dec_value=$((value))
+                local ascii=""
+                if [ $dec_value -ge 32 ] && [ $dec_value -le 126 ]; then
+                    ascii=$(printf '%b' "$(printf '\\x%02x' $dec_value)")
+                fi
+                printf "%-8s %-10s %-6s\n" "$hex_reg" "$value" "$ascii"
             fi
-
-            output+="$(printf '%s    %s     %s\n' "$hex_reg" "$value" "$ascii")"
-        fi
-    done
-
-    if [ -n "$output_file" ]; then
-        echo -e "$output" > "$output_file"
+        done
+    } | if [ -n "$output_file" ]; then
+        tee "$output_file"
         log_info "Register dump saved to: $output_file"
     else
-        echo -e "$output"
+        cat
     fi
 
     return 0
@@ -805,8 +1606,8 @@ compare_configs() {
 
     local size1
     local size2
-    size1=$(stat -f %z "$file1" 2>/dev/null || stat -c %s "$file1" 2>/dev/null)
-    size2=$(stat -f %z "$file2" 2>/dev/null || stat -c %s "$file2" 2>/dev/null)
+    size1=$(wc -c < "$file1" 2>/dev/null); [ -z "$size1" ] && size1=0
+    size2=$(wc -c < "$file2" 2>/dev/null); [ -z "$size2" ] && size2=0
 
     echo "File Sizes:"
     echo "  File 1: $size1 bytes"
@@ -899,6 +1700,11 @@ main() {
         exit 1
     fi
 
+    # Rebind I2C driver on exit if we unbound it (skip for unbind/rebind modes)
+    if [ "$MODE" != "unbind" ] && [ "$MODE" != "rebind" ]; then
+        trap 'rebind_driver_if_unbound' EXIT
+    fi
+
     # Execute based on mode
     case "$MODE" in
         flash)
@@ -976,13 +1782,65 @@ main() {
             exit 0
             ;;
 
+        unbind)
+            if [ -z "$I2C_BUS" ] || [ -z "$DEVICE_ADDR" ]; then
+                log_error "Unbind mode requires -b <bus> -a <address>"
+                usage
+            fi
+            unbind_driver_for_device
+            if [ -z "$DRIVER_UNBIND_DEVID" ] || [ -z "$DRIVER_UNBIND_NAME" ]; then
+                log_info "No driver bound at $I2C_BUS $DEVICE_ADDR (or unbind not needed)"
+                exit 0
+            fi
+            if save_unbind_state; then
+                log_info "Unbound $DRIVER_UNBIND_NAME from $DRIVER_UNBIND_DEVID; run 'rebind' to restore"
+            else
+                log_error "Failed to save unbind state"
+                rebind_driver_if_unbound
+                exit 1
+            fi
+            exit 0
+            ;;
+
+        rebind)
+            if rebind_driver_from_state_file; then
+                log_info "Driver rebound successfully"
+                exit 0
+            else
+                log_error "No saved unbind state (run 'unbind -b <bus> -a <addr>' first) or rebind failed"
+                exit 1
+            fi
+            ;;
+
+        readback)
+            if [ -z "$CONFIG_FILE" ] || [ -z "$I2C_BUS" ] || [ -z "$DEVICE_ADDR" ]; then
+                log_error "Readback mode requires -f <config.txt> -b <bus> -a <address>"
+                usage
+            fi
+            if ! detect_device; then
+                exit 1
+            fi
+            if ! readback_from_device; then
+                exit 1
+            fi
+            exit 0
+            ;;
+
         parse)
             if [ -z "$CONFIG_FILE" ]; then
                 log_error "Parse mode requires -f <file>"
                 usage
             fi
-            if ! parse_config_file "$CONFIG_FILE"; then
-                exit 1
+            if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]]; then
+                local out_bin="${OUTPUT_FILE:-${CONFIG_FILE%.*}.bin}"
+                if ! parse_txt_config_to_bin "$CONFIG_FILE" "$out_bin"; then
+                    exit 1
+                fi
+                log_info "Binary saved to $out_bin"
+            else
+                if ! parse_config_file "$CONFIG_FILE"; then
+                    exit 1
+                fi
             fi
             exit 0
             ;;

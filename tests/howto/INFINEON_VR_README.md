@@ -187,6 +187,14 @@ The flash tool follows this sequence:
 - Use dry-run mode (`-n`) first to test the process
 - Keep backup of working configurations
 
+### AN001 Section 6: Section-by-section programming
+
+**Per Infineon AN001 "Generic Configuration programming steps through scratchpad":**
+
+- Each configuration data section (Config, PMBus LoopA, PMBus LoopB, Partial PMBus) **must be programmed individually** to the device to avoid buffer overrun.
+- When you flash a **.txt or .mic** file, the tool parses sections and **uploads each section one by one** (scratchpad → OTP per section, with a short delay between sections).
+- When you flash a **.bin** file, the entire file is sent in one scratchpad write and one OTP upload; for a .bin that was built from a multi-section config, consider using the .txt source with this tool so that section-by-section upload is used.
+
 ### Best Practices
 
 1. **Always dry-run first:**
