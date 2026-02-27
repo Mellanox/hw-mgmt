@@ -452,16 +452,19 @@ class BMCAccessor(object):
         err_msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
         raise AttributeError(err_msg)
 
-    def _acquire_lock(self, timeout_sec=FLOCK_TIMEOUT_SEC):
+    def _acquire_lock(self, timeout_sec=None):
         """Acquire advisory lock for TPM usage.
         Returns lock_fd (int). Caller must release with _release_lock(lock_fd).
         Waits up to timeout_sec (default: FLOCK_TIMEOUT_SEC).
         """
+        if timeout_sec is None:
+            timeout_sec = self.FLOCK_TIMEOUT_SEC
+
         lock_path = os.path.join(self.LOCK_DIR, self.LOCK_FILE)
         deadline = time.time() + timeout_sec
         while True:
             try:
-                lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+                lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
             except OSError as e:
                 raise Exception(f"Cannot create lock file for TPM access: {e}") from e
             try:
