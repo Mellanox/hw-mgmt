@@ -973,11 +973,14 @@ if [ "$1" == "add" ]; then
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
 					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
 					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
-                        			if [ ! -z "$slot_num" ]; then
-						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
-						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
-						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
-                        			fi
+						if [ ! -z "$slot_num" ]; then
+							environment_path="$hw_management_path"/dpu"$slot_num"/environment
+							alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+							thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+						fi
+					else
+						# Skip other voltmons events, since its not present in DPU.
+						exit 0
 					fi
 					;;
 				*)
