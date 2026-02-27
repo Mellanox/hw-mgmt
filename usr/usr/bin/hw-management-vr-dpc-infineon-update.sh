@@ -22,7 +22,9 @@ CONFIG_FILE=""
 VERIFY_ONLY=0
 DRY_RUN=0
 TIMEOUT=30
-DEBUG=0
+# Honor DEBUG from environment (e.g. export DEBUG=1) so get_scratchpad_address etc. log commands
+DEBUG=${DEBUG:-0}
+VERBOSE=0
 MODE=""
 
 # When the kernel driver (e.g. xdpe1a2g7b) is bound, raw i2cget/i2cset cannot access the device.
@@ -68,6 +70,8 @@ CMD_SCRATCHPAD_UPLOAD=0x02
 CMD_INVALIDATE_OTP=0x12
 CMD_READ_OTP=0x04
 CMD_CHECK_OTP_SPACE=0x05
+# Retrieve scratchpad register address (supported on some controllers); returns 4 bytes d0,d1,d2,d3 (LE) via 0xFD
+CMD_GET_SCRATCHPAD_ADDR=0x2e
 
 usage() {
     cat << EOF
@@ -84,6 +88,7 @@ MODES:
     dump        Dump device registers
     unbind      Unbind kernel driver for device (raw I2C access)
     rebind      Rebind kernel driver previously unbound with 'unbind'
+    scpad-addr  Get scratchpad register address (controllers supporting 0x2e)
     parse       Parse configuration file (or convert .txt/.mic to .bin with -o)
     readback    Parse .txt config, read each section from device OTP, compare or save to read_NN.bin
     compare     Compare two configuration files
@@ -96,6 +101,7 @@ FLASH MODE OPTIONS:
 
     Optional:
         -n              Dry run (show commands without executing)
+        -v              Verbose: log all executed I2C commands (i2ctransfer, i2cset, i2cget) to stderr
         -t <seconds>    Timeout for operations (default: 30)
         -d              Debug mode (verbose output)
 
@@ -122,6 +128,10 @@ UNBIND MODE OPTIONS:
 
 REBIND MODE OPTIONS:
     (none)              Rebinds the device saved by last 'unbind'
+
+SCPAD-ADDR MODE OPTIONS:
+    -b <bus>            I2C bus number
+    -a <addr>           Device I2C address (hex, e.g. 0x6c)
 
 PARSE MODE OPTIONS:
     -f <file>           Configuration file path (.bin = analyze; .txt/.mic = convert to binary)
@@ -173,20 +183,27 @@ EOF
 }
 
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[INFO]${NC} $1" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
 log_debug() {
     if [ $DEBUG -eq 1 ]; then
-        echo -e "[DEBUG] $1"
+        echo -e "[DEBUG] $1" >&2
+    fi
+}
+
+# Log executed I2C command to stderr when -v (verbose) is set
+log_verbose() {
+    if [ $VERBOSE -eq 1 ]; then
+        echo -e "[VERBOSE] $1" >&2
     fi
 }
 
@@ -199,11 +216,12 @@ i2c_write() {
     local data=("$@")
 
     if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: i2cset -y $bus $addr $reg ${data[*]}"
+        log_info "[DRY-RUN] i2cset -y $bus $addr $reg ${data[*]}"
         return 0
     fi
 
     log_debug "i2cset -y $bus $addr $reg ${data[*]}"
+    log_verbose "i2cset -y $bus $addr $reg ${data[*]}"
     if ! i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null; then
         log_error "Failed to write to device"
         return 1
@@ -218,12 +236,17 @@ i2c_read() {
     local length=${4:-1}
 
     if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: i2cget -y $bus $addr $reg"
-        echo "0xff"
+        if [ "$length" = "1" ]; then
+            log_info "[DRY-RUN] i2cget -y $bus $addr $reg"
+        else
+            log_info "[DRY-RUN] i2cget -y $bus $addr $reg w"
+        fi
+        echo -n "0xff"
         return 0
     fi
 
     log_debug "i2cget -y $bus $addr $reg"
+    [ "$length" = "1" ] && log_verbose "i2cget -y $bus $addr $reg" || log_verbose "i2cget -y $bus $addr $reg w"
     local result
     if [ "$length" = "1" ]; then
         result=$(i2cget -y $bus $addr $reg 2>/dev/null)
@@ -236,8 +259,103 @@ i2c_read() {
         return 1
     fi
 
-    echo "$result"
+    echo -n "$result"
     return 0
+}
+
+# Write one DWORD (4 bytes) to reg. For RPTR use with length prefix: write_dword bus addr MFR_RPTR 0x04 b0 b1 b2 b3.
+# For scratchpad use without prefix: write_dword bus addr MFR_SPECIFIC_00 b0 b1 b2 b3.
+# All addresses and config data in little-endian (b0=LSB, b3=MSB).
+write_dword() {
+    local bus=$1
+    local addr=$2
+    local reg=$3
+    shift 3
+    i2c_block_write $bus $addr $reg "$@"
+}
+
+# Block read: write reg (1 byte), then read N bytes. Returns space-separated hex bytes (no 0x).
+i2c_block_read() {
+    local bus=$1
+    local addr=$2
+    local reg=$3
+    local num_bytes=${4:-4}
+
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY-RUN] i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
+        # Default N hex bytes for dry-run (up to 8)
+        echo "00 00 00 00 00 00 00 00" | cut -d' ' -f1-$num_bytes
+        return 0
+    fi
+
+    log_verbose "i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
+    local line
+    line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
+    echo "$line" | sed 's/0x//g'
+    return 0
+}
+
+# Retrieve scratchpad register address for controllers that support CMD_GET_SCRATCHPAD_ADDR (0x2e).
+# Sequence: BLOCK_WRITE(0xFD, 4, 2,0,0,0), WRITE_BYTE(0xFE, 0x2e), wait ~500us, BLOCK_READ(0xFD, 5).
+# The value we use for scratchpad writes is d0 (first byte of the 5-byte response) — it is taken
+# from the device only, not hardcoded. Some devices return 0x04; in standard PMBus 0x04 is
+# PMBUS_PHASE — the controller may use vendor-specific meaning for scratchpad at this index.
+#   d0 = byte from device (used as reg for write_dword); d1..d4 = 4-byte addr LE (e.g. 0x2005e000).
+# If response has 0xff in d0 or d1..d4 all 0xff, treat as invalid and return empty (use default 0xD0).
+get_scratchpad_address() {
+    local bus=$1
+    local addr=$2
+
+    # BLOCK_WRITE(PMB_Addr, 0xfd, 4, 2, 0, 0, 0)
+    write_dword $bus $addr $MFR_FW_COMMAND_DATA 0x04 0x02 0x00 0x00 0x00 || return 1
+    # WRITE_BYTE(0xfe, 0x2e)
+    i2c_write $bus $addr $MFR_FW_COMMAND $CMD_GET_SCRATCHPAD_ADDR || return 1
+    sleep 0.001
+    # BLOCK_READ(0xfd, 5) -> d0, d1, d2, d3, d4
+    local d0 d1 d2 d3 d4
+    local line
+    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5) || return 1
+    read -r d0 d1 d2 d3 d4 <<< "$line"
+    log_debug "BLOCK_READ(0xfd,5) response: 0x${d0} 0x${d1} 0x${d2} 0x${d3} 0x${d4}"
+    # 4-byte address (d1..d4) little-endian: e.g. 00 e0 05 20 -> 0x2005e000
+    log_debug "4-byte addr (d1..d4) LE: 0x$(printf '%02x%02x%02x%02x' $((16#$d4)) $((16#$d3)) $((16#$d2)) $((16#$d1)))"
+    [ -z "$d0" ] && return 1
+    # Reject 0xff (unprogrammed) or d1..d4 all 0xff (stale/no valid address)
+    [ "$d0" = "ff" ] && return 1
+    [ "$d1" = "ff" ] && [ "$d2" = "ff" ] && [ "$d3" = "ff" ] && [ "$d4" = "ff" ] && return 1
+    # Output: line1 = 8-bit register (d0); line2 = 4-byte addr LE (d1..d4) for scpad-addr display
+    printf '0x%02x\n' $((16#$d0))
+    printf '0x%08x\n' $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    return 0
+}
+
+# Run get_scratchpad_address and print result (for manual use via 'scpad-addr' mode).
+# Usage: get_scpad_addr <bus> <addr>
+get_scpad_addr() {
+    local bus=$1
+    local addr=$2
+    local result
+    log_info "Querying scratchpad address (CMD_GET_SCRATCHPAD_ADDR 0x2e)..."
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY-RUN] No real query; showing default placeholder."
+        log_info "Scratchpad register: $MFR_SPECIFIC_00 (dry-run placeholder)"
+        echo "$MFR_SPECIFIC_00"
+        return 0
+    fi
+    local full
+    full=$(get_scratchpad_address "$bus" "$addr") || true
+    result=$(echo "$full" | head -n1)
+    if [ -n "$result" ]; then
+        local addr4
+        addr4=$(echo "$full" | sed -n '2p')
+        [ -n "$addr4" ] && log_info "Scratchpad: PMBus reg $result (for writes), 4-byte addr: $addr4" || log_info "Scratchpad: PMBus reg $result (for writes)"
+        echo "$result"
+        return 0
+    else
+        log_warn "Controller did not return scratchpad address; default is MFR_SPECIFIC_00 (0xD0)"
+        echo "$MFR_SPECIFIC_00"
+        return 1
+    fi
 }
 
 # Multi-byte write: reg + data via i2ctransfer only (no SMBus block / i2cset block).
@@ -249,11 +367,12 @@ i2c_block_write() {
     local data=("$@")
 
     if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: i2ctransfer w$((${#data[@]}+1))@$addr $reg ${data[*]}"
+        log_info "[DRY-RUN] i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
         return 0
     fi
 
     log_debug "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
+    log_verbose "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
     if ! i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null; then
         log_error "Failed to write to device (i2ctransfer)"
         return 1
@@ -272,19 +391,19 @@ i2c_block_write_byte_by_byte() {
     local i=0
     local r
 
-    if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: i2cset byte-by-byte $((${#data[@]})) bytes at reg $reg"
-        return 0
-    fi
-
     for b in "${data[@]}"; do
         r=$(printf '0x%02x' $((reg + i)))
-        if ! i2cset -y $bus $addr $r $b 2>/dev/null; then
+        if [ $DRY_RUN -eq 1 ]; then
+            log_info "[DRY-RUN] i2cset -y $bus $addr $r $b"
+        else
+            log_verbose "i2cset -y $bus $addr $r $b"
+            if ! i2cset -y $bus $addr $r $b 2>/dev/null; then
             log_error "Failed to write byte at offset $i (reg $r) via i2cset"
             return 1
+            fi
         fi
         i=$((i + 1))
-        if [ $((i % 100)) -eq 0 ]; then
+        if [ $DRY_RUN -eq 0 ] && [ $((i % 100)) -eq 0 ]; then
             echo -n "."
         fi
     done
@@ -303,11 +422,6 @@ i2c_block_write_word_by_word() {
     local i=0
     local word_val
 
-    if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: i2cset word-by-word $(( (n+1)/2 )) words at reg $reg"
-        return 0
-    fi
-
     while [ $i -lt $n ]; do
         local b0 b1
         b0=${data[$i]}
@@ -318,12 +432,17 @@ i2c_block_write_word_by_word() {
         fi
         word_val=$(( (b1 << 8) | (b0 & 0xff) ))
         word_val=$((word_val & 0xFFFF))
-        if ! i2cset -y $bus $addr $reg $word_val w 2>/dev/null; then
-            log_error "Failed to write word at offset $i (reg $reg) via i2cset w"
-            return 1
+        if [ $DRY_RUN -eq 1 ]; then
+            log_info "[DRY-RUN] i2cset -y $bus $addr $reg $word_val w"
+        else
+            log_verbose "i2cset -y $bus $addr $reg $word_val w"
+            if ! i2cset -y $bus $addr $reg $word_val w 2>/dev/null; then
+                log_error "Failed to write word at offset $i (reg $reg) via i2cset w"
+                return 1
+            fi
         fi
         i=$((i + 2))
-        if [ $((i % 64)) -eq 0 ] || [ $i -ge $n ]; then
+        if [ $DRY_RUN -eq 0 ] && ( [ $((i % 64)) -eq 0 ] || [ $i -ge $n ] ); then
             echo -n "."
         fi
     done
@@ -336,9 +455,11 @@ read_otp_dword_hex() {
     local bus=$1
     local addr=$2
     if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY-RUN] i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr"
         echo "00 00 00 00"
         return 0
     fi
+    log_verbose "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr"
     local line
     if command -v timeout &>/dev/null; then
         line=$(timeout 3 i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
@@ -389,11 +510,6 @@ read_otp_section() {
 
     : > "$out_file" || return 1
 
-    if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: read_otp_section hc=$header_code xv=$xvcode"
-        return 0
-    fi
-
     while (( addr_32 < max_addr && iters < max_iters )); do
         iters=$((iters + 1))
         set_rptr $bus $addr $addr_32 || return 1
@@ -433,7 +549,7 @@ read_otp_section() {
 }
 
 # Set register pointer RPTR to 32-bit address (little-endian per AN001).
-# SMBus BLOCK_WRITE sends CommandCode, then Length (1 byte), then N data bytes.
+# BLOCK_WRITE(PMB_Addr, RPTR, 4, b0, b1, b2, b3) -> reg, length 0x04, then 4 bytes LE.
 set_rptr() {
     local bus=$1
     local addr=$2
@@ -442,8 +558,7 @@ set_rptr() {
     local b1=$(( (addr_32 >> 8)  & 0xff ))
     local b2=$(( (addr_32 >> 16) & 0xff ))
     local b3=$(( (addr_32 >> 24) & 0xff ))
-    # BLOCK_WRITE(PMB_Addr, RPTR, 4, b0, b1, b2, b3) -> send reg, 0x04 (length), then 4 bytes
-    i2c_block_write $bus $addr $MFR_RPTR 0x04 0x$(printf '%02x' $b0) 0x$(printf '%02x' $b1) 0x$(printf '%02x' $b2) 0x$(printf '%02x' $b3) || return 1
+    write_dword $bus $addr $MFR_RPTR 0x04 0x$(printf '%02x' $b0) 0x$(printf '%02x' $b1) 0x$(printf '%02x' $b2) 0x$(printf '%02x' $b3) || return 1
     return 0
 }
 
@@ -473,7 +588,7 @@ detect_device() {
     log_info "Detecting device at address $DEVICE_ADDR on bus $I2C_BUS..."
 
     if [ $DRY_RUN -eq 1 ]; then
-        log_info "DRY-RUN: Device detection skipped"
+        log_info "[DRY-RUN] i2cdetect -y $I2C_BUS $DEVICE_ADDR $DEVICE_ADDR"
         return 0
     fi
 
@@ -494,8 +609,12 @@ detect_device() {
 # Unbind kernel driver so raw i2cget/i2cset can access the device (device shows as UU when bound).
 # Idempotent: no-op if already unbound or unbind not possible. Sets globals for rebind on exit.
 unbind_driver_for_device() {
+# return 0; # VV: Skip unbinding for now
     [ -n "$I2C_BUS" ] && [ -n "$DEVICE_ADDR" ] || return 0
-    [ $DRY_RUN -eq 1 ] && return 0
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY-RUN] (unbind driver: echo <bus>-<addr> > /sys/bus/i2c/drivers/<driver>/unbind)"
+        return 0
+    fi
     local addr_hex
     addr_hex=$(printf '%02x' $((DEVICE_ADDR)))
     local dev_id_4="${I2C_BUS}-$(printf '%04x' $((DEVICE_ADDR)))"
@@ -527,6 +646,7 @@ unbind_driver_for_device() {
 
 # Rebind the driver if we had unbound it (so device works again under the kernel driver).
 rebind_driver_if_unbound() {
+#return 0; # VV: Skip rebinding for now
     [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 0
     local bind_file="/sys/bus/i2c/drivers/$DRIVER_UNBIND_NAME/bind"
     if [ -f "$bind_file" ]; then
@@ -648,16 +768,11 @@ invalidate_otp() {
         log_info "Invalidating specific OTP section..."
     fi
 
-    if [ $DRY_RUN -eq 1 ]; then
-        log_debug "DRY-RUN: skip OTP invalidation"
-        return 0
-    fi
-
     # AN001: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, invalidation_cmd). 0xfe,0xfe = all sections.
     if [ $invalidate_all -eq 1 ]; then
         # 1) Set MFR_FW_COMMAND_DATA (0xFD) to 0xfe 0xfe 0x00 0x00 (invalidate all)
         local fd_ok=0
-        if i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 0xfe 0x00 0x00 2>/dev/null; then
+        if write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 0xfe 0x00 0x00 2>/dev/null; then
             fd_ok=1
         else
             # Fallback: four single-byte writes to 0xFD
@@ -897,7 +1012,33 @@ parse_txt_config_to_section_files() {
     return 0
 }
 
-# Write data to scratchpad memory
+# Convert byte array to little-endian DWORDs: each 4-byte group is reversed (LSB first).
+# Input: array of 0xNN bytes. Output: same length, with every 4-byte chunk reversed.
+# Partial final chunk (1-3 bytes) is also reversed.
+bytes_to_little_endian_dwords() {
+    local data=("$@")
+    local n=${#data[@]}
+    local out=()
+    local i=0
+    while [ $i -lt $n ]; do
+        local chunk=()
+        local j=0
+        while [ $j -lt 4 ] && [ $((i + j)) -lt $n ]; do
+            chunk+=("${data[$((i + j))]}")
+            j=$((j + 1))
+        done
+        # reverse chunk
+        local k=$((${#chunk[@]} - 1))
+        while [ $k -ge 0 ]; do
+            out+=("${chunk[$k]}")
+            k=$((k - 1))
+        done
+        i=$((i + 4))
+    done
+    echo "${out[@]}"
+}
+
+# Write data to scratchpad memory (AN001 6.3: RPTR + 0xDE when 4-byte addr available; else legacy reg write).
 write_to_scratchpad() {
     local data_file=$1
 
@@ -913,72 +1054,104 @@ write_to_scratchpad() {
     [ -z "$file_size" ] && file_size=0
     log_info "Configuration file size: $file_size bytes"
 
-    # Skip file processing in dry-run mode
-    if [ $DRY_RUN -eq 1 ]; then
-        log_info "DRY-RUN: Skipping scratchpad write (would write $file_size bytes)"
+    # Get scratchpad info: line1 = reg (d0), line2 = 4-byte address LE (e.g. 0x2005e000)
+    local scpad_full
+    scpad_full=$(get_scratchpad_address $I2C_BUS $DEVICE_ADDR 2>/dev/null) || true
+    local scpad_reg
+    scpad_reg=$(echo "$scpad_full" | head -n1)
+    local scpad_addr_hex
+    scpad_addr_hex=$(echo "$scpad_full" | sed -n '2p')
+    [ -z "$scpad_reg" ] && scpad_reg=$MFR_SPECIFIC_00
+
+    # Put device in scratchpad-write mode (required before writing to scratchpad)
+    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_WRITE || return 1
+
+    # Read file and convert to little-endian DWORDs
+    local all_bytes
+    all_bytes=$(od -An -tx1 "$data_file" | tr -s ' ' | sed 's/^ //')
+    local data_array=()
+    for b in $all_bytes; do data_array+=("0x$b"); done
+    data_array=( $(bytes_to_little_endian_dwords "${data_array[@]}") )
+
+    local num_dwords=$((${#data_array[@]} / 4))
+    local remainder_bytes=$((${#data_array[@]} % 4))
+    if [ $remainder_bytes -gt 0 ]; then
+        while [ $remainder_bytes -lt 4 ]; do
+            data_array+=(0x00)
+            remainder_bytes=$((remainder_bytes + 1))
+        done
+        num_dwords=$((num_dwords + 1))
+    fi
+
+    # AN001 6.3: BLOCK_WRITE(PMB_Addr, RPTR, 4, scpad0..3) then BLOCK_WRITE(PMB_Addr, 0xDE, 4, DWORD...)
+    if [ -n "$scpad_addr_hex" ]; then
+        log_info "Using AN001 6.3: RPTR (0xCE) + MFR_REG_WRITE (0xDE), scratchpad addr $scpad_addr_hex"
+        if [ $DRY_RUN -eq 1 ]; then
+            log_info "[DRY-RUN] set_rptr $I2C_BUS $DEVICE_ADDR $scpad_addr_hex"
+        else
+            set_rptr $I2C_BUS $DEVICE_ADDR $((scpad_addr_hex)) || return 1
+        fi
+        log_info "Writing $num_dwords DWORD(s) to 0xDE (w6: reg 0xDE + 0x04 + 4 bytes)..."
+        local d
+        for ((d=0; d<num_dwords; d++)); do
+            local i=$((d * 4))
+            local b0=${data_array[$i]}
+            local b1=${data_array[$((i+1))]}
+            local b2=${data_array[$((i+2))]}
+            local b3=${data_array[$((i+3))]}
+            if [ $DRY_RUN -eq 1 ]; then
+                log_info "[DRY-RUN] write_dword ... 0xDE 0x04 $b0 $b1 $b2 $b3"
+            elif ! write_dword $I2C_BUS $DEVICE_ADDR $MFR_REG_WRITE 0x04 $b0 $b1 $b2 $b3; then
+                log_error "Scratchpad write to 0xDE failed at DWORD $d"
+                return 1
+            fi
+            sleep 0.002
+            if [ $((d % 8)) -eq 0 ] || [ $d -eq $((num_dwords - 1)) ]; then
+                echo -n "."
+            fi
+        done
+        echo ""
+        log_info "Scratchpad write completed"
         return 0
     fi
 
-    # Put device in scratchpad-write mode (required before writing to MFR_SPECIFIC_00 / 0xD0)
-    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_WRITE || return 1
-
-    local block_size=32
-    local blocks=$((file_size / block_size))
-    local remainder=$((file_size % block_size))
-
-    log_info "Writing $blocks blocks + $remainder bytes..."
+    # Legacy path: no 4-byte address (device did not report via 0x2e); write to scpad reg (0xD0 or d0)
+    log_info "Using scratchpad register: $scpad_reg (legacy; no 4-byte addr from device)"
+    log_info "Writing $num_dwords DWORD(s) (${#data_array[@]} bytes) via write_dword..."
 
     local use_word_fallback=0
-    local offset=0
-    local i
-
-    for ((i=0; i<blocks; i++)); do
-        local data_bytes
-        data_bytes=$(od -An -tx1 -N$block_size -j$offset "$data_file" | tr -s ' ' | sed 's/^ //')
-
-        local data_array=()
-        for b in $data_bytes; do data_array+=("0x$b"); done
-
-        log_debug "Writing block $i at offset $offset"
-        if ! i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" 2>/dev/null; then
-            if [ $i -eq 0 ]; then
-                log_warn "Block write failed (adapter may not support multi-byte). Trying word-by-word (SMBus) write..."
+    local d
+    for ((d=0; d<num_dwords; d++)); do
+        local i=$((d * 4))
+        local b0=${data_array[$i]}
+        local b1=${data_array[$((i+1))]}
+        local b2=${data_array[$((i+2))]}
+        local b3=${data_array[$((i+3))]}
+        if [ $DRY_RUN -eq 1 ]; then
+            write_dword $I2C_BUS $DEVICE_ADDR $scpad_reg 0x04 $b0 $b1 $b2 $b3 || true
+        elif ! write_dword $I2C_BUS $DEVICE_ADDR $scpad_reg 0x04 $b0 $b1 $b2 $b3; then
+            if [ $d -eq 0 ]; then
+                log_warn "DWORD write failed (adapter may not support 5-byte transfer). Trying word-by-word (SMBus) write..."
                 use_word_fallback=1
             else
                 return 1
             fi
             break
         fi
-
-        offset=$((offset + block_size))
-        sleep 0.01
-
-        if [ $((i % 10)) -eq 0 ]; then
+        sleep 0.002
+        if [ $((d % 8)) -eq 0 ] || [ $d -eq $((num_dwords - 1)) ]; then
             echo -n "."
         fi
     done
 
     if [ $use_word_fallback -eq 1 ]; then
-        # Write entire scratchpad via i2cset word writes (2 bytes per write to same reg 0xD0)
-        log_info "Writing $file_size bytes word-by-word (SMBus) to 0xD0..."
-        local all_bytes
-        all_bytes=$(od -An -tx1 "$data_file" | tr -s ' ' | sed 's/^ //')
-        local data_array=()
-        for b in $all_bytes; do data_array+=("0x$b"); done
-        if ! i2c_block_write_word_by_word $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" 2>/dev/null; then
+        log_info "Writing $file_size bytes word-by-word (SMBus) to $scpad_reg..."
+        if [ $DRY_RUN -eq 1 ]; then
+            i2c_block_write_word_by_word $I2C_BUS $DEVICE_ADDR $scpad_reg "${data_array[@]}" || true
+        elif ! i2c_block_write_word_by_word $I2C_BUS $DEVICE_ADDR $scpad_reg "${data_array[@]}"; then
             log_error "Word-by-word scratchpad write failed"
-            log_error "This device accepts only a multi-byte block write to 0xD0; the I2C adapter must support i2ctransfer block write (e.g. w33@addr)."
+            log_error "Adapter must support at least 5-byte i2ctransfer (reg+4) or SMBus word write to $scpad_reg."
             return 1
-        fi
-    else
-        if [ $remainder -gt 0 ]; then
-            local data_bytes
-            data_bytes=$(od -An -tx1 -N$remainder -j$offset "$data_file" | tr -s ' ' | sed 's/^ //')
-            local data_array=()
-            for b in $data_bytes; do data_array+=("0x$b"); done
-
-            log_debug "Writing final $remainder bytes"
-            i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_SPECIFIC_00 "${data_array[@]}" || return 1
         fi
     fi
 
@@ -992,6 +1165,8 @@ upload_scratchpad_to_otp() {
     log_info "Uploading configuration from scratchpad to OTP..."
 
     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_UPLOAD || return 1
+
+    [ $DRY_RUN -eq 1 ] && return 0
 
     log_info "Upload initiated, waiting for completion..."
 
@@ -1023,6 +1198,8 @@ verify_programming() {
     log_info "Verifying programmed configuration..."
 
     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_READ_OTP || return 1
+
+    [ $DRY_RUN -eq 1 ] && return 0
 
     local elapsed=0
     local max_wait=${TIMEOUT:-30}
@@ -1099,12 +1276,8 @@ program_device() {
             log_info "Programming cancelled by user (entered: '$confirm')"
             return 1
         fi
-
-        # Only invalidate OTP in non-dry-run mode
-        invalidate_otp 1 || return 1
-    else
-        log_info "DRY-RUN: Skipping OTP invalidation"
     fi
+    invalidate_otp 1 || return 1
     echo ""
 
     # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
@@ -1135,64 +1308,40 @@ program_device() {
                 return 1
             }
             echo ""
-            if [ $DRY_RUN -eq 0 ]; then
-                upload_scratchpad_to_otp || {
-                    rm -rf "$config_bin_temp"
-                    return 1
-                }
-                # Soak between sections per AN001 (e.g. 2 ms/byte; use at least 1s)
-                if [ $i -lt $((${#section_bins[@]} - 1)) ]; then
-                    log_info "Waiting before next section..."
-                    sleep 2
-                fi
-            else
-                log_info "DRY-RUN: Skipping scratchpad upload for this section"
+            upload_scratchpad_to_otp || {
+                rm -rf "$config_bin_temp"
+                return 1
+            }
+            if [ $DRY_RUN -eq 0 ] && [ $i -lt $((${#section_bins[@]} - 1)) ]; then
+                log_info "Waiting before next section..."
+                sleep 2
             fi
             echo ""
         done
-        if [ $DRY_RUN -eq 1 ]; then
-            log_info "DRY-RUN: Would have uploaded ${#section_bins[@]} section(s)"
-        fi
     else
         flash_file="$CONFIG_FILE"
         write_to_scratchpad "$flash_file" || return 1
         echo ""
-        if [ $DRY_RUN -eq 0 ]; then
-            upload_scratchpad_to_otp || return 1
-        else
-            log_info "DRY-RUN: Skipping scratchpad upload to OTP"
-        fi
+        upload_scratchpad_to_otp || return 1
         echo ""
     fi
 
-    if [ $DRY_RUN -eq 0 ]; then
-        verify_programming || {
-            [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
-            return 1
-        }
-    else
-        log_info "DRY-RUN: Skipping verification"
-    fi
+    verify_programming || {
+        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
+        return 1
+    }
     echo ""
 
-    if [ $DRY_RUN -eq 0 ]; then
-        enable_write_protect || {
-            [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
-            return 1
-        }
-    else
-        log_info "DRY-RUN: Skipping write protection enable"
-    fi
+    enable_write_protect || {
+        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
+        return 1
+    }
     echo ""
 
-    if [ $DRY_RUN -eq 0 ]; then
-        reset_device || {
-            [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
-            return 1
-        }
-    else
-        log_info "DRY-RUN: Skipping device reset"
-    fi
+    reset_device || {
+        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
+        return 1
+    }
     echo ""
 
     [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
@@ -1659,7 +1808,8 @@ main() {
     echo ""
 
     if [ $# -lt 1 ]; then
-        usage
+        # usage
+        return 0; # VV: Skip usage for now
     fi
 
     MODE=$1
@@ -1671,7 +1821,7 @@ main() {
     local MONITOR_INTERVAL=1
     local OUTPUT_FILE=""
 
-    while getopts "b:a:f:c:i:o:t:ndh" opt; do
+    while getopts "b:a:f:c:i:o:t:nvdh" opt; do
         case $opt in
             b) I2C_BUS=$OPTARG ;;
             a) DEVICE_ADDR=$OPTARG ;;
@@ -1681,6 +1831,7 @@ main() {
             o) OUTPUT_FILE=$OPTARG ;;
             t) TIMEOUT=$OPTARG ;;
             n) DRY_RUN=1 ;;
+            v) VERBOSE=1 ;;
             d) DEBUG=1 ;;
             h) usage ;;
             *) usage ;;
@@ -1810,6 +1961,16 @@ main() {
                 log_error "No saved unbind state (run 'unbind -b <bus> -a <addr>' first) or rebind failed"
                 exit 1
             fi
+            ;;
+
+        scpad-addr)
+            if [ -z "$I2C_BUS" ] || [ -z "$DEVICE_ADDR" ]; then
+                log_error "scpad-addr mode requires -b <bus> -a <address>"
+                usage
+            fi
+            unbind_driver_for_device
+            get_scpad_addr "$I2C_BUS" "$DEVICE_ADDR"
+            exit $?
             ;;
 
         readback)
