@@ -36,6 +36,7 @@
 
 LOG_TAG="vr_dpc_update_all"
 DPC_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-update.sh"
+DPC_INFINEON_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-infineon-update.sh"
 
 # Function to log messages
 log_message()
@@ -70,6 +71,12 @@ usage()
     echo "        \"ConfigFile\": \"path/to/config.csv\","
     echo "        \"CrcFile\": \"path/to/crc.txt\","
     echo "        \"DeviceConfigFile\": \"path/to/device_config.conf\""
+    echo "      },"
+    echo "      {"
+    echo "        \"DeviceType\": \"xdpe12284\","
+    echo "        \"Bus\": 2,"
+    echo "        \"Addr\": \"0x40\","
+    echo "        \"ConfigFile\": \"path/to/config.bin\""
     echo "      }"
     echo "    ]"
     echo "  }"
@@ -87,10 +94,14 @@ check_dependencies()
         return 1
     fi
 
-    # Check for DPC update script (skip if only validating)
+    # Check for DPC update scripts (skip if only validating)
     if [[ "$skip_dpc_check" != "skip" ]]; then
         if [[ ! -x "$DPC_UPDATE_SCRIPT" ]]; then
-            log_message "err" "DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+            log_message "err" "MPS DPC update script not found or not executable: $DPC_UPDATE_SCRIPT"
+            return 1
+        fi
+        if [[ ! -x "$DPC_INFINEON_UPDATE_SCRIPT" ]]; then
+            log_message "err" "Infineon DPC update script not found or not executable: $DPC_INFINEON_UPDATE_SCRIPT"
             return 1
         fi
     fi
@@ -178,15 +189,17 @@ validate_json_config()
         # Extract device information
         local device_type
         local bus
+        local addr
         local config_file
         local crc_file
         local device_config_file
 
         device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file" 2>/dev/null)
         bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file" 2>/dev/null)
+        addr=$(jq -r ".Devices[$dev_idx].Addr // empty" "$json_file" 2>/dev/null)
         config_file=$(jq -r ".Devices[$dev_idx].ConfigFile" "$json_file" 2>/dev/null)
-        crc_file=$(jq -r ".Devices[$dev_idx].CrcFile" "$json_file" 2>/dev/null)
-        device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile" "$json_file" 2>/dev/null)
+        crc_file=$(jq -r ".Devices[$dev_idx].CrcFile // empty" "$json_file" 2>/dev/null)
+        device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile // empty" "$json_file" 2>/dev/null)
 
         # Validate DeviceType
         if [[ -z "$device_type" ]] || [[ "$device_type" == "null" ]]; then
@@ -194,6 +207,17 @@ validate_json_config()
             validation_errors=$((validation_errors + 1))
         else
             echo "  DeviceType: $device_type"
+        fi
+
+        # Determine device vendor based on prefix (case-insensitive)
+        local is_infineon=0
+        if [[ "${device_type,,}" =~ ^xdpe ]]; then
+            is_infineon=1
+            echo "  Vendor: Infineon"
+        elif [[ "${device_type,,}" =~ ^mp ]]; then
+            echo "  Vendor: MPS"
+        else
+            echo "  [WARNING] Unknown device type prefix (expected 'mp' or 'xdpe')"
         fi
 
         # Validate Bus
@@ -207,6 +231,20 @@ validate_json_config()
             echo "  Bus: $bus"
         fi
 
+        # Validate Addr (required for Infineon, optional for MPS)
+        if [[ $is_infineon -eq 1 ]]; then
+            if [[ -z "$addr" ]]; then
+                echo "  [ERROR] Missing 'Addr' (required for Infineon devices)"
+                validation_errors=$((validation_errors + 1))
+            else
+                echo "  Addr: $addr"
+            fi
+        else
+            if [[ -n "$addr" ]]; then
+                echo "  Addr: $addr (optional for MPS)"
+            fi
+        fi
+
         # Validate ConfigFile
         if [[ -z "$config_file" ]] || [[ "$config_file" == "null" ]]; then
             echo "  [ERROR] Missing 'ConfigFile'"
@@ -218,25 +256,29 @@ validate_json_config()
             fi
         fi
 
-        # Validate CrcFile
-        if [[ -z "$crc_file" ]] || [[ "$crc_file" == "null" ]]; then
-            echo "  [ERROR] Missing 'CrcFile'"
-            validation_errors=$((validation_errors + 1))
-        else
-            echo "  CrcFile: $crc_file"
-            if [[ ! -f "$crc_file" ]]; then
-                echo "    [WARNING] File does not exist"
+        # Validate CrcFile (required for MPS, not used for Infineon)
+        if [[ $is_infineon -eq 0 ]]; then
+            if [[ -z "$crc_file" ]]; then
+                echo "  [ERROR] Missing 'CrcFile' (required for MPS devices)"
+                validation_errors=$((validation_errors + 1))
+            else
+                echo "  CrcFile: $crc_file"
+                if [[ ! -f "$crc_file" ]]; then
+                    echo "    [WARNING] File does not exist"
+                fi
             fi
         fi
 
-        # Validate DeviceConfigFile
-        if [[ -z "$device_config_file" ]] || [[ "$device_config_file" == "null" ]]; then
-            echo "  [ERROR] Missing 'DeviceConfigFile'"
-            validation_errors=$((validation_errors + 1))
-        else
-            echo "  DeviceConfigFile: $device_config_file"
-            if [[ ! -f "$device_config_file" ]]; then
-                echo "    [WARNING] File does not exist"
+        # Validate DeviceConfigFile (required for MPS, not used for Infineon)
+        if [[ $is_infineon -eq 0 ]]; then
+            if [[ -z "$device_config_file" ]]; then
+                echo "  [ERROR] Missing 'DeviceConfigFile' (required for MPS devices)"
+                validation_errors=$((validation_errors + 1))
+            else
+                echo "  DeviceConfigFile: $device_config_file"
+                if [[ ! -f "$device_config_file" ]]; then
+                    echo "    [WARNING] File does not exist"
+                fi
             fi
         fi
 
@@ -308,15 +350,17 @@ process_json_config()
         # Extract device information
         local device_type
         local bus
+        local addr
         local config_file
         local crc_file
         local device_config_file
 
         device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file")
         bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file")
+        addr=$(jq -r ".Devices[$dev_idx].Addr // empty" "$json_file")
         config_file=$(jq -r ".Devices[$dev_idx].ConfigFile" "$json_file")
-        crc_file=$(jq -r ".Devices[$dev_idx].CrcFile" "$json_file")
-        device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile" "$json_file")
+        crc_file=$(jq -r ".Devices[$dev_idx].CrcFile // empty" "$json_file")
+        device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile // empty" "$json_file")
 
         log_message "info" "Device $total_devices: Type=$device_type, Bus=$bus"
 
@@ -342,26 +386,56 @@ process_json_config()
             continue
         fi
 
-        if [[ -z "$crc_file" ]] || [[ "$crc_file" == "null" ]]; then
-            log_message "err" "Missing CrcFile for device $dev_idx"
-            failed_updates=$((failed_updates + 1))
-            dev_idx=$((dev_idx + 1))
-            continue
+        # Determine device vendor and build appropriate command (case-insensitive)
+        local is_infineon=0
+        if [[ "${device_type,,}" =~ ^xdpe ]]; then
+            is_infineon=1
         fi
 
-        if [[ -z "$device_config_file" ]] || [[ "$device_config_file" == "null" ]]; then
-            log_message "err" "Missing DeviceConfigFile for device $dev_idx"
-            failed_updates=$((failed_updates + 1))
-            dev_idx=$((dev_idx + 1))
-            continue
+        local cmd=()
+
+        if [[ $is_infineon -eq 1 ]]; then
+            # Infineon device - use hw-management-vr-dpc-infineon-update.sh
+            log_message "info" "Detected Infineon device: $device_type"
+
+            # Validate Addr field (required for Infineon)
+            if [[ -z "$addr" ]]; then
+                log_message "err" "Missing Addr field for Infineon device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            # Build Infineon flash command
+            cmd=("$DPC_INFINEON_UPDATE_SCRIPT" "flash" "-b" "$bus" "-a" "$addr" "-f" "$config_file")
+            log_message "info" "Infineon device at address $addr"
+
+        else
+            # MPS device - use hw-management-vr-dpc-update.sh
+            log_message "info" "Detected MPS device: $device_type"
+
+            # Validate MPS-specific fields
+            if [[ -z "$crc_file" ]]; then
+                log_message "err" "Missing CrcFile for MPS device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            if [[ -z "$device_config_file" ]]; then
+                log_message "err" "Missing DeviceConfigFile for MPS device $dev_idx"
+                failed_updates=$((failed_updates + 1))
+                dev_idx=$((dev_idx + 1))
+                continue
+            fi
+
+            # Convert system HID to lowercase for MPS command
+            local system_hid_lower
+            system_hid_lower=$(echo "$system_hid" | tr '[:upper:]' '[:lower:]')
+
+            # Build MPS command
+            cmd=("$DPC_UPDATE_SCRIPT" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
         fi
-
-        # Convert system HID to lowercase for command
-        local system_hid_lower
-        system_hid_lower=$(echo "$system_hid" | tr '[:upper:]' '[:lower:]')
-
-        # Build command (using array to prevent argument injection)
-        local cmd=("$DPC_UPDATE_SCRIPT" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
 
         log_message "info" "Executing: ${cmd[*]}"
 
