@@ -19,7 +19,7 @@
 # GNU General Public License ("GPL") version 2 as published by the Free
 # Software Foundation.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"0
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 # ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -131,6 +131,9 @@ dump_cmd "iio_info" "iio_info" "5"
 dump_cmd "cat $REGMAP_FILE 2>/dev/null" "cpld_dump" "5"
 dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
 
+if [ -d /var/log/hw_mgmt_dbg ]; then
+	tar czf $DUMP_FOLDER/hw-mgmt-dbg.tar.gz -C /var/log/hw_mgmt_dbg .
+fi
 # Kill all the leftout child processes before creating the dump archive
 pkill -P $dump_process_pid
 

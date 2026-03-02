@@ -602,6 +602,15 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
+
+		# Start trace
+		TS="$(date +'%y_%d_%m-%H_%M')"
+		trace_dir="/var/log/hw_mgmt_dbg/$TS"
+		mkdir -p "$trace_dir"
+		set -x
+		exec 3>&1 4>&2 >> "$trace_dir"/bashstart_thermal_events.$$.log 2>&1
+		date "+%s.%N"
+
 		for ((i=1; i<=max_tachos; i+=1)); do
 			if [ -f "$3""$4"/fan$i ]; then
 				check_n_link "$3""$4"/fan$i $thermal_path/fan"$i"_status
@@ -612,6 +621,11 @@ if [ "$1" == "add" ]; then
 				(( fan_drwr_num++ ))
 			fi
 		done
+
+		# End trace
+		date "+%s.%N"
+		set +x
+
 		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
 			get_fixed_fans_direction
 			dir=$?
@@ -625,7 +639,7 @@ if [ "$1" == "add" ]; then
 			echo $fan_drwr_num > $config_path/fan_drwr_num
 		fi
 		# Set temporary flag in fs to indicate that fanX_status is set for all fans
-		echo 1 > "$config_path"/fan_status_ready
+
 
 		for ((i=1; i<=max_psus; i+=1)); do
 			if [ -f "$3""$4"/psu$i ]; then
