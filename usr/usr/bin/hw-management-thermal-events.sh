@@ -34,8 +34,8 @@
 #
 
 source hw-management-helpers.sh
-board_type=$(< $board_type_file)
-sku=$(< $sku_file)
+dmi_board_name=$(< "$board_type_file")
+dmi_sku=$(< "$sku_file")
 
 # Local variables
 fan_psu_default=$config_path/fan_psu_default
@@ -64,7 +64,7 @@ AMD_SNW_TEMP_MAX=95000
 
 FAN_MAP_DEF=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 
-if [ "$board_type" == "VMOD0014" ]; then
+if [ "$dmi_board_name" == "VMOD0014" ]; then
 	i2c_bus_max=14
 	i2c_asic_bus_default=6
 	max_tachos=4
@@ -174,7 +174,7 @@ sn2201_find_cpu_core_temp_ids()
 		core0_temp_id=$(<$config_path/core0_temp_id)
 	else
 		tmp=$(cat /proc/cpuinfo | grep -m1 "core id" | awk '{print $4}')
-		core0_temp_id==$(($tmp+2))
+		core0_temp_id=$(($tmp+2))
 	fi
 	if [ -e $config_path/core1_temp_id ]; then
 		core1_temp_id=$(<$config_path/core1_temp_id)
@@ -383,7 +383,7 @@ if [ "$1" == "add" ]; then
 			fi
 
 			if [ "$name" == "mlxsw" ]; then
-				case $sku in
+				case $dmi_sku in
 					HI157|HI158|HI179)
 						# Mapping of ASIC I2C bus to ASIC index
 						asic_indices=([2]=1 [18]=2 [34]=3 [50]=4)
@@ -460,7 +460,7 @@ if [ "$1" == "add" ]; then
 							else
 								j="$i"
 							fi
-							case $sku in
+							case $dmi_sku in
 								# First 18 modules are accessible via ASIC1, all the rest - via ASIC2
 								HI157)
 									asic1_bus=$(< $cpath/asic1_i2c_bus_id)
@@ -807,7 +807,7 @@ if [ "$1" == "add" ]; then
 					name="pack"
 				else
 					id=$((i - 2))
-					if [ "$board_type" == "VMOD0014" ]; then
+					if [ "$dmi_board_name" == "VMOD0014" ]; then
 					# Denverton CPU on SN2201 has ridicolous CPU Core numbers 6, 12 instead 0, 1
 					# These core id numbers also can differ in various CPU batches.
 					# This was fixed in later version of coretemp driver e.g. in kernel 5.10.162 
@@ -921,12 +921,12 @@ if [ "$1" == "add" ]; then
 	   [ "$2" == "psu3" ] || [ "$2" == "psu4" ] ||
 	   [ "$2" == "psu5" ] || [ "$2" == "psu6" ] ||
 	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
-		if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
+		if [[ $dmi_sku == "HI138" ]] || [[ $dmi_sku == "HI139" ]]; then
 			exit 0
 		fi
 		psu_name="$2"
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
-		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
+		if [[ ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
 		fi
 		find_i2c_bus
@@ -996,7 +996,7 @@ if [ "$1" == "add" ]; then
 		psu_addr=$(< $config_path/"$psu_name"_i2c_addr)
 		psu_eeprom_addr=$(printf '%02x\n' $((psu_addr - 8)))
 		eeprom_name="$psu_name"_info
-		if [ "$board_type" == "VMOD0014" ]; then
+		if [ "$dmi_board_name" == "VMOD0014" ]; then
 			eeprom_file=/sys/devices/pci0000:00/*/NVSN2201:*/i2c_mlxcpld.1/i2c-1/i2c-$bus/$bus-00$psu_eeprom_addr/eeprom
 		else
 			arch=$(uname -m)
@@ -1013,7 +1013,7 @@ if [ "$1" == "add" ]; then
 			psu_eeprom_type=$(get_psu_eeprom_type $bus $psu_addr)
 			cmd_status=$?
 			if [ $cmd_status -ne 0 ]; then
-				if [ "$board_type" == "VMOD0014" ]; then
+				if [ "$dmi_board_name" == "VMOD0014" ]; then
 					psu_eeprom_type="24c02"
 				else
 					psu_eeprom_type="24c32"
@@ -1098,7 +1098,7 @@ if [ "$1" == "add" ]; then
 		cap=$(grep CAPACITY $eeprom_path/"$psu_name"_vpd | awk '{print $2}')
 
 		# Don't set default PSU FAN speed for Delta 2000 on HI172 - let's PSU FW handle it
-		if [[ "$cap" != "2000" || $sku != "HI172" || $mfr != "DELTA" ]]; then
+		if [[ "$cap" != "2000" || $dmi_sku != "HI172" || $mfr != "DELTA" ]]; then
 		    psu_set_fan_speed "$psu_name" $(< $fan_psu_default)
 		fi
 
@@ -1135,7 +1135,7 @@ if [ "$1" == "add" ]; then
 					fw_primary_ver=$(echo $fw_ver_all | cut -d. -f1)
 					fw_ver=$(echo $fw_ver_all | cut -d. -f2)
 				fi
-				if [[ "$cap" == "3000" && ( $sku == "HI144" || $sku == "HI147" ) ]]; then
+				if [[ "$cap" == "3000" && ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) ]]; then
 					if [ ! -e "$config_path"/amb_tmp_warn_limit ]; then
 						echo 38000 > "$config_path"/amb_tmp_warn_limit
 					fi
@@ -1210,8 +1210,7 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "dpu" ]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		case $sku in
+		case $dmi_sku in
 		HI160)
 			# DPU event, replace output folder.
 			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
@@ -1482,7 +1481,7 @@ else
 	   [ "$2" == "psu7" ] || [ "$2" == "psu8" ]; then
 		psu_name="$2"
 		# SN5600, SN5400 systems have PSU2 with I2C address 0x5a. In udev rules 0x5a corresponds to psu4.
-		if [[ ( $sku == "HI144" || $sku == "HI147" ) && "$2" == "psu4" ]]; then
+		if [[ ( $dmi_sku == "HI144" || $dmi_sku == "HI147" ) && "$2" == "psu4" ]]; then
 			psu_name="psu2"
 		fi
 		find_i2c_bus
@@ -1539,8 +1538,7 @@ else
 		set_asic_ready "$4/$5" 0
 	fi
 	if [ "$2" == "dpu" ]; then
-		sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-		case $sku in
+		case ${dmi_sku} in
 		HI160)
 			# DPU event, replace output folder.
 			input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)

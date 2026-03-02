@@ -127,7 +127,7 @@ bmc_i2c_bus_offset=70
 cpu_type=
 device_connect_delay=0.2
 
-# CPU Family + CPU Model should idintify exact CPU architecture
+# CPU Family + CPU Model should identify exact CPU architecture
 # IVB - Ivy-Bridge
 # RNG - Atom Rangeley
 # BDW - Broadwell-DE
@@ -288,10 +288,11 @@ unlock_service_state_change()
     /usr/bin/flock -u ${LOCKFD}
 }
 
+# This function checks if the labels are enabled for the current platform.
+# Returns 0 if labels are enabled, 1 otherwise.
 check_labels_enabled()
 {
-    ui_tree_archive_file="$(get_ui_tree_archive_file)"
-    if ([ "$ui_tree_sku" = "HI130" ] ||
+    if [ "$ui_tree_sku" = "HI130" ] ||
         [ "$ui_tree_sku" = "HI151" ] ||
         [ "$ui_tree_sku" = "HI157" ] ||
         [ "$ui_tree_sku" = "HI158" ] ||
@@ -308,12 +309,13 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI178" ] ||
         [ "$ui_tree_sku" = "HI179" ] ||
         [ "$ui_tree_sku" = "HI180" ] ||
-        [ "$ui_tree_sku" = "HI185" ]) &&
-        ([ ! -e "$ui_tree_archive_file" ]); then
-        return 0
-    else
-        return 1
+        [ "$ui_tree_sku" = "HI185" ]; then
+        ui_tree_archive_file="$(get_ui_tree_archive_file)"
+        if [ ! -e "$ui_tree_archive_file" ]; then
+            return 0
+        fi
     fi
+    return 1
 }
 
 # This function checks if the platform is having BSP emulation support.
@@ -412,14 +414,25 @@ init_sysfs_monitor_timestamp_files()
 # Used by both hw-management service and sysfs monitor service.
 refresh_sysfs_monitor_timestamps()
 {
-    # Capture the current time with milliseconds.
-    local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
-    # Read the last update time from both reset files.
-    local last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
-    local last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
-    # Ensure both variables are valid integers, defaulting to 0 if empty or invalid.
-    last_reset_time_A=${last_reset_time_A:-0}
-    last_reset_time_B=${last_reset_time_B:-0}
+    local uptime_sec int_part frac_part current_time
+    # Read uptime from /proc/uptime and extract integer and fractional parts.
+    read -r uptime_sec _ </proc/uptime 2>/dev/null || uptime_sec="0.000"
+    # Extract integer part of uptime.
+    int_part=${uptime_sec%%.*}
+    # Extract fractional part of uptime.
+    frac_part=${uptime_sec#*.}
+    # Take up to the first 3 digits of the fractional part.
+    frac_part=${frac_part:0:3}
+    # Default to 0 if fractional part is empty.
+    frac_part=${frac_part:-0}
+    # Pad fractional part with zeros if it has fewer than 3 digits.
+    while [ ${#frac_part} -lt 3 ]; do frac_part="${frac_part}0"; done
+    # Calculate current time in milliseconds.
+    current_time=$(( int_part * 1000 + 10#$frac_part ))
+
+    local last_reset_time_A last_reset_time_B
+    read -r last_reset_time_A < "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || last_reset_time_A=0
+    read -r last_reset_time_B < "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || last_reset_time_B=0
     # Determine which file was written most recently.
     if [ "$last_reset_time_A" -gt "$last_reset_time_B" ]; then
         # Write the current time to the less recently updated file (B).
