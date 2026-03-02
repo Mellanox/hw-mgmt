@@ -72,6 +72,8 @@ dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 fan_debounce_timeout_ms=2000
 cfl_comex_vcore_out_idx=2
 
+dmi_board_name=""
+
 case "$board_type" in
 VMOD0014)
 	i2c_bus_max=14
@@ -105,31 +107,25 @@ POWER_SENS_LABEL=(  "none" "pin\$|pin1"   "pout\$|pout1\$" "pout2\$")
 # Find sensor index which label matching to mask.
 # $1 - path to sensor in sysfs
 # $2 - sensor type ('in', 'curr', 'power'...)
-# $3 - mask to matching  label
+# $3 - mask to match for label
 # return sensor index if match is found or 0 if match not found
 find_sensor_by_label()
 {
-	path=$1
-	sens_type=$2
-	label_mask=$3
-	FILES=$(find "$path"/"$sens_type"*label)
-	sensor_id_regex="$path"/"$sens_type""([0-9]+)_label"
-	for label_file in $FILES
-	do
-		curr_label=$(< "$label_file")
-		if [[ $curr_label =~ $label_mask ]]; then
-			# Extracting sensor number from label name like "curr7_label"
-			[[ $label_file =~ $sensor_id_regex ]]
-			if [ "${#BASH_REMATCH[@]}" != 2 ]; then
-			    # not matched
-			    return 0
-			else
-			    return "${BASH_REMATCH[1]}"
-			fi
-		fi
+	local path="$1" sens_type="$2" label_mask="$3"
+	local label_file curr_label
+
+	# Use glob instead of find (no subprocess); nullglob so no match = empty list
+	shopt -s nullglob
+	local -a files=("$path"/"$sens_type"*label)
+	shopt -u nullglob
+
+	for label_file in "${files[@]}"; do
+		read -r curr_label < "$label_file" 2>/dev/null || continue
+		[[ "$curr_label" =~ $label_mask ]] || continue
+		# Extract sensor number from filename like "curr7_label" (avoids path in regex)
+		[[ "$label_file" =~ ([0-9]+)_label$ ]] && return "${BASH_REMATCH[1]}"
 	done
-	# 0 means label by 'pattern' not found.
-    return 0
+	return 0
 }
 
 linecard_i2c_parent_bus_offset=( \
@@ -444,7 +440,7 @@ function asic_cpld_add_handler()
 {
 	local -r ASIC_I2C_PATH="${1}"
 
-	# Verify if CPLD attributes are exist
+	# Verify if CPLD attributes exist
 	if [ -f "$config_path/cpld_port" ]; then
 		local  cpld=$(< $config_path/cpld_port)
 		if [ "$cpld" == "cpld1" ]; then
@@ -465,7 +461,7 @@ function set_fan_direction()
 		if [ -f $config_path/fan_dir_eeprom ]; then
 			return
 		fi
-		# Check if CPLD fan direction is exists
+		# Check if CPLD fan direction exists
 		if [ ! -f $system_path/fan_dir ]; then
 			return
 		fi
@@ -514,7 +510,6 @@ function set_fan_direction_for_all_fans()
 {
 	local -r max_tachos=$(<"$config_path"/max_tachos)
 	for ((i=1; i<="$max_tachos"; i+=1)); do
-		date "+%s.%N"
 		if [ -L "${thermal_path}"/fan"${i}"_status ]; then
 			# check if fan status is set
 			status=$(< "${thermal_path}"/fan"${i}"_status)
@@ -812,31 +807,31 @@ function handle_fantray_led_event()
 
 function check_cpld_attrs_num()
 {
-   board=$(cat /sys/devices/virtual/dmi/id/board_name)
-   cpld_num=$(cat $config_path/cpld_num)
-   case "$board" in
-   VMOD0001|VMOD0003)
-       cpld_num=$((cpld_num-1))
-       ;;
-   *)
-       ;;
-   esac
-
-   return $cpld_num
+	# Read board_name once when empty (avoid cat, use builtin read)
+	[[ -z "$dmi_board_name" ]] && read -r dmi_board_name < /sys/devices/virtual/dmi/id/board_name 2>/dev/null
+	read -r cpld_num < "$config_path/cpld_num" 2>/dev/null || cpld_num=0
+	case "$dmi_board_name" in
+		VMOD0001|VMOD0003)
+			cpld_num=$((cpld_num - 1))
+		;;
+		*)
+		;;
+	esac
+	return $cpld_num
 }
 
 function check_cpld_attrs()
 {
-    attrname="$1"
-    cpld_num="$2"
-    take=1
+	local attrname="$1"
+	local cpld_num="$2"
+	local take=1 num
 
-    # Extracting the cpld number if the attribute starts with cpld<num>
-    num=`echo $attrname | grep -Po '^(cpld)\K\d+'`
-    # Seeing if the cpld index is valid for the platform
-    [[ ! -z "$num" ]] && [ $num -gt $cpld_num ] && take=0
-
-    return $take
+	# Extract digits after "cpld" at start (pure bash, no grep)
+	if [[ "$attrname" =~ ^cpld([0-9]+) ]]; then
+		num="${BASH_REMATCH[1]}"
+		[[ -n "$num" && $num -gt $cpld_num ]] && take=0
+	fi
+	return $take
 }
 
 handle_cpld_versions()
@@ -1160,12 +1155,11 @@ if [ "$1" == "add" ]; then
 		esac
 		# Allow insertion of all the attributes, but skip redundant cpld entries.
 		if [ -d "$3""$4" ]; then
-			local cpld_num
+			check_cpld_attrs_num
+			cpld_num=$?
 			for attrpath in "$3""$4"/*; do
 				take=10
 				attrname=$(basename "${attrpath}")
-				check_cpld_attrs_num
-				cpld_num=$?
 				check_cpld_attrs "$attrname" "$cpld_num"
 				take=$?
 				if [ ! -d "$attrpath" ] && [ ! -L "$attrpath" ] &&
@@ -1177,21 +1171,9 @@ if [ "$1" == "add" ]; then
 			done
 			handle_cpld_versions "$cpld_num"
 		fi
-
-		# Start trace
-		TS="$(date +'%y_%d_%m-%H_%M')"
-		trace_dir="/var/log/hw_mgmt_dbg/$TS"
-		mkdir -p "$trace_dir"
-		set -x
-		exec 3>&1 4>&2 >> "$trace_dir"/bashstart_chassis_events.$$.log 2>&1
-		date "+%s.%N"
-
+	
 		# Set fan direction for all fans.
 		set_fan_direction_for_all_fans
-
-		# End trace
-		date "+%s.%N"
-		set +x
 
 		# Handle linecard.
 		if [ "$linecard" -ne 0 ]; then

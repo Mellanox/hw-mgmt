@@ -127,7 +127,7 @@ bmc_i2c_bus_offset=70
 cpu_type=
 device_connect_delay=0.2
 
-# CPU Family + CPU Model should idintify exact CPU architecture
+# CPU Family + CPU Model should identify exact CPU architecture
 # IVB - Ivy-Bridge
 # RNG - Atom Rangeley
 # BDW - Broadwell-DE
@@ -284,10 +284,11 @@ unlock_service_state_change()
     /usr/bin/flock -u ${LOCKFD}
 }
 
+# This function checks if the labels are enabled for the current platform.
+# Returns 0 if labels are enabled, 1 otherwise.
 check_labels_enabled()
 {
-    ui_tree_archive_file="$(get_ui_tree_archive_file)"
-    if ([ "$ui_tree_sku" = "HI130" ] ||
+    if [ "$ui_tree_sku" = "HI130" ] ||
         [ "$ui_tree_sku" = "HI151" ] ||
         [ "$ui_tree_sku" = "HI157" ] ||
         [ "$ui_tree_sku" = "HI158" ] ||
@@ -303,12 +304,13 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI177" ] ||
         [ "$ui_tree_sku" = "HI178" ] ||
         [ "$ui_tree_sku" = "HI179" ] ||
-        [ "$ui_tree_sku" = "HI180" ]) &&
-        ([ ! -e "$ui_tree_archive_file" ]); then
-        return 0
-    else
-        return 1
-    fi
+        [ "$ui_tree_sku" = "HI180" ];  then
+		    ui_tree_archive_file="$(get_ui_tree_archive_file)"
+			if [ ! -e "$ui_tree_archive_file" ]; then
+				return 0
+			fi
+	fi
+    return 1
 }
 
 # This function checks if the platform is having BSP emulation support.
@@ -407,20 +409,30 @@ init_sysfs_monitor_timestamp_files()
 # Used by both hw-management service and sysfs monitor service.
 refresh_sysfs_monitor_timestamps()
 {
-    # Capture the current time with milliseconds.
-    local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
-    # Read the last update time from both reset files.
-    local last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
-    local last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
-    # Ensure both variables are valid integers, defaulting to 0 if empty or invalid.
+    local uptime_sec int_part frac_part current_time
+    # Read uptime from /proc/uptime and extract integer and fractional parts.
+	read -r uptime_sec _ </proc/uptime
+    # Extract integer part of uptime.
+	int_part=${uptime_sec%%.*}
+    # Extract fractional part of uptime.
+    frac_part=${uptime_sec#*.}
+    # Take up to the first 3 digits of the fractional part.
+    frac_part=${frac_part:0:3}
+    # Default to 0 if fractional part is empty.
+    frac_part=${frac_part:-0}
+    # Pad fractional part with zeros if it has fewer than 3 digits.
+    while [ ${#frac_part} -lt 3 ]; do frac_part="${frac_part}0"; done
+	# Calculate current time in milliseconds.
+    current_time=$(( int_part * 1000 + 10#$frac_part ))
+
+    local last_reset_time_A last_reset_time_B
+    read -r last_reset_time_A < "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || last_reset_time_A=0
+    read -r last_reset_time_B < "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || last_reset_time_B=0
     last_reset_time_A=${last_reset_time_A:-0}
     last_reset_time_B=${last_reset_time_B:-0}
-    # Determine which file was written most recently.
     if [ "$last_reset_time_A" -gt "$last_reset_time_B" ]; then
-        # Write the current time to the less recently updated file (B).
         echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_B"
     else
-        # Write the current time to the less recently updated file (A).
         echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_A"
     fi
 }
@@ -720,56 +732,48 @@ function handle_i2cbus_dev_action()
 # return sensor name if match is found or undefined in other case.
 function get_i2c_busdev_name()
 {
-	dev_name=$1
-	i2c_busdev_path=$2
+	local dev_name="$1" i2c_busdev_path="$2"
+	local i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
+	local i2cbus i2caddr i
 
 	# Check if we have devices list which can be connected with name translation.
-	if [  -f $config_path/i2c_bus_connect_devices ] || [ -f "$devtree_file" ];
-	then
+	if [[ -f "$config_path/i2c_bus_connect_devices" || -f "$devtree_file" ]]; then
 		# Load i2c devices list which should be connected on demand.
-		if [ -f "$devtree_file" ]; then
-			declare -a dynamic_i2c_bus_connect_table=($(<"$devtree_file"))
+		local -a dynamic_i2c_bus_connect_table
+		if [[ -f "$devtree_file" ]]; then
+			dynamic_i2c_bus_connect_table=($(< "$devtree_file"))
 		else
-			declare -a dynamic_i2c_bus_connect_table="($(< $config_path/i2c_bus_connect_devices))"
+			dynamic_i2c_bus_connect_table=($(< "$config_path/i2c_bus_connect_devices"))
 		fi
 
-		# extract i2c bud/dev addr from device sysfs path ( match for i2c-bus/{bus}-{addr} )
-		i2caddr_regex="i2c-[0-9]+/([0-9]+)-00([a-zA-Z0-9]+)/"
-		[[ $i2c_busdev_path =~ $i2caddr_regex ]]
-		if [ "${#BASH_REMATCH[@]}" != 3 ]; then
-			# not matched
-			echo "$dev_name"
+		# extract i2c bus/dev addr from device sysfs path (match for i2c-bus/{bus}-{addr})
+		[[ "$i2c_busdev_path" =~ $i2caddr_regex ]]
+		if [[ "${#BASH_REMATCH[@]}" -ne 3 ]]; then
+			printf '%s\n' "$dev_name"
 			return
-		else
-			i2cbus="${BASH_REMATCH[1]}"
-			i2caddr="0x${BASH_REMATCH[2]}"
-			find_i2c_bus
-			i2cbus=$(($i2cbus-$i2c_bus_offset))
 		fi
+		i2cbus="${BASH_REMATCH[1]}"
+		i2caddr="0x${BASH_REMATCH[2]}"
+		find_i2c_bus
+		i2cbus=$((i2cbus - i2c_bus_offset))
 
-		for ((i=0; i<${#dynamic_i2c_bus_connect_table[@]}; i+=4)); do
-			# match devi ce by i2c bus/addr
-			if [ $i2cbus == "${dynamic_i2c_bus_connect_table[i+2]}" ] && [ $i2caddr == "${dynamic_i2c_bus_connect_table[i+1]}" ];
-			then
+		for ((i = 0; i < ${#dynamic_i2c_bus_connect_table[@]}; i += 4)); do
+			if [[ "$i2cbus" == "${dynamic_i2c_bus_connect_table[i+2]}" && "$i2caddr" == "${dynamic_i2c_bus_connect_table[i+1]}" ]]; then
 				dev_name="${dynamic_i2c_bus_connect_table[i+3]}"
-				if [ $dev_name == "NA" ]; then 
-					echo "undefined"
+				if [[ "$dev_name" == "NA" ]]; then
+					printf '%s\n' "undefined"
 				else
-					echo "$dev_name"
+					printf '%s\n' "$dev_name"
 				fi
 				return
 			fi
 		done
 	fi
 
-	# we not matched i2c device with dev_list file or file not exist
-	# returning passed "devname" name or "undefined" in case if passed '{devtype}X"
-	if [ ${dev_name:0-1} == "X" ];
-	then
-		dev_name="undefined"
-	fi
-
-	echo "$dev_name"
+	# Not matched i2c device with dev_list file or file not exist.
+	# Return passed "devname" or "undefined" if passed '{devtype}X".
+	[[ "${dev_name: -1}" == "X" ]] && dev_name="undefined"
+	printf '%s\n' "$dev_name"
 }
 
 find_dpu_slot_from_i2c_bus()
