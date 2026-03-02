@@ -1,0 +1,24 @@
+{
+  "System HID": "HI180",
+  "Devices": [
+    {
+      "DeviceType": "mp2975",
+      "Bus": 12,
+      "ConfigFile": "/var/run/hw-management/config/mp2975_config.csv",
+      "CrcFile": "/var/run/hw-management/config/mp2975_crc.txt",
+      "DeviceConfigFile": "/var/run/hw-management/config/mp2975_device.conf"
+    },
+    {
+      "DeviceType": "xdpe12284",
+      "Bus": 2,
+      "Addr": "0x40",
+      "ConfigFile": "/var/run/hw-management/config/xdpe12284_config.bin"
+    },
+    {
+      "DeviceType": "xdpe132g5c",
+      "Bus": 3,
+      "Addr": "0x44",
+      "ConfigFile": "/var/run/hw-management/config/xdpe132g5c_config.bin"
+    }
+  ]
+}
