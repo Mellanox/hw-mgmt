@@ -22,8 +22,6 @@ CONFIG_FILE=""
 VERIFY_ONLY=0
 DRY_RUN=0
 TIMEOUT=30
-# Per-command timeout for I2C (i2ctransfer/i2cset/i2cget) to avoid host hang on stuck bus. 0 = no timeout.
-I2C_CMD_TIMEOUT=${I2C_CMD_TIMEOUT:-5}
 # Honor DEBUG from environment (e.g. export DEBUG=1) so get_scratchpad_address etc. log commands
 DEBUG=${DEBUG:-0}
 VERBOSE=0
@@ -69,6 +67,7 @@ READ_PIN=0x97
 # Scratchpad programming commands (AN001 Table 4; 0x12 = OTP_SECTION_INVALIDATE in doc examples)
 CMD_SCRATCHPAD_WRITE=0x01
 CMD_SCRATCHPAD_UPLOAD=0x02
+CMD_OTP_CONFIG_STORE=0x11
 CMD_INVALIDATE_OTP=0x12
 CMD_READ_OTP=0x04
 CMD_CHECK_OTP_SPACE=0x05
@@ -106,7 +105,6 @@ FLASH MODE OPTIONS:
         -v              Verbose: log all executed I2C commands (i2ctransfer, i2cset, i2cget) to stderr
         -t <seconds>    Timeout for operations (default: 30)
         -d              Debug mode (verbose output)
-    Environment: I2C_CMD_TIMEOUT (default 5) = seconds per i2c command; 0 = no timeout (avoid host hang: use 5)
 
 SCAN MODE OPTIONS:
     -b <bus>            I2C bus number
@@ -225,14 +223,7 @@ i2c_write() {
 
     log_debug "i2cset -y $bus $addr $reg ${data[*]}"
     log_verbose "i2cset -y $bus $addr $reg ${data[*]}"
-    local rc=0
-    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
-        timeout "$I2C_CMD_TIMEOUT" i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null || rc=$?
-    else
-        i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null || rc=$?
-    fi
-    if [ $rc -ne 0 ]; then
-        [ $rc -eq 124 ] && log_error "i2cset timed out after ${I2C_CMD_TIMEOUT}s"
+    if ! i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null; then
         log_error "Failed to write to device"
         return 1
     fi
@@ -258,22 +249,13 @@ i2c_read() {
     log_debug "i2cget -y $bus $addr $reg"
     [ "$length" = "1" ] && log_verbose "i2cget -y $bus $addr $reg" || log_verbose "i2cget -y $bus $addr $reg w"
     local result
-    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
-        if [ "$length" = "1" ]; then
-            result=$(timeout "$I2C_CMD_TIMEOUT" i2cget -y $bus $addr $reg 2>/dev/null)
-        else
-            result=$(timeout "$I2C_CMD_TIMEOUT" i2cget -y $bus $addr $reg w 2>/dev/null)
-        fi
+    if [ "$length" = "1" ]; then
+        result=$(i2cget -y $bus $addr $reg 2>/dev/null)
     else
-        if [ "$length" = "1" ]; then
-            result=$(i2cget -y $bus $addr $reg 2>/dev/null)
-        else
-            result=$(i2cget -y $bus $addr $reg w 2>/dev/null)
-        fi
+        result=$(i2cget -y $bus $addr $reg w 2>/dev/null)
     fi
-    local rc=$?
-    if [ $rc -ne 0 ]; then
-        [ $rc -eq 124 ] && log_error "i2cget timed out after ${I2C_CMD_TIMEOUT}s"
+
+    if [ $? -ne 0 ]; then
         log_error "Failed to read from device"
         return 1
     fi
@@ -309,14 +291,7 @@ i2c_block_read() {
 
     log_verbose "i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
     local line
-    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
-        line=$(timeout "$I2C_CMD_TIMEOUT" i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null)
-        local rc=$?
-        [ $rc -eq 124 ] && log_error "i2ctransfer (block read) timed out after ${I2C_CMD_TIMEOUT}s"
-        [ $rc -ne 0 ] && return 1
-    else
-        line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
-    fi
+    line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
     echo "$line" | sed 's/0x//g'
     return 0
 }
@@ -399,14 +374,7 @@ i2c_block_write() {
 
     log_debug "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
     log_verbose "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
-    local rc=0
-    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
-        timeout "$I2C_CMD_TIMEOUT" i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null || rc=$?
-    else
-        i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null || rc=$?
-    fi
-    if [ $rc -ne 0 ]; then
-        [ $rc -eq 124 ] && log_error "i2ctransfer timed out after ${I2C_CMD_TIMEOUT}s"
+    if ! i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null; then
         log_error "Failed to write to device (i2ctransfer)"
         return 1
     fi
@@ -430,16 +398,9 @@ i2c_block_write_byte_by_byte() {
             log_info "[DRY-RUN] i2cset -y $bus $addr $r $b"
         else
             log_verbose "i2cset -y $bus $addr $r $b"
-            local rc=0
-            if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
-                timeout "$I2C_CMD_TIMEOUT" i2cset -y $bus $addr $r $b 2>/dev/null || rc=$?
-            else
-                i2cset -y $bus $addr $r $b 2>/dev/null || rc=$?
-            fi
-            if [ $rc -ne 0 ]; then
-                [ $rc -eq 124 ] && log_error "i2cset (byte) timed out after ${I2C_CMD_TIMEOUT}s"
-                log_error "Failed to write byte at offset $i (reg $r) via i2cset"
-                return 1
+            if ! i2cset -y $bus $addr $r $b 2>/dev/null; then
+            log_error "Failed to write byte at offset $i (reg $r) via i2cset"
+            return 1
             fi
         fi
         i=$((i + 1))
@@ -476,14 +437,7 @@ i2c_block_write_word_by_word() {
             log_info "[DRY-RUN] i2cset -y $bus $addr $reg $word_val w"
         else
             log_verbose "i2cset -y $bus $addr $reg $word_val w"
-            local rc=0
-            if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
-                timeout "$I2C_CMD_TIMEOUT" i2cset -y $bus $addr $reg $word_val w 2>/dev/null || rc=$?
-            else
-                i2cset -y $bus $addr $reg $word_val w 2>/dev/null || rc=$?
-            fi
-            if [ $rc -ne 0 ]; then
-                [ $rc -eq 124 ] && log_error "i2cset (word) timed out after ${I2C_CMD_TIMEOUT}s"
+            if ! i2cset -y $bus $addr $reg $word_val w 2>/dev/null; then
                 log_error "Failed to write word at offset $i (reg $reg) via i2cset w"
                 return 1
             fi
@@ -508,11 +462,7 @@ read_otp_dword_hex() {
     fi
     log_verbose "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr"
     local line
-    if command -v timeout &>/dev/null; then
-        line=$(timeout 3 i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
-    else
-        line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
-    fi
+    line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
     # i2ctransfer read output is hex bytes; normalize to space-separated without 0x
     echo "$line" | sed 's/0x//g'
 }
@@ -871,13 +821,12 @@ section_type_name() {
     esac
 }
 
-# Parse XDPE .txt/.mic config (AN001 format) to binary; write to output path.
-# Format: [Configuration Data] then rows "XXX DWORD0 DWORD1 DWORD2 DWORD3" (3-digit hex offset + 8-char hex DWORDs).
-# Each DWORD written as 4 bytes big-endian. Logs section name, type/page, and data count. Returns 0 on success.
+# Parse XDPE .txt/.mic config (AN001 format) to single binary; write to output path.
+# Optional: [Configuration Data], [End Configuration Data], "// XV0 ..." lines. Data rows: "XXX DWORD0 DWORD1 ..." (3-digit hex + 8-char hex DWORDs). Each DWORD = 4 bytes big-endian.
 parse_txt_config_to_bin() {
     local txt_file="$1"
     local bin_file="$2"
-    local in_section=0
+    local in_config=1
     local byte_count=0
     local current_section_name=""
     local section_dwords=0
@@ -891,13 +840,14 @@ parse_txt_config_to_bin() {
     : > "$bin_file" || { log_error "Cannot create temp binary: $bin_file"; return 1; }
 
     log_section_summary() {
-        if [[ -n "$current_section_name" && $section_dwords -gt 0 ]]; then
+        if [[ $section_dwords -gt 0 ]]; then
             local type_str=""
             if [[ -n "$section_first_dword" ]]; then
                 local code=$((16#${section_first_dword:6:2}))
                 type_str=$(section_type_name "$code")
             fi
-            log_info "  Section: $current_section_name"
+            local name="${current_section_name:-(section)}"
+            log_info "  Section: $name"
             [[ -n "$type_str" ]] && log_info "    Type / programming: $type_str"
             log_info "    Data: $section_dwords DWORDs ($(( section_dwords * 4 )) bytes)"
         fi
@@ -908,7 +858,7 @@ parse_txt_config_to_bin() {
         [[ -z "$line" ]] && continue
 
         if [[ "$line" =~ ^\[Configuration[[:space:]]Data\] ]]; then
-            in_section=1
+            in_config=1
             log_info "Parsing [Configuration Data] from $txt_file"
             echo ""
             continue
@@ -917,19 +867,14 @@ parse_txt_config_to_bin() {
             log_section_summary
             break
         fi
-        [[ $in_section -eq 0 ]] && continue
+        [[ $in_config -eq 0 ]] && continue
 
-        # Section header lines (//XV0 Config, //XV0 PMBus LoopA User, etc.)
         if [[ "$line" =~ ^// ]]; then
-            log_section_summary
             current_section_name="${line#//}"
             current_section_name=$(echo "$current_section_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-            section_dwords=0
-            section_first_dword=""
             continue
         fi
 
-        # Data row: 3 hex digits then one or more 8-char hex DWORDs
         if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]]; then
             local rest="${line#* }"
             local dword
@@ -951,24 +896,24 @@ parse_txt_config_to_bin() {
         fi
     done < "$txt_file"
 
-    if [[ $in_section -eq 0 ]]; then
-        log_error "No [Configuration Data] section found in $txt_file"
+    log_section_summary
+    if [[ $byte_count -eq 0 ]]; then
+        log_error "No data rows (XXX DWORD...) found in $txt_file"
         rm -f "$bin_file"
         return 1
     fi
-
     echo ""
     log_info "Total: $byte_count bytes written to binary"
     return 0
 }
 
-# Parse .txt/.mic into one binary file per section (AN001). Writes section_0.bin, section_1.bin, ...
-# into out_dir and writes the list of paths to out_dir/section_list (one per line).
-# Returns 0 on success. Use for section-by-section flash to avoid device buffer overrun.
+# Parse .txt/.mic into one binary file per (sub)section (AN001 5.2).
+# (Sub)sections start with a line beginning with "000 " (3-digit hex row offset). Optional: [Configuration Data],
+# [End Configuration Data], and "// XV0 ..." comment lines. Writes section_0.bin, section_1.bin, ... and section_list.
 parse_txt_config_to_section_files() {
     local txt_file="$1"
     local out_dir="$2"
-    local in_section=0
+    local in_config=1
     local current_section_name=""
     local section_dwords=0
     local section_first_dword=""
@@ -984,13 +929,15 @@ parse_txt_config_to_section_files() {
     : > "$section_list_file" || { log_error "Cannot create section list"; return 1; }
 
     log_section_summary() {
-        if [[ -n "$current_section_name" && $section_dwords -gt 0 ]]; then
+        if [[ -n "$current_section_bin" && $section_dwords -gt 0 ]]; then
             local type_str=""
             if [[ -n "$section_first_dword" ]]; then
                 local code=$((16#${section_first_dword:6:2}))
                 type_str=$(section_type_name "$code")
             fi
-            log_info "  Section: $current_section_name"
+            local idx=$((section_index - 1))
+            local name="${current_section_name:-Section $idx}"
+            log_info "  Section: $name"
             [[ -n "$type_str" ]] && log_info "    Type / programming: $type_str"
             log_info "    Data: $section_dwords DWORDs ($(( section_dwords * 4 )) bytes)"
         fi
@@ -1002,12 +949,52 @@ parse_txt_config_to_section_files() {
         echo "$current_section_bin" >> "$section_list_file"
     }
 
+    # Extract and store section header per AN001 5.3 (1st DWORD → 4 bytes b0..b3) and 5.4 (2nd DWORD → size 2 bytes: sz0 LSB, sz1 MSB).
+    write_section_params() {
+        local dword1="$1"
+        local dword2="$2"
+        [[ -z "$dword1" ]] || [[ ${#dword1} -ne 8 ]] || [[ ! "$dword1" =~ ^[0-9A-F]{8}$ ]] && return 0
+        [[ -z "$dword2" ]] || [[ ${#dword2} -ne 8 ]] || [[ ! "$dword2" =~ ^[0-9A-F]{8}$ ]] && return 0
+        local params_file="$out_dir/section_${section_index}.params"
+        local b0 b1 b2 b3 sz0 sz1
+        b0=$((16#${dword1:0:2})); b1=$((16#${dword1:2:2})); b2=$((16#${dword1:4:2})); b3=$((16#${dword1:6:2}))
+        sz0=$((16#${dword2:0:2})); sz1=$((16#${dword2:2:2}))
+        local size=$(( sz0 + (sz1 << 8) ))
+        {
+            echo "dword1=$dword1"
+            echo "dword2=$dword2"
+            echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
+            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b1)"
+            echo "sz0=0x$(printf '%02x' $sz0)"
+            echo "sz1=0x$(printf '%02x' $sz1)"
+            echo "size=$size"
+            echo "size_hex=0x$(printf '%04x' $size)"
+        } > "$params_file" 2>/dev/null || true
+    }
+
+    append_dwords_from_line() {
+        local rest="${line#* }"
+        local dword
+        for dword in $rest; do
+            dword=$(echo "$dword" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
+            [[ -z "$dword" ]] || [[ ${#dword} -ne 8 ]] && continue
+            [[ ! "$dword" =~ ^[0-9A-F]{8}$ ]] && continue
+            local b0 b1 b2 b3
+            [[ "${dword:0:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:2:2}" =~ ^[0-9A-F]{2}$ ]] && \
+            [[ "${dword:4:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:6:2}" =~ ^[0-9A-F]{2}$ ]] || continue
+            [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
+            b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
+            printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b0" "$b1" "$b2" "$b3")" >> "$current_section_bin" || return 1
+            section_dwords=$((section_dwords + 1))
+        done
+    }
+
     while IFS= read -r line; do
         line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         [[ -z "$line" ]] && continue
 
         if [[ "$line" =~ ^\[Configuration[[:space:]]Data\] ]]; then
-            in_section=1
+            in_config=1
             log_info "Parsing [Configuration Data] for section-by-section flash from $txt_file"
             echo ""
             continue
@@ -1016,40 +1003,44 @@ parse_txt_config_to_section_files() {
             log_section_summary
             break
         fi
-        [[ $in_section -eq 0 ]] && continue
+        [[ $in_config -eq 0 ]] && continue
 
+        # Optional section name (// XV0 Partial PMBus, etc.) — for logging only
         if [[ "$line" =~ ^// ]]; then
-            log_section_summary
             current_section_name="${line#//}"
             current_section_name=$(echo "$current_section_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            continue
+        fi
+
+        # (Sub)section start: line beginning with "000 " (AN001 5.2). Extract 1st and 2nd DWORD (5.3, 5.4) for params.
+        if [[ "$line" =~ ^000[[:space:]] ]]; then
+            log_section_summary
+            start_section_file || return 1
             section_dwords=0
             section_first_dword=""
-            start_section_file || return 1
+            local rest="${line#* }"
+            local first_two=()
+            for d in $rest; do
+                d=$(echo "$d" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
+                [[ ${#d} -eq 8 ]] && [[ "$d" =~ ^[0-9A-F]{8}$ ]] && first_two+=("$d")
+                [[ ${#first_two[@]} -ge 2 ]] && break
+            done
+            [[ ${#first_two[@]} -ge 2 ]] && write_section_params "${first_two[0]}" "${first_two[1]}"
+            append_dwords_from_line
             section_index=$((section_index + 1))
             continue
         fi
 
-        if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]]; then
-            [[ -z "$current_section_bin" ]] && continue
-            local rest="${line#* }"
-            local dword
-            for dword in $rest; do
-                dword=$(echo "$dword" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
-                [[ -z "$dword" ]] || [[ ${#dword} -ne 8 ]] && continue
-                [[ ! "$dword" =~ ^[0-9A-F]{8}$ ]] && continue
-                local b0 b1 b2 b3
-                [[ "${dword:0:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:2:2}" =~ ^[0-9A-F]{2}$ ]] && \
-                [[ "${dword:4:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:6:2}" =~ ^[0-9A-F]{2}$ ]] || continue
-                [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
-                b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
-                printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b0" "$b1" "$b2" "$b3")" >> "$current_section_bin" || return 1
-                section_dwords=$((section_dwords + 1))
-            done
+        # Data row: 3 hex digits + space + DWORDs (e.g. "010 38B4D17E") — append to current section
+        if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]] && [[ -n "$current_section_bin" ]]; then
+            append_dwords_from_line
         fi
     done < "$txt_file"
 
-    if [[ $in_section -eq 0 ]]; then
-        log_error "No [Configuration Data] section found in $txt_file"
+    log_section_summary
+
+    if [[ $section_index -eq 0 ]] && [[ $section_dwords -eq 0 ]]; then
+        log_error "No (sub)section (line starting with '000 ') found in $txt_file"
         rm -rf "$out_dir"
         return 1
     fi
@@ -1207,15 +1198,53 @@ write_to_scratchpad() {
     return 0
 }
 
-# Upload data from scratchpad to OTP
+# Upload data from scratchpad to OTP (AN001 6.4).
+# Faults on both pages must be cleared first. Then BLOCK_WRITE(0xfd, 4, sz0, sz1, 0, 0), WRITE_BYTE(0xfe, 0x11), wait soak.
+# Optional: section_params_file = path to section_N.params (provides sz0, sz1 from 5.4). Without it, uses 0xFE 0x02 and polls.
 upload_scratchpad_to_otp() {
+    local section_params_file="${1:-}"
+
     log_info "Uploading configuration from scratchpad to OTP..."
 
-    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_UPLOAD || return 1
+    # AN001 6.4: clear faults on both pages before upload so any faults from the operation can be identified
+    log_info "Clearing faults on page 0 and page 1 (AN001 6.4)..."
+    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_PAGE 0x00 || return 1
+    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS 0x00 || return 1
+    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_PAGE 0x01 || return 1
+    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS 0x00 || return 1
+
+    local p_sz0 p_sz1 p_hc p_xv p_size p_dword1 p_dword2
+    if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
+        while IFS= read -r line; do
+            [[ "$line" =~ ^dword1=(.*)$ ]] && p_dword1="${BASH_REMATCH[1]}"
+            [[ "$line" =~ ^dword2=(.*)$ ]] && p_dword2="${BASH_REMATCH[1]}"
+            [[ "$line" =~ ^hc=(.*)$ ]] && p_hc="${BASH_REMATCH[1]}"
+            [[ "$line" =~ ^xv=(.*)$ ]] && p_xv="${BASH_REMATCH[1]}"
+            [[ "$line" =~ ^size=([0-9]+)$ ]] && p_size="${BASH_REMATCH[1]}"
+            [[ "$line" =~ ^sz0=0x([0-9A-Fa-f]+)$ ]] && p_sz0=0x${BASH_REMATCH[1]}
+            [[ "$line" =~ ^sz1=0x([0-9A-Fa-f]+)$ ]] && p_sz1=0x${BASH_REMATCH[1]}
+        done < "$section_params_file" 2>/dev/null
+    fi
+
+    if [[ -n "$p_sz0" && -n "$p_sz1" ]]; then
+        # AN001 6.4: BLOCK_WRITE(0xfd, 4, sz[0], sz[1], 0, 0) then WRITE_BYTE(0xfe, 0x11) OTP_CONFIG_STORE
+        log_info "0xFD: sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1 (size from 6.1)"
+        write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 $p_sz0 $p_sz1 0x00 0x00 || return 1
+        i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_OTP_CONFIG_STORE || return 1
+    else
+        # Fallback when no section params (e.g. single .bin): use legacy upload command
+        log_info "No section params; using 0xFE 0x02 (CMD_SCRATCHPAD_UPLOAD)"
+        i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_UPLOAD || return 1
+    fi
 
     [ $DRY_RUN -eq 1 ] && return 0
 
-    log_info "Upload initiated, waiting for completion..."
+    # Soak time per AN001 Table 8 before polling
+    local soak_s=2
+    log_info "Soak time ${soak_s}s (AN001 Table 8)..."
+    sleep $soak_s
+
+    log_info "Waiting for upload completion..."
 
     local elapsed=0
     local max_wait=$TIMEOUT
@@ -1229,6 +1258,10 @@ upload_scratchpad_to_otp() {
 
         if [ "$result" = "0x00" ]; then
             log_info "Upload completed successfully"
+            if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
+                [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD (5.3): $p_dword1  (hc=$p_hc xv=$p_xv)"
+                [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD (5.4): $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
+            fi
             return 0
         fi
 
@@ -1355,7 +1388,8 @@ program_device() {
                 return 1
             }
             echo ""
-            upload_scratchpad_to_otp || {
+            section_params_file="${flash_file%.bin}.params"
+            upload_scratchpad_to_otp "$section_params_file" || {
                 rm -rf "$config_bin_temp"
                 return 1
             }
