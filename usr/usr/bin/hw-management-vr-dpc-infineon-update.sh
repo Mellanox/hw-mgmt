@@ -22,6 +22,8 @@ CONFIG_FILE=""
 VERIFY_ONLY=0
 DRY_RUN=0
 TIMEOUT=30
+# Per-command timeout for I2C (i2ctransfer/i2cset/i2cget) to avoid host hang on stuck bus. 0 = no timeout.
+I2C_CMD_TIMEOUT=${I2C_CMD_TIMEOUT:-5}
 # Honor DEBUG from environment (e.g. export DEBUG=1) so get_scratchpad_address etc. log commands
 DEBUG=${DEBUG:-0}
 VERBOSE=0
@@ -104,6 +106,7 @@ FLASH MODE OPTIONS:
         -v              Verbose: log all executed I2C commands (i2ctransfer, i2cset, i2cget) to stderr
         -t <seconds>    Timeout for operations (default: 30)
         -d              Debug mode (verbose output)
+    Environment: I2C_CMD_TIMEOUT (default 5) = seconds per i2c command; 0 = no timeout (avoid host hang: use 5)
 
 SCAN MODE OPTIONS:
     -b <bus>            I2C bus number
@@ -222,7 +225,14 @@ i2c_write() {
 
     log_debug "i2cset -y $bus $addr $reg ${data[*]}"
     log_verbose "i2cset -y $bus $addr $reg ${data[*]}"
-    if ! i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null; then
+    local rc=0
+    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        timeout "$I2C_CMD_TIMEOUT" i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null || rc=$?
+    else
+        i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null || rc=$?
+    fi
+    if [ $rc -ne 0 ]; then
+        [ $rc -eq 124 ] && log_error "i2cset timed out after ${I2C_CMD_TIMEOUT}s"
         log_error "Failed to write to device"
         return 1
     fi
@@ -248,13 +258,22 @@ i2c_read() {
     log_debug "i2cget -y $bus $addr $reg"
     [ "$length" = "1" ] && log_verbose "i2cget -y $bus $addr $reg" || log_verbose "i2cget -y $bus $addr $reg w"
     local result
-    if [ "$length" = "1" ]; then
-        result=$(i2cget -y $bus $addr $reg 2>/dev/null)
+    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        if [ "$length" = "1" ]; then
+            result=$(timeout "$I2C_CMD_TIMEOUT" i2cget -y $bus $addr $reg 2>/dev/null)
+        else
+            result=$(timeout "$I2C_CMD_TIMEOUT" i2cget -y $bus $addr $reg w 2>/dev/null)
+        fi
     else
-        result=$(i2cget -y $bus $addr $reg w 2>/dev/null)
+        if [ "$length" = "1" ]; then
+            result=$(i2cget -y $bus $addr $reg 2>/dev/null)
+        else
+            result=$(i2cget -y $bus $addr $reg w 2>/dev/null)
+        fi
     fi
-
-    if [ $? -ne 0 ]; then
+    local rc=$?
+    if [ $rc -ne 0 ]; then
+        [ $rc -eq 124 ] && log_error "i2cget timed out after ${I2C_CMD_TIMEOUT}s"
         log_error "Failed to read from device"
         return 1
     fi
@@ -290,7 +309,14 @@ i2c_block_read() {
 
     log_verbose "i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
     local line
-    line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
+    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        line=$(timeout "$I2C_CMD_TIMEOUT" i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null)
+        local rc=$?
+        [ $rc -eq 124 ] && log_error "i2ctransfer (block read) timed out after ${I2C_CMD_TIMEOUT}s"
+        [ $rc -ne 0 ] && return 1
+    else
+        line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
+    fi
     echo "$line" | sed 's/0x//g'
     return 0
 }
@@ -373,7 +399,14 @@ i2c_block_write() {
 
     log_debug "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
     log_verbose "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
-    if ! i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null; then
+    local rc=0
+    if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        timeout "$I2C_CMD_TIMEOUT" i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null || rc=$?
+    else
+        i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null || rc=$?
+    fi
+    if [ $rc -ne 0 ]; then
+        [ $rc -eq 124 ] && log_error "i2ctransfer timed out after ${I2C_CMD_TIMEOUT}s"
         log_error "Failed to write to device (i2ctransfer)"
         return 1
     fi
@@ -397,9 +430,16 @@ i2c_block_write_byte_by_byte() {
             log_info "[DRY-RUN] i2cset -y $bus $addr $r $b"
         else
             log_verbose "i2cset -y $bus $addr $r $b"
-            if ! i2cset -y $bus $addr $r $b 2>/dev/null; then
-            log_error "Failed to write byte at offset $i (reg $r) via i2cset"
-            return 1
+            local rc=0
+            if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
+                timeout "$I2C_CMD_TIMEOUT" i2cset -y $bus $addr $r $b 2>/dev/null || rc=$?
+            else
+                i2cset -y $bus $addr $r $b 2>/dev/null || rc=$?
+            fi
+            if [ $rc -ne 0 ]; then
+                [ $rc -eq 124 ] && log_error "i2cset (byte) timed out after ${I2C_CMD_TIMEOUT}s"
+                log_error "Failed to write byte at offset $i (reg $r) via i2cset"
+                return 1
             fi
         fi
         i=$((i + 1))
@@ -436,7 +476,14 @@ i2c_block_write_word_by_word() {
             log_info "[DRY-RUN] i2cset -y $bus $addr $reg $word_val w"
         else
             log_verbose "i2cset -y $bus $addr $reg $word_val w"
-            if ! i2cset -y $bus $addr $reg $word_val w 2>/dev/null; then
+            local rc=0
+            if command -v timeout &>/dev/null && [ "$I2C_CMD_TIMEOUT" -gt 0 ] 2>/dev/null; then
+                timeout "$I2C_CMD_TIMEOUT" i2cset -y $bus $addr $reg $word_val w 2>/dev/null || rc=$?
+            else
+                i2cset -y $bus $addr $reg $word_val w 2>/dev/null || rc=$?
+            fi
+            if [ $rc -ne 0 ]; then
+                [ $rc -eq 124 ] && log_error "i2cset (word) timed out after ${I2C_CMD_TIMEOUT}s"
                 log_error "Failed to write word at offset $i (reg $reg) via i2cset w"
                 return 1
             fi
