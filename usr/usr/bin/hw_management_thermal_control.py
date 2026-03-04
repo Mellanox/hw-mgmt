@@ -3692,13 +3692,12 @@ class ThermalManagement(hw_management_file_op):
                     if "name" in sys_config.keys():
                         self.log.info("System data: {}".format(sys_config["name"]))
                 except (json.JSONDecodeError, ValueError, KeyError):
-                    self.log.error("System config file {} broken.".format(config_file_name), repeat=1)
+                    self.log.critical("System config file {} broken.".format(config_file_name), repeat=1)
                     sys_config["platform_support"] = 0
         else:
-            self.log.warn("System config file {} missing. Platform: '{}'/'{}'/'{}' is not supported.".format(config_file_name,
-                                                                                                             self.board_type,
-                                                                                                             self.sku,
-                                                                                                             self.system_ver), repeat=1)
+            self.log.error("System config file {} missing. Platform: '{}'/'{}' is not supported.".format(config_file_name,
+                                                                                                          self.board_type,
+                                                                                                          self.sku), repeat=1)
             sys_config["platform_support"] = 0
 
         # 1. Init dmin table
@@ -3986,7 +3985,7 @@ class ThermalManagement(hw_management_file_op):
         """
 
         if self.state != CONST.RUNNING:
-            self.log.notice("State changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason))
+            self.log.notice("State changed {} -> {} reason:{}".format(self.state, CONST.RUNNING, reason), repeat=1)
             self.state = CONST.RUNNING
             self.emergency = False
 
@@ -4042,7 +4041,7 @@ class ThermalManagement(hw_management_file_op):
                 if dev_obj.enable:
                     dev_obj.stop()
 
-            self.log.notice("State changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason))
+            self.log.notice("State changed {} -> {} reason:{}".format(self.state, CONST.STOPPED, reason), repeat=1)
             self.state = CONST.STOPPED
             self._set_pwm(CONST.PWM_MAX, reason="TC stop")
             self.log.info("Set FAN PWM {}".format(self.pwm_target), repeat=1)
@@ -4396,7 +4395,7 @@ if __name__ == '__main__':
         logger.stop()
 
     except Exception as e:
-        logger.info(traceback.format_exc())
+        logger.critical(traceback.format_exc())
         if thermal_management:
             thermal_management.stop(reason="crash ({})".format(str(e)))
         sys.exit(1)
