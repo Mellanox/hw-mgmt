@@ -53,6 +53,7 @@ MFR_SPECIFIC_00=0xD0
 MFR_RPTR=0xCE
 MFR_REG_WRITE=0xDE
 MFR_REG_READ=0xDF
+PMBUS_VOUT_MODE=0x20
 # OTP partition 0 base (AN001 10.1)
 OTP_BASE=0x10020000
 STATUS_WORD=0x79
@@ -91,7 +92,7 @@ MODES:
     rebind      Rebind kernel driver previously unbound with 'unbind'
     scpad-addr  Get scratchpad register address (controllers supporting 0x2e)
     parse       Parse configuration file (or convert .txt/.mic to .bin with -o)
-    readback    Parse .txt config, read each section from device OTP, compare or save to read_NN.bin
+    readback    Read OTP sections from device to read_NN.bin; with -f .txt compare to config
     compare     Compare two configuration files
 
 FLASH MODE OPTIONS:
@@ -139,10 +140,10 @@ PARSE MODE OPTIONS:
     -o <file>           Output .bin path when converting .txt/.mic (default: input name with .bin extension)
 
 READBACK MODE OPTIONS:
-    -f <file>           Configuration .txt/.mic file (defines sections to read)
-    -b <bus>            I2C bus number
-    -a <addr>           Device I2C address (hex)
-    -o <dir>            Output directory for read_NN.bin files (default: current dir). Each section is compared with config.
+    -b <bus>            I2C bus number (required)
+    -a <addr>           Device I2C address in hex (required)
+    -f <file>           Optional: .txt/.mic config; if given, read sections by header code and compare with config
+    -o <dir>            Output directory for read_NN.bin files (default: current dir). Without -f, all OTP sections are dumped in order.
     Note: Readback requires I2C/SMBus block write and block read. If your adapter does not support these, use another I2C adapter or skip readback.
 
 COMPARE MODE OPTIONS:
@@ -173,7 +174,9 @@ EXAMPLES:
     $(basename $0) parse -f config.bin
     $(basename $0) parse -f config.txt -o config.bin
 
-    # Readback: read each section from device OTP, save to read_NN.bin and compare with .txt
+    # Readback: dump all OTP sections to read_NN.bin (no config)
+    $(basename $0) readback -b 2 -a 0x6c -o ./readback
+    # Readback with config: read by section header and compare with .txt
     $(basename $0) readback -f config.txt -b 2 -a 0x6c -o ./readback
 
     # Compare configs
@@ -206,6 +209,24 @@ log_verbose() {
     if [ $VERBOSE -eq 1 ]; then
         echo -e "[VERBOSE] $1" >&2
     fi
+}
+
+# Send single byte (command only, no data) — e.g. PMBUS_CLEAR_FAULTS per SMBus "send byte".
+i2c_send_byte() {
+    local bus=$1
+    local addr=$2
+    local reg=$3
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY-RUN] i2ctransfer -y $bus w1@$addr $reg"
+        return 0
+    fi
+    log_debug "i2ctransfer -y $bus w1@$addr $reg"
+    log_verbose "i2ctransfer -y $bus w1@$addr $reg"
+    if ! i2ctransfer -y $bus "w1@$addr" $reg 2>/dev/null; then
+        log_error "Failed to send byte to device"
+        return 1
+    fi
+    return 0
 }
 
 # Execute i2c command with error handling
@@ -451,20 +472,25 @@ i2c_block_write_word_by_word() {
 }
 
 # Read one DWORD (4 bytes) from MFR_REG_READ; RPTR must be set and auto-increments.
-# Uses i2ctransfer (w1 reg, r4) only. Outputs space-separated hex bytes (no 0x), e.g. "00 00 00 04".
+# Device returns 5 bytes: length (0x04) then 4 data bytes. Use r5, then output only the 4 data bytes.
 read_otp_dword_hex() {
     local bus=$1
     local addr=$2
     if [ $DRY_RUN -eq 1 ]; then
-        log_info "[DRY-RUN] i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr"
+        log_info "[DRY-RUN] i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr"
         echo "00 00 00 00"
         return 0
     fi
-    log_verbose "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr"
+    log_verbose "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr"
     local line
-    line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r4@$addr 2>/dev/null) || return 1
-    # i2ctransfer read output is hex bytes; normalize to space-separated without 0x
-    echo "$line" | sed 's/0x//g'
+    line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr 2>/dev/null) || return 1
+    # Normalize: strip 0x, then drop first byte (length 0x04), output 4 data bytes
+    line=$(echo "$line" | sed 's/0x//g')
+    local _d0 _d1 _d2 _d3 _d4
+    read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
+    line="$_d1 $_d2 $_d3 $_d4"
+    log_verbose "read DWORD: $line"
+    echo "$line"
 }
 
 # Append 4 hex bytes (as from read_otp_dword_hex) as binary to file.
@@ -494,11 +520,12 @@ read_otp_bytes_to_file() {
 
 # Find section by header_code and xvcode in OTP, read full section to out_file. AN001 10.1.
 # Returns 0 on success. OTP base 0x10020000; section layout: 4B header (byte0=hc, byte1=xv), 4B size (LE), then data.
+# header_code and xvcode may be passed as decimal or hex (e.g. 0x07 0x00); normalized to decimal for -eq comparisons.
 read_otp_section() {
     local bus=$1
     local addr=$2
-    local header_code=$3
-    local xvcode=$4
+    local header_code=$(( $3 ))
+    local xvcode=$(( $4 ))
     local out_file=$5
     local addr_32=$((OTP_BASE))
     local max_addr=$((OTP_BASE + 32768))
@@ -506,6 +533,8 @@ read_otp_section() {
     local iters=0
 
     : > "$out_file" || return 1
+
+    log_verbose "Searching for the section header_code=0x$(printf '%02x' $header_code) xvcode=0x$(printf '%02x' $xvcode)..."
 
     while (( addr_32 < max_addr && iters < max_iters )); do
         iters=$((iters + 1))
@@ -516,13 +545,15 @@ read_otp_section() {
         local h0 h1 h2 h3 s0 s1 s2 s3
         read -r h0 h1 h2 h3 <<< "$hd_hex"
         read -r s0 s1 s2 s3 <<< "$sz_hex"
-        local size=$(( 16#$s0 + (16#$s1 << 8) + (16#$s2 << 16) + (16#$s3 << 24) ))
+        # Section size is 2 bytes LE (sz0 LSB, sz1 MSB) per AN001; e.g. 58 01 -> 0x0158
+        local size=$(( 16#$s0 + (16#$s1 << 8) ))
         local hc=$((16#$h0))
         local xv=$((16#$h1))
         # Unprogrammed OTP often reads as 0xff; cap size to avoid overflow or huge skip
         if [ "$size" -gt 32768 ]; then
             size=8
         fi
+        log_verbose "OTP offset $(printf '%03x' $(( addr_32 - OTP_BASE ))) found a section HC=0x$(printf '%02x' $hc) of size 0x$(printf '%04x' $size)"
         if [ "$hc" -eq "$header_code" ] && [ "$xv" -eq "$xvcode" ]; then
             hex_dword_to_file "$hd_hex" "$out_file"
             hex_dword_to_file "$sz_hex" "$out_file"
@@ -641,13 +672,56 @@ unbind_driver_for_device() {
     return 0
 }
 
+# Diagnostic: read registers that xdpe1a2g7b driver uses for "Chip identification" (MFR_ID, MFR_MODEL, VOUT_MODE on both pages).
+# Call with bus and addr (e.g. from I2C_BUS, DEVICE_ADDR). Logs values so user can see why probe might fail.
+# Driver expects PMBUS_VOUT_MODE (0x20) lower 5 bits = 0x1E (NVIDIA 195mV) on both pages when in VID mode.
+diagnose_rebind_id_regs() {
+    local bus=$1
+    local addr=$2
+    [ -z "$bus" ] || [ -z "$addr" ] && return 0
+    log_info "--- Pre-rebind identification read (bus $bus $addr) ---"
+    local mfr_id mfr_model vout0 vout1
+    mfr_id=$(i2c_read "$bus" "$addr" $MFR_ID 2>/dev/null)
+    mfr_model=$(i2c_read "$bus" "$addr" $MFR_MODEL 2>/dev/null)
+    i2c_write "$bus" "$addr" $PMBUS_PAGE 0x00 2>/dev/null
+    vout0=$(i2c_read "$bus" "$addr" $PMBUS_VOUT_MODE 2>/dev/null)
+    i2c_write "$bus" "$addr" $PMBUS_PAGE 0x01 2>/dev/null
+    vout1=$(i2c_read "$bus" "$addr" $PMBUS_VOUT_MODE 2>/dev/null)
+    log_info "  MFR_ID(0x99)=${mfr_id:-<read failed>}  MFR_MODEL(0x9A)=${mfr_model:-<read failed>}"
+    log_info "  VOUT_MODE(0x20) page0=${vout0:-<read failed>}  page1=${vout1:-<read failed>}"
+    log_info "  (xdpe1a2g7b expects VOUT_MODE low 5 bits = 0x1E on both pages for VID; 0xff or mismatch -> Chip identification failed)"
+}
+
 # Rebind the driver if we had unbound it (so device works again under the kernel driver).
+# Waits REBIND_DELAY seconds before bind so device can complete reset (avoids "Chip identification failed" on probe).
 rebind_driver_if_unbound() {
 #return 0; # VV: Skip rebinding for now
     [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 0
     local bind_file="/sys/bus/i2c/drivers/$DRIVER_UNBIND_NAME/bind"
-    if [ -f "$bind_file" ]; then
-        echo "$DRIVER_UNBIND_DEVID" > "$bind_file" 2>/dev/null
+    if [ ! -f "$bind_file" ]; then
+        DRIVER_UNBIND_DEVID=""
+        DRIVER_UNBIND_NAME=""
+        return 0
+    fi
+    local delay=${REBIND_DELAY:-5}
+    if [ "$delay" -gt 0 ] 2>/dev/null; then
+        log_info "Waiting ${delay}s for device to be ready after reset before rebind..."
+        sleep "$delay"
+    fi
+    if [ "${REBIND_DEBUG:-0}" -eq 1 ] 2>/dev/null; then
+        local bus addr
+        bus="${DRIVER_UNBIND_DEVID%-*}"
+        addr="0x${DRIVER_UNBIND_DEVID##*-}"
+        diagnose_rebind_id_regs "$bus" "$addr"
+    fi
+    if echo "$DRIVER_UNBIND_DEVID" > "$bind_file" 2>/dev/null; then
+        log_info "Driver $DRIVER_UNBIND_NAME rebound to $DRIVER_UNBIND_DEVID"
+    else
+        log_warn "Rebind of $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID failed (device may need more time or power cycle)"
+        local bus addr
+        bus="${DRIVER_UNBIND_DEVID%-*}"
+        addr="0x${DRIVER_UNBIND_DEVID##*-}"
+        diagnose_rebind_id_regs "$bus" "$addr"
     fi
     DRIVER_UNBIND_DEVID=""
     DRIVER_UNBIND_NAME=""
@@ -711,10 +785,10 @@ read_device_id() {
     return 0
 }
 
-# Clear any existing faults
+# Clear any existing faults (SMBus send byte: command only, no data)
 clear_faults() {
     log_info "Clearing device faults..."
-    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || return 1
+    i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || return 1
     sleep 0.1
     return 0
 }
@@ -755,45 +829,51 @@ check_otp_space() {
     return 0
 }
 
-# Invalidate existing OTP data. Per AN001: set 0xFD (param), then 0xFE (command). Use i2ctransfer for 0xFD, i2cset for 0xFE.
+# Invalidate existing OTP data (AN-001 6.2.1 "Reprogram entire configuration file").
+# BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, 0x12 OTP_SECTION_INVALIDATE), wait 1s soak.
 invalidate_otp() {
     local invalidate_all=${1:-1}
 
     if [ $invalidate_all -eq 1 ]; then
-        log_info "Invalidating entire OTP configuration..."
+        log_info "Invalidating entire OTP configuration (AN-001 6.2.1)..."
     else
         log_info "Invalidating specific OTP section..."
     fi
 
-    # AN001: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, invalidation_cmd). 0xfe,0xfe = all sections.
+    # AN-001 6.2.1: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, 0x12). 0xfe,0xfe = all hc and XVcode.
     if [ $invalidate_all -eq 1 ]; then
-        # 1) Set MFR_FW_COMMAND_DATA (0xFD) to 0xfe 0xfe 0x00 0x00 (invalidate all)
+        # 1) BLOCK_WRITE(PMB_Addr, 0xfd, 4, 0xfe, 0xfe, 0, 0)
         local fd_ok=0
-        if write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 0xfe 0x00 0x00 2>/dev/null; then
+        if i2c_block_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 0xfe 0xfe 0x00 0x00 2>/dev/null; then
             fd_ok=1
         else
-            # Fallback: four single-byte writes to 0xFD
-            log_info "Trying 4x single-byte write to 0xFD..."
-            if ( i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 2>/dev/null && \
-                 i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 2>/dev/null && \
-                 i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x00 2>/dev/null && \
-                 i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x00 2>/dev/null ); then
+            # Fallback: 4 data bytes without length (some adapters/controllers)
+            if write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 0xfe 0x00 0x00 2>/dev/null; then
                 fd_ok=1
+            else
+                log_info "Trying 4x single-byte write to 0xFD..."
+                if ( i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 2>/dev/null && \
+                     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0xfe 2>/dev/null && \
+                     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x00 2>/dev/null && \
+                     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x00 2>/dev/null ); then
+                    fd_ok=1
+                fi
             fi
         fi
         if [ $fd_ok -eq 0 ]; then
             log_warn "Could not write to 0xFD (adapter may not support multi-byte or 0xFD). Trying command-only invalidation (0xFE)..."
         fi
-        # 2) Send invalidation command (single byte to 0xFE)
+        # 2) WRITE_BYTE(PMB_Addr, 0xfe, 0x12) // OTP_SECTION_INVALIDATE
         if ! i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_INVALIDATE_OTP; then
-            log_error "OTP invalidation: failed to send command (0xFE)"
+            log_error "OTP invalidation: failed to send command (0xFE 0x12)"
             return 1
         fi
+        # 3) wait soak time — 1s is enough per AN-001 6.2.1
+        sleep 1
     else
         log_error "OTP section invalidation (specific section) requires setting 0xFD with section; use invalidate all or adapter with i2ctransfer"
         return 1
     fi
-    sleep 1
 
     local result
     result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || return 1
@@ -1206,12 +1286,12 @@ upload_scratchpad_to_otp() {
 
     log_info "Uploading configuration from scratchpad to OTP..."
 
-    # AN001 6.4: clear faults on both pages before upload so any faults from the operation can be identified
+    # AN001 6.4: clear faults on both pages before upload (SEND_BYTE = command only, no data)
     log_info "Clearing faults on page 0 and page 1 (AN001 6.4)..."
     i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_PAGE 0x00 || return 1
-    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS 0x00 || return 1
+    i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || return 1
     i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_PAGE 0x01 || return 1
-    i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS 0x00 || return 1
+    i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || return 1
 
     local p_sz0 p_sz1 p_hc p_xv p_size p_dword1 p_dword2
     if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
@@ -1264,12 +1344,20 @@ upload_scratchpad_to_otp() {
             fi
             return 0
         fi
+        if [ "$result" = "0xff" ]; then
+            log_info "Upload completed (device status 0xff - idle/done)"
+            if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
+                [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD (5.3): $p_dword1  (hc=$p_hc xv=$p_xv)"
+                [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD (5.4): $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
+            fi
+            return 0
+        fi
 
         echo -n "."
     done
 
     echo ""
-    log_error "Upload timeout after $TIMEOUT seconds"
+    log_error "Upload timeout after $max_wait seconds"
     return 1
 }
 
@@ -1357,6 +1445,7 @@ program_device() {
             return 1
         fi
     fi
+    # AN-001 6.2.1: invalidate all existing OTP data before reprogramming entire config (avoids old sections affecting CRC)
     invalidate_otp 1 || return 1
     echo ""
 
@@ -1481,22 +1570,28 @@ parse_config_file() {
     return 0
 }
 
-# Readback: parse .txt config, read each section from device OTP, save to read_NN.bin and/or compare with config.
-# Requires -f .txt/.mic -b bus -a addr. Optional -o out_dir (default: current dir).
-# XVcode 0 used for .txt. Compares each section with config and reports match/diff.
+# Readback: read OTP sections from device to read_NN.bin.
+# With -f .txt/.mic: parse config, read each section by header code, save and compare with config.
+# Without -f: scan OTP from base, read every section to read_00.bin, read_01.bin, ... (no comparison).
+# Requires -b bus -a addr. Optional -o out_dir (default: current dir).
 readback_from_device() {
     local txt_file="$CONFIG_FILE"
     local bus="$I2C_BUS"
     local addr="$DEVICE_ADDR"
     local out_dir="${OUTPUT_FILE:-.}"
-    local tmpdir section_bins i hc section_path read_path
+    local have_config=0
+    [[ -n "$txt_file" && "$txt_file" =~ \.(txt|mic)$ ]] && have_config=1
 
-    if [[ ! "$txt_file" =~ \.(txt|mic)$ ]]; then
-        log_error "Readback requires a .txt or .mic configuration file (-f)"
+    if [ -z "$bus" ] || [ -z "$addr" ]; then
+        log_error "Readback requires -b <bus> and -a <addr>"
         return 1
     fi
 
-    log_info "Readback: parsing $txt_file and reading sections from device (bus $bus addr $addr)"
+    if [ $have_config -eq 1 ]; then
+        log_info "Readback: parsing $txt_file and reading sections from device (bus $bus addr $addr)"
+    else
+        log_info "Readback: reading all OTP sections from device (bus $bus addr $addr) -> $out_dir/read_*.bin"
+    fi
     echo ""
 
     unbind_driver_for_device
@@ -1517,51 +1612,97 @@ readback_from_device() {
         echo ""
     fi
 
-    tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
-
-    if ! parse_txt_config_to_section_files "$txt_file" "$tmpdir"; then
-        rm -rf "$tmpdir"
-        return 1
-    fi
-
-    section_bins=()
-    while IFS= read -r p; do
-        [[ -n "$p" ]] && section_bins+=("$p")
-    done < "$tmpdir/section_list"
-
     mkdir -p "$out_dir" 2>/dev/null || true
 
-    for i in "${!section_bins[@]}"; do
-        section_path="${section_bins[$i]}"
-        read_path="$out_dir/read_$(printf '%02d' $i).bin"
-        # Header code = LSB of first DWORD in section (4th byte in our big-endian file)
-        hc=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
-        hc=$((16#${hc:6:2}))
-        log_info "Section $i: reading from OTP (header 0x$(printf '%02x' $hc)) -> $read_path"
-        if [ $DRY_RUN -eq 1 ]; then
-            log_info "DRY-RUN: Would read section and write to $read_path"
-        else
-            if ! read_otp_section $bus $addr $hc 0 "$read_path"; then
-                rm -rf "$tmpdir"
-                return 1
-            fi
-            local cfg_size dev_size
-            cfg_size=$(wc -c < "$section_path" 2>/dev/null); [ -z "$cfg_size" ] && cfg_size=0
-            dev_size=$(wc -c < "$read_path" 2>/dev/null); [ -z "$dev_size" ] && dev_size=0
-            if [ "$cfg_size" = "$dev_size" ]; then
-                if cmp -s "$section_path" "$read_path"; then
-                    log_info "  Match: config and device data identical"
-                else
-                    log_warn "  Diff: config and device data differ (same size)"
-                fi
-            else
-                log_warn "  Size mismatch: config ${cfg_size}B vs device ${dev_size}B"
-            fi
+    if [ $have_config -eq 1 ]; then
+        # With config: parse .txt, read each section by hc/xv, write to read_NN.bin and compare
+        local tmpdir section_bins i hc section_path read_path
+        tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
+        if ! parse_txt_config_to_section_files "$txt_file" "$tmpdir"; then
+            rm -rf "$tmpdir"
+            return 1
         fi
-        echo ""
-    done
+        section_bins=()
+        while IFS= read -r p; do
+            [[ -n "$p" ]] && section_bins+=("$p")
+        done < "$tmpdir/section_list"
 
-    rm -rf "$tmpdir"
+        for i in "${!section_bins[@]}"; do
+            section_path="${section_bins[$i]}"
+            hc=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
+            hc=$((16#${hc:6:2}))
+            read_path="$out_dir/read_$(printf '%02d' $i)_hc_$(printf '%02x' $hc).bin"
+            log_info "Section $i: reading from OTP (header 0x$(printf '%02x' $hc)) -> $read_path"
+            if [ $DRY_RUN -eq 1 ]; then
+                log_info "DRY-RUN: Would read section and write to $read_path"
+            else
+                if ! read_otp_section $bus $addr $hc 0 "$read_path"; then
+                    rm -rf "$tmpdir"
+                    return 1
+                fi
+                local cfg_size dev_size
+                cfg_size=$(wc -c < "$section_path" 2>/dev/null); [ -z "$cfg_size" ] && cfg_size=0
+                dev_size=$(wc -c < "$read_path" 2>/dev/null); [ -z "$dev_size" ] && dev_size=0
+                if [ "$cfg_size" = "$dev_size" ]; then
+                    if cmp -s "$section_path" "$read_path"; then
+                        log_info "  Match: config and device data identical"
+                    else
+                        log_warn "  Diff: config and device data differ (same size)"
+                    fi
+                else
+                    log_warn "  Size mismatch: config ${cfg_size}B vs device ${dev_size}B"
+                fi
+            fi
+            echo ""
+        done
+        rm -rf "$tmpdir"
+    else
+        # No config: scan OTP from base. HC=0x00 = end of data; HC=0xff = invalid (skip). Save rest as read_NN_hc_XX.bin.
+        local addr_32=$((OTP_BASE))
+        local max_addr=$((OTP_BASE + 32768))
+        local idx=0 max_sections=64
+        local hd_hex sz_hex h0 h1 h2 h3 s0 s1 s2 s3 size hc
+
+        while (( addr_32 < max_addr && idx < max_sections )); do
+            set_rptr $bus $addr $addr_32 || return 1
+            hd_hex=$(read_otp_dword_hex $bus $addr) || return 1
+            sz_hex=$(read_otp_dword_hex $bus $addr) || return 1
+            read -r h0 h1 h2 h3 <<< "$hd_hex"
+            read -r s0 s1 s2 s3 <<< "$sz_hex"
+            size=$(( 16#$s0 + (16#$s1 << 8) ))
+            hc=$((16#$h0))
+            if [ "$hc" -eq 0 ]; then
+                log_info "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x00 size 0x$(printf '%04x' $size) -- stopping scan"
+                break
+            fi
+            if [ "$size" -le 0 ] || [ "$size" -gt 32768 ]; then
+                log_info "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) invalid -- stopping scan"
+                break
+            fi
+            if [ "$hc" -eq 255 ]; then
+                log_verbose "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))): HC=0xff (invalid), skipping"
+                addr_32=$((addr_32 + size))
+                continue
+            fi
+            local read_path="$out_dir/read_$(printf '%02d' $idx)_hc_$(printf '%02x' $hc).bin"
+            log_info "Section $idx: OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) -> $read_path"
+            if [ $DRY_RUN -eq 1 ]; then
+                log_info "DRY-RUN: Would write section to $read_path"
+            else
+                : > "$read_path" || return 1
+                hex_dword_to_file "$hd_hex" "$read_path"
+                hex_dword_to_file "$sz_hex" "$read_path"
+                if [ "$size" -gt 8 ]; then
+                    read_otp_bytes_to_file $bus $addr $((size - 8)) "$read_path" || return 1
+                fi
+            fi
+            addr_32=$((addr_32 + size))
+            idx=$((idx + 1))
+            echo ""
+        done
+        log_info "Read $idx section(s) from OTP."
+    fi
+
     log_info "Readback complete. Device sections saved under $out_dir/read_*.bin"
     return 0
 }
@@ -2055,8 +2196,8 @@ main() {
             ;;
 
         readback)
-            if [ -z "$CONFIG_FILE" ] || [ -z "$I2C_BUS" ] || [ -z "$DEVICE_ADDR" ]; then
-                log_error "Readback mode requires -f <config.txt> -b <bus> -a <address>"
+            if [ -z "$I2C_BUS" ] || [ -z "$DEVICE_ADDR" ]; then
+                log_error "Readback mode requires -b <bus> -a <address>"
                 usage
             fi
             if ! detect_device; then
