@@ -47,7 +47,7 @@
 		"drivetemp":      {"pwm_min": 30, "pwm_max": 70, "val_min": "!65000", "val_max": "!85000", "poll_time": 60},
 		"dpu\\d+_module" :{"child_sensors_list" : ["cx_amb", "voltmon1", "voltmon2"], "poll_time": 3},
 		"dpu\\d+_cx_amb": {"pwm_min": 30, "pwm_max": 100, "val_min": "!70000", "val_max": "!105000", "poll_time": 30, "sensor_read_error":100},
-    	"dpu\\d+_sodimm\\d+": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_crit": 95000, "poll_time": 60},
+    	"dpu\\d+_sodimm\\d+": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_crit": "!95000", "poll_time": 60},
    		"dpu\\d+_drivetemp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!55000", "val_max": "!70000", "poll_time": 60},
     	"dpu\\d+_voltmon\\d+_temp": {"pwm_min": 30, "pwm_max": 70, "val_min": "!70000", "val_max": "!95000", "poll_time": 60}
 	},
