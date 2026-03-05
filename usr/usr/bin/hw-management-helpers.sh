@@ -1091,16 +1091,14 @@ set_sodimm_temp_limits()
 		fi
 	fi
 
-	if ! ls /sys/bus/i2c/drivers/jc42 | grep -q '^[0-9][0-9]*' ||
-	   ! find /sys/bus/i2c/drivers/jc42/[0-9][0-9]*/ | grep -q hwmon; then
-		return 1
-	fi
+	for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*-*; do
+		# Skip if the sensor path does not exist or lacks a hwmon subdirectory
+		[[ -e "$temp_sens" && -d "$temp_sens/hwmon" ]] || continue
 
-	for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9][0-9]*; do
-		echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
-		echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
-		echo $SODIMM_TEMP_MIN > "$temp_sens"/hwmon/hwmon*/temp1_min
-		echo $SODIMM_TEMP_HYST > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
+		echo "$SODIMM_TEMP_CRIT" > "$temp_sens"/hwmon/hwmon*/temp1_crit
+		echo "$SODIMM_TEMP_MAX"  > "$temp_sens"/hwmon/hwmon*/temp1_max
+		echo "$SODIMM_TEMP_MIN"  > "$temp_sens"/hwmon/hwmon*/temp1_min
+		echo "$SODIMM_TEMP_HYST" > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
 	done
 
 	return 0
