@@ -1116,3 +1116,55 @@ set_sodimm_temp_limits()
 
 	return 0
 }
+
+
+
+# Print function call to the log file
+# Arguments:
+# $1 - file name
+# $2 - function name
+# $3 - arguments
+export TRACE_DIR_COUNT="${TRACE_DIR_COUNT:-5}"
+print_function_call() {
+	local TS trace_dir_root trace_dir dir_count LOG_FILE
+	TS="$(date +'%Y_%m_%d_%H-%M-%S.%3N')"
+	trace_dir_root="/tmp/hw_mgmt_trace"
+	trace_dir="$trace_dir_root"/"${TS:0:-7}"
+
+	if [ ! -d "$trace_dir" ]; then
+		mkdir -p "$trace_dir"
+		# Keep at most TRACE_DIR_COUNT trace directories; remove oldest when creating a new one.
+		dir_count=0
+		for _ in "$trace_dir_root"/*/; do
+			((++dir_count))
+			if ((dir_count > TRACE_DIR_COUNT)); then
+				find "$trace_dir_root" -mindepth 1 -maxdepth 1 -type d -print0 | sort -rz | tail -z -n +$((TRACE_DIR_COUNT + 1)) | xargs -0 rm -rf
+				break
+			fi
+		done
+	fi
+
+	LOG_FILE="$trace_dir/$1.$$.calls.log"
+
+	printf "[%s] | %s [%s]\n" \
+		"$TS" \
+		"$2" \
+		"$3" >> "$LOG_FILE"
+}
+
+if [ -z "$HW_MGMT_DISABLE_FUNC_TRACE" ] || [ "$HW_MGMT_DISABLE_FUNC_TRACE" == "0" ]; then
+	__hw_mgmt_script_name="$(basename "$0")"
+	set -o functrace
+	trap '
+	__hw_mgmt_cmd="${BASH_COMMAND}"
+	__hw_mgmt_func="${__hw_mgmt_cmd%% *}"
+	# With functrace, DEBUG runs at call site and again on function entry; skip the entry (FUNCNAME[0]==func) to avoid duplicate log lines.
+	if [[ "${FUNCNAME[0]:-main}" != "$__hw_mgmt_func" ]] && [[ "$__hw_mgmt_func" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] && declare -F "$__hw_mgmt_func" >/dev/null; then
+		__hw_mgmt_args=""
+		if [[ "$__hw_mgmt_cmd" == *" "* ]]; then
+			__hw_mgmt_args="${__hw_mgmt_cmd#* }"
+		fi
+		print_function_call "$__hw_mgmt_script_name" "$__hw_mgmt_func" "$__hw_mgmt_args"
+	fi
+	' DEBUG
+fi
