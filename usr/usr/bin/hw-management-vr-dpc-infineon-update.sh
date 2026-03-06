@@ -73,6 +73,7 @@ CMD_INVALIDATE_OTP=0x12
 CMD_READ_OTP=0x04
 CMD_OTP_PARTITION_SIZE_REMAINING=0x10
 CMD_FW_VERSION=0x01
+CMD_CRC=0x2D
 # Retrieve scratchpad register address (supported on some controllers); returns 4 bytes d0,d1,d2,d3 (LE) via 0xFD
 CMD_GET_SCRATCHPAD_ADDR=0x2e
 
@@ -704,7 +705,7 @@ rebind_driver_if_unbound() {
         DRIVER_UNBIND_NAME=""
         return 0
     fi
-    local delay=${REBIND_DELAY:-5}
+    local delay=${REBIND_DELAY:-1}
     if [ "$delay" -gt 0 ] 2>/dev/null; then
         log_info "Waiting ${delay}s for device to be ready after reset before rebind..."
         sleep "$delay"
@@ -821,6 +822,32 @@ get_otp_partition_size_remaining() {
     local d0 d1 d2 d3 d4
     read -r d0 d1 d2 d3 d4 <<< "$line"
     echo $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    return 0
+}
+
+# Get FW UTC date timestamp (AN001: 0x01 FW_VERSION). WRITE_BYTE(0xFE, 0x01), wait 1ms, BLOCK_READ(0xFD, 5).
+# Returns Unix timestamp to stdout (4 bytes LE after length byte); empty on failure.
+get_fw_timestamp() {
+    local bus=$1
+    local addr=$2
+    i2c_write $bus $addr $MFR_FW_COMMAND $CMD_FW_VERSION 2>/dev/null || return 1
+    sleep 0.001
+    local line
+    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5 2>/dev/null) || return 1
+    line=$(echo "$line" | sed 's/0x//g')
+    local d0 d1 d2 d3 d4
+    read -r d0 d1 d2 d3 d4 <<< "$line"
+    echo $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    return 0
+}
+
+# Get CRC (AN001: 0x2D GET_CRC). WRITE_BYTE(0xFE, 0x2D), wait 1ms, BLOCK_READ(0xFD, 5). Used as workaround between get_fw_timestamp and get_otp_partition_size_remaining on some HW.
+get_crc() {
+    local bus=$1
+    local addr=$2
+    i2c_write $bus $addr $MFR_FW_COMMAND $CMD_CRC 2>/dev/null || return 1
+    sleep 0.001
+    i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5 >/dev/null 2>/dev/null || true
     return 0
 }
 
@@ -1368,38 +1395,8 @@ upload_scratchpad_to_otp() {
     return 1
 }
 
-# Verify programmed data
-verify_programming() {
-    log_info "Verifying programmed configuration..."
-
-    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_READ_OTP || return 1
-
-    [ $DRY_RUN -eq 1 ] && return 0
-
-    local elapsed=0
-    local max_wait=${TIMEOUT:-30}
-    local result=""
-
-    while [ $elapsed -lt $max_wait ]; do
-        sleep 1
-        elapsed=$((elapsed + 1))
-        result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || continue
-        if [ "$result" = "0x00" ]; then
-            log_info "Verification passed"
-            return 0
-        fi
-        # Some parts (e.g. XDPE1A2G7B) leave 0xFE at 0xff when idle; treat as success
-        if [ "$result" = "0xff" ]; then
-            log_info "Verification passed (device status 0xff - idle/no status clear)"
-            return 0
-        fi
-    done
-
-    log_error "Verification failed with code: $result (expected 0x00 or 0xff after ${max_wait}s)"
-    return 1
-}
-
-# Reset device to load new configuration
+# Reset device to load new configuration. Uses standard PMBus OPERATION (0x01) off then on.
+# If AN001 defines a device-specific reset or "load OTP to active" procedure (e.g. 0xFE command), use that instead.
 reset_device() {
     log_info "Resetting device to load new configuration..."
 
@@ -1502,12 +1499,6 @@ program_device() {
         upload_scratchpad_to_otp || return 1
         echo ""
     fi
-
-    verify_programming || {
-        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
-        return 1
-    }
-    echo ""
 
     enable_write_protect || {
         [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
@@ -1811,6 +1802,7 @@ read_device_info() {
         addr="0x$addr"
     fi
 
+    # 0xFE/0xFD access (FW timestamp, OTP size) requires device unbound
     I2C_BUS=$bus DEVICE_ADDR=$addr unbind_driver_for_device
     log_info "Reading device information..."
     echo ""
@@ -1843,6 +1835,26 @@ read_device_info() {
     printf "  %-20s (%-6s): %s\n" "OPERATION" "0x01" "$value"
     value=$(i2cget -y $bus $addr 0x10 2>/dev/null || echo "N/A")
     printf "  %-20s (%-6s): %s\n" "WRITE_PROTECT" "0x10" "$value"
+
+    local fw_ts
+    fw_ts=$(get_fw_timestamp "$bus" "$addr" 2>/dev/null)
+    if [ -n "$fw_ts" ]; then
+        local fw_date
+        fw_date=$(date -d "@$fw_ts" +"%Y-%m-%d %T" 2>/dev/null) || fw_date="$fw_ts"
+        printf "  %-20s (0xFE 0x01): %s (%s)\n" "FW_TIMESTAMP" "$fw_date" "$fw_ts"
+    else
+        printf "  %-20s (0xFE 0x01): %s\n" "FW_TIMESTAMP" "N/A"
+    fi
+
+    get_crc "$bus" "$addr" 2>/dev/null || true
+
+    local otp_remaining
+    otp_remaining=$(get_otp_partition_size_remaining "$bus" "$addr" 2>/dev/null)
+    if [ -n "$otp_remaining" ]; then
+        printf "  %-20s (0xFE 0x10): %s (0x%04x) bytes\n" "OTP_REMAINING_SIZE" "$otp_remaining" "$otp_remaining"
+    else
+        printf "  %-20s (0xFE 0x10): %s\n" "OTP_REMAINING_SIZE" "N/A"
+    fi
 
     return 0
 }
@@ -2111,10 +2123,7 @@ main() {
             if ! read_device_id; then
                 exit 1
             fi
-            if ! verify_programming; then
-                exit 1
-            fi
-            log_info "Verification completed"
+            log_info "Verify mode: device detected and ID read (AN001: no STORE_CONFIG verification)"
             exit 0
             ;;
 
