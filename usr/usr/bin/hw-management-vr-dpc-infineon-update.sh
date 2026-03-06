@@ -71,7 +71,8 @@ CMD_SCRATCHPAD_UPLOAD=0x02
 CMD_OTP_CONFIG_STORE=0x11
 CMD_INVALIDATE_OTP=0x12
 CMD_READ_OTP=0x04
-CMD_CHECK_OTP_SPACE=0x05
+CMD_OTP_PARTITION_SIZE_REMAINING=0x10
+CMD_FW_VERSION=0x01
 # Retrieve scratchpad register address (supported on some controllers); returns 4 bytes d0,d1,d2,d3 (LE) via 0xFD
 CMD_GET_SCRATCHPAD_ADDR=0x2e
 
@@ -807,25 +808,31 @@ enable_write_protect() {
     return 0
 }
 
-# Check OTP space availability
-check_otp_space() {
-    log_info "Checking OTP space availability..."
-
-    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_CHECK_OTP_SPACE || return 1
+# Read OTP partition size remaining in bytes (AN001 Table 4: 0x10 OTP_PARTITION_SIZE_REMAINING).
+# WRITE_BYTE(0xFE, 0x10), wait, BLOCK_READ(0xFD, 5). Device returns 5 bytes: length (0x04) then 4 data bytes LE; use r5, drop first byte.
+get_otp_partition_size_remaining() {
+    local bus=$1
+    local addr=$2
+    i2c_write $bus $addr $MFR_FW_COMMAND $CMD_OTP_PARTITION_SIZE_REMAINING || return 1
     sleep 0.5
+    local line
+    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5) || return 1
+    line=$(echo "$line" | sed 's/0x//g')
+    local d0 d1 d2 d3 d4
+    read -r d0 d1 d2 d3 d4 <<< "$line"
+    echo $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    return 0
+}
 
-    local result
-    result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || return 1
-
-    log_debug "OTP space check result: $result"
-
-    # 0x00 = success; 0xff = idle/no status clear (e.g. XDPE1A2G7B) – treat as OK
-    if [ "$result" = "0x00" ] || [ "$result" = "0xff" ]; then
-        log_info "OTP space available"
-    else
-        log_warn "OTP space may be limited or full (status: $result)"
+# Check OTP space availability using 0x10 OTP_PARTITION_SIZE_REMAINING; logs result.
+check_otp_space() {
+    log_info "Checking OTP space availability (0x10 OTP_PARTITION_SIZE_REMAINING)..."
+    local remaining
+    remaining=$(get_otp_partition_size_remaining $I2C_BUS $DEVICE_ADDR) || return 1
+    log_info "OTP partition size remaining: $remaining (0x$(printf '%04x' $remaining)) bytes"
+    if [ "$remaining" -eq 0 ]; then
+        log_warn "OTP partition full (0 bytes remaining)"
     fi
-
     return 0
 }
 
