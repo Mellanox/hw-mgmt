@@ -132,6 +132,10 @@ dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
 dump_cmd "systemctl status hw-management* --no-pager" "hw-management_svc_status" "5"
 dump_cmd "ip addr" "ip_addr" "5"
 
+if [ -d /tmp/hw_mgmt_trace ]; then
+	cp -r /tmp/hw_mgmt_trace "$DUMP_FOLDER"/hw_mgmt_trace
+fi
+
 # Kill all the leftout child processes before creating the dump archive
 pkill -P "$dump_process_pid" 2>/dev/null || true
 
