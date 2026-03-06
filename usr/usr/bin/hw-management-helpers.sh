@@ -1116,3 +1116,58 @@ set_sodimm_temp_limits()
 
 	return 0
 }
+
+
+
+# Print function call to the log file
+# Arguments:
+# $1 - file name
+# $2 - function name
+# $3 - arguments
+export TRACE_DIR_COUNT=5
+print_function_call() {
+	TS="$(date +'%m_%d_%H-%M-%S.%3N')"
+	trace_dir_root="/tmp/hw_mgmt_trace"
+	trace_dir="$trace_dir_root"/"${TS:0:-7}"
+	
+	if [ ! -d "$trace_dir" ]; then
+		mkdir -p "$trace_dir"
+	fi
+
+	# Keep at most 3 trace directories under trace_dir_root; remove oldest if more exist.
+	dir_count=0
+	for _ in "$trace_dir_root"/*; do
+		((dir_count++))
+		if ((dir_count > TRACE_DIR_COUNT)); then
+			find "$trace_dir_root" -mindepth 1 -maxdepth 1 -type d -print0 | sort -rz | tail -z -n +$((TRACE_DIR_COUNT + 1)) | xargs -0 rm -rf
+			break
+		fi
+	done
+
+	LOG_FILE="$trace_dir/$1.$$.calls.log"
+
+	printf "[%s] | %s [%s]\n" \
+		"$TS" \
+		"$2" \
+		"$3" >> "$LOG_FILE"
+}
+
+set -o functrace
+
+trap '
+cmd="${BASH_COMMAND}"
+func="${cmd%% *}"
+# If HW_MGMT_DISABLE_FUNC_TRACE is unset or 0, enable function call tracing; otherwise skip.
+if [ -z "$HW_MGMT_DISABLE_FUNC_TRACE" ] || [ "$HW_MGMT_DISABLE_FUNC_TRACE" -eq 0 ]; then
+	# With functrace, DEBUG runs at call site and again on function entry; skip the entry (FUNCNAME[0]==func) to avoid duplicate log lines.
+	if [[ "${FUNCNAME[0]:-main}" != "$func" ]] && [[ "$func" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] && declare -F "$func" >/dev/null; then
+		args=""
+		if [[ "$cmd" == *" "* ]]; then
+			raw_args="${cmd#* }"
+			# Expand variables so we log argument values, not names (eval runs in caller context)
+			args=$(eval "echo $raw_args" 2>/dev/null) || args="$raw_args" 
+		fi
+		print_function_call "$(basename "$0")" "$func" "$args"
+	fi
+fi
+' DEBUG
