@@ -83,6 +83,8 @@ cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
 fixup_hook_script=/usr/local/bin/hw-management-fixup.sh
 asic_chipup_status=/run/.asic_chipup_completed
 
+export HW_MGMT_TRACE_DIR="${HW_MGMT_TRACE_DIR:-/tmp/hw_mgmt_trace}"
+
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
 ["01PG798"]=F ["01PG800"]=R ["02YF120"]=R ["02YF121"]=F ["03GX980"]=F \
@@ -1116,3 +1118,64 @@ set_sodimm_temp_limits()
 
 	return 0
 }
+
+
+
+# Print function call to the log file
+# Arguments:
+# $1 - file name
+# $2 - function name
+# $3 - arguments
+export TRACE_DIR_COUNT="${TRACE_DIR_COUNT:-5}"
+print_function_call() {
+	local TS trace_dir dir_count LOG_FILE
+	# TS format is %Y_%m_%d_%H-%M-%S.%3N (23 chars). Slice off last 7 chars (-SS.%3N) for dir name
+	TS="$(date +'%Y_%m_%d_%H-%M-%S.%3N')"
+	trace_dir="$HW_MGMT_TRACE_DIR"/"${TS:0:-7}"
+
+	if [ ! -d "$trace_dir" ]; then
+		mkdir -p "$trace_dir"
+		# Keep at most TRACE_DIR_COUNT trace directories; remove oldest when creating a new one.
+		dir_count=0
+		for _ in "$HW_MGMT_TRACE_DIR"/*/; do
+			[[ -d "$_" ]] && ((++dir_count))
+			if ((dir_count > TRACE_DIR_COUNT)); then
+				find "$HW_MGMT_TRACE_DIR" -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9][0-9][0-9]_*' | sort -r | tail -n "+$((TRACE_DIR_COUNT+1))" | xargs -r rm -rf			
+				break
+			fi
+		done
+	fi
+
+	LOG_FILE="$trace_dir/$1.$$.calls.log"
+
+	printf "[%s] | %s [%s]\n" \
+		"$TS" \
+		"$2" \
+		"$3" >> "$LOG_FILE"
+}
+
+if [ -z "$HW_MGMT_DISABLE_FUNC_TRACE" ]; then
+	__hw_mgmt_script_name="$(basename "$0")"
+	set -o functrace
+	trap '
+	# Re-entrancy guard: trap can fire again for its own commands; skip to avoid recursion.
+	if [[ -n "${__hw_mgmt_in_debug_trap:-}" ]]; then
+		return 0
+	fi
+	__hw_mgmt_in_debug_trap=1
+	__hw_mgmt_cmd="${BASH_COMMAND}"
+	__hw_mgmt_func="${__hw_mgmt_cmd%% *}"
+	# With functrace, DEBUG runs at call site and again on function entry; skip the entry (FUNCNAME[0]==func) to avoid duplicate log lines. Only log if the command is a defined function with a valid name (re-entrancy guard already skips our own print_function_call).
+	if [[ "${FUNCNAME[0]:-main}" != "$__hw_mgmt_func" ]] \
+	   && [[ "$__hw_mgmt_func" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] \
+	   && declare -F "$__hw_mgmt_func" >/dev/null; then
+
+		__hw_mgmt_args=""
+		if [[ "$__hw_mgmt_cmd" == *" "* ]]; then
+			__hw_mgmt_args="${__hw_mgmt_cmd#* }"
+		fi
+		print_function_call "$__hw_mgmt_script_name" "$__hw_mgmt_func" "$__hw_mgmt_args" || true
+	fi
+	__hw_mgmt_in_debug_trap=""
+	' DEBUG
+fi
