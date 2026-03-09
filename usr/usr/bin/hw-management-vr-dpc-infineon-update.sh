@@ -404,15 +404,17 @@ read_otp_bytes_to_file() {
     return 0
 }
 
-# Find section by header_code and xvcode in OTP, read full section to out_file. AN001 10.1.
-# Returns 0 on success. OTP base 0x10020000; section layout: 4B header (byte0=hc, byte1=xv), 4B size (LE), then data.
-# header_code and xvcode may be passed as decimal or hex (e.g. 0x07 0x00); normalized to decimal for -eq comparisons.
+# Find section by full 4-byte header (Loop, CMD, XVcode, HeaderCode) in OTP, read full section to out_file. AN001 10.1.
+# Returns 0 on success. OTP base 0x10020000; section layout: 4B header (LE: byte0=HC, byte1=XV, byte2=CMD, byte3=Loop), 4B size (LE), then data.
+# All four fields must match; pass as decimal or hex (e.g. 0x0B 0x00 0x21 0x00).
 read_otp_section() {
     local bus=$1
     local addr=$2
     local header_code=$(( $3 ))
     local xvcode=$(( $4 ))
-    local out_file=$5
+    local cmd=$(( ${5:-0} ))
+    local loop=$(( ${6:-0} ))
+    local out_file=$7
     local addr_32=$((OTP_BASE))
     local max_addr=$((OTP_BASE + 32768))
     local max_iters=512
@@ -420,7 +422,7 @@ read_otp_section() {
 
     : > "$out_file" || return 1
 
-    log_verbose "Searching for the section header_code=0x$(printf '%02x' $header_code) xvcode=0x$(printf '%02x' $xvcode)..."
+    log_verbose "Searching for the section Loop=0x$(printf '%02x' $loop) CMD=0x$(printf '%02x' $cmd) XV=0x$(printf '%02x' $xvcode) HC=0x$(printf '%02x' $header_code)..."
 
     while (( addr_32 < max_addr && iters < max_iters )); do
         iters=$((iters + 1))
@@ -435,12 +437,14 @@ read_otp_section() {
         local size=$(( 16#$s0 + (16#$s1 << 8) ))
         local hc=$((16#$h0))
         local xv=$((16#$h1))
+        local dev_cmd=$((16#$h2))
+        local dev_loop=$((16#$h3))
         # Unprogrammed OTP often reads as 0xff; cap size to avoid overflow or huge skip
         if [ "$size" -gt 32768 ]; then
             size=8
         fi
-        log_verbose "OTP offset $(printf '%03x' $(( addr_32 - OTP_BASE ))) found a section HC=0x$(printf '%02x' $hc) of size 0x$(printf '%04x' $size)"
-        if [ "$hc" -eq "$header_code" ] && [ "$xv" -eq "$xvcode" ]; then
+        log_verbose "OTP offset $(printf '%03x' $(( addr_32 - OTP_BASE ))) found a section HC=0x$(printf '%02x' $hc) Loop=0x$(printf '%02x' $dev_loop) CMD=0x$(printf '%02x' $dev_cmd) of size 0x$(printf '%04x' $size)"
+        if [ "$hc" -eq "$header_code" ] && [ "$xv" -eq "$xvcode" ] && [ "$dev_cmd" -eq "$cmd" ] && [ "$dev_loop" -eq "$loop" ]; then
             hex_dword_to_file "$hd_hex" "$out_file"
             hex_dword_to_file "$sz_hex" "$out_file"
             if [ $size -gt 8 ]; then
@@ -455,9 +459,9 @@ read_otp_section() {
         addr_32=$((addr_32 + size))
     done
     if [ $iters -ge $max_iters ]; then
-        log_error "Section hc=$header_code xv=$xvcode not found (max iterations reached)"
+        log_error "Section Loop=$loop CMD=$cmd XV=$xvcode HC=$header_code not found (max iterations reached)"
     else
-        log_error "Section hc=$header_code xv=$xvcode not found in OTP"
+        log_error "Section Loop=$loop CMD=$cmd XV=$xvcode HC=$header_code not found in OTP"
     fi
     return 1
 }
@@ -862,7 +866,8 @@ parse_txt_config_to_bin() {
                 [[ "${dword:4:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:6:2}" =~ ^[0-9A-F]{2}$ ]] || continue
                 [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
                 b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
-                printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b0" "$b1" "$b2" "$b3")" >> "$bin_file" || return 1
+                # DWORD in .txt is MSB-first; device/OTP use little-endian — write LSB first (b3 b2 b1 b0)
+                printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b3" "$b2" "$b1" "$b0")" >> "$bin_file" || return 1
                 byte_count=$((byte_count + 4))
                 row_dwords=$((row_dwords + 1))
             done
@@ -958,7 +963,8 @@ parse_txt_config_to_section_files() {
             [[ "${dword:4:2}" =~ ^[0-9A-F]{2}$ ]] && [[ "${dword:6:2}" =~ ^[0-9A-F]{2}$ ]] || continue
             [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
             b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
-            printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b0" "$b1" "$b2" "$b3")" >> "$current_section_bin" || return 1
+            # DWORD in .txt is MSB-first; device/OTP use little-endian — write LSB first (b3 b2 b1 b0)
+            printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b3" "$b2" "$b1" "$b0")" >> "$current_section_bin" || return 1
             section_dwords=$((section_dwords + 1))
         done
     }
@@ -1077,11 +1083,11 @@ write_to_scratchpad() {
 
     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_WRITE || return 1
 
+    # Config .bin files are little-endian (LSB first per DWORD); send as-is to device.
     local all_bytes
     all_bytes=$(od -An -tx1 "$data_file" | tr -s ' ' | sed 's/^ //')
     local data_array=()
     for b in $all_bytes; do data_array+=("0x$b"); done
-    data_array=( $(bytes_to_little_endian_dwords "${data_array[@]}") )
 
     local num_dwords=$((${#data_array[@]} / 4))
     local remainder_bytes=$((${#data_array[@]} % 4))
@@ -1384,6 +1390,7 @@ readback_from_device() {
     local addr="$DEVICE_ADDR"
     local out_dir="${OUTPUT_FILE:-.}"
     local have_config=0
+    local config_files_dir=""
     [[ -n "$txt_file" && "$txt_file" =~ \.(txt|mic)$ ]] && have_config=1
 
     if [ -z "$bus" ] || [ -z "$addr" ]; then
@@ -1419,7 +1426,9 @@ readback_from_device() {
     if [ $have_config -eq 1 ]; then
         # With config: parse .txt, read each section by hc/xv, write to read_NN.bin and compare
         local tmpdir section_bins i hc section_path read_path
-        tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
+        # tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
+	tmpdir="/tmp/dpc-config/" ; mkdir -p $tmpdir || { log_error "Cannot create temp dir"; return 1; }
+        config_files_dir="$tmpdir"
         if ! parse_txt_config_to_section_files "$txt_file" "$tmpdir"; then
             rm -rf "$tmpdir"
             return 1
@@ -1431,11 +1440,18 @@ readback_from_device() {
 
         for i in "${!section_bins[@]}"; do
             section_path="${section_bins[$i]}"
-            hc=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
-            hc=$((16#${hc:6:2}))
-            read_path="$out_dir/read_$(printf '%02d' $i)_hc_$(printf '%02x' $hc).bin"
-            log_info "Section $i: reading from OTP (header 0x$(printf '%02x' $hc)) -> $read_path"
-            if ! read_otp_section $bus $addr $hc 0 "$read_path"; then
+            # Section bin is LE: first 4 bytes = HC, XV, CMD, Loop (byte0..byte3)
+            local hd_hex4
+            hd_hex4=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
+            [ ${#hd_hex4} -lt 8 ] && { log_error "Section file too short: $section_path"; rm -rf "$tmpdir"; return 1; }
+            local sec_hc sec_xv sec_cmd sec_loop
+            sec_hc=$((16#${hd_hex4:0:2}))
+            sec_xv=$((16#${hd_hex4:2:2}))
+            sec_cmd=$((16#${hd_hex4:4:2}))
+            sec_loop=$((16#${hd_hex4:6:2}))
+            read_path="$out_dir/read_$(printf '%02d' $i)_hc_$(printf '%02x' $sec_hc)_loop_$(printf '%02x' $sec_loop)_cmd_$(printf '%02x' $sec_cmd).bin"
+            log_info "Section $i: reading from OTP (Loop=0x$(printf '%02x' $sec_loop) CMD=0x$(printf '%02x' $sec_cmd) XV=0x$(printf '%02x' $sec_xv) HC=0x$(printf '%02x' $sec_hc)) -> $read_path"
+            if ! read_otp_section $bus $addr $sec_hc $sec_xv $sec_cmd $sec_loop "$read_path"; then
                 rm -rf "$tmpdir"
                 return 1
             fi
@@ -1453,7 +1469,7 @@ readback_from_device() {
             fi
             echo ""
         done
-        rm -rf "$tmpdir"
+        # rm -rf "$tmpdir"
     else
         # No config: scan OTP from base. HC=0x00 = end of data; HC=0xff = invalid (skip). Save rest as read_NN_hc_XX.bin.
         local addr_32=$((OTP_BASE))
@@ -1498,6 +1514,7 @@ readback_from_device() {
     fi
 
     log_info "Readback complete. Device sections saved under $out_dir/read_*.bin"
+    [ -n "$config_files_dir" ] && log_info "Config section files (parsed from -f): $config_files_dir"
     return 0
 }
 
