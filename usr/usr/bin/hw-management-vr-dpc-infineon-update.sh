@@ -889,6 +889,8 @@ parse_txt_config_to_bin() {
 # Parse .txt/.mic into one binary file per (sub)section (AN001 5.2).
 # (Sub)sections start with a line beginning with "000 " (3-digit hex row offset). Optional: [Configuration Data],
 # [End Configuration Data], and "// XV0 ..." comment lines. Writes section_0.bin, section_1.bin, ... and section_list.
+# AN001 5.8.1.2 PMBus Partial Section (XV0 Partial PMBus): XV=0x00, HC=0x0B. Multiple "000" rows are one logical
+# section; all DWORDs are concatenated into a single section file and uploaded with total size (e.g. 80 bytes).
 parse_txt_config_to_section_files() {
     local txt_file="$1"
     local out_dir="$2"
@@ -899,6 +901,9 @@ parse_txt_config_to_section_files() {
     local section_index=0
     local current_section_bin=""
     local section_list_file="$out_dir/section_list"
+    local in_partial_pmbus=0
+    local first_partial_dword1=""
+    local first_partial_dword2=""
 
     if [ ! -f "$txt_file" ]; then
         log_error "Config file not found: $txt_file"
@@ -951,6 +956,28 @@ parse_txt_config_to_section_files() {
         } > "$params_file" 2>/dev/null || true
     }
 
+    # Write .params for a section with explicit total size (used for XV0 Partial PMBus combined section).
+    write_section_params_with_size() {
+        local dword1="$1"
+        local total_size=$(( $2 ))
+        [[ -z "$dword1" ]] || [[ ${#dword1} -ne 8 ]] || [[ ! "$dword1" =~ ^[0-9A-F]{8}$ ]] && return 0
+        local params_file="$out_dir/section_${section_index}.params"
+        local b0 b1 b2 b3 sz0 sz1
+        b0=$((16#${dword1:0:2})); b1=$((16#${dword1:2:2})); b2=$((16#${dword1:4:2})); b3=$((16#${dword1:6:2}))
+        sz0=$(( total_size & 0xff ))
+        sz1=$(( (total_size >> 8) & 0xff ))
+        {
+            echo "dword1=$dword1"
+            echo "dword2=0000$(printf '%02x' $sz1)$(printf '%02x' $sz0)"
+            echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
+            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b1)"
+            echo "sz0=0x$(printf '%02x' $sz0)"
+            echo "sz1=0x$(printf '%02x' $sz1)"
+            echo "size=$total_size"
+            echo "size_hex=0x$(printf '%04x' $total_size)"
+        } > "$params_file" 2>/dev/null || true
+    }
+
     append_dwords_from_line() {
         local rest="${line#* }"
         local dword
@@ -980,6 +1007,11 @@ parse_txt_config_to_section_files() {
             continue
         fi
         if [[ "$line" =~ ^\[End[[:space:]]Configuration[[:space:]]Data\] ]]; then
+            if [ $in_partial_pmbus -eq 1 ]; then
+                write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) || true
+                in_partial_pmbus=0
+                section_index=$((section_index + 1))
+            fi
             log_section_summary
             break
         fi
@@ -992,12 +1024,9 @@ parse_txt_config_to_section_files() {
             continue
         fi
 
-        # (Sub)section start: line beginning with "000 " (AN001 5.2). Extract 1st and 2nd DWORD (5.3, 5.4) for params.
+        # (Sub)section start: line beginning with "000 " (AN001 5.2). Extract 1st and 2nd DWORD (5.3, 5.4).
+        # XV0 Partial PMBus (AN001 5.8.1.2): HC=0x0B, XV=0x00 — multiple "000" rows form one section; concatenate all DWORDs.
         if [[ "$line" =~ ^000[[:space:]] ]]; then
-            log_section_summary
-            start_section_file || return 1
-            section_dwords=0
-            section_first_dword=""
             local rest="${line#* }"
             local first_two=()
             for d in $rest; do
@@ -1005,6 +1034,34 @@ parse_txt_config_to_section_files() {
                 [[ ${#d} -eq 8 ]] && [[ "$d" =~ ^[0-9A-F]{8}$ ]] && first_two+=("$d")
                 [[ ${#first_two[@]} -ge 2 ]] && break
             done
+            # First DWORD in .txt (MSB-first): chars 0:2=Loop, 2:2=CMD, 4:2=XV, 6:2=HC. Partial PMBus: HC=0x0B, XV=0x00.
+            local is_partial_pmbus=0
+            [[ ${#first_two[@]} -ge 1 ]] && [[ "${first_two[0]:6:2}" = "0B" ]] && [[ "${first_two[0]:4:2}" = "00" ]] && is_partial_pmbus=1
+
+            if [ $is_partial_pmbus -eq 1 ]; then
+                if [ $in_partial_pmbus -eq 0 ]; then
+                    log_section_summary
+                    start_section_file || return 1
+                    section_dwords=0
+                    section_first_dword="${first_two[0]}"
+                    first_partial_dword1="${first_two[0]}"
+                    first_partial_dword2="${first_two[1]:-00000000}"
+                    in_partial_pmbus=1
+                fi
+                append_dwords_from_line
+                continue
+            fi
+
+            # Normal section: close Partial PMBus if we were in it, then start this section
+            if [ $in_partial_pmbus -eq 1 ]; then
+                write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) || true
+                in_partial_pmbus=0
+                section_index=$((section_index + 1))
+            fi
+            log_section_summary
+            start_section_file || return 1
+            section_dwords=0
+            section_first_dword=""
             [[ ${#first_two[@]} -ge 2 ]] && write_section_params "${first_two[0]}" "${first_two[1]}"
             append_dwords_from_line
             section_index=$((section_index + 1))
@@ -1017,6 +1074,10 @@ parse_txt_config_to_section_files() {
         fi
     done < "$txt_file"
 
+    if [ $in_partial_pmbus -eq 1 ]; then
+        write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) || true
+        section_index=$((section_index + 1))
+    fi
     log_section_summary
 
     if [[ $section_index -eq 0 ]] && [[ $section_dwords -eq 0 ]]; then
