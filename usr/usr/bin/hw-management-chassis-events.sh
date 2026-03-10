@@ -823,13 +823,6 @@ function check_cpld_attrs_num()
 	*)
 		;;
 	esac
-	case "$dmi_sku" in
-	HI180)
-		cpld_num=$((cpld_num-1))
-		;;
-	*)
-		;;
-	esac
 	[ "$cpld_num" -lt 0 ] && cpld_num=0
 	return "$cpld_num"
 }
