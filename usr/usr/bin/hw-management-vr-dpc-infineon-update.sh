@@ -24,6 +24,8 @@ DRY_RUN=0
 TIMEOUT=30
 VERBOSE=0
 MODE=""
+# Flash only one section by HeaderCode (e.g. -s 0x0B); empty = flash all sections
+FLASH_SECTION_HC=""
 
 # When the kernel driver (e.g. xdpe1a2g7b) is bound, raw i2cget/i2cset cannot access the device.
 # We unbind the driver for verify/flash and rebind on exit.
@@ -102,7 +104,8 @@ FLASH MODE OPTIONS:
         -f <file>       Configuration file path
 
     Optional:
-        -s              Skip finalize: write to scratchpad only, do not upload to OTP or reset
+        -s <hc>         Flash only section(s) with this HeaderCode (e.g. -s 0x0B); parse full config, invalidate and upload only matching section(s)
+        -n              Skip finalize (dry run): write to scratchpad only, do not upload to OTP or reset
         -v              Verbose: repeat for more (-v = verbose, -vv = debug)
         -t <seconds>    Timeout for operations (default: 30)
 
@@ -150,9 +153,11 @@ COMPARE MODE OPTIONS:
     -c <file2>          Second configuration file
 
 EXAMPLES:
-    # Flash device (-s = scratchpad only, no OTP upload)
-    $(basename $0) flash -b 2 -a 0x40 -f config.bin -s
+    # Flash device (-n = scratchpad only, no OTP upload)
+    $(basename $0) flash -b 2 -a 0x40 -f config.bin -n
     $(basename $0) flash -b 2 -a 0x40 -f config.bin
+    # Flash only section(s) with HeaderCode 0x0B (e.g. Partial PMBus)
+    $(basename $0) flash -b 2 -a 0x40 -f config.txt -s 0x0B
 
     # Verify configuration
     $(basename $0) verify -b 2 -a 0x40 -f config.bin
@@ -404,25 +409,22 @@ read_otp_bytes_to_file() {
     return 0
 }
 
-# Find section by full 4-byte header (Loop, CMD, XVcode, HeaderCode) in OTP, read full section to out_file. AN001 10.1.
-# Returns 0 on success. OTP base 0x10020000; section layout: 4B header (LE: byte0=HC, byte1=XV, byte2=CMD, byte3=Loop), 4B size (LE), then data.
-# All four fields must match; pass as decimal or hex (e.g. 0x0B 0x00 0x21 0x00).
-read_otp_section() {
+# Scan OTP from base and concatenate all sections with the given HC (and XV) until a section with HC=0x00 (stop) is found.
+# Used for every HeaderCode: usually one section per HC; 0x0B (Partial PMBus) may have several. All matching sections are concatenated into out_file.
+read_otp_sections_by_hc_until_stop() {
     local bus=$1
     local addr=$2
     local header_code=$(( $3 ))
-    local xvcode=$(( $4 ))
-    local cmd=$(( ${5:-0} ))
-    local loop=$(( ${6:-0} ))
-    local out_file=$7
+    local xvcode=$(( ${4:-0} ))
+    local out_file=$5
     local addr_32=$((OTP_BASE))
     local max_addr=$((OTP_BASE + 32768))
     local max_iters=512
     local iters=0
+    local count=0
 
     : > "$out_file" || return 1
-
-    log_verbose "Searching for the section Loop=0x$(printf '%02x' $loop) CMD=0x$(printf '%02x' $cmd) XV=0x$(printf '%02x' $xvcode) HC=0x$(printf '%02x' $header_code)..."
+    log_verbose "Reading all OTP sections with HC=0x$(printf '%02x' $header_code) XV=0x$(printf '%02x' $xvcode) until HC=0x00..."
 
     while (( addr_32 < max_addr && iters < max_iters )); do
         iters=$((iters + 1))
@@ -433,37 +435,33 @@ read_otp_section() {
         local h0 h1 h2 h3 s0 s1 s2 s3
         read -r h0 h1 h2 h3 <<< "$hd_hex"
         read -r s0 s1 s2 s3 <<< "$sz_hex"
-        # Section size is 2 bytes LE (sz0 LSB, sz1 MSB) per AN001; e.g. 58 01 -> 0x0158
         local size=$(( 16#$s0 + (16#$s1 << 8) ))
         local hc=$((16#$h0))
         local xv=$((16#$h1))
-        local dev_cmd=$((16#$h2))
-        local dev_loop=$((16#$h3))
-        # Unprogrammed OTP often reads as 0xff; cap size to avoid overflow or huge skip
         if [ "$size" -gt 32768 ]; then
             size=8
         fi
-        log_verbose "OTP offset $(printf '%03x' $(( addr_32 - OTP_BASE ))) found a section HC=0x$(printf '%02x' $hc) Loop=0x$(printf '%02x' $dev_loop) CMD=0x$(printf '%02x' $dev_cmd) of size 0x$(printf '%04x' $size)"
-        if [ "$hc" -eq "$header_code" ] && [ "$xv" -eq "$xvcode" ] && [ "$dev_cmd" -eq "$cmd" ] && [ "$dev_loop" -eq "$loop" ]; then
+        if [ "$hc" -eq 0 ]; then
+            log_verbose "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x00 (stop) -- done"
+            return 0
+        fi
+        if [ "$size" -le 0 ]; then
+            log_error "Invalid OTP section size 0 at 0x$(printf '%x' $addr_32)"
+            return 1
+        fi
+        if [ "$hc" -eq "$header_code" ] && [ "$xv" -eq "$xvcode" ]; then
             hex_dword_to_file "$hd_hex" "$out_file"
             hex_dword_to_file "$sz_hex" "$out_file"
             if [ $size -gt 8 ]; then
                 read_otp_bytes_to_file $bus $addr $((size - 8)) "$out_file" || return 1
             fi
-            return 0
-        fi
-        if [ $size -le 0 ]; then
-            log_error "Invalid OTP section size 0 at 0x$(printf '%x' $addr_32)"
-            return 1
+            count=$((count + 1))
+            log_verbose "Appended section $count (size 0x$(printf '%04x' $size))"
         fi
         addr_32=$((addr_32 + size))
     done
-    if [ $iters -ge $max_iters ]; then
-        log_error "Section Loop=$loop CMD=$cmd XV=$xvcode HC=$header_code not found (max iterations reached)"
-    else
-        log_error "Section Loop=$loop CMD=$cmd XV=$xvcode HC=$header_code not found in OTP"
-    fi
-    return 1
+    log_info "Read $count section(s) with HC=0x$(printf '%02x' $header_code) (stopped at max addr or iterations)"
+    return 0
 }
 
 # Set register pointer RPTR to 32-bit address (little-endian per AN001).
@@ -749,28 +747,40 @@ check_otp_space() {
 }
 
 # Invalidate existing OTP data (AN-001 6.2.1 "Reprogram entire configuration file").
-# BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, 0x12 OTP_SECTION_INVALIDATE), wait 1s soak.
+# invalidate_otp 1 = invalidate all: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, 0x12).
+# invalidate_otp 0 <hc> <xv> <cmd> <loop> = invalidate one section: BLOCK_WRITE(0xFD, 4, hc, xv, cmd, loop) then 0x12.
 invalidate_otp() {
     local invalidate_all=${1:-1}
+    local hc xv cmd loop
 
     if [ $invalidate_all -eq 1 ]; then
         log_info "Invalidating entire OTP configuration (AN-001 6.2.1)..."
     else
-        log_info "Invalidating specific OTP section..."
+        hc=$((${2:-0})); xv=$((${3:-0})); cmd=$((${4:-0})); loop=$((${5:-0}))
+        log_info "Invalidating OTP section (HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv) CMD=0x$(printf '%02x' $cmd) Loop=0x$(printf '%02x' $loop))..."
     fi
 
-    # AN-001 6.2.1: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, 0x12). 0xfe,0xfe = all hc and XVcode.
+    if [ $DRY_RUN -eq 1 ]; then
+        [ $VERBOSE -gt 0 ] && log_verbose "[DRY_RUN] Would write 0xFD (4 bytes) then 0xFE 0x12 (OTP_SECTION_INVALIDATE); skip actual write"
+        return 0
+    fi
+
+    # AN-001 6.2.1: BLOCK_WRITE(0xFD, 4, ...) then WRITE_BYTE(0xFE, 0x12). All: 0xfe,0xfe,0,0. Specific: hc,xv,cmd,loop (LE).
     if [ $invalidate_all -eq 1 ]; then
         write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 0xfe 0xfe 0x00 0x00 || return 1
         if ! i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_OTP_SECTION_INVALIDATE; then
             log_error "OTP invalidation: failed to send command (0xFE 0x12)"
             return 1
         fi
-        # 3) wait soak time — 1s is enough per AN-001 6.2.1
         sleep 1
     else
-        log_error "OTP section invalidation (specific section) requires setting 0xFD with section; use invalidate all or adapter with i2ctransfer"
-        return 1
+        write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 \
+            0x$(printf '%02x' $hc) 0x$(printf '%02x' $xv) 0x$(printf '%02x' $cmd) 0x$(printf '%02x' $loop) || return 1
+        if ! i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_OTP_SECTION_INVALIDATE; then
+            log_error "OTP section invalidation: failed to send command (0xFE 0x12)"
+            return 1
+        fi
+        sleep 1
     fi
 
     local result
@@ -948,7 +958,7 @@ parse_txt_config_to_section_files() {
             echo "dword1=$dword1"
             echo "dword2=$dword2"
             echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
-            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b1)"
+            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b2) cmd=0x$(printf '%02x' $b1) loop=0x$(printf '%02x' $b0)"
             echo "sz0=0x$(printf '%02x' $sz0)"
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$size"
@@ -970,7 +980,7 @@ parse_txt_config_to_section_files() {
             echo "dword1=$dword1"
             echo "dword2=0000$(printf '%02x' $sz1)$(printf '%02x' $sz0)"
             echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
-            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b1)"
+            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b2) cmd=0x$(printf '%02x' $b1) loop=0x$(printf '%02x' $b0)"
             echo "sz0=0x$(printf '%02x' $sz0)"
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$total_size"
@@ -1316,9 +1326,6 @@ program_device() {
         log_info "Programming cancelled by user (entered: '$confirm')"
         return 1
     fi
-    # AN-001 6.2.1: invalidate all existing OTP data before reprogramming entire config (avoids old sections affecting CRC)
-    invalidate_otp 1 || return 1
-    echo ""
 
     # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
     # .bin: single scratchpad write + upload
@@ -1337,12 +1344,53 @@ program_device() {
             rm -rf "$config_bin_temp"
             return 1
         fi
+
+        # -s <hc>: flash only section(s) with this HeaderCode
+        if [ -n "$FLASH_SECTION_HC" ]; then
+            local requested_hc=$((FLASH_SECTION_HC))
+            section_bins_filtered=()
+            for f in "${section_bins[@]}"; do
+                [ ! -f "$f" ] && continue
+                local first_byte
+                first_byte=$(od -An -tx1 -N1 "$f" 2>/dev/null | tr -d ' \n')
+                [ -z "$first_byte" ] && continue
+                local file_hc=$((16#$first_byte))
+                [ "$file_hc" -eq "$requested_hc" ] && section_bins_filtered+=("$f")
+            done
+            if [ ${#section_bins_filtered[@]} -eq 0 ]; then
+                log_info "No section with HeaderCode 0x$(printf '%02x' $requested_hc) found in config; nothing to flash."
+                rm -rf "$config_bin_temp"
+                return 0
+            fi
+            section_bins=("${section_bins_filtered[@]}")
+            log_info "Flashing only section(s) with HC=0x$(printf '%02x' $requested_hc) (${#section_bins[@]} section(s))"
+        else
+            # AN-001 6.2.1: invalidate all existing OTP before full reprogramming
+            invalidate_otp 1 || return 1
+        fi
+        echo ""
+
         log_info "Uploading ${#section_bins[@]} section(s) one by one (AN001 Section 6)"
         echo ""
 
         for i in "${!section_bins[@]}"; do
             flash_file="${section_bins[$i]}"
             log_info "--- Section $((i + 1))/${#section_bins[@]} ---"
+            if [ -n "$FLASH_SECTION_HC" ] && [ $DRY_RUN -eq 0 ]; then
+                local hd_hex4 sec_hc sec_xv sec_cmd sec_loop
+                hd_hex4=$(od -An -tx1 -N4 "$flash_file" 2>/dev/null | tr -d ' \n')
+                if [ ${#hd_hex4} -ge 8 ]; then
+                    sec_hc=$((16#${hd_hex4:0:2}))
+                    sec_xv=$((16#${hd_hex4:2:2}))
+                    sec_cmd=$((16#${hd_hex4:4:2}))
+                    sec_loop=$((16#${hd_hex4:6:2}))
+                    invalidate_otp 0 $sec_hc $sec_xv $sec_cmd $sec_loop || {
+                        rm -rf "$config_bin_temp"
+                        return 1
+                    }
+                    echo ""
+                fi
+            fi
             write_to_scratchpad "$flash_file" || {
                 rm -rf "$config_bin_temp"
                 return 1
@@ -1372,7 +1420,7 @@ program_device() {
     fi
 
     if [ $DRY_RUN -eq 1 ]; then
-        log_info "Skip finalize (-s): upload to OTP, write protect, and reset were skipped"
+        log_info "Skip finalize (-n): upload to OTP, write protect, and reset were skipped"
         [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
         return 0
     fi
@@ -1505,19 +1553,21 @@ readback_from_device() {
             local hd_hex4
             hd_hex4=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
             [ ${#hd_hex4} -lt 8 ] && { log_error "Section file too short: $section_path"; rm -rf "$tmpdir"; return 1; }
-            local sec_hc sec_xv sec_cmd sec_loop
+            local sec_hc sec_xv
             sec_hc=$((16#${hd_hex4:0:2}))
             sec_xv=$((16#${hd_hex4:2:2}))
-            sec_cmd=$((16#${hd_hex4:4:2}))
-            sec_loop=$((16#${hd_hex4:6:2}))
-            read_path="$out_dir/read_$(printf '%02d' $i)_hc_$(printf '%02x' $sec_hc)_loop_$(printf '%02x' $sec_loop)_cmd_$(printf '%02x' $sec_cmd).bin"
-            log_info "Section $i: reading from OTP (Loop=0x$(printf '%02x' $sec_loop) CMD=0x$(printf '%02x' $sec_cmd) XV=0x$(printf '%02x' $sec_xv) HC=0x$(printf '%02x' $sec_hc)) -> $read_path"
-            if ! read_otp_section $bus $addr $sec_hc $sec_xv $sec_cmd $sec_loop "$read_path"; then
+            local cfg_size
+            cfg_size=$(wc -c < "$section_path" 2>/dev/null); [ -z "$cfg_size" ] && cfg_size=0
+
+            # For every HeaderCode: read all OTP sections with this HC (and XV) until HC=0x00 (stop), concatenate. One section per HC usually; 0x0B may have several.
+            read_path="$out_dir/read_$(printf '%02d' $i)_hc_$(printf '%02x' $sec_hc).bin"
+            log_info "Section $i: reading all HC=0x$(printf '%02x' $sec_hc) XV=0x$(printf '%02x' $sec_xv) sections from OTP until HC=0x00 -> $read_path"
+            if ! read_otp_sections_by_hc_until_stop $bus $addr $sec_hc $sec_xv "$read_path"; then
                 rm -rf "$tmpdir"
                 return 1
             fi
-            local cfg_size dev_size
-            cfg_size=$(wc -c < "$section_path" 2>/dev/null); [ -z "$cfg_size" ] && cfg_size=0
+
+            local dev_size
             dev_size=$(wc -c < "$read_path" 2>/dev/null); [ -z "$dev_size" ] && dev_size=0
             if [ "$cfg_size" = "$dev_size" ]; then
                 if cmp -s "$section_path" "$read_path"; then
@@ -1928,7 +1978,7 @@ main() {
     local MONITOR_INTERVAL=1
     local OUTPUT_FILE=""
 
-    while getopts "b:a:f:c:i:o:t:svh" opt; do
+    while getopts "b:a:f:c:i:o:t:s:nvh" opt; do
         case $opt in
             b) I2C_BUS=$OPTARG ;;
             a) DEVICE_ADDR=$OPTARG ;;
@@ -1937,7 +1987,8 @@ main() {
             i) MONITOR_INTERVAL=$OPTARG ;;
             o) OUTPUT_FILE=$OPTARG ;;
             t) TIMEOUT=$OPTARG ;;
-            s) DRY_RUN=1 ;;
+            s) FLASH_SECTION_HC=$OPTARG ;;
+            n) DRY_RUN=1 ;;
             v) VERBOSE=$((VERBOSE + 1)) ;;
             h) usage ;;
             *) usage ;;
