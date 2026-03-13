@@ -35,6 +35,7 @@
 # Description: hw-management generate dump script.
 #              This script collecting debug information and pack it in /tmp/hw-mgmt-dump.tar.gz
 
+export HW_MGMT_TRACE_DIR="${HW_MGMT_TRACE_DIR:-/tmp/hw_mgmt_trace}"
 DUMP_FOLDER="/tmp/hw-mgmt-dump"
 HW_MGMT_FOLDER="/var/run/hw-management/"
 board_type=$(cat /sys/devices/virtual/dmi/id/board_name 2>/dev/null || echo "")
@@ -131,6 +132,10 @@ dump_cmd "cat ${REGMAP_FILE} 2>/dev/null" "cpld_dump" "5"
 dump_cmd "dpkg -l | grep hw-management" "hw-management_version" "5"
 dump_cmd "systemctl status hw-management* --no-pager" "hw-management_svc_status" "5"
 dump_cmd "ip addr" "ip_addr" "5"
+
+if [ -d "$HW_MGMT_TRACE_DIR" ]; then
+	cp -r "$HW_MGMT_TRACE_DIR" "$DUMP_FOLDER"/hw_mgmt_trace
+fi
 
 # Kill all the leftout child processes before creating the dump archive
 pkill -P "$dump_process_pid" 2>/dev/null || true
