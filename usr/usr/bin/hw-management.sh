@@ -4072,6 +4072,7 @@ case $ACTION in
 		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193 in simx
 		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
+			process_simx_links
 			log_info "Created mock hw management tree, exiting."
 			exit 0
 		fi
