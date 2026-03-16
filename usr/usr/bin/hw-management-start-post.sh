@@ -111,6 +111,53 @@ case $sku in
 		# Do nothing
 esac
 
+# Check if TC service is enabled (unit enabled at boot) and if it is currently running.
+tc_is_enabled=0
+if systemctl is-enabled --quiet hw-management-tc.service 2>/dev/null; then
+	tc_is_enabled=1
+fi
+# Check if TC service is running.
+tc_should_start=0
+if systemctl is-active --quiet hw-management-tc.service; then
+	tc_should_start=1
+fi
+
+# Initialize TC service control variables.
+tc_should_enable=0
+tc_should_disable=0
+tc_should_reload=0
+
+## Checking if system doesn't support TC and disable it if it doesn't.
+if check_tc_is_supported; then
+	# If TC is not supported, disable it.
+	log_info "Disable Thermal Control for current platform: $sku"
+	tc_should_disable=1
+else
+	# If we are running in SimX environment and the BSP emulation is not available for the platforms that run in the SimX
+	# environment, TC need to be stopped. Otherwise, enable and start TC.
+	if check_simx; then
+		# Check if SimX is supported for the current platform.
+		if ! check_if_simx_supported_platform; then
+			if [ $tc_is_enabled -eq 1 ]; then
+				echo "Stopping and disabling hw-management-tc on SimX"
+				logger -t hw-management -p daemon.notice "Stopping and disabling hw-management-tc on SimX"
+				# TC service should be stopped and disabled.
+				tc_should_disable=1
+				tc_should_start=0
+			fi
+		else
+			# If TC is supported in SimX.
+			if [ $tc_is_enabled -eq 0 ]; then
+				echo "Enable and start Thermal Control service."
+				logger -t hw-management -p daemon.notice "Thermal Control service scheduled to start."
+				# TC service should be enabled and started.
+				tc_should_enable=1
+				tc_should_start=1
+			fi
+		fi
+	fi
+fi
+
 # update Thermal Control service to use correct executable revision
 service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
 if [ -f $service_file_path ]; then
@@ -130,38 +177,41 @@ if [ -f $service_file_path ]; then
 	md5sum_new=$(md5sum $service_file_path | awk '{print $1}')
 	if [ "$md5sum_orig" != "$md5sum_new" ]; then
 		log_info "Thermal Control service updated. reload it in 10 seconds"
-		bash -c 'sleep 10 && systemctl daemon-reload && systemctl restart hw-management-tc.service' &
+		tc_should_reload=1
 	fi
 fi
 
-# If the BSP emulation is not available for the platforms that run in the SimX
-# environment, TC need to be stopped. Otherwise enabling TC.
-if check_simx; then
-    if ! check_if_simx_supported_platform; then
-	    if systemctl is-enabled --quiet hw-management-tc; then
-		    echo "Stopping and disabling hw-management-tc on SimX"
-		    systemctl stop hw-management-tc
-		    systemctl disable hw-management-tc
-	    fi
-	    echo "Start Chassis HW management service."
-	    logger -t hw-management -p daemon.notice "Start Chassis HW management service."
-	    exit 0
-    else
-	    if ! systemctl is-enabled --quiet hw-management-tc; then
-		    echo "Enabling and starting hw-management-tc"
-		    if check_tc_support; then
-			    systemctl enable hw-management-tc
-			    nohup systemctl start hw-management-tc &
-			fi
-	    fi
-    fi
-fi
+# Build and execute the command line for TC service control only when there is something to do.
+if [ $tc_should_reload -eq 1 ] || 
+   [ $tc_should_disable -eq 1 ] || 
+   [ $tc_should_enable -eq 1 ]; then
+	cmd_line="sleep 10 &&"
 
-## Checking if system doesn't require TC
-check_tc_is_supported
-if [ $? -eq 0 ]; then
-	log_info "Disabe Thermal Control for current platform: $sku"
-	systemctl stop hw-management-tc.service
-	systemctl disable hw-management-tc.service  
-fi
+	# Reload the systemd daemon if needed.
+	if [ $tc_should_reload -eq 1 ]; then
+		cmd_line="$cmd_line systemctl daemon-reload &&"
+	fi
 
+	# Disable TC service if needed.
+	if [ $tc_should_disable -eq 1 ]; then
+		cmd_line="$cmd_line systemctl stop hw-management-tc && systemctl disable hw-management-tc &&"
+		# TC service should not be started.
+		tc_should_start=0
+	elif [ $tc_should_enable -eq 1 ]; then
+		# TC service should be enabled.
+		cmd_line="$cmd_line systemctl enable hw-management-tc &&"
+	fi
+
+	# Start TC service if needed.
+	if [ $tc_should_start -ne 0 ]; then
+		if [ $tc_should_reload -eq 1 ]; then
+			# TC service should be restarted in case of reload.
+			cmd_line="$cmd_line systemctl restart hw-management-tc &&"
+		else
+			# TC service should be started.
+			cmd_line="$cmd_line systemctl start hw-management-tc &&"
+		fi
+	fi
+
+	bash -c "$cmd_line echo thermal control service configured" &>/dev/null &
+fi
