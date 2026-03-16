@@ -746,26 +746,30 @@ check_otp_space() {
     return 0
 }
 
-# Invalidate existing OTP data (AN-001 6.2.1 "Reprogram entire configuration file").
+# Invalidate existing OTP data (AN-001 6.2 / 6.2.1).
 # invalidate_otp 1 = invalidate all: BLOCK_WRITE(0xFD, 4, 0xfe, 0xfe, 0, 0) then WRITE_BYTE(0xFE, 0x12).
-# invalidate_otp 0 <hc> <xv> <cmd> <loop> = invalidate one section: BLOCK_WRITE(0xFD, 4, hc, xv, cmd, loop) then 0x12.
+# invalidate_otp 0 <hc> <xv> = invalidate one section: BLOCK_WRITE(0xFD, 4, hc, XVcode, 0, 0) then 0x12 (AN001 6.2).
 invalidate_otp() {
     local invalidate_all=${1:-1}
-    local hc xv cmd loop
+    local hc xv
 
     if [ $invalidate_all -eq 1 ]; then
         log_info "Invalidating entire OTP configuration (AN-001 6.2.1)..."
     else
-        hc=$((${2:-0})); xv=$((${3:-0})); cmd=$((${4:-0})); loop=$((${5:-0}))
-        log_info "Invalidating OTP section (HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv) CMD=0x$(printf '%02x' $cmd) Loop=0x$(printf '%02x' $loop))..."
+        hc=$((${2:-0})); xv=$((${3:-0}))
+        log_info "Invalidating OTP section (HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv))..."
     fi
 
     if [ $DRY_RUN -eq 1 ]; then
-        [ $VERBOSE -gt 0 ] && log_verbose "[DRY_RUN] Would write 0xFD (4 bytes) then 0xFE 0x12 (OTP_SECTION_INVALIDATE); skip actual write"
+        if [ $invalidate_all -eq 1 ]; then
+            log_verbose "[DRY_RUN] Would write 0xFD (0xfe,0xfe,0,0) then 0xFE 0x12 (OTP_SECTION_INVALIDATE); skip actual write"
+        else
+            log_verbose "[DRY_RUN] Would write 0xFD (hc=0x$(printf '%02x' $hc), xv=0x$(printf '%02x' $xv), 0, 0) then 0xFE 0x12; skip actual write"
+        fi
         return 0
     fi
 
-    # AN-001 6.2.1: BLOCK_WRITE(0xFD, 4, ...) then WRITE_BYTE(0xFE, 0x12). All: 0xfe,0xfe,0,0. Specific: hc,xv,cmd,loop (LE).
+    # AN-001 6.2 / 6.2.1: BLOCK_WRITE(0xFD, 4, ...) then WRITE_BYTE(0xFE, 0x12). All: 0xfe,0xfe,0,0. One section: hc, XVcode, 0, 0 (LE).
     if [ $invalidate_all -eq 1 ]; then
         write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 0xfe 0xfe 0x00 0x00 || return 1
         if ! i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_OTP_SECTION_INVALIDATE; then
@@ -775,7 +779,7 @@ invalidate_otp() {
         sleep 1
     else
         write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 \
-            0x$(printf '%02x' $hc) 0x$(printf '%02x' $xv) 0x$(printf '%02x' $cmd) 0x$(printf '%02x' $loop) || return 1
+            0x$(printf '%02x' $hc) 0x$(printf '%02x' $xv) 0x00 0x00 || return 1
         if ! i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_OTP_SECTION_INVALIDATE; then
             log_error "OTP section invalidation: failed to send command (0xFE 0x12)"
             return 1
@@ -913,7 +917,6 @@ parse_txt_config_to_section_files() {
     local section_list_file="$out_dir/section_list"
     local in_partial_pmbus=0
     local first_partial_dword1=""
-    local first_partial_dword2=""
 
     if [ ! -f "$txt_file" ]; then
         log_error "Config file not found: $txt_file"
@@ -958,7 +961,10 @@ parse_txt_config_to_section_files() {
             echo "dword1=$dword1"
             echo "dword2=$dword2"
             echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
-            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b2) cmd=0x$(printf '%02x' $b1) loop=0x$(printf '%02x' $b0)"
+            echo "hc=0x$(printf '%02x' $b3)"
+            echo "xv=0x$(printf '%02x' $b2)"
+            echo "cmd=0x$(printf '%02x' $b1)"
+            echo "loop=0x$(printf '%02x' $b0)"
             echo "sz0=0x$(printf '%02x' $sz0)"
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$size"
@@ -980,7 +986,10 @@ parse_txt_config_to_section_files() {
             echo "dword1=$dword1"
             echo "dword2=0000$(printf '%02x' $sz1)$(printf '%02x' $sz0)"
             echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
-            echo "hc=0x$(printf '%02x' $b3) xv=0x$(printf '%02x' $b2) cmd=0x$(printf '%02x' $b1) loop=0x$(printf '%02x' $b0)"
+            echo "hc=0x$(printf '%02x' $b3)"
+            echo "xv=0x$(printf '%02x' $b2)"
+            echo "cmd=0x$(printf '%02x' $b1)"
+            echo "loop=0x$(printf '%02x' $b0)"
             echo "sz0=0x$(printf '%02x' $sz0)"
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$total_size"
@@ -1055,7 +1064,6 @@ parse_txt_config_to_section_files() {
                     section_dwords=0
                     section_first_dword="${first_two[0]}"
                     first_partial_dword1="${first_two[0]}"
-                    first_partial_dword2="${first_two[1]:-00000000}"
                     in_partial_pmbus=1
                 fi
                 append_dwords_from_line
@@ -1377,14 +1385,12 @@ program_device() {
             flash_file="${section_bins[$i]}"
             log_info "--- Section $((i + 1))/${#section_bins[@]} ---"
             if [ -n "$FLASH_SECTION_HC" ] && [ $DRY_RUN -eq 0 ]; then
-                local hd_hex4 sec_hc sec_xv sec_cmd sec_loop
+                local hd_hex4 sec_hc sec_xv
                 hd_hex4=$(od -An -tx1 -N4 "$flash_file" 2>/dev/null | tr -d ' \n')
                 if [ ${#hd_hex4} -ge 8 ]; then
                     sec_hc=$((16#${hd_hex4:0:2}))
                     sec_xv=$((16#${hd_hex4:2:2}))
-                    sec_cmd=$((16#${hd_hex4:4:2}))
-                    sec_loop=$((16#${hd_hex4:6:2}))
-                    invalidate_otp 0 $sec_hc $sec_xv $sec_cmd $sec_loop || {
+                    invalidate_otp 0 $sec_hc $sec_xv || {
                         rm -rf "$config_bin_temp"
                         return 1
                     }
@@ -1534,7 +1540,7 @@ readback_from_device() {
 
     if [ $have_config -eq 1 ]; then
         # With config: parse .txt, read each section by hc/xv, write to read_NN.bin and compare
-        local tmpdir section_bins i hc section_path read_path
+        local tmpdir section_bins i section_path read_path
         # tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
 	tmpdir="/tmp/dpc-config/" ; mkdir -p $tmpdir || { log_error "Cannot create temp dir"; return 1; }
         config_files_dir="$tmpdir"
