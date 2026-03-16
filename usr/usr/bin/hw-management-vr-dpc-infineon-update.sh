@@ -21,7 +21,6 @@ DEVICE_ADDR=""
 CONFIG_FILE=""
 VERIFY_ONLY=0
 DRY_RUN=0
-TIMEOUT=30
 VERBOSE=0
 MODE=""
 # Flash only one section by HeaderCode (e.g. -s 0x0B); empty = flash all sections
@@ -50,6 +49,7 @@ PMBUS_MFR_DEVICE_ID=0xAD
 PMBUS_VOUT_MODE=0x20
 PMBUS_STATUS_WORD=0x79
 PMBUS_STATUS_BYTE=0x78
+PMBUS_STATUS_CML=0x7E
 PMBUS_READ_VIN=0x88
 PMBUS_READ_VOUT=0x8B
 PMBUS_READ_IOUT=0x8C
@@ -107,7 +107,6 @@ FLASH MODE OPTIONS:
         -s <hc>         Flash only section(s) with this HeaderCode (e.g. -s 0x0B); parse full config, invalidate and upload only matching section(s)
         -n              Skip finalize (dry run): write to scratchpad only, do not upload to OTP or reset
         -v              Verbose: repeat for more (-v = verbose, -vv = debug)
-        -t <seconds>    Timeout for operations (default: 30)
 
 SCAN MODE OPTIONS:
     -b <bus>            I2C bus number
@@ -251,7 +250,6 @@ i2c_read() {
     local length=${4:-1}
 
     log_debug "i2cget -y $bus $addr $reg"
-    [ "$length" = "1" ] && log_verbose "i2cget -y $bus $addr $reg" || log_verbose "i2cget -y $bus $addr $reg w"
     local result
     if [ "$length" = "1" ]; then
         result=$(i2cget -y $bus $addr $reg 2>/dev/null)
@@ -263,6 +261,7 @@ i2c_read() {
         log_error "Failed to read from device"
         return 1
     fi
+    log_debug "i2cget result: $result"
 
     echo -n "$result"
     return 0
@@ -286,10 +285,12 @@ i2c_block_read() {
     local reg=$3
     local num_bytes=${4:-4}
 
-    log_verbose "i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
+    log_debug "i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
     local line
     line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
-    echo "$line" | sed 's/0x//g'
+    line=$(echo "$line" | sed 's/0x//g')
+    log_debug "block read result: $line"
+    echo "$line"
     return 0
 }
 
@@ -359,7 +360,6 @@ i2c_block_write() {
     local data=("$@")
 
     log_debug "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
-    log_verbose "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
     if ! i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null; then
         log_error "Failed to write to device (i2ctransfer)"
         return 1
@@ -372,7 +372,7 @@ i2c_block_write() {
 read_otp_dword_hex() {
     local bus=$1
     local addr=$2
-    log_verbose "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr"
+    log_debug "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr"
     local line
     line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr 2>/dev/null) || return 1
     # Normalize: strip 0x, then drop first byte (length 0x04), output 4 data bytes
@@ -380,7 +380,7 @@ read_otp_dword_hex() {
     local _d0 _d1 _d2 _d3 _d4
     read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
     line="$_d1 $_d2 $_d3 $_d4"
-    log_verbose "read DWORD: $line"
+    log_debug "read DWORD: $line"
     echo "$line"
 }
 
@@ -787,16 +787,8 @@ invalidate_otp() {
         sleep 1
     fi
 
-    local result
-    result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || return 1
-
-    # 0x00 = success; 0xff = idle (e.g. XDPE1A2G7B)
-    if [ "$result" != "0x00" ] && [ "$result" != "0xff" ]; then
-        log_error "OTP invalidation failed with code: $result"
-        return 1
-    fi
-
-    log_info "OTP invalidation completed"
+    # MFR_FW_COMMAND (0xFE) is read-only; do not read it for status.
+    log_info "OTP invalidation command sent"
     return 0
 }
 
@@ -1199,7 +1191,7 @@ write_to_scratchpad() {
     return 0
 }
 
-# Upload data from scratchpad to OTP (AN001 6.4).
+# Upload data from scratchpad to OTP (AN001 6.4). Error handling per AN001 6.5: check PMBus STATUS_CML (0x7e) after upload; only bit[0] is analyzed.
 # Faults on both pages must be cleared first. Then BLOCK_WRITE(0xfd, 4, sz0, sz1, 0, 0), WRITE_BYTE(0xfe, 0x11), wait soak.
 # Arg1: section_params_file (path to section_N.params with sz0, sz1). Arg2: optional data_file for single .bin (size used as sz0, sz1 LE).
 upload_scratchpad_to_otp() {
@@ -1248,40 +1240,30 @@ upload_scratchpad_to_otp() {
     log_info "Soak time ${soak_s}s (AN001 Table 8)..."
     sleep $soak_s
 
-    log_info "Waiting for upload completion..."
+    # MFR_FW_COMMAND (0xFE) is read-only; wait fixed time then check STATUS_CML per AN001 6.5. AN001: max wait not more than 3 s.
+    local upload_wait_s=3
+    log_info "Waiting ${upload_wait_s}s for upload (0xFE read-only, no completion poll)..."
 
-    local elapsed=0
-    local max_wait=$TIMEOUT
+    sleep $upload_wait_s
 
-    while [ $elapsed -lt $max_wait ]; do
-        sleep 1
-        elapsed=$((elapsed + 1))
-
-        local result
-        result=$(i2c_read $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND) || continue
-
-        if [ "$result" = "0x00" ]; then
-            log_info "Upload completed successfully"
-            if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
-                [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD (5.3): $p_dword1  (hc=$p_hc xv=$p_xv)"
-                [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD (5.4): $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
-            fi
-            return 0
+    # AN001 6.5: only bit[0] of STATUS_CML (d0) is analyzed; if bit 0 is not 0, upload was unsuccessful.
+    local status_cml
+    status_cml=$(i2c_read $I2C_BUS $DEVICE_ADDR $PMBUS_STATUS_CML 1 2>/dev/null) || status_cml=""
+    if [[ -z "$status_cml" ]]; then
+        log_error "Upload wait completed but STATUS_CML read failed or empty"
+        return 1
+    fi
+    local cml_bit0=$((status_cml & 1))
+    if [[ $cml_bit0 -eq 0 ]]; then
+        log_info "Upload completed (STATUS_CML d0 bit[0]=0, raw=$status_cml)"
+        if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
+            [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD (5.3): $p_dword1  (hc=$p_hc xv=$p_xv)"
+            [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD (5.4): $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
         fi
-        if [ "$result" = "0xff" ]; then
-            log_info "Upload completed (device status 0xff - idle/done)"
-            if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
-                [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD (5.3): $p_dword1  (hc=$p_hc xv=$p_xv)"
-                [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD (5.4): $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
-            fi
-            return 0
-        fi
-
-        echo -n "."
-    done
-
-    echo ""
-    log_error "Upload timeout after $max_wait seconds"
+        return 0
+    fi
+    log_error "Upload unsuccessful: STATUS_CML d0 bit[0] is not 0 (AN001 6.5), raw=$status_cml"
+    i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS 2>/dev/null || true
     return 1
 }
 
@@ -1984,7 +1966,7 @@ main() {
     local MONITOR_INTERVAL=1
     local OUTPUT_FILE=""
 
-    while getopts "b:a:f:c:i:o:t:s:nvh" opt; do
+    while getopts "b:a:f:c:i:o:s:nvh" opt; do
         case $opt in
             b) I2C_BUS=$OPTARG ;;
             a) DEVICE_ADDR=$OPTARG ;;
@@ -1992,7 +1974,6 @@ main() {
             c) COMPARE_FILE=$OPTARG ;;
             i) MONITOR_INTERVAL=$OPTARG ;;
             o) OUTPUT_FILE=$OPTARG ;;
-            t) TIMEOUT=$OPTARG ;;
             s) FLASH_SECTION_HC=$OPTARG ;;
             n) DRY_RUN=1 ;;
             v) VERBOSE=$((VERBOSE + 1)) ;;
