@@ -93,8 +93,9 @@ MODES:
     unbind      Unbind kernel driver for device (raw I2C access)
     rebind      Rebind kernel driver previously unbound with 'unbind'
     scpad-addr  Get scratchpad register address (controllers supporting 0x2e)
-    parse       Parse configuration file (or convert .txt/.mic to .bin with -o)
+    parse       Convert .txt/.mic to .bin then show AN001 sections; or parse .bin by sections (-o = section dir for .bin only)
     readback    Read OTP sections from device to read_NN.bin; with -f .txt compare to config
+    readback-all   Read full 32 KB OTP to outdir/otp-full.bin
     compare     Compare two configuration files
 
 FLASH MODE OPTIONS:
@@ -137,14 +138,19 @@ SCPAD-ADDR MODE OPTIONS:
     -a <addr>           Device I2C address (hex, e.g. 0x6c)
 
 PARSE MODE OPTIONS:
-    -f <file>           Configuration file path (.bin = analyze; .txt/.mic = convert to binary)
-    -o <file>           Output .bin path when converting .txt/.mic (default: input name with .bin extension)
+    -f <file>           Configuration file path (.bin = parse by AN001 sections; .txt/.mic = convert to binary)
+    -o <path>           Output: .bin path when converting .txt/.mic; or output dir for section_*_hc_*.bin when parsing .bin
 
 READBACK MODE OPTIONS:
     -b <bus>            I2C bus number (required)
     -a <addr>           Device I2C address in hex (required)
     -f <file>           Optional: .txt/.mic config; if given, read sections by header code and compare with config
     -o <dir>            Output directory for read_NN.bin files (default: current dir). Without -f, all OTP sections are dumped in order.
+
+READBACK-ALL MODE OPTIONS:
+    -b <bus>            I2C bus number
+    -a <addr>           Device I2C address
+    -o <dir>            Output directory (default: current dir). Writes otp-full.bin (32 KB).
     Note: Readback requires I2C/SMBus block write and block read. If your adapter does not support these, use another I2C adapter or skip readback.
 
 COMPARE MODE OPTIONS:
@@ -342,7 +348,6 @@ get_scpad_addr() {
         local addr4
         addr4=$(echo "$full" | sed -n '2p')
         [ -n "$addr4" ] && log_info "Scratchpad: PMBus reg $result (for writes), 4-byte addr: $addr4" || log_info "Scratchpad: PMBus reg $result (for writes)"
-        echo "$result"
         return 0
     else
         log_warn "Controller did not return scratchpad address; default is MFR_SPECIFIC_00 (0xD0)"
@@ -807,9 +812,11 @@ section_type_name() {
 
 # Parse XDPE .txt/.mic config (AN001 format) to single binary; write to output path.
 # Optional: [Configuration Data], [End Configuration Data], "// XV0 ..." lines. Data rows: "XXX DWORD0 DWORD1 ..." (3-digit hex + 8-char hex DWORDs). Each DWORD = 4 bytes big-endian.
+# Optional third arg: quiet=1 — no per-section logs (use when followed by parse_config_file on the .bin).
 parse_txt_config_to_bin() {
     local txt_file="$1"
     local bin_file="$2"
+    local quiet="${3:-0}"
     local in_config=1
     local byte_count=0
     local current_section_name=""
@@ -824,6 +831,7 @@ parse_txt_config_to_bin() {
     : > "$bin_file" || { log_error "Cannot create temp binary: $bin_file"; return 1; }
 
     log_section_summary() {
+        [[ $quiet -eq 1 ]] && return 0
         if [[ $section_dwords -gt 0 ]]; then
             local type_str=""
             if [[ -n "$section_first_dword" ]]; then
@@ -843,8 +851,10 @@ parse_txt_config_to_bin() {
 
         if [[ "$line" =~ ^\[Configuration[[:space:]]Data\] ]]; then
             in_config=1
-            log_info "Parsing [Configuration Data] from $txt_file"
-            echo ""
+            if [[ $quiet -ne 1 ]]; then
+                log_info "Parsing [Configuration Data] from $txt_file"
+                echo ""
+            fi
             continue
         fi
         if [[ "$line" =~ ^\[End[[:space:]]Configuration[[:space:]]Data\] ]]; then
@@ -887,8 +897,10 @@ parse_txt_config_to_bin() {
         rm -f "$bin_file"
         return 1
     fi
-    echo ""
-    log_info "Total: $byte_count bytes written to binary"
+    if [[ $quiet -ne 1 ]]; then
+        echo ""
+        log_info "Total: $byte_count bytes written to binary"
+    fi
     return 0
 }
 
@@ -1431,49 +1443,80 @@ program_device() {
     return 0
 }
 
-# Parse and display configuration file structure
+# Parse and display configuration file structure (AN001 section-by-section, aligned with readback).
+# For .bin: scan by section headers (8-byte header: 4-byte header DWORD LE, 4-byte size DWORD LE). HC=0x00 end, HC=0xff invalid/skip.
+# Optional out_dir (second arg): write each section to out_dir/section_NN_hc_XX.bin.
 parse_config_file() {
     local config_file=$1
+    local out_dir="${2:-}"
 
     if [ ! -f "$config_file" ]; then
         log_error "File not found: $config_file"
         return 1
     fi
 
-    log_info "Analyzing configuration file: $config_file"
+    log_info "Parsing configuration file (AN001 section layout): $config_file"
     echo ""
 
     local file_size
     file_size=$(wc -c < "$config_file" 2>/dev/null); [ -z "$file_size" ] && file_size=0
 
-    echo "File Information:"
-    echo "  Size: $file_size bytes"
-    echo "  Path: $config_file"
+    log_info "File size: $file_size bytes"
     echo ""
 
-    echo "File Header (first 64 bytes):"
-    hexdump -C -n 64 "$config_file"
-    echo ""
+    local offset=0
+    local idx=0
+    local max_sections=64
 
-    echo "Configuration Sections:"
+    while (( offset + 8 <= file_size && idx < max_sections )); do
+        local header_hex size_hex
+        header_hex=$(dd if="$config_file" bs=1 skip=$offset count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
+        size_hex=$(dd if="$config_file" bs=1 skip=$((offset + 4)) count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
 
-    local header
-    header=$(od -An -tx1 -N16 "$config_file" | tr -d ' \n')
+        [ -z "$header_hex" ] || [ ${#header_hex} -lt 8 ] && break
 
-    echo "  Header signature: 0x$header"
+        local h0 h1 s0 s1
+        h0=${header_hex:0:2}; h1=${header_hex:2:2}
+        s0=${size_hex:0:2}; s1=${size_hex:2:2}
+        local hc=$((16#$h0))
+        local xv=$((16#$h1))
+        local size=$((16#$s0 + (16#$s1 << 8)))
 
-    if [ -n "${HAS_MD5SUM}" ]; then
-        local md5
-        md5=$(md5sum "$config_file" | awk '{print $1}')
-        echo "  MD5 checksum: $md5"
+        if [ "$hc" -eq 0 ]; then
+            log_info "Offset 0x$(printf '%x' $offset) HC=0x00 size 0x$(printf '%04x' $size) -- end of data"
+            break
+        fi
+        if [ "$size" -le 0 ] || [ "$size" -gt 32768 ]; then
+            log_info "Offset 0x$(printf '%x' $offset) HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) invalid -- stopping"
+            break
+        fi
+        if [ "$hc" -eq 255 ]; then
+            log_verbose "Offset 0x$(printf '%x' $offset): HC=0xff (invalid), skipping ${size}B"
+            offset=$((offset + size))
+            continue
+        fi
+
+        local type_str
+        type_str=$(section_type_name $hc)
+        log_info "Section $idx: offset 0x$(printf '%x' $offset) HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv) $type_str size $size (0x$(printf '%x' $size)) bytes"
+
+        if [[ -n "$out_dir" ]]; then
+            mkdir -p "$out_dir" 2>/dev/null || true
+            local sec_path="$out_dir/section_$(printf '%02d' $idx)_hc_$(printf '%02x' $hc).bin"
+            if dd if="$config_file" of="$sec_path" bs=1 skip=$offset count=$size 2>/dev/null; then
+                log_info "  -> $sec_path"
+            fi
+        fi
+
+        offset=$((offset + size))
+        idx=$((idx + 1))
+        echo ""
+    done
+
+    log_info "Parsed $idx section(s), total ${offset} bytes."
+    if [ -n "$out_dir" ]; then
+        log_info "Section files written to $out_dir/section_*_hc_*.bin"
     fi
-
-    if [ -n "${HAS_SHA256SUM}" ]; then
-        local sha256
-        sha256=$(sha256sum "$config_file" | awk '{print $1}')
-        echo "  SHA256 checksum: $sha256"
-    fi
-
     return 0
 }
 
@@ -1614,6 +1657,48 @@ readback_from_device() {
 
     log_info "Readback complete. Device sections saved under $out_dir/read_*.bin"
     [ -n "$config_files_dir" ] && log_info "Config section files (parsed from -f): $config_files_dir"
+    return 0
+}
+
+# Read full 32 KB OTP and save to outdir/otp-full.bin. Requires -b bus -a addr. Optional -o outdir (default: .).
+readback_all() {
+    local bus="$1"
+    local addr="$2"
+    local out_dir="${3:-.}"
+
+    if [ -z "$bus" ] || [ -z "$addr" ]; then
+        log_error "readback-all requires -b <bus> and -a <addr>"
+        return 1
+    fi
+
+    log_info "Readback all: reading 32 KB from device (bus $bus addr $addr) -> $out_dir/otp-full.bin"
+    echo ""
+
+    unbind_driver_for_device
+
+    if ! set_rptr "$bus" "$addr" $((OTP_BASE)) 2>/dev/null; then
+        log_error "readback-all requires I2C block write support (to set register pointer)."
+        return 1
+    fi
+    if ! read_otp_dword_hex "$bus" "$addr" >/dev/null 2>&1; then
+        log_error "readback-all requires I2C block read support (to read OTP)."
+        return 1
+    fi
+
+    mkdir -p "$out_dir" 2>/dev/null || true
+    local out_file="$out_dir/otp-full.bin"
+    : > "$out_file" || { log_error "Cannot create $out_file"; return 1; }
+
+    if ! set_rptr "$bus" "$addr" $((OTP_BASE)); then
+        log_error "Failed to set OTP read pointer"
+        return 1
+    fi
+    if ! read_otp_bytes_to_file "$bus" "$addr" 32768 "$out_file"; then
+        log_error "Failed to read OTP data"
+        return 1
+    fi
+
+    log_info "Saved 32768 bytes to $out_file"
     return 0
 }
 
@@ -2128,6 +2213,17 @@ main() {
             exit 0
             ;;
 
+        readback-all)
+            if [ -z "$I2C_BUS" ] || [ -z "$DEVICE_ADDR" ]; then
+                log_error "readback-all requires -b <bus> -a <address>"
+                usage
+            fi
+            if ! readback_all "$I2C_BUS" "$DEVICE_ADDR" "${OUTPUT_FILE:-.}"; then
+                exit 1
+            fi
+            exit 0
+            ;;
+
         parse)
             if [ -z "$CONFIG_FILE" ]; then
                 log_error "Parse mode requires -f <file>"
@@ -2135,12 +2231,15 @@ main() {
             fi
             if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]]; then
                 local out_bin="${OUTPUT_FILE:-${CONFIG_FILE%.*}.bin}"
-                if ! parse_txt_config_to_bin "$CONFIG_FILE" "$out_bin"; then
+                if ! parse_txt_config_to_bin "$CONFIG_FILE" "$out_bin" 1; then
                     exit 1
                 fi
-                log_info "Binary saved to $out_bin"
+                log_info "Converted .txt -> $out_bin ($(wc -c < "$out_bin" | tr -d '[:space:]') bytes)"
+                if ! parse_config_file "$out_bin" ""; then
+                    exit 1
+                fi
             else
-                if ! parse_config_file "$CONFIG_FILE"; then
+                if ! parse_config_file "$CONFIG_FILE" "${OUTPUT_FILE:-}"; then
                     exit 1
                 fi
             fi
