@@ -2286,8 +2286,13 @@ class thermal_asic_sensor(system_device):
                     self.log.notice(None, id="{} value in {}".format(self.name, val_read_file))
 
                 if not self.is_crit_range_violation(value, self.get_hw_path(val_read_file)):
+                    # value is readable and in expected range
+                    self.fread_err.handle_err(self.get_hw_path(val_read_file), reset=True)
                     self.update_value(value)
                     self.validate_value_in_min_max_range(self.value, self.get_hw_path(val_read_file))
+                else:
+                    # value is not in expected range
+                    self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="crit range")
             except (ValueError, TypeError, OSError, IOError):
                 self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="value")
 
