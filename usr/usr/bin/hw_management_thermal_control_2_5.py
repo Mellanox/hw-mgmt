@@ -2842,7 +2842,7 @@ class fan_sensor(system_device):
                                                                                                                      rpm_diff,
                                                                                                                      rpm_diff_norm * 100))
                     if rpm_diff_norm >= self.rpm_tolerance:
-                        self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} pwm  {}".format(self.name,
+                        self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} @pwm {}".format(self.name,
                                                                                                                     tacho_idx,
                                                                                                                     rpm_real,
                                                                                                                     rpm_diff_norm * 100,
@@ -3000,7 +3000,11 @@ class fan_sensor(system_device):
             if CONST.TACHO not in self.mask_fault_list:
                 pwm = g_get_dmin(thermal_table, amb_tmp, [flow_dir, CONST.FAN_ERR, CONST.TACHO])
                 pwm_new = max(pwm, pwm_new)
-                self.log.warn("{} FAN tacho issue. Set tz_pwm {}".format(self.name, pwm_new))
+                self.log.warn("{} FAN tacho issue. Set tz_pwm {}".format(self.name, pwm_new),
+                              id="{} tacho".format(self.name),
+                              repeat=1)
+        else:
+            self.log.notice(None, id="{} tacho".format(self.name))
 
         # truth table for fan direction
         #  FAN_DIR SYS_DIR     ERROR
