@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -59,6 +59,10 @@ do_start_fast_sysfs_monitor()
     declare -A FOUND_FILES
     declare -A DEVICE_ADDED  # Track added devices per file name.
     ELAPSED=0
+
+    # Clear the ready file in case this is a service restart
+    [ -f "$FAST_SYSFS_MONITOR_RDY_FILE" ] && rm -f "$FAST_SYSFS_MONITOR_RDY_FILE"
+
     log_info "Monitoring ${TOTAL_FILES} files..."
     while (( ELAPSED < FAST_SYSFS_MONITOR_TIMEOUT )); do
     # Check and add missing devices from devtree_file.
@@ -131,7 +135,7 @@ case $FAST_SYSFS_MONITOR_ACTION in
     start)
         # Save the PID of the Fast Sysfs Monitor process.
         touch "$FAST_SYSFS_MONITOR_PID_FILE"
-        echo $! > "$FAST_SYSFS_MONITOR_PID_FILE"
+        echo $$ > "$FAST_SYSFS_MONITOR_PID_FILE"
         log_info "HW Mangement Fast Sysfs Monitor process created."
         do_start_fast_sysfs_monitor
     ;;
