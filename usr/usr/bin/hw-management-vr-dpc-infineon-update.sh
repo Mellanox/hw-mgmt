@@ -25,6 +25,8 @@ VERBOSE=0
 MODE=""
 # Flash only one section by HeaderCode (e.g. -s 0x0B); empty = flash all sections
 FLASH_SECTION_HC=""
+# Cached 4-byte scratchpad memory address from CMD_GET_SCRATCHPAD_ADDR (0x2e), e.g. 0x2005e000; set once per run.
+SCPAD_HEX_ADDR=""
 
 # When the kernel driver (e.g. xdpe1a2g7b) is bound, raw i2cget/i2cset cannot access the device.
 # We unbind the driver for verify/flash and rebind on exit.
@@ -108,6 +110,9 @@ FLASH MODE OPTIONS:
         -s <hc>         Flash only section(s) with this HeaderCode (e.g. -s 0x0B); parse full config, invalidate and upload only matching section(s)
         -n              Skip finalize (dry run): write to scratchpad only, do not upload to OTP or reset
         -v              Verbose: repeat for more (-v = verbose, -vv = debug)
+
+    After each scratchpad write, data is read back to <file>.scpad and compared; mismatch aborts flash.
+    For .txt/.mic flash: section .bin live in a temp dir during the run; after the section loop (including -n dry run) they are copied to <config_basename>_flash_work/ (.bin, .params, .scpad per flashed section). Direct -f *.bin keeps *.bin.scpad next to the .bin.
 
 SCAN MODE OPTIONS:
     -b <bus>            I2C bus number
@@ -348,6 +353,7 @@ get_scpad_addr() {
         local addr4
         addr4=$(echo "$full" | sed -n '2p')
         [ -n "$addr4" ] && log_info "Scratchpad: PMBus reg $result (for writes), 4-byte addr: $addr4" || log_info "Scratchpad: PMBus reg $result (for writes)"
+        SCPAD_HEX_ADDR="$addr4"
         return 0
     else
         log_warn "Controller did not return scratchpad address; default is MFR_SPECIFIC_00 (0xD0)"
@@ -488,7 +494,7 @@ check_dependencies() {
     log_debug "Checking dependencies..."
 
     local missing=0
-    for cmd in i2cdetect i2cget i2cset i2ctransfer; do
+    for cmd in i2cdetect i2cget i2cset i2ctransfer cmp; do
         if ! command -v $cmd &> /dev/null; then
             log_error "Required command not found: $cmd"
             missing=1
@@ -496,16 +502,14 @@ check_dependencies() {
     done
 
     if [ $missing -eq 1 ]; then
-        log_error "Please install i2c-tools package"
+        log_error "Install missing packages (e.g. i2c-tools, diffutils for cmp)"
         return 1
     fi
 
     HAS_MD5SUM=""
     HAS_SHA256SUM=""
-    HAS_CMP=""
     command -v md5sum &> /dev/null && HAS_MD5SUM=1
     command -v sha256sum &> /dev/null && HAS_SHA256SUM=1
-    command -v cmp &> /dev/null && HAS_CMP=1
 
     log_debug "All dependencies satisfied"
     return 0
@@ -1139,7 +1143,23 @@ bytes_to_little_endian_dwords() {
     echo "${out[@]}"
 }
 
-# Write data to scratchpad memory (AN001 6.3: RPTR + 0xDE). Requires 4-byte scratchpad address from get_scratchpad_address (0x2e).
+# Populate SCPAD_HEX_ADDR once via 0x2e; reuse on subsequent scratchpad ops in the same process.
+ensure_scpad_hex_addr() {
+    if [ -n "$SCPAD_HEX_ADDR" ]; then
+        return 0
+    fi
+    local scpad_full
+    scpad_full=$(get_scratchpad_address $I2C_BUS $DEVICE_ADDR 2>/dev/null) || true
+    local addr
+    addr=$(echo "$scpad_full" | sed -n '2p')
+    if [ -z "$addr" ]; then
+        return 1
+    fi
+    SCPAD_HEX_ADDR="$addr"
+    return 0
+}
+
+# Write data to scratchpad memory (AN001 6.3: RPTR + 0xDE). Uses cached SCPAD_HEX_ADDR from 0x2e.
 write_to_scratchpad() {
     local data_file=$1
 
@@ -1155,11 +1175,7 @@ write_to_scratchpad() {
     [ -z "$file_size" ] && file_size=0
     log_info "Configuration file size: $file_size bytes"
 
-    local scpad_full
-    scpad_full=$(get_scratchpad_address $I2C_BUS $DEVICE_ADDR 2>/dev/null) || true
-    local scpad_addr_hex
-    scpad_addr_hex=$(echo "$scpad_full" | sed -n '2p')
-    if [ -z "$scpad_addr_hex" ]; then
+    if ! ensure_scpad_hex_addr; then
         log_error "Scratchpad address not available (get_scratchpad_address failed). Device may not support 0x2e."
         return 1
     fi
@@ -1182,8 +1198,8 @@ write_to_scratchpad() {
         num_dwords=$((num_dwords + 1))
     fi
 
-    log_info "Using AN001 6.3: RPTR (0xCE) + MFR_REG_WRITE (0xDE), scratchpad addr $scpad_addr_hex"
-    set_rptr $I2C_BUS $DEVICE_ADDR $((scpad_addr_hex)) || return 1
+    log_info "Using AN001 6.3: RPTR (0xCE) + MFR_REG_WRITE (0xDE), scratchpad addr $SCPAD_HEX_ADDR"
+    set_rptr $I2C_BUS $DEVICE_ADDR $((SCPAD_HEX_ADDR)) || return 1
     log_info "Writing $num_dwords DWORD(s) to 0xDE (w6: reg 0xDE + 0x04 + 4 bytes)..."
     local d
     for ((d=0; d<num_dwords; d++)); do
@@ -1201,6 +1217,72 @@ write_to_scratchpad() {
     echo ""
     log_info "Scratchpad write completed"
     return 0
+}
+
+# Read back scratchpad (AN001 6.3: RPTR + MFR_REG_READ 0xDF). Uses only data_file name and its byte size:
+# output .scpad is exactly that many bytes (DWORD reads from device, then truncate to file size).
+read_from_scratchpad() {
+    local data_file=$1
+    local out_file="${2:-${data_file}.scpad}"
+
+    if [ ! -f "$data_file" ]; then
+        log_error "read_from_scratchpad: file not found: $data_file"
+        return 1
+    fi
+
+    local file_size
+    file_size=$(wc -c < "$data_file" | tr -d '[:space:]')
+    [ -z "$file_size" ] && file_size=0
+
+    if ! ensure_scpad_hex_addr; then
+        log_error "read_from_scratchpad: scratchpad address not available"
+        return 1
+    fi
+
+    if [ "$file_size" -eq 0 ]; then
+        : > "$out_file" || return 1
+        log_info "Scratchpad readback: empty $out_file (0 bytes)"
+        return 0
+    fi
+
+    local num_dwords=$(( (file_size + 3) / 4 ))
+    local read_bytes=$((num_dwords * 4))
+
+    log_info "Reading scratchpad $file_size bytes -> $out_file (from $read_bytes device DWORDs)"
+    i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_SCRATCHPAD_WRITE || return 1
+    set_rptr $I2C_BUS $DEVICE_ADDR $((SCPAD_HEX_ADDR)) || return 1
+    local tmp
+    tmp=$(mktemp) || return 1
+    if ! read_otp_bytes_to_file $I2C_BUS $DEVICE_ADDR $read_bytes "$tmp"; then
+        rm -f "$tmp"
+        log_error "Scratchpad readback failed"
+        return 1
+    fi
+    head -c "$file_size" "$tmp" > "$out_file" || { rm -f "$tmp"; return 1; }
+    rm -f "$tmp"
+    log_info "Scratchpad readback saved ($file_size bytes)"
+    return 0
+}
+
+# Compare source file to .scpad (same size).
+verify_scratchpad_readback() {
+    local data_file=$1
+    local scpad_file="${2:-${data_file}.scpad}"
+
+    if [ ! -f "$scpad_file" ]; then
+        log_error "verify_scratchpad_readback: missing $scpad_file"
+        return 1
+    fi
+
+    if cmp -s "$data_file" "$scpad_file"; then
+        log_info "Scratchpad verify OK: $data_file matches readback"
+        return 0
+    fi
+    log_error "Scratchpad mismatch: written data differs from $scpad_file"
+    local diff_sample
+    diff_sample=$(cmp -l "$data_file" "$scpad_file" 2>/dev/null | head -10) || true
+    [[ -n "$diff_sample" ]] && log_error "First differing bytes (cmp -l): $diff_sample"
+    return 1
 }
 
 # Upload data from scratchpad to OTP (AN001 6.4). Error handling per AN001 6.5: check PMBus STATUS_CML (0x7e) after upload; only bit[0] is analyzed.
@@ -1317,7 +1399,11 @@ program_device() {
     check_otp_space || return 1
     echo ""
 
-    log_warn "This will invalidate current OTP and program the new configuration (irreversible; effectively overwrites active config)."
+    if [ $DRY_RUN -eq 0 ]; then
+        log_warn "This will invalidate current OTP and program the new configuration (irreversible; effectively overwrites active config)."
+    else
+        log_info "DRY_RUN (-n): scratchpad write/readback only; OTP upload and finalize skipped."
+    fi
     local confirm=""
     read -r -p "Continue? (yes/no): " confirm || {
         log_error "Failed to read user input (non-interactive environment?)"
@@ -1367,8 +1453,12 @@ program_device() {
             section_bins=("${section_bins_filtered[@]}")
             log_info "Flashing only section(s) with HC=0x$(printf '%02x' $requested_hc) (${#section_bins[@]} section(s))"
         else
-            # AN-001 6.2.1: invalidate all existing OTP before full reprogramming
-            invalidate_otp 1 || return 1
+            # AN-001 6.2.1: invalidate all existing OTP before full reprogramming (skip in -n dry run)
+            if [ $DRY_RUN -eq 0 ]; then
+                invalidate_otp 1 || return 1
+            else
+                log_info "DRY_RUN (-n): skipping full OTP invalidate before scratchpad test"
+            fi
         fi
         echo ""
 
@@ -1395,6 +1485,14 @@ program_device() {
                 rm -rf "$config_bin_temp"
                 return 1
             }
+            read_from_scratchpad "$flash_file" || {
+                rm -rf "$config_bin_temp"
+                return 1
+            }
+            verify_scratchpad_readback "$flash_file" || {
+                rm -rf "$config_bin_temp"
+                return 1
+            }
             echo ""
             section_params_file="${flash_file%.bin}.params"
             if [ $DRY_RUN -eq 0 ]; then
@@ -1409,9 +1507,22 @@ program_device() {
             fi
             echo ""
         done
+        # Persist section .bin, .params, and scratchpad readback (.scpad) — temp dir is removed below.
+        if [[ -n "$config_bin_temp" ]]; then
+            local artifact_dir="${CONFIG_FILE%.*}_flash_work"
+            mkdir -p "$artifact_dir" || true
+            for flash_file in "${section_bins[@]}"; do
+                [[ -f "$flash_file" ]] && cp -f "$flash_file" "$artifact_dir"/
+                [[ -f "${flash_file}.scpad" ]] && cp -f "${flash_file}.scpad" "$artifact_dir"/
+                [[ -f "${flash_file%.bin}.params" ]] && cp -f "${flash_file%.bin}.params" "$artifact_dir"/
+            done
+            log_info "Flashed section files saved under: $artifact_dir (section .bin, .params, .scpad readback; same with -n dry run)"
+        fi
     else
         flash_file="$CONFIG_FILE"
         write_to_scratchpad "$flash_file" || return 1
+        read_from_scratchpad "$flash_file" || return 1
+        verify_scratchpad_readback "$flash_file" || return 1
         echo ""
         if [ $DRY_RUN -eq 0 ]; then
             upload_scratchpad_to_otp "" "$flash_file" || return 1
@@ -2015,16 +2126,14 @@ compare_configs() {
         echo ""
     fi
 
-    if [ -n "${HAS_CMP}" ]; then
-        echo "Byte Comparison:"
-        if cmp -s "$file1" "$file2"; then
-            log_info "Files are identical (byte-by-byte)"
-        else
-            log_warn "Files differ"
-            echo ""
-            echo "First difference:"
-            cmp -l "$file1" "$file2" | head -5
-        fi
+    echo "Byte Comparison:"
+    if cmp -s "$file1" "$file2"; then
+        log_info "Files are identical (byte-by-byte)"
+    else
+        log_warn "Files differ"
+        echo ""
+        echo "First difference:"
+        cmp -l "$file1" "$file2" | head -5
     fi
 
     return 0
