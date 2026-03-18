@@ -480,6 +480,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: TC _exit_wait (stop timeout)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Python Syntax',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
