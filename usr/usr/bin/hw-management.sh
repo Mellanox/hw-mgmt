@@ -2747,6 +2747,13 @@ sn68xxld_specific()
 		i2c_asic_bus_default=5
 		hotplug_pdbs=1
 		;;
+	# SN6800_LD
+	HI192|HI187|HI188)
+		cpld_num=10
+		leakage_count=5
+		asic_i2c_buses=(4 20 36 52)
+		hotplug_pdbs=4
+		;;
 	esac
 
 	echo 0 > $config_path/i2c_bus_offset
@@ -3317,7 +3324,7 @@ set_asic_pci_id()
 	HI193)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
-	HI183|HI195)
+	HI183|HI195|HI188|HI192)
 		asic_pci_id="${spc6_pci_id}"
 		;;
 	*)
@@ -3644,6 +3651,16 @@ pre_devtr_init()
 			echo 16 > "$config_path"/swb_brd_vr_num
 			echo 1 >  "$config_path"/pwr_brd_num
 			echo 1 >  "$config_path"/pwr_brd_bus_offset
+			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
+			echo 1 >  "$config_path"/pwr_brd_hotswap_num
+			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+			;;
+		HI192|HI187|HI188)
+			echo 4 >  "$config_path"/swb_brd_num
+			echo 16 > "$config_path"/swb_brd_bus_offset
+			echo 16 > "$config_path"/swb_brd_vr_num
+			echo 4 >  "$config_path"/pwr_brd_num
+			echo 16 > "$config_path"/pwr_brd_bus_offset
 			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
 			echo 1 >  "$config_path"/pwr_brd_hotswap_num
 			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
