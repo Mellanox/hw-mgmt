@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Test Runner for hw-mgmt
 #
@@ -462,6 +462,11 @@ class TestRunner:
             {
                 'name': 'Pytest: Thermal Updater',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_updater.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: Fan _validate_rpm',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_fan_validate_rpm.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
