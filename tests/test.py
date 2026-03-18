@@ -475,6 +475,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: start-post TC flags (Bug 4929286)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Python Syntax',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
