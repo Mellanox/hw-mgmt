@@ -480,6 +480,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: Fan _validate_rpm',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_fan_validate_rpm.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Python Syntax',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
