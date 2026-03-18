@@ -2241,6 +2241,9 @@ class fan_sensor(system_device):
         self.insert_failed = False
         self.insert_event = False
 
+        # FAN tacho state. True - ok, False - error
+        self.fan_tacho_state = True
+
     # ----------------------------------------------------------------------
     def sensor_configure(self):
         """
@@ -2417,7 +2420,18 @@ class fan_sensor(system_device):
     # ----------------------------------------------------------------------
     def _validate_rpm(self):
         """
+        Validate FAN RPM against expected speed for current PWM.
+
+        Returns:
+            True:  FAN PWM stabilized and speed as expected; or current PWM
+                   below trend minimum (pwm_curr < pwm_min), no RPM trend check.
+            False: PWM read error; or fan speed abnormal (out of range or
+                   wrong vs calculated); or PWM stabilized but speed wrong.
+            Previous state (cached fan_tacho_state): when PWM not yet
+            stabilized (relax time not elapsed or read PWM != set PWM).
         """
+        # FAN tacho state. True - ok, False - error
+        fan_tacho_state = True
         pwm_curr = self.read_pwm()
         if not pwm_curr:
             self.fread_err.handle_err(self.get_hw_path("thermal/pwm1"), cause="missing")
@@ -2451,7 +2465,8 @@ class fan_sensor(system_device):
                                                                             rpm_real,
                                                                             rpm_min,
                                                                             rpm_max))
-                return False
+                fan_tacho_state = False
+                break
 
              # 2. Check fan trend
             if pwm_curr >= pwm_min:
@@ -2479,8 +2494,21 @@ class fan_sensor(system_device):
                                                                                                                     rpm_diff_norm * 100,
                                                                                                                     rpm_calculated,
                                                                                                                     pwm_curr))
-                        return False
-        return True
+                        # If any tacho is in error, set fan_tacho_state to False
+                        fan_tacho_state = False
+                        break
+                else:
+                    # If FAN not stabilized yet - use cached state
+                    fan_tacho_state = self.fan_tacho_state
+            else:
+                # if PWM < pwm_min - set  True (do not check RPM)
+                # We never expect to be here, but just in case
+                fan_tacho_state = True
+                continue
+
+        # Update FAN tacho state
+        self.fan_tacho_state = fan_tacho_state
+        return fan_tacho_state
 
     # ----------------------------------------------------------------------
     def set_pwm(self, pwm_val, force=False):
