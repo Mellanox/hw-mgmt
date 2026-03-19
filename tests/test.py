@@ -470,6 +470,11 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: TC 2.5 ASIC fread reset (1c294f7)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_asic_fread_reset.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Python Syntax',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir
