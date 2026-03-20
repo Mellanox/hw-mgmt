@@ -222,3 +222,6 @@ if [ $tc_should_reload -eq 1 ] ||
 	# to run it in the background to avoid blocking the startup process.
 	nohup bash -c "$cmd_line echo thermal control service configured" &>/dev/null &
 fi
+
+
+# WA for fanX_dir_missing issue

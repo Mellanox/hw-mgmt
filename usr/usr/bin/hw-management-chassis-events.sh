@@ -522,7 +522,6 @@ function set_fan_direction_for_all_fans()
 			fi
 		fi
 	done
-	rm -f "$config_path"/fan_status_ready || true
 }
 
 # Get FAN direction based on VPD PN field
@@ -1177,14 +1176,7 @@ if [ "$1" == "add" ]; then
 		fi
 
 		# Set fan direction for all fans.
-		# Wait for fan status attributes to be created (indicated by fan_status_ready flag).
-		if [ -f "$config_path"/fan_status_ready ] && [ "$(< "$config_path"/fan_status_ready)" -eq 1 ]; then
-			set_fan_direction_for_all_fans
-		else
-			# Fan status attributes are not created yet, postpone fan dir initialization in background by 5 seconds.
-			nohup bash -c 'sleep 5 && source hw-management-chassis-events.sh && set_fan_direction_for_all_fans' >/dev/null 2>&1 &
-		fi
-		rm -f "$config_path"/fan_status_ready || true
+		set_fan_direction_for_all_fans
 
 		# Handle linecard.
 		if [ "$linecard" -ne 0 ]; then
