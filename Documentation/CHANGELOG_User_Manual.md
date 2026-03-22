@@ -1,11 +1,53 @@
 # User Manual Changelog
 
-**Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.1.md  
-**Last Updated:** January 14, 2026
+**Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
+**Last Updated:** March 22, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2 (SN66XX_LD) - March 22, 2026
+
+#### Added: SN6600_LD platform documentation
+
+**Affected platforms:** SN66XX_LD family (SN6600_LD)  
+**Platform SKU:** HI193 (`hw-management.sh` `sn66xxld_specific`)  
+**ASIC:** 1 (single ASIC, `config/asic_num` = 1 on validated tree)  
+**CPU type:** AMD
+
+**Overview:**  
+Documented the SN6600_LD liquid-cooled switch: dual hot-plug PDBs
+(`pdb_hotswap1/2`, `pdb_pwr_conv1/2`), 19 ASIC `voltmon` sysfs indexes on the
+captured tree (`voltmon1`-`14`, `voltmon16`-`20`; no `voltmon15` symlink),
+SODIMM JC42 sensors at **0x52** and **0x53** on I2C bus **10**, PDB events
+`pdb1`/`pdb2`, watchdog layout under `watchdog/main/` and `watchdog/aux/`, and
+how `config/leakage_counter` (**2**) relates to optional extra `system/leakage*`
+symlinks in the validated tree.
+
+**New file:**
+
+| File | Description |
+|------|-------------|
+| `Documentation/SN6600_LD_Hardware_Interfaces.md` | Hardware sysfs and sensors reference |
+
+**User manual updates (cross-cutting):**
+
+| Area | Change |
+|------|--------|
+| Liquid-cooled applicability | Extended notes to include SN66XX_LD / SN6600_LD |
+| `config/hotplug_pdbs` | Documented SN6600_LD = 2 and `events/pdb1` / `pdb2` |
+| PDB power converter sections | SN6600_LD examples using `pdb_pwr_conv1` and `pdb_pwr_conv2` |
+| SODIMM thermal | SN6600_LD I2C bus 10, addresses 0x52 / 0x53 |
+| ASIC health | Note single-ASIC SN6600_LD (no `asic2_health`..`asic4_health`) |
+| Watchdog | Note `watchdog/main` and `watchdog/aux` paths for SN6600_LD |
+
+**Validation source:**
+
+- `tests/system_tree/hw-management-tree-SN6600_LD.txt`
+- `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`
+
+---
 
 ### Rev. 3.1 (V.7.0060.1000) - January 14, 2026
 
