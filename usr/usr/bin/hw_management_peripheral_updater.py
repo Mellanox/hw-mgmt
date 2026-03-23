@@ -214,8 +214,7 @@ def monitor_asic_chipup_status(arg, _dummy):
     without processing temperature values.
 
     @param arg: Dictionary with ASIC configuration in format:
-                {"asic": {"fin": "/path/to/asic0/"},
-                 "asic1": {"fin": "/path/to/asic0/"},
+                {"asic1": {"fin": "/path/to/asic0/"},
                  "asic2": {"fin": "/path/to/asic1/"}}
     @param _dummy: Unused parameter (for interface compatibility with update functions)
 
