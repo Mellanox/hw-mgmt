@@ -2720,7 +2720,6 @@ sn5640_specific()
 		;;
 	esac
 
-	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
 	named_busses+=(${sn5640_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
