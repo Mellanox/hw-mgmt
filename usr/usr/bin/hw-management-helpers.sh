@@ -1116,3 +1116,33 @@ set_sodimm_temp_limits()
 
 	return 0
 }
+
+# Print function trace to the log file(s)
+# log file is in /var/log/hw-mgmt.trace.log. Log rotation: maximum 3 rotated files, 2 MiB each (see logrotate).
+# log rotation is implemented by logrotate. See configuration file /etc/logrotate.d/hw-mgmt-trace
+# Arguments:
+# $1 - script name
+# $2 - function name
+# $3 - arguments (optional). Type: string.
+print_function_call() {
+	local script_name
+	local function_name
+	local argument
+	local TS LOG_FILE
+	local PID
+
+	script_name="${1##*/}" # Script name
+	function_name="$2" # Function name
+	argument="$3" # Arguments
+	PID="$$" # Process ID
+	# TS format is %Y_%m_%d_%H-%M-%S.%3N (23 chars).
+	TS="$(date +'%Y_%m_%d_%H-%M-%S.%3N')" # Timestamp
+	LOG_FILE="/var/log/hw-mgmt.trace.log" # Log file
+
+	printf "%s(%s) [%s]: %s %s\n" \
+		"$script_name" \
+		"$PID" \
+		"$TS" \
+		"$function_name" \
+		"$argument" >> "$LOG_FILE"
+}
