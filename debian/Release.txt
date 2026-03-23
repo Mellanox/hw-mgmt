@@ -1,4 +1,38 @@
 ================================================================================
+- V.7.0060.0932
+- Mon, 23 Mar 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, docs: Chassis sysfs user manual rev 3.2 and SN6600_LD reference, ad2dff8
+    o #4932754, hw-mgmt: thermal: unittests: PWM jumps on fan speed fail, e26c8aa
+    o #4932754, hw-mgmt: thermal: PWM jumps on fan speed fail, 822e76f
+    o #4931015, hw-mgmt: thermal: Fix TC logging - missing "FAN tacho issue" log message, ea72b37
+    o #4931215, hw-mgmt: thermal: unittests: Fix PWM too high on ASIC read error, 3e15080
+    o #4929286, hw-mgmt: thermal: unittests: Fix TC start issue on firstboot, eb3d850
+    o #4931215, hw-mgmt: thermal: unittests: Fix PWM too high on ASIC read error, b8ce31d
+    o #4931215, hw-mgmt: thermal: Fix PWM too high on ASIC read error, 6e78555
+    o #4879247, hw-mgmt: thermal: Fix TC stop timeout (SIGTERM not handled in time), 24aa808
+    o #4929286, hw-mgmt: scripts: Fix TC start issue on firstboot, 7403c85
+    o #4840120, hw-mgmt: scripts: Fix initial timestamps of sysfs monitor service, f12aa63
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.0932/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.0931
 - Sun, 15 Mar 2026
 --------------------------------------------------------------------------------
