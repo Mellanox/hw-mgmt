@@ -94,6 +94,7 @@ fi
 [ -f /var/log/hw_management_sync_log ] && cp /var/log/hw_management_sync_log* $DUMP_FOLDER/
 [ -f /var/log/chipup_i2c_trace_log ] && cp /var/log/chipup_i2c_trace_* $DUMP_FOLDER/
 [ -f /var/log/udev_events.log ] && cp -a /var/log/udev* $DUMP_FOLDER/
+[ -f /var/log/hw-mgmt.trace.log ] && cp -a /var/log/hw-mgmt.trace* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw_mgmt_cpldreg.log ] && cp /var/log/hw_mgmt_cpldreg.log $DUMP_FOLDER/
 uname -a > $DUMP_FOLDER/sys_version
 mkdir $DUMP_FOLDER/bin/
