@@ -1,0 +1,1028 @@
+/var/run/hw-management/:
+total 8
+drwxr-xr-x 15 root root  360 Jan 15 12:47 .
+drwxr-xr-x 24 root root  860 Jan 15 13:16 ..
+drwxr-xr-x  2 root root 3500 Jan 15 12:47 alarm
+drwxr-xr-x  2 root root   80 Jan 15 12:47 bin
+drwxr-xr-x  3 root root  800 Jan 15 12:47 config
+drwxr-xr-x  2 root root  120 Jan 15 12:47 eeprom
+drwxr-xr-x  2 root root 9960 Jan 15 12:47 environment
+drwxr-xr-x  2 root root  120 Jan 15 12:47 events
+-rw-r--r--  1 root root    6 Jan 15 12:47 fast_sysfs_labels_rdy
+drwxr-xr-x  2 root root   40 Jan 15 12:47 firmware
+drwxr-xr-x  2 root root  140 Jan 15 12:47 jtag
+drwxr-xr-x  2 root root  620 Jan 15 12:47 led
+drwxr-xr-x  2 root root   80 Jan 15 12:47 power
+-rw-r--r--  1 root root    6 Jan 15 12:47 sysfs_labels_rdy
+drwxr-xr-x  2 root root 1180 Jan 15 12:47 system
+drwxr-xr-x  2 root root 2080 Jan 15 12:47 thermal
+-rw-r--r--  1 root root    0 Jan 15 12:47 .udev_ready
+drwxr-xr-x  4 root root   80 Jan 15 12:47 watchdog
+
+/var/run/hw-management/alarm:
+total 0
+drwxr-xr-x  2 root root 3500 Jan 15 12:47 .
+drwxr-xr-x 15 root root  360 Jan 15 12:47 ..
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 comex_voltmon1_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr1_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 comex_voltmon1_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr2_crit_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 comex_voltmon1_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/in1_crit_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 comex_voltmon1_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/in2_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 comex_voltmon1_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/temp1_crit_alarm
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_curr1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/curr1_alarm
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/curr2_alarm
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/curr5_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 comex_voltmon2_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in1_crit_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 comex_voltmon2_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in2_crit_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 comex_voltmon2_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in3_crit_alarm
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 comex_voltmon2_power1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/power1_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 comex_voltmon2_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/temp1_crit_alarm
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 comex_voltmon2_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/temp1_max_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 pdb_hotswap1_curr1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/curr1_max_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 pdb_hotswap1_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in1_max_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 pdb_hotswap1_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in3_min_alarm
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_hotswap1_power1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/power1_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_hotswap1_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/temp1_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 pdb_hotswap1_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/temp1_max_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 pdb_hotswap2_curr1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/curr1_max_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 pdb_hotswap2_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in1_max_alarm
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 pdb_hotswap2_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in3_min_alarm
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_hotswap2_power1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/power1_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_hotswap2_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/temp1_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 pdb_hotswap2_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/temp1_max_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_pwr_conv1_curr1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_pwr_conv1_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr2_crit_alarm
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 pdb_pwr_conv1_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in1_crit_alarm
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 pdb_pwr_conv1_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in3_crit_alarm
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_pwr_conv1_power1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/power1_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_pwr_conv1_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/temp1_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 pdb_pwr_conv1_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/temp1_max_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_pwr_conv2_curr1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_pwr_conv2_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr2_crit_alarm
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 pdb_pwr_conv2_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in1_crit_alarm
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 pdb_pwr_conv2_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in3_crit_alarm
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_pwr_conv2_power1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/power1_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 pdb_pwr_conv2_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/temp1_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 pdb_pwr_conv2_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon10_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon10_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon10_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon10_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon10_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon10_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon10_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon11_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon11_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon11_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon11_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon11_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon11_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon11_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon12_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon12_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon12_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon12_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon12_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon12_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon12_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon13_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon13_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon13_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon13_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon13_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon13_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon13_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon14_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon14_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon14_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon14_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon14_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon14_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon14_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon16_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon16_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon16_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon16_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon16_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon16_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon16_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon17_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon17_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon17_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon17_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon17_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon17_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon17_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon18_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon18_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon18_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon18_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon18_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon18_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon18_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon19_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon19_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon19_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon19_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon19_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon19_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon19_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/temp1_max_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon1_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr3_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon1_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr4_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 voltmon1_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in1_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 voltmon1_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in2_crit_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 voltmon1_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in3_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon1_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/temp1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon1_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon20_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon20_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon20_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon20_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon20_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon20_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon20_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon2_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon2_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon2_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon2_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon2_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon2_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon2_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon3_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon3_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon3_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon3_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon3_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon3_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon3_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon4_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon4_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon4_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon4_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon4_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon4_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon4_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon5_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon5_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon5_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon5_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon5_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon5_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon5_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon6_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon6_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon6_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon6_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon6_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon6_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon6_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon7_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon7_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon7_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon7_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon7_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon7_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon7_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon8_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon8_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon8_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon8_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon8_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon8_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon8_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/temp1_max_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon9_curr2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon9_curr3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr4_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon9_in1_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon9_in2_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in2_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 voltmon9_in3_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in3_crit_alarm
+lrwxrwxrwx  1 root root   85 Jan 15 12:47 voltmon9_temp1_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/temp1_crit_alarm
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 voltmon9_temp1_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/temp1_max_alarm
+
+/var/run/hw-management/bin:
+total 36
+drwxr-xr-x  2 root root    80 Jan 15 12:47 .
+drwxr-xr-x 15 root root   360 Jan 15 12:47 ..
+-rwxr-xr-x  1 root root 16847 Jan 15 12:47 hw_management_dpu_thermal_update.py
+-rwxr-xr-x  1 root root 12480 Jan 15 12:47 hw_management_independent_mode_update.py
+
+/var/run/hw-management/config:
+total 144
+drwxr-xr-x  3 root root 800 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+-rw-r--r--  1 root root   1 Jan 15 12:47 asic1_pci_bus_id
+-rw-r--r--  1 root root   2 Jan 15 12:47 asic_chipup_counter
+-rw-r--r--  1 root root   2 Jan 15 12:47 asic_control
+-rw-r--r--  1 root root   2 Jan 15 12:47 asic_num
+-rw-r--r--  1 root root   2 Jan 15 12:47 chipdown_delay
+-rw-r--r--  1 root root   2 Jan 15 12:47 chipup_delay
+-rw-r--r--  1 root root   2 Jan 15 12:47 cpld_num
+-rw-r--r--  1 root root   7 Jan 15 12:47 cpu_type
+-rw-r--r--  1 root root 836 Jan 15 12:47 devtree
+-rw-r--r--  1 root root   2 Jan 15 12:47 dummy_psus_supported
+drwxr-xr-x  2 root root  40 Jan 15 12:47 dynamic_boards
+-rw-r--r--  1 root root   2 Jan 15 12:47 events_ready
+-rw-r--r--  1 root root   2 Jan 15 12:47 fan_drwr_num
+-rw-r--r--  1 root root   3 Jan 15 12:47 fan_speed_tolerance
+-rw-r--r--  1 root root   2 Jan 15 12:47 gearbox_counter
+-rw-r--r--  1 root root   2 Jan 15 12:47 hotplug_fans
+-rw-r--r--  1 root root   2 Jan 15 12:47 hotplug_linecards
+-rw-r--r--  1 root root   2 Jan 15 12:47 hotplug_pdbs
+-rw-r--r--  1 root root   2 Jan 15 12:47 hotplug_psus
+-rw-r--r--  1 root root   2 Jan 15 12:47 hotplug_pwrs
+-rw-r--r--  1 root root   2 Jan 15 12:47 i2c_bus_def_off_eeprom_cpu
+-rw-r--r--  1 root root   2 Jan 15 12:47 i2c_bus_offset
+-rw-r--r--  1 root root   2 Jan 15 12:47 i2c_comex_mon_bus_default
+-rw-r--r--  1 root root   7 Jan 15 12:47 jtag_ro_reg
+-rw-r--r--  1 root root   7 Jan 15 12:47 jtag_rw_reg
+-rw-r--r--  1 root root   2 Jan 15 12:47 leakage_counter
+lrwxrwxrwx  1 root root  48 Jan 15 12:47 lm_sensors_config -> /etc/hw-management-sensors/sn66xxld_sensors.conf
+-rw-r--r--  1 root root   2 Jan 15 12:47 minimal_unsupported
+-rw-r--r--  1 root root   2 Jan 15 12:47 module_counter
+-rw-r--r--  1 root root  50 Jan 15 12:47 named_busses
+-rw-r--r--  1 root root   2 Jan 15 12:47 pwr_brd_bus_offset
+-rw-r--r--  1 root root   2 Jan 15 12:47 pwr_brd_hotswap_num
+-rw-r--r--  1 root root   2 Jan 15 12:47 pwr_brd_num
+-rw-r--r--  1 root root   2 Jan 15 12:47 pwr_brd_pwr_conv_num
+-rw-r--r--  1 root root   2 Jan 15 12:47 pwr_brd_temp_sens_num
+-rw-r--r--  1 root root   1 Jan 15 12:47 reset_attr_num
+-rw-r--r--  1 root root  61 Jan 15 12:47 tc_config.json
+-rw-r--r--  1 root root   3 Jan 15 12:47 thermal_delay
+
+/var/run/hw-management/config/dynamic_boards:
+total 0
+drwxr-xr-x 2 root root  40 Jan 15 12:47 .
+drwxr-xr-x 3 root root 800 Jan 15 12:47 ..
+
+/var/run/hw-management/eeprom:
+total 8
+drwxr-xr-x  2 root root  120 Jan 15 12:47 .
+drwxr-xr-x 15 root root  360 Jan 15 12:47 ..
+-rw-r--r--  1 root root  650 Jan 15 12:47 swb_data
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 swb_info -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-24/24-0051/eeprom
+-rw-r--r--  1 root root 1830 Jan 15 12:47 vpd_data
+lrwxrwxrwx  1 root root   53 Jan 15 12:47 vpd_info -> /sys/devices/platform/AMDI0010:01/i2c-1/1-0051/eeprom
+
+/var/run/hw-management/environment:
+total 0
+drwxr-xr-x  2 root root 9960 Jan 15 12:47 .
+drwxr-xr-x 15 root root  360 Jan 15 12:47 ..
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 comex_voltmon1_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr1_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon1_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr1_input
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon1_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr1_max
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 comex_voltmon1_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr2_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon1_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr2_input
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon1_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/curr2_max
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon1_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/in1_input
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon1_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/in2_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/curr1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/curr2_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/curr5_input
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 comex_voltmon2_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in1_crit
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon2_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in1_input
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 comex_voltmon2_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in2_crit
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon2_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in2_input
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon2_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in2_lcrit
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 comex_voltmon2_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in3_crit
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon2_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in3_input
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon2_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/in3_lcrit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 comex_voltmon2_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/power1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 comex_voltmon2_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/power2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 comex_voltmon2_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/power3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_hotswap1_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/curr1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap1_curr1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/curr1_max
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap1_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in1_max
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap1_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in1_input
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap1_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in1_min
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap1_in1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in1_max
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap1_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in1_min
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap1_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in3_input
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap1_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in3_min
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap1_in2_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/in3_min
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_hotswap1_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/power1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_hotswap1_power1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/power1_max
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_hotswap2_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/curr1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap2_curr1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/curr1_max
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap2_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in1_max
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap2_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in1_input
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap2_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in1_min
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap2_in1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in1_max
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap2_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in1_min
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap2_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in3_input
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap2_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in3_min
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_hotswap2_in2_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/in3_min
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_hotswap2_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/power1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_hotswap2_power1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/power1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_pwr_conv1_curr1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv1_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_curr1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_pwr_conv1_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv1_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr2_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/curr2_max
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 pdb_pwr_conv1_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in1_crit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in1_lcrit
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_pwr_conv1_in1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in1_max
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_pwr_conv1_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in1_min
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 pdb_pwr_conv1_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in3_crit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in3_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/in3_lcrit
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_pwr_conv1_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/power1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_pwr_conv1_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/power2_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_pwr_conv2_curr1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv2_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_curr1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_pwr_conv2_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv2_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr2_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/curr2_max
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 pdb_pwr_conv2_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in1_crit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in1_lcrit
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_pwr_conv2_in1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in1_max
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pdb_pwr_conv2_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in1_min
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 pdb_pwr_conv2_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in3_crit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in3_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/in3_lcrit
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_pwr_conv2_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/power1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 pdb_pwr_conv2_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/power2_input
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon10_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon10_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon10_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon10_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon10_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon10_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon10_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon10_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon10_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon10_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon10_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon10_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon10_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon10_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon11_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon11_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon11_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon11_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon11_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon11_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon11_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon11_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon11_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon11_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon11_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon11_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon11_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon11_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon12_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon12_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon12_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon12_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon12_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon12_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon12_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon12_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon12_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon12_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon12_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon12_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon12_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon12_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon13_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon13_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon13_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon13_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon13_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon13_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon13_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon13_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon13_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon13_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon13_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon13_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon13_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon13_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon14_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon14_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon14_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon14_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon14_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon14_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon14_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon14_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon14_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon14_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon14_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon14_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon14_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon14_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon16_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon16_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon16_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon16_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon16_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon16_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon16_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon16_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon16_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon16_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon16_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon16_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon16_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon16_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon17_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon17_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon17_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon17_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon17_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon17_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon17_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon17_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon17_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon17_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon17_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon17_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon17_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon17_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon18_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon18_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon18_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon18_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon18_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon18_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon18_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon18_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon18_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon18_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon18_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon18_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon18_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon18_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon19_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon19_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon19_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon19_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon19_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon19_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon19_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon19_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon19_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon19_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon19_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon19_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon19_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon19_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/power4_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon1_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon1_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr3_crit
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon1_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr3_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr3_max
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon1_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr4_crit
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon1_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr4_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/curr4_max
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon1_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in1_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in1_lcrit
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 voltmon1_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in1_min
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon1_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in2_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in2_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in2_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon1_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in3_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in3_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/in3_lcrit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon1_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/power1_input
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon1_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/power3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon1_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/power3_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon1_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/power4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon1_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon20_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon20_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon20_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon20_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon20_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon20_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon20_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon20_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon20_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon20_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon20_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon20_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon20_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon20_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon2_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon2_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon2_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon2_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon2_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon2_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon2_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon2_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon2_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon2_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon2_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon2_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon2_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon2_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon3_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon3_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon3_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon3_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon3_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon3_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon3_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon3_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon3_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon3_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon3_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon3_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon3_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon3_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon4_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon4_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon4_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon4_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon4_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon4_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon4_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon4_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon4_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon4_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon4_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon4_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon4_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon4_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon5_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon5_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon5_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon5_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon5_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon5_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon5_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon5_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon5_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon5_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon5_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon5_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon5_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon5_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon6_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon6_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon6_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon6_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon6_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon6_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon6_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon6_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon6_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon6_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon6_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon6_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon6_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon6_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon7_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon7_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon7_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon7_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon7_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon7_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon7_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon7_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon7_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon7_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon7_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon7_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon7_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon7_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon8_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon8_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon8_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon8_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon8_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon8_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon8_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon8_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon8_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon8_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon8_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon8_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon8_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon8_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/power4_max
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon9_curr1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr1_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon9_curr2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr3_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon9_curr2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_curr2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr3_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon9_curr3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr4_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon9_curr3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr4_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_curr3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/curr4_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon9_in1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_in1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_in1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 voltmon9_in1_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in1_min
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon9_in2_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in2_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_in2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in2_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_in2_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in2_lcrit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon9_in3_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in3_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_in3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in3_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_in3_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/in3_lcrit
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon9_power1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/power1_input
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon9_power2_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/power3_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon9_power2_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/power3_max
+lrwxrwxrwx  1 root root   81 Jan 15 12:47 voltmon9_power3_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/power4_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon9_power3_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/power4_max
+
+/var/run/hw-management/events:
+total 16
+drwxr-xr-x  2 root root 120 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+-rw-r--r--  1 root root   2 Jan 15 12:47 leakage1
+-rw-r--r--  1 root root   2 Jan 15 12:47 leakage2
+-rw-r--r--  1 root root   2 Jan 15 12:47 pdb1
+-rw-r--r--  1 root root   2 Jan 15 12:47 pdb2
+
+/var/run/hw-management/firmware:
+total 0
+drwxr-xr-x  2 root root  40 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+
+/var/run/hw-management/jtag:
+total 0
+drwxr-xr-x  2 root root 140 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+lrwxrwxrwx  1 root root  64 Jan 15 12:47 jtag_enable -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/jtag_enable
+lrwxrwxrwx  1 root root  29 Jan 15 12:47 jtag_tck -> /sys/class/gpio/gpio900/value
+lrwxrwxrwx  1 root root  29 Jan 15 12:47 jtag_tdi -> /sys/class/gpio/gpio773/value
+lrwxrwxrwx  1 root root  29 Jan 15 12:47 jtag_tdo -> /sys/class/gpio/gpio776/value
+lrwxrwxrwx  1 root root  29 Jan 15 12:47 jtag_tms -> /sys/class/gpio/gpio775/value
+
+/var/run/hw-management/led:
+total 24
+drwxr-xr-x  2 root root 620 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+-rw-r--r--  1 root root   5 Jan 15 12:47 led_power
+lrwxrwxrwx  1 root root  76 Jan 15 12:47 led_power_amber -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/brightness
+lrwxrwxrwx  1 root root  75 Jan 15 12:47 led_power_amber_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/delay_off
+lrwxrwxrwx  1 root root  74 Jan 15 12:47 led_power_amber_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/delay_on
+lrwxrwxrwx  1 root root  73 Jan 15 12:47 led_power_amber_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:amber/trigger
+-rw-r--r--  1 root root  41 Jan 15 12:47 led_power_capability
+lrwxrwxrwx  1 root root  76 Jan 15 12:47 led_power_green -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/brightness
+lrwxrwxrwx  1 root root  75 Jan 15 12:47 led_power_green_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/delay_off
+lrwxrwxrwx  1 root root  74 Jan 15 12:47 led_power_green_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/delay_on
+lrwxrwxrwx  1 root root  73 Jan 15 12:47 led_power_green_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:power:green/trigger
+lrwxrwxrwx  1 root root  46 Jan 15 12:47 led_power_state -> /usr/bin/hw-management-led-state-conversion.sh
+-rw-r--r--  1 root root   5 Jan 15 12:47 led_status
+lrwxrwxrwx  1 root root  77 Jan 15 12:47 led_status_amber -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/brightness
+lrwxrwxrwx  1 root root  76 Jan 15 12:47 led_status_amber_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/delay_off
+lrwxrwxrwx  1 root root  75 Jan 15 12:47 led_status_amber_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/delay_on
+lrwxrwxrwx  1 root root  74 Jan 15 12:47 led_status_amber_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:amber/trigger
+-rw-r--r--  1 root root  41 Jan 15 12:47 led_status_capability
+lrwxrwxrwx  1 root root  77 Jan 15 12:47 led_status_green -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/brightness
+lrwxrwxrwx  1 root root  76 Jan 15 12:47 led_status_green_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/delay_off
+lrwxrwxrwx  1 root root  75 Jan 15 12:47 led_status_green_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/delay_on
+lrwxrwxrwx  1 root root  74 Jan 15 12:47 led_status_green_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:status:green/trigger
+lrwxrwxrwx  1 root root  46 Jan 15 12:47 led_status_state -> /usr/bin/hw-management-led-state-conversion.sh
+-rw-r--r--  1 root root   5 Jan 15 12:47 led_uid
+lrwxrwxrwx  1 root root  73 Jan 15 12:47 led_uid_blue -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/brightness
+lrwxrwxrwx  1 root root  72 Jan 15 12:47 led_uid_blue_delay_off -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/delay_off
+lrwxrwxrwx  1 root root  71 Jan 15 12:47 led_uid_blue_delay_on -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/delay_on
+lrwxrwxrwx  1 root root  70 Jan 15 12:47 led_uid_blue_trigger -> /sys/devices/platform/mlxplat/leds-mlxreg/leds/mlxreg:uid:blue/trigger
+-rw-r--r--  1 root root  21 Jan 15 12:47 led_uid_capability
+lrwxrwxrwx  1 root root  46 Jan 15 12:47 led_uid_state -> /usr/bin/hw-management-led-state-conversion.sh
+
+/var/run/hw-management/power:
+total 0
+drwxr-xr-x  2 root root  80 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+lrwxrwxrwx  1 root root  38 Jan 15 12:47 pwr_consum -> /usr/bin/hw-management-power-helper.sh
+lrwxrwxrwx  1 root root  38 Jan 15 12:47 pwr_sys -> /usr/bin/hw-management-power-helper.sh
+
+/var/run/hw-management/system:
+total 12
+drwxr-xr-x  2 root root 1180 Jan 15 12:47 .
+drwxr-xr-x 15 root root  360 Jan 15 12:47 ..
+lrwxrwxrwx  1 root root   64 Jan 15 12:47 asic_health -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/asic_health
+lrwxrwxrwx  1 root root   65 Jan 15 12:47 asic_pg_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/asic_pg_fail
+lrwxrwxrwx  1 root root   63 Jan 15 12:47 asic_reset -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/asic_reset
+lrwxrwxrwx  1 root root   66 Jan 15 12:47 aux_pwr_cycle -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/aux_pwr_cycle
+lrwxrwxrwx  1 root root   29 Jan 15 12:47 bmc_present -> /sys/class/gpio/gpio780/value
+lrwxrwxrwx  1 root root   68 Jan 15 12:47 bmc_to_cpu_ctrl -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/bmc_to_cpu_ctrl
+lrwxrwxrwx  1 root root   29 Jan 15 12:47 boot_completed -> /sys/class/gpio/gpio778/value
+lrwxrwxrwx  1 root root   29 Jan 15 12:47 conf_flash_rst -> /sys/class/gpio/gpio857/value
+-rw-r--r--  1 root root   76 Jan 15 12:47 cpld
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 cpld1_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld1_pn
+lrwxrwxrwx  1 root root   66 Jan 15 12:47 cpld1_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld1_version
+lrwxrwxrwx  1 root root   70 Jan 15 12:47 cpld1_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld1_version_min
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 cpld2_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld2_pn
+lrwxrwxrwx  1 root root   66 Jan 15 12:47 cpld2_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld2_version
+lrwxrwxrwx  1 root root   70 Jan 15 12:47 cpld2_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld2_version_min
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 cpld3_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld3_pn
+lrwxrwxrwx  1 root root   66 Jan 15 12:47 cpld3_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld3_version
+lrwxrwxrwx  1 root root   70 Jan 15 12:47 cpld3_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld3_version_min
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 cpld4_pn -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld4_pn
+lrwxrwxrwx  1 root root   66 Jan 15 12:47 cpld4_version -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld4_version
+lrwxrwxrwx  1 root root   70 Jan 15 12:47 cpld4_version_min -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpld4_version_min
+-rw-r--r--  1 root root   76 Jan 15 12:47 cpld_base
+lrwxrwxrwx  1 root root   29 Jan 15 12:47 cpu_erot_present -> /sys/class/gpio/gpio791/value
+lrwxrwxrwx  1 root root   67 Jan 15 12:47 cpu_mctp_ready -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpu_mctp_ready
+lrwxrwxrwx  1 root root   72 Jan 15 12:47 cpu_power_off_ready -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpu_power_off_ready
+lrwxrwxrwx  1 root root   69 Jan 15 12:47 cpu_shutdown_req -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/cpu_shutdown_req
+lrwxrwxrwx  1 root root   69 Jan 15 12:47 graceful_pwr_off -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/graceful_pwr_off
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 jtag_cap -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/jtag_cap
+lrwxrwxrwx  1 root root   64 Jan 15 12:47 jtag_enable -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/jtag_enable
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 leakage1 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/leakage1
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 leakage2 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/leakage2
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 leakage3 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/leakage3
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 leakage4 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/leakage4
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 leakage5 -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/leakage5
+lrwxrwxrwx  1 root root   72 Jan 15 12:47 pcie_asic_reset_dis -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/pcie_asic_reset_dis
+lrwxrwxrwx  1 root root   74 Jan 15 12:47 pwr_converter_prog_en -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/pwr_converter_prog_en
+lrwxrwxrwx  1 root root   62 Jan 15 12:47 pwr_cycle -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/pwr_cycle
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 pwr_down -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/pwr_down
+lrwxrwxrwx  1 root root   71 Jan 15 12:47 reset_asic_thermal -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_asic_thermal
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 reset_aux_pwr_or_reload -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_aux_pwr_or_reload
+lrwxrwxrwx  1 root root   70 Jan 15 12:47 reset_cpu_thermal -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_cpu_thermal
+lrwxrwxrwx  1 root root   66 Jan 15 12:47 reset_long_pb -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_long_pb
+lrwxrwxrwx  1 root root   67 Jan 15 12:47 reset_main_51v -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_main_51v
+lrwxrwxrwx  1 root root   67 Jan 15 12:47 reset_mgmt_pwr -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_mgmt_pwr
+lrwxrwxrwx  1 root root   67 Jan 15 12:47 reset_platform -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_platform
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 reset_pwr_converter_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_pwr_converter_fail
+lrwxrwxrwx  1 root root   67 Jan 15 12:47 reset_short_pb -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_short_pb
+lrwxrwxrwx  1 root root   62 Jan 15 12:47 reset_soc -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_soc
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 reset_swb_dc_dc_pwr_fail -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_swb_dc_dc_pwr_fail
+lrwxrwxrwx  1 root root   65 Jan 15 12:47 reset_swb_wd -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_swb_wd
+lrwxrwxrwx  1 root root   69 Jan 15 12:47 reset_sw_pwr_off -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_sw_pwr_off
+lrwxrwxrwx  1 root root   65 Jan 15 12:47 reset_system -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/reset_system
+-rw-r--r--  1 root root    4 Jan 15 12:47 sed_pba_ver
+lrwxrwxrwx  1 root root   68 Jan 15 12:47 shutdown_unlock -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/shutdown_unlock
+lrwxrwxrwx  1 root root   68 Jan 15 12:47 spi_chnl_select -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/spi_chnl_select
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 uart_sel -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/uart_sel
+lrwxrwxrwx  1 root root   59 Jan 15 12:47 vpd_wp -> /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon4/vpd_wp
+
+/var/run/hw-management/thermal:
+total 8
+drwxr-xr-x  2 root root 2080 Jan 15 12:47 .
+drwxr-xr-x 15 root root  360 Jan 15 12:47 ..
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon1_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-0069/hwmon/hwmon7/temp1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 comex_voltmon2_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/temp1_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 comex_voltmon2_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/temp1_input
+lrwxrwxrwx  1 root root   75 Jan 15 12:47 comex_voltmon2_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-5/5-006a/hwmon/hwmon8/temp1_max
+lrwxrwxrwx  1 root root   61 Jan 15 12:47 cpu_pack -> /sys/devices/pci0000:00/0000:00:18.3/hwmon/hwmon3/temp1_input
+-rw-r--r--  1 root root    7 Jan 15 12:47 cpu_pack_crit
+-rw-r--r--  1 root root    6 Jan 15 12:47 cpu_pack_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 drivetemp -> /sys/devices/pci0000:00/0000:00:01.3/0000:03:00.0/nvme/nvme0/hwmon1/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 drivetemp_crit -> /sys/devices/pci0000:00/0000:00:01.3/0000:03:00.0/nvme/nvme0/hwmon1/temp1_crit
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 drivetemp_max -> /sys/devices/pci0000:00/0000:00:01.3/0000:03:00.0/nvme/nvme0/hwmon1/temp1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 drivetemp_min -> /sys/devices/pci0000:00/0000:00:01.3/0000:03:00.0/nvme/nvme0/hwmon1/temp1_min
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 drivetemp_sensor1 -> /sys/devices/pci0000:00/0000:00:01.3/0000:03:00.0/nvme/nvme0/hwmon1/temp2_input
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 drivetemp_sensor2 -> /sys/devices/pci0000:00/0000:00:01.3/0000:03:00.0/nvme/nvme0/hwmon1/temp3_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_hotswap1_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/temp1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_hotswap1_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/temp1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap1_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0012/hwmon/hwmon30/temp1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_hotswap2_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/temp1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_hotswap2_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/temp1_input
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_hotswap2_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0012/hwmon/hwmon31/temp1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_pwr_conv1_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/temp1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv1_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv1_temp1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/temp1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv1_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-6/6-0060/hwmon/hwmon32/temp1_max
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 pdb_pwr_conv2_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/temp1_crit
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv2_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 pdb_pwr_conv2_temp1_lcrit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/temp1_lcrit
+lrwxrwxrwx  1 root root   76 Jan 15 12:47 pdb_pwr_conv2_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-7/7-0060/hwmon/hwmon33/temp1_max
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 sodimm1_temp_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_crit
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 sodimm1_temp_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 sodimm1_temp_crit_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_crit_hyst
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 sodimm1_temp_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 sodimm1_temp_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_max
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 sodimm1_temp_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_max_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 sodimm1_temp_max_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_max_hyst
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 sodimm1_temp_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_min
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 sodimm1_temp_min_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0052/hwmon/hwmon5/temp1_min_alarm
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 sodimm2_temp_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_crit
+lrwxrwxrwx  1 root root   84 Jan 15 12:47 sodimm2_temp_crit_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_crit_alarm
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 sodimm2_temp_crit_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_crit_hyst
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 sodimm2_temp_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 sodimm2_temp_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_max
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 sodimm2_temp_max_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_max_alarm
+lrwxrwxrwx  1 root root   82 Jan 15 12:47 sodimm2_temp_max_hyst -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_max_hyst
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 sodimm2_temp_min -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_min
+lrwxrwxrwx  1 root root   83 Jan 15 12:47 sodimm2_temp_min_alarm -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-10/10-0053/hwmon/hwmon6/temp1_min_alarm
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon10_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon10_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon10_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0061/hwmon/hwmon18/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon11_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon11_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon11_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0062/hwmon/hwmon19/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon12_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon12_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon12_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0063/hwmon/hwmon21/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon13_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon13_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon13_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0064/hwmon/hwmon22/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon14_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon14_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon14_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0066/hwmon/hwmon24/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon16_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon16_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon16_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0067/hwmon/hwmon25/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon17_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon17_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon17_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0068/hwmon/hwmon26/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon18_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon18_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon18_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0069/hwmon/hwmon27/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon19_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon19_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon19_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0068/hwmon/hwmon28/temp1_max
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon1_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/temp1_crit
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon1_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/temp1_input
+lrwxrwxrwx  1 root root   77 Jan 15 12:47 voltmon1_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0061/hwmon/hwmon9/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon20_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon20_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon20_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0069/hwmon/hwmon29/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon2_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon2_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon2_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0062/hwmon/hwmon10/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon3_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon3_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon3_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0063/hwmon/hwmon11/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon4_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon4_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon4_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0064/hwmon/hwmon12/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon5_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon5_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon5_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0065/hwmon/hwmon13/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon6_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon6_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon6_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0066/hwmon/hwmon14/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon7_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon7_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon7_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-0067/hwmon/hwmon15/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon8_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon8_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon8_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-15/15-006a/hwmon/hwmon16/temp1_max
+lrwxrwxrwx  1 root root   79 Jan 15 12:47 voltmon9_temp1_crit -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/temp1_crit
+lrwxrwxrwx  1 root root   80 Jan 15 12:47 voltmon9_temp1_input -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/temp1_input
+lrwxrwxrwx  1 root root   78 Jan 15 12:47 voltmon9_temp1_max -> /sys/devices/platform/AMDI0010:02/i2c-2/i2c-16/16-0060/hwmon/hwmon17/temp1_max
+
+/var/run/hw-management/watchdog:
+total 0
+drwxr-xr-x  4 root root  80 Jan 15 12:47 .
+drwxr-xr-x 15 root root 360 Jan 15 12:47 ..
+drwxr-xr-x  2 root root 180 Jan 15 12:47 aux
+drwxr-xr-x  2 root root 180 Jan 15 12:47 main
+
+/var/run/hw-management/watchdog/aux:
+total 0
+drwxr-xr-x 2 root root 180 Jan 15 12:47 .
+drwxr-xr-x 4 root root  80 Jan 15 12:47 ..
+lrwxrwxrwx 1 root root  69 Jan 15 12:47 bootstatus -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/bootstatus
+lrwxrwxrwx 1 root root  67 Jan 15 12:47 identity -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/identity
+lrwxrwxrwx 1 root root  67 Jan 15 12:47 nowayout -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/nowayout
+lrwxrwxrwx 1 root root  64 Jan 15 12:47 state -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/state
+lrwxrwxrwx 1 root root  65 Jan 15 12:47 status -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/status
+lrwxrwxrwx 1 root root  67 Jan 15 12:47 timeleft -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/timeleft
+lrwxrwxrwx 1 root root  66 Jan 15 12:47 timeout -> /sys/devices/platform/mlxplat/mlx-wdt.1/watchdog/watchdog2/timeout
+
+/var/run/hw-management/watchdog/main:
+total 0
+drwxr-xr-x 2 root root 180 Jan 15 12:47 .
+drwxr-xr-x 4 root root  80 Jan 15 12:47 ..
+lrwxrwxrwx 1 root root  69 Jan 15 12:47 bootstatus -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/bootstatus
+lrwxrwxrwx 1 root root  67 Jan 15 12:47 identity -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/identity
+lrwxrwxrwx 1 root root  67 Jan 15 12:47 nowayout -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/nowayout
+lrwxrwxrwx 1 root root  64 Jan 15 12:47 state -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/state
+lrwxrwxrwx 1 root root  65 Jan 15 12:47 status -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/status
+lrwxrwxrwx 1 root root  67 Jan 15 12:47 timeleft -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/timeleft
+lrwxrwxrwx 1 root root  66 Jan 15 12:47 timeout -> /sys/devices/platform/mlxplat/mlx-wdt.0/watchdog/watchdog1/timeout
