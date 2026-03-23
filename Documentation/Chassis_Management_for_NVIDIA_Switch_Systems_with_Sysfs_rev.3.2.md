@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.1
+Rev. 3.2
 
 ## Table of Contents
 
@@ -400,6 +400,7 @@ Rev. 3.1
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management_tree-SN6600_LD.txt`, `hw-management_val_sn6600.txt`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
 | 3.0 | September 2025 | Complete document alignment with Word document source<br>• Updated title and branding to NVIDIA<br>• Complete sysfs hierarchy coverage with 300+ attributes<br>• Professional markdown formatting throughout<br>• Added comprehensive examples for all attributes<br>• Updated all 22 major sections (3.1-3.22)<br>• Added Watchdog, JTAG, and BMC sections<br>• Complete thermal monitoring documentation<br>• Enterprise-grade documentation ready for production |
 | 2.8 | April 1st 2024 | Added temperature, BMC and power related attributes |
@@ -736,10 +737,11 @@ cat $bsp_path/config/hotplug_psus
 
 **Description:** Get the number of hot-pluggable Power Distribution Boards (PDB) in the system.
 
-Note: This attribute is primarily for liquid-cooled systems (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD).
+Note: This attribute is primarily for liquid-cooled systems (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD).
 PDBs manage power distribution in liquid-cooled systems where traditional PSUs are not present.
 It can be zero on air-cooled systems or systems without hot-pluggable PDBs.
 Note: N6100_LD has hotplug_pdbs=0 (PDB is not hot-pluggable).
+Note: SN6600_LD (SKU HI193) has hotplug_pdbs=2 with `events/pdb1` and `events/pdb2`.
 
 **Access:** Read only
 
@@ -2069,7 +2071,7 @@ cat $bsp_path/environment/voltmon1_power2_input
 
 **Description:** Get PDB (Power Distribution Board) hot-swap controller current measurement
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD)
 
 **Access:** Read only
 
@@ -2091,7 +2093,7 @@ cat $bsp_path/environment/pdb_hotswap1_curr1_input
 
 **Description:** Get PDB hot-swap controller voltage measurement
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -2113,7 +2115,7 @@ cat $bsp_path/environment/pdb_hotswap1_in1_input
 
 **Description:** Get PDB hot-swap controller power measurement
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -2135,7 +2137,7 @@ cat $bsp_path/environment/pdb_hotswap1_power1_input
 
 **Description:** Get PDB hot-swap controller threshold values (crit, lcrit, max, min)
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -2155,13 +2157,14 @@ cat $bsp_path/environment/pdb_hotswap1_in1_lcrit
 
 ### Get PDB Power Converter Current
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_curr<index>_input` (SN58XX_LD)
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_curr<index>_input` (SN58XX_LD, SN66XX_LD)
 `$bsp_path/environment/pwr_conv<index>_curr<index>_input` (N61XX_LD)
 
 **Description:** Get PDB power converter current measurement (input or output)
 
 Note: This attribute is for liquid-cooled systems only.
-- SN58XX_LD family uses: `pdb_pwr_conv<N>_...` naming (1 power converter)
+- SN58XX_LD family uses: `pdb_pwr_conv<N>_...` naming (1 power converter on SN5810_LD; more on SN5800_LD)
+- SN66XX_LD family (SN6600_LD) uses: `pdb_pwr_conv<N>_...` with N = 1..2
 - N61XX_LD family uses: `pwr_conv<N>_...` naming (2 power converters)
 
 **Access:** Read only
@@ -2179,6 +2182,12 @@ Note: This attribute is for liquid-cooled systems only.
 cat $bsp_path/environment/pdb_pwr_conv1_curr1_input
 cat $bsp_path/environment/pdb_pwr_conv1_curr2_input
 
+# SN6600_LD systems (2 PDB converters)
+cat $bsp_path/environment/pdb_pwr_conv1_curr1_input
+cat $bsp_path/environment/pdb_pwr_conv1_curr2_input
+cat $bsp_path/environment/pdb_pwr_conv2_curr1_input
+cat $bsp_path/environment/pdb_pwr_conv2_curr2_input
+
 # N6100_LD systems (2 power converters)
 cat $bsp_path/environment/pwr_conv1_curr1_input
 cat $bsp_path/environment/pwr_conv1_curr2_input
@@ -2188,13 +2197,13 @@ cat $bsp_path/environment/pwr_conv2_curr2_input
 
 ### Get PDB Power Converter Voltage
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_in<index>_input` (SN58XX_LD)
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_in<index>_input` (SN58XX_LD, SN66XX_LD)
 `$bsp_path/environment/pwr_conv<index>_in<index>_input` (N61XX_LD)
 
 **Description:** Get PDB power converter voltage measurement (input or output)
 
 Note: This attribute is for liquid-cooled systems only.
-- SN58XX_LD family uses: `pdb_pwr_conv<N>_...` naming
+- SN58XX_LD and SN66XX_LD families use: `pdb_pwr_conv<N>_...` naming
 - N61XX_LD family uses: `pwr_conv<N>_...` naming
 
 **Access:** Read only
@@ -2212,6 +2221,12 @@ Note: This attribute is for liquid-cooled systems only.
 cat $bsp_path/environment/pdb_pwr_conv1_in1_input
 cat $bsp_path/environment/pdb_pwr_conv1_in2_input
 
+# SN6600_LD systems
+cat $bsp_path/environment/pdb_pwr_conv1_in1_input
+cat $bsp_path/environment/pdb_pwr_conv1_in2_input
+cat $bsp_path/environment/pdb_pwr_conv2_in1_input
+cat $bsp_path/environment/pdb_pwr_conv2_in2_input
+
 # N6100_LD systems
 cat $bsp_path/environment/pwr_conv1_in1_input
 cat $bsp_path/environment/pwr_conv1_in2_input
@@ -2221,13 +2236,13 @@ cat $bsp_path/environment/pwr_conv2_in2_input
 
 ### Get PDB Power Converter Power
 
-**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_power<index>_input` (SN58XX_LD)
+**Node name:** `$bsp_path/environment/pdb_pwr_conv<index>_power<index>_input` (SN58XX_LD, SN66XX_LD)
 `$bsp_path/environment/pwr_conv<index>_power<index>_input` (N61XX_LD)
 
 **Description:** Get PDB power converter power measurement (input or output)
 
 Note: This attribute is for liquid-cooled systems only.
-- SN58XX_LD family uses: `pdb_pwr_conv<N>_...` naming
+- SN58XX_LD and SN66XX_LD families use: `pdb_pwr_conv<N>_...` naming
 - N61XX_LD family uses: `pwr_conv<N>_...` naming
 
 **Access:** Read only
@@ -2244,6 +2259,10 @@ Note: This attribute is for liquid-cooled systems only.
 # SN58XX_LD systems
 cat $bsp_path/environment/pdb_pwr_conv1_power1_input
 
+# SN6600_LD systems
+cat $bsp_path/environment/pdb_pwr_conv1_power1_input
+cat $bsp_path/environment/pdb_pwr_conv2_power1_input
+
 # N6100_LD systems
 cat $bsp_path/environment/pwr_conv1_power1_input
 cat $bsp_path/environment/pwr_conv2_power1_input
@@ -2255,7 +2274,7 @@ cat $bsp_path/environment/pwr_conv2_power1_input
 
 **Description:** Get PDB power converter threshold values (crit, lcrit, max, min)
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -2351,7 +2370,7 @@ Index max value corresponds to $bsp_path/config/hotplug_pdbs
 0 – PDB<index> was removed,
 1 – PDB<index> was inserted.
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read
 
@@ -2613,7 +2632,7 @@ Alarm set by PDB hotswap controller sensor itself (hardware-controlled attribute
 1 – alarm set
 0 – alarm clear
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD)
 
 **Access:** Read
 
@@ -2643,7 +2662,7 @@ Alarm set by PDB power converter sensor itself (hardware-controlled attribute)
 1 – alarm set
 0 – alarm clear
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read
 
@@ -4503,6 +4522,8 @@ cat $bsp_path/power/psu1_sensor_capability
 
 **Description:** Get ASIC health status. For multi-ASIC systems (N61XX_LD family: N6100_LD), additional nodes exist for each ASIC.
 
+Note: SN6600_LD (SN66XX_LD) is a single-ASIC system; only `asic_health` applies (no `asic2_health`..`asic4_health` in that configuration).
+
 Note: N6100_LD has 4 ASICs with individual health monitoring:
 - `asic_health` (ASIC1), `asic2_health`, `asic3_health`, `asic4_health`
 
@@ -5287,7 +5308,7 @@ cat $bsp_path/system/cartridge1
 
 **Description:** Get ASIC power good failure status. Indicates power sequencing failure on the ASIC.
 
-Note: This attribute is for multi-ASIC systems (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for multi-ASIC systems (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 N6100_LD has 4 ASICs with individual failure tracking.
 
 **Access:** Read only
@@ -5312,7 +5333,7 @@ cat $bsp_path/system/asic_pg_fail
 
 **Description:** Get leakage sensor status at the specified index. Detects liquid leaks in liquid-cooled systems.
 
-Note: This attribute is for liquid-cooled systems (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for liquid-cooled systems (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 N6100_LD has 2 leakage sensors, SN5810_LD has 2, SN5800_LD has 5.
 
 **Access:** Read only
@@ -5899,7 +5920,7 @@ cat $bsp_path/thermal/psu1_status
 
 **Description:** Read PDB (Power Distribution Board) hot-swap controller temperature
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family: SN5810_LD, SN5800_LD; N61XX_LD family: N6100_LD; SN66XX_LD family: SN6600_LD)
 
 **Access:** Read only
 
@@ -5922,7 +5943,7 @@ cat $bsp_path/thermal/pdb_hotswap1_temp1_input
 
 **Description:** Read PDB hot-swap controller temperature critical and maximum thresholds
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -5945,7 +5966,7 @@ cat $bsp_path/thermal/pdb_hotswap1_temp1_max
 
 **Description:** Read PDB power converter temperature
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -5969,7 +5990,7 @@ cat $bsp_path/thermal/pdb_pwr_conv1_temp1_input
 
 **Description:** Read PDB power converter temperature thresholds (critical, lower critical, maximum)
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -5993,7 +6014,7 @@ cat $bsp_path/thermal/pdb_pwr_conv1_temp1_max
 
 **Description:** Read PDB MOSFET ambient temperature sensor
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family)
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 
@@ -6295,8 +6316,9 @@ cat $bsp_path/thermal/switch_psu1_temp
 
 **Description:** Read SODIMM (Small Outline Dual In-line Memory Module) temperature. SODIMMs are DDR memory modules with integrated temperature sensors.
 
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family).
-Both SN5810_LD and N6100_LD have 2 SODIMM sensors on I2C bus 2 (addresses 0x1a, 0x1b).
+Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
+SN5810_LD and N6100_LD use 2 SODIMM sensors on I2C bus 2 (addresses 0x1a, 0x1b).
+SN6600_LD uses 2 JC42 sensors on I2C bus 10 (addresses 0x52, 0x53) per validated tree.
 
 **Access:** Read only
 
@@ -6305,7 +6327,7 @@ Both SN5810_LD and N6100_LD have 2 SODIMM sensors on I2C bus 2 (addresses 0x1a, 
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD) |
+| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
 | Temperature | Integer | Value in millidegrees Celsius (m°C) |
 
 **Example:** Read SODIMM temperatures:
@@ -6320,7 +6342,7 @@ cat $bsp_path/thermal/sodimm2_temp_input  # SODIMM 2
 
 **Description:** Read SODIMM critical temperature threshold.
 
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 
 **Access:** Read only
 
@@ -6329,7 +6351,7 @@ Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD f
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD) |
+| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
 | Temperature | Integer | Value in millidegrees Celsius (m°C) |
 
 **Example:** Read SODIMM critical temperatures:
@@ -6344,7 +6366,7 @@ cat $bsp_path/thermal/sodimm2_temp_crit
 
 **Description:** Read SODIMM maximum temperature threshold.
 
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 
 **Access:** Read only
 
@@ -6353,7 +6375,7 @@ Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD f
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD) |
+| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
 | Temperature | Integer | Value in millidegrees Celsius (m°C) |
 
 **Example:** Read SODIMM max temperatures:
@@ -6368,7 +6390,7 @@ cat $bsp_path/thermal/sodimm2_temp_max
 
 **Description:** Read SODIMM minimum temperature threshold.
 
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 
 **Access:** Read only
 
@@ -6377,7 +6399,7 @@ Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD f
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD) |
+| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
 | Temperature | Integer | Value in millidegrees Celsius (m°C) |
 
 **Example:** Read SODIMM min temperatures:
@@ -6394,7 +6416,7 @@ cat $bsp_path/thermal/sodimm2_temp_min
 
 **Description:** Read SODIMM temperature alarm status (critical, maximum, minimum).
 
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 
 **Access:** Read only
 
@@ -6403,7 +6425,7 @@ Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD f
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD) |
+| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
 | Alarm | Integer | 0 (clear), 1 (alarm) |
 
 **Example:** Read SODIMM temperature alarms:
@@ -6423,7 +6445,7 @@ cat $bsp_path/thermal/sodimm2_temp_min_alarm
 
 **Description:** Read SODIMM temperature hysteresis values for critical and max thresholds.
 
-Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family).
+Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
 
 **Access:** Read only
 
@@ -6432,7 +6454,7 @@ Note: This attribute is for systems with SODIMM temperature sensors (SN58XX_LD f
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| index | Integer | 1-2 (N6100_LD) |
+| index | Integer | 1-2 (N6100_LD, SN6600_LD) |
 | Hysteresis | Integer | Value in millidegrees Celsius (m°C) |
 
 **Example:** Read SODIMM temperature hysteresis:
@@ -6444,6 +6466,10 @@ cat $bsp_path/thermal/sodimm2_temp_max_hyst
 ```
 
 ## Watchdog
+
+Note: On SN6600_LD the validated hierarchy places attributes under
+`$bsp_path/watchdog/main/` and `$bsp_path/watchdog/aux/` instead of directly
+under `$bsp_path/watchdog/`.
 
 ### Read Boot Status
 
