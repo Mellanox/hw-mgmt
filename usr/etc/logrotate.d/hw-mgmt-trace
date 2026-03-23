@@ -1,0 +1,11 @@
+"/var/log/hw-mgmt.trace.log" {
+    size 2M
+    rotate 3
+    copytruncate
+    compress
+    delaycompress
+    dateext
+    dateformat -%Y%m%d%H%M%S
+    missingok
+    notifempty
+}
