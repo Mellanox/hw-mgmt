@@ -452,8 +452,10 @@ read_otp_sections_by_hc_until_stop() {
         if [ "$size" -gt 32768 ]; then
             size=8
         fi
+        local pr_otp
+        pr_otp="OTP offset $(printf '0x%04x' $((addr_32 - OTP_BASE)))"
         if [ "$hc" -eq 0 ]; then
-            log_verbose "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x00 (stop) -- done"
+            log_verbose "$pr_otp HC=0x00 (stop) -- done"
             return 0
         fi
         if [ "$size" -le 0 ]; then
@@ -1580,19 +1582,19 @@ parse_config_file() {
     fi
 
     log_info "Parsing configuration file (AN001 section layout): $config_file"
-    echo ""
 
     local file_size
     file_size=$(wc -c < "$config_file" 2>/dev/null); [ -z "$file_size" ] && file_size=0
 
     log_info "File size: $file_size bytes"
-    echo ""
 
     local offset=0
     local idx=0
     local max_sections=64
 
     while (( offset + 8 <= file_size && idx < max_sections )); do
+        local pr_offs
+        pr_offs="offset $(printf '0x%04x' $offset)"
         local header_hex size_hex
         header_hex=$(dd if="$config_file" bs=1 skip=$offset count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
         size_hex=$(dd if="$config_file" bs=1 skip=$((offset + 4)) count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
@@ -1607,22 +1609,22 @@ parse_config_file() {
         local size=$((16#$s0 + (16#$s1 << 8)))
 
         if [ "$hc" -eq 0 ]; then
-            log_info "Offset 0x$(printf '%x' $offset) HC=0x00 size 0x$(printf '%04x' $size) -- end of data"
+            log_info "$pr_offs HC=0x00 size 0x$(printf '%04x' $size) -- end of data"
             break
         fi
         if [ "$size" -le 0 ] || [ "$size" -gt 32768 ]; then
-            log_info "Offset 0x$(printf '%x' $offset) HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) invalid -- stopping"
+            log_info "$pr_offs HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) invalid -- stopping"
             break
         fi
         if [ "$hc" -eq 255 ]; then
-            log_verbose "Offset 0x$(printf '%x' $offset): HC=0xff (invalid), skipping ${size}B"
+            log_verbose "$pr_offs: HC=0xff (invalid), skipping ${size}B"
             offset=$((offset + size))
             continue
         fi
 
         local type_str
         type_str=$(section_type_name $hc)
-        log_info "Section $idx: offset 0x$(printf '%x' $offset) HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv) $type_str size $size (0x$(printf '%x' $size)) bytes"
+        log_info "Section $idx: $pr_offs HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv) $type_str size $size (0x$(printf '%04x' $size)) bytes"
 
         if [[ -n "$out_dir" ]]; then
             mkdir -p "$out_dir" 2>/dev/null || true
@@ -1634,7 +1636,6 @@ parse_config_file() {
 
         offset=$((offset + size))
         idx=$((idx + 1))
-        echo ""
     done
 
     log_info "Parsed $idx section(s), total ${offset} bytes."
@@ -1733,7 +1734,6 @@ readback_from_device() {
             else
                 log_warn "  Size mismatch: config ${cfg_size}B vs device ${dev_size}B"
             fi
-            echo ""
         done
         # rm -rf "$tmpdir"
     else
@@ -1744,6 +1744,8 @@ readback_from_device() {
         local hd_hex sz_hex h0 h1 h2 h3 s0 s1 s2 s3 size hc
 
         while (( addr_32 < max_addr && idx < max_sections )); do
+            local pr_otp
+            pr_otp="OTP offset $(printf '0x%04x' $((addr_32 - OTP_BASE)))"
             set_rptr $bus $addr $addr_32 || return 1
             hd_hex=$(read_otp_dword_hex $bus $addr) || return 1
             sz_hex=$(read_otp_dword_hex $bus $addr) || return 1
@@ -1752,20 +1754,20 @@ readback_from_device() {
             size=$(( 16#$s0 + (16#$s1 << 8) ))
             hc=$((16#$h0))
             if [ "$hc" -eq 0 ]; then
-                log_info "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x00 size 0x$(printf '%04x' $size) -- stopping scan"
+                log_info "$pr_otp HC=0x00 size 0x$(printf '%04x' $size) -- stopping scan"
                 break
             fi
             if [ "$size" -le 0 ] || [ "$size" -gt 32768 ]; then
-                log_info "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) invalid -- stopping scan"
+                log_info "$pr_otp HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) invalid -- stopping scan"
                 break
             fi
             if [ "$hc" -eq 255 ]; then
-                log_verbose "OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))): HC=0xff (invalid), skipping"
+                log_verbose "$pr_otp: HC=0xff (invalid), skipping ${size} (0x$(printf '%04x' $size)) bytes"
                 addr_32=$((addr_32 + size))
                 continue
             fi
             local read_path="$out_dir/read_$(printf '%02d' $idx)_hc_$(printf '%02x' $hc).bin"
-            log_info "Section $idx: OTP offset 0x$(printf '%x' $(( addr_32 - OTP_BASE ))) HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) -> $read_path"
+            log_info "Section $idx: $pr_otp HC=0x$(printf '%02x' $hc) size 0x$(printf '%04x' $size) -> $read_path"
             : > "$read_path" || return 1
             hex_dword_to_file "$hd_hex" "$read_path"
             hex_dword_to_file "$sz_hex" "$read_path"
@@ -1774,7 +1776,6 @@ readback_from_device() {
             fi
             addr_32=$((addr_32 + size))
             idx=$((idx + 1))
-            echo ""
         done
         log_info "Read $idx section(s) from OTP."
     fi
@@ -1959,12 +1960,13 @@ read_device_info() {
         printf "  %-20s (0xFE 0x01): %s\n" "FW_TIMESTAMP" "N/A"
     fi
 
+    # Workaround: on some HW, GET_CRC with HeaderCode=0 (total) can hang info path; HC=0xFF (non-existent section) is safe.
     local crc_hex
-    crc_hex=$(get_crc "$bus" "$addr" 0 2>/dev/null) || true
+    crc_hex=$(get_crc "$bus" "$addr" $((0xff)) 2>/dev/null) || true
     if [ -n "$crc_hex" ]; then
-        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (total)" "$crc_hex"
+        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0xFF)" "$crc_hex"
     else
-        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (total)" "N/A"
+        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0xFF)" "N/A"
     fi
 
     local otp_remaining
