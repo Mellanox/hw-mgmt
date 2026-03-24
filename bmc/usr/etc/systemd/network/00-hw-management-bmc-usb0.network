@@ -1,0 +1,7 @@
+[Match]
+Name=usb0
+
+[Network]
+DHCP=no
+ConfigureWithoutCarrier=true
+Address=__USB0_ADDRESS__

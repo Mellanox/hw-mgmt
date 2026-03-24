@@ -1,0 +1,41 @@
+# Boot-complete gate — shell config (example)
+#
+# Purpose
+#   Minimum top-level entry counts under /var/run/hw-management/{system,thermal,eeprom}
+#   before hw-management-bmc-boot-complete.service exits successfully. SONiC BMC can use
+#   After=hw-management-bmc-boot-complete.service so dependent units start only after
+#   hw-management runtime has published the expected sysfs trees.
+#
+# Packaged reference (HI189)
+#   usr/etc/HI189/hw-management-bmc-boot-complete.conf
+#   Copied to /etc/hw-management-bmc-boot-complete.conf by hw-management-bmc-plat-specific-preps.sh
+#   when the device-tree SKU maps to that platform directory (e.g. hid189 → HI189).
+#
+# Consumer
+#   /usr/bin/hw-management-bmc-boot-complete.sh (ExecStart of hw-management-bmc-boot-complete.service)
+#   Sources /etc/hw-management-bmc-boot-complete.conf with `.` (POSIX shell).
+#
+# Semantics
+#   For each directory below, the script counts top-level names (files, symlinks, subdirs)
+#   with `ls -A` | wc -l. The service completes when actual_count >= configured minimum for
+#   all three; counts above the minimum are acceptable.
+#
+#   /var/run/hw-management/system   → SYSFS_SYSTEM_COUNTER
+#   /var/run/hw-management/thermal  → SYSFS_THERMAL_COUNTER
+#   /var/run/hw-management/eeprom   → SYSFS_EEPROM_COUNTER
+#
+# File format
+#   POSIX-style KEY=value assignments; lines starting with # are comments.
+#   Optional variables (defaults in the script if unset):
+#     BOOT_COMPLETE_MAX_WAIT_SEC — max seconds before timeout (default 1800; 0 = wait forever)
+#     BOOT_COMPLETE_POLL_SEC     — sleep between checks in seconds (default 2)
+#
+# Example (HI189-style — illustrative; match your platform under usr/etc/<HID>/)
+
+SYSFS_SYSTEM_COUNTER=180
+SYSFS_EEPROM_COUNTER=2
+SYSFS_THERMAL_COUNTER=4
+
+# Optional:
+# BOOT_COMPLETE_MAX_WAIT_SEC=1800
+# BOOT_COMPLETE_POLL_SEC=2
