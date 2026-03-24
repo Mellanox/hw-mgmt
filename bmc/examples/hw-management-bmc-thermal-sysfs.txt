@@ -1,0 +1,33 @@
+# /var/run/hw-management/thermal — runtime layout (example)
+#
+# Created by udev when hwmon thermal devices appear; handler:
+#   /usr/bin/hw-management-bmc-events.sh add|rm <event> %S %p
+#
+# Platform rules (example: usr/etc/HI189/71-hw-management-bmc-events.rules):
+#   • cpu_temp — SUBSYSTEM=="hwmon", DEVPATH=="*/15-004c/hwmon/hwmon*", ACTION=="add"|"remove"
+#   • bmc_temp — SUBSYSTEM=="hwmon", DEVPATH=="*/4-0048/hwmon/hwmon*", ACTION=="add"|"remove"
+#
+# $3 in the script is the hwmon directory path (%p from udev). Symlinks point at
+# standard hwmon temperature attributes for temp1.
+
+/var/run/hw-management/thermal/
+├── cpu_temp_input                     # symlink → …/15-004c/…/hwmon*/temp1_input (instantaneous, m°C)
+├── cpu_temp                           # symlink → …/temp1_max (high limit / max, driver-specific)
+├── cpu_min                            # symlink → …/temp1_min (low limit / min)
+├── bmc_temp_input                     # symlink → …/4-0048/…/hwmon*/temp1_input
+├── bmc_temp                           # symlink → …/temp1_max
+└── bmc_min                            # symlink → …/temp1_min
+
+# Notes
+#
+# • Naming follows hw-management-bmc-events.sh: CPU uses cpu_* ; BMC uses bmc_* .
+#   Both map temp1_{input,max,min} from their respective hwmon instances.
+#
+# • Units are typically millidegrees Celsius for *_input (Linux hwmon convention);
+#   consult the sensor driver for temp1_max / temp1_min semantics on your board.
+#
+# • DEVPATH globs are platform-specific; other HIDs may bind different I2C
+#   addresses while reusing the same stable names under /var/run/hw-management/thermal/.
+#
+# • Implementation: bmc/usr/etc/HI189/hw-management-bmc-events.sh (THERMAL_RUN_DIR,
+#   cases cpu_temp / bmc_temp).

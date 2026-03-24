@@ -1,0 +1,14 @@
+[Unit]
+Description=BMC Early I2C Device Initialization
+DefaultDependencies=no
+After=hw-management-bmc-early-config.service
+Before=nvidia_update_mac.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/hw-management-bmc-early-i2c-init.sh
+SyslogIdentifier=hw-management-bmc-early-i2c-init
+
+[Install]
+WantedBy=sysinit.target
