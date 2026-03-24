@@ -21,6 +21,16 @@ tests/shell/coverage/
 dist/
 build/
 
+# Debian package build (generated under debian/)
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/*.debhelper
+debian/*.debhelper.log
+debian/hw-management/
+debian/hw-management-bmc/
+
 # IDE and editor files
 .vscode/
 .idea/
