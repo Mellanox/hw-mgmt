@@ -703,11 +703,16 @@ enable_write_protect() {
     return 0
 }
 
-# Read OTP partition size remaining in bytes (AN001 Table 4: 0x10 OTP_PARTITION_SIZE_REMAINING).
-# WRITE_BYTE(0xFE, 0x10), wait, BLOCK_READ(0xFD, 5). Device returns 5 bytes: length (0x04) then 4 data bytes LE; use r5, drop first byte.
+# Read OTP partition size remaining in bytes (AN001 ch.9 / Table 4: 0x10 OTP_PARTITION_SIZE_REMAINING).
+# Arg3: partition number pn (default 0). Sequence: BLOCK_WRITE(0xFD, 4, 0, 0, 0, pn), WRITE_BYTE(0xFE, 0x10), wait, BLOCK_READ(0xFD, 5).
+# Device returns 5 bytes: length (0x04) then 4 data bytes LE; use r5, drop first byte.
 get_otp_partition_size_remaining() {
     local bus=$1
     local addr=$2
+    local pn="${3:-0}"
+    local pn_byte
+    pn_byte=$(printf '0x%02x' $((pn & 0xff)))
+    write_dword $bus $addr $MFR_FW_COMMAND_DATA 0x04 0x00 0x00 0x00 $pn_byte || return 1
     i2c_write $bus $addr $MFR_FW_COMMAND $CMD_OTP_PARTITION_SIZE_REMAINING || return 1
     sleep 0.5
     local line
@@ -1960,13 +1965,13 @@ read_device_info() {
         printf "  %-20s (0xFE 0x01): %s\n" "FW_TIMESTAMP" "N/A"
     fi
 
-    # Workaround: on some HW, GET_CRC with HeaderCode=0 (total) can hang info path; HC=0xFF (non-existent section) is safe.
+    # GET_CRC total CRC: AN001 HC=0x00 in BLOCK_WRITE(0xFD, 4, hc, 0, 0, 0).
     local crc_hex
-    crc_hex=$(get_crc "$bus" "$addr" $((0xff)) 2>/dev/null) || true
+    crc_hex=$(get_crc "$bus" "$addr" 0 2>/dev/null) || true
     if [ -n "$crc_hex" ]; then
-        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0xFF)" "$crc_hex"
+        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0x00)" "$crc_hex"
     else
-        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0xFF)" "N/A"
+        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0x00)" "N/A"
     fi
 
     local otp_remaining
