@@ -594,7 +594,7 @@ if __name__ == '__main__':
                             dest="arch",
                             help="Arch type...",
                             default="amd64",
-                            choices=["amd64", "arm64"],
+                            choices=["amd64", "arm64", "aspeed"],
                             required=False)
     CMD_PARSER.add_argument("--verbose",
                             dest="verbose",
