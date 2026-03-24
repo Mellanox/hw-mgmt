@@ -54,7 +54,7 @@ import pdb
 #############################
 # pylint: disable=c0301,W0105
 
-VERSION = "0.9.0"
+VERSION = "0.9.1"
 
 
 class CONST(object):
@@ -162,8 +162,18 @@ def parse_status(line, patch_name):
 # ----------------------------------------------------------------------
 
 
-def load_patch_table(path, k_version):
-    patch_table_filename = os.path.join(path, CONST.PATCH_TABLE_NAME)
+def load_patch_table(path, k_version, patch_table_name=None):
+    """
+    Load patch list for kernel major.minor (e.g. 6.12) from a status table file.
+    patch_table_name: basename or absolute path. Default: Patch_Status_Table.txt
+                      in path (same directory as other patch metadata).
+    """
+    if not patch_table_name:
+        patch_table_name = CONST.PATCH_TABLE_NAME
+    if os.path.isabs(patch_table_name):
+        patch_table_filename = patch_table_name
+    else:
+        patch_table_filename = os.path.join(path, patch_table_name)
 
     print("Loading patch table {} kver:{}".format(patch_table_filename, k_version))
 
@@ -183,7 +193,10 @@ def load_patch_table(path, k_version):
     kversion_line = "Kernel-{}".format(k_version)
     table_ofset = 0
     for table_ofset, line in enumerate(patch_table_lines):
-        if line == kversion_line:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped == kversion_line:
             break
 
     # if kernel version not found
@@ -195,6 +208,9 @@ def load_patch_table(path, k_version):
     delimiter_count = 0
     column_names = None
     for idx, line in enumerate(patch_table_lines[table_ofset:]):
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
         if CONST.PATCH_TABLE_DELIMITER in line:
             delimiter_count += 1
             if delimiter_count >= 3:
@@ -214,6 +230,8 @@ def load_patch_table(path, k_version):
                 delimiter_count = 0
                 continue
             elif column_names:
+                if not stripped:
+                    continue
                 line_arr = get_line_elements(line)
                 if len(line_arr) != len(column_names):
                     print("Err: patch table wrong format linex #{}: {}".format(table_ofset + idx, line))
@@ -549,6 +567,13 @@ if __name__ == '__main__':
                             dest="k_version",
                             help="Kernel version: 5.10.43/5.10.103/any other",
                             required=True)
+    CMD_PARSER.add_argument("--patch_table",
+                            dest="patch_table",
+                            help="Patch status table file: basename under --src_folder, or absolute path.\n"
+                            "Default: Patch_Status_Table.txt. Use Patch_BMC_Status_Table.txt for a second\n"
+                            "deploy pass (e.g. SONiC BMC after vendor table + Aspeed baseline patches).",
+                            default=CONST.PATCH_TABLE_NAME,
+                            required=False)
     CMD_PARSER.add_argument("-s", "--src_folder",
                             dest="src_folder",
                             help=argparse.SUPPRESS,
@@ -594,7 +619,7 @@ if __name__ == '__main__':
                             dest="arch",
                             help="Arch type...",
                             default="amd64",
-                            choices=["amd64", "arm64"],
+                            choices=["amd64", "arm64", "aspeed"],
                             required=False)
     CMD_PARSER.add_argument("--verbose",
                             dest="verbose",
@@ -622,7 +647,7 @@ if __name__ == '__main__':
     config_diff = None
 
     print("-> Process patches")
-    patch_table = load_patch_table(src_folder, k_version_major)
+    patch_table = load_patch_table(src_folder, k_version_major, args["patch_table"])
     if patch_table is None:
         print("Can't load patch table from folder {}".format(src_folder))
         sys.exit(1)

@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# /var/run/hw-management/leakage — runtime layout (example)
+#
+# Populated by hw-management-bmc-a2d-leakage-config.sh from
+# /etc/hw-management-bmc-a2d-leakage-config.json (see also
+# hw-management-bmc-a2d-leakage-config-example.json).
+#
+# N = leak-detector index: 1-based order of objects in the top-level JSON array.
+# j = channel index: 1 … NumChnl for that detector.
+#
+# There is no I2C bus/address level under leakage/; only numeric detector dirs.
+
+/var/run/hw-management/leakage/
+├── 1/                                 # first detector (N=1)
+│   ├── device_type                    # text: DeviceType from JSON (e.g. MAX1363, ADS1015)
+│   ├── 1/                             # channel j=1
+│   │   ├── input                      # symlink or file: raw IIO sample (unscaled) when Probe path exists
+│   │   ├── min                        # low threshold (register-derived × scale, config units)
+│   │   ├── max                        # high threshold (register-derived × scale)
+│   │   ├── crit                       # CriticalMax (config units)
+│   │   ├── emerg                      # EmergencyMax (config units)
+│   │   ├── lcrit                      # optional: CriticalMin
+│   │   ├── lemerg                     # optional: EmergencyMin
+│   │   ├── type                       # optional: JSON field "Type" — file content rop or flex (sensor kind)
+│   │   ├── scale                      # Scale from JSON
+│   │   ├── last_sample                # optional: 12-bit-aligned code (written on OOB event by leakage-handler)
+│   │   └── last_event                 # optional: event timestamp ms (written by leakage-handler)
+│   ├── 2/                             # channel j=2 (if NumChnl ≥ 2)
+│   │   ├── input
+│   │   ├── min
+│   │   ├── max
+│   │   ├── crit
+│   │   ├── emerg
+│   │   ├── type                       # optional: rop or flex (same "Type" field as channel 1)
+│   │   ├── scale
+│   │   ├── last_sample
+│   │   └── last_event
+│   └── leak_in_0 -> 1               # optional: ChnlNames — symlink from JSON name → channel dir "1"
+│
+└── 2/                                 # second detector (N=2)
+    ├── device_type
+    └── 1/
+        ├── input
+        ├── min
+        ├── max
+        ├── crit
+        ├── emerg
+        └── scale
+
+# Notes
+#
+# • input: When JSON Probe is true, the script binds the driver and points input at the kernel
+#   sysfs raw attribute (e.g. …/iio:deviceX/in_voltageY_raw). Paths differ by SoC/driver.
+#
+# • min/max: From LoThreshRegVal / HiThreshRegVal (big-endian unsigned) × Scale.
+#
+# • type: Per-channel file from JSON "Type". Typical values: rop, flex (not a ChnlNames symlink).
+#
+# • ChnlNames: Optional extra symlinks under leakage/<N>/ whose names come from the JSON array;
+#   each symlink targets a numeric channel directory (1 … NumChnl).
+#
+# • hw-management-bmc-leakage-handler.sh (udev LEAKAGE<n> events) walks only numeric subdirs of
+#   leakage/<n>/ (channel indices). It reads input, min, max; if sample is out of band it writes
+#   last_sample and last_event.
+#
+# • Separate from this tree: init-time per-detector flags may appear under
+#   /var/run/hw-management/system/leakage<n> (see helpers / bmc-ready integration).
