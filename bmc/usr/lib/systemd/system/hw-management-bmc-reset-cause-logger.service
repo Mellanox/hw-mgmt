@@ -1,0 +1,19 @@
+[Unit]
+Description=BMC Reset Cause Logger
+Documentation=file:///BMC_UNEXPECTED_REBOOT_INVESTIGATION.md
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+ConditionPathExists=/usr/bin/hw-management-bmc-reset-cause-logger.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hw-management-bmc-reset-cause-logger.sh
+RemainAfterExit=no
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutSec=30
+
+[Install]
+WantedBy=sysinit.target
+
