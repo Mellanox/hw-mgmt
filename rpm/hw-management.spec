@@ -14,7 +14,8 @@ Provides:      hw-management(x86-64) = %{version}
 
 %define _builddir ../
 %define _rpmdir .
-#%define _rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm
+# _rpmfilename pattern (avoid % in comment — rpm still expands macros):
+# NAME-VERSION-RELEASE.ARCH.rpm
 %define _rpmfilename %%{NAME}-%%{VERSION}.%%{ARCH}.rpm
 %define _unpackaged_files_terminate_build 0
 
@@ -96,7 +97,8 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_mqm9700.json $RPM_BUILD_
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2010.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2010.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2100.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2100.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2201.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2201.json
-install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2700_msb7x00.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2700_msb7x00.json
+install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2700.json
+install -m 0644 usr/etc/hw-management-thermal/tc_config_msn27002.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn27002.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn3420.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn3420.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn3700C.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn3700C.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn3700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn3700.json
@@ -198,7 +200,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2010.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2100.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2201.json"
-%config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2700_msb7x00.json"
+%config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2700.json"
+%config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn27002.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn3420.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn3700C.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn3700.json"
