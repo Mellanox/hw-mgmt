@@ -1,0 +1,77 @@
+{
+  "field_reference": {
+    "top_level_array": "Each element is one leak detector (A2D stack) on the platform.",
+    "detector_object": {
+      "Name": "string, required. Human-readable detector id.",
+      "NumChnl": "number, required. Channel count for this detector (1-based channel indices under leakage/<i>/).",
+      "ChnlNames": "array of strings, optional. If set, symlinks leakage/<i>/<name> -> channel index.",
+      "Device": "array of device alternatives; first probed I2C match is configured."
+    },
+    "device_object": {
+      "DeviceType": "string, required. e.g. MAX1363, ADS7142 — maps to driver / register logic.",
+      "Bus": "number, required. I2C bus number.",
+      "Address": "string, required. Device address, e.g. 0x34.",
+      "Probe": "boolean, optional. If true, bind kernel driver (new_device) before register writes.",
+      "Type": "string, optional. Sensor kind label (e.g. rop, flex). Published as runtime .../<j>/type.",
+      "CfgReg": "string, optional. Configuration register address (hex).",
+      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg.",
+      "LoThreshReg": "string, optional. Low threshold register address.",
+      "LoThreshRegVal": "string, optional. Bytes for low threshold (big-endian); scaled to min.",
+      "HiThreshReg": "string, optional. High threshold register address.",
+      "HiThreshRegVal": "string, optional. Bytes for high threshold; scaled to max.",
+      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max/crit).",
+      "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
+      "EmergencyMin": "number, optional. User low-side emergency bound (engineering units). Runtime: .../<j>/lemerg.",
+      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit.",
+      "EmergencyMax": "number, optional. User high-side emergency bound. Runtime: .../<j>/emerg."
+    },
+    "runtime_paths": {
+      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel.",
+      "type": "from Device.Type",
+      "lcrit": "from Device.CriticalMin",
+      "lemerg": "from Device.EmergencyMin",
+      "crit": "from Device.CriticalMax",
+      "emerg": "from Device.EmergencyMax"
+    },
+    "deployment_note": "Copy only the array in example_leak_detectors to /etc/hw-management-bmc-a2d-leakage-config.json (or merge with platform file). The full JSON in this file is for documentation; the BMC tool expects a top-level JSON array."
+  },
+  "example_leak_detectors": [
+    {
+      "Name": "Chassis_0_LeakDetector_0_Mgmt",
+      "NumChnl": 2,
+      "ChnlNames": [
+        "Chassis_0_LeakDetector_0_A",
+        "Chassis_0_LeakDetector_0_B"
+      ],
+      "Device": [
+        {
+          "DeviceType": "MAX1363",
+          "Bus": 28,
+          "Address": "0x34",
+          "Probe": false,
+          "Type": "rop",
+          "Scale": 0.000244140625,
+          "CriticalMin": 0.05,
+          "EmergencyMin": 0.02,
+          "CriticalMax": 0.85,
+          "EmergencyMax": 0.95,
+          "CfgReg": "0x00",
+          "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
+        },
+        {
+          "DeviceType": "ADS7142",
+          "Bus": 28,
+          "Address": "0x49",
+          "Probe": false,
+          "Type": "flex",
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xc4 0x90",
+          "LoThreshReg": "0x02",
+          "LoThreshRegVal": "0x38 0x40",
+          "HiThreshReg": "0x03",
+          "HiThreshRegVal": "0x7f 0xf0"
+        }
+      ]
+    }
+  ]
+}
