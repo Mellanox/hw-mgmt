@@ -1,0 +1,61 @@
+# BMC VPD EEPROM — shell config (example)
+#
+# Purpose
+#   Variables consumed by /usr/bin/hw-management-bmc-ready-common.sh for:
+#     • get_system_hw_id  — read HID bytes from the VPD EEPROM into $config_path/hid
+#     • get_system_hw_bom — parse BOM for selected HID prefixes (see script)
+#
+# Packaged reference (HI193)
+#   usr/etc/HI193/hw-management-bmc-eeprom.conf
+#   Copied to /etc/hw-management-bmc-eeprom.conf by hw-management-bmc-plat-specific-preps.sh
+#   when the device-tree SKU maps to that platform directory (e.g. hid193 → HI193).
+#
+# Runtime loading
+#   1. ready-common.sh sets built-in defaults (same values as HI193 reference).
+#   2. If /etc/hw-management-bmc-eeprom.conf exists and is readable, it is sourced
+#      with `. /etc/hw-management-bmc-eeprom.conf` and overrides those defaults.
+#   3. A platform-specific wrapper may set variables before sourcing ready-common.sh.
+#
+# File format
+#   POSIX-style assignments only (comments with #). No spaces around '=' required
+#   for simple values; quote eeprom_file if paths contain spaces (they should not).
+#
+# Variables
+#
+#   BMC_VPD_EEPROM_I2C_BUS
+#     I2C bus number for documentation / tooling. The running code uses eeprom_file
+#     (sysfs path to the eeprom character device), not raw I2C ioctls.
+#
+#   BMC_VPD_EEPROM_I2C_ADDRES
+#     Device address in 0xNN form (metadata; same note as bus).
+#
+#   BMC_VPD_EEPROM_HID_OFFSET
+#     Byte offset in the EEPROM image where the hardware ID string starts.
+#
+#   BMC_VPD_EEPROM_HID_SIZE
+#     Length in bytes to read for HID (dd skip/count in get_system_hw_id).
+#
+#   BMC_VPD_EEPROM_BOM_SIZE
+#     Maximum BOM region length after the Vx- anchor is found in get_system_hw_bom.
+#
+#   eeprom_file
+#     Absolute sysfs path to the EEPROM node (e.g. …/i2c-<bus>/<bus>-00xx/eeprom).
+#     Must match the device created by hw-management-bmc-early-i2c-init (JSON) on
+#     that platform.
+#
+# Example (HI193 reference — illustrative; use the packaged file as source of truth)
+
+BMC_VPD_EEPROM_I2C_BUS=5
+BMC_VPD_EEPROM_I2C_ADDRES=0x51
+BMC_VPD_EEPROM_HID_OFFSET=22
+BMC_VPD_EEPROM_HID_SIZE=5
+BMC_VPD_EEPROM_BOM_SIZE=192
+eeprom_file=/sys/devices/platform/soc@14000000/soc@14000000:bus@14c0f000/14c0f600.i2c-bus/i2c-5/5-0051/eeprom
+
+# Notes
+#
+# • Platform DT / ACPI may change the sysfs path; update eeprom_file in the copy
+#   under usr/etc/<HID>/ for new boards, then deploy via plat-specific-preps.
+#
+# • See also: bmc/examples/hw-management-bmc-eeprom-sysfs.txt for /var/run/…/eeprom/
+#   symlinks (runtime view), which is separate from this VPD read path.
