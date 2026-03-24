@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+[Unit]
+Description=BMC Ready Configuration
+After=hw-management-bmc-early-i2c-init.service hw-management-bmc-init.service
+Requires=hw-management-bmc-early-i2c-init.service
+Wants=hw-management-bmc-init.service
+
+[Service]
+Restart=no
+RemainAfterExit=true
+Type=simple
+ExecStartPre=/usr/bin/env hw-management-bmc-ready-common.sh
+ExecStart=/usr/bin/env hw-management-bmc-boot-complete.sh
+SyslogIdentifier=hw-management-bmc-boot-complete
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=
+

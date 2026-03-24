@@ -1,0 +1,50 @@
+HI189 / SPC6 AST2700 BMC — GPIO reference for usr/etc/HI189/hw-management-bmc-gpio-pins.json
+============================================================================================
+
+Linux gpiochip bases are discovered at runtime (see bmc_init_sysfs_gpio in
+hw-management-bmc-gpio-set.sh):
+
+  expander24  →  gpiochip with ngpio=24  (PCAL6524), base = EXPANDER_BASE
+  aspeed      →  gpiochip ngpio 208 (AST2600) or 216 (AST2700), base = ASPEED_BASE
+
+Absolute Linux GPIO number:  ABS = BASE + offset
+
+Example bases (typical on AST2700 bringup; verify on your system):
+  EXPANDER_BASE = 740   →  echo /sys/class/gpio/gpiochip*/{base,ngpio}
+  ASPEED_BASE     = 524
+
+Symlinks under /var/run/hw-management/system/ point at …/gpio<N>/value after init.
+
+--------------------------------------------------------------------------------------------
+PCAL6524 (expander24)
+--------------------------------------------------------------------------------------------
+offset   ABS (ex.)   dir    value   symlink name
+--------------------------------------------------------------------------------------------
+   1       741        in      —     GP_EROT_RST_IN_L
+   2       742        in      —     GP_3V3_BMC_PHY_PG
+   3       743        out     1     GP_BMC_PWR_CYCLE_3V3_MASK_L
+   6       746        in      —     SE_SOC_EROT_BOOT_COMPLETE
+   7       747        out     —     GP_BMC_WP_CTRL_GPIO_L
+   8       748        out     0     GP_BMC_REC_SPI_MUX1_SEL
+  11       751        out     1     GP_JTAG_BMC_CPLD_BURN_EN_L
+  12       752        in      —     GP_PWR_BANK_PRESENT_L
+  19       759        out     0     GP_PROD_CS_FLASH0_EN
+  21       761        out     0     GP_PROD_CS_FLASH1_EN
+
+  Offset 10 (e.g. PHY reset) may be owned by devicetree — not exported by this JSON.
+
+--------------------------------------------------------------------------------------------
+Aspeed SoC GPIO (aspeed)
+--------------------------------------------------------------------------------------------
+offset   ABS (ex.)   dir    value   symlink name
+--------------------------------------------------------------------------------------------
+  34       558        in      —     GP_STBY_PG
+ 144       668        out     1     GP_BMC_GPIO_EXP_RESET_L
+
+  bmc_stby_ready in JSON: chip aspeed, offset 34  →  wait_bmc_standby_ready() uses
+  /sys/class/gpio/gpio<558>/value when BASE=524.
+
+  Offset 145 (GP_BMC_PWR_CYCLE_BMC / “1V8 power cycle”) is intentionally NOT listed:
+  configuring it can reset or power-cycle the BMC (see spc6-ast2700-a1-bmc_ready.sh).
+
+============================================================================================

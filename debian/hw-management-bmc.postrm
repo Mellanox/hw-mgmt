@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+purge)
+	# Udev rules under /lib/udev/rules.d/ are symlinked at boot from /etc/HI*/*.rules by
+	# hw-management-bmc-plat-specific-preps (see ln -sfn in that script). Those symlinks are
+	# not dpkg-owned, so they must be removed here or they survive --purge as dangling links.
+	if [ -d /lib/udev/rules.d ]; then
+		find /lib/udev/rules.d -maxdepth 1 -type l -name '*-hw-management-bmc-*.rules' -exec rm -f {} +
+	fi
+	;;
+esac
+
+#DEBHELPER#

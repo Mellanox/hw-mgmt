@@ -1,0 +1,46 @@
+{
+	"field_reference": {
+		"overview": "Consumed by bmc_init_sysfs_gpio() in hw-management-bmc-gpio-set.sh after hw-management-bmc-plat-specific-preps copies the platform file to /etc/hw-management-bmc-gpio-pins.json (or override GPIO_PINS_CONFIG). Parsed with hw-management-bmc-json-parser.sh.",
+		"description": "string, optional. Comment only; not required by the script.",
+		"bmc_stby_ready": {
+			"chip": "string, required. Logical GPIO controller: aspeed | expander24 (see chip table).",
+			"offset": "number, required. Line index relative to that controller base (Linux GPIO number = discovered_base + offset)."
+		},
+		"pins": "array of pin objects, processed in order (export, direction, optional value, then after wait_platform_drv symlinks).",
+		"pin_object": {
+			"chip": "string, required. aspeed — SoC GPIO (AST2600 208 lines or AST2700 216 lines, auto-detected). expander24 — 24-line PCAL6524-class expander.",
+			"offset": "number, required. Offset on that chip.",
+			"direction": "string, required. in | out.",
+			"value": "number, optional. 0 or 1; applied only when direction is out (omit for direction-only setup).",
+			"symlink": "string, optional. If set and /var/run/hw-management/system exists, check_n_link gpio<abs>/value -> <system_path>/<symlink>."
+		},
+		"runtime": {
+			"BMC_STBY_READY": "Global path set from bmc_stby_ready chip+offset for wait_bmc_standby_ready() in hw-management-bmc-ready.sh.",
+			"system_path": "From hw-management-bmc-helpers.sh (typically /var/run/hw-management/system)."
+		},
+		"deployment_note": "Do not install this whole file to /etc. Copy only the object in example_platform below (save as /etc/hw-management-bmc-gpio-pins.json), or use the platform tree file usr/etc/<HID>/hw-management-bmc-gpio-pins.json shipped in the package. Remove field_reference and deployment_note from any deployed JSON."
+	},
+	"deployment_note": "See field_reference.deployment_note.",
+	"example_platform": {
+		"description": "HI189 / SPC6 AST2700 reference — same logical content as usr/etc/HI189/hw-management-bmc-gpio-pins.json in this repo.",
+		"bmc_stby_ready": {
+			"chip": "aspeed",
+			"offset": 34
+		},
+		"pins": [
+			{ "chip": "expander24", "offset": 1, "direction": "in", "symlink": "GP_EROT_RST_IN_L" },
+			{ "chip": "expander24", "offset": 2, "direction": "in", "symlink": "GP_3V3_BMC_PHY_PG" },
+			{ "chip": "expander24", "offset": 3, "direction": "out", "value": 1, "symlink": "GP_BMC_PWR_CYCLE_3V3_MASK_L" },
+			{ "chip": "expander24", "offset": 6, "direction": "in", "symlink": "SE_SOC_EROT_BOOT_COMPLETE" },
+			{ "chip": "expander24", "offset": 7, "direction": "out", "symlink": "GP_BMC_WP_CTRL_GPIO_L" },
+			{ "chip": "expander24", "offset": 8, "direction": "out", "value": 1, "symlink": "GP_BMC_REC_SPI_MUX1_SEL" },
+			{ "chip": "expander24", "offset": 11, "direction": "out", "value": 1, "symlink": "GP_JTAG_BMC_CPLD_BURN_EN_L" },
+			{ "chip": "expander24", "offset": 12, "direction": "in", "symlink": "GP_PWR_BANK_PRESENT_L" },
+			{ "chip": "expander24", "offset": 19, "direction": "out", "value": 0, "symlink": "GP_PROD_CS_FLASH0_EN" },
+			{ "chip": "expander24", "offset": 21, "direction": "out", "value": 0, "symlink": "GP_PROD_CS_FLASH1_EN" },
+			{ "chip": "aspeed", "offset": 34, "direction": "in", "symlink": "GP_STBY_PG" },
+			{ "chip": "aspeed", "offset": 145, "direction": "out", "value": 1, "symlink": "GP_BMC_PWR_CYCLE_1V8" },
+			{ "chip": "aspeed", "offset": 144, "direction": "out", "value": 1, "symlink": "GP_BMC_PWR_CYCLE_1V8_MASK_L" }
+		]
+	}
+}
