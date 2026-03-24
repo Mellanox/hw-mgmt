@@ -1,0 +1,27 @@
+# /var/run/hw-management/eeprom — runtime layout (example)
+#
+# Created by udev when I2C EEPROM devices appear; handler:
+#   /usr/bin/hw-management-bmc-events.sh add|rm <event> %S %p
+#
+# Platform rules (example: usr/etc/HI193/71-hw-management-bmc-events.rules):
+#   • eeprom_system — SUBSYSTEM=="i2c", KERNEL=="5-0051", ACTION=="add"|"remove"
+#   • eeprom_bmc    — SUBSYSTEM=="i2c", KERNEL=="4-0050", ACTION=="add"|"remove"
+#
+# On add, the script mkdir -p this directory and symlinks each name to the
+# kernel sysfs eeprom attribute under the matched device path ($3/eeprom).
+# On remove, the symlinks are unlinked (check_n_unlink).
+
+/var/run/hw-management/eeprom/
+├── eeprom_system                      # symlink → …/i2c-5/5-0051/eeprom (system FRU / VPD, example)
+└── eeprom_bmc                         # symlink → …/i2c-4/4-0050/eeprom (BMC board EEPROM, example)
+
+# Notes
+#
+# • Exact I2C bus and address depend on the platform udev rules; other boards may
+#   use different KERNEL== patterns while keeping the same run-dir link names.
+#
+# • Links are created only after the corresponding i2c device is probed; readers
+#   should tolerate missing paths until hotplug completes.
+#
+# • Implementation: bmc/usr/etc/HI193/hw-management-bmc-events.sh (EEPROM_RUN_DIR,
+#   cases eeprom_system / eeprom_bmc).
