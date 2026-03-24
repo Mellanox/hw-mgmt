@@ -490,10 +490,12 @@ function set_fan_direction()
 		fi
 		local fan_debounce_timer
 		local fan_debounce_counter
+		local fan_dir
+		local fan_dir_old
 		# if $thermal_path / fanN_dir attribute missing - run debounce logic.
 		fan_dir=$(< "$system_path/fan_dir")
 		if [ ! -f "$thermal_path/${attribute}_dir" ]; then
-		    fan_debounce_counter=0
+			fan_debounce_counter=0
 			fan_dir_old=-1
 			fan_debounce_timer=$fan_debounce_timeout_ms
 			while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
@@ -517,8 +519,8 @@ function set_fan_direction()
 		fi
 		fan_index=$((fan_index - 1))
 
-		#  Debounce is not succses. Set fan dir as not recognized value "2".
-		if [ ! -z "$fan_debounce_timer" ] && [ "$fan_debounce_timer" -eq 0 ]; then
+		#  Debounce is not success. Set fan dir as not recognized value "2".
+		if [ ! -z "$fan_debounce_timer" ] && [ "$fan_debounce_timer" -le 0 ]; then
 			fan_direction=2
 		else
 			# fan_dir is an integer bitfield; one bit per fan direction.
