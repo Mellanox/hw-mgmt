@@ -1,0 +1,17 @@
+[Unit]
+Description=BMC hardware management init (hw-management-bmc-ready)
+Documentation=file:///usr/share/doc/hw-management-bmc/README.md
+DefaultDependencies=no
+After=local-fs.target hw-management-bmc-early-i2c-init.service
+Requires=hw-management-bmc-early-i2c-init.service
+Before=hw-management-bmc-boot-complete.service
+ConditionPathExists=/usr/bin/hw-management-bmc-ready.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /usr/bin/hw-management-bmc-ready.sh
+SyslogIdentifier=hw-management-bmc-init
+
+[Install]
+WantedBy=multi-user.target
