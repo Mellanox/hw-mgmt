@@ -14,7 +14,8 @@ Provides:      hw-management(x86-64) = %{version}
 
 %define _builddir ../
 %define _rpmdir .
-#%define _rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm
+# _rpmfilename pattern (avoid % in comment — rpm still expands macros):
+# NAME-VERSION-RELEASE.ARCH.rpm
 %define _rpmfilename %%{NAME}-%%{VERSION}.%%{ARCH}.rpm
 %define _unpackaged_files_terminate_build 0
 
@@ -96,7 +97,8 @@ install -m 0644 usr/etc/hw-management-thermal/tc_config_mqm9700.json $RPM_BUILD_
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2010.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2010.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2100.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2100.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2201.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2201.json
-install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2700_msb7x00.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2700_msb7x00.json
+install -m 0644 usr/etc/hw-management-thermal/tc_config_msn2700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn2700.json
+install -m 0644 usr/etc/hw-management-thermal/tc_config_msn27002.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn27002.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn3420.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn3420.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn3700C.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn3700C.json
 install -m 0644 usr/etc/hw-management-thermal/tc_config_msn3700.json $RPM_BUILD_ROOT/etc/hw-management-thermal/tc_config_msn3700.json
@@ -125,9 +127,7 @@ install -m 0755 usr/usr/bin/hw-management-parse-eeprom.sh $RPM_BUILD_ROOT/usr/bi
 install -m 0755 usr/usr/bin/hw-management-power-helper.sh $RPM_BUILD_ROOT/usr/bin/hw-management-power-helper.sh
 install -m 0755 usr/usr/bin/hw-management-ps-vpd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ps-vpd.sh
 install -m 0755 usr/usr/bin/hw-management-ready.sh $RPM_BUILD_ROOT/usr/bin/hw-management-ready.sh
-install -m 0755 usr/usr/bin/hw-management-sfp-helper.sh $RPM_BUILD_ROOT/usr/bin/hw-management-sfp-helper.sh
 install -m 0755 usr/usr/bin/hw-management-start-post.sh $RPM_BUILD_ROOT/usr/bin/hw-management-start-post.sh
-install -m 0755 usr/usr/bin/hw-management-thermal-control.sh $RPM_BUILD_ROOT/usr/bin/hw-management-thermal-control.sh
 install -m 0755 usr/usr/bin/hw-management-thermal-events.sh $RPM_BUILD_ROOT/usr/bin/hw-management-thermal-events.sh
 install -m 0755 usr/usr/bin/hw-management-vpd-parser.py $RPM_BUILD_ROOT/usr/bin/hw-management-vpd-parser.py
 install -m 0755 usr/usr/bin/hw-management-wd.sh $RPM_BUILD_ROOT/usr/bin/hw-management-wd.sh
@@ -138,6 +138,8 @@ install -m 0755 usr/usr/bin/hw_management_psu_fw_update_common.py $RPM_BUILD_ROO
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_delta.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_delta.py
 install -m 0755 usr/usr/bin/hw_management_psu_fw_update_murata.py $RPM_BUILD_ROOT/usr/bin/hw_management_psu_fw_update_murata.py
 install -m 0755 usr/usr/bin/hw_management_thermal_control.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_control.py
+install -m 0755 usr/usr/bin/hw_management_thermal_control_2_5.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_control_2_5.py
+install -m 0755 usr/usr/bin/hw_management_thermal_updater.py $RPM_BUILD_ROOT/usr/bin/hw_management_thermal_updater.py
 install -m 0755 usr/usr/bin/hw_management_independent_mode_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_independent_mode_update.py
 install -m 0755 usr/usr/bin/hw_management_dpu_thermal_update.py $RPM_BUILD_ROOT/usr/bin/hw_management_dpu_thermal_update.py
 install -m 0755 usr/usr/bin/iorw $RPM_BUILD_ROOT/usr/bin/iorw
@@ -198,7 +200,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2010.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2100.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2201.json"
-%config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2700_msb7x00.json"
+%config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn2700.json"
+%config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn27002.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn3420.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn3700C.json"
 %config %attr(0755, root, root) "/etc/hw-management-thermal/tc_config_msn3700.json"
@@ -232,9 +235,7 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-power-helper.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ps-vpd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-ready.sh"
-%attr(0755, root, root) "/usr/bin/hw-management-sfp-helper.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-start-post.sh"
-%attr(0755, root, root) "/usr/bin/hw-management-thermal-control.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-thermal-events.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-wd.sh"
 %attr(0755, root, root) "/usr/bin/hw-management.sh"
@@ -251,6 +252,8 @@ chmod 0644 $RPM_BUILD_ROOT/usr/share/man/man8/hw-management.service.8.gz
 %attr(0755, root, root) "/usr/bin/hw-management-if-rename.sh"
 %attr(0755, root, root) "/usr/bin/hw-management-vpd-parser.py"
 %attr(0755, root, root) "/usr/bin/hw_management_thermal_control.py"
+%attr(0755, root, root) "/usr/bin/hw_management_thermal_control_2_5.py"
+%attr(0755, root, root) "/usr/bin/hw_management_thermal_updater.py"
 %attr(0755, root, root) "/usr/bin/hw_management_independent_mode_update.py"
 %attr(0755, root, root) "/usr/bin/hw_management_dpu_thermal_update.py"
 %attr(0755, root, root) "/usr/local/bin/hw-management-process-blacklist.sh"

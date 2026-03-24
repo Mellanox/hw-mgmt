@@ -1,0 +1,21 @@
+[Unit]
+Description=BMC Health Monitor
+Documentation=file:///BMC_UNEXPECTED_REBOOT_INVESTIGATION.md
+After=multi-user.target
+Wants=syslog.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/hw-management-bmc-health-monitor.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits to prevent the monitor itself from causing issues
+MemoryMax=50M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target
+
