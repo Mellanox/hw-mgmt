@@ -724,6 +724,7 @@ Kernel-6.1
 |0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0109-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch  |                    | Downstream accepted; os[nvos]            |            | xdpe1a2g7b                                     |
 |0110-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            | CPLD power LED                                 |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
@@ -815,6 +816,11 @@ Kernel-6.12
 |0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0058-PCI-DOE-Poll-DOE-Busy-bit-for-up-to-1-second-in-pci.patch   | 86efc62            | Feature upstream                         | 6.13.0     |                                                |
 |0059-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch  |                    | Downstream accepted                      |            | xdpe1a2g7b                                     |
+|0060-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            | CPLD power LED                                 |
+|0060-platform-mellanox-nvsw-bmc-Downstream-Add-protection.patch  |                    | Downstream accepted                      |            |                                                |
+|0061-platform-mellanox-mlxreg-io-Increase-max-supported-a.patch  |                    | Downstream accepted                      |            |                                                |
+|0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
+|0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
