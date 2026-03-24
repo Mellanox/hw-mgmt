@@ -1,0 +1,35 @@
+Kernel-6.12
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+|0001-jtag-Add-JTAG-core-headers-GPIO-mux-and-locking-support.patch|                   | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
+|0002-aspeed-nvidia-spc6-a1-bmc.dts.patch                         |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Legend:
+Feature upstream: Has commit Id in upstream
+Feature accepted: Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
+Feature pending:  Pending maintainer review or not sent yet
+downstream:       Not plan to upstream
+downstream accepted: Not plan to upstream but following patches depend on this. This patch will be taken to the accepted list.
+Bugfix upstream:  Has commit Id in upstream and backported as bugfix  | v5.10.145
+Bugfix accepted:  Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
+Bugfix pending:   Bugfix pending maintainer review or not sent yet
+Rejected:         Not take this patch
+ 
+Additional options in status: 
+os['sonic', '...'] - take this patch from the OS folder under patch folder(sonic, ..).
+				 		hw-mgmt/recipes-kernel/linux/linux-5.10/{OS}
+take['sonic', '...'] - take this patch for specified OS (sonic, ..)
+                       Will take patch, even for patches that should be ignored, NOS can be set to ALL
+skip['sonic', '...'] - skip this patch for specified OS (sonic, ..), NOS can be set to ALL
+
+
+Example status: 
+Feature  upstream, take[sonic] -- take this patch for all OS form patches folder. For sonic - take from sonic repo
+Feature  upstream, skip[sonic] -- take this patch for all OS form patches folder. For sonic - skip
+Feature  upstream, take[sonic], skip[cumulus] -- take this patch for all OS form patches folder.
+								Special options: for cumulus - skip, for sonic - take from sonic repo
+ 
+
+© 2026 GitHub, Inc.
