@@ -54,7 +54,7 @@ try:
     import traceback
     import signal
     import threading
-    from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write
+    from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write, exit_wait
     from collections import Counter
     from hw_management_platform_config import (
         PLATFORM_CONFIG,
@@ -596,7 +596,7 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        EXIT.wait(timeout=1)
+        exit_wait(EXIT, 1, chunk_sec=0.2)
 
     LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
 
