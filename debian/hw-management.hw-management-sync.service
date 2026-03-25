@@ -10,9 +10,11 @@ RemainAfterExit=yes
 
 ExecStart=/bin/systemctl start hw-management-peripheral-updater.service --no-block
 ExecStart=/bin/systemctl start hw-management-thermal-updater.service --no-block
+ExecStartPost=/bin/sleep 3
 
 ExecStop=/bin/systemctl stop hw-management-peripheral-updater.service --no-block
 ExecStop=/bin/systemctl stop hw-management-thermal-updater.service --no-block
+ExecStopPost=/bin/sleep 3
 
 [Install]
 WantedBy=multi-user.target
