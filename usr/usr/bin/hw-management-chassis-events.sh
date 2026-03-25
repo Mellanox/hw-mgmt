@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# Copyright (c) 2018 - 2024, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##################################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -478,6 +480,7 @@ function set_fan_direction()
 			return
 		fi
 		fan_debounce_counter=0
+		fan_dir_old=2
 		fan_debounce_timer=$fan_debounce_timeout_ms
 		# debounce timeout for FAN dir. 2 times in a row read same value or delay > fan_debounce_timer.
 		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
