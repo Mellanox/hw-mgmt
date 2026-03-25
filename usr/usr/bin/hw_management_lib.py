@@ -201,6 +201,7 @@ class HW_Mgmt_Logger:
         self.syslog_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to syslog
         self.log_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to log
         self._lock = threading.Lock()  # Thread safety for all logger operations
+        self.log_hash_max_size = self.MAX_MSG_HASH_SIZE
 
         self._set_param(ident, log_file, log_level, syslog_level)
         for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
@@ -340,6 +341,15 @@ class HW_Mgmt_Logger:
         """
         if isinstance(syslog_repeat, int) and syslog_repeat >= 0:
             self.syslog_repeat = syslog_repeat
+
+    def set_log_hash_max_size(self, log_hash_max_size):
+        """
+        @summary:
+            Set max size of log hash.
+        @param log_hash_max_size: max size of log hash
+        """
+        if isinstance(log_hash_max_size, int) and log_hash_max_size >= 0:
+            self.log_hash_max_size = log_hash_max_size
 
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
@@ -576,9 +586,9 @@ class HW_Mgmt_Logger:
         """
         hash_size = len(log_hash)
 
-        # don't clean up if hash size < MAX_MSG_TIMEOUT_HASH_SIZE and < MAX_MSG_HASH_SIZE
-        if hash_size > self.MAX_MSG_HASH_SIZE:
-            # some major issue. We never expect to have more than MAX_MSG_HASH_SIZE messages in hash.
+        # don't clean up if hash size < log_hash_max_size
+        if hash_size > self.log_hash_max_size:
+            # some major issue. We never expect to have more than log_hash_max_size messages in hash.
             # Use print instead of logger to avoid potential circular logging issues
             print("hash_garbage_collect: too many ({}) messages in hash. Remove all messages.".format(hash_size))
             log_hash.clear()  # Clear the actual dictionary, not reassign local variable

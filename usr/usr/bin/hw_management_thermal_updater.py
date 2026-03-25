@@ -545,6 +545,9 @@ def main():
 
     try:
         LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+        # System can have >100 ports. It means we can have potential >100 warnings in the logger
+        # We need enough space to store all warnings for all ports.
+        LOGGER.set_log_hash_max_size(256)
     except Exception as e:
         print("Failed to initialize logger: {}. Stopping service.".format(e))
         exit(1)
