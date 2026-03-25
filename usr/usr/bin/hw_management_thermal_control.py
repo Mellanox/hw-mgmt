@@ -57,7 +57,7 @@ import signal
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
-from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait
 import json
 import re
 import psutil
@@ -4085,20 +4085,6 @@ class ThermalManagement(hw_management_file_op):
             self.log.info("Set FAN PWM {}".format(self.pwm_target), repeat=1)
 
     # ----------------------------------------------------------------------
-    def _exit_wait(self, timeout, chunk_sec=1.0):
-        """
-        Wait up to timeout seconds in short chunks so the main thread returns
-        to the interpreter often enough for the SIGTERM handler to run.
-        When blocked in a single long Event.wait(), the handler never runs
-        until wait() returns, so the process can miss systemd's stop timeout.
-        """
-        elapsed = 0.0
-        while elapsed < timeout and not self.exit.is_set():
-            wait_time = min(chunk_sec, timeout - elapsed)
-            self.exit.wait(wait_time)
-            elapsed += wait_time
-
-    # ----------------------------------------------------------------------
     def run(self):
         """
         @summary:  main thermal control loop
@@ -4127,22 +4113,22 @@ class ThermalManagement(hw_management_file_op):
                 pass
 
             if self.emergency:
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
 
             if not self.is_fan_tacho_init():
                 self.stop(reason="Missing FANs")
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
 
             if not self.is_pwm_exists():
                 self.stop(reason="Missing PWM")
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
 
             if self._is_i2c_control_with_bmc():
                 self.stop(reason="BMC has taken over i2c bus")
-                self._exit_wait(30)
+                exit_wait(self.exit, 30)
                 continue
 
             if self._is_attention_fan_insertion_fail():
@@ -4152,7 +4138,7 @@ class ThermalManagement(hw_management_file_op):
 
             if self._is_suspend():
                 self.stop(reason="suspend")
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
             else:
                 self.start(reason="resume")
