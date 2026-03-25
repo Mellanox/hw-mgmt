@@ -83,6 +83,27 @@ def atomic_file_write(file_name, value):
 # ----------------------------------------------------------------------
 
 
+def exit_wait(exit_event, timeout, chunk_sec=1.0):
+    """
+    @summary:
+        Wait up to timeout seconds in short chunks for graceful shutdown visibility.
+    @param exit_event: threading.Event cleared on run, set by signal handler
+    @param timeout: Total seconds to wait (may end early if exit_event is set)
+    @param chunk_sec: Maximum duration of a single wait; smaller reacts faster to signals
+
+    The main-thread Python signal handler does not run while blocked in a single
+    long exit_event.wait(); chunking returns to the interpreter so SIGTERM/SIGINT
+    handlers can run and systemd stop timeouts are respected.
+    """
+    elapsed = 0.0
+    while elapsed < timeout and not exit_event.is_set():
+        wait_time = min(chunk_sec, timeout - elapsed)
+        exit_event.wait(wait_time)
+        elapsed += wait_time
+
+# ----------------------------------------------------------------------
+
+
 def current_milli_time():
     """
     @summary:
