@@ -36,6 +36,14 @@ DRIVER_UNBIND_NAME=""
 UNBIND_STATE_FILE="/var/run/hw-management/vr_dpc_infineon_unbound"
 # Scratchpad (0xD0) accepts only a multi-byte block write; the I2C adapter must support i2ctransfer block writes.
 
+# SMBus PEC (CRC-8): default on (same algorithm as Infineon PEC examples, e.g. head-example-0324-0x66.sh).
+# Disable with -P0 or I2C_PEC=0; override with -P1 / I2C_PEC=1.
+USE_I2C_PEC=1
+I2C_XFER_FLAGS="-f -y"
+# Transient I²C retries (see head-example-0324-0x66.sh). Override with env I2C_MAX_RETRY / I2C_RETRY_DELAY.
+I2C_MAX_RETRY=3
+I2C_RETRY_DELAY=0.05
+
 # PMBus/MFR Specific Commands
 PMBUS_PAGE=0x00
 PMBUS_OPERATION=0x01
@@ -79,6 +87,9 @@ CMD_GET_SCRATCHPAD_ADDR=0x2e
 # OTP partition 0 base (AN001 10.1)
 OTP_BASE=0x10020000
 
+# Header Codes for configuration sections (AN001). Full flash (no -s): invalidate HCs not listed in the config file.
+OTP_SECTION_HC_ALL=(0x04 0x07 0x09 0x0A 0x0B 0x0D 0x0E 0x0F 0x11)
+
 usage() {
     cat << EOF
 Infineon XDPE1x2xx Voltage Regulator Management Tool
@@ -109,10 +120,16 @@ FLASH MODE OPTIONS:
     Optional:
         -s <hc>         Flash only section(s) with this HeaderCode (e.g. -s 0x0B); parse full config, invalidate and upload only matching section(s)
         -n              Skip finalize (dry run): write to scratchpad only, do not upload to OTP or reset
+        -P0 | -P1       SMBus PEC for i2ctransfer helpers (append CRC-8; verify on reads). Default is PEC on (-P1). Use -P0 to disable. Env I2C_PEC=0 or =1 overrides after parsing -P.
         -v              Verbose: repeat for more (-v = verbose, -vv = debug)
+
+    Environment (optional, I2C flash path):
+        I2C_MAX_RETRY   Transient I2C retries per op (default 3; minimum 1). Same role as max_retry in Infineon PEC examples.
+        I2C_RETRY_DELAY Seconds between attempts (default 0.05).
 
     After each scratchpad write, data is read back to <file>.scpad and compared; mismatch aborts flash.
     For .txt/.mic flash: section .bin live in a temp dir during the run; after the section loop (including -n dry run) they are copied to <config_basename>_flash_work/ (.bin, .params, .scpad per flashed section). Direct -f *.bin keeps *.bin.scpad next to the .bin.
+    Full .txt/.mic flash (no -s): if the file contains "Configuration Checksum : 0x........" and it matches the device total OTP CRC (GET_CRC with header code 0), programming is skipped (no prompt, no invalidate). Otherwise: invalidate only OTP sections whose Header Code is not present in the file (known HC list). Per-section upload is skipped if GET_CRC matches section_crc_expected (see .params): Partial PMBus (HC 0x0B) builds <section>_crc_input.bin during .txt parse (LE bytes of 3rd DWORD on each 000 row + LE bytes of the DWORD on the following 010 row), then crc32(1) on that file; other sections use the last 4 bytes LE of the section .bin. Requires crc32 in PATH for 0x0B expected CRC.
 
 SCAN MODE OPTIONS:
     -b <bus>            I2C bus number
@@ -225,57 +242,192 @@ log_verbose() {
     fi
 }
 
-# Send single byte (command only, no data) — e.g. PMBUS_CLEAR_FAULTS per SMBus "send byte".
-i2c_send_byte() {
-    local bus=$1
-    local addr=$2
-    local reg=$3
-    log_debug "i2ctransfer -y $bus w1@$addr $reg"
-    if ! i2ctransfer -y $bus "w1@$addr" $reg 2>/dev/null; then
-        log_error "Failed to send byte to device"
-        return 1
-    fi
-    return 0
+# 7-bit address -> SMBus slave write address byte (W=0).
+_pec_slave_w() {
+    local a="${1#0x}"
+    echo $(( (16#$a << 1) & 0xff ))
 }
 
-# Execute i2c command with error handling
-i2c_write() {
-    local bus=$1
-    local addr=$2
-    local reg=$3
-    shift 3
-    local data=("$@")
+# Slave read address byte (R=1) from write-address byte.
+_pec_slave_r() {
+    echo $(( ($1 | 1) & 0xff ))
+}
 
-    log_debug "i2cset -y $bus $addr $reg ${data[*]}"
-    if ! i2cset -y $bus $addr $reg "${data[@]}" 2>/dev/null; then
-        log_error "Failed to write to device"
+# SMBus PEC: CRC-8 over all listed bytes (decimal or 0x hex). Prints e.g. 0x76 (no newline).
+calc_pec() {
+    local crc=0 val i byte
+    for byte in "$@"; do
+        val=$((byte))
+        crc=$((crc ^ val))
+        for i in 1 2 3 4 5 6 7 8; do
+            if [ $((crc & 0x80)) -ne 0 ]; then
+                crc=$(((crc << 1) ^ 0x07))
+            else
+                crc=$((crc << 1))
+            fi
+        done
+        crc=$((crc & 0xFF))
+    done
+    printf '0x%02x' "$crc"
+}
+
+# Single i2ctransfer entry point (Infineon head-example i2c_rw_prefix style + PEC + I2C_MAX_RETRY).
+# Usage: i2c_rw_wrapper <bus> <addr> <readlen> <wkm1> [write_byte ...]
+#   readlen — 0 = write only; >0 = read this many payload bytes (adds 1 on wire when USE_I2C_PEC).
+#   wkm1    — (count of write bytes) minus 1; the following args must be exactly wkm1+1 bytes (first is often PMBus command reg).
+# On read success: prints space-separated hex (no 0x), readlen tokens. On write success: returns 0.
+# Mapping:  i2c_block_write reg+d[]     -> i2c_rw_wrapper b a 0 ${#d[@]} reg "${d[@]}"
+#           i2c_write reg + data[]      -> i2c_rw_wrapper b a 0 ${#data[@]} reg "${data[@]}"
+#           i2c_send_byte reg           -> i2c_rw_wrapper b a 0 0 reg
+#           i2c_block_read N          -> i2c_rw_wrapper b a N 0 reg
+#           i2c_read byte             -> i2c_rw_wrapper b a 1 0 reg  (w1 + r(N+PEC); same block-read PEC rule as head-example read path)
+i2c_rw_wrapper() {
+    local bus=$1 addr=$2 readlen=$3 wkm1=$4
+    shift 4
+    local -a wb
+    wb=("$@")
+    local nwb=${#wb[@]}
+    local expect=$((wkm1 + 1))
+    if [ "$nwb" -ne "$expect" ]; then
+        log_error "i2c_rw_wrapper: expected $expect write bytes, got $nwb"
         return 1
     fi
-    return 0
+    readlen=$(($readlen))
+    wkm1=$(($wkm1))
+    local max="${I2C_MAX_RETRY:-3}"
+    [ "$max" -lt 1 ] 2>/dev/null && max=1
+    local delay="${I2C_RETRY_DELAY:-0.05}"
+    local attempt=0 addr_w addr_r raw line p_rx expected j pec_args wp
+    local -a rd
+
+    addr_w=$(_pec_slave_w "$addr")
+    addr_r=$(_pec_slave_r "$addr_w")
+
+    if [ "$readlen" -eq 0 ]; then
+        while [ $attempt -lt "$max" ]; do
+            if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
+                wp=$(calc_pec "$addr_w" "${wb[@]}")
+                log_debug "i2c_rw_wrapper wr # PEC: i2ctransfer $I2C_XFER_FLAGS $bus w$((nwb + 1))@$addr ${wb[*]} $wp"
+                if i2ctransfer $I2C_XFER_FLAGS $bus "w$((nwb + 1))@$addr" "${wb[@]}" "$wp" 2>/dev/null; then
+                    return 0
+                fi
+            else
+                log_debug "i2c_rw_wrapper wr: i2ctransfer -y $bus w${nwb}@$addr ${wb[*]}"
+                if i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}" 2>/dev/null; then
+                    return 0
+                fi
+            fi
+            attempt=$((attempt + 1))
+            [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper write retry $attempt/$max"; sleep "$delay"; }
+        done
+        log_error "i2c_rw_wrapper write failed after $max attempts"
+        return 1
+    fi
+
+    local nread=$readlen
+    [ "${USE_I2C_PEC:-0}" -eq 1 ] && nread=$((readlen + 1))
+    attempt=0
+    while [ $attempt -lt "$max" ]; do
+        if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
+            log_debug "i2c_rw_wrapper rd # PEC: i2ctransfer $I2C_XFER_FLAGS $bus w${nwb}@$addr ${wb[*]} r${nread}"
+            raw=$(i2ctransfer $I2C_XFER_FLAGS $bus "w${nwb}@$addr" "${wb[@]}" "r${nread}" 2>/dev/null) || {
+                attempt=$((attempt + 1))
+                [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper read retry $attempt/$max"; sleep "$delay"; }
+                continue
+            }
+        else
+            log_debug "i2c_rw_wrapper rd: i2ctransfer -y $bus w${nwb}@$addr ${wb[*]} r${readlen}"
+            raw=$(i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}" "r${readlen}" 2>/dev/null) || {
+                attempt=$((attempt + 1))
+                [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper read retry $attempt/$max"; sleep "$delay"; }
+                continue
+            }
+        fi
+        line=$(echo "$raw" | sed 's/0x//g')
+        read -ra rd <<< "$line"
+        if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
+            [ "${#rd[@]}" -lt $((readlen + 1)) ] && {
+                attempt=$((attempt + 1))
+                [ $attempt -lt "$max" ] && sleep "$delay"
+                continue
+            }
+            p_rx=$(printf '0x%02x' $((16#${rd[readlen]})))
+            pec_args=("$addr_w" "${wb[@]}" "$addr_r")
+            for ((j = 0; j < readlen; j++)); do
+                pec_args+=("0x${rd[j]}")
+            done
+            expected=$(calc_pec "${pec_args[@]}")
+            if [ "$p_rx" != "$expected" ]; then
+                attempt=$((attempt + 1))
+                [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper PEC mismatch $p_rx vs $expected, retry $attempt/$max"; sleep "$delay"; }
+                continue
+            fi
+        else
+            [ "${#rd[@]}" -lt "$readlen" ] && {
+                attempt=$((attempt + 1))
+                [ $attempt -lt "$max" ] && sleep "$delay"
+                continue
+            }
+        fi
+        echo "$(printf '%s ' "${rd[@]:0:readlen}" | sed 's/[[:space:]]*$//')"
+        return 0
+    done
+    log_error "i2c_rw_wrapper read failed after $max attempts"
+    return 1
+}
+
+# Send single byte (command only, no data) — e.g. PMBUS_CLEAR_FAULTS per SMBus "send byte".
+i2c_send_byte() {
+    local bus=$1 addr=$2 reg=$3
+    i2c_rw_wrapper "$bus" "$addr" 0 0 "$reg"
+}
+
+# Execute i2c command with error handling (reg + data bytes → i2ctransfer via i2c_rw_wrapper).
+i2c_write() {
+    local bus=$1 addr=$2 reg=$3
+    shift 3
+    local data=("$@")
+    if [ ${#data[@]} -eq 0 ]; then
+        i2c_rw_wrapper "$bus" "$addr" 0 0 "$reg"
+    else
+        i2c_rw_wrapper "$bus" "$addr" 0 "${#data[@]}" "$reg" "${data[@]}"
+    fi
 }
 
 i2c_read() {
-    local bus=$1
-    local addr=$2
-    local reg=$3
+    local bus=$1 addr=$2 reg=$3
     local length=${4:-1}
+    local line b max delay attempt result
 
-    log_debug "i2cget -y $bus $addr $reg"
-    local result
-    if [ "$length" = "1" ]; then
-        result=$(i2cget -y $bus $addr $reg)
-    else
-        result=$(i2cget -y $bus $addr $reg w)
-    fi
-
-    if [ $? -ne 0 ]; then
-        log_error "Failed to read from device"
+    if [ "$length" = "0" ]; then
+        log_error "i2c_read: length 0 invalid (writes use i2c_write / i2c_rw_wrapper readlen=0)"
         return 1
     fi
-    log_debug "i2cget result: $result"
 
-    echo -n "$result"
-    return 0
+    if [ "$length" = "1" ]; then
+        line=$(i2c_rw_wrapper "$bus" "$addr" 1 0 "$reg") || return 1
+        b=$(echo "$line" | awk '{print $1}')
+        log_debug "i2c_read byte: 0x$b # PEC=${USE_I2C_PEC:-0}"
+        echo -n "0x$b"
+        return 0
+    fi
+
+    max="${I2C_MAX_RETRY:-3}"
+    [ "$max" -lt 1 ] 2>/dev/null && max=1
+    delay="${I2C_RETRY_DELAY:-0.05}"
+    attempt=0
+    while [ $attempt -lt "$max" ]; do
+        result=$(i2cget -y $bus $addr $reg w 2>/dev/null)
+        if [ $? -eq 0 ]; then
+            log_debug "i2cget result: $result"
+            echo -n "$result"
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        [ $attempt -lt "$max" ] && { log_verbose "I2C i2cget word retry $attempt/$max"; sleep "$delay"; }
+    done
+    log_error "Failed to read word from device after $max attempts"
+    return 1
 }
 
 # Write one DWORD (4 bytes) to reg. For RPTR use with length prefix: write_dword bus addr MFR_RPTR 0x04 b0 b1 b2 b3.
@@ -291,27 +443,45 @@ write_dword() {
 
 # Block read: write reg (1 byte), then read N bytes. Returns space-separated hex bytes (no 0x).
 i2c_block_read() {
-    local bus=$1
-    local addr=$2
-    local reg=$3
-    local num_bytes=${4:-4}
-
-    log_debug "i2ctransfer -y $bus w1@$addr $reg r${num_bytes}@$addr"
+    local bus=$1 addr=$2 reg=$3 num_bytes=${4:-4}
     local line
-    line=$(i2ctransfer -y $bus "w1@$addr" $reg "r${num_bytes}@$addr" 2>/dev/null) || return 1
+    line=$(i2c_rw_wrapper "$bus" "$addr" "$num_bytes" 0 "$reg") || return 1
     line=$(echo "$line" | sed 's/0x//g')
-    log_debug "block read result: $line"
+    log_debug "block read result: $line # PEC=${USE_I2C_PEC:-0}"
     echo "$line"
     return 0
 }
 
+# BLOCK_READ(MFR_FW_COMMAND_DATA, 5): byte0 = block length, must be 4; bytes 1..4 = payload (hex tokens, no 0x).
+# Echoes four space-separated hex byte tokens (same as former d1..d4 after length check).
+read_dword_bytes() {
+    local bus=$1 addr=$2
+    local line d0 d1 d2 d3 d4
+    line=$(i2c_block_read "$bus" "$addr" "$MFR_FW_COMMAND_DATA" 5) || return 1
+    read -r d0 d1 d2 d3 d4 <<< "$line" || return 1
+    if (( 16#${d0:-0} != 4 )); then
+        log_error "read_dword_bytes: expected block length 4 (0x04), got 0x${d0:-?} (bus=$bus addr=$addr reg=$MFR_FW_COMMAND_DATA)"
+        return 1
+    fi
+    echo "$d1 $d2 $d3 $d4"
+}
+
+# Same block read as read_dword_bytes; interprets the four payload bytes as little-endian uint32.
+# Prints one line: 0xXXXXXXXX (8 lowercase hex digits).
+read_dword_u32() {
+    local bus=$1 addr=$2
+    local line d1 d2 d3 d4
+    line=$(read_dword_bytes "$bus" "$addr") || return 1
+    read -r d1 d2 d3 d4 <<< "$line" || return 1
+    [ -z "$d1" ] && return 1
+    printf '0x%08x\n' $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+}
+
 # Retrieve scratchpad register address for controllers that support CMD_GET_SCRATCHPAD_ADDR (0x2e).
 # Sequence: BLOCK_WRITE(0xFD, 4, 2,0,0,0), WRITE_BYTE(0xFE, 0x2e), wait ~500us, BLOCK_READ(0xFD, 5).
-# The value we use for scratchpad writes is d0 (first byte of the 5-byte response) — it is taken
-# from the device only, not hardcoded. Some devices return 0x04; in standard PMBus 0x04 is
-# PMBUS_PHASE — the controller may use vendor-specific meaning for scratchpad at this index.
-#   d0 = byte from device (used as reg for write_dword); d1..d4 = 4-byte addr LE (e.g. 0x2005e000).
-# If response has 0xff in d0 or d1..d4 all 0xff, treat as invalid and return empty (use default 0xD0).
+# Response: block length 0x04 then 4-byte scratchpad address LE (e.g. 0x2005e000). read_dword_bytes/u32 enforce length.
+# Prints one line only: 32-bit addr as 0xXXXXXXXX (scratchpad flow uses PMBus reg 0x04 / phase — not echoed).
+# If payload is 0xffffffff (all 0xff), treat as invalid and return empty (use default 0xD0).
 get_scratchpad_address() {
     local bus=$1
     local addr=$2
@@ -321,21 +491,11 @@ get_scratchpad_address() {
     # WRITE_BYTE(0xfe, 0x2e)
     i2c_write $bus $addr $MFR_FW_COMMAND $CMD_GET_SCRATCHPAD_ADDR || return 1
     sleep 0.001
-    # BLOCK_READ(0xfd, 5) -> d0, d1, d2, d3, d4
-    local d0 d1 d2 d3 d4
-    local line
-    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5) || return 1
-    read -r d0 d1 d2 d3 d4 <<< "$line"
-    log_debug "BLOCK_READ(0xfd,5) response: 0x${d0} 0x${d1} 0x${d2} 0x${d3} 0x${d4}"
-    # 4-byte address (d1..d4) little-endian: e.g. 00 e0 05 20 -> 0x2005e000
-    log_debug "4-byte addr (d1..d4) LE: 0x$(printf '%02x%02x%02x%02x' $((16#$d4)) $((16#$d3)) $((16#$d2)) $((16#$d1)))"
-    [ -z "$d0" ] && return 1
-    # Reject 0xff (unprogrammed) or d1..d4 all 0xff (stale/no valid address)
-    [ "$d0" = "ff" ] && return 1
-    [ "$d1" = "ff" ] && [ "$d2" = "ff" ] && [ "$d3" = "ff" ] && [ "$d4" = "ff" ] && return 1
-    # Output: line1 = 8-bit register (d0); line2 = 4-byte addr LE (d1..d4) for scpad-addr display
-    printf '0x%02x\n' $((16#$d0))
-    printf '0x%08x\n' $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    local addr_hex
+    addr_hex=$(read_dword_u32 "$bus" "$addr") || return 1
+    log_debug "BLOCK_READ(0xfd,5) response: 0x04 payload LE $addr_hex"
+    [ "$addr_hex" = "0xffffffff" ] && return 1
+    printf '%s\n' "$addr_hex"
     return 0
 }
 
@@ -344,15 +504,13 @@ get_scratchpad_address() {
 get_scpad_addr() {
     local bus=$1
     local addr=$2
-    local result
+    local addr4
     log_info "Querying scratchpad address (CMD_GET_SCRATCHPAD_ADDR 0x2e)..."
     local full
     full=$(get_scratchpad_address "$bus" "$addr") || true
-    result=$(echo "$full" | head -n1)
-    if [ -n "$result" ]; then
-        local addr4
-        addr4=$(echo "$full" | sed -n '2p')
-        [ -n "$addr4" ] && log_info "Scratchpad: PMBus reg $result (for writes), 4-byte addr: $addr4" || log_info "Scratchpad: PMBus reg $result (for writes)"
+    addr4=$(echo "$full" | head -n1)
+    if [ -n "$addr4" ]; then
+        log_info "Scratchpad: PMBus reg 0x04 (for writes), 4-byte addr: $addr4"
         SCPAD_HEX_ADDR="$addr4"
         return 0
     else
@@ -364,34 +522,26 @@ get_scpad_addr() {
 
 # Multi-byte write: reg + data via i2ctransfer only (no SMBus block / i2cset block).
 i2c_block_write() {
-    local bus=$1
-    local addr=$2
-    local reg=$3
+    local bus=$1 addr=$2 reg=$3
     shift 3
     local data=("$@")
-
-    log_debug "i2ctransfer -y $bus w$((${#data[@]}+1))@$addr $reg ${data[*]}"
-    if ! i2ctransfer -y $bus "w$((${#data[@]}+1))@$addr" $reg "${data[@]}" 2>/dev/null; then
-        log_error "Failed to write to device (i2ctransfer)"
+    if ! i2c_rw_wrapper "$bus" "$addr" 0 "${#data[@]}" "$reg" "${data[@]}"; then
+        log_error "Failed i2c_block_write (i2c_rw_wrapper)"
         return 1
     fi
     return 0
 }
 
 # Read one DWORD (4 bytes) from MFR_REG_READ; RPTR must be set and auto-increments.
-# Device returns 5 bytes: length (0x04) then 4 data bytes. Use r5, then output only the 4 data bytes.
+# Device returns 5 bytes: length (0x04) then 4 data bytes (r5, or r6 with read PEC via i2c_rw_wrapper).
 read_otp_dword_hex() {
-    local bus=$1
-    local addr=$2
-    log_debug "i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr"
-    local line
-    line=$(i2ctransfer -y $bus w1@$addr $MFR_REG_READ r5@$addr 2>/dev/null) || return 1
-    # Normalize: strip 0x, then drop first byte (length 0x04), output 4 data bytes
+    local bus=$1 addr=$2
+    local line _d0 _d1 _d2 _d3 _d4
+    line=$(i2c_rw_wrapper "$bus" "$addr" 5 0 "$MFR_REG_READ") || return 1
     line=$(echo "$line" | sed 's/0x//g')
-    local _d0 _d1 _d2 _d3 _d4
     read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
     line="$_d1 $_d2 $_d3 $_d4"
-    log_debug "read DWORD: $line"
+    log_debug "read DWORD: $line # PEC=${USE_I2C_PEC:-0}"
     echo "$line"
 }
 
@@ -399,9 +549,12 @@ read_otp_dword_hex() {
 hex_dword_to_file() {
     local hex="$1"
     local file="$2"
-    local b0 b1 b2 b3
-    read -r b0 b1 b2 b3 <<< "$hex"
-    printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' $((16#$b0)) $((16#$b1)) $((16#$b2)) $((16#$b3)))" >> "$file"
+    local esc=""
+    local b
+    for b in $hex; do
+        esc+="\\x${b}"
+    done
+    printf '%b' "$esc" >> "$file"
 }
 
 # Read num_bytes (multiple of 4) from OTP at current RPTR and append to file. RPTR must be set.
@@ -510,8 +663,10 @@ check_dependencies() {
 
     HAS_MD5SUM=""
     HAS_SHA256SUM=""
+    HAS_CRC32=""
     command -v md5sum &> /dev/null && HAS_MD5SUM=1
     command -v sha256sum &> /dev/null && HAS_SHA256SUM=1
+    command -v crc32 &> /dev/null && HAS_CRC32=1
 
     log_debug "All dependencies satisfied"
     return 0
@@ -715,12 +870,9 @@ get_otp_partition_size_remaining() {
     write_dword $bus $addr $MFR_FW_COMMAND_DATA 0x04 0x00 0x00 0x00 $pn_byte || return 1
     i2c_write $bus $addr $MFR_FW_COMMAND $CMD_OTP_PARTITION_SIZE_REMAINING || return 1
     sleep 0.5
-    local line
-    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5) || return 1
-    line=$(echo "$line" | sed 's/0x//g')
-    local d0 d1 d2 d3 d4
-    read -r d0 d1 d2 d3 d4 <<< "$line"
-    echo $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    local h
+    h=$(read_dword_u32 "$bus" "$addr") || return 1
+    echo $((h))
     return 0
 }
 
@@ -731,12 +883,9 @@ get_fw_timestamp() {
     local addr=$2
     i2c_write $bus $addr $MFR_FW_COMMAND $CMD_FW_VERSION || return 1
     sleep 0.001
-    local line
-    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5) || return 1
-    line=$(echo "$line" | sed 's/0x//g')
-    local d0 d1 d2 d3 d4
-    read -r d0 d1 d2 d3 d4 <<< "$line"
-    echo $(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
+    local h
+    h=$(read_dword_u32 "$bus" "$addr") || return 1
+    echo $((h))
     return 0
 }
 
@@ -752,14 +901,7 @@ get_crc() {
     write_dword $bus $addr $MFR_FW_COMMAND_DATA 0x04 $hc_byte 0x00 0x00 0x00 || return 1
     i2c_write $bus $addr $MFR_FW_COMMAND $CMD_GET_CRC || return 1
     sleep 0.001
-    local line
-    line=$(i2c_block_read $bus $addr $MFR_FW_COMMAND_DATA 5) || return 1
-    line=$(echo "$line" | sed 's/0x//g')
-    local d0 d1 d2 d3 d4
-    read -r d0 d1 d2 d3 d4 <<< "$line"
-    [ -z "$d1" ] && return 1
-    local crc=$(( 16#$d1 + (16#$d2 << 8) + (16#$d3 << 16) + (16#$d4 << 24) ))
-    printf "0x%08x\n" "$crc"
+    read_dword_u32 "$bus" "$addr" || return 1
     return 0
 }
 
@@ -821,14 +963,131 @@ invalidate_otp() {
     return 0
 }
 
+# Full programming only: invalidate OTP sections whose Header Code is not in the parsed config.
+# Uses AN001 6.2 per-section invalidate with XV=0x00. DRY_RUN delegates to invalidate_otp (no bus writes).
+invalidate_otp_sections_not_in_config() {
+    declare -A present
+    local f fb
+    for f in "$@"; do
+        [ ! -f "$f" ] && continue
+        fb=$(od -An -tx1 -N1 "$f" 2>/dev/null | tr -d ' \n')
+        [ -z "$fb" ] && continue
+        present[$((16#$fb))]=1
+    done
+    local hc dec
+    for hc in "${OTP_SECTION_HC_ALL[@]}"; do
+        dec=$((hc))
+        [ -n "${present[$dec]}" ] && continue
+        log_info "OTP section not in config: invalidating HC=0x$(printf '%02x' $dec) (XV=0x00)"
+        invalidate_otp 0 "$dec" 0 || return 1
+        echo ""
+    done
+    return 0
+}
+
+# Normalize 32-bit CRC to 0x + 8 lowercase hex digits for string compare.
+_normalize_crc32_hex() {
+    local x="${1#0x}"
+    x=$(echo "$x" | tr '[:upper:]' '[:lower:]')
+    printf '0x%08x' $((16#$x))
+}
+
+# Append one MSB-first hex DWORD as 4 bytes LE (same as section .bin layout).
+_append_le_dword_hex_to_file() {
+    local outf="$1" dword="$2"
+    local b0 b1 b2 b3
+    dword=$(echo "$dword" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
+    [[ ${#dword} -eq 8 ]] && [[ "$dword" =~ ^[0-9A-F]{8}$ ]] || return 1
+    b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
+    printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b3" "$b2" "$b1" "$b0")" >> "$outf" || return 1
+}
+
+# Run crc32(1) on file; print 0x<first field> (no newline). Expects crc32 to emit hex CRC as first token (see HAS_CRC32).
+_crc32_cli_to_hex() {
+    local f="$1" val
+    [ -n "$HAS_CRC32" ] || return 1
+    val=$(crc32 "$f" 2>/dev/null | awk '{print $1}' | tr -d '\r\n') || return 1
+    [ -n "$val" ] || return 1
+    printf '0x%s' "$val"
+}
+
+# After parse: section_crc_expected for GET_CRC pre-check — HC 0x0B: crc32 on 32-byte extract; else last DWORD LE of .bin.
+_finalize_section_crc_expected() {
+    local pf="$1" bf="$2"
+    local hc_line hcval v tmp sz b0 b1 b2 b3 fb crc_in
+    [ -f "$bf" ] && [ -s "$bf" ] || return 0
+    [ -f "$pf" ] || return 0
+    hcval=""
+    hc_line=$(grep -i '^hc=' "$pf" 2>/dev/null | head -1 || true)
+    if [[ "$hc_line" =~ ^[Hh][Cc]=0[xX]([0-9a-fA-F]+) ]]; then
+        hcval=$((16#${BASH_REMATCH[1]}))
+    fi
+    if [ -z "$hcval" ]; then
+        fb=$(od -An -tx1 -N1 "$bf" 2>/dev/null | tr -d ' \n' | tr '[:upper:]' '[:lower:]')
+        [ "$fb" = "0b" ] && hcval=11
+    fi
+    v=""
+    if [ "$hcval" = "11" ]; then
+        crc_in="${bf%.bin}_crc_input.bin"
+        if [ ! -s "$crc_in" ]; then
+            log_warn "Partial PMBus (0x0B): missing or empty *_crc_input.bin (built during .txt parse); section_crc_expected not set"
+            return 0
+        fi
+        v=$(_crc32_cli_to_hex "$crc_in")
+        if [ -z "$v" ]; then
+            log_warn "Partial PMBus (0x0B): crc32 missing, failed, or bad output (install crc32, PATH; checked at startup); section_crc_expected not set"
+            return 0
+        fi
+        log_verbose "Partial PMBus: section_crc_expected from crc32($crc_in)"
+    else
+        sz=$(wc -c < "$bf" 2>/dev/null | tr -d ' ')
+        [ "${sz:-0}" -ge 4 ] || return 0
+        set -- $(tail -c 4 "$bf" | od -An -tu1)
+        [ $# -ge 4 ] || return 0
+        b0=$1 b1=$2 b2=$3 b3=$4
+        v=$(printf '0x%08x' $(( b0 + (b1 << 8) + (b2 << 16) + (b3 << 24) )))
+    fi
+    tmp="${pf}.crcstrip.$$"
+    if ! grep -v '^section_crc_expected=' "$pf" > "$tmp" 2>/dev/null; then
+        rm -f "$tmp"
+        return 1
+    fi
+    mv "$tmp" "$pf" || { rm -f "$tmp"; return 1; }
+    echo "section_crc_expected=$v" >> "$pf"
+}
+
+# Read section_crc_expected= from .params (after parse: crc32 path for 0x0B, else tail dword).
+_read_section_crc_expected_from_params() {
+    local pf=$1
+    local line v
+    [ ! -f "$pf" ] && { echo ""; return 0; }
+    line=$(grep '^section_crc_expected=' "$pf" 2>/dev/null | head -1) || { echo ""; return 0; }
+    v="${line#section_crc_expected=}"
+    echo "$(echo "$v" | tr -d '\r\n' | sed 's/[[:space:]]*$//')"
+}
+
+# Infineon GUI export: "Configuration Checksum : 0x........" before [Configuration Data]. Used for full-flash skip vs GET_CRC(HC=0).
+_read_configuration_checksum_from_txt() {
+    local f="$1"
+    local line hex
+    [ -f "$f" ] || { echo ""; return 0; }
+    line=$(grep -iE '^[[:space:]]*configuration[[:space:]]+checksum[[:space:]]*:' "$f" 2>/dev/null | head -1) || true
+    [ -z "$line" ] && { echo ""; return 0; }
+    hex="${line#*:}"
+    hex=$(echo "$hex" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/#.*//')
+    hex=$(echo "$hex" | tr '[:upper:]' '[:lower:]')
+    [[ "$hex" =~ ^0x[0-9a-f]{1,8}$ ]] && echo "$hex" || echo ""
+}
+
 # Map AN001 Table 7 header code (first DWORD LSB) to short name and optional page (Loop A=0, B=1).
-# 0x04=Config, 0x07=PMBus LoopA, 0x09=PMBus LoopB, 0x0B=Partial PMBus, etc.
+# 0x04=Config, 0x07=PMBus LoopA, 0x09=PMBus LoopB, 0x0A=Config Partial, 0x0B=Partial PMBus, etc.
 section_type_name() {
     local code=$1
     case "$code" in
         4)  echo "Config (0x04)" ;;
         7)  echo "PMBus LoopA / page 0 (0x07)" ;;
         9)  echo "PMBus LoopB / page 1 (0x09)" ;;
+        10) echo "Config Partial (0x0A)" ;;
         11) echo "Partial PMBus (0x0B)" ;;
         *)  echo "header 0x$(printf '%02x' "$code")" ;;
     esac
@@ -931,8 +1190,8 @@ parse_txt_config_to_bin() {
 # Parse .txt/.mic into one binary file per (sub)section (AN001 5.2).
 # (Sub)sections start with a line beginning with "000 " (3-digit hex row offset). Optional: [Configuration Data],
 # [End Configuration Data], and "// XV0 ..." comment lines. Writes section_0.bin, section_1.bin, ... and section_list.
-# AN001 5.8.1.2 PMBus Partial Section (XV0 Partial PMBus): XV=0x00, HC=0x0B. Multiple "000" rows are one logical
-# section; all DWORDs are concatenated into a single section file and uploaded with total size (e.g. 80 bytes).
+# AN001 partial sections may span multiple "000" rows (e.g. HC 0x0A/0x0B/0x11). We concatenate all DWORDs into one
+# logical section file and upload with the combined size.
 parse_txt_config_to_section_files() {
     local txt_file="$1"
     local out_dir="$2"
@@ -943,8 +1202,11 @@ parse_txt_config_to_section_files() {
     local section_index=0
     local current_section_bin=""
     local section_list_file="$out_dir/section_list"
-    local in_partial_pmbus=0
+    local in_partial=0
     local first_partial_dword1=""
+    local first_partial_dword3=""
+    local partial_crc_input_file=""
+    local partial_crc_pending_d3=""
 
     if [ ! -f "$txt_file" ]; then
         log_error "Config file not found: $txt_file"
@@ -978,12 +1240,14 @@ parse_txt_config_to_section_files() {
     write_section_params() {
         local dword1="$1"
         local dword2="$2"
+        local dword3="${3:-}"
         [[ -z "$dword1" ]] || [[ ${#dword1} -ne 8 ]] || [[ ! "$dword1" =~ ^[0-9A-F]{8}$ ]] && return 0
         [[ -z "$dword2" ]] || [[ ${#dword2} -ne 8 ]] || [[ ! "$dword2" =~ ^[0-9A-F]{8}$ ]] && return 0
         local params_file="$out_dir/section_${section_index}.params"
         local b0 b1 b2 b3 sz0 sz1
         b0=$((16#${dword1:0:2})); b1=$((16#${dword1:2:2})); b2=$((16#${dword1:4:2})); b3=$((16#${dword1:6:2}))
-        sz0=$((16#${dword2:0:2})); sz1=$((16#${dword2:2:2}))
+        # AN001 5.4 size is low 16 bits of DWORD2 (MSB-first token), so use rightmost 4 hex chars: ... sz1 sz0
+        sz0=$((16#${dword2:6:2})); sz1=$((16#${dword2:4:2}))
         local size=$(( sz0 + (sz1 << 8) ))
         {
             echo "dword1=$dword1"
@@ -997,6 +1261,10 @@ parse_txt_config_to_section_files() {
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$size"
             echo "size_hex=0x$(printf '%04x' $size)"
+            if [ -n "$dword3" ] && [[ ${#dword3} -eq 8 ]] && [[ "$dword3" =~ ^[0-9A-Fa-f]{8}$ ]]; then
+                dword3=$(echo "$dword3" | tr '[:lower:]' '[:upper:]')
+                echo "third_dword_on_000_line=$dword3"
+            fi
         } > "$params_file" 2>/dev/null || true
     }
 
@@ -1004,6 +1272,7 @@ parse_txt_config_to_section_files() {
     write_section_params_with_size() {
         local dword1="$1"
         local total_size=$(( $2 ))
+        local dword3="${3:-}"
         [[ -z "$dword1" ]] || [[ ${#dword1} -ne 8 ]] || [[ ! "$dword1" =~ ^[0-9A-F]{8}$ ]] && return 0
         local params_file="$out_dir/section_${section_index}.params"
         local b0 b1 b2 b3 sz0 sz1
@@ -1022,6 +1291,10 @@ parse_txt_config_to_section_files() {
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$total_size"
             echo "size_hex=0x$(printf '%04x' $total_size)"
+            if [ -n "$dword3" ] && [[ ${#dword3} -eq 8 ]] && [[ "$dword3" =~ ^[0-9A-Fa-f]{8}$ ]]; then
+                dword3=$(echo "$dword3" | tr '[:lower:]' '[:upper:]')
+                echo "third_dword_on_first_000=$dword3"
+            fi
         } > "$params_file" 2>/dev/null || true
     }
 
@@ -1054,9 +1327,13 @@ parse_txt_config_to_section_files() {
             continue
         fi
         if [[ "$line" =~ ^\[End[[:space:]]Configuration[[:space:]]Data\] ]]; then
-            if [ $in_partial_pmbus -eq 1 ]; then
-                write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) || true
-                in_partial_pmbus=0
+            if [ $in_partial -eq 1 ]; then
+                [ -n "$partial_crc_pending_d3" ] && log_warn "Partial section: ended config with no 010 row after last 000 (CRC input may be incomplete)"
+                write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) "${first_partial_dword3:-}" || true
+                in_partial=0
+                first_partial_dword3=""
+                partial_crc_input_file=""
+                partial_crc_pending_d3=""
                 section_index=$((section_index + 1))
             fi
             log_section_summary
@@ -1072,43 +1349,71 @@ parse_txt_config_to_section_files() {
         fi
 
         # (Sub)section start: line beginning with "000 " (AN001 5.2). Extract 1st and 2nd DWORD (5.3, 5.4).
-        # XV0 Partial PMBus (AN001 5.8.1.2): HC=0x0B, XV=0x00 — multiple "000" rows form one section; concatenate all DWORDs.
+        # Partial sections (AN001 8.3): HC in {0x0A,0x0B,0x11} — multiple "000" rows form one section.
         if [[ "$line" =~ ^000[[:space:]] ]]; then
             local rest="${line#* }"
-            local first_two=()
+            local dw=()
             for d in $rest; do
                 d=$(echo "$d" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
-                [[ ${#d} -eq 8 ]] && [[ "$d" =~ ^[0-9A-F]{8}$ ]] && first_two+=("$d")
-                [[ ${#first_two[@]} -ge 2 ]] && break
+                [[ ${#d} -eq 8 ]] && [[ "$d" =~ ^[0-9A-F]{8}$ ]] && dw+=("$d")
+                [[ ${#dw[@]} -ge 3 ]] && break
             done
-            # First DWORD in .txt (MSB-first): chars 0:2=Loop, 2:2=CMD, 4:2=XV, 6:2=HC. Partial PMBus: HC=0x0B, XV=0x00.
-            local is_partial_pmbus=0
-            [[ ${#first_two[@]} -ge 1 ]] && [[ "${first_two[0]:6:2}" = "0B" ]] && [[ "${first_two[0]:4:2}" = "00" ]] && is_partial_pmbus=1
+            # First DWORD in .txt (MSB-first): chars 0:2=Loop, 2:2=CMD, 4:2=XV, 6:2=HC.
+            local is_partial=0
+            local is_hc_0b=0
+            if [[ ${#dw[@]} -ge 1 ]]; then
+                case "${dw[0]:6:2}" in
+                    0A|0B|11) is_partial=1 ;;
+                esac
+                [[ "${dw[0]:6:2}" = "0B" ]] && is_hc_0b=1
+            fi
 
-            if [ $is_partial_pmbus -eq 1 ]; then
-                if [ $in_partial_pmbus -eq 0 ]; then
+            if [ $is_partial -eq 1 ]; then
+                if [ $in_partial -eq 0 ]; then
                     log_section_summary
                     start_section_file || return 1
                     section_dwords=0
-                    section_first_dword="${first_two[0]}"
-                    first_partial_dword1="${first_two[0]}"
-                    in_partial_pmbus=1
+                    section_first_dword="${dw[0]}"
+                    first_partial_dword1="${dw[0]}"
+                    first_partial_dword3="${dw[2]:-}"
+                    in_partial=1
+                    if [ $is_hc_0b -eq 1 ]; then
+                        partial_crc_input_file="${current_section_bin%.bin}_crc_input.bin"
+                        : > "$partial_crc_input_file" || return 1
+                    else
+                        partial_crc_input_file=""
+                    fi
+                    partial_crc_pending_d3=""
+                fi
+                if [ $is_hc_0b -eq 1 ] && [ ${#dw[@]} -ge 3 ]; then
+                    partial_crc_pending_d3="${dw[2]}"
                 fi
                 append_dwords_from_line
                 continue
             fi
 
-            # Normal section: close Partial PMBus if we were in it, then start this section
-            if [ $in_partial_pmbus -eq 1 ]; then
-                write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) || true
-                in_partial_pmbus=0
+            # Normal section: close partial if we were in it, then start this section
+            if [ $in_partial -eq 1 ]; then
+                [ -n "$partial_crc_pending_d3" ] && log_warn "Partial section: new section started without 010 after last 000 (CRC input may be incomplete)"
+                write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) "${first_partial_dword3:-}" || true
+                in_partial=0
+                first_partial_dword3=""
+                partial_crc_input_file=""
+                partial_crc_pending_d3=""
                 section_index=$((section_index + 1))
+            fi
+            if [ $section_index -gt 0 ]; then
+                _finalize_section_crc_expected "$out_dir/section_$((section_index - 1)).params" "$out_dir/section_$((section_index - 1)).bin" || true
             fi
             log_section_summary
             start_section_file || return 1
             section_dwords=0
             section_first_dword=""
-            [[ ${#first_two[@]} -ge 2 ]] && write_section_params "${first_two[0]}" "${first_two[1]}"
+            if [[ ${#dw[@]} -ge 3 ]]; then
+                write_section_params "${dw[0]}" "${dw[1]}" "${dw[2]}"
+            elif [[ ${#dw[@]} -ge 2 ]]; then
+                write_section_params "${dw[0]}" "${dw[1]}"
+            fi
             append_dwords_from_line
             section_index=$((section_index + 1))
             continue
@@ -1116,13 +1421,36 @@ parse_txt_config_to_section_files() {
 
         # Data row: 3 hex digits + space + DWORDs (e.g. "010 38B4D17E") — append to current section
         if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]] && [[ -n "$current_section_bin" ]]; then
+            if [ $in_partial -eq 1 ] && [ -n "${partial_crc_input_file:-}" ]; then
+                local row_off d010 rest010
+                row_off=$(echo "${line:0:3}" | tr '[:lower:]' '[:upper:]')
+                if [ "$row_off" = "010" ] && [ -n "${partial_crc_pending_d3:-}" ]; then
+                    rest010="${line#* }"
+                    d010=$(echo "$rest010" | awk '{print $1}' | tr '[:lower:]' '[:upper:]' | tr -d '\r')
+                    if [[ ${#d010} -eq 8 ]] && [[ "$d010" =~ ^[0-9A-F]{8}$ ]]; then
+                        _append_le_dword_hex_to_file "$partial_crc_input_file" "$partial_crc_pending_d3" || return 1
+                        _append_le_dword_hex_to_file "$partial_crc_input_file" "$d010" || return 1
+                    else
+                        log_warn "Partial section: invalid DWORD on 010 row; skipping one CRC input pair"
+                    fi
+                    partial_crc_pending_d3=""
+                fi
+            fi
             append_dwords_from_line
         fi
     done < "$txt_file"
 
-    if [ $in_partial_pmbus -eq 1 ]; then
-        write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) || true
+    if [ $in_partial -eq 1 ]; then
+        [ -n "$partial_crc_pending_d3" ] && log_warn "Partial section: EOF after 000 with no following 010 (CRC input may be incomplete)"
+        write_section_params_with_size "$first_partial_dword1" $((section_dwords * 4)) "${first_partial_dword3:-}" || true
+        in_partial=0
+        first_partial_dword3=""
+        partial_crc_input_file=""
+        partial_crc_pending_d3=""
         section_index=$((section_index + 1))
+    fi
+    if [ $section_index -gt 0 ]; then
+        _finalize_section_crc_expected "$out_dir/section_$((section_index - 1)).params" "$out_dir/section_$((section_index - 1)).bin" || true
     fi
     log_section_summary
 
@@ -1171,7 +1499,7 @@ ensure_scpad_hex_addr() {
     local scpad_full
     scpad_full=$(get_scratchpad_address $I2C_BUS $DEVICE_ADDR 2>/dev/null) || true
     local addr
-    addr=$(echo "$scpad_full" | sed -n '2p')
+    addr=$(echo "$scpad_full" | head -n1)
     if [ -z "$addr" ]; then
         return 1
     fi
@@ -1402,37 +1730,57 @@ program_device() {
 
     log_info "Starting programming sequence for $CONFIG_FILE"
     log_info "Target: I2C bus $I2C_BUS, address $DEVICE_ADDR"
-    echo ""
 
     detect_device || return 1
-    echo ""
-
     read_device_id || return 1
-    echo ""
-
     clear_faults || return 1
-    echo ""
-
     disable_write_protect || return 1
-    echo ""
-
     check_otp_space || return 1
-    echo ""
+
+    # Full .txt/.mic only (no -s): skip entire flash if GUI "Configuration Checksum" matches device total CRC (AN001 GET_CRC HC=0).
+    if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]] && [ -z "$FLASH_SECTION_HC" ]; then
+        local file_crc_full dev_crc_full nx_full ex_full
+        file_crc_full=$(_read_configuration_checksum_from_txt "$CONFIG_FILE")
+        if [ -n "$file_crc_full" ]; then
+            dev_crc_full=$(get_crc "$I2C_BUS" "$DEVICE_ADDR" 0 2>/dev/null) || dev_crc_full=""
+            if [ -n "$dev_crc_full" ]; then
+                nx_full=$(_normalize_crc32_hex "$dev_crc_full")
+                ex_full=$(_normalize_crc32_hex "$file_crc_full")
+                if [ "$nx_full" = "$ex_full" ]; then
+                    if [ $DRY_RUN -eq 1 ]; then
+                        log_info "[DRY_RUN] Configuration Checksum matches device total OTP CRC ($nx_full); would skip full flash."
+                    else
+                        log_info "Configuration Checksum matches device total OTP CRC ($nx_full); skipping full flash."
+                    fi
+                    return 0
+                fi
+                log_verbose "Configuration Checksum $ex_full vs device total CRC $nx_full — mismatch; continuing."
+            else
+                log_verbose "GET_CRC (total, HC=0) failed or empty; cannot compare Configuration Checksum (continuing)."
+            fi
+        fi
+    fi
 
     if [ $DRY_RUN -eq 0 ]; then
-        log_warn "This will invalidate current OTP and program the new configuration (irreversible; effectively overwrites active config)."
+        if [ -n "$FLASH_SECTION_HC" ]; then
+            log_warn "Partial flash (-s): matching OTP section(s) will be invalidated and reprogrammed."
+        else
+            log_warn "Full config flash: OTP section(s) not listed in the file will be invalidated; others updated or skipped if CRC matches (irreversible)."
+        fi
     else
-        log_info "DRY_RUN (-n): scratchpad write/readback only; OTP upload and finalize skipped."
+        log_info "DRY_RUN (-n): scratchpad write/readback only; OTP upload and finalize skipped; OTP invalidate only logged."
     fi
-    local confirm=""
-    read -r -p "Continue? (yes/no): " confirm || {
-        log_error "Failed to read user input (non-interactive environment?)"
-        return 1
-    }
-    confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
-    if [[ ! "$confirm" =~ ^(yes|y)$ ]]; then
-        log_info "Programming cancelled by user (entered: '$confirm')"
-        return 1
+    if [ $DRY_RUN -eq 0 ]; then
+        local confirm=""
+        read -r -p "Continue? (yes/no): " confirm || {
+            log_error "Failed to read user input (non-interactive environment?)"
+            return 1
+        }
+        confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
+        if [[ ! "$confirm" =~ ^(yes|y)$ ]]; then
+            log_info "Programming cancelled by user (entered: '$confirm')"
+            return 1
+        fi
     fi
 
     # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
@@ -1473,21 +1821,49 @@ program_device() {
             section_bins=("${section_bins_filtered[@]}")
             log_info "Flashing only section(s) with HC=0x$(printf '%02x' $requested_hc) (${#section_bins[@]} section(s))"
         else
-            # AN-001 6.2.1: invalidate all existing OTP before full reprogramming (skip in -n dry run)
-            if [ $DRY_RUN -eq 0 ]; then
-                invalidate_otp 1 || return 1
-            else
-                log_info "DRY_RUN (-n): skipping full OTP invalidate before scratchpad test"
-            fi
+            # Full .txt: invalidate only OTP sections whose HC is not in this config (not global wipe).
+            invalidate_otp_sections_not_in_config "${section_bins[@]}" || {
+                rm -rf "$config_bin_temp"
+                return 1
+            }
         fi
-        echo ""
 
         log_info "Uploading ${#section_bins[@]} section(s) one by one (AN001 Section 6)"
-        echo ""
 
         for i in "${!section_bins[@]}"; do
             flash_file="${section_bins[$i]}"
             log_info "--- Section $((i + 1))/${#section_bins[@]} ---"
+            section_params_file="${flash_file%.bin}.params"
+            local sec_hc_skip exp_crc dev_crc nx ex
+            sec_hc_skip=$(od -An -tx1 -N1 "$flash_file" 2>/dev/null | tr -d ' \n')
+            [ -z "$sec_hc_skip" ] && sec_hc_skip=0
+            sec_hc_skip=$((16#$sec_hc_skip))
+            exp_crc=$(_read_section_crc_expected_from_params "$section_params_file")
+            if [ -n "$exp_crc" ]; then
+                dev_crc=$(get_crc $I2C_BUS $DEVICE_ADDR $sec_hc_skip 2>/dev/null) || dev_crc=""
+                if [ -n "$dev_crc" ]; then
+                    nx=$(_normalize_crc32_hex "$dev_crc")
+                    ex=$(_normalize_crc32_hex "$exp_crc")
+                    if [ "$nx" = "$ex" ]; then
+                        if [ $DRY_RUN -eq 1 ]; then
+                            log_info "[DRY_RUN] Would skip section HC=0x$(printf '%02x' $sec_hc_skip): OTP GET_CRC $nx matches config $ex (no upload)."
+                        else
+                            log_info "Skipping section HC=0x$(printf '%02x' $sec_hc_skip): OTP CRC $nx matches config (no upload)."
+                        fi
+                        continue
+                    else
+                        if [ $DRY_RUN -eq 1 ]; then
+                            log_info "[DRY_RUN] CRC check: OTP GET_CRC $nx vs config $ex — mismatch; would continue (scratchpad / simulate upload)."
+                        else
+                            log_info "CRC check: OTP GET_CRC $nx vs config $ex — mismatch; uploading section."
+                        fi
+                    fi
+                else
+                    log_warn "GET_CRC failed or empty for HC=0x$(printf '%02x' $sec_hc_skip); cannot compare to config $exp_crc (continuing)."
+                fi
+            elif [ $DRY_RUN -eq 1 ]; then
+                log_info "[DRY_RUN] No section_crc_expected in $(basename "$section_params_file"); CRC pre-check skipped (section still processed)."
+            fi
             if [ -n "$FLASH_SECTION_HC" ] && [ $DRY_RUN -eq 0 ]; then
                 local hd_hex4 sec_hc sec_xv
                 hd_hex4=$(od -An -tx1 -N4 "$flash_file" 2>/dev/null | tr -d ' \n')
@@ -1498,7 +1874,6 @@ program_device() {
                         rm -rf "$config_bin_temp"
                         return 1
                     }
-                    echo ""
                 fi
             fi
             write_to_scratchpad "$flash_file" || {
@@ -1513,8 +1888,6 @@ program_device() {
                 rm -rf "$config_bin_temp"
                 return 1
             }
-            echo ""
-            section_params_file="${flash_file%.bin}.params"
             if [ $DRY_RUN -eq 0 ]; then
                 upload_scratchpad_to_otp "$section_params_file" || {
                     rm -rf "$config_bin_temp"
@@ -1525,7 +1898,6 @@ program_device() {
                 log_info "Waiting before next section..."
                 sleep 2
             fi
-            echo ""
         done
         # Persist section .bin, .params, and scratchpad readback (.scpad) — temp dir is removed below.
         if [[ -n "$config_bin_temp" ]]; then
@@ -1535,19 +1907,18 @@ program_device() {
                 [[ -f "$flash_file" ]] && cp -f "$flash_file" "$artifact_dir"/
                 [[ -f "${flash_file}.scpad" ]] && cp -f "${flash_file}.scpad" "$artifact_dir"/
                 [[ -f "${flash_file%.bin}.params" ]] && cp -f "${flash_file%.bin}.params" "$artifact_dir"/
+                [[ -f "${flash_file%.bin}_crc_input.bin" ]] && cp -f "${flash_file%.bin}_crc_input.bin" "$artifact_dir"/
             done
-            log_info "Flashed section files saved under: $artifact_dir (section .bin, .params, .scpad readback; same with -n dry run)"
+            log_info "Flashed section files saved under: $artifact_dir (section .bin, .params, .scpad, optional *_crc_input.bin for 0x0B; same with -n dry run)"
         fi
     else
         flash_file="$CONFIG_FILE"
         write_to_scratchpad "$flash_file" || return 1
         read_from_scratchpad "$flash_file" || return 1
         verify_scratchpad_readback "$flash_file" || return 1
-        echo ""
         if [ $DRY_RUN -eq 0 ]; then
             upload_scratchpad_to_otp "" "$flash_file" || return 1
         fi
-        echo ""
     fi
 
     if [ $DRY_RUN -eq 1 ]; then
@@ -1560,13 +1931,11 @@ program_device() {
         [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
         return 1
     }
-    echo ""
 
     reset_device || {
         [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
         return 1
     }
-    echo ""
 
     [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
 
@@ -1924,9 +2293,7 @@ read_device_info() {
     # 0xFE/0xFD access (FW timestamp, OTP size) requires device unbound
     I2C_BUS=$bus DEVICE_ADDR=$addr unbind_driver_for_device
     log_info "Reading device information..."
-    echo ""
     echo "Device: Bus $bus, Address $addr"
-    echo ""
 
     local block_regs="0x99 0x9A 0x9B 0x9C 0x9D 0x9E 0xAD"
     local reg_names="PMBUS_MFR_ID PMBUS_MFR_MODEL PMBUS_MFR_REVISION PMBUS_MFR_LOCATION PMBUS_MFR_DATE PMBUS_MFR_SERIAL PMBUS_MFR_DEVICE_ID"
@@ -2170,7 +2537,6 @@ main() {
     echo "=========================================="
     echo "Infineon XDPE1x2xx Management Tool"
     echo "=========================================="
-    echo ""
 
     if [ $# -lt 1 ]; then
         # usage
@@ -2186,8 +2552,18 @@ main() {
     local MONITOR_INTERVAL=1
     local OUTPUT_FILE=""
 
-    while getopts "b:a:f:c:i:o:s:nvh" opt; do
+    while getopts "P:b:a:f:c:i:o:s:nvh" opt; do
         case $opt in
+            P)
+                case "$OPTARG" in
+                    0|no|off|false) USE_I2C_PEC=0 ;;
+                    1|yes|on|true) USE_I2C_PEC=1 ;;
+                    *)
+                        log_error "Invalid -P$OPTARG (use -P0 or -P1)"
+                        usage
+                        ;;
+                esac
+                ;;
             b) I2C_BUS=$OPTARG ;;
             a) DEVICE_ADDR=$OPTARG ;;
             f) CONFIG_FILE=$OPTARG ;;
@@ -2201,6 +2577,17 @@ main() {
             *) usage ;;
         esac
     done
+
+    case "${I2C_PEC:-}" in
+        0|no|off|false) USE_I2C_PEC=0 ;;
+        1|yes|on|true) USE_I2C_PEC=1 ;;
+    esac
+    if [ "${USE_I2C_PEC:-1}" -eq 1 ]; then
+        I2C_XFER_FLAGS="-f -y"
+    else
+        I2C_XFER_FLAGS="-y"
+        log_info "SMBus PEC disabled (-P0 or I2C_PEC=0)"
+    fi
 
     # Convert device address if needed
     if [ -n "$DEVICE_ADDR" ]; then
