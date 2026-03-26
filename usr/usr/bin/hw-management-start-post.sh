@@ -158,10 +158,10 @@ else
 	fi
 fi
 
-# update Thermal Control service to use correct executable revision
+# Align hw-management-tc.service on disk with this platform's TC script and version label.
+# The unit is rewritten only when those strings would actually change (avoid needless reload).
 service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
-if [ -f $service_file_path ]; then
-	md5sum_orig=$(md5sum $service_file_path | awk '{print $1}')
+if [ -f "$service_file_path" ]; then
 	case $sku in
 		HI172|HI171|HI179|HI184)	# Systems allowed to use new hw-management-tc
 			tc_version="2.5"
@@ -172,11 +172,23 @@ if [ -f $service_file_path ]; then
 			tc_executable="hw_management_thermal_control.py"
 			;;
 	esac
-	sed -i "s/hw_management_thermal_control.py/$tc_executable/g" $service_file_path
-	sed -i "s/ver 2.0/ver $tc_version/g" $service_file_path
-	md5sum_new=$(md5sum $service_file_path | awk '{print $1}')
-	if [ "$md5sum_orig" != "$md5sum_new" ]; then
-		log_info "Thermal Control service updated. reload it in 10 seconds"
+
+	# 1) Substitutions we would apply to the unit (TC executable basename and "ver X.Y" marker).
+	sed_edit_executable="s/hw_management_thermal_control\.py/$tc_executable/g"
+	sed_edit_version="s/ver 2\.0/ver $tc_version/g"
+
+	# 2) Rewrite only if disk and "sed output" differ. cmp compares the file to stdin (-);
+	#    stdin is the unit text after the two sed rules (no temp file).
+	tc_unit_needs_update=1
+	if sed -e "$sed_edit_executable" -e "$sed_edit_version" -- "$service_file_path" |
+		cmp -s -- "$service_file_path" -; then
+		tc_unit_needs_update=0
+	fi
+
+	# 3) Apply the same two edits in place only when needed.
+	if [ "$tc_unit_needs_update" -eq 1 ]; then
+		sed -i -e "$sed_edit_executable" -e "$sed_edit_version" "$service_file_path"
+		log_info "Thermal Control service updated. Reload it in 10 seconds"
 		tc_should_reload=1
 	fi
 fi
