@@ -3786,6 +3786,8 @@ report_sed_pba_ver()
 
 do_start()
 {
+	# start i2c bus trace recording
+	start_i2c_trace
 	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
@@ -4028,6 +4030,20 @@ do_chip_down()
 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
 }
 
+# Temporary trap for i2c trace started in do_start. Installed only from the start and
+# restart|force-reload case branches. While hw-management-sysfs-monitor.service is active
+# it owns teardown; otherwise stop_i2c_trace runs from the trap. Not used for chipup or
+# other actions: chipup uses the top-level i2c tracer and may exit while it stays on.
+_hw_management_install_i2c_trace_exit_trap()
+{
+	trap '
+		if ! systemctl is-active --quiet hw-management-sysfs-monitor.service 2>/dev/null; then
+			stop_i2c_trace
+		fi
+	' EXIT ERR QUIT TERM
+}
+
+
 __usage="
 Usage: $(basename "$0") [Options]
 
@@ -4075,6 +4091,7 @@ case $ACTION in
 			log_info "Created mock hw management tree, exiting."
 			exit 0
 		fi
+		_hw_management_install_i2c_trace_exit_trap
 		do_start
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.
@@ -4173,6 +4190,7 @@ case $ACTION in
 			log_info "Created mock hw management tree, exiting."
 			exit 0
 		fi
+		_hw_management_install_i2c_trace_exit_trap
 		do_start
 		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
 		# of asic chipup for the restart scenario.

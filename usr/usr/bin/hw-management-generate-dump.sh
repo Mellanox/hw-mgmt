@@ -95,6 +95,7 @@ fi
 [ -f /var/log/hw_mgmt_cpldreg.log ] && cp /var/log/hw_mgmt_cpldreg.log "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw_management_thermal_updater_log ] && cp /var/log/hw_management_thermal_updater_log* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw_management_peripheral_updater_log ] && cp /var/log/hw_management_peripheral_updater_log* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/hw-mgmt-i2c-trace.log ] && cp /var/log/hw-mgmt-i2c-trace.log* "$DUMP_FOLDER/" 2>/dev/null || true
 uname -a > "$DUMP_FOLDER/sys_version"
 mkdir "$DUMP_FOLDER/bin/"
 cp /usr/bin/hw?management* "$DUMP_FOLDER/bin/" 2>/dev/null || true
