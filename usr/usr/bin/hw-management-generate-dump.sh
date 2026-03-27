@@ -78,9 +78,8 @@ dump_cmd "sensors" "sensors" "20"
 find /sys/ -path '/sys/kernel' -prune -o -ls > "$DUMP_FOLDER/sysfs_tree" 2>&1 || true
 
 if [ -d "$HW_MGMT_FOLDER" ]; then
-    ls -Rla "$HW_MGMT_FOLDER" > "$DUMP_FOLDER/hw-management_tree"
-    timeout 140 find -L "$HW_MGMT_FOLDER" -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > "$DUMP_FOLDER/hw-management_val" 2> /dev/null
-    timeout 80 find "$HW_MGMT_FOLDER/eeprom/" -type l -exec ls -la {} \; -exec hexdump -C {} \; > "$DUMP_FOLDER/hw-management_fru_dump" 2> /dev/null
+	timeout 140 find -L "$HW_MGMT_FOLDER" -maxdepth 4 ! -name '*_info' ! -name '*_eeprom'  ! -name '*.sh' ! -name '*.py' ! -name 'led_*_state' -exec ls -la {} \; -exec cat {} \; > "$DUMP_FOLDER/hw-management_val" 2>/dev/null
+	timeout 80 find "$HW_MGMT_FOLDER/eeprom/" -type l -exec ls -la {} \; -exec hexdump -C {} \; > "$DUMP_FOLDER/hw-management_fru_dump" 2> /dev/null
 fi
 
 if [ -z "$MODE" ] || [ "$MODE" != "compact" ]; then
@@ -94,6 +93,8 @@ fi
 [ -f /var/log/udev_events.log ] && cp -a /var/log/udev* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw-mgmt.trace.log ] && cp -a /var/log/hw-mgmt.trace* "$DUMP_FOLDER/" 2>/dev/null || true
 [ -f /var/log/hw_mgmt_cpldreg.log ] && cp /var/log/hw_mgmt_cpldreg.log "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/hw_management_thermal_updater_log ] && cp /var/log/hw_management_thermal_updater_log* "$DUMP_FOLDER/" 2>/dev/null || true
+[ -f /var/log/hw_management_peripheral_updater_log ] && cp /var/log/hw_management_peripheral_updater_log* "$DUMP_FOLDER/" 2>/dev/null || true
 uname -a > "$DUMP_FOLDER/sys_version"
 mkdir "$DUMP_FOLDER/bin/"
 cp /usr/bin/hw?management* "$DUMP_FOLDER/bin/" 2>/dev/null || true
