@@ -242,6 +242,23 @@ log_verbose() {
     fi
 }
 
+# Byte hex/decimal dump: BusyBox od often lacks -t/-A (see VV-notes). hexdump -e '1/1 "…"' works on BusyBox + util-linux.
+_od_hex_n() {
+    local n=$1 f=$2
+    hexdump -v -n "$n" -e '1/1 "%02x"' "$f" 2>/dev/null
+}
+
+# Whole file -> space-separated lowercase hex bytes (scratchpad array / dword walk).
+_od_hex_all_spaced() {
+    local f=$1
+    hexdump -v -e '1/1 "%02x "' "$f" 2>/dev/null | sed 's/[[:space:]]*$//'
+}
+
+# Last 4 bytes as unsigned decimal octets (one line: b0 b1 b2 b3) for LE dword from tail.
+_od_tail4_u1() {
+    tail -c 4 "$1" | hexdump -v -n 4 -e '1/1 "%u "' 2>/dev/null | sed 's/[[:space:]]*$//'
+}
+
 # 7-bit address -> SMBus slave write address byte (W=0).
 _pec_slave_w() {
     local a="${1#0x}"
@@ -585,14 +602,23 @@ read_otp_bytes_to_file() {
     return 0
 }
 
-# Scan OTP from base and concatenate all sections with the given HC (and XV) until a section with HC=0x00 (stop) is found.
-# Used for every HeaderCode: usually one section per HC; 0x0B (Partial PMBus) may have several. All matching sections are concatenated into out_file.
+# True if readback (-f) should concatenate every OTP section with this HC/XV until HC=0x00 (AN001 partial types: 0x0A/0x0B/0x11).
+readback_otp_multi_section_hc() {
+    case $(($1)) in
+        10|11|17) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Scan OTP from base for sections with the given HC (and XV).
+# Optional 6th arg concat_all (default 1): 1 = append every matching section until HC=0x00 (partial types); 0 = read first match only then return.
 read_otp_sections_by_hc_until_stop() {
     local bus=$1
     local addr=$2
     local header_code=$(( $3 ))
     local xvcode=$(( ${4:-0} ))
     local out_file=$5
+    local concat_all="${6:-1}"
     local addr_32=$((OTP_BASE))
     local max_addr=$((OTP_BASE + 32768))
     local max_iters=512
@@ -600,7 +626,11 @@ read_otp_sections_by_hc_until_stop() {
     local count=0
 
     : > "$out_file" || return 1
-    log_verbose "Reading all OTP sections with HC=0x$(printf '%02x' $header_code) XV=0x$(printf '%02x' $xvcode) until HC=0x00..."
+    if [ "$concat_all" -eq 1 ]; then
+        log_verbose "Reading all OTP sections with HC=0x$(printf '%02x' $header_code) XV=0x$(printf '%02x' $xvcode) until HC=0x00..."
+    else
+        log_verbose "Reading first OTP section with HC=0x$(printf '%02x' $header_code) XV=0x$(printf '%02x' $xvcode)..."
+    fi
 
     while (( addr_32 < max_addr && iters < max_iters )); do
         iters=$((iters + 1))
@@ -635,6 +665,7 @@ read_otp_sections_by_hc_until_stop() {
             fi
             count=$((count + 1))
             log_verbose "Appended section $count (size 0x$(printf '%04x' $size))"
+            [ "$concat_all" -eq 0 ] && return 0
         fi
         addr_32=$((addr_32 + size))
     done
@@ -661,7 +692,7 @@ check_dependencies() {
     log_debug "Checking dependencies..."
 
     local missing=0
-    for cmd in i2cdetect i2cget i2cset i2ctransfer cmp; do
+    for cmd in i2cdetect i2cget i2cset i2ctransfer cmp hexdump awk tail dd head tr; do
         if ! command -v $cmd &> /dev/null; then
             log_error "Required command not found: $cmd"
             missing=1
@@ -669,7 +700,7 @@ check_dependencies() {
     done
 
     if [ $missing -eq 1 ]; then
-        log_error "Install missing packages (e.g. i2c-tools, diffutils for cmp)"
+        log_error "Install missing packages (e.g. i2c-tools, diffutils for cmp; hexdump + awk + tail + head + dd + tr — typically BusyBox or util-linux)"
         return 1
     fi
 
@@ -982,7 +1013,7 @@ invalidate_otp_sections_not_in_config() {
     local f fb
     for f in "$@"; do
         [ ! -f "$f" ] && continue
-        fb=$(od -An -tx1 -N1 "$f" 2>/dev/null | tr -d ' \n')
+        fb=$(_od_hex_n 1 "$f")
         [ -z "$fb" ] && continue
         present[$((16#$fb))]=1
     done
@@ -1030,12 +1061,12 @@ _finalize_section_crc_expected() {
     [ -f "$bf" ] && [ -s "$bf" ] || return 0
     [ -f "$pf" ] || return 0
     hcval=""
-    hc_line=$(grep -i '^hc=' "$pf" 2>/dev/null | head -1 || true)
+    hc_line=$(grep -i '^hc=' "$pf" 2>/dev/null | head -n 1 || true)
     if [[ "$hc_line" =~ ^[Hh][Cc]=0[xX]([0-9a-fA-F]+) ]]; then
         hcval=$((16#${BASH_REMATCH[1]}))
     fi
     if [ -z "$hcval" ]; then
-        fb=$(od -An -tx1 -N1 "$bf" 2>/dev/null | tr -d ' \n' | tr '[:upper:]' '[:lower:]')
+        fb=$(_od_hex_n 1 "$bf")
         [ "$fb" = "0b" ] && hcval=11
     fi
     v=""
@@ -1054,16 +1085,14 @@ _finalize_section_crc_expected() {
     else
         sz=$(wc -c < "$bf" 2>/dev/null | tr -d ' ')
         [ "${sz:-0}" -ge 4 ] || return 0
-        set -- $(tail -c 4 "$bf" | od -An -tu1)
+        set -- $(_od_tail4_u1 "$bf")
         [ $# -ge 4 ] || return 0
         b0=$1 b1=$2 b2=$3 b3=$4
         v=$(printf '0x%08x' $(( b0 + (b1 << 8) + (b2 << 16) + (b3 << 24) )))
     fi
     tmp="${pf}.crcstrip.$$"
-    if ! grep -v '^section_crc_expected=' "$pf" > "$tmp" 2>/dev/null; then
-        rm -f "$tmp"
-        return 1
-    fi
+    # sed (not grep -v): BusyBox grep can exit 1 when stripping yields "no match", aborting append.
+    sed '/^section_crc_expected=/d' "$pf" > "$tmp" || { rm -f "$tmp"; return 1; }
     mv "$tmp" "$pf" || { rm -f "$tmp"; return 1; }
     echo "section_crc_expected=$v" >> "$pf"
 }
@@ -1073,7 +1102,7 @@ _read_section_crc_expected_from_params() {
     local pf=$1
     local line v
     [ ! -f "$pf" ] && { echo ""; return 0; }
-    line=$(grep '^section_crc_expected=' "$pf" 2>/dev/null | head -1) || { echo ""; return 0; }
+    line=$(grep '^section_crc_expected=' "$pf" 2>/dev/null | head -n 1) || { echo ""; return 0; }
     v="${line#section_crc_expected=}"
     echo "$(echo "$v" | tr -d '\r\n' | sed 's/[[:space:]]*$//')"
 }
@@ -1083,7 +1112,7 @@ _read_configuration_checksum_from_txt() {
     local f="$1"
     local line hex
     [ -f "$f" ] || { echo ""; return 0; }
-    line=$(grep -iE '^[[:space:]]*configuration[[:space:]]+checksum[[:space:]]*:' "$f" 2>/dev/null | head -1) || true
+    line=$(grep -iE '^[[:space:]]*configuration[[:space:]]+checksum[[:space:]]*:' "$f" 2>/dev/null | head -n 1) || true
     [ -z "$line" ] && { echo ""; return 0; }
     hex="${line#*:}"
     hex=$(echo "$hex" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/#.*//')
@@ -1117,13 +1146,13 @@ parse_txt_config_to_bin() {
     local current_section_name=""
     local section_dwords=0
     local section_first_dword=""
+    # Build binary in memory once; avoid hundreds of `printf >> file` (slow on slow storage / BusyBox).
+    local bin_buf=""
 
     if [ ! -f "$txt_file" ]; then
         log_error "Config file not found: $txt_file"
         return 1
     fi
-
-    : > "$bin_file" || { log_error "Cannot create temp binary: $bin_file"; return 1; }
 
     log_section_summary() {
         [[ $quiet -eq 1 ]] && return 0
@@ -1140,8 +1169,9 @@ parse_txt_config_to_bin() {
         fi
     }
 
-    while IFS= read -r line; do
-        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
         [[ -z "$line" ]] && continue
 
         if [[ "$line" =~ ^\[Configuration[[:space:]]Data\] ]]; then
@@ -1160,16 +1190,20 @@ parse_txt_config_to_bin() {
 
         if [[ "$line" =~ ^// ]]; then
             current_section_name="${line#//}"
-            current_section_name=$(echo "$current_section_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            current_section_name="${current_section_name#"${current_section_name%%[![:space:]]*}"}"
+            current_section_name="${current_section_name%"${current_section_name##*[![:space:]]}"}"
             continue
         fi
 
         if [[ "$line" =~ ^[0-9A-Fa-f]{3}[[:space:]] ]]; then
-            local rest="${line#* }"
+            # One tr per row (not per DWORD) — avoids hundreds of subshells on .mic/.txt data blocks.
+            local rest
+            rest="${line#*[[:space:]]}"
+            rest=$(printf '%s' "$rest" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
             local dword
             local row_dwords=0
+            local _chunk
             for dword in $rest; do
-                dword=$(echo "$dword" | tr '[:lower:]' '[:upper:]' | tr -d '\r')
                 [[ -z "$dword" ]] || [[ ${#dword} -ne 8 ]] && continue
                 [[ ! "$dword" =~ ^[0-9A-F]{8}$ ]] && continue
                 local b0 b1 b2 b3
@@ -1178,7 +1212,8 @@ parse_txt_config_to_bin() {
                 [[ -z "$section_first_dword" ]] && section_first_dword="$dword"
                 b0=$((16#${dword:0:2})); b1=$((16#${dword:2:2})); b2=$((16#${dword:4:2})); b3=$((16#${dword:6:2}))
                 # DWORD in .txt is MSB-first; device/OTP use little-endian — write LSB first (b3 b2 b1 b0)
-                printf '%b' "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' "$b3" "$b2" "$b1" "$b0")" >> "$bin_file" || return 1
+                printf -v _chunk '\\x%02x\\x%02x\\x%02x\\x%02x' "$b3" "$b2" "$b1" "$b0"
+                bin_buf+="$_chunk"
                 byte_count=$((byte_count + 4))
                 row_dwords=$((row_dwords + 1))
             done
@@ -1192,6 +1227,7 @@ parse_txt_config_to_bin() {
         rm -f "$bin_file"
         return 1
     fi
+    printf '%b' "$bin_buf" > "$bin_file" || { log_error "Cannot write binary: $bin_file"; return 1; }
     if [[ $quiet -ne 1 ]]; then
         echo ""
         log_info "Total: $byte_count bytes written to binary"
@@ -1201,7 +1237,7 @@ parse_txt_config_to_bin() {
 
 # Parse .txt/.mic into one binary file per (sub)section (AN001 5.2).
 # (Sub)sections start with a line beginning with "000 " (3-digit hex row offset). Optional: [Configuration Data],
-# [End Configuration Data], and "// XV0 ..." comment lines. Writes section_0.bin, section_1.bin, ... and section_list.
+# [End Configuration Data], and "// XV0 ..." comment lines. Writes section_NN_hc_XX.bin (same style as readback), .params, and section_list.
 # AN001 partial sections may span multiple "000" rows (e.g. HC 0x0A/0x0B/0x11). We concatenate all DWORDs into one
 # logical section file and upload with the combined size.
 parse_txt_config_to_section_files() {
@@ -1213,6 +1249,8 @@ parse_txt_config_to_section_files() {
     local section_first_dword=""
     local section_index=0
     local current_section_bin=""
+    local current_section_stem=""
+    local -a parsed_section_stems=()
     local section_list_file="$out_dir/section_list"
     local in_partial=0
     local first_partial_dword1=""
@@ -1243,8 +1281,19 @@ parse_txt_config_to_section_files() {
     }
 
     start_section_file() {
-        current_section_bin="$out_dir/section_${section_index}.bin"
+        local first_dword="$1"
+        [[ -z "$first_dword" ]] || [[ ${#first_dword} -ne 8 ]] || [[ ! "$first_dword" =~ ^[0-9A-Fa-f]{8}$ ]] && {
+            log_error "start_section_file: bad first dword '$first_dword'"
+            return 1
+        }
+        first_dword=$(printf '%s' "$first_dword" | tr '[:lower:]' '[:upper:]')
+        local hc=$((16#${first_dword:6:2}))
+        local stem
+        stem=$(printf 'section_%02d_hc_%02x' "$section_index" "$hc")
+        current_section_stem="$stem"
+        current_section_bin="$out_dir/${stem}.bin"
         : > "$current_section_bin" || return 1
+        parsed_section_stems+=("$stem")
         echo "$current_section_bin" >> "$section_list_file"
     }
 
@@ -1255,7 +1304,8 @@ parse_txt_config_to_section_files() {
         local dword3="${3:-}"
         [[ -z "$dword1" ]] || [[ ${#dword1} -ne 8 ]] || [[ ! "$dword1" =~ ^[0-9A-F]{8}$ ]] && return 0
         [[ -z "$dword2" ]] || [[ ${#dword2} -ne 8 ]] || [[ ! "$dword2" =~ ^[0-9A-F]{8}$ ]] && return 0
-        local params_file="$out_dir/section_${section_index}.params"
+        [[ -z "${current_section_stem:-}" ]] && return 0
+        local params_file="$out_dir/${current_section_stem}.params"
         local b0 b1 b2 b3 sz0 sz1
         b0=$((16#${dword1:0:2})); b1=$((16#${dword1:2:2})); b2=$((16#${dword1:4:2})); b3=$((16#${dword1:6:2}))
         # AN001 5.4 size is low 16 bits of DWORD2 (MSB-first token), so use rightmost 4 hex chars: ... sz1 sz0
@@ -1264,7 +1314,10 @@ parse_txt_config_to_section_files() {
         {
             echo "dword1=$dword1"
             echo "dword2=$dword2"
-            echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
+            if [ -n "$dword3" ] && [[ ${#dword3} -eq 8 ]] && [[ "$dword3" =~ ^[0-9A-Fa-f]{8}$ ]]; then
+                dword3=$(echo "$dword3" | tr '[:lower:]' '[:upper:]')
+                echo "dword3=$dword3"
+            fi
             echo "hc=0x$(printf '%02x' $b3)"
             echo "xv=0x$(printf '%02x' $b2)"
             echo "cmd=0x$(printf '%02x' $b1)"
@@ -1273,10 +1326,6 @@ parse_txt_config_to_section_files() {
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$size"
             echo "size_hex=0x$(printf '%04x' $size)"
-            if [ -n "$dword3" ] && [[ ${#dword3} -eq 8 ]] && [[ "$dword3" =~ ^[0-9A-Fa-f]{8}$ ]]; then
-                dword3=$(echo "$dword3" | tr '[:lower:]' '[:upper:]')
-                echo "third_dword_on_000_line=$dword3"
-            fi
         } > "$params_file" 2>/dev/null || true
     }
 
@@ -1286,7 +1335,8 @@ parse_txt_config_to_section_files() {
         local total_size=$(( $2 ))
         local dword3="${3:-}"
         [[ -z "$dword1" ]] || [[ ${#dword1} -ne 8 ]] || [[ ! "$dword1" =~ ^[0-9A-F]{8}$ ]] && return 0
-        local params_file="$out_dir/section_${section_index}.params"
+        [[ -z "${current_section_stem:-}" ]] && return 0
+        local params_file="$out_dir/${current_section_stem}.params"
         local b0 b1 b2 b3 sz0 sz1
         b0=$((16#${dword1:0:2})); b1=$((16#${dword1:2:2})); b2=$((16#${dword1:4:2})); b3=$((16#${dword1:6:2}))
         sz0=$(( total_size & 0xff ))
@@ -1294,7 +1344,10 @@ parse_txt_config_to_section_files() {
         {
             echo "dword1=$dword1"
             echo "dword2=0000$(printf '%02x' $sz1)$(printf '%02x' $sz0)"
-            echo "b0=0x$(printf '%02x' $b0) b1=0x$(printf '%02x' $b1) b2=0x$(printf '%02x' $b2) b3=0x$(printf '%02x' $b3)"
+            if [ -n "$dword3" ] && [[ ${#dword3} -eq 8 ]] && [[ "$dword3" =~ ^[0-9A-Fa-f]{8}$ ]]; then
+                dword3=$(echo "$dword3" | tr '[:lower:]' '[:upper:]')
+                echo "dword3=$dword3"
+            fi
             echo "hc=0x$(printf '%02x' $b3)"
             echo "xv=0x$(printf '%02x' $b2)"
             echo "cmd=0x$(printf '%02x' $b1)"
@@ -1303,10 +1356,6 @@ parse_txt_config_to_section_files() {
             echo "sz1=0x$(printf '%02x' $sz1)"
             echo "size=$total_size"
             echo "size_hex=0x$(printf '%04x' $total_size)"
-            if [ -n "$dword3" ] && [[ ${#dword3} -eq 8 ]] && [[ "$dword3" =~ ^[0-9A-Fa-f]{8}$ ]]; then
-                dword3=$(echo "$dword3" | tr '[:lower:]' '[:upper:]')
-                echo "third_dword_on_first_000=$dword3"
-            fi
         } > "$params_file" 2>/dev/null || true
     }
 
@@ -1348,7 +1397,7 @@ parse_txt_config_to_section_files() {
                 partial_crc_pending_d3=""
                 section_index=$((section_index + 1))
             fi
-            log_section_summary
+            # Single summary for the last section: log_section_summary after the loop (EOF / end marker).
             break
         fi
         [[ $in_config -eq 0 ]] && continue
@@ -1383,7 +1432,13 @@ parse_txt_config_to_section_files() {
             if [ $is_partial -eq 1 ]; then
                 if [ $in_partial -eq 0 ]; then
                     log_section_summary
-                    start_section_file || return 1
+                    # Partial 000 after a normal section: finalize that section (no intervening normal 000).
+                    if [[ -n "$current_section_bin" ]] && [ -f "$current_section_bin" ]; then
+                        if [ $section_index -gt 0 ] && [ ${#parsed_section_stems[@]} -ge "$section_index" ]; then
+                            _finalize_section_crc_expected "$out_dir/${parsed_section_stems[$((section_index - 1))]}.params" "$out_dir/${parsed_section_stems[$((section_index - 1))]}.bin" || true
+                        fi
+                    fi
+                    start_section_file "${dw[0]}" || return 1
                     section_dwords=0
                     section_first_dword="${dw[0]}"
                     first_partial_dword1="${dw[0]}"
@@ -1414,11 +1469,11 @@ parse_txt_config_to_section_files() {
                 partial_crc_pending_d3=""
                 section_index=$((section_index + 1))
             fi
-            if [ $section_index -gt 0 ]; then
-                _finalize_section_crc_expected "$out_dir/section_$((section_index - 1)).params" "$out_dir/section_$((section_index - 1)).bin" || true
+            if [ $section_index -gt 0 ] && [ ${#parsed_section_stems[@]} -ge "$section_index" ]; then
+                _finalize_section_crc_expected "$out_dir/${parsed_section_stems[$((section_index - 1))]}.params" "$out_dir/${parsed_section_stems[$((section_index - 1))]}.bin" || true
             fi
             log_section_summary
-            start_section_file || return 1
+            start_section_file "${dw[0]}" || return 1
             section_dwords=0
             section_first_dword=""
             if [[ ${#dw[@]} -ge 3 ]]; then
@@ -1461,8 +1516,8 @@ parse_txt_config_to_section_files() {
         partial_crc_pending_d3=""
         section_index=$((section_index + 1))
     fi
-    if [ $section_index -gt 0 ]; then
-        _finalize_section_crc_expected "$out_dir/section_$((section_index - 1)).params" "$out_dir/section_$((section_index - 1)).bin" || true
+    if [ $section_index -gt 0 ] && [ ${#parsed_section_stems[@]} -ge "$section_index" ]; then
+        _finalize_section_crc_expected "$out_dir/${parsed_section_stems[$((section_index - 1))]}.params" "$out_dir/${parsed_section_stems[$((section_index - 1))]}.bin" || true
     fi
     log_section_summary
 
@@ -1544,7 +1599,7 @@ write_to_scratchpad() {
 
     # Config .bin files are little-endian (LSB first per DWORD); send as-is to device.
     local all_bytes
-    all_bytes=$(od -An -tx1 "$data_file" | tr -s ' ' | sed 's/^ //')
+    all_bytes=$(_od_hex_all_spaced "$data_file")
     local data_array=()
     for b in $all_bytes; do data_array+=("0x$b"); done
 
@@ -1640,7 +1695,7 @@ verify_scratchpad_readback() {
     fi
     log_error "Scratchpad mismatch: $(basename "$data_file") differs from readback ($(basename "$scpad_file"))"
     local diff_sample
-    diff_sample=$(cmp -l "$data_file" "$scpad_file" 2>/dev/null | head -10) || true
+    diff_sample=$(cmp -l "$data_file" "$scpad_file" 2>/dev/null | head -n 10) || true
     [[ -n "$diff_sample" ]] && log_error "First differing bytes (cmp -l): $diff_sample"
     return 1
 }
@@ -1738,7 +1793,7 @@ reset_device() {
 
 # Main programming sequence
 program_device() {
-    local flash_file config_bin_temp=""
+    local flash_file artifact_dir=""
 
     log_info "Starting programming sequence for $CONFIG_FILE"
     log_info "Target: I2C bus $I2C_BUS, address $DEVICE_ADDR"
@@ -1798,18 +1853,18 @@ program_device() {
     # .txt/.mic: upload each section individually (AN001 Section 6 - avoid device buffer overrun)
     # .bin: single scratchpad write + upload
     if [[ "$CONFIG_FILE" =~ \.(txt|mic)$ ]]; then
-        config_bin_temp=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
-        if ! parse_txt_config_to_section_files "$CONFIG_FILE" "$config_bin_temp"; then
-            rm -rf "$config_bin_temp"
+        # Section parse + artifacts + readback (-f): ${CONFIG_FILE%.*}_flash_work
+        artifact_dir="${CONFIG_FILE%.*}_flash_work"
+        mkdir -p "$artifact_dir" || { log_error "Cannot create section workspace: $artifact_dir"; return 1; }
+        if ! parse_txt_config_to_section_files "$CONFIG_FILE" "$artifact_dir"; then
             return 1
         fi
         section_bins=()
         while IFS= read -r p; do
             [[ -n "$p" ]] && section_bins+=("$p")
-        done < "$config_bin_temp/section_list"
+        done < "$artifact_dir/section_list"
         if [ ${#section_bins[@]} -eq 0 ]; then
             log_error "No sections to flash"
-            rm -rf "$config_bin_temp"
             return 1
         fi
 
@@ -1820,14 +1875,13 @@ program_device() {
             for f in "${section_bins[@]}"; do
                 [ ! -f "$f" ] && continue
                 local first_byte
-                first_byte=$(od -An -tx1 -N1 "$f" 2>/dev/null | tr -d ' \n')
+                first_byte=$(_od_hex_n 1 "$f")
                 [ -z "$first_byte" ] && continue
                 local file_hc=$((16#$first_byte))
                 [ "$file_hc" -eq "$requested_hc" ] && section_bins_filtered+=("$f")
             done
             if [ ${#section_bins_filtered[@]} -eq 0 ]; then
                 log_info "No section with HeaderCode 0x$(printf '%02x' $requested_hc) found in config; nothing to flash."
-                rm -rf "$config_bin_temp"
                 return 0
             fi
             section_bins=("${section_bins_filtered[@]}")
@@ -1835,7 +1889,6 @@ program_device() {
         else
             # Full .txt: invalidate only OTP sections whose HC is not in this config (not global wipe).
             invalidate_otp_sections_not_in_config "${section_bins[@]}" || {
-                rm -rf "$config_bin_temp"
                 return 1
             }
         fi
@@ -1847,7 +1900,7 @@ program_device() {
             log_info "--- Section $((i + 1))/${#section_bins[@]} ---"
             section_params_file="${flash_file%.bin}.params"
             local sec_hc_skip exp_crc dev_crc nx ex
-            sec_hc_skip=$(od -An -tx1 -N1 "$flash_file" 2>/dev/null | tr -d ' \n')
+            sec_hc_skip=$(_od_hex_n 1 "$flash_file")
             [ -z "$sec_hc_skip" ] && sec_hc_skip=0
             sec_hc_skip=$((16#$sec_hc_skip))
             exp_crc=$(_read_section_crc_expected_from_params "$section_params_file")
@@ -1878,31 +1931,26 @@ program_device() {
             fi
             if [ -n "$FLASH_SECTION_HC" ] && [ $DRY_RUN -eq 0 ]; then
                 local hd_hex4 sec_hc sec_xv
-                hd_hex4=$(od -An -tx1 -N4 "$flash_file" 2>/dev/null | tr -d ' \n')
+                hd_hex4=$(_od_hex_n 4 "$flash_file")
                 if [ ${#hd_hex4} -ge 8 ]; then
                     sec_hc=$((16#${hd_hex4:0:2}))
                     sec_xv=$((16#${hd_hex4:2:2}))
                     invalidate_otp 0 $sec_hc $sec_xv || {
-                        rm -rf "$config_bin_temp"
                         return 1
                     }
                 fi
             fi
             write_to_scratchpad "$flash_file" || {
-                rm -rf "$config_bin_temp"
                 return 1
             }
             read_from_scratchpad "$flash_file" || {
-                rm -rf "$config_bin_temp"
                 return 1
             }
             verify_scratchpad_readback "$flash_file" || {
-                rm -rf "$config_bin_temp"
                 return 1
             }
             if [ $DRY_RUN -eq 0 ]; then
                 upload_scratchpad_to_otp "$section_params_file" || {
-                    rm -rf "$config_bin_temp"
                     return 1
                 }
             fi
@@ -1911,18 +1959,7 @@ program_device() {
                 sleep 2
             fi
         done
-        # Persist section .bin, .params, and scratchpad readback (.scpad) — temp dir is removed below.
-        if [[ -n "$config_bin_temp" ]]; then
-            local artifact_dir="${CONFIG_FILE%.*}_flash_work"
-            mkdir -p "$artifact_dir" || true
-            for flash_file in "${section_bins[@]}"; do
-                [[ -f "$flash_file" ]] && cp -f "$flash_file" "$artifact_dir"/
-                [[ -f "${flash_file}.scpad" ]] && cp -f "${flash_file}.scpad" "$artifact_dir"/
-                [[ -f "${flash_file%.bin}.params" ]] && cp -f "${flash_file%.bin}.params" "$artifact_dir"/
-                [[ -f "${flash_file%.bin}_crc_input.bin" ]] && cp -f "${flash_file%.bin}_crc_input.bin" "$artifact_dir"/
-            done
-            log_info "Flashed section files saved under: $artifact_dir (section .bin, .params, .scpad, optional *_crc_input.bin for 0x0B; same with -n dry run)"
-        fi
+        log_info "Section workspace: $artifact_dir"
     else
         flash_file="$CONFIG_FILE"
         write_to_scratchpad "$flash_file" || return 1
@@ -1935,21 +1972,16 @@ program_device() {
 
     if [ $DRY_RUN -eq 1 ]; then
         log_info "Skip finalize (-n): upload to OTP, write protect, and reset were skipped"
-        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
         return 0
     fi
 
     enable_write_protect || {
-        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
         return 1
     }
 
     reset_device || {
-        [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
         return 1
     }
-
-    [[ -n "$config_bin_temp" ]] && rm -rf "$config_bin_temp"
 
     log_info "Programming completed successfully!"
     return 0
@@ -1974,6 +2006,17 @@ parse_config_file() {
 
     log_info "File size: $file_size bytes"
 
+    # One hexdump of the whole file avoids repeated `dd bs=1 skip=N` (BusyBox dd often discards skip by reading from offset 0 each time → very slow).
+    local fullhex
+    fullhex=$(hexdump -v -n "$file_size" -e '1/1 "%02x"' "$config_file" 2>/dev/null) || {
+        log_error "hexdump failed for $config_file"
+        return 1
+    }
+    [ "$((${#fullhex} / 2))" -lt "$file_size" ] && {
+        log_error "hexdump short read for $config_file"
+        return 1
+    }
+
     local offset=0
     local idx=0
     local max_sections=64
@@ -1982,10 +2025,10 @@ parse_config_file() {
         local pr_offs
         pr_offs="offset $(printf '0x%04x' $offset)"
         local header_hex size_hex
-        header_hex=$(dd if="$config_file" bs=1 skip=$offset count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
-        size_hex=$(dd if="$config_file" bs=1 skip=$((offset + 4)) count=4 2>/dev/null | od -An -tx1 | tr -d ' \n')
+        header_hex=${fullhex:$((offset * 2)):8}
+        size_hex=${fullhex:$((offset * 2 + 8)):8}
 
-        [ -z "$header_hex" ] || [ ${#header_hex} -lt 8 ] && break
+        [ -z "$header_hex" ] || [ ${#header_hex} -lt 8 ] || [ ${#size_hex} -lt 8 ] && break
 
         local h0 h1 s0 s1
         h0=${header_hex:0:2}; h1=${header_hex:2:2}
@@ -2015,7 +2058,7 @@ parse_config_file() {
         if [[ -n "$out_dir" ]]; then
             mkdir -p "$out_dir" 2>/dev/null || true
             local sec_path="$out_dir/section_$(printf '%02d' $idx)_hc_$(printf '%02x' $hc).bin"
-            if dd if="$config_file" of="$sec_path" bs=1 skip=$offset count=$size 2>/dev/null; then
+            if tail -c +$((offset + 1)) "$config_file" 2>/dev/null | head -c "$size" > "$sec_path"; then
                 log_info "  -> $sec_path"
             fi
         fi
@@ -2077,8 +2120,8 @@ readback_from_device() {
     if [ $have_config -eq 1 ]; then
         # With config: parse .txt, read each section by hc/xv, write to read_NN.bin and compare
         local tmpdir section_bins i section_path read_path
-        # tmpdir=$(mktemp -d) || { log_error "Cannot create temp dir"; return 1; }
-	tmpdir="/tmp/dpc-config/" ; mkdir -p $tmpdir || { log_error "Cannot create temp dir"; return 1; }
+        tmpdir="${txt_file%.*}_flash_work"
+        mkdir -p "$tmpdir" || { log_error "Cannot create temp dir: $tmpdir"; return 1; }
         config_files_dir="$tmpdir"
         if ! parse_txt_config_to_section_files "$txt_file" "$tmpdir"; then
             rm -rf "$tmpdir"
@@ -2093,7 +2136,7 @@ readback_from_device() {
             section_path="${section_bins[$i]}"
             # Section bin is LE: first 4 bytes = HC, XV, CMD, Loop (byte0..byte3)
             local hd_hex4
-            hd_hex4=$(od -An -tx1 -N4 "$section_path" 2>/dev/null | tr -d ' \n')
+            hd_hex4=$(_od_hex_n 4 "$section_path")
             [ ${#hd_hex4} -lt 8 ] && { log_error "Section file too short: $section_path"; rm -rf "$tmpdir"; return 1; }
             local sec_hc sec_xv
             sec_hc=$((16#${hd_hex4:0:2}))
@@ -2101,10 +2144,16 @@ readback_from_device() {
             local cfg_size
             cfg_size=$(wc -c < "$section_path" 2>/dev/null); [ -z "$cfg_size" ] && cfg_size=0
 
-            # For every HeaderCode: read all OTP sections with this HC (and XV) until HC=0x00 (stop), concatenate. One section per HC usually; 0x0B may have several.
+            # Partial types (0x0A/0x0B/0x11): concatenate every matching OTP section until HC=0x00. Other HCs: first matching section only.
             read_path="$out_dir/read_$(printf '%02d' $i)_hc_$(printf '%02x' $sec_hc).bin"
-            log_info "Section $i: reading all HC=0x$(printf '%02x' $sec_hc) XV=0x$(printf '%02x' $sec_xv) sections from OTP until HC=0x00 -> $read_path"
-            if ! read_otp_sections_by_hc_until_stop $bus $addr $sec_hc $sec_xv "$read_path"; then
+            local _concat=0
+            readback_otp_multi_section_hc "$sec_hc" && _concat=1
+            if [ "$_concat" -eq 1 ]; then
+                log_info "Section $i: reading all HC=0x$(printf '%02x' $sec_hc) XV=0x$(printf '%02x' $sec_xv) OTP sections until HC=0x00 -> $read_path"
+            else
+                log_info "Section $i: reading first OTP section HC=0x$(printf '%02x' $sec_hc) XV=0x$(printf '%02x' $sec_xv) -> $read_path"
+            fi
+            if ! read_otp_sections_by_hc_until_stop $bus $addr $sec_hc $sec_xv "$read_path" $_concat; then
                 rm -rf "$tmpdir"
                 return 1
             fi
@@ -2538,7 +2587,7 @@ compare_configs() {
         log_warn "Files differ"
         echo ""
         echo "First difference:"
-        cmp -l "$file1" "$file2" | head -5
+        cmp -l "$file1" "$file2" | head -n 5
     fi
 
     return 0
