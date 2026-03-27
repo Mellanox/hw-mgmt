@@ -3786,8 +3786,6 @@ report_sed_pba_ver()
 
 do_start()
 {
-	# start i2c bus trace recording
-	start_i2c_trace
 	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
@@ -4029,16 +4027,6 @@ do_chip_down()
 	# Delete ASIC device
 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
 }
-
-# add script exit trap to stop i2c bus trace recording in case of script exit.
-# hw-management-sysfs-monitor.service theoretically should stop i2c bus trace recording
-# but if it is not running - we need to stop it manually here
-trap '
-	# If sysfs-monitor is running it stops trace on its own; otherwise stop here.
-	if ! systemctl is-active --quiet hw-management-sysfs-monitor.service 2>/dev/null; then
-		stop_i2c_trace
-	fi
-' EXIT ERR QUIT TERM
 
 __usage="
 Usage: $(basename "$0") [Options]

@@ -91,9 +91,6 @@ do_start_sysfs_monitor()
                ! -name '*.sh' ! -name '*.py' ! -name 'led_*_state' -exec ls -la {} \; -exec cat {} \; > /var/log/hw-mgmt-val.log 2>/dev/null
             # Run post-init fixup hook
             run_fixup_script post
-
-            # stop i2c bus trace recording (if running)
-            stop_i2c_trace
             # Exit the sysfs monitor.
             exit 0
         fi
@@ -104,8 +101,6 @@ do_start_sysfs_monitor()
 
 do_stop_sysfs_monitor()
 {
-    # stop i2c bus trace recording (if running)
-    stop_i2c_trace
     # Remove older sysfs-monitor process if it exists.
     if [ -f "$SYSFS_MONITOR_PID_FILE" ]; then
         local MONITOR_PID
