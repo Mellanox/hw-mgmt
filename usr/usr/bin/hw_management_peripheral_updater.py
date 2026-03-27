@@ -84,6 +84,11 @@ class CONST(object):
     # File which defined current level filename.
     # User can dynamically change loglevel without svc restarting.
     LOG_LEVEL_FILENAME = "config/log_level"
+    LOG_FILE = "/var/log/hw-management-peripheral-updater.log"
+
+    # Log rotation size
+    LOG_ROTATION_SIZE = 1 * 1024 * 1024  # 1MB
+    LOG_ROTATION_COUNT = 3
 
 
 EXIT = threading.Event()
@@ -591,7 +596,7 @@ def main():
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest="log_file",
                             help="Add output also to log file. Pass file name here",
-                            default="/var/log/hw_management_peripheral_updater_log")
+                            default=CONST.LOG_FILE)
 
     # Note: set logging to 50 on release
     CMD_PARSER.add_argument("-v", "--verbosity",
@@ -610,6 +615,7 @@ def main():
     args = vars(CMD_PARSER.parse_args())
     global LOGGER
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+    LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
 
     if args["system_type"] is None:
         try:
