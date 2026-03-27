@@ -1117,6 +1117,55 @@ set_sodimm_temp_limits()
 	return 0
 }
 
+
+# Start i2c trace (ftrace i2c event class under tracefs).
+KERN_TRACE_FS="/sys/kernel/debug/tracing"
+start_i2c_trace() {
+	# check if i2c trace available
+	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
+		return
+	fi
+
+	# Already running: do not reconfigure (another tool may have enabled it with
+	# different buffer/filters; re-applying could fight that consumer).
+	if [ "$(< "$KERN_TRACE_FS"/events/i2c/enable)" -eq 1 ]; then
+		return
+	fi
+    
+	# configure i2c trace buffer size
+	echo 1024 > "$KERN_TRACE_FS"/buffer_size_kb  # 1 MiB (per-buffer; see tracing doc)
+	# reset i2c trace
+	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
+	# clear i2c trace buffer
+	echo 0 > "$KERN_TRACE_FS"/trace
+	# set i2c trace filter (only where the kernel exposes per-event filter files)
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/filter
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_write/filter
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_read/filter
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_result/filter
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter
+	# enable (start)i2c trace
+	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
+}
+
+# Stop i2c trace
+stop_i2c_trace() {
+	# check if i2c trace available
+	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
+		return
+	fi
+	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
+	if [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable)" -eq 0 ]; then
+		return
+	fi
+	# disable (stop) i2c trace
+	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
+	# save i2c trace to file
+	cat "$KERN_TRACE_FS"/trace >> /var/log/hw-mgmt-i2c-trace.log
+	# clear i2c trace buffer
+	echo 0 > "$KERN_TRACE_FS"/trace
+}
+
 # Print function trace to the log file(s)
 # log file is in /var/log/hw-mgmt.trace.log. Log rotation: maximum 3 rotated files, 2 MiB each (see logrotate).
 # log rotation is implemented by logrotate. See configuration file /etc/logrotate.d/hw-mgmt-trace
