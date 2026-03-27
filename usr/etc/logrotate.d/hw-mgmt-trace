@@ -9,3 +9,14 @@
     missingok
     notifempty
 }
+
+# Active log + rotate 2 => three rotated files (see logrotate.conf.5); compressed after delaycompress.
+"/var/log/hw-mgmt-i2c-trace.log" {
+    size 4M
+    rotate 2
+    copytruncate
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
