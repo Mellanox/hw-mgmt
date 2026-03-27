@@ -44,6 +44,22 @@ from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
 
+def to_int(value: Any, default: int = 0) -> int:
+    """
+    @summary:
+        Convert value to integer
+    @param value: value to convert
+    @param default: default value if conversion fails
+    @return: integer value
+    """
+    try:
+        return int(str(value).strip())
+    except (ValueError, TypeError):
+        return default
+
+# ----------------------------------------------------------------------
+
+
 def read_dmi_data(dmi_field_name):
     """
     @summary:
@@ -371,6 +387,35 @@ class HW_Mgmt_Logger:
         """
         if isinstance(log_hash_max_size, int) and log_hash_max_size >= 0:
             self.log_hash_max_size = log_hash_max_size
+
+    def set_log_rotation_size(self, file_size=None, file_count=None):
+        """
+        @summary:
+            Set log rotation size.
+        @param file_size: file size
+        @param file_count: file count
+        """
+
+        file_size = to_int(file_size)
+        file_count = to_int(file_count)
+        if file_size == 0:
+            file_size = self.MAX_LOG_FILE_SIZE
+        if file_count == 0:
+            file_count = self.MAX_LOG_FILE_BACKUP_COUNT
+
+        handler_list = self.logger.handlers[:]
+        for handler in handler_list:
+            if isinstance(handler, RotatingFileHandler):
+                prev_bytes = handler.maxBytes
+                prev_count = handler.backupCount
+                handler.maxBytes = file_size
+                handler.backupCount = file_count
+                # Rollover only when limits change. Unconditional doRollover() at
+                # startup rotated a fresh log and wasted a backup slot. When limits
+                # do change, rollover still applies so a log oversized vs the new cap
+                # from a prior config is split correctly.
+                if handler.maxBytes != prev_bytes or handler.backupCount != prev_count:
+                    handler.doRollover()
 
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
