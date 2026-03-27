@@ -307,13 +307,13 @@ i2c_rw_wrapper() {
         while [ $attempt -lt "$max" ]; do
             if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
                 wp=$(calc_pec "$addr_w" "${wb[@]}")
-                log_debug "i2c_rw_wrapper wr # PEC: i2ctransfer $I2C_XFER_FLAGS $bus w$((nwb + 1))@$addr ${wb[*]} $wp"
-                if i2ctransfer $I2C_XFER_FLAGS $bus "w$((nwb + 1))@$addr" "${wb[@]}" "$wp" 2>/dev/null; then
+                log_debug "i2ctransfer $I2C_XFER_FLAGS $bus w$((nwb + 1))@$addr ${wb[*]} $wp # PEC"
+                if i2ctransfer $I2C_XFER_FLAGS $bus "w$((nwb + 1))@$addr" "${wb[@]}" "$wp"; then
                     return 0
                 fi
             else
-                log_debug "i2c_rw_wrapper wr: i2ctransfer -y $bus w${nwb}@$addr ${wb[*]}"
-                if i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}" 2>/dev/null; then
+                log_debug "i2ctransfer -y $bus w${nwb}@$addr ${wb[*]} # no PEC"
+                if i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}"; then
                     return 0
                 fi
             fi
@@ -329,15 +329,15 @@ i2c_rw_wrapper() {
     attempt=0
     while [ $attempt -lt "$max" ]; do
         if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
-            log_debug "i2c_rw_wrapper rd # PEC: i2ctransfer $I2C_XFER_FLAGS $bus w${nwb}@$addr ${wb[*]} r${nread}"
-            raw=$(i2ctransfer $I2C_XFER_FLAGS $bus "w${nwb}@$addr" "${wb[@]}" "r${nread}" 2>/dev/null) || {
+            log_debug "i2ctransfer $I2C_XFER_FLAGS $bus w${nwb}@$addr ${wb[*]} r${nread} # PEC"
+            raw=$(i2ctransfer $I2C_XFER_FLAGS $bus "w${nwb}@$addr" "${wb[@]}" "r${nread}") || {
                 attempt=$((attempt + 1))
                 [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper read retry $attempt/$max"; sleep "$delay"; }
                 continue
             }
         else
-            log_debug "i2c_rw_wrapper rd: i2ctransfer -y $bus w${nwb}@$addr ${wb[*]} r${readlen}"
-            raw=$(i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}" "r${readlen}" 2>/dev/null) || {
+            log_debug "i2ctransfer -y $bus w${nwb}@$addr ${wb[*]} r${readlen} # no PEC"
+            raw=$(i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}" "r${readlen}") || {
                 attempt=$((attempt + 1))
                 [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper read retry $attempt/$max"; sleep "$delay"; }
                 continue
@@ -407,7 +407,11 @@ i2c_read() {
     if [ "$length" = "1" ]; then
         line=$(i2c_rw_wrapper "$bus" "$addr" 1 0 "$reg") || return 1
         b=$(echo "$line" | awk '{print $1}')
-        log_debug "i2c_read byte: 0x$b # PEC=${USE_I2C_PEC:-0}"
+        if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
+            log_debug "i2c_read byte: 0x$b # PEC"
+        else
+            log_debug "i2c_read byte: 0x$b # no PEC"
+        fi
         echo -n "0x$b"
         return 0
     fi
@@ -417,7 +421,7 @@ i2c_read() {
     delay="${I2C_RETRY_DELAY:-0.05}"
     attempt=0
     while [ $attempt -lt "$max" ]; do
-        result=$(i2cget -y $bus $addr $reg w 2>/dev/null)
+        result=$(i2cget -y $bus $addr $reg w)
         if [ $? -eq 0 ]; then
             log_debug "i2cget result: $result"
             echo -n "$result"
@@ -447,7 +451,11 @@ i2c_block_read() {
     local line
     line=$(i2c_rw_wrapper "$bus" "$addr" "$num_bytes" 0 "$reg") || return 1
     line=$(echo "$line" | sed 's/0x//g')
-    log_debug "block read result: $line # PEC=${USE_I2C_PEC:-0}"
+    if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
+        log_debug "block read result: $line # PEC"
+    else
+        log_debug "block read result: $line # no PEC"
+    fi
     echo "$line"
     return 0
 }
@@ -541,7 +549,11 @@ read_otp_dword_hex() {
     line=$(echo "$line" | sed 's/0x//g')
     read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
     line="$_d1 $_d2 $_d3 $_d4"
-    log_debug "read DWORD: $line # PEC=${USE_I2C_PEC:-0}"
+    if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
+        log_debug "read DWORD: $line # PEC"
+    else
+        log_debug "read DWORD: $line # no PEC"
+    fi
     echo "$line"
 }
 
@@ -677,7 +689,7 @@ detect_device() {
     log_info "Detecting device at address $DEVICE_ADDR on bus $I2C_BUS..."
 
     local i2c_out
-    i2c_out=$(i2cdetect -y $I2C_BUS $DEVICE_ADDR $DEVICE_ADDR 2>/dev/null)
+    i2c_out=$(i2cdetect -y $I2C_BUS $DEVICE_ADDR $DEVICE_ADDR)
     local addr_hex
     addr_hex=$(printf '%02x' $((DEVICE_ADDR)))
     # Accept either the address hex (device probed) or "UU" (address in use by kernel driver)
@@ -715,7 +727,7 @@ unbind_driver_for_device() {
     [ -f "$unbind_file" ] || return 0
     local dev_id
     dev_id=$(basename "$dev_path")
-    if echo "$dev_id" > "$unbind_file" 2>/dev/null; then
+    if echo "$dev_id" > "$unbind_file"; then
         DRIVER_UNBIND_DEVID="$dev_id"
         DRIVER_UNBIND_NAME="$driver_name"
         sleep 0.2
@@ -734,9 +746,9 @@ diagnose_rebind_id_regs() {
     local mfr_id mfr_model vout0 vout1
     mfr_id=$(i2c_read "$bus" "$addr" $PMBUS_MFR_ID)
     mfr_model=$(i2c_read "$bus" "$addr" $PMBUS_MFR_MODEL)
-    i2c_write "$bus" "$addr" $PMBUS_PAGE 0x00 2>/dev/null
+    i2c_write "$bus" "$addr" $PMBUS_PAGE 0x00
     vout0=$(i2c_read "$bus" "$addr" $PMBUS_VOUT_MODE)
-    i2c_write "$bus" "$addr" $PMBUS_PAGE 0x01 2>/dev/null
+    i2c_write "$bus" "$addr" $PMBUS_PAGE 0x01
     vout1=$(i2c_read "$bus" "$addr" $PMBUS_VOUT_MODE)
     log_info "  PMBUS_MFR_ID(0x99)=${mfr_id:-<read failed>}  PMBUS_MFR_MODEL(0x9A)=${mfr_model:-<read failed>}"
     log_info "  PMBUS_VOUT_MODE(0x20) page0=${vout0:-<read failed>}  page1=${vout1:-<read failed>}"
@@ -756,7 +768,7 @@ rebind_driver_if_unbound() {
     fi
     local delay=${REBIND_DELAY:-1}
     if [ "$delay" -gt 0 ] 2>/dev/null; then
-        log_info "Waiting ${delay}s for device to be ready after reset before rebind..."
+        log_debug "Waiting ${delay}s for device to be ready after reset before rebind..."
         sleep "$delay"
     fi
     if [ "${REBIND_DEBUG:-0}" -eq 1 ] 2>/dev/null; then
@@ -765,7 +777,7 @@ rebind_driver_if_unbound() {
         addr="0x${DRIVER_UNBIND_DEVID##*-}"
         diagnose_rebind_id_regs "$bus" "$addr"
     fi
-    if echo "$DRIVER_UNBIND_DEVID" > "$bind_file" 2>/dev/null; then
+    if echo "$DRIVER_UNBIND_DEVID" > "$bind_file"; then
         log_info "Driver $DRIVER_UNBIND_NAME rebound to $DRIVER_UNBIND_DEVID"
     else
         log_warn "Rebind of $DRIVER_UNBIND_NAME to $DRIVER_UNBIND_DEVID failed (device may need more time or power cycle)"
@@ -1006,7 +1018,7 @@ _append_le_dword_hex_to_file() {
 _crc32_cli_to_hex() {
     local f="$1" val
     [ -n "$HAS_CRC32" ] || return 1
-    val=$(crc32 "$f" 2>/dev/null | awk '{print $1}' | tr -d '\r\n') || return 1
+    val=$(crc32 "$f" | awk '{print $1}' | tr -d '\r\n') || return 1
     [ -n "$val" ] || return 1
     printf '0x%s' "$val"
 }
@@ -1497,7 +1509,7 @@ ensure_scpad_hex_addr() {
         return 0
     fi
     local scpad_full
-    scpad_full=$(get_scratchpad_address $I2C_BUS $DEVICE_ADDR 2>/dev/null) || true
+    scpad_full=$(get_scratchpad_address $I2C_BUS $DEVICE_ADDR) || true
     local addr
     addr=$(echo "$scpad_full" | head -n1)
     if [ -z "$addr" ]; then
@@ -1705,7 +1717,7 @@ upload_scratchpad_to_otp() {
         return 0
     fi
     log_error "Upload unsuccessful: STATUS_CML d0 bit[0] is not 0 (AN001 6.5), raw=$status_cml"
-    i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS 2>/dev/null || true
+    i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || true
     return 1
 }
 
@@ -1742,7 +1754,7 @@ program_device() {
         local file_crc_full dev_crc_full nx_full ex_full
         file_crc_full=$(_read_configuration_checksum_from_txt "$CONFIG_FILE")
         if [ -n "$file_crc_full" ]; then
-            dev_crc_full=$(get_crc "$I2C_BUS" "$DEVICE_ADDR" 0 2>/dev/null) || dev_crc_full=""
+            dev_crc_full=$(get_crc "$I2C_BUS" "$DEVICE_ADDR" 0) || dev_crc_full=""
             if [ -n "$dev_crc_full" ]; then
                 nx_full=$(_normalize_crc32_hex "$dev_crc_full")
                 ex_full=$(_normalize_crc32_hex "$file_crc_full")
@@ -1840,7 +1852,7 @@ program_device() {
             sec_hc_skip=$((16#$sec_hc_skip))
             exp_crc=$(_read_section_crc_expected_from_params "$section_params_file")
             if [ -n "$exp_crc" ]; then
-                dev_crc=$(get_crc $I2C_BUS $DEVICE_ADDR $sec_hc_skip 2>/dev/null) || dev_crc=""
+                dev_crc=$(get_crc $I2C_BUS $DEVICE_ADDR $sec_hc_skip) || dev_crc=""
                 if [ -n "$dev_crc" ]; then
                     nx=$(_normalize_crc32_hex "$dev_crc")
                     ex=$(_normalize_crc32_hex "$exp_crc")
@@ -2047,12 +2059,12 @@ readback_from_device() {
     unbind_driver_for_device
 
     # Readback requires I2C/SMBus block write (to set RPTR) and block read (to read OTP). Probe once.
-    if ! set_rptr $bus $addr $((OTP_BASE)) 2>/dev/null; then
+    if ! set_rptr $bus $addr $((OTP_BASE)); then
         log_error "Readback requires I2C block write support (to set register pointer)."
         log_error "Your controller may not support it. Use an I2C adapter with SMBus block transfer, or skip readback."
         return 1
     fi
-    if ! read_otp_dword_hex $bus $addr >/dev/null 2>&1; then
+    if ! read_otp_dword_hex $bus $addr >/dev/null; then
         log_error "Readback requires I2C block read support (to read OTP)."
         log_error "Your controller may not support it. Use an I2C adapter with SMBus block transfer, or skip readback."
         return 1
@@ -2175,11 +2187,11 @@ readback_all() {
 
     unbind_driver_for_device
 
-    if ! set_rptr "$bus" "$addr" $((OTP_BASE)) 2>/dev/null; then
+    if ! set_rptr "$bus" "$addr" $((OTP_BASE)); then
         log_error "readback-all requires I2C block write support (to set register pointer)."
         return 1
     fi
-    if ! read_otp_dword_hex "$bus" "$addr" >/dev/null 2>&1; then
+    if ! read_otp_dword_hex "$bus" "$addr" >/dev/null; then
         log_error "readback-all requires I2C block read support (to read OTP)."
         return 1
     fi
@@ -2221,7 +2233,7 @@ scan_infineon_devices() {
         addr_hex=$(printf '%02x' $addr)
 
         local scan_out
-        scan_out=$(i2cdetect -y $bus $addr $addr 2>/dev/null)
+        scan_out=$(i2cdetect -y $bus $addr $addr)
         # Match cell value (space before addr_hex or UU) to avoid false positive on row label (e.g. "40:" for addr 0x40)
         if echo "$scan_out" | grep -qE " (${addr_hex}|UU)( |$)"; then
             echo -e "${GREEN}Found device at $hex_addr${NC}"
@@ -2293,7 +2305,7 @@ read_device_info() {
     # 0xFE/0xFD access (FW timestamp, OTP size) requires device unbound
     I2C_BUS=$bus DEVICE_ADDR=$addr unbind_driver_for_device
     log_info "Reading device information..."
-    echo "Device: Bus $bus, Address $addr"
+    log_info "Device: Bus $bus, Address $addr"
 
     local block_regs="0x99 0x9A 0x9B 0x9C 0x9D 0x9E 0xAD"
     local reg_names="PMBUS_MFR_ID PMBUS_MFR_MODEL PMBUS_MFR_REVISION PMBUS_MFR_LOCATION PMBUS_MFR_DATE PMBUS_MFR_SERIAL PMBUS_MFR_DEVICE_ID"
@@ -2304,49 +2316,49 @@ read_device_info() {
         local value
         value=$(read_device_info_block "$bus" "$addr" "$reg")
         if [ -n "$value" ]; then
-            printf "  %-20s (%-6s): %s\n" "$name" "$reg" "$value"
+            log_info "  $(printf '%-24s' "$name"): $value"
         else
             value=$(i2cget -y $bus $addr $reg || echo "N/A")
-            printf "  %-20s (%-6s): %s\n" "$name" "$reg" "$value"
+            log_info "  $(printf '%-24s' "$name"): $value"
         fi
         idx=$((idx + 1))
     done
 
     local value
     value=$(i2cget -y $bus $addr 0x79 w || echo "N/A")
-    printf "  %-20s (%-6s): %s\n" "PMBUS_STATUS_WORD" "0x79" "$value"
+    log_info "  $(printf '%-24s' 'PMBUS_STATUS_WORD'): $value"
     value=$(i2cget -y $bus $addr 0x78 || echo "N/A")
-    printf "  %-20s (%-6s): %s\n" "PMBUS_STATUS_BYTE" "0x78" "$value"
+    log_info "  $(printf '%-24s' 'PMBUS_STATUS_BYTE'): $value"
     value=$(i2cget -y $bus $addr 0x01 || echo "N/A")
-    printf "  %-20s (%-6s): %s\n" "OPERATION" "0x01" "$value"
+    log_info "  $(printf '%-24s' 'OPERATION'): $value"
     value=$(i2cget -y $bus $addr 0x10 || echo "N/A")
-    printf "  %-20s (%-6s): %s\n" "WRITE_PROTECT" "0x10" "$value"
+    log_info "  $(printf '%-24s' 'WRITE_PROTECT'): $value"
 
     local fw_ts
-    fw_ts=$(get_fw_timestamp "$bus" "$addr" 2>/dev/null)
+    fw_ts=$(get_fw_timestamp "$bus" "$addr")
     if [ -n "$fw_ts" ]; then
         local fw_date
         fw_date=$(date -d "@$fw_ts" +"%Y-%m-%d %T" 2>/dev/null) || fw_date="$fw_ts"
-        printf "  %-20s (0xFE 0x01): %s (%s)\n" "FW_TIMESTAMP" "$fw_date" "$fw_ts"
+        log_info "  $(printf '%-24s' 'FW_TIMESTAMP'): $fw_date ($fw_ts)"
     else
-        printf "  %-20s (0xFE 0x01): %s\n" "FW_TIMESTAMP" "N/A"
+        log_info "  $(printf '%-24s' 'FW_TIMESTAMP'): N/A"
     fi
 
     # GET_CRC total CRC: AN001 HC=0x00 in BLOCK_WRITE(0xFD, 4, hc, 0, 0, 0).
     local crc_hex
-    crc_hex=$(get_crc "$bus" "$addr" 0 2>/dev/null) || true
+    crc_hex=$(get_crc "$bus" "$addr" 0) || true
     if [ -n "$crc_hex" ]; then
-        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0x00)" "$crc_hex"
+        log_info "  $(printf '%-24s' 'CRC (HC=0x00)'): $crc_hex"
     else
-        printf "  %-20s (0xFE 0x2D): %s\n" "CRC (HC=0x00)" "N/A"
+        log_info "  $(printf '%-24s' 'CRC (HC=0x00)'): N/A"
     fi
 
     local otp_remaining
-    otp_remaining=$(get_otp_partition_size_remaining "$bus" "$addr" 2>/dev/null)
+    otp_remaining=$(get_otp_partition_size_remaining "$bus" "$addr")
     if [ -n "$otp_remaining" ]; then
-        printf "  %-20s (0xFE 0x10): %s (0x%04x) bytes\n" "OTP_REMAINING_SIZE" "$otp_remaining" "$otp_remaining"
+        log_info "  $(printf '%-24s' 'OTP_REMAINING_SIZE'): $otp_remaining (0x$(printf '%04x' "$otp_remaining")) bytes"
     else
-        printf "  %-20s (0xFE 0x10): %s\n" "OTP_REMAINING_SIZE" "N/A"
+        log_info "  $(printf '%-24s' 'OTP_REMAINING_SIZE'): N/A"
     fi
 
     return 0
@@ -2381,7 +2393,7 @@ monitor_telemetry() {
 
         for page in 0 1; do
             echo "--- Page $page ---"
-            i2cset -y $bus $addr $PMBUS_PAGE $page 2>/dev/null
+            i2cset -y $bus $addr $PMBUS_PAGE $page
 
             local vout
             vout=$(i2cget -y $bus $addr $PMBUS_READ_VOUT w || echo "N/A")
