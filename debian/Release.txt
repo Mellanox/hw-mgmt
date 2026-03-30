@@ -1,4 +1,34 @@
 ================================================================================
+- V.7.0060.0933
+- Mon, 30 Mar 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4946745, hw-mgmt: service: Fix hw-mgmt sync service start/stop issue, 5223462
+    o #4946747, hw-mgmt: service: Fix thermal-updater stop Failed with result timeout, eb70d41
+    o #4949012, hw-mgmt: scripts: Fix oo many (101) messages in hash logger issue, 232702f
+    o #N/A, Fix greptile comments in usr/usr/bin/hw-management-chassis-events.sh, f24a718
+    o #4859849, hw-mgmt: scripts: Improve robustness and tracing for fanX_dir init, 68fcda6
+    o #N/A, hw-mgmt: scripts: Add helper hw-mgmt function call tracing, 0916ce2
+
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.0933/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.0932
 - Mon, 23 Mar 2026
 --------------------------------------------------------------------------------
