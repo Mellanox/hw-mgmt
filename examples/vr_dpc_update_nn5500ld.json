@@ -12,37 +12,37 @@
       "DeviceType": "xdpe1a2g7b",
       "Bus": 13,
       "Addr": "0x66",
-      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_66.bin"
+      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_66.txt"
     },
     {
       "DeviceType": "xdpe1a2g7b",
       "Bus": 13,
       "Addr": "0x68",
-      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_68.bin"
+      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_68.txt"
     },
     {
       "DeviceType": "xdpe1a2g7b",
       "Bus": 13,
       "Addr": "0x6c",
-      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_6c.bin"
+      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_6c.txt"
     },
     {
       "DeviceType": "xdpe1a2g7b",
       "Bus": 29,
       "Addr": "0x66",
-      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_66.bin"
+      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_66.txt"
     },
     {
       "DeviceType": "xdpe1a2g7b",
       "Bus": 29,
       "Addr": "0x68",
-      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_68.bin"
+      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_68.txt"
     },
     {
       "DeviceType": "xdpe1a2g7b",
       "Bus": 29,
       "Addr": "0x6c",
-      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_6c.bin"
+      "ConfigFile": "/var/run/hw-management/config/xdpe1a2g7b_config_6c.txt"
     }
   ]
 }
