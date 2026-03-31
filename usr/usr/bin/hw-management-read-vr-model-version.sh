@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -37,9 +37,28 @@
 DEVTREE_FILE="/var/run/hw-management/config/devtree"
 FIRMWARE_BASE="/var/run/hw-management/firmware"
 LOG_TAG="vr_model_version"
+I2C_BUS_OFFSET_FILE="/var/run/hw-management/config/i2c_bus_offset"
 
 # Register addresses for reading model and revision (defaults)
 PAGE_REG=0x00
+
+# Function to get bus offset used by hw-management topology scripts.
+get_i2c_bus_offset()
+{
+    local offset=0
+
+    if [[ -f "$I2C_BUS_OFFSET_FILE" ]]; then
+        offset=$(<"$I2C_BUS_OFFSET_FILE")
+        # Fallback to 0 if file content is not an integer.
+        if [[ ! "$offset" =~ ^-?[0-9]+$ ]]; then
+            log_message "warning" "Invalid i2c_bus_offset value '$offset' in $I2C_BUS_OFFSET_FILE, using 0"
+            offset=0
+        fi
+    fi
+
+    echo "$offset"
+    return 0
+}
 
 # Function to get device-specific register configuration
 get_device_registers()
@@ -296,6 +315,9 @@ parse_devtree()
     fi
 
     log_message "info" "Parsing devtree file: $DEVTREE_FILE"
+    local i2c_bus_offset
+    i2c_bus_offset=$(get_i2c_bus_offset)
+    log_message "info" "Using i2c_bus_offset: $i2c_bus_offset"
 
     # Read devtree into array (space-separated fields)
     local devtree_content
@@ -320,13 +342,14 @@ parse_devtree()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus + i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         # Check if internal name matches "voltmon" pattern
         if [[ "$internal_name" == *voltmon* ]]; then
-            log_message "info" "Found voltmon device: $internal_name (driver: $driver_name, bus: $bus, addr: $address)"
+            log_message "info" "Found voltmon device: $internal_name (driver: $driver_name, bus: $bus -> abs $bus_abs, addr: $address)"
 
-            if get_model_version "$driver_name" "$bus" "$address" "$internal_name"; then
+            if get_model_version "$driver_name" "$bus_abs" "$address" "$internal_name"; then
                 ((devices_processed++))
             else
                 ((devices_skipped++))
@@ -379,6 +402,9 @@ get_pmic_prefix()
 # Function to display voltmon information
 show_voltmon_info()
 {
+    local i2c_bus_offset
+    i2c_bus_offset=$(get_i2c_bus_offset)
+
     if [[ ! -f "$DEVTREE_FILE" ]]; then
         echo "Error: Devtree file not found: $DEVTREE_FILE"
         return 1
@@ -412,6 +438,7 @@ show_voltmon_info()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus + i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         # Check if internal name matches "voltmon" pattern
@@ -442,14 +469,14 @@ show_voltmon_info()
 
                 # Read model ID directly from device
                 local model_result
-                model_result=$(get_model "$bus" "$address" "$model_reg" "$model_page" 2>/dev/null)
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
                     model_id="$model_result"
                 fi
 
                 # Read revision ID directly from device
                 local rev_result
-                rev_result=$(get_revision "$bus" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
                     rev_id="$rev_result"
                 fi
