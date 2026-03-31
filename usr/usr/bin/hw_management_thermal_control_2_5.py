@@ -2088,11 +2088,9 @@ class thermal_module_sensor(system_device):
         @summary: returning info about current device state. Can be overridden in child class
         """
         fault_list = self.get_fault_list_filtered()
-        # sensor error reading counter
-        if CONST.SENSOR_READ_ERR in fault_list:
+        value = round(self.value, 1) if self.get_temp_support_status() else CONST.TEMP_NA_VAL
+        if CONST.SENSOR_READ_ERR in fault_list or value == CONST.TEMP_NA_VAL:
             value = "N/A"
-        else:
-            value = round(self.value, 1)
 
         if self.pwm > self.pwm_prev:
             sign = u'\u2191'  # up arrow
