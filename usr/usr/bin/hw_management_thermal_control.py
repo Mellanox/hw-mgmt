@@ -1756,6 +1756,25 @@ class thermal_module_sensor(system_device):
         self._update_pwm()
         return None
 
+    # ----------------------------------------------------------------------
+    def info(self):
+        """
+        @summary: returning info about current device state. Can be overridden in child class
+        """
+        fault_list = self.get_fault_list_filtered()
+        value = self.value if self.get_temp_support_status() else CONST.TEMP_NA_VAL
+        if CONST.SENSOR_READ_ERR in fault_list or value == CONST.TEMP_NA_VAL:
+            value = "N/A"
+
+        info_str = "\"{}\" temp: {}, tmin: {}, tmax: {}, faults:[{}], tz_pwm: {}, {}".format(self.name,
+                                                                                             value,
+                                                                                             self.val_min,
+                                                                                             self.val_max,
+                                                                                             self.get_fault_list_str(),
+                                                                                             self.pwm,
+                                                                                             self.state)
+        return info_str
+
 
 class thermal_module_tec_sensor(system_device):
     """
