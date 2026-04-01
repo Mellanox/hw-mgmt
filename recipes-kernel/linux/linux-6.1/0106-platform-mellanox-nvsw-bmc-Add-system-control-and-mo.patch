@@ -1,4 +1,4 @@
-From 623b439e3a16cc80da30f5cd3ab7940965601dfd Mon Sep 17 00:00:00 2001
+From 4084ea877fb69d5fad7b3af51ef80c15eb0a311c Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Sun, 15 Jun 2025 13:13:26 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +25,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  710 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  944 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  837 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  934 ++++++
  drivers/platform/mellanox/nvsw.h              |  297 ++
- 9 files changed, 6359 insertions(+), 4 deletions(-)
+ 9 files changed, 6456 insertions(+), 4 deletions(-)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5322,10 +5322,10 @@ index 000000000..fed143cdf
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..6e867ccd4
+index 000000000..4f022d9fd
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,837 @@
+@@ -0,0 +1,934 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -5348,8 +5348,11 @@ index 000000000..6e867ccd4
 +
 +#define NVSW_HOST_DEVICE_NAME	"mlxplat"
 +
-+/* Bus number of mux device */
-+#define NVSW_I2C_MUX_BUS_NR		2
++/* Bus number of mux parent device */
++#define NVSW_I2C_MUX_PARENT_BUS_NR	2
++
++/* Bus number of the last host I2C bus */
++#define NVSW_I2C_LAST_HOST_BUS_NR  	3
 +
 +/* Platform mux channels */
 +static int nvsw_host_spc6_mux_channels[] = {
@@ -5695,6 +5698,30 @@ index 000000000..6e867ccd4
 +		.mode = 0644,
 +	},
 +	{
++		.label = "asic1_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0644,
++	},
++	{
++		.label = "asic2_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0644,
++	},
++	{
++		.label = "asic3_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0644,
++	},
++	{
++		.label = "asic4_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
 +		.label = "reset_long_pb",
 +		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
 +		.mask = GENMASK(7, 0) & ~BIT(0),
@@ -5800,9 +5827,24 @@ index 000000000..6e867ccd4
 +		.mode = 0444,
 +	},
 +	{
-+		.label = "asic_pg_fail",
-+		.reg = NVSW_REG_GP4_RO_OFFSET,
-+		.mask = GENMASK(7, 0) & ~BIT(7),
++		.label = "asic2_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC2_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
++		.label = "asic3_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC3_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
++		.label = "asic4_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC4_MASK,
++		.bit = 1,
 +		.mode = 0444,
 +	},
 +	{
@@ -6014,7 +6056,7 @@ index 000000000..6e867ccd4
 +{
 +	int i, err;
 +
-+    /* Allocate the platform device structure */
++	/* Allocate the platform device structure */
 +	nvsw_host_pdev =
 +		platform_device_alloc(NVSW_HOST_DEVICE_NAME, PLATFORM_DEVID_NONE);
 +	if (!nvsw_host_pdev)
@@ -6049,6 +6091,48 @@ index 000000000..6e867ccd4
 +			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
 +		},
 +	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI191"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI183"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI195"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI192"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI187"),
++		},
++	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0027"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI1188"),
++		},
++	},
 +	{ }
 +};
 +
@@ -6056,16 +6140,29 @@ index 000000000..6e867ccd4
 +
 +static int nvsw_host_probe(struct platform_device *pdev)
 +{
++	struct i2c_adapter *last_host_adapter;
 +	struct nvsw_core *nvsw_core;
 +	int i, err;
 +
-+	/* Get I2C adapter at the top of host I2C tree */
-+	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_BUS_NR);
-+	if (!nvsw_host_mux_i2c_adapter) {
++	/* Ensure the I2C host driver has finished registering
++	 * all 4 buses (0-3) to prevent the mux from stealing bus 3
++	 */
++	last_host_adapter = i2c_get_adapter(NVSW_I2C_LAST_HOST_BUS_NR);
++	if (!last_host_adapter) {
 +		dev_info(&pdev->dev,
 +			 "I2C adapter for bus %d is not ready, deferring probe\n",
-+			 NVSW_I2C_MUX_BUS_NR);
++			 NVSW_I2C_LAST_HOST_BUS_NR);
 +		return -EPROBE_DEFER;
++	}
++	i2c_put_adapter(last_host_adapter);
++
++	/* Get I2C mux parent adapter */
++	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_PARENT_BUS_NR);
++	if (!nvsw_host_mux_i2c_adapter) {
++		dev_err(&pdev->dev,
++			 "I2C adapter for bus %d is not available\n",
++			 NVSW_I2C_MUX_PARENT_BUS_NR);
++		return -ENODEV;
 +	}
 +
 +	/* Create device at the top of host I2C tree */
@@ -6075,8 +6172,8 @@ index 000000000..6e867ccd4
 +	if (IS_ERR(nvsw_host_mux_i2c_client)) {
 +		dev_err(&pdev->dev,
 +			"Failed to create client %s at bus %d at addr 0x%02x\n",
-+			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_BUS_NR,
-+		    nvsw_host_mux_brdinfo->addr);
++			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_PARENT_BUS_NR,
++			nvsw_host_mux_brdinfo->addr);
 +		err = PTR_ERR(nvsw_host_mux_i2c_client);
 +		goto i2c_new_client_device_fail;
 +	}
@@ -6165,7 +6262,7 @@ index 000000000..6e867ccd4
 +
 diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
 new file mode 100644
-index 000000000..3fbe4cc02
+index 000000000..0776f4541
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw.h
 @@ -0,0 +1,297 @@
@@ -6211,6 +6308,7 @@ index 000000000..3fbe4cc02
 +#define NVSW_REG_CPLD7_PN_OFFSET	0x2528
 +#define NVSW_REG_CPLD7_PN1_OFFSET	0x2529
 +#define NVSW_REG_GP0_RO_OFFSET		0x252a
++#define NVSW_REG_GP2_RO_OFFSET		0x252b
 +#define NVSW_REG_GP1_RO_OFFSET		0x252c
 +#define NVSW_REG_GPCOM0_OFFSET		0x252d
 +#define NVSW_REG_GP0_OFFSET		0x252e
@@ -6256,17 +6354,15 @@ index 000000000..3fbe4cc02
 +#define NVSW_REG_PS_DC_OK_MASK_OFFSET	0x2569
 +#define NVSW_REG_CPLD8_PN_OFFSET	0x2573
 +#define NVSW_REG_CPLD8_PN1_OFFSET	0x2574
-+#define NVSW_REG_CPLD6_VER_OFFSET	0x2575
 +#define NVSW_REG_PG3_OFFSET		0x2576
 +#define NVSW_REG_PG3_EVENT_OFFSET	0x2577
 +#define NVSW_REG_PG3_MASK_OFFSET	0x2578
 +#define NVSW_REG_PG4_OFFSET		0x2579
 +#define NVSW_REG_PG4_EVENT_OFFSET	0x257a
 +#define NVSW_REG_PG4_MASK_OFFSET	0x257b
-+#define NVSW_REG_CPLD6_PN_OFFSET	0x257c
-+#define NVSW_REG_CPLD6_PN1_OFFSET	0x257d
-+#define NVSW_REG_CPLD9_PN_OFFSET	0x257e
-+#define NVSW_REG_CPLD9_PN1_OFFSET	0x257f
++#define NVSW_REG_CPLD6_VER_OFFSET	0x257c
++#define NVSW_REG_CPLD6_PN_OFFSET	0x257d
++#define NVSW_REG_CPLD6_PN1_OFFSET	0x257e
 +#define NVSW_REG_CPLD10_PN_OFFSET	0x2580
 +#define NVSW_REG_CPLD10_PN1_OFFSET	0x2581
 +#define NVSW_REG_ASIC3_HEALTH_OFFSET	0x2582
@@ -6299,6 +6395,8 @@ index 000000000..3fbe4cc02
 +#define NVSW_REG_CPLD8_VER_OFFSET	0x25c8
 +#define NVSW_REG_CPLD9_VER_OFFSET	0x25c9
 +#define NVSW_REG_CPLD10_VER_OFFSET	0x25ca
++#define NVSW_REG_CPLD9_PN_OFFSET	0x25cb
++#define NVSW_REG_CPLD9_PN1_OFFSET	0x25cc
 +#define NVSW_REG_WD2_TMR_OFFSET		0x25cd
 +#define NVSW_REG_WD2_TLEFT_OFFSET	0x25ce
 +#define NVSW_REG_WD2_ACT_OFFSET		0x25cf
@@ -6380,8 +6478,7 @@ index 000000000..3fbe4cc02
 +#define NVSW_UART_SEL_MASK		GENMASK(7, 6)
 +#define NVSW_BIOS_STATUS_MASK		GENMASK(3, 1)
 +#define NVSW_REG_RESET_MASK		BIT(1)
-+#define NVSW_MASTER_MASK                BIT(5)
-+
++#define NVSW_MASTER_MASK		BIT(5)
 +#define NVSW_FU_CAP_MASK		GENMASK(1, 0)
 +#define NVSW_WD_RESET_ACT_MASK		GENMASK(7, 1)
 +#define NVSW_WD_FAN_ACT_MASK		(GENMASK(7, 0) & ~BIT(4))
