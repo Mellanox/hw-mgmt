@@ -81,6 +81,8 @@ usage()
     echo "    ]"
     echo "  }"
     echo ""
+    echo "  Infineon (DeviceType xdpe*): CrcFile and DeviceConfigFile are not used; Addr is required."
+    echo ""
 }
 
 # Function to check dependencies
@@ -407,7 +409,7 @@ process_json_config()
             fi
 
             # Build Infineon flash command
-            cmd=("$DPC_INFINEON_UPDATE_SCRIPT" "flash" "-b" "$bus" "-a" "$addr" "-f" "$config_file")
+            cmd=("$DPC_INFINEON_UPDATE_SCRIPT" "flash" "-y" "-b" "$bus" "-a" "$addr" "-f" "$config_file")
             log_message "info" "Infineon device at address $addr"
 
         else

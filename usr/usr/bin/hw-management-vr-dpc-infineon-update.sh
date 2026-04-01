@@ -21,6 +21,8 @@ DEVICE_ADDR=""
 CONFIG_FILE=""
 VERIFY_ONLY=0
 DRY_RUN=0
+# Flash: skip "Continue? (yes/no)" prompt (non-interactive / batch)
+ASSUME_YES=0
 VERBOSE=0
 MODE=""
 # Flash only one section by HeaderCode (e.g. -s 0x0B); empty = flash all sections
@@ -120,6 +122,7 @@ FLASH MODE OPTIONS:
     Optional:
         -s <hc>         Flash only section(s) with this HeaderCode (e.g. -s 0x0B); parse full config, invalidate and upload only matching section(s)
         -n              Skip finalize (dry run): write to scratchpad only, do not upload to OTP or reset
+        -y              Do not prompt for confirmation before OTP-changing flash steps (non-interactive)
         -P0 | -P1       SMBus PEC for i2ctransfer helpers (append CRC-8; verify on reads). Default is PEC on (-P1). Use -P0 to disable. Env I2C_PEC=0 or =1 overrides after parsing -P.
         -v              Verbose: repeat for more (-v = verbose, -vv = debug)
 
@@ -183,6 +186,7 @@ EXAMPLES:
     # Flash device (-n = scratchpad only, no OTP upload)
     $(basename $0) flash -b 2 -a 0x40 -f config.bin -n
     $(basename $0) flash -b 2 -a 0x40 -f config.bin
+    $(basename $0) flash -y -b 2 -a 0x40 -f config.bin   # no confirmation prompt
     # Flash only section(s) with HeaderCode 0x0B (e.g. Partial PMBus)
     $(basename $0) flash -b 2 -a 0x40 -f config.txt -s 0x0B
 
@@ -1838,15 +1842,19 @@ program_device() {
         log_info "DRY_RUN (-n): scratchpad write/readback only; OTP upload and finalize skipped; OTP invalidate only logged."
     fi
     if [ $DRY_RUN -eq 0 ]; then
-        local confirm=""
-        read -r -p "Continue? (yes/no): " confirm || {
-            log_error "Failed to read user input (non-interactive environment?)"
-            return 1
-        }
-        confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
-        if [[ ! "$confirm" =~ ^(yes|y)$ ]]; then
-            log_info "Programming cancelled by user (entered: '$confirm')"
-            return 1
+        if [ "${ASSUME_YES:-0}" -eq 1 ]; then
+            log_info "Assuming yes (-y): skipping interactive confirmation before flash."
+        else
+            local confirm=""
+            read -r -p "Continue? (yes/no): " confirm || {
+                log_error "Failed to read user input (non-interactive environment?)"
+                return 1
+            }
+            confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
+            if [[ ! "$confirm" =~ ^(yes|y)$ ]]; then
+                log_info "Programming cancelled by user (entered: '$confirm')"
+                return 1
+            fi
         fi
     fi
 
@@ -2613,7 +2621,7 @@ main() {
     local MONITOR_INTERVAL=1
     local OUTPUT_FILE=""
 
-    while getopts "P:b:a:f:c:i:o:s:nvh" opt; do
+    while getopts "P:b:a:f:c:i:o:s:nyvh" opt; do
         case $opt in
             P)
                 case "$OPTARG" in
@@ -2633,6 +2641,7 @@ main() {
             o) OUTPUT_FILE=$OPTARG ;;
             s) FLASH_SECTION_HC=$OPTARG ;;
             n) DRY_RUN=1 ;;
+            y) ASSUME_YES=1 ;;
             v) VERBOSE=$((VERBOSE + 1)) ;;
             h) usage ;;
             *) usage ;;
