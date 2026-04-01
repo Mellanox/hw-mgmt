@@ -76,6 +76,10 @@ get_device_registers()
         mp2975|mp2974)
             echo "0xba 0xbb 0 0"
             ;;
+        xdpe1a2g7b)
+            # Block read exposes a leading byte before the 16-bit MFR value.
+            echo "0x9a 0x9b 0 0 1"
+            ;;
         tps53679|xdpe12284)
             echo "unsupported"
             ;;
@@ -114,6 +118,34 @@ i2c_cmd()
     return 0
 }
 
+# Read 16-bit LE word at register. byte_offset skips leading bytes (e.g. SMBus block count).
+read_smbus_word()
+{
+    local bus="$1"
+    local dev_addr="$2"
+    local reg="$3"
+    local byte_offset="${4:-0}"
+
+    if [[ "$byte_offset" -eq 0 ]]; then
+        i2cget -y -f "$bus" "$dev_addr" "$reg" w 2>/dev/null
+        return $?
+    fi
+
+    local nbytes=$((byte_offset + 2))
+    local out
+    out=$(i2ctransfer -y -f "$bus" "w1@$dev_addr" "$reg" "r$nbytes" 2>/dev/null) || return 1
+
+    local -a bytes=($out)
+    if [[ ${#bytes[@]} -lt $((byte_offset + 2)) ]]; then
+        return 1
+    fi
+
+    local lo hi
+    lo=${bytes[$byte_offset]#0x}
+    hi=${bytes[$((byte_offset + 1))]#0x}
+    printf '0x%04x\n' "$((0x$lo | (0x$hi << 8)))"
+}
+
 # Function to read model ID from device
 get_model()
 {
@@ -121,15 +153,15 @@ get_model()
     local dev_addr="$2"
     local model_reg="$3"
     local model_page="$4"
+    local byte_offset="${5:-0}"
 
     # Set page to model ID page
     if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$model_page'"; then
         return 1
     fi
 
-    # Read model ID (word)
     local model_id
-    model_id=$(i2cget -y -f "$bus" "$dev_addr" "$model_reg" w 2>/dev/null)
+    model_id=$(read_smbus_word "$bus" "$dev_addr" "$model_reg" "$byte_offset")
 
     if [[ -z "$model_id" ]]; then
         return 1
@@ -146,15 +178,15 @@ get_revision()
     local dev_addr="$2"
     local rev_reg="$3"
     local rev_page="$4"
+    local byte_offset="${5:-0}"
 
     # Set page to revision ID page
     if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$rev_page'"; then
         return 1
     fi
 
-    # Read revision ID (word)
     local rev_id
-    rev_id=$(i2cget -y -f "$bus" "$dev_addr" "$rev_reg" w 2>/dev/null)
+    rev_id=$(read_smbus_word "$bus" "$dev_addr" "$rev_reg" "$byte_offset")
 
     if [[ -z "$rev_id" ]]; then
         return 1
@@ -191,17 +223,18 @@ get_model_version()
     local rev_reg="${reg_array[1]}"
     local model_page="${reg_array[2]}"
     local rev_page="${reg_array[3]}"
+    local byte_offset="${reg_array[4]:-0}"
 
-    log_message "info" "Reading model/version for $voltmon_type device: $device_name (bus $bus, addr $dev_addr, regs: model=$model_reg/$model_page, rev=$rev_reg/$rev_page)"
+    log_message "info" "Reading model/version for $voltmon_type device: $device_name (bus $bus, addr $dev_addr, regs: model=$model_reg/$model_page, rev=$rev_reg/$rev_page, byte_offset=$byte_offset)"
 
     # Read model ID
     local model_id
-    model_id=$(get_model "$bus" "$dev_addr" "$model_reg" "$model_page")
+    model_id=$(get_model "$bus" "$dev_addr" "$model_reg" "$model_page" "$byte_offset")
     local model_status=$?
 
     # Read revision ID
     local rev_id
-    rev_id=$(get_revision "$bus" "$dev_addr" "$rev_reg" "$rev_page")
+    rev_id=$(get_revision "$bus" "$dev_addr" "$rev_reg" "$rev_page" "$byte_offset")
     local rev_status=$?
 
     # Create device firmware directory if it doesn't exist
@@ -470,17 +503,18 @@ show_voltmon_info()
                 local rev_reg="${reg_array[1]}"
                 local model_page="${reg_array[2]}"
                 local rev_page="${reg_array[3]}"
+                local byte_offset="${reg_array[4]:-0}"
 
                 # Read model ID directly from device
                 local model_result
-                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" 2>/dev/null)
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" "$byte_offset" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
                     model_id="$model_result"
                 fi
 
                 # Read revision ID directly from device
                 local rev_result
-                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" "$byte_offset" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
                     rev_id="$rev_result"
                 fi
@@ -505,6 +539,11 @@ check_dependencies()
 
     if ! command -v i2cset >/dev/null 2>&1; then
         log_message "err" "i2cset is not installed. Cannot configure I2C devices."
+        return 1
+    fi
+
+    if ! command -v i2ctransfer >/dev/null 2>&1; then
+        log_message "err" "i2ctransfer is not installed. Cannot read SMBus block/word data (e.g. xdpe1a2g7b)."
         return 1
     fi
 
@@ -546,10 +585,13 @@ show_voltmon_info_json()
     fi
 
     # Quiet dependency check (avoid stdout noise that would corrupt JSON)
-    if ! command -v i2cget >/dev/null 2>&1 || ! command -v i2cset >/dev/null 2>&1; then
-        echo "Error: Required I2C tools not available (need i2cget/i2cset)" >&2
+    if ! command -v i2cget >/dev/null 2>&1 || ! command -v i2cset >/dev/null 2>&1 || ! command -v i2ctransfer >/dev/null 2>&1; then
+        echo "Error: Required I2C tools not available (need i2cget/i2cset/i2ctransfer)" >&2
         return 1
     fi
+
+    local i2c_bus_offset
+    i2c_bus_offset=$(get_i2c_bus_offset)
 
     local devtree_content
     devtree_content=$(cat "$DEVTREE_FILE")
@@ -594,15 +636,17 @@ show_voltmon_info_json()
                 local rev_reg="${reg_array[1]}"
                 local model_page="${reg_array[2]}"
                 local rev_page="${reg_array[3]}"
+                local byte_offset="${reg_array[4]:-0}"
+                local bus_abs=$((bus + i2c_bus_offset))
 
                 local model_result
-                model_result=$(get_model "$bus" "$address" "$model_reg" "$model_page" 2>/dev/null)
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" "$byte_offset" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
                     model_id="$model_result"
                 fi
 
                 local rev_result
-                rev_result=$(get_revision "$bus" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" "$byte_offset" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
                     rev_id="$rev_result"
                 fi
