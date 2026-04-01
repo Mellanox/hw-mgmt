@@ -1913,6 +1913,21 @@ class thermal_asic_sensor(thermal_module_sensor):
         self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
 
     # ----------------------------------------------------------------------
+    def _read_asic_ready(self):
+        """
+        @summary: read ASIC ready state
+        """
+        asic_ready = False
+        try:
+            asic_ready = self.read_file("config/{}_ready".format(self.base_file_name))
+            asic_ready = str2bool(asic_ready)
+        except (ValueError, TypeError, OSError, IOError):
+            asic_ready = False
+        if asic_ready is None:
+            asic_ready = True
+        return asic_ready
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
@@ -1920,16 +1935,18 @@ class thermal_asic_sensor(thermal_module_sensor):
         pwm = self.pwm_min
         val_read_file = "thermal/{}".format(self.file_input)
         val_read_file_full_path = self.get_hw_path(val_read_file)
+
         if not self.check_file(val_read_file):
             self.fread_err.handle_err(val_read_file_full_path, cause="missing")
         else:
             try:
+                asic_ready_state = self._read_asic_ready()
                 value = self.read_file_int(val_read_file, self.scale)
-                if value == 0:
-                    self.log.error("{} Incorrect value: {} in the file: {}). Emergency error!".format(self.name,
-                                                                                                      value,
-                                                                                                      val_read_file),
-                                   id="{} value in {}".format(self.name, val_read_file), repeat=1)
+                if value == 0 and asic_ready_state:
+                    self.log.notice("{} Incorrect value: {} in the file: {}. Emergency attention".format(self.name,
+                                                                                                         value,
+                                                                                                         val_read_file),
+                                    id="{} value in {}".format(self.name, val_read_file), repeat=1)
                     self.asic_fault_err.handle_err(val_read_file_full_path, cause="emergency value (0)")
                 else:
                     self.asic_fault_err.handle_err(val_read_file_full_path, reset=True)
@@ -3011,7 +3028,6 @@ class ThermalManagement(hw_management_file_op):
         self.pwm_worker_timer = None
         self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
         self.state = CONST.UNCONFIGURED
-        self.is_fault_state = False
         self.fan_drwr_num = 0
         self.emergency = False
 
@@ -3305,7 +3321,7 @@ class ThermalManagement(hw_management_file_op):
         """
         dev_obj = self._get_dev_obj(name)
         if dev_obj:
-            self.log.info("Rm dev {}".format(name))
+            self.log.info("Rm dev {}".format(dev_obj.name))
             self.dev_obj_list.remove(dev_obj)
 
     # ----------------------------------------------------------------------
@@ -3418,7 +3434,7 @@ class ThermalManagement(hw_management_file_op):
     def _set_emergency_pwm(self, pwm):
         ""
         self.log.notice("Set emergency PWM {}".format(pwm), repeat=1)
-        if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
+        if self.is_pwm_asic_control():
             self.write_pwm_mlxreg(pwm)
         else:
             self.write_pwm(pwm)
@@ -3468,21 +3484,32 @@ class ThermalManagement(hw_management_file_op):
                 self._update_chassis_fan_speed(self.pwm)
         elif current_milli_time() > self.pwm_validate_timeout:
             self.pwm_validate_timeout = current_milli_time() + CONST.PWM_VALIDATE_TIME * 1000
-            pwm_real = self.read_pwm()
-            if not pwm_real:
-                self.log.warn("Read PWM error. Possible hw-management is not running", id="Read PWM error", repeat=1)
-                return
-            else:
-                # Print "finalization" message to indicate that the error is resolved. Print only once.
-                self.log.notice(None, id="Read PWM error")
 
-            if pwm_real != self.pwm:
-                self.log.warn("Unexpected pwm value {}%. Force set to {}%".format(pwm_real, self.pwm))
-                self._update_chassis_fan_speed(self.pwm, True)
+            # check if PWM interface is available
+            if self.is_pwm_exists():
+                pwm_real = self.read_pwm()
+                if not pwm_real:
+                    self.log.warn("Read PWM error. Possible hw-management is not running", id="Read PWM error", repeat=1)
+                    return
+                else:
+                    # Print "finalization" message to indicate that the error is resolved. Print only once.
+                    self.log.notice(None, id="Read PWM error")
+
+                if pwm_real != self.pwm:
+                    self.log.warn("Unexpected pwm value {}%. Force set to {}%".format(pwm_real, self.pwm))
+                    self._update_chassis_fan_speed(self.pwm, True)
+            elif self.is_pwm_asic_control():  # ASIC controlled PWM but path unavailable
+                self.log.notice("PWM validation skipped (PWM link not available; ASIC PWM mode)")
+            else:  # CPLD controlled PWM but path unavailable
+                self.log.warn("PWM validation skipped. PWM link does not exist")
 
     # ----------------------------------------------------------------------
     def _pwm_worker(self):
         ''
+        if self.is_pwm_asic_control() and not self.is_pwm_exists():
+            self.log.notice("PWM link does not exist. Skipping PWM worker")
+            return
+
         if self.pwm_target == self.pwm:
             pwm_real = self.read_pwm()
             if not pwm_real:
@@ -3635,10 +3662,24 @@ class ThermalManagement(hw_management_file_op):
         Applicable only for systems with PWM control through ASIC
         """
         ret = True
-        if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"] is True:
+        if self.is_pwm_asic_control():
             if self.read_pwm() is None:
                 ret = False
         return ret
+
+    def is_pwm_asic_control(self):
+        """
+        @summary: checking if PWM control is through ASIC
+        """
+        val = self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["pwm_control"]
+        return str2bool(val)
+
+    def is_fan_asic_control(self):
+        """
+        @summary: checking if fan control is through ASIC
+        """
+        val = self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"]
+        return str2bool(val)
 
     # ----------------------------------------------------------------------
     def is_fan_tacho_init(self):
@@ -3648,7 +3689,7 @@ class ThermalManagement(hw_management_file_op):
         """
         ret = True
         tacho_cnt = 0
-        if self.sys_config[CONST.SYS_CONF_ASIC_PARAM]["1"]["fan_control"] is True:
+        if self.is_fan_asic_control():
             if self.check_file("config/max_tachos"):
                 try:
                     tacho_cnt = self.read_file("config/max_tachos")
@@ -4155,7 +4196,11 @@ class ThermalManagement(hw_management_file_op):
                 continue
 
             if not self.is_pwm_exists():
-                self.stop(reason="Missing PWM")
+                if self.is_pwm_asic_control():
+                    reason_str = "Missing PWM (SDK unloaded)"
+                else:
+                    reason_str = "Missing PWM (CPLD controlled)"
+                self.stop(reason=reason_str)
                 self._exit_wait(5)
                 continue
 

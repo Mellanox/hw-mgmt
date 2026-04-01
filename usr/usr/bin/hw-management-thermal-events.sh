@@ -442,6 +442,7 @@ if [ "$1" == "add" ]; then
 				for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
 					set_fan_speed_limits fan"$i"
 				done
+				set_asic_ready "$3""$4" 1
 			fi
 
 			lcmatch=`echo $name | cut -d"#" -f1`
@@ -1340,6 +1341,7 @@ else
 			rm -f "$tpath/module*_temp_emergency"
 
 			check_n_unlink $cpath/asic_hwmon
+			set_asic_ready "$3""$4" 0
 
 			if [ "$lc_id" -ne 0 ]; then
 				exit 0
