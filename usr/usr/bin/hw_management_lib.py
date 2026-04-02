@@ -95,6 +95,8 @@ def exit_wait(exit_event, timeout, chunk_sec=1.0):
     long exit_event.wait(); chunking returns to the interpreter so SIGTERM/SIGINT
     handlers can run and systemd stop timeouts are respected.
     """
+    if timeout <= 0:
+        return
     elapsed = 0.0
     while elapsed < timeout and not exit_event.is_set():
         wait_time = min(chunk_sec, timeout - elapsed)
