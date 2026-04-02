@@ -57,7 +57,7 @@ import signal
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
-from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait
 import json
 import re
 import psutil
@@ -3047,7 +3047,7 @@ class ThermalManagement(hw_management_file_op):
             self.log.notice("Platform Board:'{}', SKU:'{}' is not supported.".format(self.board_type, self.sku), repeat=1)
             self.log.notice("Set TC to idle.")
             while True:
-                self.exit.wait(60)
+                exit_wait(self.exit, 60)
                 if self.exit.is_set():
                     return
 
@@ -3055,7 +3055,7 @@ class ThermalManagement(hw_management_file_op):
             self.log.notice("Missing PWM control (probably ASIC driver not loaded). PWM control is required for TC run\nWaiting for ASIC init", repeat=1)
             while not self.is_pwm_exists():
                 self.log.notice("Wait...")
-                self.exit.wait(10)
+                exit_wait(self.exit, 10)
                 if self.exit.is_set():
                     return
             self.log.notice("PWM control activated", repeat=1)
@@ -3084,7 +3084,7 @@ class ThermalManagement(hw_management_file_op):
             while timeout > current_milli_time():
                 if not self.write_pwm(self.pwm_target):
                     self.log.info("Set PWM failed. Possible SDK is not started")
-                    self.exit.wait(2)
+                    exit_wait(self.exit, 2)
                 else:
                     self.log.info("Set PWM successful")
                     break
@@ -3095,16 +3095,16 @@ class ThermalManagement(hw_management_file_op):
             self.log.notice("Missing FAN tacho (probably ASIC not initialized yet). FANs is required for TC run\nWaiting for ASIC init", repeat=1)
             while not self.is_fan_tacho_init():
                 self.log.notice("Wait...")
-                self.exit.wait(10)
-            if self.exit.is_set():
-                return
+                exit_wait(self.exit, 10)
+                if self.exit.is_set():
+                    return
 
         self.log.notice("Waiting for configuration ({} sec).".format(CONST.THERMAL_WAIT_FOR_CONFIG), repeat=1)
         timeout = current_milli_time() + 1000 * CONST.THERMAL_WAIT_FOR_CONFIG
         while timeout > current_milli_time():
             if not self.write_pwm(self.pwm_target):
                 self.log.info("Set PWM failed. Possible SDK is not started")
-            self.exit.wait(2)
+            exit_wait(self.exit, 2)
             if self.exit.is_set():
                 return
 
@@ -3389,7 +3389,9 @@ class ThermalManagement(hw_management_file_op):
         self.log.info("Waiting {}s for newly inserted fan to stabilize".format(self.fan_steady_state_delay), repeat=1)
         timeout = current_milli_time() + 1000 * self.fan_steady_state_delay
         while timeout > current_milli_time():
-            self.exit.wait(1)
+            exit_wait(self.exit, 1)
+            if self.exit.is_set():
+                return
         self.log.info("Resuming normal operation: Setting pwm back to {}%".format(pwm), repeat=1)
         self._update_chassis_fan_speed(pwm, force=True)
         if self.pwm_worker_timer:
@@ -4145,20 +4147,6 @@ class ThermalManagement(hw_management_file_op):
             self.log.info("Set FAN PWM {}".format(self.pwm_target), repeat=1)
 
     # ----------------------------------------------------------------------
-    def _exit_wait(self, timeout, chunk_sec=1.0):
-        """
-        Wait up to timeout seconds in short chunks so the main thread returns
-        to the interpreter often enough for the SIGTERM handler to run.
-        When blocked in a single long Event.wait(), the handler never runs
-        until wait() returns, so the process can miss systemd's stop timeout.
-        """
-        elapsed = 0.0
-        while elapsed < timeout and not self.exit.is_set():
-            wait_time = min(chunk_sec, timeout - elapsed)
-            self.exit.wait(wait_time)
-            elapsed += wait_time
-
-    # ----------------------------------------------------------------------
     def run(self):
         """
         @summary:  main thermal control loop
@@ -4187,12 +4175,12 @@ class ThermalManagement(hw_management_file_op):
                 pass
 
             if self.emergency:
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
 
             if not self.is_fan_tacho_init():
                 self.stop(reason="Missing FANs")
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
 
             if not self.is_pwm_exists():
@@ -4201,12 +4189,12 @@ class ThermalManagement(hw_management_file_op):
                 else:
                     reason_str = "Missing PWM (CPLD controlled)"
                 self.stop(reason=reason_str)
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
 
             if self._is_i2c_control_with_bmc():
                 self.stop(reason="BMC has taken over i2c bus")
-                self._exit_wait(30)
+                exit_wait(self.exit, 30)
                 continue
 
             if self._is_attention_fan_insertion_fail():
@@ -4216,7 +4204,7 @@ class ThermalManagement(hw_management_file_op):
 
             if self._is_suspend():
                 self.stop(reason="suspend")
-                self._exit_wait(5)
+                exit_wait(self.exit, 5)
                 continue
             else:
                 self.start(reason="resume")
@@ -4326,7 +4314,7 @@ class ThermalManagement(hw_management_file_op):
                 sleep_ms = 1 * 1000
             elif sleep_ms > 20 * 1000:
                 sleep_ms = 20 * 1000
-            self._exit_wait(sleep_ms / 1000)
+            exit_wait(self.exit, sleep_ms / 1000)
 
     # ----------------------------------------------------------------------
     def show_full_thread_report(self, pid=None):
