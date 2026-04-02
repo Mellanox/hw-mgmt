@@ -17,13 +17,17 @@ The `hw-management-vr-dpc-update-all.sh` script provides batch updating for volt
   - `DeviceConfigFile` - Path to device configuration file
 
 ### Infineon Devices
-- **Device Type Prefix**: `xdpe*` (e.g., xdpe12284, xdpe132g5c)
+- **Device Type Prefix**: `xdpe*` (case-insensitive), e.g. `xdpe12284`,
+  `xdpe1a2g7b`
 - **Update Script**: `hw-management-vr-dpc-infineon-update.sh`
 - **Required Fields**:
-  - `DeviceType` - Device model (e.g., "xdpe12284")
-  - `Bus` - I2C bus number
-  - `Addr` - I2C device address (e.g., "0x40")
-  - `ConfigFile` - Path to binary configuration file
+  - `DeviceType` - Driver/model name used in topology (e.g. `"xdpe1a2g7b"`)
+  - `Bus` - I2C bus number (logical; same convention as devtree)
+  - `Addr` - I2C device address (hex string, e.g. `"0x68"`)
+  - `ConfigFile` - Path to **`.bin`**, **`.txt`**, or **`.mic`** Infineon config
+- **Not used for Infineon**: `CrcFile` and `DeviceConfigFile` (omit them; CRC
+  handling is inside the Infineon flash flow / config file, not the JSON CRC
+  field used for MPS).
 
 ## Usage
 
@@ -57,10 +61,10 @@ hw-management-vr-dpc-update-all.sh --help
       "DeviceConfigFile": "/var/run/hw-management/config/mp2975_device.conf"
     },
     {
-      "DeviceType": "xdpe12284",
-      "Bus": 2,
-      "Addr": "0x40",
-      "ConfigFile": "/var/run/hw-management/config/xdpe12284_config.bin"
+      "DeviceType": "xdpe1a2g7b",
+      "Bus": 29,
+      "Addr": "0x68",
+      "ConfigFile": "/var/run/hw-management/config/xdpe_config_68.txt"
     },
     {
       "DeviceType": "xdpe132g5c",
@@ -87,7 +91,11 @@ hw-management-vr-dpc-update-all.sh --help
 - **DeviceConfigFile** (required for MPS): Full path to device configuration file
 
 #### Infineon-Specific Fields
-- **Addr** (required for Infineon): I2C device address (hex format: "0x40")
+- **Addr** (required for Infineon): I2C device address (hex string, e.g.
+  `"0x68"`)
+
+**Validation:** For `xdpe*` devices, `--validate-json` does **not** require
+`CrcFile` or `DeviceConfigFile`.
 
 ## Vendor Detection Logic
 
@@ -122,11 +130,11 @@ Device 1:
   DeviceConfigFile: /var/run/hw-management/config/mp2975_device.conf
 
 Device 2:
-  DeviceType: xdpe12284
+  DeviceType: xdpe1a2g7b
   Vendor: Infineon
-  Bus: 2
-  Addr: 0x40
-  ConfigFile: /var/run/hw-management/config/xdpe12284_config.bin
+  Bus: 29
+  Addr: 0x68
+  ConfigFile: /var/run/hw-management/config/xdpe_config_68.txt
 
 Device 3:
   DeviceType: xdpe132g5c
@@ -154,11 +162,11 @@ Output:
 [info] Detected MPS device: mp2975
 [info] Executing: /usr/bin/hw-management-vr-dpc-update.sh 12 mp2975 hi180 ...
 [info] Successfully updated device: mp2975 on bus 12
-[info] Device 2: Type=xdpe12284, Bus=2
-[info] Detected Infineon device: xdpe12284
-[info] Infineon device at address 0x40
-[info] Executing: /usr/bin/hw-management-vr-dpc-infineon-update.sh flash -b 2 -a 0x40 -f ...
-[info] Successfully updated device: xdpe12284 on bus 2
+[info] Device 2: Type=xdpe1a2g7b, Bus=29
+[info] Detected Infineon device: xdpe1a2g7b
+[info] Infineon device at address 0x68
+[info] Executing: /usr/bin/hw-management-vr-dpc-infineon-update.sh flash -y -b 29 -a 0x68 -f ...
+[info] Successfully updated device: xdpe1a2g7b on bus 29
 [info] Device 3: Type=xdpe132g5c, Bus=3
 [info] Detected Infineon device: xdpe132g5c
 [info] Infineon device at address 0x44
@@ -192,9 +200,9 @@ Error: "Missing CrcFile (required for MPS devices)"
 **For Infineon devices:**
 ```json
 {
-  "DeviceType": "xdpe12284",
-  "Bus": 2,
-  "ConfigFile": "/path/to/config.bin"
+  "DeviceType": "xdpe1a2g7b",
+  "Bus": 29,
+  "ConfigFile": "/path/to/config.txt"
   // Missing: Addr
 }
 ```
@@ -259,8 +267,8 @@ journalctl -t vr_dpc_update_all -f
    # MPS device
    hw-management-vr-dpc-update.sh 12 mp2975 hi180 config.csv crc.txt device.conf
 
-   # Infineon device
-   hw-management-vr-dpc-infineon-update.sh flash -b 2 -a 0x40 -f config.bin
+   # Infineon device (batch adds -y so OTP flow does not wait for stdin)
+   hw-management-vr-dpc-infineon-update.sh flash -y -b 29 -a 0x68 -f config.txt
    ```
 
 3. **Backup configurations:**
@@ -347,10 +355,10 @@ sudo hw-management-vr-dpc-update-all.sh config.json
       "DeviceConfigFile": "/path/to/device.conf"
     },
     {
-      "DeviceType": "xdpe12284",
-      "Bus": 2,
-      "Addr": "0x40",
-      "ConfigFile": "/path/to/config.bin"
+      "DeviceType": "xdpe1a2g7b",
+      "Bus": 29,
+      "Addr": "0x68",
+      "ConfigFile": "/path/to/config.txt"
     }
   ]
 }
@@ -359,10 +367,15 @@ sudo hw-management-vr-dpc-update-all.sh config.json
 
 ## Version History
 
+### Version 2.1 (2026-04)
+- Document Infineon JSON without `CrcFile` / `DeviceConfigFile`
+- Batch Infineon invocation uses `flash -y` (non-interactive)
+- Config examples include `.txt` and `xdpe1a2g7b`-style `DeviceType`
+
 ### Version 2.0 (2026-01-20)
 - Added support for Infineon XDPE devices
 - Automatic vendor detection based on DeviceType prefix
-- Optional `Addr` field for Infineon devices
+- `Addr` required for Infineon devices
 - Enhanced validation for both MPS and Infineon devices
 - Backward compatible with existing MPS-only configurations
 
