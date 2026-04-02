@@ -1,12 +1,40 @@
 #!/bin/bash
+################################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the names of the copyright holders nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# Alternatively, this software may be distributed under the terms of the
+# GNU General Public License ("GPL") version 2 as published by the Free
+# Software Foundation.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
 # Infineon XDPE1x2xx Voltage Regulator Management Tool
 # Combined flash and diagnostic utility for Infineon XDPE devices
 # Based on: AN001-XDPE1x2xx Programming Guide
-#
-
-# Note: set -e removed to allow proper handling of interactive prompts
-# and graceful error handling in automated environments
+################################################################################
 
 # Color codes for output
 RED='\033[0;31m'
@@ -19,7 +47,6 @@ NC='\033[0m'
 I2C_BUS=""
 DEVICE_ADDR=""
 CONFIG_FILE=""
-VERIFY_ONLY=0
 DRY_RUN=0
 # Flash: skip "Continue? (yes/no)" prompt (non-interactive / batch)
 ASSUME_YES=0
@@ -97,6 +124,7 @@ usage() {
 Infineon XDPE1x2xx Voltage Regulator Management Tool
 
 USAGE: $(basename $0) <mode> [options]
+       $(basename $0) -h | --help | help    Show this help (no mode required)
 
 MODES:
     flash       Program device with configuration file
@@ -132,7 +160,8 @@ FLASH MODE OPTIONS:
 
     After each scratchpad write, data is read back to <file>.scpad and compared; mismatch aborts flash.
     For .txt/.mic flash: section .bin live in a temp dir during the run; after the section loop (including -n dry run) they are copied to <config_basename>_flash_work/ (.bin, .params, .scpad per flashed section). Direct -f *.bin keeps *.bin.scpad next to the .bin.
-    Full .txt/.mic flash (no -s): if the file contains "Configuration Checksum : 0x........" and it matches the device total OTP CRC (GET_CRC with header code 0), programming is skipped (no prompt, no invalidate). Otherwise: invalidate only OTP sections whose Header Code is not present in the file (known HC list). Per-section upload is skipped if GET_CRC matches section_crc_expected (see .params): Partial PMBus (HC 0x0B) builds <section>_crc_input.bin during .txt parse (LE bytes of 3rd DWORD on each 000 row + LE bytes of the DWORD on the following 010 row), then crc32(1) on that file; other sections use the last 4 bytes LE of the section .bin. Requires crc32 in PATH for 0x0B expected CRC.
+    Full .txt/.mic flash (no -s): if "Configuration Checksum : 0x........" matches device total OTP CRC (GET_CRC HC=0), skip (no prompt, no invalidate). Otherwise: invalidate HCs not in the file; for each section that will be uploaded (CRC mismatch or no section_crc_expected), invalidate that HC/XV immediately before scratchpad then upload.
+    Per-section upload skipped if GET_CRC matches section_crc_expected (.params). HC 0x0B: crc32 on <section>_crc_input.bin from .txt parse; else last 4 bytes LE of section .bin. Requires crc32 in PATH for 0x0B expected CRC.
 
 SCAN MODE OPTIONS:
     -b <bus>            I2C bus number
@@ -246,7 +275,8 @@ log_verbose() {
     fi
 }
 
-# Byte hex/decimal dump: BusyBox od often lacks -t/-A (see VV-notes). hexdump -e '1/1 "…"' works on BusyBox + util-linux.
+# Byte hex/decimal dump: BusyBox od often lacks -t/-A. hexdump -e '1/1 "%02x"'
+# works on BusyBox + util-linux.
 _od_hex_n() {
     local n=$1 f=$2
     hexdump -v -n "$n" -e '1/1 "%02x"' "$f" 2>/dev/null
@@ -793,7 +823,6 @@ diagnose_rebind_id_regs() {
 # Rebind the driver if we had unbound it (so device works again under the kernel driver).
 # Waits REBIND_DELAY seconds before bind so device can complete reset (avoids "Chip identification failed" on probe).
 rebind_driver_if_unbound() {
-#return 0; # VV: Skip rebinding for now
     [ -n "$DRIVER_UNBIND_DEVID" ] && [ -n "$DRIVER_UNBIND_NAME" ] || return 0
     local bind_file="/sys/bus/i2c/drivers/$DRIVER_UNBIND_NAME/bind"
     if [ ! -f "$bind_file" ]; then
@@ -849,7 +878,14 @@ rebind_driver_from_state_file() {
 }
 
 # Read device identification (uses block read for MFR_* so output matches 'info')
+# Optional arg: "soft" — use log_warn on failures (post-flash / XDPE batch: do not imply hard fault).
 read_device_id() {
+    local soft_fail=0
+    [[ "${1:-}" == soft ]] && soft_fail=1
+    local _log_fail
+    _log_fail=log_error
+    [ "$soft_fail" -eq 1 ] && _log_fail=log_warn
+
     log_info "Reading device identification..."
     unbind_driver_for_device
 
@@ -857,7 +893,7 @@ read_device_id() {
     mfr_id=$(read_device_info_block $I2C_BUS $DEVICE_ADDR $PMBUS_MFR_ID)
     [ -z "$mfr_id" ] && mfr_id=$(i2c_read $I2C_BUS $DEVICE_ADDR $PMBUS_MFR_ID)
     if [ -z "$mfr_id" ]; then
-        log_error "Failed to read Manufacturer ID"
+        $_log_fail "Failed to read Manufacturer ID"
         return 1
     fi
     log_info "Manufacturer ID: $mfr_id"
@@ -866,7 +902,7 @@ read_device_id() {
     mfr_model=$(read_device_info_block $I2C_BUS $DEVICE_ADDR $PMBUS_MFR_MODEL)
     [ -z "$mfr_model" ] && mfr_model=$(i2c_read $I2C_BUS $DEVICE_ADDR $PMBUS_MFR_MODEL)
     if [ -z "$mfr_model" ]; then
-        log_error "Failed to read Model"
+        $_log_fail "Failed to read Model"
         return 1
     fi
     log_info "Model: $mfr_model"
@@ -875,7 +911,7 @@ read_device_id() {
     mfr_rev=$(read_device_info_block $I2C_BUS $DEVICE_ADDR $PMBUS_MFR_REVISION)
     [ -z "$mfr_rev" ] && mfr_rev=$(i2c_read $I2C_BUS $DEVICE_ADDR $PMBUS_MFR_REVISION)
     if [ -z "$mfr_rev" ]; then
-        log_error "Failed to read Revision"
+        $_log_fail "Failed to read Revision"
         return 1
     fi
     log_info "Revision: $mfr_rev"
@@ -954,7 +990,8 @@ get_crc() {
 
 # Check OTP space availability using 0x10 OTP_PARTITION_SIZE_REMAINING; logs result.
 check_otp_space() {
-    log_info "Checking OTP space availability (0x10 OTP_PARTITION_SIZE_REMAINING)..."
+    # AN001 ch.9 / Table 4: 0x10 OTP_PARTITION_SIZE_REMAINING
+    log_info "Checking OTP space availability..."
     local remaining
     remaining=$(get_otp_partition_size_remaining $I2C_BUS $DEVICE_ADDR) || return 1
     log_info "OTP partition size remaining: $remaining (0x$(printf '%04x' $remaining)) bytes"
@@ -972,7 +1009,8 @@ invalidate_otp() {
     local hc xv
 
     if [ $invalidate_all -eq 1 ]; then
-        log_info "Invalidating entire OTP configuration (AN-001 6.2.1)..."
+        # AN-001 6.2.1 — invalidate entire OTP
+        log_info "Invalidating entire OTP configuration..."
     else
         hc=$((${2:-0})); xv=$((${3:-0}))
         log_info "Invalidating OTP section (HC=0x$(printf '%02x' $hc) XV=0x$(printf '%02x' $xv))..."
@@ -1617,7 +1655,8 @@ write_to_scratchpad() {
         num_dwords=$((num_dwords + 1))
     fi
 
-    log_info "Using AN001 6.3: RPTR (0xCE) + MFR_REG_WRITE (0xDE), scratchpad addr $SCPAD_HEX_ADDR"
+    # AN001 6.3 — RPTR (0xCE) + MFR_REG_WRITE (0xDE)
+    log_info "Using RPTR (0xCE) + MFR_REG_WRITE (0xDE), scratchpad addr $SCPAD_HEX_ADDR"
     set_rptr $I2C_BUS $DEVICE_ADDR $((SCPAD_HEX_ADDR)) || return 1
     log_info "Writing $num_dwords DWORD(s) to 0xDE (w6: reg 0xDE + 0x04 + 4 bytes)..."
     local d
@@ -1713,7 +1752,8 @@ upload_scratchpad_to_otp() {
 
     log_info "Uploading configuration from scratchpad to OTP..."
 
-    log_info "Clearing faults on page 0 and page 1 (AN001 6.4)..."
+    # AN001 6.4 — clear faults on page 0 and page 1 before store
+    log_info "Clearing faults on page 0 and page 1..."
     i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_PAGE 0x00 || return 1
     i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || return 1
     i2c_write $I2C_BUS $DEVICE_ADDR $PMBUS_PAGE 0x01 || return 1
@@ -1748,9 +1788,9 @@ upload_scratchpad_to_otp() {
     write_dword $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND_DATA 0x04 $p_sz0 $p_sz1 0x00 0x00 || return 1
     i2c_write $I2C_BUS $DEVICE_ADDR $MFR_FW_COMMAND $CMD_OTP_CONFIG_STORE || return 1
 
-    # Soak time per AN001 Table 8 before polling
+    # AN001 Table 8 — soak time before STATUS_CML check
     local soak_s=2
-    log_info "Soak time ${soak_s}s (AN001 Table 8)..."
+    log_info "Soak time ${soak_s}s..."
     sleep $soak_s
 
     # MFR_FW_COMMAND (0xFE) is read-only; wait fixed time then check STATUS_CML per AN001 6.5. AN001: max wait not more than 3 s.
@@ -1770,12 +1810,14 @@ upload_scratchpad_to_otp() {
     if [[ $cml_bit0 -eq 0 ]]; then
         log_info "Upload completed (STATUS_CML d0 bit[0]=0, raw=$status_cml)"
         if [[ -n "$section_params_file" && -f "$section_params_file" ]]; then
-            [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD (5.3): $p_dword1  (hc=$p_hc xv=$p_xv)"
-            [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD (5.4): $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
+            # AN001 5.3 / 5.4 — section header DWORDs
+            [[ -n "$p_dword1" ]] && log_info "  Section 1st DWORD: $p_dword1  (hc=$p_hc xv=$p_xv)"
+            [[ -n "$p_dword2" ]] && log_info "  Section 2nd DWORD: $p_dword2  (size=$p_size${p_sz0:+ sz0(LSB)=$p_sz0 sz1(MSB)=$p_sz1})"
         fi
         return 0
     fi
-    log_error "Upload unsuccessful: STATUS_CML d0 bit[0] is not 0 (AN001 6.5), raw=$status_cml"
+    # AN001 6.5 — STATUS_CML d0 bit[0] must be 0 for successful upload
+    log_error "Upload unsuccessful: STATUS_CML d0 bit[0] is not 0, raw=$status_cml"
     i2c_send_byte $I2C_BUS $DEVICE_ADDR $PMBUS_CLEAR_FAULTS || true
     return 1
 }
@@ -1901,7 +1943,8 @@ program_device() {
             }
         fi
 
-        log_info "Uploading ${#section_bins[@]} section(s) one by one (AN001 Section 6)"
+        # AN001 Section 6 — upload sections sequentially (avoid buffer overrun)
+        log_info "Uploading ${#section_bins[@]} section(s) one by one"
 
         for i in "${!section_bins[@]}"; do
             flash_file="${section_bins[$i]}"
@@ -1937,16 +1980,17 @@ program_device() {
             elif [ $DRY_RUN -eq 1 ]; then
                 log_info "[DRY_RUN] No section_crc_expected in $(basename "$section_params_file"); CRC pre-check skipped (section still processed)."
             fi
-            if [ -n "$FLASH_SECTION_HC" ] && [ $DRY_RUN -eq 0 ]; then
-                local hd_hex4 sec_hc sec_xv
-                hd_hex4=$(_od_hex_n 4 "$flash_file")
-                if [ ${#hd_hex4} -ge 8 ]; then
-                    sec_hc=$((16#${hd_hex4:0:2}))
-                    sec_xv=$((16#${hd_hex4:2:2}))
-                    invalidate_otp 0 $sec_hc $sec_xv || {
-                        return 1
-                    }
-                fi
+            # AN001: invalidate this OTP slot immediately before scratchpad/upload
+            # (full flash used to skip HC present in file; partial -s did it here only).
+            local hd_inv sec_hc_inv sec_xv_inv
+            hd_inv=$(_od_hex_n 4 "$flash_file")
+            if [ ${#hd_inv} -ge 8 ]; then
+                sec_hc_inv=$((16#${hd_inv:0:2}))
+                sec_xv_inv=$((16#${hd_inv:2:2}))
+                log_info "Invalidating section before upload (HC=0x$(printf '%02x' $sec_hc_inv) XV=0x$(printf '%02x' $sec_xv_inv))..."
+                invalidate_otp 0 $sec_hc_inv $sec_xv_inv || {
+                    return 1
+                }
             fi
             write_to_scratchpad "$flash_file" || {
                 return 1
@@ -1987,9 +2031,17 @@ program_device() {
         return 1
     }
 
-    reset_device || {
-        return 1
-    }
+    # XDPE1A2G7 family: after OTP programming the device may not ACK OPERATION reset
+    # or MFR_ID/MODEL/REVISION immediately. Do not fail the script (batch JSON flashes
+    # would stop); log and continue.
+    if ! reset_device; then
+        log_warn "Reset after programming failed (device may have reset itself or need delay); OTP update steps already completed."
+    fi
+
+    sleep 1 2>/dev/null || true
+    if ! read_device_id soft; then
+        log_warn "Post-flash device identification incomplete (XDPE1A2G7 family may need more time or power cycle); treating programming as successful for batch flow."
+    fi
 
     log_info "Programming completed successfully!"
     return 0
@@ -2007,7 +2059,8 @@ parse_config_file() {
         return 1
     fi
 
-    log_info "Parsing configuration file (AN001 section layout): $config_file"
+    # AN001 — binary config section layout (header + size per section)
+    log_info "Parsing configuration file (section layout): $config_file"
 
     local file_size
     file_size=$(wc -c < "$config_file" 2>/dev/null); [ -z "$file_size" ] && file_size=0
@@ -2608,9 +2661,14 @@ main() {
     echo "=========================================="
 
     if [ $# -lt 1 ]; then
-        # usage
-        return 0; # VV: Skip usage for now
+        usage
     fi
+
+    case "$1" in
+        -h|--help|help)
+            usage
+            ;;
+    esac
 
     MODE=$1
     shift
@@ -2703,7 +2761,8 @@ main() {
             if ! read_device_id; then
                 exit 1
             fi
-            log_info "Verify mode: device detected and ID read (AN001: no STORE_CONFIG verification)"
+            # AN001 — verify mode does not perform STORE_CONFIG verification
+            log_info "Verify mode: device detected and ID read"
             exit 0
             ;;
 
@@ -2850,7 +2909,7 @@ main() {
             ;;
 
         *)
-            log_error "Unknown mode: $MODE"
+            log_error "Unknown mode: $MODE (use -h or --help for usage)"
             usage
             ;;
     esac
