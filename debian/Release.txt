@@ -1,4 +1,33 @@
 ================================================================================
+- V.7.0060.0934
+- Sun, 05 Apr 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4954687, hw-mgmt: scripts: Fix unexpected reset module counter, 85d1ebd
+    o #4953142, hw-mgmt: service: Fix TC stop Failed with result timeout, 86d74ef
+    o #4952807, hw-mgmt: thermal: Fix handling for sdk driver reload in TC, 65044ed
+    o #4939724, hw-mgmt: thermal: Fix module periodic report value in tc_log., 81fb2ba
+    o #4946745, hw-mgmt: service: Fix hw-mgmt sync service start/stop issue [continue], 902e710
+    o #4949553, hw-mgmt: scripts: Fix spurious hw-management-tc.service "changed on disk" warning, d045891
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.0934/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.0933
 - Mon, 30 Mar 2026
 --------------------------------------------------------------------------------
