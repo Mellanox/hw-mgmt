@@ -1,4 +1,4 @@
-From 6a9f1e150d07c9276a67d1272bde84103eae380b Mon Sep 17 00:00:00 2001
+From 9170ba2bf9505776f6d136b520981991c6ed4837 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Thu, 4 Jul 2024 23:50:27 +0300
 Subject: [PATCH] platform/mellanox: nvsw-bmc: Add system control and
@@ -25,9 +25,9 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  drivers/platform/mellanox/nvsw-core.c         |  693 ++++
  drivers/platform/mellanox/nvsw-host-l1.c      |  744 +++++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  943 ++++++
- drivers/platform/mellanox/nvsw-host-spc6.c    |  836 +++++
+ drivers/platform/mellanox/nvsw-host-spc6.c    |  852 +++++
  drivers/platform/mellanox/nvsw.h              |  296 ++
- 9 files changed, 6332 insertions(+)
+ 9 files changed, 6348 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -5292,10 +5292,10 @@ index 000000000..e54bd4109
 +
 diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
 new file mode 100644
-index 000000000..880c7760e
+index 000000000..449ba5ffd
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-host-spc6.c
-@@ -0,0 +1,836 @@
+@@ -0,0 +1,852 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia SPC6 host platform driver
@@ -5318,8 +5318,11 @@ index 000000000..880c7760e
 +
 +#define NVSW_HOST_DEVICE_NAME	"mlxplat"
 +
-+/* Bus number of mux device */
-+#define NVSW_I2C_MUX_BUS_NR		2
++/* Bus number of mux parent device */
++#define NVSW_I2C_MUX_PARENT_BUS_NR	2
++
++/* Bus number of the last host I2C bus */
++#define NVSW_I2C_LAST_HOST_BUS_NR	3
 +
 +/* Platform mux channels */
 +static int nvsw_host_spc6_mux_channels[] = {
@@ -6026,16 +6029,29 @@ index 000000000..880c7760e
 +
 +static int nvsw_host_probe(struct platform_device *pdev)
 +{
++	struct i2c_adapter *last_host_adapter;
 +	struct nvsw_core *nvsw_core;
 +	int i, err;
 +
-+	/* Get I2C adapter at the top of host I2C tree */
-+	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_BUS_NR);
-+	if (!nvsw_host_mux_i2c_adapter) {
++	/* Ensure the I2C host driver has finished registering
++	 * all 4 buses (0-3) to prevent the mux from stealing bus 3
++	 */
++	last_host_adapter = i2c_get_adapter(NVSW_I2C_LAST_HOST_BUS_NR);
++	if (!last_host_adapter) {
 +		dev_info(&pdev->dev,
 +			 "I2C adapter for bus %d is not ready, deferring probe\n",
-+			 NVSW_I2C_MUX_BUS_NR);
++			 NVSW_I2C_LAST_HOST_BUS_NR);
 +		return -EPROBE_DEFER;
++	}
++	i2c_put_adapter(last_host_adapter);
++
++	/* Get I2C mux parent adapter */
++	nvsw_host_mux_i2c_adapter = i2c_get_adapter(NVSW_I2C_MUX_PARENT_BUS_NR);
++	if (!nvsw_host_mux_i2c_adapter) {
++		dev_err(&pdev->dev,
++			 "I2C adapter for bus %d is not available\n",
++			 NVSW_I2C_MUX_PARENT_BUS_NR);
++		return -ENODEV;
 +	}
 +
 +	/* Create device at the top of host I2C tree */
@@ -6045,8 +6061,8 @@ index 000000000..880c7760e
 +	if (IS_ERR(nvsw_host_mux_i2c_client)) {
 +		dev_err(&pdev->dev,
 +			"Failed to create client %s at bus %d at addr 0x%02x\n",
-+			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_BUS_NR,
-+		    nvsw_host_mux_brdinfo->addr);
++			nvsw_host_mux_brdinfo->type, NVSW_I2C_MUX_PARENT_BUS_NR,
++			nvsw_host_mux_brdinfo->addr);
 +		err = PTR_ERR(nvsw_host_mux_i2c_client);
 +		goto i2c_new_client_device_fail;
 +	}
