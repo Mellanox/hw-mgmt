@@ -1274,7 +1274,7 @@ devtr_check_supported_system_init_alternatives()
 			;;
 		VMOD0027)
 			case $sku in
-			HI191|H183|HI195|HI192|HI187|HI188)
+			HI191|HI183|HI195|HI192|HI187|HI188)
 				for key in "${!sn68xxld_swb_alternatives[@]}"; do
 					swb_alternatives["$key"]="${sn68xxld_swb_alternatives["$key"]}"
 				done
