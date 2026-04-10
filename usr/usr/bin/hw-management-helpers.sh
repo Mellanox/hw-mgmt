@@ -125,7 +125,6 @@ i2c_bus_max=26
 bmc_i2c_bus_max=9
 bmc_i2c_bus_offset=70
 cpu_type=
-device_connect_delay=0.2
 
 # CPU Family + CPU Model should identify exact CPU architecture
 # IVB - Ivy-Bridge
@@ -543,6 +542,18 @@ unlock_service_state_change_update_and_match()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+# Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
+# Poll every 100 ms for device driver connection.
+# Input: 
+# - $1 - device name
+# - $2 - device address
+# - $3 - device bus
+# Output:
+# - 0 - success
+# - 1 - failure
+# Max wait for I2C new_device driver connect (milliseconds); connect_device polls every 100 ms.
+device_connect_delay_ms=500
+device_connect_poll_step_ms=100
 connect_device()
 {
 	find_i2c_bus
@@ -551,12 +562,21 @@ connect_device()
 	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+		   	local device_connect_timer=$device_connect_delay_ms
+			local step_sec
+			step_sec=val_sec=$(awk "BEGIN {printf \"%.3f\", $device_connect_poll_step_ms/1000}")
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-			sleep ${device_connect_delay}
-			if [ ! -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] &&
-			   [ ! -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
-				return 1
-			fi
+			while [ "$device_connect_timer" -ge 0 ]
+			do
+				if [ -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] ||
+				   [ -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
+					return 0
+				fi
+				# We know that sleep is not accurate. But it is acceptable for this use case.
+				sleep "$step_sec"
+				device_connect_timer=$((device_connect_timer - device_connect_poll_step_ms))
+			done
+			return 1
 		fi
 	fi
 
