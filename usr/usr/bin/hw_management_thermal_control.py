@@ -2347,11 +2347,11 @@ class fan_sensor(system_device):
                 self.log.warning("{} dir \"{}\" unsupported in configuration. Using default: {}".format(self.name,
                                                                                                         fan_dir,
                                                                                                         fan_dir_def),
-                                 id="{} dir".format(self.name), repeat=1)
+                                 id="{} dir get param".format(self.name), repeat=1)
             fan_dir = fan_dir_def
         else:
             # Print "finalization" message to indicate that the error is resolved. Print only once.
-            self.log.notice(None, id="{} dir".format(self.name))
+            self.log.notice(None, id="{} dir get param".format(self.name))
 
         param = self.fan_param[fan_dir]
         return param
