@@ -48,13 +48,17 @@ of ASICs and optical modules with different poll intervals and lifecycle managem
 
 try:
     import os
-    import time
     import re
     import argparse
     import traceback
     import signal
     import threading
-    from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write, exit_wait
+    from hw_management_lib import (
+        HW_Mgmt_Logger as Logger,
+        atomic_file_write,
+        exit_wait,
+        current_milli_time,
+    )
     from collections import Counter
     from hw_management_platform_config import (
         PLATFORM_CONFIG,
@@ -479,7 +483,7 @@ def update_thermal_attr(attr_prop):
     at the configured polling interval. It invokes the appropriate thermal function
     (e.g., asic_temp_populate, module_temp_populate) to read and update temperature data.
     """
-    ts = time.time()
+    ts = current_milli_time() // 1000
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
