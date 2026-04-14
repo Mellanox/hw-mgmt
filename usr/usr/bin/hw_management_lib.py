@@ -739,6 +739,8 @@ class HW_Mgmt_Logger:
                             msg=msg,
                             max_repeat=repeat,
                         )
+                        # special "start" marker to indicate that message is new
+                        msg = "{} (+)".format(msg)
                         log_hash[id_hash] = msg_state
                         self._msg_hash_garbage_collect(log_hash)
                     if msg_state.seen_count <= msg_state.max_repeat:
