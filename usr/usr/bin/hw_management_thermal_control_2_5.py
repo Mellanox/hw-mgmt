@@ -1533,12 +1533,12 @@ class system_device(hw_management_file_op):
         err_flag = False
         if sensor_value > self.val_max:
             self.log.warn("{}: file {} value({}) > max({})".format(self.name, val_read_file, sensor_value, self.val_max),
-                          id="{} value > max".format(self.name),
+                          id="{} value > max".format(val_read_file),
                           repeat=1, log_repeat=5)
             err_flag = True
         else:
             # Print "finalization" message to indicate that the error is resolved. Print only once.
-            self.log.notice(None, id="{} value > max".format(self.name))
+            self.log.notice(None, id="{} value > max".format(val_read_file))
 
         if sensor_value < self.val_min:
             self.log.debug("{}: file {} value({}) < min({})".format(self.name,
