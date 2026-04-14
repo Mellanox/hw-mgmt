@@ -470,7 +470,7 @@ class HW_Mgmt_Logger:
 
             def timed_error_handler(record):
                 """Wrap original handleError with time-based suppression."""
-                current_time = time.time()
+                current_time = time.clock_gettime(time.CLOCK_MONOTONIC)
 
                 # Thread-safe check and update of error state
                 with self._lock:
@@ -795,13 +795,13 @@ class RepeatedTimer:
             Run function in separate thread
         """
         while not self._stop_event.is_set():
-            start = time.time()
+            start = time.clock_gettime(time.CLOCK_MONOTONIC)
             try:
                 self.func()
             except Exception as e:
                 print(f"Error in periodic task: {e}")
             # Sleep remaining time if func took less than interval
-            elapsed = time.time() - start
+            elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
             sleep_time = max(0, self.interval - elapsed)
             if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately
