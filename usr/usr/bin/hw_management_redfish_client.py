@@ -461,7 +461,7 @@ class BMCAccessor(object):
             timeout_sec = self.FLOCK_TIMEOUT_SEC
 
         lock_path = os.path.join(self.LOCK_DIR, self.LOCK_FILE)
-        deadline = time.time() + timeout_sec
+        deadline = time.clock_gettime(time.CLOCK_MONOTONIC) + timeout_sec
         while True:
             try:
                 lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
@@ -472,7 +472,7 @@ class BMCAccessor(object):
                 return lock_fd
             except BlockingIOError:
                 os.close(lock_fd)
-                if time.time() >= deadline:
+                if time.clock_gettime(time.CLOCK_MONOTONIC) >= deadline:
                     raise Exception(
                         f"Cannot acquire TPM lock within {timeout_sec}s (timeout)"
                     )
