@@ -1,6 +1,6 @@
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -616,13 +616,13 @@ class RepeatedTimer:
             Run function in separate thread
         """
         while not self._stop_event.is_set():
-            start = time.time()
+            start = time.clock_gettime(time.CLOCK_MONOTONIC)
             try:
                 self.func()
             except Exception as e:
                 print(f"Error in periodic task: {e}")
             # Sleep remaining time if func took less than interval
-            elapsed = time.time() - start
+            elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
             sleep_time = max(0, self.interval - elapsed)
             if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately
