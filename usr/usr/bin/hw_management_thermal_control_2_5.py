@@ -239,6 +239,10 @@ class CONST:
     DBG_MEMORY_USAGE_ALERT = 50000    # KB
     DBG_MEMORY_USAGE_ALERT_STEP = 5000  # KB
 
+    # SDK load timeout in seconds. On system start SDK load takes additional time
+    # so we need to wait for SDK load timeout to avoid false error handling
+    SDK_LOAD_TIMEOUT_SEC = 60
+
 
 """
 Default sensor  configuration.
@@ -2250,15 +2254,26 @@ class thermal_asic_sensor(system_device):
         self.val_lcrit = self.read_val_min_max(None, "val_lcrit", self.scale)
         self.val_hcrit = self.read_val_min_max(None, "val_hcrit", self.scale)
 
+        self.sdk_load_timeout_timestamp = 0
+        self._sdk_timeout_restart(timeout_sec=CONST.SDK_LOAD_TIMEOUT_SEC)
+
     # ----------------------------------------------------------------------
-    def sensor_configure(self):
+    def _sdk_timeout_restart(self, timeout_sec=CONST.SDK_LOAD_TIMEOUT_SEC):
         """
-        @summary: this function calling on sensor start after initialization or suspend off
+        @summary: restart SDK load timeout
         """
-        # Disable kernel control for this thermal zone
-        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
-        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
-        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
+        self.sdk_load_timeout_timestamp = current_milli_time() + timeout_sec * 1000
+
+    # ----------------------------------------------------------------------
+    def _sdk_init_in_progress(self):
+        """
+        @summary: check if SDK init is in progress.
+        @return: True if SDK init is in progress, False otherwise
+        """
+        if self.sdk_load_timeout_timestamp > current_milli_time():
+            return True
+        else:
+            return False
 
     # ----------------------------------------------------------------------
     def _read_asic_ready(self):
@@ -2276,16 +2291,30 @@ class thermal_asic_sensor(system_device):
         return asic_ready
 
     # ----------------------------------------------------------------------
+    def sensor_configure(self):
+        """
+        @summary: this function calling on sensor start after initialization or suspend off
+        """
+        # Disable kernel control for this thermal zone
+        self.val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
+        self.val_min = self.read_val_min_max("thermal/{}_temp_norm".format(self.base_file_name), "val_min", scale=self.scale)
+        self.pwm_regulator.update_param(self.val_min, self.val_max, self.pwm_min, self.pwm_max)
+
+    # ----------------------------------------------------------------------
     def handle_input(self, thermal_table, flow_dir, amb_tmp):
         """
         @summary: handle sensor input
         """
         pwm = self.pwm_min
         val_read_file = "thermal/{}".format(self.file_input)
+        # need to ignore incorrect sensor file reading error when SDK init is in progress
+        sdk_init_in_progress = self._sdk_init_in_progress()
         if not self.check_file(val_read_file):
+            # ASIC thermal sensor file must be present even if ASIC/SDK not ready
             self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="missing")
         else:
             try:
+                # need only to correct handle emergency value (0) when SDK not started yet
                 asic_ready_state = self._read_asic_ready()
                 value = self.read_file_float(val_read_file, self.scale)
                 if value == 0 and asic_ready_state:
@@ -2306,9 +2335,15 @@ class thermal_asic_sensor(system_device):
                     self.validate_value_in_min_max_range(self.value, self.get_hw_path(val_read_file))
                 else:
                     # value is not in expected range and ASIC is ready
-                    self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="crit range")
+                    if sdk_init_in_progress:
+                        self.log.notice("{}: SDK init in progress, crit range violation is not an issue".format(self.name))
+                    else:
+                        self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="crit range")
             except (ValueError, TypeError, OSError, IOError):
-                self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="value")
+                if sdk_init_in_progress:
+                    self.log.notice("{}: SDK init in progress, value reading error is not an issue".format(self.name))
+                else:
+                    self.fread_err.handle_err(self.get_hw_path(val_read_file), cause="value")
 
         # calculate PWM based on formula
         self.pwm_regulator.tick(self.value)
