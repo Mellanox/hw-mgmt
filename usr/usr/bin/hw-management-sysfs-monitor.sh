@@ -112,14 +112,14 @@ do_stop_sysfs_monitor()
         MONITOR_PID=$(cat "$SYSFS_MONITOR_PID_FILE")
         if kill -0 "$MONITOR_PID" 2>/dev/null; then
             if kill "$MONITOR_PID"; then
-                log_info "HW Mangement old sysfs monitor process killed succesfully."
+                log_info "HW Management old sysfs monitor process killed succesfully."
                 rm -f "$SYSFS_MONITOR_PID_FILE"
             else
-                log_info "HW Mangement failed to kill old sysfs monitor process."
+                log_info "HW Management failed to kill old sysfs monitor process."
                 exit 1
             fi
         else
-            log_info "HW Mangement old sysfs monitor process $MONITOR_PID already dead, remove the pid file."
+            log_info "HW Management old sysfs monitor process $MONITOR_PID already dead, remove the pid file."
             rm -f "$SYSFS_MONITOR_PID_FILE"
         fi
     fi
@@ -128,9 +128,8 @@ do_stop_sysfs_monitor()
 case $SYSFS_MONITOR_ACTION in
     start)
         # Save the PID of the sysfs monitor process.
-        touch "$SYSFS_MONITOR_PID_FILE"
-        echo $! > "$SYSFS_MONITOR_PID_FILE"
-        log_info "HW Mangement Sysfs Monitor process created."
+        echo $$ > "$SYSFS_MONITOR_PID_FILE"
+        log_info "HW Management Sysfs Monitor process created."
         do_start_sysfs_monitor
     ;;
     stop)
@@ -139,6 +138,8 @@ case $SYSFS_MONITOR_ACTION in
     restart|force-reload)
         do_stop_sysfs_monitor
         sleep 5
+        # Save the PID of the sysfs monitor process.
+        echo $$ > "$SYSFS_MONITOR_PID_FILE"
         do_start_sysfs_monitor
     ;;
     *)
