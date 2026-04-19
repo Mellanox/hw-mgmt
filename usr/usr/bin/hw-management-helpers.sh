@@ -308,7 +308,8 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI178" ] ||
         [ "$ui_tree_sku" = "HI179" ] ||
         [ "$ui_tree_sku" = "HI180" ] ||
-        [ "$ui_tree_sku" = "HI185" ]) &&
+        [ "$ui_tree_sku" = "HI185" ] ||
+        [ "$ui_tree_sku" = "HI197" ]) &&
         ([ ! -e "$ui_tree_archive_file" ]); then
         return 0
     else
@@ -356,7 +357,7 @@ check_tc_is_supported()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI185|HI193)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI185|HI193|HI197)
 			return 0
 			;;
 

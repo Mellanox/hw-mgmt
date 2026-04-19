@@ -196,22 +196,24 @@ declare -A msn27002_alternatives=( \
 	["24c512_0"]="24c512 0x51 8 vpd_info" \
 )
 
-declare -A msn4700_msn4600_alternatives=(["max11603_0"]="max11603 0x6d 5 swb_a2d" \
-					 ["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
-					 ["xdpe12284_1"]="xdpe12284 0x64 5 voltmon2" \
-					 ["xdpe12284_2"]="xdpe12284 0x66 5 voltmon3" \
-					 ["xdpe12284_3"]="xdpe12284 0x68 5 voltmon4" \
-					 ["xdpe12284_4"]="xdpe12284 0x6a 5 voltmon5" \
-					 ["xdpe12284_5"]="xdpe12284 0x6c 5 voltmon6" \
-					 ["xdpe12284_6"]="xdpe12284 0x6e 5 voltmon7" \
-					 ["mp2975_0"]="mp2975 0x62 5 voltmon1" \
-					 ["mp2975_1"]="mp2975 0x64 5 voltmon2" \
-					 ["mp2975_2"]="mp2975 0x66 5 voltmon3" \
-					 ["mp2975_3"]="mp2975 0x68 5 voltmon4" \
-					 ["mp2975_4"]="mp2975 0x6a 5 voltmon5" \
-					 ["mp2975_5"]="mp2975 0x6c 5 voltmon6" \
-					 ["mp2975_6"]="mp2975 0x6e 5 voltmon7" \
-					 ["24c32_0"]="24c32 0x51 8 vpd_info")
+declare -A msn4700_msn4600_alternatives=( \
+	["max11603_0"]="max11603 0x6d 5 swb_a2d" \
+	["xdpe12284_0"]="xdpe12284 0x62 5 voltmon1" \
+	["xdpe12284_1"]="xdpe12284 0x64 5 voltmon2" \
+	["xdpe12284_2"]="xdpe12284 0x66 5 voltmon3" \
+	["xdpe12284_3"]="xdpe12284 0x68 5 voltmon4" \
+	["xdpe12284_4"]="xdpe12284 0x6a 5 voltmon5" \
+	["xdpe12284_5"]="xdpe12284 0x6c 5 voltmon6" \
+	["xdpe12284_6"]="xdpe12284 0x6e 5 voltmon7" \
+	["mp2975_0"]="mp2975 0x62 5 voltmon1" \
+	["mp2975_1"]="mp2975 0x64 5 voltmon2" \
+	["mp2975_2"]="mp2975 0x66 5 voltmon3" \
+	["mp2975_3"]="mp2975 0x68 5 voltmon4" \
+	["mp2975_4"]="mp2975 0x6a 5 voltmon5" \
+	["mp2975_5"]="mp2975 0x6c 5 voltmon6" \
+	["mp2975_6"]="mp2975 0x6e 5 voltmon7" \
+	["24c32_0"]="24c32 0x51 8 vpd_info" \
+)
 
 declare -A mqm97xx_alternatives=( \
 	["mp2975_0"]="mp2975 0x62 5 voltmon1" \
@@ -573,6 +575,48 @@ declare -A n61xxld_swb_alternatives=( \
 	["mp29502_1"]="mp29502 0x2c 7 pwr_conv2" \
 )
 
+declare -A n61xxld_v3000_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x66 7 voltmon1" \
+	["mp29816_1"]="mp29816 0x68 7 voltmon2" \
+	["mp29816_2"]="mp29816 0x6c 7 voltmon3" \
+	["mp29816_3"]="mp29816 0x6e 7 voltmon4" \
+	["mp29816_4"]="mp29816 0x66 23 voltmon5" \
+	["mp29816_5"]="mp29816 0x68 23 voltmon6" \
+	["mp29816_6"]="mp29816 0x6c 23 voltmon7" \
+	["mp29816_7"]="mp29816 0x6e 23 voltmon8" \
+	["mp29816_8"]="mp29816 0x66 39 voltmon9" \
+	["mp29816_9"]="mp29816 0x68 39 voltmon10" \
+	["mp29816_10"]="mp29816 0x6c 39 voltmon11" \
+	["mp29816_11"]="mp29816 0x6e 39 voltmon12" \
+	["mp29816_12"]="mp29816 0x66 55 voltmon13" \
+	["mp29816_13"]="mp29816 0x68 55 voltmon14" \
+	["mp29816_14"]="mp29816 0x6c 55 voltmon15" \
+	["mp29816_15"]="mp29816 0x6e 55 voltmon16" \
+	["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 7 voltmon1" \
+	["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 7 voltmon2" \
+	["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 7 voltmon3" \
+	["xdpe1a2g7_3"]="xdpe1a2g7b 0x6e 7 voltmon4" \
+	["xdpe1a2g7_4"]="xdpe1a2g7b 0x66 23 voltmon5" \
+	["xdpe1a2g7_5"]="xdpe1a2g7b 0x68 23 voltmon6" \
+	["xdpe1a2g7_6"]="xdpe1a2g7b 0x6c 23 voltmon7" \
+	["xdpe1a2g7_7"]="xdpe1a2g7b 0x6e 23 voltmon8" \
+	["xdpe1a2g7_8"]="xdpe1a2g7b 0x66 39 voltmon9" \
+	["xdpe1a2g7_9"]="xdpe1a2g7b 0x68 39 voltmon10" \
+	["xdpe1a2g7_10"]="xdpe1a2g7b 0x6c 39 voltmon11" \
+	["xdpe1a2g7_11"]="xdpe1a2g7b 0x6e 39 voltmon12" \
+	["xdpe1a2g7_12"]="xdpe1a2g7b 0x66 55 voltmon13" \
+	["xdpe1a2g7_13"]="xdpe1a2g7b 0x68 55 voltmon14" \
+	["xdpe1a2g7_14"]="xdpe1a2g7b 0x6c 55 voltmon15" \
+	["xdpe1a2g7_15"]="xdpe1a2g7b 0x6e 55 voltmon16" \
+	["24c512_0"]="24c512 0x51 13 swb_info" \
+	["lm5066i_0"]="lm5066i 0x12 6 pdb_hotswap1" \
+	["mp5926_0"]="mp5926 0x12 6 pdb_hotswap1" \
+	["raa228004_0"]="raa228004 0x60 6 pwr_conv1" \
+	["raa228004_1"]="raa228004 0x61 6 pwr_conv2" \
+	["mp29502_0"]="mp29502 0x2e 6 pwr_conv1" \
+	["mp29502_1"]="mp29502 0x2c 6 pwr_conv2" \
+)
+
 declare -A n63xxld_swb_alternatives=( \
 	["mp29816_0"]="mp29816 0x66 8 voltmon1" \
 	["mp29816_1"]="mp29816 0x68 8 voltmon2" \
@@ -825,6 +869,14 @@ declare -A n61xxld_platform_alternatives=( \
 	["24c512_1"]="24c512 0x51 1 vpd_info" \
 	["mp2855_0"]="mp2855 0x69 6 comex_voltmon1" \
 	["mp2975_1"]="mp2975 0x6a 6 comex_voltmon2" \
+)
+
+declare -A n61xxld_v3000_platform_alternatives=( \
+	["24c512_1"]="24c512 0x51 1 vpd_info" \
+	["jc42_0"]="jc42 0x52 2 somdimm_temp1" \
+	["jc42_1"]="jc42 0x53 2 somdimm_temp2" \
+	["mp2855_0"]="mp2845 0x69 5 comex_voltmon1" \
+	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2" \
 )
 
 # Port ambient sensor located on a separate module board
@@ -1299,6 +1351,15 @@ devtr_check_supported_system_init_alternatives()
 				done
 
 				for key in "${!n61xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n61xxld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI197)
+				for key in "${!n61xxld_v3000_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${n61xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!n61xxld_v3000_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${n61xxld_platform_alternatives["$key"]}"
 				done
 				;;
