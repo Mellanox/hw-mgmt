@@ -672,6 +672,14 @@ declare -A n63xxld_swb_alternatives=( \
 	["mp29502_1"]="mp29502 0x2e 23 pwr_conv2" \
 )
 
+declare -A n64xxld_platform_alternatives=( \
+	["24c512_1"]="24c512 0x51 1 vpd_info" \
+	["spd5118_0"]="spd5118 0x52 2 somdimm_temp1" \
+	["spd5118_1"]="spd5118 0x53 2 somdimm_temp2" \
+	["mp2855_0"]="mp2845 0x69 5 comex_voltmon1" \
+	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2" \
+)
+
 # Devices located on SN66XX_LD switch board
 declare -A sn66xxld_swb_alternatives=( \
 	["mp29816_0"]="mp29816 0x61 15 voltmon1" \
@@ -1393,6 +1401,15 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!n61xxld_platform_alternatives[@]}"; do
 					platform_alternatives["$key"]="${n61xxld_platform_alternatives["$key"]}"
+				done
+				;;
+			HI197)
+				for key in "${!n64xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${n61xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!n64xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${n64xxld_platform_alternatives["$key"]}"
 				done
 				;;
 			*)
