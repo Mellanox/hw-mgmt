@@ -1,0 +1,22 @@
+"/var/log/hw-mgmt.trace.log" {
+    size 2M
+    rotate 3
+    copytruncate
+    compress
+    delaycompress
+    dateext
+    dateformat -%Y%m%d%H%M%S
+    missingok
+    notifempty
+}
+
+# Active log + rotate 2 => three files total (1 active + 2 rotated, compressed after delaycompress).
+"/var/log/hw-mgmt-i2c-trace.log" {
+    size 4M
+    rotate 2
+    copytruncate
+    compress
+    delaycompress
+    missingok
+    notifempty
+}

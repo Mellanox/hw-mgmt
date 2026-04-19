@@ -48,13 +48,17 @@ of ASICs and optical modules with different poll intervals and lifecycle managem
 
 try:
     import os
-    import time
     import re
     import argparse
     import traceback
     import signal
     import threading
-    from hw_management_lib import HW_Mgmt_Logger as Logger, atomic_file_write
+    from hw_management_lib import (
+        HW_Mgmt_Logger as Logger,
+        atomic_file_write,
+        exit_wait,
+        current_milli_time,
+    )
     from collections import Counter
     from hw_management_platform_config import (
         PLATFORM_CONFIG,
@@ -96,6 +100,11 @@ class CONST(object):
     # Folder paths
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
     LOG_LEVEL_FILENAME = "config/log_level"
+    LOG_FILE = "/var/log/hw-management-thermal-updater.log"
+
+    # Log rotation size
+    LOG_ROTATION_SIZE = 1 * 1024 * 1024  # 1MB
+    LOG_ROTATION_COUNT = 3
 
 
 # ----------------------------------------------------------------------
@@ -479,7 +488,7 @@ def update_thermal_attr(attr_prop):
     at the configured polling interval. It invokes the appropriate thermal function
     (e.g., asic_temp_populate, module_temp_populate) to read and update temperature data.
     """
-    ts = time.time()
+    ts = current_milli_time() // 1000
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
@@ -525,7 +534,7 @@ def main():
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest="log_file",
                             help="Add output also to log file. Pass file name here",
-                            default="/var/log/hw_management_thermal_updater_log")
+                            default=CONST.LOG_FILE)
 
     CMD_PARSER.add_argument("-v", "--verbosity",
                             dest="verbosity",
@@ -545,6 +554,10 @@ def main():
 
     try:
         LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+        # System can have >100 ports. It means we can have potential >100 warnings in the logger
+        # We need enough space to store all warnings for all ports.
+        LOGGER.set_log_hash_max_size(256)
+        LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
     except Exception as e:
         print("Failed to initialize logger: {}. Stopping service.".format(e))
         exit(1)
@@ -593,7 +606,7 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        EXIT.wait(timeout=1)
+        exit_wait(EXIT, 1, chunk_sec=0.2)
 
     LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
 

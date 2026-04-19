@@ -442,6 +442,7 @@ if [ "$1" == "add" ]; then
 				for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
 					set_fan_speed_limits fan"$i"
 				done
+				set_asic_ready "$3""$4" 1
 			fi
 
 			lcmatch=`echo $name | cut -d"#" -f1`
@@ -602,6 +603,7 @@ if [ "$1" == "add" ]; then
 		fi
 	fi
 	if [ "$2" == "hotplug" ]; then
+		print_function_call "$0" "fan hotplug" "$1 $2 $3 $4 start"
 		for ((i=1; i<=max_tachos; i+=1)); do
 			if [ -f "$3""$4"/fan$i ]; then
 				check_n_link "$3""$4"/fan$i $thermal_path/fan"$i"_status
@@ -612,6 +614,7 @@ if [ "$1" == "add" ]; then
 				(( fan_drwr_num++ ))
 			fi
 		done
+		print_function_call "$0" "fan hotplug" "$1 $2 $3 $4 end"
 		if [ -f $config_path/fixed_fans_system ] && [ "$(< $config_path/fixed_fans_system)" = 1 ]; then
 			get_fixed_fans_direction
 			dir=$?
@@ -624,8 +627,6 @@ if [ "$1" == "add" ]; then
 		else
 			echo $fan_drwr_num > $config_path/fan_drwr_num
 		fi
-		# Set temporary flag in fs to indicate that fanX_status is set for all fans
-		echo 1 > "$config_path"/fan_status_ready
 
 		for ((i=1; i<=max_psus; i+=1)); do
 			if [ -f "$3""$4"/psu$i ]; then
@@ -1340,6 +1341,7 @@ else
 			rm -f "$tpath/module*_temp_emergency"
 
 			check_n_unlink $cpath/asic_hwmon
+			set_asic_ready "$3""$4" 0
 
 			if [ "$lc_id" -ne 0 ]; then
 				exit 0

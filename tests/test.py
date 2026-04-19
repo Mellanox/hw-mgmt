@@ -470,6 +470,21 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
+                'name': 'Pytest: TC 2.5 ASIC fread reset (1c294f7)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_asic_fread_reset.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: start-post TC flags (Bug 4929286)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: TC _exit_wait (stop timeout)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
                 'name': 'Pytest: Python Syntax',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_python_syntax.py', '--tb=short'],
                 'cwd': self.tests_dir

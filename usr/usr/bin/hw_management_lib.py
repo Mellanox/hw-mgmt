@@ -44,6 +44,22 @@ from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
 
 
+def to_int(value: Any, default: int = 0) -> int:
+    """
+    @summary:
+        Convert value to integer
+    @param value: value to convert
+    @param default: default value if conversion fails
+    @return: integer value
+    """
+    try:
+        return int(str(value).strip())
+    except (ValueError, TypeError):
+        return default
+
+# ----------------------------------------------------------------------
+
+
 def read_dmi_data(dmi_field_name):
     """
     @summary:
@@ -79,6 +95,29 @@ def atomic_file_write(file_name, value):
     except Exception as e:
         os.unlink(f_path_tmp)  # Cleanup on failure
         raise Exception(f"Error writing {file_name}: {e}")
+
+# ----------------------------------------------------------------------
+
+
+def exit_wait(exit_event, timeout, chunk_sec=1.0):
+    """
+    @summary:
+        Wait up to timeout seconds in short chunks for graceful shutdown visibility.
+    @param exit_event: threading.Event cleared on run, set by signal handler
+    @param timeout: Total seconds to wait (may end early if exit_event is set)
+    @param chunk_sec: Maximum duration of a single wait; smaller reacts faster to signals
+
+    The main-thread Python signal handler does not run while blocked in a single
+    long exit_event.wait(); chunking returns to the interpreter so SIGTERM/SIGINT
+    handlers can run and systemd stop timeouts are respected.
+    """
+    if timeout <= 0:
+        return
+    elapsed = 0.0
+    while elapsed < timeout and not exit_event.is_set():
+        wait_time = min(chunk_sec, timeout - elapsed)
+        exit_event.wait(wait_time)
+        elapsed += wait_time
 
 # ----------------------------------------------------------------------
 
@@ -201,6 +240,7 @@ class HW_Mgmt_Logger:
         self.syslog_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to syslog
         self.log_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to log
         self._lock = threading.Lock()  # Thread safety for all logger operations
+        self.log_hash_max_size = self.MAX_MSG_HASH_SIZE
 
         self._set_param(ident, log_file, log_level, syslog_level)
         for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
@@ -341,6 +381,44 @@ class HW_Mgmt_Logger:
         if isinstance(syslog_repeat, int) and syslog_repeat >= 0:
             self.syslog_repeat = syslog_repeat
 
+    def set_log_hash_max_size(self, log_hash_max_size):
+        """
+        @summary:
+            Set max size of log hash.
+        @param log_hash_max_size: max size of log hash
+        """
+        if isinstance(log_hash_max_size, int) and log_hash_max_size >= 0:
+            self.log_hash_max_size = log_hash_max_size
+
+    def set_log_rotation_size(self, file_size=None, file_count=None):
+        """
+        @summary:
+            Set log rotation size.
+        @param file_size: file size
+        @param file_count: file count
+        """
+
+        file_size = to_int(file_size)
+        file_count = to_int(file_count)
+        if file_size == 0:
+            file_size = self.MAX_LOG_FILE_SIZE
+        if file_count == 0:
+            file_count = self.MAX_LOG_FILE_BACKUP_COUNT
+
+        handler_list = self.logger.handlers[:]
+        for handler in handler_list:
+            if isinstance(handler, RotatingFileHandler):
+                prev_bytes = handler.maxBytes
+                prev_count = handler.backupCount
+                handler.maxBytes = file_size
+                handler.backupCount = file_count
+                # Rollover only when limits change. Unconditional doRollover() at
+                # startup rotated a fresh log and wasted a backup slot. When limits
+                # do change, rollover still applies so a log oversized vs the new cap
+                # from a prior config is split correctly.
+                if handler.maxBytes != prev_bytes or handler.backupCount != prev_count:
+                    handler.doRollover()
+
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
         @summary:
@@ -392,7 +470,7 @@ class HW_Mgmt_Logger:
 
             def timed_error_handler(record):
                 """Wrap original handleError with time-based suppression."""
-                current_time = time.time()
+                current_time = time.clock_gettime(time.CLOCK_MONOTONIC)
 
                 # Thread-safe check and update of error state
                 with self._lock:
@@ -576,9 +654,9 @@ class HW_Mgmt_Logger:
         """
         hash_size = len(log_hash)
 
-        # don't clean up if hash size < MAX_MSG_TIMEOUT_HASH_SIZE and < MAX_MSG_HASH_SIZE
-        if hash_size > self.MAX_MSG_HASH_SIZE:
-            # some major issue. We never expect to have more than MAX_MSG_HASH_SIZE messages in hash.
+        # don't clean up if hash size < log_hash_max_size
+        if hash_size > self.log_hash_max_size:
+            # some major issue. We never expect to have more than log_hash_max_size messages in hash.
             # Use print instead of logger to avoid potential circular logging issues
             print("hash_garbage_collect: too many ({}) messages in hash. Remove all messages.".format(hash_size))
             log_hash.clear()  # Clear the actual dictionary, not reassign local variable
@@ -717,13 +795,13 @@ class RepeatedTimer:
             Run function in separate thread
         """
         while not self._stop_event.is_set():
-            start = time.time()
+            start = time.clock_gettime(time.CLOCK_MONOTONIC)
             try:
                 self.func()
             except Exception as e:
                 print(f"Error in periodic task: {e}")
             # Sleep remaining time if func took less than interval
-            elapsed = time.time() - start
+            elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
             sleep_time = max(0, self.interval - elapsed)
             if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately

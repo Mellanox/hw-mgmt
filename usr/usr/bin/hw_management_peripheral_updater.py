@@ -38,14 +38,17 @@
 
 try:
     import os
-    import time
     import json
     import re
     import argparse
     import traceback
     import signal
     import threading
-    from hw_management_lib import HW_Mgmt_Logger as Logger
+    from hw_management_lib import (
+        HW_Mgmt_Logger as Logger,
+        exit_wait,
+        current_milli_time,
+    )
     from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
@@ -54,11 +57,14 @@ except ImportError as e:
 
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
-    from hw_management_platform_config import get_module_count
+    from hw_management_platform_config import get_module_count, get_platform_config
 except ImportError:
     # Fallback if platform config not available
     def get_module_count(sku):
         return 0
+
+    def get_platform_config(sku):
+        return []
 
 VERSION = "1.0.0"
 
@@ -84,6 +90,11 @@ class CONST(object):
     # File which defined current level filename.
     # User can dynamically change loglevel without svc restarting.
     LOG_LEVEL_FILENAME = "config/log_level"
+    LOG_FILE = "/var/log/hw-management-peripheral-updater.log"
+
+    # Log rotation size
+    LOG_ROTATION_SIZE = 1 * 1024 * 1024  # 1MB
+    LOG_ROTATION_COUNT = 3
 
 
 EXIT = threading.Event()
@@ -488,7 +499,7 @@ def update_peripheral_attr(attr_prop):
     input file and invokes the appropriate function only when the value changes,
     implementing change-based triggering for peripheral monitoring.
     """
-    ts = time.time()
+    ts = current_milli_time() // 1000
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
@@ -545,13 +556,22 @@ def write_module_counter(product_sku):
     This is done in peripheral_updater to ensure availability even if
     thermal_updater is disabled by the customer.
 
+    If product_sku does not match any entry in PLATFORM_CONFIG, the file is not
+    created or modified (unsupported platform — leave existing content intact).
+
     @param product_sku: Platform SKU identifier to load correct config
     """
+    if not get_platform_config(product_sku):
+        LOGGER.notice(
+            "hw-management-peripheral-updater: module_counter skipped (platform not in config)"
+        )
+        return
+
     # Get module count from centralized platform configuration
     # This is the SINGLE SOURCE OF TRUTH for module counts
     module_count = get_module_count(product_sku)
 
-    # Always write module_counter (even 0) so other services can reliably read it
+    # Write module_counter (including 0) for supported platforms only
     try:
         with open("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8") as f:
             f.write("{}\n".format(module_count))
@@ -577,6 +597,8 @@ def handle_shutdown(sig, _frame):
 
     EXIT.set()
 
+# ----------------------------------------------------------------------
+
 
 def main():
     """
@@ -589,7 +611,7 @@ def main():
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest="log_file",
                             help="Add output also to log file. Pass file name here",
-                            default="/var/log/hw_management_peripheral_updater_log")
+                            default=CONST.LOG_FILE)
 
     # Note: set logging to 50 on release
     CMD_PARSER.add_argument("-v", "--verbosity",
@@ -608,6 +630,7 @@ def main():
     args = vars(CMD_PARSER.parse_args())
     global LOGGER
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
+    LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
 
     if args["system_type"] is None:
         try:
@@ -662,7 +685,7 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        EXIT.wait(timeout=1)
+        exit_wait(EXIT, 1, chunk_sec=0.2)
 
     LOGGER.notice("hw-management-peripheral-updater: stopped main loop ({})".format(_sig_condition_name))
     return

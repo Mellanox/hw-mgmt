@@ -125,7 +125,6 @@ i2c_bus_max=26
 bmc_i2c_bus_max=9
 bmc_i2c_bus_offset=70
 cpu_type=
-device_connect_delay=0.2
 
 # CPU Family + CPU Model should identify exact CPU architecture
 # IVB - Ivy-Bridge
@@ -322,7 +321,7 @@ check_labels_enabled()
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI193)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI193|HI194)
 			return 0
 			;;
 
@@ -543,6 +542,18 @@ unlock_service_state_change_update_and_match()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+# Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
+# Poll every 100 ms for device driver connection.
+# Input: 
+# - $1 - device name
+# - $2 - device address
+# - $3 - device bus
+# Output:
+# - 0 - success
+# - 1 - failure
+# Max wait for I2C new_device driver connect (milliseconds); connect_device polls every 100 ms.
+device_connect_delay_ms=400
+device_connect_poll_step_ms=100
 connect_device()
 {
 	find_i2c_bus
@@ -551,12 +562,22 @@ connect_device()
 	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
+		   	local device_connect_timer=$device_connect_delay_ms
+			local step_sec
+			step_sec=$(awk "BEGIN {printf \"%.3f\", $device_connect_poll_step_ms/1000}")
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-			sleep ${device_connect_delay}
-			if [ ! -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] &&
-			   [ ! -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
-				return 1
-			fi
+			while true
+			do
+				if [ -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] ||
+				   [ -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
+					return 0
+				fi
+				device_connect_timer=$((device_connect_timer - device_connect_poll_step_ms))
+				[ "$device_connect_timer" -lt 0 ] && break
+				# We know that sleep is not accurate. But it is acceptable for this use case.
+				sleep "$step_sec"
+			done
+			return 1
 		fi
 	fi
 
@@ -1115,4 +1136,82 @@ set_sodimm_temp_limits()
 	done
 
 	return 0
+}
+
+
+# Start i2c trace (ftrace i2c event class under tracefs).
+KERN_TRACE_FS="/sys/kernel/debug/tracing"
+start_i2c_trace() {
+	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
+		return
+	fi
+
+	# Already running: do not reconfigure (another tool may have enabled it with
+	# different buffer/filters; re-applying could fight that consumer).
+	if [ "$(< "$KERN_TRACE_FS"/events/i2c/enable)" -eq 1 ]; then
+		return
+	fi
+
+	# configure i2c trace buffer size
+	# echo 1024 > "$KERN_TRACE_FS"/buffer_size_kb  # 1 MiB (per-buffer; see tracing doc)
+	# reset i2c trace
+	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
+	# clear i2c trace buffer
+	echo 0 > "$KERN_TRACE_FS"/trace
+	# set i2c trace filter (only where the kernel exposes per-event filter files)
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_write/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_read/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_result/filter  2>/dev/null || true
+	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter  2>/dev/null || true
+	# enable (start)i2c trace
+	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
+}
+
+# Stop i2c trace
+stop_i2c_trace() {
+	# check if i2c trace available
+	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
+		return
+	fi
+	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
+	if [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable)" -eq 0 ]; then
+		return
+	fi
+	# disable (stop) i2c trace
+	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
+	# save i2c trace to file
+	cat "$KERN_TRACE_FS"/trace >> /var/log/hw-mgmt-i2c-trace.log
+	# clear i2c trace buffer
+	echo 0 > "$KERN_TRACE_FS"/trace
+}
+
+# Print function trace to the log file(s)
+# log file is in /var/log/hw-mgmt.trace.log. Log rotation: maximum 3 rotated files, 2 MiB each (see logrotate).
+# log rotation is implemented by logrotate. See configuration file /etc/logrotate.d/hw-mgmt-trace
+# Arguments:
+# $1 - script name
+# $2 - function name
+# $3 - arguments (optional). Type: string.
+print_function_call() {
+	local script_name
+	local function_name
+	local argument
+	local TS LOG_FILE
+	local PID
+
+	script_name="${1##*/}" # Script name
+	function_name="$2" # Function name
+	argument="$3" # Arguments
+	PID="$$" # Process ID
+	# TS format is %Y_%m_%d_%H-%M-%S.%3N (23 chars).
+	TS="$(date +'%Y_%m_%d_%H-%M-%S.%3N')" # Timestamp
+	LOG_FILE="/var/log/hw-mgmt.trace.log" # Log file
+
+	printf "%s(%s) [%s]: %s %s\n" \
+		"$script_name" \
+		"$PID" \
+		"$TS" \
+		"$function_name" \
+		"$argument" >> "$LOG_FILE"
 }
