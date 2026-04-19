@@ -1,5 +1,5 @@
 [Unit]
-Description=HW management Fast Lables Monitor
+Description=HW Management Fast Completion Monitor
 After=hw-management.service
 Requires=hw-management.service
 PartOf=hw-management.service
