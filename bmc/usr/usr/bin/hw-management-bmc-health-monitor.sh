@@ -44,6 +44,17 @@ KERN_ERR_WARN=5
 I2C_ERR_WARN=10
 TEMP_WARN_C=85
 
+# Rolling state (same shell process): avoid logging the same fault every CHECK_INTERVAL.
+LAST_I2C_DMESG_COUNT=0
+LAST_KERNEL_RECENT_COUNT=0
+_HM_MEM_BAD=0
+_HM_LOAD_BAD=0
+_HM_TEMP_BAD=0
+_HM_FS_BAD=0
+_HM_WDT_BAD=0
+_HM_SVC_JOURNALD_BAD=0
+_HM_SVC_UDEVD_BAD=0
+
 check_memory() {
     if [ ! -f /proc/meminfo ]; then
         return
@@ -55,14 +66,22 @@ check_memory() {
     local mem_pct=$((mem_used * 100 / mem_total))
 
     if [ "$mem_avail" -lt "$MEM_WARN_MB" ]; then
-        log_message "WARNING" "Low memory: ${mem_avail}MB available (${mem_pct}% used)"
+        if [ "$_HM_MEM_BAD" -eq 0 ]; then
+            _HM_MEM_BAD=1
+            log_message "WARNING" "Low memory: ${mem_avail}MB available (${mem_pct}% used)"
 
-        # Log top memory consumers (BusyBox compatible)
-        if command -v ps &> /dev/null; then
-            log_message "INFO" "Top memory consumers:"
-            ps | awk 'NR>1' | sort -k6 -rn | head -n 5 | while read line; do
-                log_message "INFO" "  $line"
-            done
+            # Log top memory consumers (BusyBox compatible)
+            if command -v ps &> /dev/null; then
+                log_message "INFO" "Top memory consumers:"
+                ps | awk 'NR>1' | sort -k6 -rn | head -n 5 | while read line; do
+                    log_message "INFO" "  $line"
+                done
+            fi
+        fi
+    else
+        if [ "$_HM_MEM_BAD" -eq 1 ]; then
+            _HM_MEM_BAD=0
+            log_message "INFO" "Memory pressure cleared (${mem_avail}MB available)"
         fi
     fi
 }
@@ -72,14 +91,22 @@ check_cpu_load() {
     local load_int=${load%.*}
 
     if [ "$load_int" -gt "$LOAD_WARN" ]; then
-        log_message "WARNING" "High CPU load: $load"
+        if [ "$_HM_LOAD_BAD" -eq 0 ]; then
+            _HM_LOAD_BAD=1
+            log_message "WARNING" "High CPU load: $load"
 
-        # Log top CPU consumers (BusyBox compatible)
-        if command -v ps &> /dev/null; then
-            log_message "INFO" "Top CPU consumers:"
-            ps | awk 'NR>1' | sort -k3 -rn | head -n 5 | while read line; do
-                log_message "INFO" "  $line"
-            done
+            # Log top CPU consumers (BusyBox compatible)
+            if command -v ps &> /dev/null; then
+                log_message "INFO" "Top CPU consumers:"
+                ps | awk 'NR>1' | sort -k3 -rn | head -n 5 | while read line; do
+                    log_message "INFO" "  $line"
+                done
+            fi
+        fi
+    else
+        if [ "$_HM_LOAD_BAD" -eq 1 ]; then
+            _HM_LOAD_BAD=0
+            log_message "INFO" "CPU load returned to normal (load $load)"
         fi
     fi
 }
@@ -91,35 +118,57 @@ check_kernel_errors() {
     recent_errors=${recent_errors:-0}
     recent_errors=$(echo "$recent_errors" | head -n 1 | tr -d ' ')
 
-    if [ "$recent_errors" -gt "$KERN_ERR_WARN" ] 2>/dev/null; then
-        log_message "WARNING" "$recent_errors kernel errors in last 100 messages"
+    if ! [ "$recent_errors" -gt "$KERN_ERR_WARN" ] 2>/dev/null; then
+        LAST_KERNEL_RECENT_COUNT=0
+        return
+    fi
+
+    # Only react when the rolling-window count increases (avoids spamming while stable).
+    if [ "$recent_errors" -gt "${LAST_KERNEL_RECENT_COUNT:-0}" ] 2>/dev/null; then
+        log_message "WARNING" "$recent_errors kernel errors in last 100 messages (previously ${LAST_KERNEL_RECENT_COUNT:-0})"
 
         # Log recent error messages
         dmesg 2>/dev/null | tail -100 | grep -i "error\|fail\|bug\|oops" | tail -n 5 | while read line; do
             log_message "ERROR" "KERNEL: $line"
         done
     fi
+    LAST_KERNEL_RECENT_COUNT=$recent_errors
 }
 
 check_i2c_health() {
     # I2C is critical for BMC operation (sensors, CPLD communication, etc.)
-    local i2c_errors
+    local i2c_errors prev delta
     i2c_errors=$(dmesg 2>/dev/null | grep -c "i2c.*timeout\|i2c.*error" 2>/dev/null)
     i2c_errors=${i2c_errors:-0}
     i2c_errors=$(echo "$i2c_errors" | head -n 1 | tr -d ' ')
 
-    if [ "$i2c_errors" -gt "$I2C_ERR_WARN" ] 2>/dev/null; then
-        log_message "WARNING" "I2C bus errors detected: $i2c_errors total"
-
-        # Check for specific I2C bus issues
-        dmesg 2>/dev/null | grep "i2c.*timeout\|i2c.*error" | tail -n 3 | while read line; do
-            log_message "ERROR" "I2C: $line"
-        done
+    prev=${LAST_I2C_DMESG_COUNT:-0}
+    if [ "$i2c_errors" -lt "$prev" ] 2>/dev/null; then
+        prev=$i2c_errors
     fi
+    delta=$((i2c_errors - prev))
+    LAST_I2C_DMESG_COUNT=$i2c_errors
+
+    # Only log when new matching lines appear (delta), not on every interval for stale totals.
+    if [ "$delta" -le 0 ] 2>/dev/null; then
+        return
+    fi
+    if ! [ "$i2c_errors" -gt "$I2C_ERR_WARN" ] 2>/dev/null; then
+        return
+    fi
+
+    log_message "WARNING" "I2C dmesg matches increased by ${delta} (total ${i2c_errors})"
+
+    dmesg 2>/dev/null | grep "i2c.*timeout\|i2c.*error" | tail -n 3 | while read line; do
+        log_message "ERROR" "I2C: $line"
+    done
 }
 
 check_watchdog_status() {
-    # Check AST2600 watchdog status
+    # Check AST2600 watchdog status; log once when any device enters "low timeleft" until all recover.
+    local any_low=0
+    local low_detail=""
+
     for wdt in /sys/class/watchdog/watchdog*; do
         if [ -d "$wdt" ]; then
             local wdt_name=$(basename "$wdt")
@@ -127,17 +176,29 @@ check_watchdog_status() {
             if [ -f "$wdt/state" ]; then
                 local state=$(cat "$wdt/state" 2>/dev/null)
                 if [ "$state" = "active" ]; then
-                    # Watchdog is active, check timeleft if available
                     if [ -f "$wdt/timeleft" ]; then
                         local timeleft=$(cat "$wdt/timeleft" 2>/dev/null || echo "unknown")
-                        if [ "$timeleft" != "unknown" ] && [ "$timeleft" -lt 30 ]; then
-                            log_message "WARNING" "$wdt_name has only ${timeleft}s remaining!"
+                        if [ "$timeleft" != "unknown" ] && [ "$timeleft" -lt 30 ] 2>/dev/null; then
+                            any_low=1
+                            low_detail="${low_detail} ${wdt_name}=${timeleft}s"
                         fi
                     fi
                 fi
             fi
         fi
     done
+
+    if [ "$any_low" -eq 1 ]; then
+        if [ "$_HM_WDT_BAD" -eq 0 ]; then
+            _HM_WDT_BAD=1
+            log_message "WARNING" "Watchdog low timeleft:${low_detail}"
+        fi
+    else
+        if [ "$_HM_WDT_BAD" -eq 1 ]; then
+            _HM_WDT_BAD=0
+            log_message "INFO" "Watchdog timeleft OK"
+        fi
+    fi
 }
 
 check_temperature() {
@@ -172,7 +233,15 @@ check_temperature() {
     done
 
     if [ "$max_temp" -gt "$TEMP_WARN_C" ]; then
-        log_message "WARNING" "High temperature detected: ${max_temp}°C (from ${temp_location})"
+        if [ "$_HM_TEMP_BAD" -eq 0 ]; then
+            _HM_TEMP_BAD=1
+            log_message "WARNING" "High temperature detected: ${max_temp}°C (from ${temp_location})"
+        fi
+    else
+        if [ "$_HM_TEMP_BAD" -eq 1 ]; then
+            _HM_TEMP_BAD=0
+            log_message "INFO" "Temperature returned below ${TEMP_WARN_C}°C (max ${max_temp}°C)"
+        fi
     fi
 }
 
@@ -180,27 +249,53 @@ check_filesystem() {
     # Check for filesystem issues
     local root_usage=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
     if [ "$root_usage" -gt 90 ]; then
-        log_message "WARNING" "Root filesystem ${root_usage}% full"
+        if [ "$_HM_FS_BAD" -eq 0 ]; then
+            _HM_FS_BAD=1
+            log_message "WARNING" "Root filesystem ${root_usage}% full"
 
-        # Log largest directories
-        log_message "INFO" "Largest directories in /:"
-        du -hx / --max-depth=2 2>/dev/null | sort -rh | head -n 5 | while read line; do
-            log_message "INFO" "  $line"
-        done
+            # Log largest directories
+            log_message "INFO" "Largest directories in /:"
+            du -hx / --max-depth=2 2>/dev/null | sort -rh | head -n 5 | while read line; do
+                log_message "INFO" "  $line"
+            done
+        fi
+    else
+        if [ "$_HM_FS_BAD" -eq 1 ]; then
+            _HM_FS_BAD=0
+            log_message "INFO" "Root filesystem usage OK (${root_usage}%)"
+        fi
     fi
 }
 
 check_critical_services() {
-    # Check if critical services are running
-    local critical_services="systemd-journald systemd-udevd"
+    # Check if critical services are running (edge-triggered to avoid log spam).
+    if ! command -v systemctl &> /dev/null; then
+        return
+    fi
 
-    for service in $critical_services; do
-        if command -v systemctl &> /dev/null; then
-            if ! systemctl is-active --quiet "$service" 2>/dev/null; then
-                log_message "ERROR" "Critical service $service is not running"
-            fi
+    if ! systemctl is-active --quiet "systemd-journald" 2>/dev/null; then
+        if [ "$_HM_SVC_JOURNALD_BAD" -eq 0 ]; then
+            _HM_SVC_JOURNALD_BAD=1
+            log_message "ERROR" "Critical service systemd-journald is not running"
         fi
-    done
+    else
+        if [ "$_HM_SVC_JOURNALD_BAD" -eq 1 ]; then
+            _HM_SVC_JOURNALD_BAD=0
+            log_message "INFO" "Critical service systemd-journald is active again"
+        fi
+    fi
+
+    if ! systemctl is-active --quiet "systemd-udevd" 2>/dev/null; then
+        if [ "$_HM_SVC_UDEVD_BAD" -eq 0 ]; then
+            _HM_SVC_UDEVD_BAD=1
+            log_message "ERROR" "Critical service systemd-udevd is not running"
+        fi
+    else
+        if [ "$_HM_SVC_UDEVD_BAD" -eq 1 ]; then
+            _HM_SVC_UDEVD_BAD=0
+            log_message "INFO" "Critical service systemd-udevd is active again"
+        fi
+    fi
 }
 
 # Log startup
@@ -229,4 +324,3 @@ while true; do
 
     sleep "$CHECK_INTERVAL"
 done
-
