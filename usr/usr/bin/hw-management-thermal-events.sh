@@ -1169,6 +1169,7 @@ if [ "$1" == "add" ]; then
 			fi
 		fi
 
+		update_psu_done
 	fi
 	if [ "$2" == "sxcore" ]; then
 		if [ -f "$config_path"/minimal_unsupported ]; then
@@ -1534,6 +1535,7 @@ else
 		if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
 			rm -f "$config_path"/"$psu_name"_i2c_bus
 		fi
+		update_psu_done
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"

@@ -499,6 +499,41 @@ check_n_init()
 	fi
 }
 
+# Create/remove psu_done marker in eeprom folder based on PSU discovery.
+# Marker is created when count of psuN_vpd files in eeprom folder matches
+# expected count from hotplug_psus config file, otherwise removed.
+# return none
+update_psu_done()
+{
+	local expected discovered marker
+
+	marker="$eeprom_path/psu_done"
+	
+	if [ ! -f "$config_path/hotplug_psus" ]; then
+		rm -f "$marker"
+		return 0
+	fi
+
+	expected=$(< "$config_path/hotplug_psus")
+	if ! [[ "$expected" =~ ^[0-9]+$ ]] || [ "$expected" -eq 0 ]; then
+		rm -f "$marker"
+		return 0
+	fi
+
+	discovered=0
+	if [ -d "$eeprom_path" ]; then
+		for f in "$eeprom_path"/psu[0-9]_vpd "$eeprom_path"/psu[0-9][0-9]_vpd; do
+			[ -f "$f" ] && discovered=$((discovered + 1))
+		done
+	fi
+
+	if [ "$discovered" -ge "$expected" ]; then
+		: > "$marker"
+	else
+		rm -f "$marker"
+	fi
+}
+
 # Read int val from file, inc it by val and save back
 # value can negative
 # $1 - counter file name
