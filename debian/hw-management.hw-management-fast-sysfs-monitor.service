@@ -1,5 +1,8 @@
 [Unit]
 Description=HW management Fast Lables Monitor
+After=hw-management.service
+Requires=hw-management.service
+PartOf=hw-management.service
 
 StartLimitIntervalSec=1200
 StartLimitBurst=5
