@@ -21,21 +21,21 @@
       "HiThreshRegVal": "string, optional. Bytes for high threshold; scaled to max.",
       "Min": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent.",
       "Max": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent.",
-      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max/crit).",
-      "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit; also fills min if LoThreshRegVal/Min absent.",
-      "EmergencyMin": "number, optional. User low-side emergency bound (engineering units). Runtime: .../<j>/lemerg.",
-      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit; also fills max if HiThreshRegVal/Max absent.",
-      "EmergencyMax": "number, optional. User high-side emergency bound. Runtime: .../<j>/emerg."
+      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max/warn).",
+      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if LoThreshRegVal/Min absent.",
+      "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
+      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if HiThreshRegVal/Max absent.",
+      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit."
     },
     "runtime_paths": {
       "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel.",
       "type": "from Device.Type",
+      "lwarn": "from Device.WarningMin",
       "lcrit": "from Device.CriticalMin",
-      "lemerg": "from Device.EmergencyMin",
+      "warn": "from Device.WarningMax",
       "crit": "from Device.CriticalMax",
-      "emerg": "from Device.EmergencyMax",
-      "min": "LoThreshRegVal×Scale, else Min, else CriticalMin",
-      "max": "HiThreshRegVal×Scale, else Max, else CriticalMax"
+      "min": "LoThreshRegVal×Scale, else Min, else WarningMin",
+      "max": "HiThreshRegVal×Scale, else Max, else WarningMax"
     },
     "deployment_note": "Copy only the array in example_leak_detectors to /etc/hw-management-bmc-a2d-leakage-config.json (or merge with platform file). The full JSON in this file is for documentation; the BMC tool expects a top-level JSON array."
   },
@@ -55,10 +55,10 @@
           "Probe": false,
           "Type": "rop",
           "Scale": 0.000244140625,
-          "CriticalMin": 0.05,
-          "EmergencyMin": 0.02,
-          "CriticalMax": 0.85,
-          "EmergencyMax": 0.95,
+          "WarningMin": 0.05,
+          "CriticalMin": 0.02,
+          "WarningMax": 0.85,
+          "CriticalMax": 0.95,
           "CfgReg": "0x00",
           "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
         },
