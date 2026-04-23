@@ -1,16 +1,36 @@
+From 57f844a3fd89b5cc130ee1d8dddb2688b67bf6b7 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Thu, 23 Apr 2026 18:12:25 +0300
+Subject: [PATCH 6.12 1/1] DTS: Aspeed: Nvidia spc6 bmc dts
+
+Add DTS for AST2700 A2 for Nvidia.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ arch/arm64/boot/dts/aspeed/Makefile           |   1 +
+ .../aspeed/aspeed-nvidia-spc6-bmc-core.dtsi   | 125 +++++
+ .../dts/aspeed/aspeed-nvidia-spc6-bmc.dts     | 467 ++++++++++++++++++
+ .../boot/dts/aspeed/nvidia-ast27xx-irot.dtsi  |  25 +
+ .../boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi |   8 +
+ 5 files changed, 626 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc-core.dtsi
+ create mode 100644 arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
+ create mode 100644 arch/arm64/boot/dts/aspeed/nvidia-ast27xx-irot.dtsi
+ create mode 100644 arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi
+
 diff --git a/arch/arm64/boot/dts/aspeed/Makefile b/arch/arm64/boot/dts/aspeed/Makefile
+index 056a6bd28..9184adf48 100644
 --- a/arch/arm64/boot/dts/aspeed/Makefile
 +++ b/arch/arm64/boot/dts/aspeed/Makefile
-@@ -14,5 +14,6 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
- 	ast2700-evb-256-abr.dtb \
+@@ -15,4 +15,5 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
  	ast2700-slt.dtb \
  	ast2700-fpga.dtb \
  	aspeed-nvidia-spc6-a1-bmc.dtb \
 +	aspeed-nvidia-spc6-bmc.dtb \
  	ast2700-ci-host.dtb
-
 diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc-core.dtsi b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc-core.dtsi
 new file mode 100644
+index 000000000..d3b9eb76a
 --- /dev/null
 +++ b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc-core.dtsi
 @@ -0,0 +1,125 @@
@@ -139,12 +159,12 @@ new file mode 100644
 +	/*E0-E7*/
 +	"", "", "", "", "", "", "", "";
 +};
-
 diff --git a/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
 new file mode 100644
+index 000000000..81f4beeb8
 --- /dev/null
 +++ b/arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc.dts
-@@ -0,0 +1,464 @@
+@@ -0,0 +1,467 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/dts-v1/;
 +
@@ -180,12 +200,15 @@ new file mode 100644
 +};
 +
 +/*
-+ * SPI1: BIOS recovery (CS0, CPLD selects which flash) and TPM (CS1, AST2700 only).
-+ * AST2700 uses &spi1 (aspeed-g7.dtsi); AST2600 uses &spi1raw.
++ * SPI0: BIOS recovery (CS0, CPLD selects which flash) and TPM (CS1, AST2700 only).
++ * AST2700 uses &spi0; AST2600 uses &spi1raw.
 + * Remove default flash@0/flash@1 from dtsi so spidev and tpm are the only children.
 + */
-+&spi1 {
++&spi0 {
++	compatible = "aspeed,ast2700-spi-txrx";
 +	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_spi0_default &pinctrl_spi0_cs1_default>;
 +	/delete-node/ flash@0;
 +	/delete-node/ flash@1;
 +	spidev@0 {
@@ -609,23 +632,9 @@ new file mode 100644
 +	i3c-scl-hz = <12500000>;
 +	mctp-controller;
 +};
-
-diff --git a/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi
-new file mode 100644
---- /dev/null
-+++ b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi
-@@ -0,0 +1,8 @@
-+
-+#include "nvidia-ast27xx-irot.dtsi"
-+//#include "nvidia-optee-vrot.dtsi"
-+
-+// enable OTP for testing (might remove later)
-+&otp {
-+	status = "okay";
-+};
-
 diff --git a/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-irot.dtsi b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-irot.dtsi
 new file mode 100644
+index 000000000..7cc319e40
 --- /dev/null
 +++ b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-irot.dtsi
 @@ -0,0 +1,25 @@
@@ -654,4 +663,20 @@ new file mode 100644
 +&mbox0 {
 +	status = "okay";
 +};
+diff --git a/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi
+new file mode 100644
+index 000000000..b23cec8d9
+--- /dev/null
++++ b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda.dtsi
+@@ -0,0 +1,8 @@
++
++#include "nvidia-ast27xx-irot.dtsi"
++//#include "nvidia-optee-vrot.dtsi"
++
++// enable OTP for testing (might remove later)
++&otp {
++	status = "okay";
++};
+-- 
+2.34.1
 
