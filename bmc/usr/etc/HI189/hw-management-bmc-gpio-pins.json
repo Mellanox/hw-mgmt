@@ -1,0 +1,21 @@
+{
+	"description": "GPIO sysfs init for HI189 / SPC6 AST2700 BMC. Aligned with spc6-ast2700-a1-bmc_ready.sh: aspeed+145 (GP_BMC_PWR_CYCLE_BMC) is not exported (can power-cycle BMC); expander+8 mux init value 0.",
+	"bmc_stby_ready": {
+		"chip": "aspeed",
+		"offset": 34
+	},
+	"pins": [
+		{ "chip": "expander24", "offset": 1, "direction": "in", "symlink": "GP_EROT_RST_IN_L" },
+		{ "chip": "expander24", "offset": 2, "direction": "in", "symlink": "GP_3V3_BMC_PHY_PG" },
+		{ "chip": "expander24", "offset": 3, "direction": "out", "value": 1, "symlink": "GP_BMC_PWR_CYCLE_3V3_MASK_L" },
+		{ "chip": "expander24", "offset": 6, "direction": "in", "symlink": "SE_SOC_EROT_BOOT_COMPLETE" },
+		{ "chip": "expander24", "offset": 7, "direction": "out", "symlink": "GP_BMC_WP_CTRL_GPIO_L" },
+		{ "chip": "expander24", "offset": 8, "direction": "out", "value": 0, "symlink": "GP_BMC_REC_SPI_MUX1_SEL" },
+		{ "chip": "expander24", "offset": 11, "direction": "out", "value": 1, "symlink": "GP_JTAG_BMC_CPLD_BURN_EN_L" },
+		{ "chip": "expander24", "offset": 12, "direction": "in", "symlink": "GP_PWR_BANK_PRESENT_L" },
+		{ "chip": "expander24", "offset": 19, "direction": "out", "value": 0, "symlink": "GP_PROD_CS_FLASH0_EN" },
+		{ "chip": "expander24", "offset": 21, "direction": "out", "value": 0, "symlink": "GP_PROD_CS_FLASH1_EN" },
+		{ "chip": "aspeed", "offset": 34, "direction": "in", "symlink": "GP_STBY_PG" },
+		{ "chip": "aspeed", "offset": 144, "direction": "out", "value": 1, "symlink": "GP_BMC_GPIO_EXP_RESET_L" }
+	]
+}

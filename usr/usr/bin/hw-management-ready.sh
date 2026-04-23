@@ -77,6 +77,12 @@ if check_simx && [ "$product_sku" == "HI193" ]; then
 	echo "SN6600_LD emulation, exiting"
 	exit 0
 fi
+	
+#TEMPORARY hw-management mockup values for simx
+if check_simx && [ "$product_sku" == "HI194" ]; then
+	echo "SN7170_LD emulation, exiting"
+	exit 0
+fi
 
 case $board_type in
 VMOD0014)

@@ -33,8 +33,8 @@
 #
 
 source hw-management-helpers.sh
-board_type=$(< $board_type_file)
-sku=$(< $sku_file)
+dmi_board_name=$(< "$board_type_file")
+dmi_sku=$(< "$sku_file")
 cpu_type=$(<"$config_path"/cpu_type)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
@@ -72,7 +72,7 @@ dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 fan_debounce_timeout_ms=2000
 cfl_comex_vcore_out_idx=2
 
-case "$board_type" in
+case "$dmi_board_name" in
 VMOD0014)
 	i2c_bus_max=14
 	psu1_i2c_addr=0x50
@@ -301,7 +301,7 @@ find_eeprom_name()
 	fi
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		if [ "$board_type" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
+		if [ "$dmi_board_name" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
 			eeprom_name=ipmi_info
 		else
 			eeprom_name=vpd_info
@@ -310,7 +310,7 @@ find_eeprom_name()
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
 		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		case $board_type in
+		case $dmi_board_name in
 		VMOD0014)
 			if [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ]; then
 				eeprom_name=psu1_info
@@ -329,7 +329,7 @@ find_eeprom_name()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				if [[ $sku == "HI144"  ||  $sku == "HI147" ]]; then
+				if [[ $dmi_sku == "HI144"  ||  $dmi_sku == "HI147" ]]; then
 					eeprom_name=psu2_info
 				else
 					eeprom_name=psu4_info
@@ -395,7 +395,7 @@ find_eeprom_name_on_remove()
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
 		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		case $board_type in
+		case $dmi_board_name in
 		VMOD0014)
 			if [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ]; then
 				eeprom_name=psu1_info
@@ -411,7 +411,7 @@ find_eeprom_name_on_remove()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				if [[ $sku == "HI144" || $sku == "HI147" ]]; then
+				if [[ $dmi_sku == "HI144" || $dmi_sku == "HI147" ]]; then
 					eeprom_name=psu2_info
 				else
 					eeprom_name=psu4_info
@@ -444,7 +444,7 @@ function asic_cpld_add_handler()
 {
 	local -r ASIC_I2C_PATH="${1}"
 
-	# Verify if CPLD attributes are exist
+	# Verify if CPLD attributes exist
 	if [ -f "$config_path/cpld_port" ]; then
 		local  cpld=$(< $config_path/cpld_port)
 		if [ "$cpld" == "cpld1" ]; then
@@ -485,7 +485,7 @@ function set_fan_direction()
 			print_function_call "$0" "${FUNCNAME[0]}" "$1 $2 $3. ./system/fan_dir not found"
 			return
 		fi
-		if [[ "$sku" == "HI117" ]]; then
+		if [[ "$dmi_sku" == "HI117" ]]; then
 			return
 		fi
 		local fan_debounce_timer
@@ -615,7 +615,7 @@ function handle_hotplug_fan_event()
 	local bus=
 	local addr=
 
-	case "$board_type" in
+	case "$dmi_board_name" in
 	VMOD0014)
 		case $attribute in
 		fan1)
@@ -684,7 +684,7 @@ function handle_hotplug_psu_event()
 	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
 
 	if [ ${dummy_psus_supported} -eq 1 ]; then
-		case ${sku} in
+		case ${dmi_sku} in
 		HI157)
 			psu_i2c_bus=(4 4 4 4)
 			psu_i2c_addr=(59 58 5b 5a)
@@ -839,31 +839,33 @@ function handle_fantray_led_event()
 
 function check_cpld_attrs_num()
 {
-   board=$(cat /sys/devices/virtual/dmi/id/board_name)
-   cpld_num=$(cat $config_path/cpld_num)
-   case "$board" in
-   VMOD0001|VMOD0003)
-       cpld_num=$((cpld_num-1))
-       ;;
-   *)
-       ;;
-   esac
+	local cpld_num
+	# Read cpld_num from config (avoid cat, use builtin read)
+	read -r cpld_num < "$config_path/cpld_num" 2>/dev/null || cpld_num=0
 
-   return $cpld_num
+	case "$dmi_board_name" in
+		VMOD0001|VMOD0003)
+			cpld_num=$((cpld_num - 1))
+		;;
+	*)
+		;;
+	esac
+	[ "$cpld_num" -lt 0 ] && cpld_num=0
+	return "$cpld_num"
 }
 
 function check_cpld_attrs()
 {
-    attrname="$1"
-    cpld_num="$2"
-    take=1
+	local attrname="$1"
+	local cpld_num="$2"
+	local take=1 num
 
-    # Extracting the cpld number if the attribute starts with cpld<num>
-    num=`echo $attrname | grep -Po '^(cpld)\K\d+'`
-    # Seeing if the cpld index is valid for the platform
-    [[ ! -z "$num" ]] && [ $num -gt $cpld_num ] && take=0
-
-    return $take
+	# Extract digits after "cpld" at start (pure bash, no grep)
+	if [[ "$attrname" =~ ^cpld([0-9]+) ]]; then
+		num="${BASH_REMATCH[1]}"
+		[[ -n "$num" && $num -gt $cpld_num ]] && take=0
+	fi
+	return $take
 }
 
 handle_cpld_versions()
@@ -925,7 +927,7 @@ if [ "$1" == "add" ]; then
 			fi
 		fi
 		# ADS1015 used on SN2201 has scale for every input
-		if [ "$board_type" == "VMOD0014" ]; then
+		if [ "$dmi_board_name" == "VMOD0014" ]; then
 			for i in {0..7}; do
 				if [ -f "$3""$4"/in_voltage"$i"_scale ]; then
 					check_n_link "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
@@ -984,8 +986,7 @@ if [ "$1" == "add" ]; then
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
 			else
-				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-				case $sku in
+				case $dmi_sku in
 				HI160)
 					# DPU event, replace output folder.
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
@@ -1006,7 +1007,7 @@ if [ "$1" == "add" ]; then
 				esac
 			fi
 		fi
-		case $board_type in
+		case $dmi_board_name in
 		VMOD0014)
 			# For SN2201 indexes are from 0 to 9.
 			for i in {0..9}; do 
@@ -1027,8 +1028,7 @@ if [ "$1" == "add" ]; then
 		*)
 			# TMP workaround until dictionary is implemented.
 			dev_addr=$(echo "$4" | xargs dirname | xargs dirname | xargs basename )
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-			if [[ $sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
+			if [[ $dmi_sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
 				prefix="voltmon6"
 			fi
 			# Creating links for only temp1 attribute. Skipping temp2 and others
@@ -1171,8 +1171,7 @@ if [ "$1" == "add" ]; then
 			# Default case, nothing to do.
 			;;
 		mlxreg-io.*)
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-			if [[ $sku == "HI126" ]]; then
+			if [[ $dmi_sku == "HI126" ]]; then
 				# Line card event, replace output folder.
 				input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
 				find_linecard_num "$input_bus_num"
@@ -1187,12 +1186,11 @@ if [ "$1" == "add" ]; then
 		esac
 		# Allow insertion of all the attributes, but skip redundant cpld entries.
 		if [ -d "$3""$4" ]; then
-			local cpld_num
+			check_cpld_attrs_num
+			cpld_num=$?
 			for attrpath in "$3""$4"/*; do
 				take=10
 				attrname=$(basename "${attrpath}")
-				check_cpld_attrs_num
-				cpld_num=$?
 				check_cpld_attrs "$attrname" "$cpld_num"
 				take=$?
 				if [ ! -d "$attrpath" ] && [ ! -L "$attrpath" ] &&
@@ -1308,12 +1306,11 @@ if [ "$1" == "add" ]; then
 		fi
 		case $eeprom_name in
 		fan*_info)
-			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
+			if [[ $dmi_sku == "HI138" ]] || [[ $dmi_sku == "HI139" ]]; then
 				exit 0
 			fi
 			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
-			if [ "$board_type" == "VMOD0014" ]; then
+			if [ "$dmi_board_name" == "VMOD0014" ]; then
 				hw-management-vpd-parser.py -t FIXED_FIELD_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
 			else
 				hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
@@ -1333,7 +1330,7 @@ if [ "$1" == "add" ]; then
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
 		cable_cartridge*_eeprom*)
-			if [ "$board_type" == "VMOD0021" ] || [ "$board_type" == "VMOD0023" ]; then
+			if [ "$dmi_board_name" == "VMOD0021" ] || [ "$dmi_board_name" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
 				fi
@@ -1352,7 +1349,7 @@ if [ "$1" == "add" ]; then
 			fi
 			;;
 		swb_info)
-			case "$board_type" in
+			case "$dmi_board_name" in
 				VMOD0021|VMOD0023|VMOD0025)
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/swb_data
@@ -1391,7 +1388,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Creating dpu folders hierarchy upon dpu udev add event.
 	if [ "$2" == "dpu" ]; then
-		case $sku in
+		case $dmi_sku in
 		HI160)
 			slot_num=$(find_dpu_slot "$3$4")
 			if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
@@ -1452,7 +1449,7 @@ elif [ "$1" == "fantray-led-event" ]; then
 	if [ ! -f "${udev_ready}" ]; then
 		exit 0
 	fi
-	case "$board_type" in
+	case "$dmi_board_name" in
 	VMOD0014)
 		handle_fantray_led_event "${2}" "${3}"
 		;;
@@ -1472,7 +1469,7 @@ else
 				environment_path="$hw_management_path"/lc"$linecard_num"/environment
 			fi
 		fi
-		if [ "$board_type" == "VMOD0014" ]; then
+		if [ "$dmi_board_name" == "VMOD0014" ]; then
 			for i in {0..7}; do
 				if [ -L $environment_path/"$2"_"$5"_voltage_scale_"$i" ]; then
 					unlink $environment_path/"$2"_"$5"_voltage_scale_"$i"
@@ -1523,8 +1520,7 @@ else
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
 			else
-				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
-				case $sku in
+				case $dmi_sku in
 				HI160)
 					# DPU event, replace output folder.
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
@@ -1630,7 +1626,7 @@ else
 			# Default case, nothing to do.
 			;;
 		mlxreg-io.*)
-			if [[ $sku == "HI126" ]]; then
+			if [[ $dmi_sku == "HI126" ]]; then
 				# Line card event, replace output folder.
 				input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
 				find_linecard_num "$input_bus_num"
@@ -1706,7 +1702,7 @@ else
 	fi
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
-		case $sku in
+		case $dmi_sku in
 		HI160)
 			slot_num=$(find_dpu_slot "$3$4")
 			if [ -e "$devtree_file" ]; then

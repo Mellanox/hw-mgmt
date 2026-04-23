@@ -1,0 +1,250 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# /var/run/hw-management/system — runtime layout (HI189 / nvsw-bmc-hid162)
+#
+# Source of truth for register/event labels: Linux driver
+#   recipes-kernel/linux/linux-6.12/0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+#   → drivers/platform/mellanox/nvsw-bmc-hid162.c
+#
+# Structures (HID189):
+#   • static struct mlxreg_core_data nvsw_bmc_hid189_regio_data[]   — mlxreg-io sysfs (mode per entry)
+#   • static struct mlxreg_core_item nvsw_bmc_hid189_hotplug_items_data[] — mlxreg-hotplug; each item
+#     points at a nested mlxreg_core_data[] array (.data) whose .label fields become hwmon attrs
+#
+# Userspace:
+#   system_path=/var/run/hw-management/system  (hw-management-bmc-helpers.sh)
+#
+# Udev: usr/etc/HI189/5-hw-management-bmc-events.rules
+#   • mlxreg-io  (regio):  add/rm → hw-management-bmc-events.sh add|rm regio %S %p
+#   • mlxreg-hotplug:      add/rm → … add|rm hotplug %S %p
+#
+# Handler: usr/etc/HI189/hw-management-bmc-events.sh — ACTION add, EVENT regio|hotplug:
+#   mkdir -p $system_path ; for each file under the hwmon device path, ln -sf into $system_path/<attrname>
+#
+# Note: usr/etc/HI189/99-hw-management-bmc-mctp.rules is IRoT MCTP (mctpirot*); it does not
+#   populate /var/run/hw-management/system. Deployed to /lib/udev/rules.d by plat-specific-preps.
+
+########################################################################
+# 1) mlxreg-io — nvsw_bmc_hid189_regio_data[] (attribute name = .label)
+#
+# .mode is applied by mlxreg-io to the sysfs file (octal). Typical meanings:
+#   0444  read-only for all
+#   0644  read/write (owner), read for group/other
+#   0200  write-only (owner) — BMC-controlled pulse/bits
+#
+# label                                   mode
+# --------------------------------------  ------
+cpld1_version                           0444
+cpld2_version                           0444
+cpld3_version                           0444
+cpld4_version                           0444
+cpld1_pn                                0444
+cpld2_pn                                0444
+cpld3_pn                                0444
+cpld4_pn                                0444
+cpld1_version_min                       0444
+cpld2_version_min                       0444
+cpld3_version_min                       0444
+cpld4_version_min                       0444
+bios_status_ro                          0444
+bios_start_retry                        0444
+bios_active_image                       0444
+pwr_converter_prog_en                   0644
+bmc_req_conf_flash_updt                 0644
+graceful_power_off                      0644
+bmc_perst_en                            0200
+bmc_shutdown_unlock                     0200
+stby_pwr_en_unmask                      0200
+uart_baud_rate                          0644
+cpu_mctp_ready                          0644
+cpu_shutdown_req                        0444
+vpd_wp                                  0644
+pcie_asic_reset_dis                     0644
+cpu_power_off_ready                     0644
+pwr_button_halt                         0644
+pwr_cycle                               0200
+pwr_down                                0644
+aux_pwr_cycle                           0200
+bmc_to_cpu_ctrl                         0644
+uart_sel                                0644
+asics_reset                             0644
+mcu1_reset                              0644
+platform_reset                          0200
+gp_cpld_rtc_clr                         0200
+cpld_phy2_rst                           0200
+cpld_phy1_reset                         0200
+tpm_reset                               0200
+bmc_tpm_reset                           0200
+reset_long_pb                           0444
+reset_short_pb                          0444
+reset_aux_pwr_or_fu                     0444
+reset_swb_dc_dc_pwr_fail                0444
+reset_swb_wd                            0444
+reset_asic_thermal                      0444
+reset_soc                               0444
+reset_system                            0444
+reset_sw_pwr_off                        0444
+reset_thermal                           0444
+reset_pwr_converter_fail                0444
+reset_main_51v                          0444
+reset_mgmt_pwr                          0444
+port80                                  0444
+switch_ic_qty                           0444
+gp_swb_mgmt_present                     0444
+gp_io_brd_prsnt                         0444
+gp_tpm_brd_prsnt                        0444
+gp_bmc_presnt                           0444
+sb_clk_brd_asic_ci_boot_fail            0444
+gp_bmc_tpm_brd_prsnt                    0444
+sb_clk_brd_asic_fail                    0444
+asics_pg                                0444
+jtag_cap                                0444
+jtag_enable                             0644
+bios_status                             0644
+conf_flash_updt_done                    0644
+non_active_bios_select                  0644
+bios_upgrade_fail                       0444
+bios_image_invert                       0644
+cpu_req_conf_flash_updt                 0644
+mcu1_recovery                           0644
+gp_vdd_spd_dis                          0644
+gp_spd_b_wp                             0644
+gp_spd_a_wp                             0644
+sb_clk_brd_prog_en                      0644
+cpu_int_enable                          0644
+cpu_spi_ctrl                            0644
+ignore_next_reset                       0644
+bmc_reset_reg                           0644
+asic_pg_fail                            0444
+spi_chnl_select                         0644
+asic_clk_brd_hw_id                      0444
+config1                                 0444
+config2                                 0444
+config3                                 0444
+
+########################################################################
+# 2) mlxreg-hotplug — labels under nvsw_bmc_hid189_hotplug_items_data[] (.data → nested arrays)
+#
+# These appear as hwmon attributes for the mlxreg-hotplug device. In practice the sysfs files are
+# status/event style; treat as read-only from NOS unless your driver/docs say otherwise.
+#
+# nvsw_bmc_hid189_pg1_events_items_data
+gp_vdd_pg
+gp_vdd_t_pg
+gp_pl_dvdd_t_pg
+gp_pl_avdd_t_pg
+gp_pl_hvdd_t_pg
+gp_vddhbid_t_pg
+1v8_vddio_pg
+gp_1v8_vddqps_pg
+#
+# nvsw_bmc_hid189_pg2_events_items_data
+vdd_misc_pg
+gp_3v3_bmc_pg
+vdd_1v8_pg
+ddr_pg
+12v_pg
+vdd_3v3_pg
+vdd_alw_pwrgd
+vddcr_pg
+#
+# nvsw_bmc_hid189_pg4_events_items_data
+gp_3v3_osc_pg
+gp_vdrv_pg
+#
+# nvsw_bmc_hid189_asic_items_data
+asic1_health
+#
+# nvsw_bmc_hid189_asic_temp_items_data
+asic1_temp_warn
+asic1_temp_shtdn
+#
+# nvsw_bmc_hid189_dc_ok_events_items_data
+pdb0_12v_pg
+pdb1_12v_pg
+holder16_pg
+holder17_pg
+pdb0_hsc_pg
+pdb1_hsc_pg
+#
+# nvsw_bmc_hid189_leakage_items_data
+leakage1
+leakage2
+#
+# nvsw_bmc_hid189_alarms_items_data
+ssd_i2c_alert
+wd_exp
+5v_usb
+holder9_pg
+holder11_pg
+bmc_phy_pg
+ssd_pg
+leakage_aggr
+#
+# nvsw_bmc_hid189_brd2_events_items_data
+bmc_tpm_pirq
+smb_alert
+cpu_reset_deassert
+bios_started
+bios_boot_completed
+#
+# nvsw_bmc_hid189_pg3_events_items_data
+hsc0_smb_alert
+hsc1_smb_alert
+pdb_fsd
+#
+# nvsw_bmc_hid189_alarms2_items_data
+psys_alert
+vdd_mem
+svi3_vr_alert
+thermtrip_alert
+vddq_vrhot
+#
+# nvsw_bmc_hid189_vr1_pwr_alert_items_data
+asic1_vdd_pwr_alert
+asic1_vdd_t0_7_pwr_alert
+asic1_dvdd_t0_7_pwr_alert
+asic1_avdd_t0_7_pwr_alert
+asic1_hvdd_pwr_alert
+asic1_vdddhbid_pwr_alert
+#
+# nvsw_bmc_hid189_events_items_data (also referenced from HID189 hotplug aggregator)
+graceful_power_off_req
+cpu_power_off_ready
+cpu_reset
+apml_smb_alert
+cpu_unexp_power_off
+
+########################################################################
+# 3) GPIO symlinks under the same directory (bmc_init_sysfs_gpio)
+#
+# From usr/etc/HI189/hw-management-bmc-gpio-pins.json — symlink name = stable name under
+# /var/run/hw-management/system/<symlink> → gpio…/value after wait_platform_drv.
+#
+# symlink                              direction   chip        offset
+# -----------------------------------  ----------  ----------  ------
+GP_EROT_RST_IN_L                       in          expander24  1
+GP_3V3_BMC_PHY_PG                      in          expander24  2
+GP_BMC_PWR_CYCLE_3V3_MASK_L            out (1)     expander24  3
+SE_SOC_EROT_BOOT_COMPLETE              in          expander24  6
+GP_BMC_WP_CTRL_GPIO_L                  out         expander24  7
+GP_BMC_REC_SPI_MUX1_SEL                out (1)     expander24  8
+GP_JTAG_BMC_CPLD_BURN_EN_L             out (1)     expander24  11
+GP_PWR_BANK_PRESENT_L                  in          expander24  12
+GP_PROD_CS_FLASH0_EN                   out (0)     expander24  19
+GP_PROD_CS_FLASH1_EN                   out (0)     expander24  21
+GP_STBY_PG                             in          aspeed      34
+GP_BMC_PWR_CYCLE_1V8                   out (1)     aspeed      145
+GP_BMC_PWR_CYCLE_1V8_MASK_L            out (1)     aspeed      144
+#
+# bmc_stby_ready (same JSON): chip aspeed, offset 34 — used by wait_bmc_standby_ready(); not
+# necessarily duplicated as GP_STBY_PG symlink if platform omits symlink for that pin.
+
+# Notes
+#
+# • If the kernel patch or HID branch changes, regenerate the label/mode tables from nvsw-bmc-hid162.c.
+#
+# • Duplicate names (e.g. config1/config2/config3) appear once in regio; same label may map to
+#   different register slices via .mask/.bit in the driver.
+#
+# • Hotplug nested arrays reuse HID189 tables where noted in the driver (shared silicon blocks).

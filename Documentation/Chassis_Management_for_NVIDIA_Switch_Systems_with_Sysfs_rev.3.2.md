@@ -5318,9 +5318,8 @@ cat $bsp_path/system/cartridge1
 
 **Description:** Get ASIC power good failure status. Indicates power sequencing failure on the ASIC.
 
-Note: This attribute is for liquid-cooled systems (SN58XX_LD family, N61XX_LD
-family, SN66XX_LD family). SN6600_LD is single-ASIC but still exposes this node
-on the validated tree. N6100_LD has 4 ASICs with individual failure tracking.
+Note: This attribute is for multi-ASIC systems (SN58XX_LD family, N61XX_LD family, SN66XX_LD family).
+N6100_LD has 4 ASICs with individual failure tracking.
 
 **Access:** Read only
 
@@ -6028,10 +6027,7 @@ cat $bsp_path/thermal/pdb_pwr_conv1_temp1_max
 
 **Description:** Read PDB MOSFET ambient temperature sensor
 
-Note: This attribute is for liquid-cooled systems only (SN58XX_LD family,
-N61XX_LD family). On SN6600_LD the validated tree does not provide separate
-`pdb_mosfet_amb<N>` symlinks; use PDB hotswap and converter temperature nodes
-instead (see `Documentation/SN6600_LD_Hardware_Interfaces.md`).
+Note: This attribute is for liquid-cooled systems only (SN58XX_LD family, N61XX_LD family, SN66XX_LD family)
 
 **Access:** Read only
 

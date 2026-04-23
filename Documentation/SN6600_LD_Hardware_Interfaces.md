@@ -278,7 +278,7 @@ validated tree (see `jc42-i2c-*-52` / `*-53` in `sn66xxld_sensors.conf`).
 ### COMEX alarms
 
 `alarm/comex_voltmon1_*` and `alarm/comex_voltmon2_*` are created by the same
-`hw-management-chassis-events.sh` voltmon path as ASIC voltmons (see tree
+`hw-management-chassis-events.sh` voltmont path as ASIC voltmons (see tree
 listing for the exact set on SN6600_LD).
 
 ### PDB alarms

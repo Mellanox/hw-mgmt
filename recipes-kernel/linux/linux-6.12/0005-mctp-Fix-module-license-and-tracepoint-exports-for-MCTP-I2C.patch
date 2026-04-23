@@ -1,0 +1,23 @@
+diff --git a/drivers/net/mctp/mctp-i2c-error-inject.c b/drivers/net/mctp/mctp-i2c-error-inject.c
+--- a/drivers/net/mctp/mctp-i2c-error-inject.c
++++ b/drivers/net/mctp/mctp-i2c-error-inject.c
+@@ -846,3 +846,5 @@ void mctp_i2c_error_inject_module_exit(void)
+ 	mctp_i2c_error_inject_root = NULL;
+ }
+ EXPORT_SYMBOL_GPL(mctp_i2c_error_inject_module_exit);
++
++MODULE_LICENSE("GPL");
+diff --git a/net/mctp/af_mctp.c b/net/mctp/af_mctp.c
+--- a/net/mctp/af_mctp.c
++++ b/net/mctp/af_mctp.c
+@@ -19,6 +19,10 @@
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/mctp.h>
+ 
++EXPORT_TRACEPOINT_SYMBOL_GPL(mctp_transport_tx);
++EXPORT_TRACEPOINT_SYMBOL_GPL(mctp_transport_rx);
++EXPORT_TRACEPOINT_SYMBOL_GPL(mctp_transport_error);
++
+ #include "mctp-socket-error-inject.h"
+ 
+ /* socket implementation */

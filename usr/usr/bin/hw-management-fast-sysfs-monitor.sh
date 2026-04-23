@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -60,6 +60,10 @@ do_start_fast_sysfs_monitor()
     declare -A DEVICE_ADDED  # Track added devices per file name.
     ELAPSED=0
     log_info "Monitoring ${TOTAL_FILES} files..."
+
+    # Clear the ready file in case this is a service restart
+    [ -f "$FAST_SYSFS_MONITOR_RDY_FILE" ] && rm -f "$FAST_SYSFS_MONITOR_RDY_FILE"
+
     while (( ELAPSED < FAST_SYSFS_MONITOR_TIMEOUT )); do
     # Check and add missing devices from devtree_file.
     if [ -e "$devtree_file" ] && [ -d "$eeprom_path" ] && [[ ${#DEVICE_ADDED[@]} -lt ${#DEV_FILES[@]} ]]; then
@@ -114,14 +118,14 @@ do_stop_fast_sysfs_monitor()
         FAST_MONITOR_PID=$(cat "$FAST_SYSFS_MONITOR_PID_FILE")
         if kill -0 "$FAST_MONITOR_PID" 2>/dev/null; then
             if kill "$FAST_MONITOR_PID"; then
-                log_info "HW Mangement old fast sysfs monitor process killed succesfully."
+                log_info "HW Management old fast sysfs monitor process killed succesfully."
                 rm -f "$FAST_SYSFS_MONITOR_PID_FILE"
             else
-                log_info "HW Mangement failed to kill old fast sysfs monitor process."
+                log_info "HW Management failed to kill old fast sysfs monitor process."
                 exit 1
             fi
         else
-            log_info "HW Mangement old fast sysfs monitor process $FAST_MONITOR_PID already dead, remove the pid file."
+            log_info "HW Management old fast sysfs monitor process $FAST_MONITOR_PID already dead, remove the pid file."
             rm -f "$FAST_SYSFS_MONITOR_PID_FILE"
         fi
     fi
@@ -130,9 +134,8 @@ do_stop_fast_sysfs_monitor()
 case $FAST_SYSFS_MONITOR_ACTION in
     start)
         # Save the PID of the Fast Sysfs Monitor process.
-        touch "$FAST_SYSFS_MONITOR_PID_FILE"
-        echo $! > "$FAST_SYSFS_MONITOR_PID_FILE"
-        log_info "HW Mangement Fast Sysfs Monitor process created."
+        echo $$ > "$FAST_SYSFS_MONITOR_PID_FILE"
+        log_info "HW Management Fast Sysfs Monitor process created."
         do_start_fast_sysfs_monitor
     ;;
     stop)
@@ -141,6 +144,8 @@ case $FAST_SYSFS_MONITOR_ACTION in
     restart|force-reload)
         do_stop_fast_sysfs_monitor
         sleep 5
+        # Save the PID of the Fast Sysfs Monitor process.
+        echo $$ > "$FAST_SYSFS_MONITOR_PID_FILE"
         do_start_fast_sysfs_monitor
     ;;
     *)

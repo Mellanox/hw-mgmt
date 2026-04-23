@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,12 +34,32 @@
 # Voltage Regulator Model and Version Reader
 ################################################################################
 
-DEVTREE_FILE="/var/run/hw-management/config/devtree"
-FIRMWARE_BASE="/var/run/hw-management/firmware"
+# Allow tests / non-standard deployments to override paths via environment.
+DEVTREE_FILE="${DEVTREE_FILE:-/var/run/hw-management/config/devtree}"
+FIRMWARE_BASE="${FIRMWARE_BASE:-/var/run/hw-management/firmware}"
 LOG_TAG="vr_model_version"
+I2C_BUS_OFFSET_FILE="/var/run/hw-management/config/i2c_bus_offset"
 
 # Register addresses for reading model and revision (defaults)
 PAGE_REG=0x00
+
+# Function to get bus offset used by hw-management topology scripts.
+get_i2c_bus_offset()
+{
+    local offset=0
+
+    if [[ -f "$I2C_BUS_OFFSET_FILE" ]]; then
+        offset=$(<"$I2C_BUS_OFFSET_FILE")
+        # Fallback to 0 if file content is not an integer.
+        if [[ ! "$offset" =~ ^-?[0-9]+$ ]]; then
+            log_message "warning" "Invalid i2c_bus_offset value '$offset' in $I2C_BUS_OFFSET_FILE, using 0"
+            offset=0
+        fi
+    fi
+
+    echo "$offset"
+    return 0
+}
 
 # Function to get device-specific register configuration
 get_device_registers()
@@ -56,6 +76,10 @@ get_device_registers()
         mp2975|mp2974)
             echo "0xba 0xbb 0 0"
             ;;
+        xdpe1a2g7b)
+            # Block read exposes a leading byte before the 16-bit MFR value.
+            echo "0x9a 0x9b 0 0 1"
+            ;;
         tps53679|xdpe12284)
             echo "unsupported"
             ;;
@@ -65,12 +89,12 @@ get_device_registers()
     esac
 }
 
-# Function to log messages
+# Function to log messages (stdout; used by non-JSON flows)
 log_message()
 {
     local level="$1"
     local message="$2"
-    logger -t "$LOG_TAG" -p "daemon.$level" "$message"
+    logger -t "$LOG_TAG" -p "daemon.$level" "$message" 2>/dev/null || true
     echo "[$level] $message"
 }
 
@@ -94,6 +118,34 @@ i2c_cmd()
     return 0
 }
 
+# Read 16-bit LE word at register. byte_offset skips leading bytes (e.g. SMBus block count).
+read_smbus_word()
+{
+    local bus="$1"
+    local dev_addr="$2"
+    local reg="$3"
+    local byte_offset="${4:-0}"
+
+    if [[ "$byte_offset" -eq 0 ]]; then
+        i2cget -y -f "$bus" "$dev_addr" "$reg" w 2>/dev/null
+        return $?
+    fi
+
+    local nbytes=$((byte_offset + 2))
+    local out
+    out=$(i2ctransfer -y -f "$bus" "w1@$dev_addr" "$reg" "r$nbytes" 2>/dev/null) || return 1
+
+    local -a bytes=($out)
+    if [[ ${#bytes[@]} -lt $((byte_offset + 2)) ]]; then
+        return 1
+    fi
+
+    local lo hi
+    lo=${bytes[$byte_offset]#0x}
+    hi=${bytes[$((byte_offset + 1))]#0x}
+    printf '0x%04x\n' "$((0x$lo | (0x$hi << 8)))"
+}
+
 # Function to read model ID from device
 get_model()
 {
@@ -101,15 +153,15 @@ get_model()
     local dev_addr="$2"
     local model_reg="$3"
     local model_page="$4"
+    local byte_offset="${5:-0}"
 
     # Set page to model ID page
     if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$model_page'"; then
         return 1
     fi
 
-    # Read model ID (word)
     local model_id
-    model_id=$(i2cget -y -f "$bus" "$dev_addr" "$model_reg" w 2>/dev/null)
+    model_id=$(read_smbus_word "$bus" "$dev_addr" "$model_reg" "$byte_offset")
 
     if [[ -z "$model_id" ]]; then
         return 1
@@ -126,15 +178,15 @@ get_revision()
     local dev_addr="$2"
     local rev_reg="$3"
     local rev_page="$4"
+    local byte_offset="${5:-0}"
 
     # Set page to revision ID page
     if ! i2c_cmd "i2cset -y -f '$bus' '$dev_addr' '$PAGE_REG' '$rev_page'"; then
         return 1
     fi
 
-    # Read revision ID (word)
     local rev_id
-    rev_id=$(i2cget -y -f "$bus" "$dev_addr" "$rev_reg" w 2>/dev/null)
+    rev_id=$(read_smbus_word "$bus" "$dev_addr" "$rev_reg" "$byte_offset")
 
     if [[ -z "$rev_id" ]]; then
         return 1
@@ -171,17 +223,18 @@ get_model_version()
     local rev_reg="${reg_array[1]}"
     local model_page="${reg_array[2]}"
     local rev_page="${reg_array[3]}"
+    local byte_offset="${reg_array[4]:-0}"
 
-    log_message "info" "Reading model/version for $voltmon_type device: $device_name (bus $bus, addr $dev_addr, regs: model=$model_reg/$model_page, rev=$rev_reg/$rev_page)"
+    log_message "info" "Reading model/version for $voltmon_type device: $device_name (bus $bus, addr $dev_addr, regs: model=$model_reg/$model_page, rev=$rev_reg/$rev_page, byte_offset=$byte_offset)"
 
     # Read model ID
     local model_id
-    model_id=$(get_model "$bus" "$dev_addr" "$model_reg" "$model_page")
+    model_id=$(get_model "$bus" "$dev_addr" "$model_reg" "$model_page" "$byte_offset")
     local model_status=$?
 
     # Read revision ID
     local rev_id
-    rev_id=$(get_revision "$bus" "$dev_addr" "$rev_reg" "$rev_page")
+    rev_id=$(get_revision "$bus" "$dev_addr" "$rev_reg" "$rev_page" "$byte_offset")
     local rev_status=$?
 
     # Create device firmware directory if it doesn't exist
@@ -246,7 +299,8 @@ copy_to_ui_firmware()
     local pmic_prefix=""
     for file in "$ui_device_dir"/*; do
         if [[ -e "$file" ]]; then
-            local filename=$(basename "$file")
+            local filename
+            filename=$(basename "$file")
             # Extract PMIC prefix (everything before first '+')
             pmic_prefix=$(echo "$filename" | cut -d'+' -f1)
             if [[ -n "$pmic_prefix" ]] && [[ "$pmic_prefix" == PMIC-* ]]; then
@@ -296,8 +350,11 @@ parse_devtree()
     fi
 
     log_message "info" "Parsing devtree file: $DEVTREE_FILE"
+    local i2c_bus_offset
+    i2c_bus_offset=$(get_i2c_bus_offset)
+    log_message "info" "Using i2c_bus_offset: $i2c_bus_offset"
 
-    # Read devtree into array (space-separated fields)
+    # Read devtree into array (space-separated fields). Supports both multi-line and single-line devtree files.
     local devtree_content
     devtree_content=$(cat "$DEVTREE_FILE")
 
@@ -320,13 +377,14 @@ parse_devtree()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus + i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         # Check if internal name matches "voltmon" pattern
         if [[ "$internal_name" == *voltmon* ]]; then
-            log_message "info" "Found voltmon device: $internal_name (driver: $driver_name, bus: $bus, addr: $address)"
+            log_message "info" "Found voltmon device: $internal_name (driver: $driver_name, bus: $bus -> abs $bus_abs, addr: $address)"
 
-            if get_model_version "$driver_name" "$bus" "$address" "$internal_name"; then
+            if get_model_version "$driver_name" "$bus_abs" "$address" "$internal_name"; then
                 ((devices_processed++))
             else
                 ((devices_skipped++))
@@ -344,25 +402,26 @@ get_pmic_prefix()
 {
     local device_name="$1"
     local ui_voltage_base="/var/run/hw-management/ui/voltage"
-    
+
     # Check if UI folder exists
     if [[ ! -d "$ui_voltage_base" ]]; then
         echo ""
         return 0
     fi
-    
+
     # Check if device folder exists in UI
     local ui_device_dir="$ui_voltage_base/$device_name"
     if [[ ! -d "$ui_device_dir" ]]; then
         echo ""
         return 0
     fi
-    
+
     # Find PMIC prefix from any file in the device directory
     local pmic_prefix=""
     for file in "$ui_device_dir"/*; do
         if [[ -e "$file" ]]; then
-            local filename=$(basename "$file")
+            local filename
+            filename=$(basename "$file")
             # Extract PMIC prefix (everything before first '+')
             pmic_prefix=$(echo "$filename" | cut -d'+' -f1)
             if [[ -n "$pmic_prefix" ]] && [[ "$pmic_prefix" == PMIC-* ]]; then
@@ -371,22 +430,25 @@ get_pmic_prefix()
             fi
         fi
     done
-    
+
     echo ""
     return 0
 }
 
-# Function to display voltmon information
+# Function to display voltmon information (table output)
 show_voltmon_info()
 {
+    local i2c_bus_offset
+    i2c_bus_offset=$(get_i2c_bus_offset)
+
     if [[ ! -f "$DEVTREE_FILE" ]]; then
-        echo "Error: Devtree file not found: $DEVTREE_FILE"
+        echo "Error: Devtree file not found: $DEVTREE_FILE" >&2
         return 1
     fi
 
     # Check dependencies
     if ! check_dependencies; then
-        echo "Error: Required I2C tools not available"
+        echo "Error: Required I2C tools not available" >&2
         return 1
     fi
 
@@ -412,11 +474,13 @@ show_voltmon_info()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus + i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         # Check if internal name matches "voltmon" pattern
         if [[ "$internal_name" == *voltmon* ]]; then
-            local pmic_prefix=$(get_pmic_prefix "$internal_name")
+            local pmic_prefix
+            pmic_prefix=$(get_pmic_prefix "$internal_name")
             local device_type="$driver_name"
             local model_id="N/A"
             local rev_id="N/A"
@@ -439,17 +503,18 @@ show_voltmon_info()
                 local rev_reg="${reg_array[1]}"
                 local model_page="${reg_array[2]}"
                 local rev_page="${reg_array[3]}"
+                local byte_offset="${reg_array[4]:-0}"
 
                 # Read model ID directly from device
                 local model_result
-                model_result=$(get_model "$bus" "$address" "$model_reg" "$model_page" 2>/dev/null)
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" "$byte_offset" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
                     model_id="$model_result"
                 fi
 
                 # Read revision ID directly from device
                 local rev_result
-                rev_result=$(get_revision "$bus" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" "$byte_offset" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
                     rev_id="$rev_result"
                 fi
@@ -477,26 +542,143 @@ check_dependencies()
         return 1
     fi
 
+    if ! command -v i2ctransfer >/dev/null 2>&1; then
+        log_message "err" "i2ctransfer is not installed. Cannot read SMBus block/word data (e.g. xdpe1a2g7b)."
+        return 1
+    fi
+
     return 0
 }
 
 # Function to display usage information
 usage()
 {
-    echo "Usage: $0 [OPTIONS]"
+    echo "Usage: $0 [OPTIONS]" >&2
+    echo "" >&2
+    echo "Voltage Regulator Model/Version Reader" >&2
+    echo "" >&2
+    echo "OPTIONS:" >&2
+    echo "  --show    Display information for all voltage monitors" >&2
+    echo "  --json    When used with --show, output JSON instead of a table" >&2
+    echo "  --help    Display this help message" >&2
+    echo "" >&2
+}
+
+# Escape a string for JSON output (minimal, but covers quotes/backslashes/control chars).
+json_escape()
+{
+    local s="$1"
+    s=${s//\\/\\\\}
+    s=${s//\"/\\\"}
+    s=${s//$'\n'/\\n}
+    s=${s//$'\r'/\\r}
+    s=${s//$'\t'/\\t}
+    printf '%s' "$s"
+}
+
+# JSON version of --show that prints ONLY JSON to stdout.
+show_voltmon_info_json()
+{
+    if [[ ! -f "$DEVTREE_FILE" ]]; then
+        echo "Error: Devtree file not found: $DEVTREE_FILE" >&2
+        return 1
+    fi
+
+    # Quiet dependency check (avoid stdout noise that would corrupt JSON)
+    if ! command -v i2cget >/dev/null 2>&1 || ! command -v i2cset >/dev/null 2>&1 || ! command -v i2ctransfer >/dev/null 2>&1; then
+        echo "Error: Required I2C tools not available (need i2cget/i2cset/i2ctransfer)" >&2
+        return 1
+    fi
+
+    local i2c_bus_offset
+    i2c_bus_offset=$(get_i2c_bus_offset)
+
+    local devtree_content
+    devtree_content=$(cat "$DEVTREE_FILE")
+
+    local fields=($devtree_content)
+    local num_fields=${#fields[@]}
+
+    echo "["
+    local first=1
+
+    # Parse in groups of 4: driver_name address bus internal_name
+    for ((i=0; i<num_fields; i+=4)); do
+        if [[ $((i+3)) -ge $num_fields ]]; then
+            break
+        fi
+
+        local driver_name="${fields[$i]}"
+        local address="${fields[$((i+1))]}"
+        local bus="${fields[$((i+2))]}"
+        local internal_name="${fields[$((i+3))]}"
+
+        if [[ "$internal_name" == *voltmon* ]]; then
+            local pmic_prefix
+            pmic_prefix=$(get_pmic_prefix "$internal_name")
+
+            local device_type="$driver_name"
+            local model_id="N/A"
+            local rev_id="N/A"
+
+            local reg_config
+            reg_config=$(get_device_registers "$driver_name")
+
+            if [[ "$reg_config" == "unsupported" ]]; then
+                model_id="Not supported"
+                rev_id="Not supported"
+            elif [[ "$reg_config" == "unknown" ]]; then
+                model_id="Unknown device"
+                rev_id="Unknown device"
+            else
+                local reg_array=($reg_config)
+                local model_reg="${reg_array[0]}"
+                local rev_reg="${reg_array[1]}"
+                local model_page="${reg_array[2]}"
+                local rev_page="${reg_array[3]}"
+                local byte_offset="${reg_array[4]:-0}"
+                local bus_abs=$((bus + i2c_bus_offset))
+
+                local model_result
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" "$byte_offset" 2>/dev/null)
+                if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
+                    model_id="$model_result"
+                fi
+
+                local rev_result
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" "$byte_offset" 2>/dev/null)
+                if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
+                    rev_id="$rev_result"
+                fi
+            fi
+
+            if [[ $first -eq 0 ]]; then
+                echo ","
+            fi
+            first=0
+
+            # Emit one JSON object per voltmon. Include bus/address for easy matching.
+            printf '  {"voltmon_name":"%s","pmic_index":"%s","device_name":"%s","bus":"%s","address":"%s","model":"%s","revision_id":"%s"}' \
+                "$(json_escape "$internal_name")" \
+                "$(json_escape "${pmic_prefix:-}")" \
+                "$(json_escape "$device_type")" \
+                "$(json_escape "$bus")" \
+                "$(json_escape "$address")" \
+                "$(json_escape "$model_id")" \
+                "$(json_escape "$rev_id")"
+        fi
+    done
+
     echo ""
-    echo "Voltage Regulator Model/Version Reader"
-    echo ""
-    echo "OPTIONS:"
-    echo "  --show    Display information for all voltage monitors"
-    echo "  --help    Display this help message"
-    echo ""
+    echo "]"
+    return 0
 }
 
 # Main execution
 main()
 {
     local show_mode=0
+    local json_mode=0
 
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
@@ -505,12 +687,16 @@ main()
                 show_mode=1
                 shift
                 ;;
+            --json)
+                json_mode=1
+                shift
+                ;;
             --help)
                 usage
                 exit 0
                 ;;
             *)
-                echo "Unknown option: $1"
+                echo "Unknown option: $1" >&2
                 usage
                 exit 1
                 ;;
@@ -519,8 +705,19 @@ main()
 
     # If --show mode, display information and exit
     if [[ $show_mode -eq 1 ]]; then
-        show_voltmon_info
-        exit $?
+        if [[ $json_mode -eq 1 ]]; then
+            show_voltmon_info_json
+            exit $?
+        else
+            show_voltmon_info
+            exit $?
+        fi
+    fi
+
+    if [[ $json_mode -eq 1 ]]; then
+        echo "Error: --json must be used with --show" >&2
+        usage
+        exit 1
     fi
 
     # Normal operation: read and store model/version information

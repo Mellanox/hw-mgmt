@@ -465,13 +465,8 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
-                'name': 'Pytest: TC _exit_wait (stop timeout)',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
-                'cwd': self.tests_dir
-            },
-            {
-                'name': 'Pytest: start-post TC flags (Bug 4929286)',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
+                'name': 'Pytest: Fan _validate_rpm',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_fan_validate_rpm.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {
@@ -480,8 +475,13 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
-                'name': 'Pytest: Fan _validate_rpm',
-                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_fan_validate_rpm.py', '--tb=short'],
+                'name': 'Pytest: start-post TC flags (Bug 4929286)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_start_post_tc.py', '--tb=short'],
+                'cwd': self.tests_dir
+            },
+            {
+                'name': 'Pytest: TC _exit_wait (stop timeout)',
+                'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
                 'cwd': self.tests_dir
             },
             {

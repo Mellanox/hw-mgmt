@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+[Unit]
+Description=Hardware management early config (copy platform files from /etc/<HID> to /etc and /usr/bin)
+Documentation=file:///usr/share/doc/hw-management-bmc/README.md
+DefaultDependencies=no
+After=local-fs.target hw-management-bmc-plat-specific-preps.service
+Before=systemd-modules-load.service
+Before=hw-management-bmc-early-i2c-init.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/hw-management-bmc-early-config.sh
+SyslogIdentifier=hw-management-bmc-early-config
+
+[Install]
+WantedBy=sysinit.target
