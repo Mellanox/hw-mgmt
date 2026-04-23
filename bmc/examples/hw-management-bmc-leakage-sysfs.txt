@@ -18,10 +18,10 @@
 │   │   ├── input                      # symlink or file: raw IIO sample (unscaled) when Probe path exists
 │   │   ├── min                        # low threshold (register-derived × scale, config units)
 │   │   ├── max                        # high threshold (register-derived × scale)
+│   │   ├── warn                       # WarningMax (config units)
 │   │   ├── crit                       # CriticalMax (config units)
-│   │   ├── emerg                      # EmergencyMax (config units)
+│   │   ├── lwarn                      # optional: WarningMin
 │   │   ├── lcrit                      # optional: CriticalMin
-│   │   ├── lemerg                     # optional: EmergencyMin
 │   │   ├── type                       # optional: JSON field "Type" — file content rop or flex (sensor kind)
 │   │   ├── scale                      # Scale from JSON
 │   │   ├── last_sample                # optional: 12-bit-aligned code (written on OOB event by leakage-handler)
@@ -30,8 +30,8 @@
 │   │   ├── input
 │   │   ├── min
 │   │   ├── max
+│   │   ├── warn
 │   │   ├── crit
-│   │   ├── emerg
 │   │   ├── type                       # optional: rop or flex (same "Type" field as channel 1)
 │   │   ├── scale
 │   │   ├── last_sample
@@ -44,8 +44,8 @@
         ├── input
         ├── min
         ├── max
+        ├── warn
         ├── crit
-        ├── emerg
         └── scale
 
 # Notes
