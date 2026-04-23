@@ -7,6 +7,7 @@ Kernel-6.12
 |0003-aspeed-nvidia-spc6-bmc.dts.patch                            |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0004-mctp-Update-MCTP-core-and-transport-drivers-with-error-injection.patch|          | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0005-mctp-Fix-module-license-and-tracepoint-exports-for-MCTP-I2C.patch|               | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
+|0006-JTAG-Aspeed-Fix-kernel-configuration.patch                  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
