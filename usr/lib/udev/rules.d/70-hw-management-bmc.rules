@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,11 +30,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# These rules handle USB net up/down events.
+# These rules handle USB net events.
 
-# Bring up the USB network interface when it is plugged in.
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", NAME="usb0", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 up"
+# 1. Rename the interface if it starts with the old 'eth*' prefix
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="eth*", NAME="usb0"
 
-# Bring down the USB network interface when it is unplugged.
-SUBSYSTEM=="net", ACTION=="remove", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", RUN+="/usr/bin/hw-management-ifupdown.sh usb0 down"
+# 2. Trigger script if 'usb0' was assigned by Rule 1 (Common in kernel 6.1)
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", NAME=="usb0", KERNEL!="usb0", RUN+="/usr/bin/logger 'hw-management: trigger usb0 via NAME match'", RUN+="/usr/bin/hw-management-ifupdown.sh usb0"
 
+# 3. Trigger script if the kernel named it 'usb0' natively (Common in kernel 6.12+)
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="usb0", RUN+="/usr/bin/logger 'hw-management: trigger usb0 via KERNEL match'", RUN+="/usr/bin/hw-management-ifupdown.sh usb0"
