@@ -35,12 +35,18 @@
 ################################################################################
 
 # Allow tests / non-standard deployments to override paths via environment.
+CONFIG_PATH="${CONFIG_PATH:-/var/run/hw-management/config}"
 DEVTREE_FILE="${DEVTREE_FILE:-/var/run/hw-management/config/devtree}"
 FIRMWARE_BASE="${FIRMWARE_BASE:-/var/run/hw-management/firmware}"
 LOG_TAG="vr_model_version"
 
 # Register addresses for reading model and revision (defaults)
 PAGE_REG=0x00
+
+i2c_bus_offset=0
+if [[ -f "$CONFIG_PATH/i2c_bus_offset" ]]; then
+    i2c_bus_offset=$(< $CONFIG_PATH/i2c_bus_offset)
+fi
 
 # Function to get device-specific register configuration
 get_device_registers()
@@ -322,13 +328,14 @@ parse_devtree()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus+i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         # Check if internal name matches "voltmon" pattern
         if [[ "$internal_name" == *voltmon* ]]; then
             log_message "info" "Found voltmon device: $internal_name (driver: $driver_name, bus: $bus, addr: $address)"
 
-            if get_model_version "$driver_name" "$bus" "$address" "$internal_name"; then
+            if get_model_version "$driver_name" "$bus_abs" "$address" "$internal_name"; then
                 ((devices_processed++))
             else
                 ((devices_skipped++))
@@ -415,6 +422,7 @@ show_voltmon_info()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus+i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         # Check if internal name matches "voltmon" pattern
@@ -446,14 +454,14 @@ show_voltmon_info()
 
                 # Read model ID directly from device
                 local model_result
-                model_result=$(get_model "$bus" "$address" "$model_reg" "$model_page" 2>/dev/null)
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
                     model_id="$model_result"
                 fi
 
                 # Read revision ID directly from device
                 local rev_result
-                rev_result=$(get_revision "$bus" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
                     rev_id="$rev_result"
                 fi
@@ -542,6 +550,7 @@ show_voltmon_info_json()
         local driver_name="${fields[$i]}"
         local address="${fields[$((i+1))]}"
         local bus="${fields[$((i+2))]}"
+        local bus_abs=$((bus+i2c_bus_offset))
         local internal_name="${fields[$((i+3))]}"
 
         if [[ "$internal_name" == *voltmon* ]]; then
@@ -569,13 +578,13 @@ show_voltmon_info_json()
                 local rev_page="${reg_array[3]}"
 
                 local model_result
-                model_result=$(get_model "$bus" "$address" "$model_reg" "$model_page" 2>/dev/null)
+                model_result=$(get_model "$bus_abs" "$address" "$model_reg" "$model_page" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$model_result" ]]; then
                     model_id="$model_result"
                 fi
 
                 local rev_result
-                rev_result=$(get_revision "$bus" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
+                rev_result=$(get_revision "$bus_abs" "$address" "$rev_reg" "$rev_page" 2>/dev/null)
                 if [[ $? -eq 0 ]] && [[ -n "$rev_result" ]]; then
                     rev_id="$rev_result"
                 fi
@@ -591,7 +600,7 @@ show_voltmon_info_json()
                 "$(json_escape "$internal_name")" \
                 "$(json_escape "${pmic_prefix:-}")" \
                 "$(json_escape "$device_type")" \
-                "$(json_escape "$bus")" \
+                "$(json_escape "$bus_abs")" \
                 "$(json_escape "$address")" \
                 "$(json_escape "$model_id")" \
                 "$(json_escape "$rev_id")"
