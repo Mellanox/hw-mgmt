@@ -8,9 +8,7 @@
 Describe 'VR DPC update entrypoint + read-vr JSON'
   # Resolve repo root from this spec file location:
   #   tests/shell/spec/ -> repo root is ../../..
-  spec_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
-  repo_root="$(cd "${spec_dir}/../../.." >/dev/null 2>&1 && pwd -P)"
-
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
   dpc_update="${repo_root}/usr/usr/bin/hw-management-dpc-update.sh"
   read_vr="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
 
@@ -44,13 +42,33 @@ EOF
 
   Describe 'hw-management-read-vr-model-version.sh --show --json'
     It 'prints clean JSON from a single-line devtree'
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DEVTREE_FILE='${TEST_DEVTREE}' bash '${read_vr}' --show --json"
+      local devtree_num="${TEST_TMPDIR}/devtree_num"
+      local cfg_dir="${TEST_TMPDIR}/config"
+      mkdir -p "$cfg_dir"
+      # numeric bus so arithmetic is deterministic
+      echo "tps53679 0x40 3 voltmon-test0" > "$devtree_num"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DEVTREE_FILE='${devtree_num}' bash '${read_vr}' --show --json"
       The status should be success
       The output should start with "["
       The output should include "\"voltmon_name\":\"voltmon-test0\""
       The output should include "\"pmic_index\""
       The output should include "\"device_name\":\"tps53679\""
-      The output should include "\"bus\":\"X\""
+      The output should include "\"bus\":\"3\""
+      The output should include "\"address\":\"0x40\""
+      The output should include "\"model\":\"Not supported\""
+      The output should include "\"revision_id\":\"Not supported\""
+    End
+    It 'applies i2c_bus_offset=8 to JSON bus field'
+      local devtree_num="${TEST_TMPDIR}/devtree_num"
+      local cfg_dir="${TEST_TMPDIR}/config"
+      mkdir -p "$cfg_dir"
+      # numeric bus so arithmetic is deterministic
+      echo "tps53679 0x40 3 voltmon-test0" > "$devtree_num"
+      echo "8" > "${cfg_dir}/i2c_bus_offset"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" CONFIG_PATH='${cfg_dir}' DEVTREE_FILE='${devtree_num}' bash '${read_vr}' --show --json"
+      The status should be success
+      The output should include "\"voltmon_name\":\"voltmon-test0\""
+      The output should include "\"bus\":\"11\""
       The output should include "\"address\":\"0x40\""
       The output should include "\"model\":\"Not supported\""
       The output should include "\"revision_id\":\"Not supported\""
@@ -100,16 +118,22 @@ EOF
 
     It 'accepts --verify before tar path'
       build_test_pkg
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' --verify '${TAR_PATH}'"
+      local read_vr_model_version_bin="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
+      local vr_dpc_update_all_bin="${repo_root}/usr/usr/bin/hw-management-vr-dpc-update-all.sh"
+      Skip if "test ! -x ${read_vr_model_version_bin}"
+      Skip if "test ! -x ${vr_dpc_update_all_bin}"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" READ_VR_MODEL_BIN='${read_vr_model_version_bin}' VR_DPC_UPDATE_ALL_BIN='${vr_dpc_update_all_bin}' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' --verify '${TAR_PATH}'"
       The status should be success
       The output should include "VERIFY PASSED."
     End
 
     It 'accepts --verify after tar path'
       build_test_pkg
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' '${TAR_PATH}' --verify"
+      local read_vr_model_version_bin="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
+      local vr_dpc_update_all_bin="${repo_root}/usr/usr/bin/hw-management-vr-dpc-update-all.sh"
+      Skip if "test ! -x ${read_vr_model_version_bin}"
+      Skip if "test ! -x ${vr_dpc_update_all_bin}"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" READ_VR_MODEL_BIN='${read_vr_model_version_bin}' VR_DPC_UPDATE_ALL_BIN='${vr_dpc_update_all_bin}' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEVTREE_PATH='${TEST_DEVTREE}' bash '${dpc_update}' '${TAR_PATH}' --verify"
       The status should be success
       The output should include "VERIFY PASSED."
     End
@@ -117,8 +141,11 @@ EOF
 
   Describe 'debug output separation'
     It 'writes debug logs to stderr without contaminating JSON stdout'
-      [[ -x /usr/bin/hw-management-read-vr-model-version.sh ]] || Skip "requires /usr/bin/hw-management-read-vr-model-version.sh"
-      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" DPC_TOOLS_PATHS='${repo_root}/usr/usr/bin' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEBUG=1 bash '${dpc_update}' --show --json"
+      local read_vr_model_version_bin="${repo_root}/usr/usr/bin/hw-management-read-vr-model-version.sh"
+      local vr_dpc_update_all_bin="${repo_root}/usr/usr/bin/hw-management-vr-dpc-update-all.sh"
+      Skip if "test ! -x ${read_vr_model_version_bin}"
+      Skip if "test ! -x ${vr_dpc_update_all_bin}"
+      When run bash -c "PATH='${TEST_BINDIR}':\"\$PATH\" READ_VR_MODEL_BIN='${read_vr_model_version_bin}' VR_DPC_UPDATE_ALL_BIN='${vr_dpc_update_all_bin}' DEVTREE_FILE='${TEST_DEVTREE}' DPC_DEBUG=1 bash '${dpc_update}' --show --json"
       The status should be success
       The output should start with "["
       The output should not include "DEBUG"

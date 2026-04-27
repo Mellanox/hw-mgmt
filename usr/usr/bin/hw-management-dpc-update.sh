@@ -67,6 +67,8 @@ fi
 set -euo pipefail
 
 LOG_PREFIX="[DPC]"
+READ_VR_MODEL_BIN="${READ_VR_MODEL_BIN:-/usr/bin/hw-management-read-vr-model-version.sh}"
+VR_DPC_UPDATE_ALL_BIN="${VR_DPC_UPDATE_ALL_BIN:-/usr/bin/hw-management-vr-dpc-update-all.sh}"
 
 # Temp dir cleanup must be global: EXIT traps run after local vars go out of scope under `set -u`.
 DPC_TMPDIR=""
@@ -114,51 +116,6 @@ EOF
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
 }
-
-# _iter_tool_dirs() {
-  # Echo candidate directories (one per line) in preference order:
-  #  1) /usr/bin
-  #  2) $DPC_TOOLS_PATHS (colon-separated)
-  # echo "/usr/bin"
-
-  # if [[ -n "${DPC_TOOLS_PATHS:-}" ]]; then
-  #   local IFS=":"
-  #   local d
-  #   for d in $DPC_TOOLS_PATHS; do
-  #     [[ -n "$d" ]] && echo "$d"
-  #   done
-  # fi
-# }
-
-# find_tool() {
-#   # find_tool <filename>
-#   local name="$1"
-#   debug "find_tool name=$name"
-#   local d
-#   while read -r d; do
-#     [[ -n "$d" ]] || continue
-#     if [[ -f "$d/$name" ]]; then
-#       debug "find_tool hit: $d/$name"
-#       echo "$d/$name"
-#       return 0
-#     fi
-#   done < <(_iter_tool_dirs)
-#   debug "find_tool miss: $name"
-#   return 1
-# }
-
-# find_tool_candidates() {
-#   # find_tool_candidates <filename>
-#   # Prints matching full paths, one per line, in preference order.
-#   local name="$1"
-#   local d
-#   while read -r d; do
-#     [[ -n "$d" ]] || continue
-#     if [[ -f "$d/$name" ]]; then
-#       echo "$d/$name"
-#     fi
-#   done < <(_iter_tool_dirs)
-# }
 
 realpath_fallback() {
   # Try realpath/readlink -f, otherwise best-effort absolute path.
@@ -235,14 +192,13 @@ show_cmd() {
     esac
   done
 
-  local read_vr="/usr/bin/hw-management-read-vr-model-version.sh"
-  [[ -f "$read_vr" ]] || die "Missing required read-vr script: $read_vr"
+  [[ -x ${READ_VR_MODEL_BIN} ]] || die "Missing or not executable: ${READ_VR_MODEL_BIN}"
 
   if [[ $json -eq 1 ]]; then
     # Must output clean JSON to stdout.
-    exec bash "$read_vr" --show --json
+    exec bash ${READ_VR_MODEL_BIN} --show --json
   else
-    exec bash "$read_vr" --show
+    exec bash ${READ_VR_MODEL_BIN} --show
   fi
 }
 
@@ -390,13 +346,10 @@ apply_cmd() {
   }
 
   read_vr_json_or_die() {
-    # Use only the system-installed read-vr script.
-    # Hard requirement: it must support --show --json and produce valid JSON.
-    local read_vr="/usr/bin/hw-management-read-vr-model-version.sh"
-    [[ -f "$read_vr" ]] || die "Missing required read-vr script: $read_vr"
+    [[ -x ${READ_VR_MODEL_BIN} ]] || die "Missing or not executable: ${READ_VR_MODEL_BIN}"
 
     local out
-    out="$(bash "$read_vr" --show --json)" || die "read-vr failed: $read_vr --show --json"
+    out="$(bash ${READ_VR_MODEL_BIN} --show --json)" || die "read-vr failed: ${READ_VR_MODEL_BIN} --show --json"
     echo "$out" | jq empty >/dev/null 2>&1 || die "read-vr did not return valid JSON"
     echo "$out"
   }
@@ -467,10 +420,8 @@ apply_cmd() {
     [[ -n "$json_cfg" && -f "${pkg_dir}/${json_cfg}" ]] || die "JSON configuration file not found in package dir"
     debug "verify json_cfg=$json_cfg"
 
-    [[ -x /usr/bin/hw-management-vr-dpc-update-all.sh ]] || die "Missing or not executable: /usr/bin/hw-management-vr-dpc-update-all.sh"
-    bash /usr/bin/hw-management-vr-dpc-update-all.sh --validate-json --package-dir "$pkg_dir" "${pkg_dir}/${json_cfg}" || die "JSON validation failed"
-
-    [[ -x /usr/bin/hw-management-vr-dpc-update.sh ]] || die "Missing /usr/bin/hw-management-vr-dpc-update.sh"
+    [[ -x ${VR_DPC_UPDATE_ALL_BIN} ]] || die "Missing or not executable: ${VR_DPC_UPDATE_ALL_BIN}"
+    bash ${VR_DPC_UPDATE_ALL_BIN} --validate-json --package-dir "$pkg_dir" "${pkg_dir}/${json_cfg}" || die "JSON validation failed"
 
     VERIFIED_PKG_DIR="$pkg_dir"
     VERIFIED_JSON_CFG="$json_cfg"
@@ -633,7 +584,7 @@ apply_cmd() {
   stop_health_services_if_possible
 
   info "Running package update (from JSON via per-device updater)..."
-  bash /usr/bin/hw-management-vr-dpc-update-all.sh --package-dir "$pkg_dir" "${pkg_dir}/${json_cfg}" || die "DPC batch update failed"
+  bash ${VR_DPC_UPDATE_ALL_BIN} --package-dir "$pkg_dir" "${pkg_dir}/${json_cfg}" || die "DPC batch update failed"
 
   # Show versions after update for quick confirmation.
   local vr_after
