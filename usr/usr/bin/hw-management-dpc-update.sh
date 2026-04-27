@@ -48,13 +48,11 @@
 #   set DPC_DEBUG=1 for stderr-only debug logs and bash -x reruns on failures.
 # - Tar extraction is quiet by default; set DPC_VERBOSE=1 to print tar file lists.
 #
-# Tool lookup order (preferred first):
-#   1) /usr/bin
-#   2) $DPC_TOOLS_PATHS (colon-separated directories)
 #
 # Dependencies:
 # - bash, tar, jq
 # - for VR version readout: i2cget/i2cset and access to devtree (/var/run/hw-management/config/devtree)
+# - hw-management-vr-dpc-update-all.sh for batch update
 ################################################################################
 
 # Ensure we're running under bash (OpenBMC images sometimes default to BusyBox sh/ash).
@@ -69,6 +67,8 @@ fi
 set -euo pipefail
 
 LOG_PREFIX="[DPC]"
+READ_VR_MODEL_BIN="${READ_VR_MODEL_BIN:-/usr/bin/hw-management-read-vr-model-version.sh}"
+VR_DPC_UPDATE_ALL_BIN="${VR_DPC_UPDATE_ALL_BIN:-/usr/bin/hw-management-vr-dpc-update-all.sh}"
 
 # Temp dir cleanup must be global: EXIT traps run after local vars go out of scope under `set -u`.
 DPC_TMPDIR=""
@@ -91,7 +91,6 @@ debug() {
 
 if [[ "${DPC_DEBUG:-0}" == "1" ]]; then
   debug "Debug logging enabled (DPC_DEBUG=1)"
-  debug "DPC_TOOLS_PATHS=${DPC_TOOLS_PATHS:-}"
   debug "DPC_DEVTREE_PATH=${DPC_DEVTREE_PATH:-/var/run/hw-management/config/devtree}"
 fi
 
@@ -116,51 +115,6 @@ EOF
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
-}
-
-_iter_tool_dirs() {
-  # Echo candidate directories (one per line) in preference order:
-  #  1) /usr/bin
-  #  2) $DPC_TOOLS_PATHS (colon-separated)
-  echo "/usr/bin"
-
-  if [[ -n "${DPC_TOOLS_PATHS:-}" ]]; then
-    local IFS=":"
-    local d
-    for d in $DPC_TOOLS_PATHS; do
-      [[ -n "$d" ]] && echo "$d"
-    done
-  fi
-}
-
-find_tool() {
-  # find_tool <filename>
-  local name="$1"
-  debug "find_tool name=$name"
-  local d
-  while read -r d; do
-    [[ -n "$d" ]] || continue
-    if [[ -f "$d/$name" ]]; then
-      debug "find_tool hit: $d/$name"
-      echo "$d/$name"
-      return 0
-    fi
-  done < <(_iter_tool_dirs)
-  debug "find_tool miss: $name"
-  return 1
-}
-
-find_tool_candidates() {
-  # find_tool_candidates <filename>
-  # Prints matching full paths, one per line, in preference order.
-  local name="$1"
-  local d
-  while read -r d; do
-    [[ -n "$d" ]] || continue
-    if [[ -f "$d/$name" ]]; then
-      echo "$d/$name"
-    fi
-  done < <(_iter_tool_dirs)
 }
 
 realpath_fallback() {
@@ -238,14 +192,13 @@ show_cmd() {
     esac
   done
 
-  local read_vr="/usr/bin/hw-management-read-vr-model-version.sh"
-  [[ -f "$read_vr" ]] || die "Missing required read-vr script: $read_vr"
+  [[ -x ${READ_VR_MODEL_BIN} ]] || die "Missing or not executable: ${READ_VR_MODEL_BIN}"
 
   if [[ $json -eq 1 ]]; then
     # Must output clean JSON to stdout.
-    exec bash "$read_vr" --show --json
+    exec bash ${READ_VR_MODEL_BIN} --show --json
   else
-    exec bash "$read_vr" --show
+    exec bash ${READ_VR_MODEL_BIN} --show
   fi
 }
 
@@ -393,13 +346,10 @@ apply_cmd() {
   }
 
   read_vr_json_or_die() {
-    # Use only the system-installed read-vr script.
-    # Hard requirement: it must support --show --json and produce valid JSON.
-    local read_vr="/usr/bin/hw-management-read-vr-model-version.sh"
-    [[ -f "$read_vr" ]] || die "Missing required read-vr script: $read_vr"
+    [[ -x ${READ_VR_MODEL_BIN} ]] || die "Missing or not executable: ${READ_VR_MODEL_BIN}"
 
     local out
-    out="$(bash "$read_vr" --show --json)" || die "read-vr failed: $read_vr --show --json"
+    out="$(bash ${READ_VR_MODEL_BIN} --show --json)" || die "read-vr failed: ${READ_VR_MODEL_BIN} --show --json"
     echo "$out" | jq empty >/dev/null 2>&1 || die "read-vr did not return valid JSON"
     echo "$out"
   }
@@ -444,94 +394,6 @@ apply_cmd() {
     local pkg_path="$1"
     local tmp="$2"
 
-    validate_json_config_pkg() {
-      # Validate JSON config structure and referenced files (similar to hw-management-vr-dpc-update-all.sh --validate-json)
-      # Paths are resolved relative to pkg_dir when not absolute.
-      local pkg_dir="$1"
-      local json_cfg="$2"
-      local json_file="${pkg_dir}/${json_cfg}"
-
-      local errors=0
-
-      jq empty "$json_file" >/dev/null 2>&1 || { info "ERROR: Invalid JSON syntax: $json_file"; return 1; }
-
-      local system_hid
-      system_hid="$(jq -r '."System HID" // empty' "$json_file")"
-      if [[ -z "$system_hid" ]]; then
-        info "ERROR: JSON missing 'System HID'"
-        errors=$((errors + 1))
-      elif [[ ! "$system_hid" =~ ^[Hh][Ii]([Dd])?[0-9]{3}$ ]]; then
-        info "ERROR: Invalid 'System HID' format (expected HI### or HID###): $system_hid"
-        errors=$((errors + 1))
-      fi
-
-      local devices_type
-      devices_type="$(jq -r '.Devices | type // empty' "$json_file" 2>/dev/null || true)"
-      if [[ "$devices_type" != "array" ]]; then
-        info "ERROR: JSON missing 'Devices' array"
-        return 1
-      fi
-
-      local num_devices
-      num_devices="$(jq -r '.Devices | length // 0' "$json_file")"
-      [[ "$num_devices" =~ ^[0-9]+$ ]] || num_devices=0
-
-      local i=0
-      while [[ $i -lt $num_devices ]]; do
-        local device_type bus config_file crc_file device_config_file
-        device_type="$(jq -r ".Devices[$i].DeviceType // empty" "$json_file")"
-        bus="$(jq -r ".Devices[$i].Bus // empty" "$json_file")"
-        config_file="$(jq -r ".Devices[$i].ConfigFile // empty" "$json_file")"
-        crc_file="$(jq -r ".Devices[$i].CrcFile // empty" "$json_file")"
-        device_config_file="$(jq -r ".Devices[$i].DeviceConfigFile // empty" "$json_file")"
-
-        if [[ -z "$device_type" ]]; then
-          info "ERROR: Devices[$i] missing DeviceType"
-          errors=$((errors + 1))
-        fi
-        if [[ -z "$bus" || ! "$bus" =~ ^[0-9]+$ ]]; then
-          info "ERROR: Devices[$i] invalid Bus: '${bus}'"
-          errors=$((errors + 1))
-        fi
-        if [[ -z "$config_file" ]]; then
-          info "ERROR: Devices[$i] missing ConfigFile"
-          errors=$((errors + 1))
-        fi
-        if [[ -z "$crc_file" ]]; then
-          info "ERROR: Devices[$i] missing CrcFile"
-          errors=$((errors + 1))
-        fi
-        if [[ -z "$device_config_file" ]]; then
-          info "ERROR: Devices[$i] missing DeviceConfigFile"
-          errors=$((errors + 1))
-        fi
-
-        # Resolve and verify files exist when provided
-        if [[ -n "$config_file" ]]; then
-          [[ "$config_file" != /* ]] && config_file="${pkg_dir}/${config_file}"
-          [[ -f "$config_file" ]] || { info "ERROR: Devices[$i] ConfigFile not found: $config_file"; errors=$((errors + 1)); }
-        fi
-        if [[ -n "$crc_file" ]]; then
-          [[ "$crc_file" != /* ]] && crc_file="${pkg_dir}/${crc_file}"
-          [[ -f "$crc_file" ]] || { info "ERROR: Devices[$i] CrcFile not found: $crc_file"; errors=$((errors + 1)); }
-        fi
-        if [[ -n "$device_config_file" ]]; then
-          [[ "$device_config_file" != /* ]] && device_config_file="${pkg_dir}/${device_config_file}"
-          [[ -f "$device_config_file" ]] || { info "ERROR: Devices[$i] DeviceConfigFile not found: $device_config_file"; errors=$((errors + 1)); }
-        fi
-
-        i=$((i + 1))
-      done
-
-      if [[ $errors -ne 0 ]]; then
-        info "ERROR: Package JSON validation failed ($errors error(s))"
-        return 1
-      fi
-
-      info "Package JSON validation OK (${num_devices} device(s))"
-      return 0
-    }
-
     # Verify tar can be listed and top dir detected
     tar -tf "$pkg_path" >/dev/null 2>&1 || die "Cannot read tar contents: $pkg_path"
     local top_dir
@@ -557,104 +419,13 @@ apply_cmd() {
     fi
     [[ -n "$json_cfg" && -f "${pkg_dir}/${json_cfg}" ]] || die "JSON configuration file not found in package dir"
     debug "verify json_cfg=$json_cfg"
-    validate_json_config_pkg "$pkg_dir" "$json_cfg" || die "JSON validation failed"
 
-    # Ensure per-device updater exists (/usr/bin preferred, then $DPC_TOOLS_PATHS)
-    if ! find_tool hw-management-vr-dpc-update.sh >/dev/null 2>&1; then
-      die "Missing hw-management-vr-dpc-update.sh (searched /usr/bin and \$DPC_TOOLS_PATHS)"
-    fi
+    [[ -x ${VR_DPC_UPDATE_ALL_BIN} ]] || die "Missing or not executable: ${VR_DPC_UPDATE_ALL_BIN}"
+    bash ${VR_DPC_UPDATE_ALL_BIN} --validate-json --package-dir "$pkg_dir" "${pkg_dir}/${json_cfg}" || die "JSON validation failed"
 
     VERIFIED_PKG_DIR="$pkg_dir"
     VERIFIED_JSON_CFG="$json_cfg"
     info "Package verify OK (top_dir=$top_dir, json=$json_cfg)."
-  }
-
-  # Run a batch update directly from a JSON config file (similar to hw-management-vr-dpc-update-all.sh)
-  # using the per-device updater script shipped in the extracted package directory.
-  run_update_from_json() {
-    local pkg_dir="$1"
-    local json_file="$2"
-
-    [[ -f "$json_file" ]] || die "JSON configuration file not found: $json_file"
-    jq empty "$json_file" >/dev/null 2>&1 || die "Invalid JSON syntax: $json_file"
-
-    local system_hid
-    system_hid="$(jq -r '."System HID" // empty' "$json_file")"
-    [[ -n "$system_hid" ]] || die "Missing 'System HID' in JSON configuration"
-    # Accept both HI### and HID### (legacy variants); normalize to hid### (what the per-device updater expects).
-    [[ "$system_hid" =~ ^[Hh][Ii]([Dd])?[0-9]{3}$ ]] || die "Invalid 'System HID' format (expected HI### or HID###): $system_hid"
-    local system_hid_lower
-    system_hid_lower="$(echo "$system_hid" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/')"
-
-    local updater
-    updater="$(find_tool hw-management-vr-dpc-update.sh)" || die "Per-device updater not found (searched /usr/bin and \$DPC_TOOLS_PATHS): hw-management-vr-dpc-update.sh"
-    debug "updater selected: $updater"
-
-    local num_devices
-    num_devices="$(jq -r '.Devices | length // 0' "$json_file")"
-    [[ "$num_devices" =~ ^[0-9]+$ ]] || die "Invalid '.Devices' array length in JSON"
-
-    info "Applying update from JSON (System HID: $system_hid, Devices: $num_devices)"
-
-    local ok=0
-    local fail=0
-
-    local i=0
-    while [[ $i -lt $num_devices ]]; do
-      local device_type bus config_file crc_file device_config_file
-      device_type="$(jq -r ".Devices[$i].DeviceType // empty" "$json_file")"
-      bus="$(jq -r ".Devices[$i].Bus // empty" "$json_file")"
-      config_file="$(jq -r ".Devices[$i].ConfigFile // empty" "$json_file")"
-      crc_file="$(jq -r ".Devices[$i].CrcFile // empty" "$json_file")"
-      device_config_file="$(jq -r ".Devices[$i].DeviceConfigFile // empty" "$json_file")"
-
-      if [[ -z "$device_type" || -z "$bus" || -z "$config_file" || -z "$crc_file" || -z "$device_config_file" ]]; then
-        info "ERROR: JSON device[$i] is missing required fields (DeviceType/Bus/ConfigFile/CrcFile/DeviceConfigFile)"
-        fail=$((fail + 1))
-        i=$((i + 1))
-        continue
-      fi
-      [[ "$bus" =~ ^[0-9]+$ ]] || { info "ERROR: JSON device[$i] Bus is not numeric: $bus"; fail=$((fail + 1)); i=$((i + 1)); continue; }
-
-      # Resolve relative file paths within the package directory.
-      if [[ "$config_file" != /* ]]; then config_file="${pkg_dir}/${config_file}"; fi
-      if [[ "$crc_file" != /* ]]; then crc_file="${pkg_dir}/${crc_file}"; fi
-      if [[ "$device_config_file" != /* ]]; then device_config_file="${pkg_dir}/${device_config_file}"; fi
-
-      [[ -f "$config_file" ]] || { info "ERROR: Missing ConfigFile for device[$i]: $config_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
-      [[ -f "$crc_file" ]] || { info "ERROR: Missing CrcFile for device[$i]: $crc_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
-      [[ -f "$device_config_file" ]] || { info "ERROR: Missing DeviceConfigFile for device[$i]: $device_config_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
-
-      info "Updating device[$i]: Type=$device_type Bus=$bus"
-      local cmd=(
-        bash "$updater"
-        "$bus"
-        "$device_type"
-        "$system_hid_lower"
-        "$config_file"
-        "$crc_file"
-        "$device_config_file"
-      )
-
-      if "${cmd[@]}"; then
-        ok=$((ok + 1))
-      else
-        local rc=$?
-        info "ERROR: Update failed for device[$i]: Type=$device_type Bus=$bus"
-        info "ERROR: rc=$rc (updater may log details to syslog via logger)"
-        if [[ "${DPC_DEBUG:-0}" == "1" ]]; then
-          info "DEBUG: Re-running failed device[$i] with 'bash -x' (may be verbose)..."
-          ( set +e; bash -x "$updater" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file" ) || true
-        fi
-        fail=$((fail + 1))
-      fi
-
-      i=$((i + 1))
-    done
-
-    info "Batch summary: ok=$ok failed=$fail"
-    [[ $fail -eq 0 ]] || return 1
-    return 0
   }
 
   stop_health_services_if_possible() {
@@ -813,7 +584,7 @@ apply_cmd() {
   stop_health_services_if_possible
 
   info "Running package update (from JSON via per-device updater)..."
-  run_update_from_json "$pkg_dir" "${pkg_dir}/${json_cfg}"
+  bash ${VR_DPC_UPDATE_ALL_BIN} --package-dir "$pkg_dir" "${pkg_dir}/${json_cfg}" || die "DPC batch update failed"
 
   # Show versions after update for quick confirmation.
   local vr_after

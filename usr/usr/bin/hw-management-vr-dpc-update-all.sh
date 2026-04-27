@@ -37,6 +37,34 @@
 LOG_TAG="vr_dpc_update_all"
 DPC_UPDATE_SCRIPT="/usr/bin/hw-management-vr-dpc-update.sh"
 
+normalize_system_hid()
+{
+    local system_hid="$1"
+    echo "$system_hid" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/'
+}
+
+resolve_path_under_pkg()
+{
+    local package_dir="$1"
+    local path="$2"
+
+    # Preserve empty values so callers can validate "missing field" correctly.
+    if [[ -z "$path" ]] || [[ "$path" == "null" ]]; then
+        echo ""
+        return 0
+    fi
+
+    # Keep absolute paths unchanged.
+    if [[ "$path" == /* ]]; then
+        echo "$path"
+        return 0
+    fi
+
+    # Optional package dir: default to current working directory.
+    local base_dir="${package_dir:-.}"
+    echo "${base_dir%/}/${path}"
+}
+
 # Function to log messages
 log_message()
 {
@@ -55,6 +83,7 @@ usage()
     echo ""
     echo "OPTIONS:"
     echo "  --validate-json    Validate JSON configuration file and exit"
+    echo "  --package-dir      Path to package directory"
     echo "  --help             Display this help message"
     echo ""
     echo "Arguments:"
@@ -101,8 +130,17 @@ check_dependencies()
 # Function to validate JSON configuration
 validate_json_config()
 {
+    #validate_json_config — signature validate_json_config "$json_file" "${package_dir:-}":
+
+# If $2 set: require [[ -d "$2" ]]
     local json_file="$1"
+    local package_dir="$2"
     local validation_errors=0
+
+    if [[ -n "$package_dir" ]] && [[ ! -d "$package_dir" ]]; then
+        echo "[ERROR] Package directory not found: $package_dir"
+        return 1
+    fi
 
     echo "Validating JSON configuration: $json_file"
     echo "=========================================="
@@ -131,11 +169,13 @@ validate_json_config()
         echo "FAILED"
         echo "[ERROR] Missing 'System HID' field"
         validation_errors=$((validation_errors + 1))
-    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii][0-9]{3}$'; then
+    # Accept both HI### and HID### (legacy variants); normalize to hid### (what the per-device updater expects).
+    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii]([Dd])?[0-9]{3}$'; then
         echo "FAILED"
-        echo "[ERROR] Invalid 'System HID' format. Expected format: HI### or hi### (where ### is 3 digits)"
+        echo "[ERROR] Invalid 'System HID' format. Expected format: HI### or HID### (where ### is 3 digits)"
         validation_errors=$((validation_errors + 1))
     else
+        system_hid=$(normalize_system_hid "$system_hid")
         echo "OK (System HID: $system_hid)"
     fi
 
@@ -185,8 +225,11 @@ validate_json_config()
         device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file" 2>/dev/null)
         bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file" 2>/dev/null)
         config_file=$(jq -r ".Devices[$dev_idx].ConfigFile" "$json_file" 2>/dev/null)
+        config_file=$(resolve_path_under_pkg "$package_dir" "$config_file")
         crc_file=$(jq -r ".Devices[$dev_idx].CrcFile" "$json_file" 2>/dev/null)
+        crc_file=$(resolve_path_under_pkg "$package_dir" "$crc_file")
         device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile" "$json_file" 2>/dev/null)
+        device_config_file=$(resolve_path_under_pkg "$package_dir" "$device_config_file")
 
         # Validate DeviceType
         if [[ -z "$device_type" ]] || [[ "$device_type" == "null" ]]; then
@@ -214,7 +257,8 @@ validate_json_config()
         else
             echo "  ConfigFile: $config_file"
             if [[ ! -f "$config_file" ]]; then
-                echo "    [WARNING] File does not exist"
+                echo "    [ERROR] File does not exist"
+                validation_errors=$((validation_errors + 1))
             fi
         fi
 
@@ -225,7 +269,8 @@ validate_json_config()
         else
             echo "  CrcFile: $crc_file"
             if [[ ! -f "$crc_file" ]]; then
-                echo "    [WARNING] File does not exist"
+                echo "    [ERROR] File does not exist"
+                validation_errors=$((validation_errors + 1))
             fi
         fi
 
@@ -236,7 +281,8 @@ validate_json_config()
         else
             echo "  DeviceConfigFile: $device_config_file"
             if [[ ! -f "$device_config_file" ]]; then
-                echo "    [WARNING] File does not exist"
+                echo "    [ERROR] File does not exist"
+                validation_errors=$((validation_errors + 1))
             fi
         fi
 
@@ -261,13 +307,18 @@ validate_json_config()
 process_json_config()
 {
     local json_file="$1"
+    local package_dir="$2"
+    if [[ -n "$package_dir" ]] && [[ ! -d "$package_dir" ]]; then
+        log_message "err" "Package directory not found: $package_dir"
+        return 1
+    fi
 
     if [[ ! -f "$json_file" ]]; then
         log_message "err" "JSON configuration file not found: $json_file"
         return 1
     fi
 
-    log_message "info" "Processing JSON configuration: $json_file"
+    log_message "info" "Processing JSON configuration: $json_file in package directory: $package_dir"
 
     # Validate JSON syntax
     if ! jq empty "$json_file" >/dev/null 2>&1; then
@@ -287,6 +338,9 @@ process_json_config()
 
     if [[ -z "$system_hid" ]] || [[ "$system_hid" == "null" ]]; then
         log_message "err" "Missing System HID in configuration"
+        return 1
+    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii]([Dd])?[0-9]{3}$'; then
+        log_message "err" "Invalid System HID format. Expected format: HI### or HID### (where ### is 3 digits)"
         return 1
     fi
 
@@ -315,8 +369,11 @@ process_json_config()
         device_type=$(jq -r ".Devices[$dev_idx].DeviceType" "$json_file")
         bus=$(jq -r ".Devices[$dev_idx].Bus" "$json_file")
         config_file=$(jq -r ".Devices[$dev_idx].ConfigFile" "$json_file")
+        config_file=$(resolve_path_under_pkg "$package_dir" "$config_file")
         crc_file=$(jq -r ".Devices[$dev_idx].CrcFile" "$json_file")
+        crc_file=$(resolve_path_under_pkg "$package_dir" "$crc_file")
         device_config_file=$(jq -r ".Devices[$dev_idx].DeviceConfigFile" "$json_file")
+        device_config_file=$(resolve_path_under_pkg "$package_dir" "$device_config_file")
 
         log_message "info" "Device $total_devices: Type=$device_type, Bus=$bus"
 
@@ -358,7 +415,7 @@ process_json_config()
 
         # Convert system HID to lowercase for command
         local system_hid_lower
-        system_hid_lower=$(echo "$system_hid" | tr '[:upper:]' '[:lower:]')
+        system_hid_lower=$(normalize_system_hid "$system_hid")
 
         # Build command (using array to prevent argument injection)
         local cmd=("$DPC_UPDATE_SCRIPT" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
@@ -398,13 +455,22 @@ main()
 {
     local validate_only=0
     local json_file=""
-
+    local package_dir=""
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --validate-json)
                 validate_only=1
                 shift
+                ;;
+            --package-dir)
+                if [[ $# -lt 2 ]] || [[ "$2" == -* ]]; then
+                    echo "Error: --package-dir requires a directory argument"
+                    usage
+                    exit 1
+                fi
+                package_dir="$2"
+                shift 2
                 ;;
             --help)
                 usage
@@ -443,7 +509,7 @@ main()
         fi
 
         # Validate JSON
-        if validate_json_config "$json_file"; then
+        if validate_json_config "$json_file" "$package_dir"; then
             exit 0
         else
             exit 1
@@ -460,7 +526,7 @@ main()
     fi
 
     # Process JSON configuration
-    if process_json_config "$json_file"; then
+    if process_json_config "$json_file" "$package_dir"; then
         log_message "info" "Voltage Regulator DPC Batch Update Completed Successfully"
         exit 0
     else
