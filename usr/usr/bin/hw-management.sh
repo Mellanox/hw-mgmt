@@ -1585,8 +1585,21 @@ msn47xx_specific()
 
 	max_tachos=12
 	minimal_unsupported=1
-	echo 25000 > $config_path/fan_max_speed
-	echo 4500 > $config_path/fan_min_speed
+
+	# Set according to front fan max.
+	echo 23000 > "$config_path"/fan_max_speed
+	# Set at rear (outlet) fan min, according to fan vendor table
+	echo 4800 > "$config_path"/fan_min_speed
+	# Only reverse fans are supported
+
+	# Set FAN front (inlet) speed limits
+	echo 23000 > "$config_path"/fan_front_max_speed
+	echo 5400 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 20500 > "$config_path"/fan_rear_max_speed
+	echo 4800 > "$config_path"/fan_rear_min_speed
+
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
@@ -2126,9 +2139,19 @@ sn5x00_specific()
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-	# Set according to front fan max. Rear fan max is 13200
-	echo 13800 > $config_path/fan_max_speed
-	echo 2800 > $config_path/fan_min_speed
+
+	# Set FAN front (inlet) speed limits
+	echo 13500 > "$config_path"/fan_front_max_speed
+	echo 4143 > "$config_path"/fan_front_min_speed
+
+	# Set FAN rear (outlet) speed limits 
+	echo 12603 > "$config_path"/fan_rear_max_speed
+	echo 3891 > "$config_path"/fan_rear_min_speed
+
+	# Set according to fan min/max.
+	echo 13500 > "$config_path"/fan_max_speed
+	echo 3891 > "$config_path"/fan_min_speed
+
 	echo 32500 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
