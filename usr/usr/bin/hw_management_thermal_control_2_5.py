@@ -430,7 +430,7 @@ def current_milli_time():
         get current time in milliseconds
     @return: int value time in milliseconds
     """
-    return round(time.clock_gettime(1) * 1000)
+    return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
 
 
 # ----------------------------------------------------------------------

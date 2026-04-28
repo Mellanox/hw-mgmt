@@ -814,7 +814,7 @@ def update_attr(attr_prop):
     """
     @summary: Update hw-mgmt attributes and invoke cmd per attr change
     """
-    ts = time.time()
+    ts = time.clock_gettime(time.CLOCK_MONOTONIC)
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
