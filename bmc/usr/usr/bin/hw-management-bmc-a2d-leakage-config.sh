@@ -631,6 +631,7 @@ create_channel_infrastructure()
 
 	local leakage_base="/var/run/hw-management/leakage/$device_index"
 	mkdir -p "$leakage_base"
+	rm -f "$leakage_base/device_name"
 	echo "$device_type" >"$leakage_base/device_type"
 	if [ -n "$detector_name" ]; then
 		echo "$detector_name" >"$leakage_base/device_name"
