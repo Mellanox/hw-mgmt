@@ -711,7 +711,7 @@ Kernel-6.1
 |0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted					  |            | SN5640                                         |
 |0098-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
 |0099-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
-|0100-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted					  |            |                                          |
+|0100-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted					  |            |                                                |
 |0101-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted					  |            |                                                |
 |0102-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted					  |            |                                                |
 |0103-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                         |
@@ -719,6 +719,7 @@ Kernel-6.1
 |0105-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Downstream accepted                      |            | mp29502                                        |
 |0106-hwmon-pmbus-xdpe1a2g7b-XDPE1A2G7B-Digital-Multi-phas.patch  |                    | Downstream accepted                      |            | xdpe1a2g7b                                     |
 |0107-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|0108-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
