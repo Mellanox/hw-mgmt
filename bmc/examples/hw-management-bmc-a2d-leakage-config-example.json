@@ -22,9 +22,9 @@
       "NormalMin": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent.",
       "NormalMax": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent.",
       "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max/crit).",
-      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if LoThreshRegVal/NormalMin absent.",
+      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if NormalMin absent.",
       "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
-      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if HiThreshRegVal/Max absent.",
+      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if NormalMax absent.",
       "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit."
     },
     "runtime_paths": {
@@ -72,7 +72,6 @@
           "Type": "flex",
           "CfgReg": "0x01",
           "CfgRegVal": "0xc4 0x90",
-          "LoThreshReg": "0x02",
           "LoThreshReg": "0x02",
           "LoThreshRegVal": "0x38 0x40",
           "HiThreshReg": "0x03",
