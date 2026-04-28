@@ -34,8 +34,8 @@
       "lcrit": "from Device.CriticalMin",
       "warn": "from Device.WarningMax",
       "crit": "from Device.CriticalMax",
-      "min": "NormalMin×Scale, else Min, else CriticalMin",
-      "max": "HiThreshRegVal×Scale, else Max, else CriticalMax"
+      "min": "LoThreshRegVal×Scale, else NormalMin, else WarningMin",
+      "max": "HiThreshRegVal×Scale, else NormalMax, else WarningMax"
     },
     "deployment_note": "Copy only the array in example_leak_detectors to /etc/hw-management-bmc-a2d-leakage-config.json (or merge with platform file). The full JSON in this file is for documentation; the BMC tool expects a top-level JSON array."
   },
