@@ -346,19 +346,20 @@ Platform JSON **`hw-management-bmc-a2d-leakage-config.json`** is installed as **
 | Path | Meaning |
 |------|---------|
 | `/var/run/hw-management/leakage/N/device_type` | Selected **`DeviceType`** string |
+| `/var/run/hw-management/leakage/N/device_name` | **`Name`** from JSON (human-readable detector id) |
 | `/var/run/hw-management/leakage/N/<j>/` | Per-channel directory; **`j`** = `1` … **`NumChnl`** |
 | `/var/run/hw-management/leakage/N/<j>/input` | If **`Probe`** is true: symlink to the kernel IIO raw attribute (e.g. **`in_voltage*_raw`**) for that channel — **unscaled** sample |
-| `/var/run/hw-management/leakage/N/<j>/min` | Low threshold from **`LoThreshRegVal`** (bytes → unsigned, big-endian) × **`Scale`** |
-| `/var/run/hw-management/leakage/N/<j>/max` | High threshold from **`HiThreshRegVal`** × **`Scale`** (same rules as **`min`**) |
-| `/var/run/hw-management/leakage/N/<j>/crit` | **`CriticalMax`** from JSON (engineering / config units) |
-| `/var/run/hw-management/leakage/N/<j>/emerg` | **`EmergencyMax`** from JSON |
-| `/var/run/hw-management/leakage/N/<j>/lcrit` | **`CriticalMin`** from JSON (optional; low-side critical bound, same units as **`crit`**) |
-| `/var/run/hw-management/leakage/N/<j>/lemerg` | **`EmergencyMin`** from JSON (optional; low-side emergency bound) |
+| `/var/run/hw-management/leakage/N/<j>/min` | Low threshold from **`LoThreshRegVal`** (bytes → unsigned, big-endian) × **`Scale`**; fallback **`NormalMin`**, then **`WarningMin`** |
+| `/var/run/hw-management/leakage/N/<j>/max` | High threshold from **`HiThreshRegVal`** × **`Scale`**; fallback **`NormalMax`**, then **`WarningMax`** |
+| `/var/run/hw-management/leakage/N/<j>/warn` | **`WarningMax`** from JSON (engineering / config units) |
+| `/var/run/hw-management/leakage/N/<j>/crit` | **`CriticalMax`** from JSON |
+| `/var/run/hw-management/leakage/N/<j>/lwarn` | **`WarningMin`** from JSON (optional; low-side warning bound, same units as **`warn`**) |
+| `/var/run/hw-management/leakage/N/<j>/lcrit` | **`CriticalMin`** from JSON (optional; low-side critical bound) |
 | `/var/run/hw-management/leakage/N/<j>/type` | **`Type`** from JSON (optional; sensor kind label, e.g. **`rop`**, **`flex`**) |
 | `/var/run/hw-management/leakage/N/<j>/scale` | **`Scale`** from JSON |
-| `/var/run/hw-management/leakage/N/<ChnlNames[i]>` | Symlink to channel index `i+1` when **`ChnlNames`** is set |
+| `/var/run/hw-management/leakage/N/<j>/channel_name` | **`ChnlNames[j-1]`** from JSON (optional; human-readable channel name inside channel dir) |
 
-**Per-`Device` JSON (optional):** **`Device`** is an ordered list of alternatives — the first entry whose presence probe and **`configure_device`** step succeed is used (remaining entries are skipped). Put the BOM you want to win first (e.g. **`MAX1363`** before **`ADS1015`** when both can bind at the same address). Optional **`HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC=1`** restores legacy behavior: skip **`MAX1363`** when the bus looks like **ADS1015** by register read. **`Probe`** — when **`true`**, the kernel driver is bound via **`/sys/bus/i2c/devices/i2c-<bus>/new_device`** *before* **`CfgReg`** / threshold **`i2ctransfer`** writes so the driver does not overwrite programmed values afterward. **`Scale`**, **`CriticalMax`**, **`EmergencyMax`**, **`CriticalMin`**, **`EmergencyMin`**, **`Type`**, **`LoThreshRegVal`**, **`HiThreshRegVal`** feed the channel files above (thresholds from registers are scaled by **`Scale`**; user limits **`Critical*`** / **`Emergency*`** are stored as given in configuration units). Driver names: **`MAX1363`** → `max1363`, **`ADS1015`** → `ads1015` (adjust for your kernel). **`input`** symlinks are created only after configuration; if sysfs names differ on your board, extend **`find_iio_channel_raw`** in the script.
+**Per-`Device` JSON (optional):** **`Device`** is an ordered list of alternatives — the first entry whose presence probe and **`configure_device`** step succeed is used (remaining entries are skipped). Put the BOM you want to win first (e.g. **`MAX1363`** before **`ADS1015`** when both can bind at the same address). Optional **`HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC=1`** restores legacy behavior: skip **`MAX1363`** when the bus looks like **ADS1015** by register read. **`Probe`** — when **`true`**, the kernel driver is bound via **`/sys/bus/i2c/devices/i2c-<bus>/new_device`** *before* **`CfgReg`** / threshold **`i2ctransfer`** writes so the driver does not overwrite programmed values afterward. **`Scale`**, **`WarningMax`**, **`CriticalMax`**, **`WarningMin`**, **`CriticalMin`**, **`NormalMin`**, **`NormalMax`**, **`Type`**, **`LoThreshRegVal`**, **`HiThreshRegVal`** feed the channel files above (thresholds from registers are scaled by **`Scale`**; user limits **`Warning*`** / **`Critical*`** are stored as given in configuration units). Driver names: **`MAX1363`** → `max1363`, **`ADS1015`** → `ads1015` (adjust for your kernel). **`input`** symlinks are created only after configuration; if sysfs names differ on your board, extend **`find_iio_channel_raw`** in the script.
 
 Example JSON with field notes: **`bmc/examples/hw-management-bmc-a2d-leakage-config-example.json`** (includes **`field_reference`** and **`example_leak_detectors`**; deploy the bare array to **`/etc/hw-management-bmc-a2d-leakage-config.json`** — see **`deployment_note`** in that file).
 
