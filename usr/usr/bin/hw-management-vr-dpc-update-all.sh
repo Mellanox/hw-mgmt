@@ -184,7 +184,7 @@ validate_json_config()
     echo "Validating devices:"
     echo "-------------------"
 
-    dev_idx=0
+    local dev_idx=0
     while [ $dev_idx -lt $num_devices ]; do
         echo "Device $((dev_idx+1)):"
 
@@ -345,7 +345,7 @@ process_json_config()
     log_message "info" "Processing System HID: $system_hid with $num_devices device(s)"
 
     # Iterate through each device
-    dev_idx=0
+    local dev_idx=0
     while [ $dev_idx -lt $num_devices ]; do
         total_devices=$((total_devices + 1))
 

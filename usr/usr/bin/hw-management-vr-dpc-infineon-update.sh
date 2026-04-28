@@ -372,8 +372,8 @@ i2c_rw_wrapper() {
                     return 0
                 fi
             else
-                log_debug "i2ctransfer -y $bus w${nwb}@$addr ${wb[*]} # no PEC"
-                if i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}"; then
+                log_debug "i2ctransfer $I2C_XFER_FLAGS $bus w${nwb}@$addr ${wb[*]} # no PEC"
+                if i2ctransfer $I2C_XFER_FLAGS $bus "w${nwb}@$addr" "${wb[@]}"; then
                     return 0
                 fi
             fi
@@ -396,8 +396,8 @@ i2c_rw_wrapper() {
                 continue
             }
         else
-            log_debug "i2ctransfer -y $bus w${nwb}@$addr ${wb[*]} r${readlen} # no PEC"
-            raw=$(i2ctransfer -y $bus "w${nwb}@$addr" "${wb[@]}" "r${readlen}") || {
+            log_debug "i2ctransfer $I2C_XFER_FLAGS $bus w${nwb}@$addr ${wb[*]} r${readlen} # no PEC"
+            raw=$(i2ctransfer $I2C_XFER_FLAGS $bus "w${nwb}@$addr" "${wb[@]}" "r${readlen}") || {
                 attempt=$((attempt + 1))
                 [ $attempt -lt "$max" ] && { log_verbose "i2c_rw_wrapper read retry $attempt/$max"; sleep "$delay"; }
                 continue
@@ -607,7 +607,12 @@ read_otp_dword_hex() {
     local line _d0 _d1 _d2 _d3 _d4
     line=$(i2c_rw_wrapper "$bus" "$addr" 5 0 "$MFR_REG_READ") || return 1
     line=$(echo "$line" | sed 's/0x//g')
-    read -r _d0 _d1 _d2 _d3 _d4 <<< "$line"
+    read -r _d0 _d1 _d2 _d3 _d4 <<< "$line" || return 1
+    if (( 16#${_d0:-0} != 4 )); then
+        log_error "read_otp_dword_hex: expected block length 4 (0x04), got 0x${_d0:-?} (bus=$bus addr=$addr reg=$MFR_REG_READ)"
+        return 1
+    fi
+    [ -z "$_d1" ] || [ -z "$_d2" ] || [ -z "$_d3" ] || [ -z "$_d4" ] && return 1
     line="$_d1 $_d2 $_d3 $_d4"
     if [ "${USE_I2C_PEC:-0}" -eq 1 ]; then
         log_debug "read DWORD: $line # PEC"
@@ -1930,7 +1935,7 @@ program_device() {
         # -s <hc>: flash only section(s) with this HeaderCode
         if [ -n "$FLASH_SECTION_HC" ]; then
             local requested_hc=$((FLASH_SECTION_HC))
-            section_bins_filtered=()
+            local section_bins_filtered=()
             for f in "${section_bins[@]}"; do
                 [ ! -f "$f" ] && continue
                 local first_byte
