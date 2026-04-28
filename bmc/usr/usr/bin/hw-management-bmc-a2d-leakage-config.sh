@@ -513,6 +513,9 @@ find_iio_channel_raw()
 }
 
 # Per-channel files under /var/run/.../leakage/<i>/<j>/ (see README).
+# warn/crit/lwarn/lcrit from WarningMax/CriticalMax/WarningMin/CriticalMin.
+# min: LoThreshRegVal×Scale, else NormalMin, else WarningMin.
+# max: HiThreshRegVal×Scale, else NormalMax, else WarningMax.
 populate_leakage_channel_dir()
 {
 	local ch_dir="$1"
@@ -522,7 +525,7 @@ populate_leakage_channel_dir()
 	local address="$5"
 	local device_type="$6"
 
-	rm -f "$ch_dir/min" "$ch_dir/max" "$ch_dir/warn" "$ch_dir/crit" "$ch_dir/lwarn" "$ch_dir/lcrit" "$ch_dir/type" "$ch_dir/scale" "$ch_dir/input"
+	rm -f "$ch_dir/min" "$ch_dir/max" "$ch_dir/warn" "$ch_dir/crit" "$ch_dir/lwarn" "$ch_dir/lcrit" "$ch_dir/type" "$ch_dir/scale" "$ch_dir/input" "$ch_dir/channel_name"
 
 	local scale_s=""
 	if scale_s=$(json_optional_scalar "$device_json" "Scale"); then
@@ -565,16 +568,16 @@ populate_leakage_channel_dir()
 		awk -v u="$hi_u" -v s="$sc_num" 'BEGIN { printf "%.12g\n", u * s }' >"$ch_dir/max"
 	fi
 
-	# min/max when Lo/Hi register hex absent (e.g. MAX1363): optional Min/Max scalars, else WarningMin/WarningMax
+	# min/max when Lo/Hi register hex absent (e.g. MAX1363): optional NormalMin/NormalMax scalars, else WarningMin/WarningMax
 	if [ ! -f "$ch_dir/min" ]; then
-		if v=$(json_optional_scalar "$device_json" "Min"); then
+		if v=$(json_optional_scalar "$device_json" "NormalMin"); then
 			echo "$v" >"$ch_dir/min"
 		elif v=$(json_optional_scalar "$device_json" "WarningMin"); then
 			echo "$v" >"$ch_dir/min"
 		fi
 	fi
 	if [ ! -f "$ch_dir/max" ]; then
-		if v=$(json_optional_scalar "$device_json" "Max"); then
+		if v=$(json_optional_scalar "$device_json" "NormalMax"); then
 			echo "$v" >"$ch_dir/max"
 		elif v=$(json_optional_scalar "$device_json" "WarningMax"); then
 			echo "$v" >"$ch_dir/max"
@@ -603,11 +606,13 @@ populate_leakage_channel_dir()
 
 # Runtime layout (per A2D / leak-detector index i):
 #   /var/run/hw-management/leakage/<i>/device_type
+#   /var/run/hw-management/leakage/<i>/device_name   — Name from JSON
 #   /var/run/hw-management/leakage/<i>/<j>/input (symlink if Probe) — kernel raw reading
 #   /var/run/hw-management/leakage/<i>/<j>/{min,max,warn,crit,lwarn,lcrit,type,scale} — see README
-#   min/max: LoThreshRegVal/HiThreshRegVal (× Scale), else optional Min/Max, else WarningMin/WarningMax
-#   /var/run/hw-management/leakage/<i>/<ChnlNames[k]> -> symlink to channel number
+#   min/max: LoThreshRegVal/HiThreshRegVal (× Scale), else NormalMin/NormalMax, else WarningMin/WarningMax
+#   /var/run/hw-management/leakage/<i>/<j>/channel_name — ChnlNames[k] text under channel dir
 # Seventh argument: space-separated channel names (from JSON ChnlNames).
+# Eighth argument: detector Name from JSON.
 create_channel_infrastructure()
 {
 	local device_index="$1"
@@ -617,6 +622,7 @@ create_channel_infrastructure()
 	local bus="$5"
 	local address="$6"
 	local chnames="$7"
+	local detector_name="${8:-}"
 
 	if [ ! -d "/var/run/hw-management" ]; then
 		log_message "info" "/var/run/hw-management does not exist - skipping channel infrastructure creation"
@@ -625,7 +631,11 @@ create_channel_infrastructure()
 
 	local leakage_base="/var/run/hw-management/leakage/$device_index"
 	mkdir -p "$leakage_base"
+	rm -f "$leakage_base/device_name"
 	echo "$device_type" >"$leakage_base/device_type"
+	if [ -n "$detector_name" ]; then
+		echo "$detector_name" >"$leakage_base/device_name"
+	fi
 	log_message "info" "Leakage runtime: $leakage_base (device_type=$device_type)"
 
 	if json_probe_true "$device_json"; then
@@ -639,9 +649,8 @@ create_channel_infrastructure()
 		populate_leakage_channel_dir "$leakage_base/$ch" "$ch" "$device_json" "$bus" "$address" "$device_type"
 		channel_name=$(echo "$chnames" | awk -v c="$ch" '{print $c}')
 		if [ -n "$channel_name" ]; then
-			rm -f "$leakage_base/$channel_name"
-			ln -s "$ch" "$leakage_base/$channel_name"
-			log_message "info" "Channel $ch -> $leakage_base/$channel_name"
+			echo "$channel_name" >"$leakage_base/$ch/channel_name"
+			log_message "info" "Channel $ch channel_name=$channel_name"
 		fi
 		ch=$((ch + 1))
 	done
@@ -826,7 +835,7 @@ EOF
 			fi
 			device_found=1
 			total_configured=$((total_configured + 1))
-			create_channel_infrastructure "$((i + 1))" "$resolved_type" "$num_channels" "$resolved_json" "$bus" "$address" "$chnames"
+			create_channel_infrastructure "$((i + 1))" "$resolved_type" "$num_channels" "$resolved_json" "$bus" "$address" "$chnames" "$detector_name"
 			break
 		done
 

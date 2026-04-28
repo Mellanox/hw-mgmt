@@ -4,7 +4,7 @@
     "detector_object": {
       "Name": "string, required. Human-readable detector id.",
       "NumChnl": "number, required. Channel count for this detector (1-based channel indices under leakage/<i>/).",
-      "ChnlNames": "array of strings, optional. If set, symlinks leakage/<i>/<name> -> channel index.",
+      "ChnlNames": "array of strings, optional. If set, written as channel_name file inside leakage/<i>/<j>/.",
       "Device": "array of device alternatives; first probed I2C match is configured."
     },
     "device_object": {
@@ -19,12 +19,12 @@
       "LoThreshRegVal": "string, optional. Bytes for low threshold (big-endian); scaled to min.",
       "HiThreshReg": "string, optional. High threshold register address.",
       "HiThreshRegVal": "string, optional. Bytes for high threshold; scaled to max.",
-      "Min": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent.",
-      "Max": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent.",
-      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max/warn).",
-      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if LoThreshRegVal/Min absent.",
+      "NormalMin": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent.",
+      "NormalMax": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent.",
+      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max).",
+      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if NormalMin absent.",
       "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
-      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if HiThreshRegVal/Max absent.",
+      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if NormalMax absent.",
       "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit."
     },
     "runtime_paths": {
@@ -34,8 +34,8 @@
       "lcrit": "from Device.CriticalMin",
       "warn": "from Device.WarningMax",
       "crit": "from Device.CriticalMax",
-      "min": "LoThreshRegVal×Scale, else Min, else WarningMin",
-      "max": "HiThreshRegVal×Scale, else Max, else WarningMax"
+      "min": "LoThreshRegVal×Scale, else NormalMin, else WarningMin",
+      "max": "HiThreshRegVal×Scale, else NormalMax, else WarningMax"
     },
     "deployment_note": "Copy only the array in example_leak_detectors to /etc/hw-management-bmc-a2d-leakage-config.json (or merge with platform file). The full JSON in this file is for documentation; the BMC tool expects a top-level JSON array."
   },
@@ -54,13 +54,15 @@
           "Address": "0x49",
           "Probe": false,
           "Type": "rop",
-          "Scale": 0.000244140625,
-          "WarningMin": 0.05,
-          "CriticalMin": 0.02,
-          "WarningMax": 0.85,
-          "CriticalMax": 0.95,
           "CfgReg": "0x00",
-          "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
+          "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15",
+          "NormalMin": 0.8,
+          "NormalMax": 0.9,
+          "Scale": 0.000244140625,
+          "WarningMin": 0.7,
+          "CriticalMin": 0.1,
+          "WarningMax": 0.8,
+          "CriticalMax": 0.7
         },
         {
           "DeviceType": "ADS1015",

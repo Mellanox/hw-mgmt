@@ -14,6 +14,7 @@
 /var/run/hw-management/leakage/
 ├── 1/                                 # first detector (N=1)
 │   ├── device_type                    # text: DeviceType from JSON (e.g. MAX1363, ADS1015)
+│   ├── device_name                    # text: Name from JSON (e.g. Chassis_0_LeakDetector_0_Mgmt)
 │   ├── 1/                             # channel j=1
 │   │   ├── input                      # symlink or file: raw IIO sample (unscaled) when Probe path exists
 │   │   ├── min                        # low threshold (register-derived × scale, config units)
@@ -24,28 +25,31 @@
 │   │   ├── lcrit                      # optional: CriticalMin
 │   │   ├── type                       # optional: JSON field "Type" — file content rop or flex (sensor kind)
 │   │   ├── scale                      # Scale from JSON
+│   │   ├── channel_name               # optional: ChnlNames text (e.g. Chassis_0_LeakDetector_0_A)
 │   │   ├── last_sample                # optional: 12-bit-aligned code (written on OOB event by leakage-handler)
 │   │   └── last_event                 # optional: event timestamp ms (written by leakage-handler)
-│   ├── 2/                             # channel j=2 (if NumChnl ≥ 2)
-│   │   ├── input
-│   │   ├── min
-│   │   ├── max
-│   │   ├── warn
-│   │   ├── crit
-│   │   ├── type                       # optional: rop or flex (same "Type" field as channel 1)
-│   │   ├── scale
-│   │   ├── last_sample
-│   │   └── last_event
-│   └── leak_in_0 -> 1               # optional: ChnlNames — symlink from JSON name → channel dir "1"
+│   └── 2/                             # channel j=2 (if NumChnl ≥ 2)
+│       ├── input
+│       ├── min
+│       ├── max
+│       ├── warn
+│       ├── crit
+│       ├── type                       # optional: rop or flex (same "Type" field as channel 1)
+│       ├── scale
+│       ├── channel_name               # optional: ChnlNames text (e.g. Chassis_0_LeakDetector_0_B)
+│       ├── last_sample
+│       └── last_event
 │
 └── 2/                                 # second detector (N=2)
     ├── device_type
+    ├── device_name
     └── 1/
         ├── input
         ├── min
         ├── max
         ├── warn
         ├── crit
+        ├── channel_name
         └── scale
 
 # Notes
@@ -53,12 +57,16 @@
 # • input: When JSON Probe is true, the script binds the driver and points input at the kernel
 #   sysfs raw attribute (e.g. …/iio:deviceX/in_voltageY_raw). Paths differ by SoC/driver.
 #
-# • min/max: From LoThreshRegVal / HiThreshRegVal (big-endian unsigned) × Scale.
+# • min/max: From LoThreshRegVal / HiThreshRegVal (big-endian unsigned) × Scale;
+#   fallback NormalMin / NormalMax, then WarningMin / WarningMax.
 #
-# • type: Per-channel file from JSON "Type". Typical values: rop, flex (not a ChnlNames symlink).
+# • type: Per-channel file from JSON "Type". Typical values: rop, flex.
 #
-# • ChnlNames: Optional extra symlinks under leakage/<N>/ whose names come from the JSON array;
-#   each symlink targets a numeric channel directory (1 … NumChnl).
+# • channel_name: Per-channel file from JSON ChnlNames array. Contains the human-readable
+#   channel name (e.g. Chassis_0_LeakDetector_0_A). Located inside each channel directory.
+#
+# • device_name: Per-detector file from JSON "Name". Contains the human-readable detector
+#   name (e.g. Chassis_0_LeakDetector_0_Mgmt).
 #
 # • hw-management-bmc-leakage-handler.sh (udev LEAKAGE<n> events) walks only numeric subdirs of
 #   leakage/<n>/ (channel indices). It reads input, min, max; if sample is out of band it writes
