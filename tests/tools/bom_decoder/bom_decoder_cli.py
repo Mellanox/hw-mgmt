@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -132,7 +132,8 @@ class BOMDecoder:
         self.regulator_types = {
             "0": "dummy", "a": "mp2975", "b": "mp2888", "c": "tps53679",
             "d": "xdpe12284", "e": "152x4", "f": "pmbus", "g": "mp2891",
-            "h": "xdpe1a2g7", "i": "mp2855", "j": "mp29816"
+            "h": "xdpe1a2g7", "i": "mp2855", "j": "mp29816", "k": "mp2845",
+            "l": "raa228943"
         }
 
         self.a2d_types = {
