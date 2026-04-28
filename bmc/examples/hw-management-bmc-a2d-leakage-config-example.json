@@ -21,7 +21,7 @@
       "HiThreshRegVal": "string, optional. Bytes for high threshold; scaled to max.",
       "NormalMin": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent.",
       "NormalMax": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent.",
-      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max/crit).",
+      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max).",
       "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if NormalMin absent.",
       "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
       "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if NormalMax absent.",
