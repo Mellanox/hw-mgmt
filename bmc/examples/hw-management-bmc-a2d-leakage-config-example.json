@@ -73,7 +73,8 @@
           "CfgReg": "0x01",
           "CfgRegVal": "0xc4 0x90",
           "LoThreshReg": "0x02",
-          "NormalMin": "0x38 0x40",
+          "LoThreshReg": "0x02",
+          "LoThreshRegVal": "0x38 0x40",
           "HiThreshReg": "0x03",
           "HiThreshRegVal": "0x7f 0xf0"
         }
