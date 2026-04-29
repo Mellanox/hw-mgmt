@@ -33,7 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 ################################################################################
-# A2D leakage channel reader: reads ADS1015 (and placeholder MAX1363) channels
+# A2D leakage channel reader: reads ADS1015, ADS7924 (IIO or raw I2C), and placeholder MAX1363
 # and writes per-channel voltage files under /var/run/hw-management/leakage/,
 # alongside the tree created by hw-management-bmc-a2d-leakage-config.sh.
 # Origin: OpenBMC meta-nvidia bmc-post-boot-cfg a2d_leakage_read.sh
@@ -175,6 +175,121 @@ ads1015_read_channels()
     return 0
 }
 
+# Parse first two 0xNN bytes from i2ctransfer output (big-endian 16-bit).
+# Uses grep -oE (BusyBox and GNU); avoid bash-only [[ =~ ]].
+ads7924_parse_be16()
+{
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | grep -oE '0x[0-9a-f]{1,2}' | head -2 | tr '\n' ' '
+}
+
+# True if string is a signed decimal integer (POSIX / BusyBox friendly).
+ads7924_is_decimal_int()
+{
+    awk -v s="$1" 'BEGIN { if (s ~ /^-?[0-9]+$/) exit 0; exit 1 }'
+}
+
+# Read ADS7924 channel (1..4): 12-bit code from DATAx_U/L via pointer INC, then volts = raw12 * scale.
+ads7924_read_channel_volts()
+{
+    local bus="$1"
+    local addr="$2"
+    local channel="$3"
+    local scale="$4"
+    local ptr raw_hex hi lo val raw12
+
+    ptr=$((0x80 | (0x02 + (channel - 1) * 2)))
+    raw_hex=$(i2ctransfer -f -y "$bus" w1@"$addr" "0x$(printf '%02x' "$ptr")" r2 2>/dev/null) || return 1
+    set -- $(ads7924_parse_be16 "$raw_hex")
+    hi="$1"
+    lo="$2"
+    [ -n "$hi" ] && [ -n "$lo" ] || return 1
+    hi=$((hi))
+    lo=$((lo))
+    val=$(( (hi << 8) | lo ))
+    raw12=$(( val >> 4 ))
+    echo "scale=10; ($raw12 * $scale) / 1" | bc 2>/dev/null
+}
+
+# Read all ADS7924 channels under device_dir (uses ch_dir/input + scale when present, else I2C).
+ads7924_read_channels()
+{
+    local bus="$1"
+    local addr="$2"
+    local device_dir="$3"
+    local channels_read=0
+    local channels_skipped=0
+    local ch_dir ch_num scale_f raw_input result skip_channel link link_name
+
+    log_message "info" "Reading ADS7924 channels on bus $bus addr $addr"
+
+    for ch_dir in "$device_dir"/[0-9]*; do
+        if [ ! -d "$ch_dir" ]; then
+            continue
+        fi
+
+        ch_num=$(basename "$ch_dir")
+        case "$ch_num" in
+        1|2|3|4) ;;
+        *)
+            log_message "debug" "Skipping channel dir $ch_num (ADS7924 supports 1–4)"
+            channels_skipped=$((channels_skipped + 1))
+            continue
+            ;;
+        esac
+
+        skip_channel=0
+        for link in "$device_dir"/*; do
+            if [ -L "$link" ] && [ "$(readlink "$link")" = "$ch_num" ]; then
+                link_name=$(basename "$link")
+                case "$link_name" in
+                Not_Connected*)
+                    log_message "debug" "Skipping channel $ch_num ($link_name)"
+                    skip_channel=1
+                    channels_skipped=$((channels_skipped + 1))
+                    break
+                    ;;
+                esac
+            fi
+        done
+        if [ "$skip_channel" -eq 1 ]; then
+            continue
+        fi
+
+        scale_f="0.000244140625"
+        if [ -f "$ch_dir/scale" ]; then
+            scale_f=$(tr -d ' \t\r\n' <"$ch_dir/scale")
+        fi
+        [ -z "$scale_f" ] && scale_f="0.000244140625"
+
+        result=""
+        if [ -r "$ch_dir/input" ]; then
+            IFS= read -r raw_input <"$ch_dir/input" 2>/dev/null || raw_input=""
+            raw_input="${raw_input//$'\r'/}"
+            raw_input="${raw_input// /}"
+            if [ -n "$raw_input" ] && ads7924_is_decimal_int "$raw_input"; then
+                result=$(echo "scale=10; ($raw_input * $scale_f) / 1" | bc 2>/dev/null)
+            fi
+        fi
+        if [ -z "$result" ]; then
+            result=$(ads7924_read_channel_volts "$bus" "$addr" "$ch_num" "$scale_f")
+        fi
+
+        if [ -n "$result" ]; then
+            case "$result" in
+            .*) result="0$result" ;;
+            esac
+            echo "$result" >"$ch_dir/value"
+            log_message "info" "Channel $ch_num: $result V"
+            channels_read=$((channels_read + 1))
+        else
+            log_message "warning" "Failed to read ADS7924 channel $ch_num"
+        fi
+    done
+
+    log_message "info" "ADS7924 read complete: $channels_read read, $channels_skipped skipped"
+    return 0
+}
+
 # Function to read MAX1363 channels (placeholder - not implemented yet)
 # Usage: max1363_read_channels <bus> <address> <device_dir>
 max1363_read_channels()
@@ -223,6 +338,9 @@ process_device()
     case "$device_type" in
         ADS1015)
             ads1015_read_channels "$bus" "$addr" "$device_dir"
+            ;;
+        ADS7924)
+            ads7924_read_channels "$bus" "$addr" "$device_dir"
             ;;
         MAX1363)
             max1363_read_channels "$bus" "$addr" "$device_dir"
