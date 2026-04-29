@@ -8,7 +8,7 @@
       "Device": "array of device alternatives; first probed I2C match is configured."
     },
     "device_object": {
-      "DeviceType": "string, required. e.g. MAX1363, ADS1015 — maps to driver / register logic.",
+      "DeviceType": "string, required. e.g. MAX1363, ADS1015, ADS7924 — maps to driver / register logic.",
       "Bus": "number, required. I2C bus number.",
       "Address": "string, required. Hex address; alternatives may share one address when BOMs are mutually exclusive (list MAX1363 before ADS1015).",
       "Probe": "boolean, optional. If true, bind kernel driver (new_device) before register writes.",
@@ -25,7 +25,18 @@
       "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if NormalMin absent.",
       "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
       "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if NormalMax absent.",
-      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit."
+      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit.",
+      "Ads7924SoftReset": "boolean, optional. Default true: write 0xaa to RESET before programming (raw I2C only).",
+      "Ads7924IntConfig": "string, optional. Hex byte INTCONFIG (0x12), default 0xe0.",
+      "Ads7924SlpConfig": "string, optional. Hex byte SLPCONFIG (0x13), default 0x00.",
+      "Ads7924AcqConfig": "string, optional. Hex byte ACQCONFIG (0x14), default 0x00.",
+      "Ads7924PwrConfig": "string, optional. Hex byte PWRCONFIG (0x15), default 0x00.",
+      "Ads7924Mode": "string, optional. MODECNTRL final mode byte (reg 0x00), default 0x33 (auto-scan).",
+      "Ads7924AwakeMode": "string, optional. MODECNTRL awake step before Ads7924Mode, default 0x20.",
+      "Ads7924AlarmEnable": "string, optional. INTCNTRL AEN[3:0] (reg 0x01), default 0x0f.",
+      "Ads7924UlChN": "string, optional. Per-channel ULR override, N=1..4, hex byte.",
+      "Ads7924LlChN": "string, optional. Per-channel LLR override, N=1..4, hex byte.",
+      "Ads7924_configuration_note": "All Ads7924* keys are optional. When omitted, hw-management-bmc-a2d-leakage-config.sh uses defaults: soft reset on (0xaa @ RESET), INT/SLP/ACQ/PWR = 0xe0 0x00 0x00 0x00, INTCNTRL AEN = 0x0f, AWAKE 0x20 then MODE 0x33 (auto-scan). For ULR/LLR and comparator-driven INT you need Scale plus NormalMin/NormalMax (or if those are absent, WarningMin/WarningMax) on raw I2C (Probe false). Per-channel ULR/LLR overrides use Ads7924UlCh1..4 / Ads7924LlCh1..4 only when you need registers to differ from that voltage-derived window."
     },
     "runtime_paths": {
       "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel.",
@@ -76,6 +87,32 @@
           "LoThreshRegVal": "0x38 0x40",
           "HiThreshReg": "0x03",
           "HiThreshRegVal": "0x7f 0xf0"
+        }
+      ]
+    },
+    {
+      "Name": "Example_Chassis_ADS7924_LeakDetector",
+      "NumChnl": 4,
+      "ChnlNames": [
+        "Leak_A",
+        "Leak_B",
+        "Leak_C",
+        "Leak_D"
+      ],
+      "Device": [
+        {
+          "DeviceType": "ADS7924",
+          "Bus": 28,
+          "Address": "0x60",
+          "Probe": false,
+          "Type": "rop",
+          "Scale": 0.000244140625,
+          "NormalMin": 0.05,
+          "NormalMax": 0.95,
+          "WarningMin": 0.05,
+          "CriticalMin": 0.02,
+          "WarningMax": 0.85,
+          "CriticalMax": 0.95
         }
       ]
     }

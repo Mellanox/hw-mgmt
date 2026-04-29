@@ -119,6 +119,7 @@ kernel_driver_for_type()
 	case "$1" in
 	MAX1363) echo "max1363" ;;
 	ADS1015) echo "ads1015" ;;
+	ADS7924) echo "ads7924" ;;
 	*) echo "" ;;
 	esac
 }
@@ -290,6 +291,14 @@ device_entry_matches_hw()
 		log_message "info" "Discovery: bus $bus addr $address selected as MAX1363 (presence OK)"
 		return 0
 		;;
+	ADS7924)
+		if [ "${HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC:-0}" != 0 ] && discover_ads1015_at "$bus" "$address"; then
+			log_message "info" "Discovery: bus $bus addr $address responds like ADS1015, not ADS7924 (ADS heuristic) — trying next alternative"
+			return 1
+		fi
+		log_message "info" "Discovery: bus $bus addr $address selected as ADS7924 (presence OK)"
+		return 0
+		;;
 	*)
 		return 0
 		;;
@@ -413,6 +422,226 @@ write_and_verify_register()
 	fi
 
 	log_message "info" "$reg_name verified successfully on $device_name"
+	return 0
+}
+
+# ADS7924: I2C pointer + one or more data bytes (no readback verify).
+i2c_write_ads7924_burst()
+{
+	local bus="$1" addr="$2" ptr="$3"
+	shift 3
+
+	if ! i2ctransfer -f -y "$bus" w$(($# + 1))@"$addr" "$ptr" "$@" 2>&1; then
+		return 1
+	fi
+	return 0
+}
+
+# Convert voltage (engineering units) to ADS7924 8-bit window comparator code.
+# Matches 12-bit IIO raw >> 4 when Scale = volts per 12-bit LSB (Vref/4096).
+ads7924_volts_to_code8()
+{
+	local volts="$1"
+	local scale="$2"
+
+	awk -v v="$volts" -v sc="$scale" 'BEGIN {
+		if (sc == "" || (sc + 0) == 0) { printf "0\n"; exit }
+		c = v / sc
+		if (c < 0) c = 0
+		if (c >= 4096) c = 4095
+		d = int(c / 16)
+		if (d > 255) d = 255
+		if (d < 0) d = 0
+		printf "%d\n", d
+	}'
+}
+
+# Optional JSON bool: default true when key missing (soft reset before programming).
+json_ads7924_soft_reset_default_true()
+{
+	local json="$1"
+	local v
+
+	v=$(echo "$json" | json_get_bool "Ads7924SoftReset" 2>/dev/null) || true
+	v=$(printf '%s' "$v" | tr '[:upper:]' '[:lower:]' | tr -d "\"'")
+	if [ -z "$v" ]; then
+		return 0
+	fi
+	if [ "$v" = "false" ] || [ "$v" = "0" ] || [ "$v" = "no" ]; then
+		return 1
+	fi
+	return 0
+}
+
+# First byte of space-separated hex list, or empty.
+json_hex_byte_or_empty()
+{
+	local json="$1"
+	local key="$2"
+	local s b
+
+	s=$(echo "$json" | json_get_string "$key" 2>/dev/null) || true
+	s=$(printf '%s' "$s" | tr -d '"')
+	[ -z "$s" ] || [ "$s" = "null" ] && return 1
+	set -- $s
+	b="$1"
+	[ -n "$b" ] || return 1
+	printf '%s' "$b"
+}
+
+# 0xNN / 0XNN -> decimal (BusyBox ash-safe hex strip).
+ads7924_hex_byte_to_uint()
+{
+	local b x
+	b=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+	x="${b#0x}"
+	[ -z "$x" ] && return 1
+	case "$x" in
+	*[!0-9a-f]*) return 1 ;;
+	esac
+	printf '%d' "$((16#$x))"
+}
+
+# Program ADS7924 when no kernel driver is bound (TI SBAS482 register map).
+configure_ads7924_raw_i2c()
+{
+	local device_json="$1"
+	local device_name="$2"
+	local bus="$3"
+	local address="$4"
+	local num_channels="$5"
+
+	local scale_s v_min v_max ll ul i b c t
+	local int_b slp_b acq_b pwr_b mode_b awake_b aen_b
+	local ul0 ll0 ul1 ll1 ul2 ll2 ul3 ll3
+
+	if ! scale_s=$(json_optional_scalar "$device_json" "Scale"); then
+		log_message "warning" "ADS7924 $device_name: Scale required for alarm threshold codes — skipping raw init"
+		return 1
+	fi
+
+	v_min=""
+	v_max=""
+	if v_min=$(json_optional_scalar "$device_json" "NormalMin"); then
+		:
+	elif v_min=$(json_optional_scalar "$device_json" "WarningMin"); then
+		:
+	else
+		log_message "warning" "ADS7924 $device_name: need NormalMin or WarningMin for LLR — skipping raw init"
+		return 1
+	fi
+	if v_max=$(json_optional_scalar "$device_json" "NormalMax"); then
+		:
+	elif v_max=$(json_optional_scalar "$device_json" "WarningMax"); then
+		:
+	else
+		log_message "warning" "ADS7924 $device_name: need NormalMax or WarningMax for ULR — skipping raw init"
+		return 1
+	fi
+
+	ll=$(ads7924_volts_to_code8 "$v_min" "$scale_s")
+	ul=$(ads7924_volts_to_code8 "$v_max" "$scale_s")
+	if [ "$ul" -le "$ll" ]; then
+		ul=$((ll + 1))
+		[ "$ul" -gt 255 ] && ul=255
+		[ "$ul" -le "$ll" ] && ll=$((ul - 1))
+		[ "$ll" -lt 0 ] && ll=0
+	fi
+
+	ul0=$ul
+	ll0=$ll
+	ul1=$ul
+	ll1=$ll
+	ul2=$ul
+	ll2=$ll
+	ul3=$ul
+	ll3=$ll
+	if [ -n "$num_channels" ] && [ "$num_channels" -ge 1 ] 2>/dev/null; then
+		i=1
+		while [ "$i" -le "$num_channels" ] && [ "$i" -le 4 ]; do
+			b=$(json_hex_byte_or_empty "$device_json" "Ads7924UlCh${i}")
+			if [ -n "$b" ] && c=$(ads7924_hex_byte_to_uint "$b"); then
+				case "$i" in
+				1) ul0=$c ;;
+				2) ul1=$c ;;
+				3) ul2=$c ;;
+				4) ul3=$c ;;
+				esac
+			fi
+			b=$(json_hex_byte_or_empty "$device_json" "Ads7924LlCh${i}")
+			if [ -n "$b" ] && c=$(ads7924_hex_byte_to_uint "$b"); then
+				case "$i" in
+				1) ll0=$c ;;
+				2) ll1=$c ;;
+				3) ll2=$c ;;
+				4) ll3=$c ;;
+				esac
+			fi
+			i=$((i + 1))
+		done
+	fi
+
+	int_b="0xe0"
+	slp_b="0x00"
+	acq_b="0x00"
+	pwr_b="0x00"
+	mode_b="0x33"
+	awake_b="0x20"
+	aen_b="0x0f"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924IntConfig") && int_b="$t"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924SlpConfig") && slp_b="$t"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AcqConfig") && acq_b="$t"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924PwrConfig") && pwr_b="$t"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924Mode") && mode_b="$t"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AwakeMode") && awake_b="$t"
+	t=$(json_hex_byte_or_empty "$device_json" "Ads7924AlarmEnable") && aen_b="$t"
+
+	if json_ads7924_soft_reset_default_true "$device_json"; then
+		log_message "info" "ADS7924 $device_name: software reset (write 0xaa to RESET)"
+		if ! i2c_write_ads7924_burst "$bus" "$address" 0x16 0xaa; then
+			log_message "warning" "ADS7924 $device_name: soft reset write failed"
+			return 1
+		fi
+		sleep 0.05
+	fi
+
+	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 0x00; then
+		log_message "warning" "ADS7924 $device_name: IDLE mode write failed"
+		return 1
+	fi
+	sleep 0.02
+
+	if ! write_and_verify_register "$bus" "$address" 0x8a \
+		"$(printf '0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x' "$ul0" "$ll0" "$ul1" "$ll1" "$ul2" "$ll2" "$ul3" "$ll3")" \
+		"ADS7924 ULR/LLR burst" "$device_name"; then
+		return 1
+	fi
+
+	if ! write_and_verify_register "$bus" "$address" 0x92 \
+		"$int_b $slp_b $acq_b $pwr_b" \
+		"ADS7924 INT/SLP/ACQ/PWR burst" "$device_name"; then
+		return 1
+	fi
+
+	log_message "info" "ADS7924 $device_name: enabling alarms (INTCNTRL, no readback verify)"
+	if ! i2c_write_ads7924_burst "$bus" "$address" 0x01 $aen_b; then
+		log_message "warning" "ADS7924 $device_name: INTCNTRL write failed"
+		return 1
+	fi
+	sleep 0.02
+
+	log_message "info" "ADS7924 $device_name: AWAKE then MODE ($awake_b then $mode_b)"
+	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 $awake_b; then
+		log_message "warning" "ADS7924 $device_name: AWAKE write failed"
+		return 1
+	fi
+	sleep 0.002
+	if ! i2c_write_ads7924_burst "$bus" "$address" 0x00 $mode_b; then
+		log_message "warning" "ADS7924 $device_name: MODE write failed"
+		return 1
+	fi
+
+	log_message "info" "ADS7924 $device_name: raw I2C configuration complete"
 	return 0
 }
 
@@ -704,6 +933,15 @@ configure_device()
 	if i2c_client_has_bound_driver "$bus" "$address"; then
 		log_message "info" "Kernel driver bound — skipping raw i2ctransfer register writes for $device_name (Bus $bus, Addr $address); use driver sysfs or program before bind if needed"
 		log_message "info" "Device configuration complete for $device_name: register writes skipped (driver active)"
+		return 0
+	fi
+
+	if [ "$device_type" = "ADS7924" ]; then
+		if ! configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"; then
+			log_message "info" "ADS7924 programming failed — try next Device alternative"
+			return 1
+		fi
+		log_message "info" "Device configuration complete for $device_name: ADS7924 raw I2C done"
 		return 0
 	fi
 
