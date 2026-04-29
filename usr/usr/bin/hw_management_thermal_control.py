@@ -1,8 +1,9 @@
 #!/usr/bin/python
 # pylint: disable=line-too-long
 # pylint: disable=C0103
-########################################################################
-# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES.
+################################################################################
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+# Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -415,7 +416,7 @@ def current_milli_time():
         get current time in milliseconds
     @return: int value time in milliseconds
     """
-    return round(time.clock_gettime(1) * 1000)
+    return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
 
 
 # ----------------------------------------------------------------------
