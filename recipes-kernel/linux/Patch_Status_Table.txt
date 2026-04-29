@@ -755,7 +755,6 @@ Kernel-6.12
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-|0001-mlxbf-bootctl-Constify-struct-bin_attribute.patch           | 8ba0e61            | Feature upstream                         | 6.15.1     |                                                |
 |0002-platform-mellanox-mlxbf-pmc-Add-support-for-monitori.patch  | 5efc8009           | Feature upstream                         | 6.15.1     |                                                |
 |0003-platform-mellanox-mlxbf-pmc-Add-support-for-clock_me.patch  | 8e3b3e1            | Feature upstream                         | 6.15.1     |                                                |
 |0004-platform-mellanox-mlxbf-bootctl-use-sysfs_emit-inste.patch  | 9886f57            | Feature upstream                         | 6.15.1     |                                                |
