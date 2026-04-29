@@ -69,7 +69,7 @@ align12()
 process_channel()
 {
 	local ch_dir="$1"
-	local input_path sample min_v max_v aligned
+	local input_path sample min_v max_v aligned cmp_s raw_sample scale_f
 
 	input_path="$ch_dir/input"
 	if [[ -L "$input_path" ]] || [[ -f "$input_path" ]]; then
@@ -87,8 +87,20 @@ process_channel()
 	[[ -f "$ch_dir/max" ]] && max_v=$(tr -d ' \t\r\n' <"$ch_dir/max")
 	[[ -z "$min_v" || -z "$max_v" ]] && return 0
 
-	# Out of band: sample < min OR sample > max
-	if awk -v s="$sample" -v mn="$min_v" -v mx="$max_v" 'BEGIN {
+	raw_sample="$sample"
+	cmp_s="$sample"
+	scale_f=""
+	[[ -f "$ch_dir/scale" ]] && scale_f=$(tr -d ' \t\r\n' <"$ch_dir/scale")
+	if [[ -n "$scale_f" ]]; then
+		cmp_s=$(awk -v s="$sample" -v sc="$scale_f" 'BEGIN {
+			if (s == "" || s !~ /^-?[0-9]+$/) { print ""; exit }
+			printf "%.12g\n", (s + 0) * (sc + 0)
+		}')
+		[[ -z "$cmp_s" ]] && return 0
+	fi
+
+	# Out of band: sample < min OR sample > max (cmp_s matches min/max units)
+	if awk -v s="$cmp_s" -v mn="$min_v" -v mx="$max_v" 'BEGIN {
 		exit !((s + 0) < (mn + 0) || (s + 0) > (mx + 0))
 	}'; then
 		:
@@ -96,7 +108,7 @@ process_channel()
 		return 0
 	fi
 
-	aligned=$(align12 "$sample")
+	aligned=$(align12 "$raw_sample")
 	[[ -z "$aligned" ]] && return 0
 
 	echo "$aligned" >"$ch_dir/last_sample"
