@@ -227,8 +227,10 @@ i2c_first_hex_byte()
 }
 
 # TI ADS1015/ADS1115 family: pointer register then 16-bit big-endian data (see TI SBAS173).
-# Heuristic (not address-based): MAX1363 bring-up often returns 0x7f on single-byte read of pointer 0x00;
-# then require Configuration register (pointer 0x01, 2 bytes) not 0xFF 0xFF.
+# This is a register-signature probe (not a bare I2C ACK): pointer 0x00 single-byte read must not
+# be the MAX1363-style 0x7f quirk, then pointer 0x01 returns two config bytes that are not 0xff 0xff.
+# Used to classify ADS1015 vs MAX1363, and (when HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC is set) to
+# reject MAX/ADS7924 candidates that match the ADS1015/1115 pointer+config pattern at the same address.
 discover_ads1015_at()
 {
 	local bus="$1"
@@ -292,6 +294,8 @@ device_entry_matches_hw()
 		return 0
 		;;
 	ADS7924)
+		# Optional: skip if discover_ads1015_at succeeds — that means pointer 0x00/0x01 behavior matches
+		# TI ADS1015/1115 (see discover_ads1015_at), not a generic "another device ACKed" test.
 		if [ "${HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC:-0}" != 0 ] && discover_ads1015_at "$bus" "$address"; then
 			log_message "info" "Discovery: bus $bus addr $address responds like ADS1015, not ADS7924 (ADS heuristic) — trying next alternative"
 			return 1
@@ -561,21 +565,29 @@ configure_ads7924_raw_i2c()
 		while [ "$i" -le "$num_channels" ] && [ "$i" -le 4 ]; do
 			b=$(json_hex_byte_or_empty "$device_json" "Ads7924UlCh${i}")
 			if [ -n "$b" ] && c=$(ads7924_hex_byte_to_uint "$b"); then
-				case "$i" in
-				1) ul0=$c ;;
-				2) ul1=$c ;;
-				3) ul2=$c ;;
-				4) ul3=$c ;;
-				esac
+				if [ "$c" -lt 0 ] || [ "$c" -gt 255 ]; then
+					log_message "warning" "ADS7924 $device_name: Ads7924UlCh${i} value $c out of 0–255 — ignoring override"
+				else
+					case "$i" in
+					1) ul0=$c ;;
+					2) ul1=$c ;;
+					3) ul2=$c ;;
+					4) ul3=$c ;;
+					esac
+				fi
 			fi
 			b=$(json_hex_byte_or_empty "$device_json" "Ads7924LlCh${i}")
 			if [ -n "$b" ] && c=$(ads7924_hex_byte_to_uint "$b"); then
-				case "$i" in
-				1) ll0=$c ;;
-				2) ll1=$c ;;
-				3) ll2=$c ;;
-				4) ll3=$c ;;
-				esac
+				if [ "$c" -lt 0 ] || [ "$c" -gt 255 ]; then
+					log_message "warning" "ADS7924 $device_name: Ads7924LlCh${i} value $c out of 0–255 — ignoring override"
+				else
+					case "$i" in
+					1) ll0=$c ;;
+					2) ll1=$c ;;
+					3) ll2=$c ;;
+					4) ll3=$c ;;
+					esac
+				fi
 			fi
 			i=$((i + 1))
 		done
@@ -617,11 +629,14 @@ configure_ads7924_raw_i2c()
 		return 1
 	fi
 
-	if ! write_and_verify_register "$bus" "$address" 0x92 \
-		"$int_b $slp_b $acq_b $pwr_b" \
-		"ADS7924 INT/SLP/ACQ/PWR burst" "$device_name"; then
+	# INTCONFIG/SLPCONFIG/ACQCONFIG/PWRCONFIG: write only (no readback verify). Some parts may expose
+	# read-only bits in these registers; byte-exact verify would false-fail like MODECNTRL/INTCNTRL.
+	log_message "info" "ADS7924 $device_name: INT/SLP/ACQ/PWR burst (no readback verify)"
+	if ! i2c_write_ads7924_burst "$bus" "$address" 0x92 $int_b $slp_b $acq_b $pwr_b; then
+		log_message "warning" "ADS7924 $device_name: INT/SLP/ACQ/PWR burst write failed"
 		return 1
 	fi
+	sleep 0.02
 
 	log_message "info" "ADS7924 $device_name: enabling alarms (INTCNTRL, no readback verify)"
 	if ! i2c_write_ads7924_burst "$bus" "$address" 0x01 $aen_b; then
