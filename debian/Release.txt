@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0060.1430
+- Thu, 30 Apr 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: scripts: Fix potential issues caused by system datetime changes (#2476), 92ba0bb
+    o #N/A, hw-mgmt: patches: Add missing 6.1 and 6.12 LED driver patch, 4c4c53a
+    o #N/A, Dpc update v.7.0060.1500 br (#2433), e75a769
+    o #4932754, hw-mgmt: thermal: unittests: PWM jumps on fan speed fail, 15b6a5f
+    o #4932754, hw-mgmt: thermal: PWM jumps on fan speed fail, bf4ca42
+    o #4931015, hw-mgmt: thermal: Fix TC logging - missing "FAN tacho issue" log message, eba6748
+    o #4931215, hw-mgmt: thermal: unittests: Fix PWM too high on ASIC read error, 7eed00a
+    o #4929286, hw-mgmt: thermal: unittests: Fix TC start issue on firstboot, 75212b7
+    o #4931215, hw-mgmt: thermal: unittests: Fix PWM too high on ASIC read error, bdddb5a
+    o #4879247, hw-mgmt: thermal: Fix TC stop timeout (SIGTERM not handled in time), f2b9242
+    o #4929286, hw-mgmt: scripts: Fix TC start issue on firstboot, c144b5e
+    o #4931215, hw-mgmt: thermal: Fix PWM too high on ASIC read error, 19c2ce5
+    o #N/A, Update changelog and release notes for V.7.0060.0931, 818fed0
+    o #4921510, hw-mgmt: scripts: Fix CPLD version reporting on N6100_LD platform, 1ff8b92
+    o #4921597, hw-mgmt: scripts: Fix build breakage for arm64 arch, cfd7a42
+    o #4906456, hw-mgmt: package: Update Debian package dependency list, f09d44f
+    o #4915247, hw-mgmt: scripts: Fix "State changed" log route to syslog, f7fd0b5
+    o #4917181, hw-mgmt: scripts: Fix SODIMM temperature thresholds init, a1608b4
+    o #4917546, hw-mgmt: thermal-control: Fix SODIMM configuration for ThermalControl, b84cc1d
+    o #N/A, Update changelog and release notes for V.7.0060.0930, cc7e729
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1430/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.0931
 - Sun, 15 Mar 2026
 --------------------------------------------------------------------------------
