@@ -271,7 +271,13 @@ ads7924_read_channels()
             fi
         fi
         if [ -z "$result" ]; then
-            result=$(ads7924_read_channel_volts "$bus" "$addr" "$ch_num" "$scale_f")
+            # input is a symlink only when config bound the kernel IIO driver (JSON Probe: true); raw
+            # i2ctransfer then usually fails because the adapter is busy — avoid a misleading fallback.
+            if [ -L "$ch_dir/input" ]; then
+                log_message "warning" "ADS7924 channel $ch_num: IIO sysfs read failed while kernel driver owns the bus (input symlink: $(readlink "$ch_dir/input" 2>/dev/null || echo '?')); skipping raw I2C fallback"
+            else
+                result=$(ads7924_read_channel_volts "$bus" "$addr" "$ch_num" "$scale_f")
+            fi
         fi
 
         if [ -n "$result" ]; then
