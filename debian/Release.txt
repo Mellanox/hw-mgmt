@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0040.4472
+- Sun, 03 May 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: patches: Add NVOS specific patch version for Infineon XDPE1A2G7B support (#2485), 215a2e9
+    o #N/A, Update changelog and release notes for V.7.0040.4471, 4fb84e9
+    o #N/A, hw-mgmt: scripts: Fix potential issues caused by system datetime changes, fd09cff
+    o #4949322, hw-mgmt: scripts: Make usb0 interface configuration more robust (#2460), 5034619
+    o #N/A, hw-mgmt: patches: Add missing 6.1 LED driver patch, b338025
+    o #N/A, Update changelog and release notes for V.7.0040.4470, 22593d3
+    o #4968565, hw-mgmt: service: Restart sysfs monitor services when hw-mgmt service is restarted, 5d14aa3
+    o #N/A, hw-mgmt: patches: backport NVME SSD fallback recovery patch., 793f6d4
+    o #4840120, hw-mgmt: scripts: Fix initial timestamps of sysfs monitor service, 67d8cdb
+    o #4837925, hw-mgmt: thermal control: fix signal handling for clean shutdown, c1a83bd
+    o #N/A, hw-mgmt: thermal-control: Fix overlapping range keys in configs, 193927e
+    o #N/A, Update changelog and release notes for V.7.0040.4248, 9a9fe03
+    o #N/A, hw-mgmt: kernel patch: Extend patch for XDPE1A2G7B, 17d2054
+    o #N/A, hw-mgmt: kernel patch: Add dedicated patch for XDPE1A2G7B, 21a8d75
+    o #N/A, Update changelog and release notes for V.7.0040.4247, 4e719fe
+    o #4432197, hw-mgmt: config: Disable IPMI module for n5500ld, e1e48d8
+    o #N/A, hw-mgmt: scripts: Add service to dynamically generate kernel module blacklist, 8150edd
+    o #N/A, Update version  V.7.0040.4246, 2537744
+    o #4647791, hw-mgmgt: script: Fix race conditions for write in thermal updater, e66fc97
+    o #N/A, Update changelog and release notes for V.7.0040.4245, df80502
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4472/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: Ã¢â‚¬Â¦ supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0040.4471
 - Thu, 30 Apr 2026
 --------------------------------------------------------------------------------
