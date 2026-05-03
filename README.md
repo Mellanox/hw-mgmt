@@ -76,6 +76,7 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 - P2317
 - P4262
 - P4300-A00
+- Test
 
 ## Supported Kernel versions:
 - 5.10.103, 5.10.140, 5.10.179, 5.10.218, 5.10.226
