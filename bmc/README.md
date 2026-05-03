@@ -78,6 +78,7 @@ bmc/
 │   ├── hw-management-bmc-platform-config.txt
 │   ├── hw-management-bmc-thermal-sysfs.txt
 │   ├── hw-management-bmc-boot-complete-config.txt
+│   ├── hw-mgmt-bmc-copy-cartridge-data.json   # Cartridge → CPLD I2C config example (cartridge SKUs only)
 │   └── README.md                 # Index of these files
 ├── FILE_MAPPING.md               # OpenBMC path → bmc/ checklist
 ├── README.md                     # This file
@@ -122,6 +123,7 @@ bmc/
         ├── hw-management-bmc-helpers-common.sh
         ├── hw-management-bmc-helpers.sh
         ├── hw-management-bmc-boot-complete.sh
+        ├── hw-management-bmc-copy-cartridge-data.sh   # Cartridge EEPROM → SWB CPLD (cartridge SKUs; optional JSON)
         ├── hw-management-bmc-cpld-dump.sh
         ├── hw-management-bmc-generate-dump.sh
         ├── hw-management-bmc-i2c-slave-config.sh
@@ -159,6 +161,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-eeprom-sysfs.txt`** | Example layout for **`/var/run/hw-management/eeprom/`** (**`eeprom_system`**, **`eeprom_bmc`**) from udev **`hw-management-bmc-events.sh`** / **`5-hw-management-bmc-events.rules`**. |
 | **`hw-management-bmc-thermal-sysfs.txt`** | Example layout for **`/var/run/hw-management/thermal/`** (CPU/BMC **`temp1_*`** symlinks). |
 | **`hw-management-bmc-boot-complete-config.txt`** | Reference for **`/etc/hw-management-bmc-boot-complete.conf`**: **`SYSFS_SYSTEM_COUNTER`**, **`SYSFS_THERMAL_COUNTER`**, **`SYSFS_EEPROM_COUNTER`**, and optional timeout/poll for **`hw-management-bmc-boot-complete.sh`**. |
+| **`hw-mgmt-bmc-copy-cartridge-data.json`** | Example JSON for **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`**: I2C buses, FRU/CPLD offsets for **`hw-management-bmc-copy-cartridge-data.sh`**. Use only on **systems equipped with cartridges**; see **`README-hw-management-bmc-copy-cartridge-data.md`** in this directory. |
 | **`hw-management-bmc-platform-config.txt`** | Reference for **`/etc/hw-management-bmc-platform.conf`** (from **`usr/etc/<HID>/hw-management-bmc-platform.conf`**): **`POWER_ON_POLICY`** (**`AlwaysOff`** / **`AlwaysOn`** / **`Restore`**), **`POWER_POLICY_DELAY`** (seconds → microseconds in **`get_power_restore_delay()`**), **`CPLD_I2C_BUS`**, **`MGMT_IF_NUM`**; consumed by **`hw-management-bmc-helpers.sh`** and **`hw-management-bmc-helpers-common.sh`**. |
 | **`README.md`** | Short index of the **`examples/`** directory (this table in brief form). |
 
@@ -170,6 +173,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-cpld-dump.sh`** | **Merged** from OpenBMC **`recipes-phosphor/dump/files/cpld_dump.sh`** and **`dump_utils.sh`** (**`take_cpld_dump_internal`**, **`take_cpld_dump`** only). Full **grid** CPLD register dump, optional **`.tar.xz`** packaging (**`-p`**, **`-i`**). Uses **`log_message`** and **`${HW_MANAGEMENT_BMC_PLATFORM_CONF:-/etc/hw-management-bmc-platform.conf}`** (via **`hw-management-bmc-helpers-common.sh`**); no **`switch-erots-info.sh`**, no Phosphor **`add_copy_file`**. Requires **bash**. |
 | **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (same idea as host **`hw-management-generate-dump.sh`**). Collects **`dmesg`**, **`proc/`**, **`network/`**, **`i2c/`** (non-mux buses), CPLD (**`take_cpld_dump`**), **`systemctl/`** for **`hw-management-bmc*`**, **`systemd-analyze/`** (boot timing, **`blame`**, **`critical-chain`** — see below), and **`var_run_hw-management/`** (runtime tree + values; EEPROM via **`hexdump -C`**). Default output **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Requires **bash**. |
 | **`hw-management-bmc-json-parser.sh`** | From OpenBMC **`switch_json_parser.sh`**: **`json_validate`**, **`json_get_nested_array_element`**, etc. (awk/BusyBox). Sourced by **`hw-management-bmc-a2d-leakage-config.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-gpio-set.sh`** (**`bmc_init_sysfs_gpio`**). |
+| **`hw-management-bmc-copy-cartridge-data.sh`** | **Cartridge SKUs:** sources **`/usr/bin/switch_json_parser.sh`** when **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`** exists; reads cartridge FRU over I2C and programs SWB CPLD registers. See **`README-hw-management-bmc-copy-cartridge-data.md`**. |
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
 | **`hw-management-bmc-a2d-leakage-read.sh`** | From OpenBMC **`a2d_leakage_read.sh`**: walks **`/var/run/hw-management/leakage/<idx>/<bus>-<addr>/`** (after **`hw-management-bmc-a2d-leakage-config.sh`**), reads **ADS1015** / **ADS7924** (IIO symlink or **`i2ctransfer`**) and writes per-channel **`value`** (volts); **MAX1363** path is still a placeholder. Requires **`bash`**, **`bc`**, **`i2ctransfer`**. |
 | **`hw-management-bmc-max1363-force-alarm.sh`** | From OpenBMC **`max1363_force_alarm.sh`**: debug — programs tight/safe per-channel thresholds so selected channels hit alarm (**`i2ctransfer`**). **`#!/bin/sh`**. |
@@ -334,6 +338,14 @@ Runs **before** kernel modules load. It reads **`/etc/<HID>/`** (fallback **`/us
 Optional long-name OpenBMC platform scripts (**`hw-management-spc6-ast2700-a1-*.sh`**) are also copied when present.
 
 **HID** defaults to **HI189** in **`hw-management-bmc-early-config.sh`**; override with env **`HID=<id>`**. Later: detect HID from BMC EEPROM.
+
+### Cartridge identity → switch-board CPLD (`hw-management-bmc-copy-cartridge-data.sh`)
+
+**Scope:** **Cartridge-equipped** switch platforms only. The script reads identity bytes from the **primary cartridge FRU EEPROM** over I2C and writes **rack ID**, **topology ID**, **switch tray ID**, and **slot index** into the **switch-board CPLD** so the switch side sees consistent topology after boot.
+
+**Triggering:** There is no dedicated **`systemd`** unit for this helper in the default package layout. Platform integration should **source** **`/usr/bin/hw-management-bmc-copy-cartridge-data.sh`** and call **`hw_mgmt_bmc_copy_cartridge_data`** from **`hw-management-bmc-ready.sh`** (or an equivalent post–I2C-init hook) **only on SKUs that ship cartridges**. If **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`** is absent, the entry point returns success immediately so shared ready scripts can stay common across cartridge and non-cartridge images.
+
+**Documentation:** Field reference, integration snippet, prerequisites (**`switch_json_parser.sh`**, **`i2ctransfer`**), and notes on **reserved JSON keys** for future topology paths — **`README-hw-management-bmc-copy-cartridge-data.md`** in this **`bmc/`** directory. Example JSON: **`bmc/examples/hw-mgmt-bmc-copy-cartridge-data.json`**.
 
 ### A2D leakage configuration (`hw-management-bmc-a2d-leakage-config.sh`)
 

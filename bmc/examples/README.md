@@ -16,5 +16,6 @@ Reference material for SONiC BMC **hw-management-bmc** tooling: sample JSON and 
 | [hw-management-bmc-thermal-sysfs.txt](hw-management-bmc-thermal-sysfs.txt) | **`/var/run/hw-management/thermal/`** symlinks (CPU/BMC hwmon). |
 | [hw-management-bmc-platform-config.txt](hw-management-bmc-platform-config.txt) | **`/etc/hw-management-bmc-platform.conf`**: **`POWER_ON_POLICY`**, **`POWER_POLICY_DELAY`**, **`CPLD_I2C_BUS`**, **`MGMT_IF_NUM`**; **`check_power_restore_policy()`** / **`get_power_restore_delay()`** / **`bmc_init_eth()`**. |
 | [hw-management-bmc-boot-complete-config.txt](hw-management-bmc-boot-complete-config.txt) | **`/etc/hw-management-bmc-boot-complete.conf`**: minimum entry counts for **`system`**, **`thermal`**, **`eeprom`** runtime dirs; **`hw-management-bmc-boot-complete.sh`**. |
+| [hw-mgmt-bmc-copy-cartridge-data.json](hw-mgmt-bmc-copy-cartridge-data.json) | Reference JSON for **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`**: cartridge / CPLD I2C parameters for **`hw-management-bmc-copy-cartridge-data.sh`** on **cartridge-equipped** systems only. See **[`../README-hw-management-bmc-copy-cartridge-data.md`](../README-hw-management-bmc-copy-cartridge-data.md)**. |
 
 See the parent **[`../README.md`](../README.md)** § **Examples (`bmc/examples/`)** for the same summary in the main BMC document.
