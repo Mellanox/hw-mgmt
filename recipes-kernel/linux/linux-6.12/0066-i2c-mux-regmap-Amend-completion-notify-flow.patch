@@ -1,0 +1,71 @@
+From c7a0e10de7157beb0c00d0f14254f295f8db3b56 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 5 May 2026 08:59:24 +0300
+Subject: [PATCH i2c-mux-ds 2/3] i2c: mux: regmap: Amend completion notify flow
+
+Add proper error flow handling.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/muxes/i2c-mux-regmap.c           | 13 +++++++++++--
+ include/linux/platform_data/i2c-mux-regmap.h |  4 +++-
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-regmap.c b/drivers/i2c/muxes/i2c-mux-regmap.c
+index cd8b45fa4dba..8045aa0e4045 100644
+--- a/drivers/i2c/muxes/i2c-mux-regmap.c
++++ b/drivers/i2c/muxes/i2c-mux-regmap.c
+@@ -75,8 +75,11 @@ static int i2c_mux_regmap_probe(struct platform_device *pdev)
+ 		return -EINVAL;
+ 
+ 	mux = devm_kzalloc(&pdev->dev, sizeof(*mux), GFP_KERNEL);
+-	if (!mux)
++	if (!mux) {
++		if (pdata->completion_notify && pdata->handle)
++			pdata->completion_notify(pdata->handle, NULL, NULL);
+ 		return -ENOMEM;
++	}
+ 
+ 	memcpy(&mux->pdata, pdata, sizeof(*pdata));
+ 	parent = i2c_get_adapter(mux->pdata.parent);
+@@ -85,8 +88,11 @@ static int i2c_mux_regmap_probe(struct platform_device *pdev)
+ 
+ 	muxc = i2c_mux_alloc(parent, &pdev->dev, pdata->num_adaps, sizeof(*mux), 0,
+ 			     i2c_mux_regmap_select_chan, i2c_mux_regmap_deselect);
+-	if (!muxc)
++	if (!muxc) {
++		if (mux->pdata.completion_notify && mux->pdata.handle)
++			mux->pdata.completion_notify(mux->pdata.handle, NULL, NULL);
+ 		return -ENOMEM;
++	}
+ 
+ 	platform_set_drvdata(pdev, muxc);
+ 	muxc->priv = mux;
+@@ -106,6 +112,9 @@ static int i2c_mux_regmap_probe(struct platform_device *pdev)
+ 	return 0;
+ 
+ err_i2c_mux_add_adapter:
++	if (mux->pdata.completion_notify && mux->pdata.handle)
++		mux->pdata.completion_notify(mux->pdata.handle,
++					     muxc ? muxc->parent : NULL, NULL);
+ 	i2c_mux_del_adapters(muxc);
+ 	return err;
+ }
+diff --git a/include/linux/platform_data/i2c-mux-regmap.h b/include/linux/platform_data/i2c-mux-regmap.h
+index f92db6ca7851..196590d7679e 100644
+--- a/include/linux/platform_data/i2c-mux-regmap.h
++++ b/include/linux/platform_data/i2c-mux-regmap.h
+@@ -17,7 +17,9 @@
+  * @sel_reg_addr - mux select register offset in CPLD space
+  * @reg_size: register size in bytes
+  * @handle: handle to be passed by callback
+- * @completion_notify: callback to notify when all the adapters are created
++ * @completion_notify: callback to notify when all the adapters are created.
++ *	May also be invoked once with @adapters NULL if probe fails after the
++ *	parent adapter exists, so waiters can unblock.
+  * @mux_access_grant: callback to validate if mux access is granted
+  */
+ struct i2c_mux_regmap_platform_data {
+-- 
+2.34.1
+

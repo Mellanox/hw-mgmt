@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 5 May 2026 14:00:00 +0000
+Subject: [PATCH] i2c: mux: regmap: Skip completion abandon notify on
+ -EPROBE_DEFER
+
+i2c_mux_add_adapter() can return -EPROBE_DEFER; calling completion_notify
+with NULL adapters in that case increments mlx-platform's mux_added and
+signals mux_platdevs_done before the mux reprobes. A later successful probe
+then drives mux_added past mux_num and post-init / platdevs init never runs.
+
+Match i2c-mux-reg: only abandon-notify on terminal errors.
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/i2c/muxes/i2c-mux-regmap.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-regmap.c b/drivers/i2c/muxes/i2c-mux-regmap.c
+--- a/drivers/i2c/muxes/i2c-mux-regmap.c
++++ b/drivers/i2c/muxes/i2c-mux-regmap.c
+@@ -109,11 +109,12 @@
+ 	if (pdata->completion_notify)
+ 		pdata->completion_notify(pdata->handle, muxc->parent, muxc->adapter);
+ 
+ 	return 0;
+ 
+ err_i2c_mux_add_adapter:
+-	if (mux->pdata.completion_notify && mux->pdata.handle)
++	if (err != -EPROBE_DEFER && mux->pdata.completion_notify &&
++	    mux->pdata.handle)
+ 		mux->pdata.completion_notify(mux->pdata.handle,
+ 					     muxc ? muxc->parent : NULL, NULL);
+ 	i2c_mux_del_adapters(muxc);
+ 	return err;
+

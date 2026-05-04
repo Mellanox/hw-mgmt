@@ -722,13 +722,11 @@ Kernel-6.1
 |0106-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  |                    | Downstream accepted                      |            |                                                |
 |0107-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
-|0109-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch  |                    | Downstream accepted; os[nvos]            |            | xdpe1a2g7b                                     |
 |0110-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
 |0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
 |0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
 |0113-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
-|0114-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
-|0114-1-i2c-mux-regmap-Skip-abandon-notify-on-EPROBE_DEFER.patch     |                    | Downstream accepted                      |            |                                                |
+|0114-i2c-mux-regmap-Amend-completion-notify-flow.patch           |                    | Downstream accepted                      |            |                                                |
 |0115-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_post_init after last mux (4151613)     |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
@@ -827,8 +825,7 @@ Kernel-6.12
 |0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
 |0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
 |0065-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
-|0066-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
-|0066-1-i2c-mux-regmap-Skip-abandon-notify-on-EPROBE_DEFER.patch     |                    | Downstream accepted                      |            |                                                |
+|0066-i2c-mux-regmap-Amend-completion-notify-flow.patch           |                    | Downstream accepted                      |            | mlxplat_platdevs_init after last mux (4151613) |
 |0067-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_platdevs_init after last mux (4151613) |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
