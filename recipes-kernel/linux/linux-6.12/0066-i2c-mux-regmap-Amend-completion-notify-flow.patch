@@ -1,0 +1,137 @@
+From c7a0e10de7157beb0c00d0f14254f295f8db3b56 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Tue, 5 May 2026 08:59:24 +0300
+Subject: [PATCH] i2c: mux: regmap: Amend completion notify flow
+
+Add proper error flow handling. Skip abandon notify on -EPROBE_DEFER so
+mlx-platform mux counters are not advanced before reprobe (same as i2c-mux-reg).
+Pass the obtained parent adapter into abandon completion_notify when muxc is
+NULL, matching the i2c-mux-reg contract. Use err_put_parent teardown like
+i2c-mux-reg (abandon, then i2c_put_adapter) on all post-get_adapter errors.
+
+Track user_notify_called so err_i2c_mux_add_adapter does not invoke
+completion_notify a second time when the success-path callback already ran
+(e.g. mlxplat_post_init failure), avoiding double mux_added increments.
+
+---
+drivers/i2c/muxes/i2c-mux-regmap.c           | 56 +++++++++++++++++++++++-----
+ include/linux/platform_data/i2c-mux-regmap.h |  4 +-
+ 2 files changed, 49 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/i2c/muxes/i2c-mux-regmap.c b/drivers/i2c/muxes/i2c-mux-regmap.c
+index cd8b45fa..fa3568bc 100644
+--- a/drivers/i2c/muxes/i2c-mux-regmap.c
++++ b/drivers/i2c/muxes/i2c-mux-regmap.c
+@@ -62,21 +62,41 @@ static int i2c_mux_regmap_deselect(struct i2c_mux_core *muxc, u32 chan)
+ 	return regmap_write(mux->pdata.regmap, mux->pdata.sel_reg_addr, 0);
+ }
+ 
++static void i2c_mux_regmap_notify_probe_abandon(struct platform_device *pdev,
++						struct i2c_mux_regmap *mux,
++						struct i2c_mux_core *muxc,
++						struct i2c_adapter *parent,
++						int err, bool user_notify_called)
++{
++	const struct i2c_mux_regmap_platform_data *pd;
++
++	if (user_notify_called || err == -EPROBE_DEFER)
++		return;
++	pd = mux ? &mux->pdata : dev_get_platdata(&pdev->dev);
++	if (!pd || !pd->completion_notify || !pd->handle)
++		return;
++	pd->completion_notify(pd->handle, muxc ? muxc->parent : parent, NULL);
++}
++
+ /* Probe/reomove functions */
+ static int i2c_mux_regmap_probe(struct platform_device *pdev)
+ {
+ 	struct i2c_mux_regmap_platform_data *pdata = dev_get_platdata(&pdev->dev);
+ 	struct i2c_mux_regmap *mux;
+ 	struct i2c_adapter *parent;
+-	struct i2c_mux_core *muxc;
+-	int num, err;
++	struct i2c_mux_core *muxc = NULL;
++	bool user_notify_called = false;
++	int num, ret;
+ 
+ 	if (!pdata)
+ 		return -EINVAL;
+ 
+ 	mux = devm_kzalloc(&pdev->dev, sizeof(*mux), GFP_KERNEL);
+-	if (!mux)
++	if (!mux) {
++		if (pdata->completion_notify && pdata->handle)
++			pdata->completion_notify(pdata->handle, NULL, NULL);
+ 		return -ENOMEM;
++	}
+ 
+ 	memcpy(&mux->pdata, pdata, sizeof(*pdata));
+ 	parent = i2c_get_adapter(mux->pdata.parent);
+@@ -85,8 +105,10 @@ static int i2c_mux_regmap_probe(struct platform_device *pdev)
+ 
+ 	muxc = i2c_mux_alloc(parent, &pdev->dev, pdata->num_adaps, sizeof(*mux), 0,
+ 			     i2c_mux_regmap_select_chan, i2c_mux_regmap_deselect);
+-	if (!muxc)
+-		return -ENOMEM;
++	if (!muxc) {
++		ret = -ENOMEM;
++		goto err_put_parent;
++	}
+ 
+ 	platform_set_drvdata(pdev, muxc);
+ 	muxc->priv = mux;
+@@ -94,20 +116,34 @@ static int i2c_mux_regmap_probe(struct platform_device *pdev)
+ 
+ 	/* Create an adapter for each channel. */
+ 	for (num = 0; num < pdata->num_adaps; num++) {
+-		err = i2c_mux_add_adapter(muxc, 0, pdata->chan_ids[num]);
+-		if (err)
++		ret = i2c_mux_add_adapter(muxc, 0, pdata->chan_ids[num]);
++		if (ret)
+ 			goto err_i2c_mux_add_adapter;
+ 	}
+ 
+ 	/* Notify caller when all channels' adapters are created. */
+-	if (pdata->completion_notify)
+-		pdata->completion_notify(pdata->handle, muxc->parent, muxc->adapter);
++	if (pdata->completion_notify) {
++		ret = pdata->completion_notify(pdata->handle, muxc->parent,
++					       muxc->adapter);
++		user_notify_called = true;
++		if (ret)
++			goto err_i2c_mux_add_adapter;
++	}
+ 
+ 	return 0;
+ 
+ err_i2c_mux_add_adapter:
++	i2c_mux_regmap_notify_probe_abandon(pdev, mux, muxc, parent, ret,
++					  user_notify_called);
+ 	i2c_mux_del_adapters(muxc);
+-	return err;
++	goto put_parent;
++err_put_parent:
++	i2c_mux_regmap_notify_probe_abandon(pdev, mux, muxc, parent, ret,
++					  user_notify_called);
++put_parent:
++	i2c_put_adapter(parent);
++
++	return ret;
+ }
+ 
+ static void i2c_mux_regmap_remove(struct platform_device *pdev)
+diff --git a/include/linux/platform_data/i2c-mux-regmap.h b/include/linux/platform_data/i2c-mux-regmap.h
+index f92db6ca..196590d7 100644
+--- a/include/linux/platform_data/i2c-mux-regmap.h
++++ b/include/linux/platform_data/i2c-mux-regmap.h
+@@ -17,7 +17,9 @@
+  * @sel_reg_addr - mux select register offset in CPLD space
+  * @reg_size: register size in bytes
+  * @handle: handle to be passed by callback
+- * @completion_notify: callback to notify when all the adapters are created
++ * @completion_notify: callback to notify when all the adapters are created.
++ *	May also be invoked once with @adapters NULL if probe fails after the
++ *	parent adapter exists, so waiters can unblock.
+  * @mux_access_grant: callback to validate if mux access is granted
+  */
+ struct i2c_mux_regmap_platform_data {
