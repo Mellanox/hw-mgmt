@@ -1,0 +1,222 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vadim Pasternak <vadimp@nvidia.com>
+Date: Mon, 5 May 2026 12:00:00 +0000
+Subject: [PATCH] platform: mellanox: Downstream: Defer post-init until I2C mux
+ adapters exist (6.1.y)
+
+Align with linux-6.12 0067: completion + spinlock, defer mlxplat_post_init() until
+all i2c-mux-reg / i2c-mux-regmap completion_notify callbacks, NULL-adapters
+abandon handling, regmap legacy detection over every mux slot, hotplug fixup
+under mux_notify_lock, and -EINVAL when mux_num is set but both mux tables are NULL.
+
+Does not add #include <linux/spi/spi.h> (not present on all 6.1.y trees).
+
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/mlx-platform.c | 177 ++++++++++++++++++++++--------
+ 1 file changed, 127 insertions(+), 50 deletions(-)
+
+diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
+--- a/drivers/platform/mellanox/mlx-platform.c
++++ b/drivers/platform/mellanox/mlx-platform.c
+@@ -19,6 +19,8 @@
+ #include <linux/platform_data/mlxreg.h>
+ #include <linux/reboot.h>
+ #include <linux/regmap.h>
++#include <linux/completion.h>
++#include <linux/spinlock.h>
+ 
+ #define MLX_PLAT_DEVICE_NAME		"mlxplat"
+ 
+@@ -423,8 +425,11 @@
+  * @regmap: device register map
+  * @hotplug_resources: system hotplug resources
+  * @hotplug_resources_size: size of system hotplug resources
+- * @hi2c_main_init_status: init status of I2C main bus
+- * @mux_added: number of added mux segments
++ * @i2c_main_init_status: init status of I2C main bus
++ * @mux_added: mux segments that have completed i2c-mux-reg/regmap probe (completion_notify)
++ * @mux_notify_lock: serializes mux_added and hotplug bus-nr fixup
++ * @mux_platdevs_done: signaled when deferred mlxplat_post_init() has finished
++ * @mux_platdevs_err: result of mlxplat_post_init() from completion_notify (for topology_init)
+  * @irq_fpga: FPGA IRQ number
+  */
+ struct mlxplat_priv {
+@@ -441,6 +446,9 @@
+ 	unsigned int hotplug_resources_size;
+ 	u8 i2c_main_init_status;
+ 	int mux_added;
++	spinlock_t mux_notify_lock;
++	struct completion mux_platdevs_done;
++	int mux_platdevs_err;
+ 	int irq_fpga;
+ };
+ 
+@@ -9063,19 +9071,47 @@
+ }
+ 
+ static int
+-mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
++mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent __maybe_unused,
+ 				  struct i2c_adapter *adapters[])
+ {
+-	struct mlxplat_priv *priv = handle;
+ 	struct mlxreg_core_item *item;
++	struct mlxplat_priv *priv = handle;
++	unsigned long flags;
++	bool run_post_init = false;
++	int ret = 0;
+ 	int i, j;
+ 
+ 	/*
++	 * i2c-mux-reg / i2c-mux-regmap may call this with @adapters NULL when this
++	 * mux probe failed after mlx-platform began waiting (so mux_added still
++	 * reaches mlxplat_mux_num).
++	 */
++	if (!adapters) {
++		bool last;
++
++		spin_lock_irqsave(&priv->mux_notify_lock, flags);
++		if (!priv->mux_platdevs_err)
++			priv->mux_platdevs_err = -EIO;
++		last = (++priv->mux_added == mlxplat_mux_num);
++		spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
++		if (last)
++			complete(&priv->mux_platdevs_done);
++		return -EIO;
++	}
++
++	spin_lock_irqsave(&priv->mux_notify_lock, flags);
++	/*
+ 	 * Hotplug platform driver data structure contains static mux channels for I2C hotplug
+ 	 * devices. These channels numbers can be updated dynamically and returned by mux callback
+ 	 * through the adapters array. Update mux channels according to the dynamic adapters data.
++	 *
++	 * The hotplug bus-nr fixup compares mux_added before this probe is counted toward mux_num,
++	 * while the post-init gate uses mux_added only after incrementing for this callback.
++	 * That asymmetry is intentional: fixup must observe the adapter map from the probe that
++	 * completes the hotplug_num-th mux segment, and post-init must run only after mux_num
++	 * probes have completed.
+ 	 */
+-	if (priv->mux_added == mlxplat_mux_hotplug_num) {
++	if (priv->mux_added == mlxplat_mux_hotplug_num && mlxplat_hotplug) {
+ 		item = mlxplat_hotplug->items;
+ 		for (i = 0; i < mlxplat_hotplug->counter; i++, item++) {
+ 			struct mlxreg_core_data *data = item->data;
+@@ -9087,15 +9123,29 @@
+ 		}
+ 	}
+ 
+-	/* Start post initialization only after last nux segment is added */
++	/* Run post-init only after the last mux segment has finished probe. */
+ 	if (++priv->mux_added == mlxplat_mux_num)
+-		return mlxplat_post_init(priv);
++		run_post_init = true;
++	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
+ 
+-	return 0;
++	if (run_post_init) {
++		if (priv->mux_platdevs_err) {
++			complete(&priv->mux_platdevs_done);
++			return priv->mux_platdevs_err;
++		}
++		ret = mlxplat_post_init(priv);
++		priv->mux_platdevs_err = ret;
++		complete(&priv->mux_platdevs_done);
++	}
++
++	return ret;
+ }
+ 
+ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
+ {
++	unsigned long flags;
++	bool mux_regmap_no_notify = false;
++	unsigned int j;
+ 	int i, err;
+ 
+ 	if (!priv->pdev_i2c) {
+@@ -9104,8 +9154,40 @@
+ 	}
+ 
+ 	priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
++	if (mlxplat_mux_num && !mlxplat_mux_data && !mlxplat_mux_regmap_data) {
++		err = -EINVAL;
++		return err;
++	}
++
++	spin_lock_irqsave(&priv->mux_notify_lock, flags);
++	priv->mux_added = 0;
++	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
++
++	/*
++	 * Legacy synchronous post-init only when every regmap pdata slot leaves
++	 * completion_notify unset (do not infer from element 0 alone).
++	 */
++	if (!mlxplat_mux_data && mlxplat_mux_regmap_data) {
++		mux_regmap_no_notify = true;
++		for (j = 0; j < mlxplat_mux_num; j++) {
++			if (mlxplat_mux_regmap_data[j].completion_notify) {
++				mux_regmap_no_notify = false;
++				break;
++			}
++		}
++	}
++
++	if (!mlxplat_mux_num)
++		return mlxplat_post_init(priv);
++
++	reinit_completion(&priv->mux_platdevs_done);
++	priv->mux_platdevs_err = 0;
++
+ 	for (i = 0; i < mlxplat_mux_num; i++) {
+ 		if (mlxplat_mux_data) {
++			mlxplat_mux_data[i].handle = priv;
++			mlxplat_mux_data[i].completion_notify =
++				mlxplat_i2c_mux_complition_notify;
+ 			priv->pdev_mux[i] =
+ 				platform_device_register_resndata(&priv->pdev_i2c->dev,
+ 								  "i2c-mux-reg", i, NULL, 0,
+@@ -9114,8 +9196,9 @@
+ 		} else {
+ 			mlxplat_mux_regmap_data[i].handle = priv;
+ 			mlxplat_mux_regmap_data[i].regmap = priv->regmap;
+-			mlxplat_mux_regmap_data[i].completion_notify =
+-								mlxplat_i2c_mux_complition_notify;
++			if (!mux_regmap_no_notify)
++				mlxplat_mux_regmap_data[i].completion_notify =
++					mlxplat_i2c_mux_complition_notify;
+ 			priv->pdev_mux[i] =
+ 			platform_device_register_resndata(&priv->pdev_i2c->dev,
+ 							  "i2c-mux-regmap", i, NULL, 0,
+@@ -9128,14 +9211,18 @@
+ 		}
+ 	}
+ 
+-	if (mlxplat_mux_regmap_data && mlxplat_mux_regmap_data->completion_notify)
+-		return 0;
++	if (mux_regmap_no_notify)
++		return mlxplat_post_init(priv);
+ 
+-	return mlxplat_post_init(priv);
++	wait_for_completion(&priv->mux_platdevs_done);
++	return priv->mux_platdevs_err;
+ 
+ fail_platform_mux_register:
+ 	while (--i >= 0)
+ 		platform_device_unregister(priv->pdev_mux[i]);
++	spin_lock_irqsave(&priv->mux_notify_lock, flags);
++	priv->mux_added = 0;
++	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
+ 	return err;
+ }
+ 
+@@ -9234,6 +9321,8 @@
+ 	priv->hotplug_resources = hotplug_resources;
+ 	priv->hotplug_resources_size = hotplug_resources_size;
+ 	priv->irq_fpga = irq_fpga;
++	spin_lock_init(&priv->mux_notify_lock);
++	init_completion(&priv->mux_platdevs_done);
+ 
+ 	if (!mlxplat_regmap_config)
+ 		mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config;
