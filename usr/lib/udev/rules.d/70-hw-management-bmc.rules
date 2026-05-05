@@ -36,4 +36,4 @@
 SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="eth*", NAME="usb0", RUN+="/usr/bin/logger 'hw-management: renaming %k to usb0'"
 
 # Trigger script if the kernel named it 'usb0' natively or renamed it in the previous rule
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", KERNEL=="usb0", RUN+="/usr/bin/logger 'hw-management: configuring usb0'", RUN+="/usr/bin/hw-management-ifupdown.sh usb0"
+SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a2", NAME=="usb0", RUN+="/usr/bin/logger 'hw-management: configuring usb0'", RUN+="/usr/bin/hw-management-ifupdown.sh usb0"
