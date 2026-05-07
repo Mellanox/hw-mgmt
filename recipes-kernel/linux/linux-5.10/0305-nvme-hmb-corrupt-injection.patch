@@ -1,0 +1,536 @@
+nvme-pci: HMB corruption injection (debug-only)
+
+A DRAM-less NVMe SSD has no on-board DRAM and uses NVMe's Host Memory
+Buffer (HMB) feature to keep its FTL / L2P cache in host RAM. The host
+gives the controller a list of (DMA address, length) descriptors via
+"Set Features 0x0D - HMB" and from then on the controller reads/writes
+those buffers directly over PCIe.
+
+If those buffers ever get corrupted (bad host DRAM, IOMMU mis-mapping,
+stray host writes, ...) the controller reads back nonsense L2P entries,
+returns wrong data and may eventually hang.  We have observed exactly
+that symptom on DRAM-less SSDs in the field and want a reproducer.
+
+This patch adds a debug-only sysfs entry on every NVMe controller that
+allocates an HMB:
+
+    /sys/class/nvme/nvmeX/hmb_corrupt   (root-write only, 0644)
+
+  read  : prints HMB size, descriptor count, per-segment DMA addr / size
+          / VA, and the list of supported corruption modes
+  write : "MODE [PARAM1] [PARAM2]" - scribbles a pattern on every HMB
+          segment (or only on the addressed bit / segment), then
+          dma_sync_single_for_device() so the change is visible to the
+          controller
+
+Modes supported (see show output for the full list):
+  10..19    byte-level micro corruption (1, 16, 32, ... 512 bytes,
+            every 64th, every 256th, last byte)
+  25/50/75  first 25 / 50 / 75 % of every segment
+  100       full segment, 0xDEADBEEF pattern
+  1         first 4 KB of every segment
+  2         every 2nd 4 KB page
+  3         pseudo-random ~10 %
+  200/201/202  first / middle / last 1 MB
+  255       zero fill
+  300 OFF B    flip bit B (0-7) at HMB byte offset OFF
+  400 SEG      corrupt first 4 KB of segment SEG only
+
+Implementation notes:
+
+- __nvme_alloc_host_mem() / nvme_free_host_mem() now allocate the HMB
+  segments WITHOUT DMA_ATTR_NO_KERNEL_MAPPING.  Upstream uses that flag
+  (the host normally never reads/writes HMB), but without a kernel
+  virtual mapping host_mem_desc_bufs[i] cannot be scribbled on.  This
+  is the only change to the existing HMB code path.
+
+- The hmb_corrupt sysfs file is created in nvme_setup_host_mem() right
+  after a successful allocation, and removed in nvme_free_host_mem().
+
+- All writes are flushed with dma_sync_single_for_device(... ,
+  DMA_BIDIRECTIONAL) so the corruption is visible to the controller
+  on non-coherent / IOMMU / SWIOTLB configurations.
+
+DO NOT enable on production systems.
+
+Signed-off-by: Michael Shych <michaelsh@nvidia.com>
+
+--- a/drivers/nvme/host/pci.c
++++ b/drivers/nvme/host/pci.c
+@@ -1821,6 +1821,413 @@
+ }
+ static DEVICE_ATTR(cmb, S_IRUGO, nvme_cmb_show, NULL);
+ 
++/*
++ * HMB corruption injection (debug-only).
++ *
++ * The Host Memory Buffer is RAM the host loans to a DRAM-less NVMe
++ * controller for it to use as L2P / FTL cache via PCIe DMA. Real-world
++ * SSD hangs have been blamed on garbage HMB contents (bad host DRAM,
++ * IOMMU mis-mapping, accidental host writes). These two sysfs handlers
++ * deliberately scribble on the HMB segments so that the same failure
++ * mode can be reproduced in a controlled way.
++ *
++ * Sysfs file: /sys/class/nvme/nvmeX/hmb_corrupt   (root-write only)
++ *   read  -> dumps HMB layout and the list of supported modes
++ *   write -> "MODE [PARAM1] [PARAM2]"
++ *
++ * Requires that __nvme_alloc_host_mem() above did NOT pass
++ * DMA_ATTR_NO_KERNEL_MAPPING, otherwise host_mem_desc_bufs[] are not
++ * usable kernel virtual addresses.
++ */
++static ssize_t nvme_hmb_corrupt_show(struct device *dev,
++			      struct device_attribute *attr,
++			      char *buf)
++{
++	struct nvme_dev *ndev = to_nvme_dev(dev_get_drvdata(dev));
++	int i, len = 0;
++
++	len += scnprintf(buf + len, PAGE_SIZE - len,
++			 "HMB size: %llu bytes\n"
++			 "HMB descriptors: %u\n\n",
++			 ndev->host_mem_size, ndev->nr_host_mem_descs);
++
++	len += scnprintf(buf + len, PAGE_SIZE - len,
++			 "HMB Buffer Segments:\n");
++	for (i = 0; i < ndev->nr_host_mem_descs && len < PAGE_SIZE - 200; i++) {
++		struct nvme_host_mem_buf_desc *desc = &ndev->host_mem_descs[i];
++		size_t size = le32_to_cpu(desc->size) * NVME_CTRL_PAGE_SIZE;
++		dma_addr_t dma_addr = le64_to_cpu(desc->addr);
++		void *vaddr = ndev->host_mem_desc_bufs[i];
++
++		len += scnprintf(buf + len, PAGE_SIZE - len,
++				 "  [%d] DMA: 0x%llx  Size: %zu bytes  VA: %p\n",
++				 i, (unsigned long long)dma_addr, size, vaddr);
++	}
++
++	len += scnprintf(buf + len, PAGE_SIZE - len,
++			 "\nCorruption modes (echo 'MODE [PARAMS]' > hmb_corrupt):\n"
++			 "Byte-level:\n"
++			 "  10   = First byte only\n"
++			 "  11   = First 16 bytes\n"
++			 "  12   = First 32 bytes\n"
++			 "  13   = First 64 bytes\n"
++			 "  14   = First 128 bytes\n"
++			 "  15   = First 256 bytes\n"
++			 "  16   = First 512 bytes\n"
++			 "  17   = Every 64th byte\n"
++			 "  18   = Every 256th byte\n"
++			 "  19   = Last byte only\n"
++			 "\n"
++			 "Bit-flip at offset:\n"
++			 "  300 OFFSET BIT = Flip bit BIT (0-7) at byte OFFSET\n"
++			 "    Example: echo '300 0x1000 3' flips bit 3 at offset 0x1000\n"
++			 "    Example: echo '300 4096 0' flips bit 0 at offset 4096\n"
++			 "\n"
++			 "Segment-specific:\n"
++			 "  400 SEG_ID = Corrupt first 4KB of segment SEG_ID only\n"
++			 "    Example: echo '400 0' corrupts first 4KB of segment 0\n"
++			 "    Example: echo '400 2' corrupts first 4KB of segment 2\n"
++			 "\n"
++			 "Bulk fill of every segment:\n"
++			 "  25   = First 25%% of every segment\n"
++			 "  50   = First 50%% of every segment\n"
++			 "  75   = First 75%% of every segment\n"
++			 "  100  = Full segment, 0xDEADBEEF pattern\n"
++			 "\n"
++			 "Page/region:\n"
++			 "  1    = First 4KB of EVERY segment\n"
++			 "  2    = Every 2nd page\n"
++			 "  3    = Random 10%%\n"
++			 "  200  = First 1MB\n"
++			 "  201  = Middle 1MB\n"
++			 "  202  = Last 1MB\n"
++			 "  255  = Zero fill\n");
++
++	return len;
++}
++
++static ssize_t nvme_hmb_corrupt_store(struct device *dev,
++			       struct device_attribute *attr,
++			       const char *buf, size_t count)
++{
++	struct nvme_dev *ndev = to_nvme_dev(dev_get_drvdata(dev));
++	int i;
++	unsigned long mode, param1 = 0, param2 = 0;
++	u64 total_corrupted = 0;
++	int num_params;
++	char *buf_copy, *buf_orig, *token;
++
++	if (!ndev->host_mem_desc_bufs) {
++		dev_warn(dev, "HMB not allocated, nothing to corrupt\n");
++		return -ENODEV;
++	}
++
++	/* Parse input: mode [param1] [param2] */
++	buf_orig = kstrdup(buf, GFP_KERNEL);
++	if (!buf_orig)
++		return -ENOMEM;
++
++	buf_copy = buf_orig;
++
++	token = strsep(&buf_copy, " \t\n");
++	if (!token || kstrtoul(token, 0, &mode)) {
++		kfree(buf_orig);
++		return -EINVAL;
++	}
++
++	token = strsep(&buf_copy, " \t\n");
++	num_params = 1;
++	if (token && *token) {
++		if (kstrtoul(token, 0, &param1) == 0)
++			num_params = 2;
++	}
++
++	token = strsep(&buf_copy, " \t\n");
++	if (token && *token) {
++		if (kstrtoul(token, 0, &param2) == 0)
++			num_params = 3;
++	}
++
++	/* Bit-flip mode: works on a single global HMB byte offset. */
++	if (mode == 300) {
++		u64 offset = param1;
++		unsigned int bit_pos = param2;
++		u64 current_offset = 0;
++		int found = 0;
++
++		if (num_params < 3) {
++			dev_err(dev, "Mode 300 requires: 300 OFFSET BIT\n");
++			kfree(buf_orig);
++			return -EINVAL;
++		}
++
++		if (bit_pos > 7) {
++			dev_err(dev, "Bit position must be 0-7, got %u\n", bit_pos);
++			kfree(buf_orig);
++			return -EINVAL;
++		}
++
++		if (offset >= ndev->host_mem_size) {
++			dev_err(dev, "Offset 0x%llx exceeds HMB size %llu\n",
++				offset, ndev->host_mem_size);
++			kfree(buf_orig);
++			return -EINVAL;
++		}
++
++		for (i = 0; i < ndev->nr_host_mem_descs; i++) {
++			struct nvme_host_mem_buf_desc *desc = &ndev->host_mem_descs[i];
++			size_t size = le32_to_cpu(desc->size) * NVME_CTRL_PAGE_SIZE;
++			unsigned char *buf_ptr = ndev->host_mem_desc_bufs[i];
++			dma_addr_t dma_addr = le64_to_cpu(desc->addr);
++
++			if (offset >= current_offset && offset < current_offset + size) {
++				size_t local_offset = offset - current_offset;
++				unsigned char old_val = buf_ptr[local_offset];
++
++				buf_ptr[local_offset] ^= (1 << bit_pos);
++
++				dma_sync_single_for_device(ndev->dev, dma_addr + local_offset,
++							   1, DMA_BIDIRECTIONAL);
++
++				dev_warn(dev, "BIT FLIP: Segment %d, offset 0x%llx (local 0x%zx)\n"
++					      "  DMA addr: 0x%llx\n"
++					      "  Bit %u: 0x%02x -> 0x%02x\n",
++					 i, offset, local_offset,
++					 (unsigned long long)(dma_addr + local_offset),
++					 bit_pos, old_val, buf_ptr[local_offset]);
++				found = 1;
++				break;
++			}
++			current_offset += size;
++		}
++
++		if (!found) {
++			dev_err(dev, "Could not locate offset 0x%llx in HMB\n", offset);
++			kfree(buf_orig);
++			return -EINVAL;
++		}
++
++		kfree(buf_orig);
++		return count;
++	}
++
++	/* Segment-specific 4KB corruption. */
++	if (mode == 400) {
++		unsigned int seg_id = param1;
++		struct nvme_host_mem_buf_desc *desc;
++		size_t size, corrupt_size;
++		unsigned char *buf_ptr;
++		dma_addr_t dma_addr;
++
++		if (num_params < 2) {
++			dev_err(dev, "Mode 400 requires: 400 SEGMENT_ID\n");
++			kfree(buf_orig);
++			return -EINVAL;
++		}
++
++		if (seg_id >= ndev->nr_host_mem_descs) {
++			dev_err(dev, "Segment ID %u exceeds max %u\n",
++				seg_id, ndev->nr_host_mem_descs - 1);
++			kfree(buf_orig);
++			return -EINVAL;
++		}
++
++		desc = &ndev->host_mem_descs[seg_id];
++		size = le32_to_cpu(desc->size) * NVME_CTRL_PAGE_SIZE;
++		buf_ptr = ndev->host_mem_desc_bufs[seg_id];
++		dma_addr = le64_to_cpu(desc->addr);
++		corrupt_size = min_t(size_t, size, 4096);
++
++		if (!buf_ptr) {
++			dev_warn(dev, "HMB segment %u buffer is NULL\n", seg_id);
++			kfree(buf_orig);
++			return -ENODEV;
++		}
++
++		memset(buf_ptr, 0xEF, corrupt_size);
++		dma_sync_single_for_device(ndev->dev, dma_addr, corrupt_size,
++					   DMA_BIDIRECTIONAL);
++
++		dev_warn(dev, "SEGMENT-SPECIFIC CORRUPTION:\n"
++			      "  Segment: %u\n"
++			      "  Corrupted: %zu bytes (first 4KB)\n"
++			      "  DMA addr: 0x%llx\n",
++			 seg_id, corrupt_size,
++			 (unsigned long long)dma_addr);
++
++		kfree(buf_orig);
++		return count;
++	}
++
++	kfree(buf_orig);
++
++	dev_warn(dev, "CORRUPTING HMB BUFFER - Mode %lu, %u descriptors, %llu bytes total\n",
++		 mode, ndev->nr_host_mem_descs, ndev->host_mem_size);
++
++	for (i = 0; i < ndev->nr_host_mem_descs; i++) {
++		struct nvme_host_mem_buf_desc *desc = &ndev->host_mem_descs[i];
++		size_t size = le32_to_cpu(desc->size) * NVME_CTRL_PAGE_SIZE;
++		unsigned char *buf_ptr = ndev->host_mem_desc_bufs[i];
++		dma_addr_t dma_addr = le64_to_cpu(desc->addr);
++		size_t corrupt_size = 0;
++		size_t offset = 0;
++
++		if (!buf_ptr) {
++			dev_warn(dev, "HMB buffer %d is NULL\n", i);
++			continue;
++		}
++
++		switch (mode) {
++		case 10:
++			if (size > 0) {
++				buf_ptr[0] = 0xFF;
++				corrupt_size = 1;
++			}
++			break;
++		case 11:
++			memset(buf_ptr, 0xF1, min_t(size_t, size, 16));
++			corrupt_size = min_t(size_t, size, 16);
++			break;
++		case 12:
++			memset(buf_ptr, 0xF2, min_t(size_t, size, 32));
++			corrupt_size = min_t(size_t, size, 32);
++			break;
++		case 13:
++			memset(buf_ptr, 0xF3, min_t(size_t, size, 64));
++			corrupt_size = min_t(size_t, size, 64);
++			break;
++		case 14:
++			memset(buf_ptr, 0xF4, min_t(size_t, size, 128));
++			corrupt_size = min_t(size_t, size, 128);
++			break;
++		case 15:
++			memset(buf_ptr, 0xF5, min_t(size_t, size, 256));
++			corrupt_size = min_t(size_t, size, 256);
++			break;
++		case 16:
++			memset(buf_ptr, 0xF6, min_t(size_t, size, 512));
++			corrupt_size = min_t(size_t, size, 512);
++			break;
++		case 17: {
++			size_t pos;
++
++			for (pos = 0; pos < size; pos += 64) {
++				buf_ptr[pos] = 0x77;
++				corrupt_size++;
++			}
++			break;
++		}
++		case 18: {
++			size_t pos;
++
++			for (pos = 0; pos < size; pos += 256) {
++				buf_ptr[pos] = 0x88;
++				corrupt_size++;
++			}
++			break;
++		}
++		case 19:
++			if (size > 0) {
++				buf_ptr[size - 1] = 0x99;
++				corrupt_size = 1;
++			}
++			break;
++		case 100:
++			memset(buf_ptr, 0xDE, size / 4);
++			memset(buf_ptr + size / 4, 0xAD, size / 4);
++			memset(buf_ptr + size / 2, 0xBE, size / 4);
++			memset(buf_ptr + 3 * size / 4, 0xEF, size - 3 * size / 4);
++			corrupt_size = size;
++			break;
++		case 25:
++			memset(buf_ptr, 0xDE, size / 4);
++			corrupt_size = size / 4;
++			break;
++		case 50:
++			memset(buf_ptr, 0xAD, size / 2);
++			corrupt_size = size / 2;
++			break;
++		case 75:
++			memset(buf_ptr, 0xBE, (size * 3) / 4);
++			corrupt_size = (size * 3) / 4;
++			break;
++		case 1:
++			memset(buf_ptr, 0xEF, min_t(size_t, size, 4096));
++			corrupt_size = min_t(size_t, size, 4096);
++			break;
++		case 2: {
++			size_t pg;
++
++			for (pg = 0; pg < size; pg += 8192) {
++				size_t chunk = min_t(size_t, 4096, size - pg);
++
++				memset(buf_ptr + pg, 0xBA, chunk);
++				corrupt_size += chunk;
++			}
++			break;
++		}
++		case 3: {
++			size_t target = size / 10;
++			size_t corrupted = 0;
++
++			/* Cheap deterministic LCG seeded from segment index. */
++			while (corrupted < target && corrupted < size) {
++				size_t pos = ((i * 1103515245 + 12345 + corrupted) % size);
++
++				buf_ptr[pos] = 0x66;
++				corrupted++;
++			}
++			corrupt_size = corrupted;
++			break;
++		}
++		case 200:
++			memset(buf_ptr, 0xC0, min_t(size_t, size, 1048576));
++			corrupt_size = min_t(size_t, size, 1048576);
++			break;
++		case 201:
++			if (size > 1048576) {
++				offset = (size - 1048576) / 2;
++				memset(buf_ptr + offset, 0xC1, 1048576);
++				corrupt_size = 1048576;
++			}
++			break;
++		case 202:
++			if (size > 1048576) {
++				offset = size - 1048576;
++				memset(buf_ptr + offset, 0xC2, 1048576);
++				corrupt_size = 1048576;
++			} else {
++				memset(buf_ptr, 0xC2, size);
++				corrupt_size = size;
++			}
++			break;
++		case 255:
++			memset(buf_ptr, 0x00, size);
++			corrupt_size = size;
++			break;
++		default:
++			dev_warn(dev, "Unknown corruption mode %lu\n", mode);
++			return -EINVAL;
++		}
++
++		if (corrupt_size > 0) {
++			dma_sync_single_for_device(ndev->dev, dma_addr, size,
++						   DMA_BIDIRECTIONAL);
++
++			dev_info(dev, "  Seg %d: corrupted %zu/%zu bytes at DMA 0x%llx\n",
++				 i, corrupt_size, size, (unsigned long long)dma_addr);
++			total_corrupted += corrupt_size;
++		}
++	}
++
++	dev_warn(dev, "HMB CORRUPTION COMPLETE - Mode %lu, %llu bytes corrupted\n",
++		 mode, total_corrupted);
++	return count;
++}
++
++static DEVICE_ATTR(hmb_corrupt, S_IRUGO | S_IWUSR,
++		   nvme_hmb_corrupt_show, nvme_hmb_corrupt_store);
++
+ static u64 nvme_cmb_size_unit(struct nvme_dev *dev)
+ {
+ 	u8 szu = (dev->cmbsz >> NVME_CMBSZ_SZU_SHIFT) & NVME_CMBSZ_SZU_MASK;
+@@ -1938,9 +2345,15 @@
+ 		struct nvme_host_mem_buf_desc *desc = &dev->host_mem_descs[i];
+ 		size_t size = le32_to_cpu(desc->size) * NVME_CTRL_PAGE_SIZE;
+ 
++		/*
++		 * NO_KERNEL_MAPPING is intentionally NOT requested so the host
++		 * keeps a kernel virtual mapping of every HMB segment. This is
++		 * required by the hmb_corrupt sysfs hook below to scribble on
++		 * the buffers for fault-injection testing.
++		 */
+ 		dma_free_attrs(dev->dev, size, dev->host_mem_desc_bufs[i],
+ 			       le64_to_cpu(desc->addr),
+-			       DMA_ATTR_NO_KERNEL_MAPPING | DMA_ATTR_NO_WARN);
++			       DMA_ATTR_NO_WARN);
+ 	}
+ 
+ 	kfree(dev->host_mem_desc_bufs);
+@@ -1950,6 +2363,10 @@
+ 			dev->host_mem_descs, dev->host_mem_descs_dma);
+ 	dev->host_mem_descs = NULL;
+ 	dev->nr_host_mem_descs = 0;
++
++	if (dev->ctrl.device)
++		sysfs_remove_file_from_group(&dev->ctrl.device->kobj,
++					     &dev_attr_hmb_corrupt.attr, NULL);
+ }
+ 
+ static int __nvme_alloc_host_mem(struct nvme_dev *dev, u64 preferred,
+@@ -1982,8 +2399,12 @@
+ 		dma_addr_t dma_addr;
+ 
+ 		len = min_t(u64, chunk_size, preferred - size);
++		/*
++		 * Allocate WITHOUT DMA_ATTR_NO_KERNEL_MAPPING so the kernel
++		 * gets a usable virtual mapping for hmb_corrupt fault injection.
++		 */
+ 		bufs[i] = dma_alloc_attrs(dev->dev, len, &dma_addr, GFP_KERNEL,
+-				DMA_ATTR_NO_KERNEL_MAPPING | DMA_ATTR_NO_WARN);
++				DMA_ATTR_NO_WARN);
+ 		if (!bufs[i])
+ 			break;
+ 
+@@ -2008,7 +2429,7 @@
+ 
+ 		dma_free_attrs(dev->dev, size, bufs[i],
+ 			       le64_to_cpu(descs[i].addr),
+-			       DMA_ATTR_NO_KERNEL_MAPPING | DMA_ATTR_NO_WARN);
++			       DMA_ATTR_NO_WARN);
+ 	}
+ 
+ 	kfree(bufs);
+@@ -2075,6 +2496,11 @@
+ 		dev_info(dev->ctrl.device,
+ 			"allocated %lld MiB host memory buffer.\n",
+ 			dev->host_mem_size >> ilog2(SZ_1M));
++
++		if (sysfs_add_file_to_group(&dev->ctrl.device->kobj,
++					    &dev_attr_hmb_corrupt.attr, NULL))
++			dev_warn(dev->ctrl.device,
++				 "failed to add sysfs attribute for HMB corruption\n");
+ 	}
+ 
+ 	ret = nvme_set_host_mem(dev, enable_bits);
