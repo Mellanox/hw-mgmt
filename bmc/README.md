@@ -135,6 +135,8 @@ bmc/
         ├── hw-management-bmc-ready.sh
         ├── hw-management-bmc-ready-common.sh
         ├── hw-management-bmc-recovery-handler.sh
+        ├── hw-management-bmc-get-reset-cause.sh
+        ├── hw-management-bmc-show-reset-cause.sh
         ├── hw-management-bmc-reset-cause-logger.sh
         ├── hw-management-bmc-set-extra-params.sh
         └── hw-management-bmc.sh
@@ -168,13 +170,15 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 |--------|------|
 | **`hw-management-bmc-helpers-common.sh`** | From OpenBMC **`hw-management-helpers-common.sh`**: shared routines (**`log_event`**, **`log_cpld_dump`** — compact CPLD read for events), PHY **`mdio`** helpers, **`bmc_init_eth`**, **`get_mgmt_board_revision`**, etc.). **`hw-management-bmc-ready.sh`** sources it before **`hw-management-bmc-helpers.sh`**. Requires **bash** (uses **`[[ ]]`, `(( ))`, …). |
 | **`hw-management-bmc-cpld-dump.sh`** | **Merged** from OpenBMC **`recipes-phosphor/dump/files/cpld_dump.sh`** and **`dump_utils.sh`** (**`take_cpld_dump_internal`**, **`take_cpld_dump`** only). Full **grid** CPLD register dump, optional **`.tar.xz`** packaging (**`-p`**, **`-i`**). Uses **`log_message`** and **`${HW_MANAGEMENT_BMC_PLATFORM_CONF:-/etc/hw-management-bmc-platform.conf}`** (via **`hw-management-bmc-helpers-common.sh`**); no **`switch-erots-info.sh`**, no Phosphor **`add_copy_file`**. Requires **bash**. |
-| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (same idea as host **`hw-management-generate-dump.sh`**). Collects **`dmesg`**, **`proc/`**, **`network/`**, **`i2c/`** (non-mux buses), CPLD (**`take_cpld_dump`**), **`systemctl/`** for **`hw-management-bmc*`**, **`systemd-analyze/`** (boot timing, **`blame`**, **`critical-chain`** — see below), and **`var_run_hw-management/`** (runtime tree + values; EEPROM via **`hexdump -C`**). Default output **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Requires **bash**. |
+| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (same idea as host **`hw-management-generate-dump.sh`**). Collects **`dmesg`**, **`proc/`**, **`network/`**, **`i2c/`** (non-mux buses), CPLD (**`take_cpld_dump`**), **`systemctl/`** for **`hw-management-bmc*`**, **`systemd-analyze/`** (boot timing, **`blame`**, **`critical-chain`** — see below), and **`var_run_hw-management/`** (runtime tree + values; EEPROM via **`hexdump -C`**). Before archiving **`/var/run/hw-management`**, runs **`hw-management-bmc-show-reset-cause.sh`** and writes **`/var/run/hw-management/bmc/show-reset-cause`** so it is included in **`values/`** (as **`bmc_show-reset-cause.txt`**). Default output **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Requires **bash**. |
 | **`hw-management-bmc-json-parser.sh`** | From OpenBMC **`switch_json_parser.sh`**: **`json_validate`**, **`json_get_nested_array_element`**, etc. (awk/BusyBox). Sourced by **`hw-management-bmc-a2d-leakage-config.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-gpio-set.sh`** (**`bmc_init_sysfs_gpio`**). |
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
 | **`hw-management-bmc-a2d-leakage-read.sh`** | From OpenBMC **`a2d_leakage_read.sh`**: walks **`/var/run/hw-management/leakage/<idx>/<bus>-<addr>/`** (after **`hw-management-bmc-a2d-leakage-config.sh`**), reads **ADS1015** / **ADS7924** (IIO symlink or **`i2ctransfer`**) and writes per-channel **`value`** (volts); **MAX1363** path is still a placeholder. Requires **`bash`**, **`bc`**, **`i2ctransfer`**. |
 | **`hw-management-bmc-max1363-force-alarm.sh`** | From OpenBMC **`max1363_force_alarm.sh`**: debug — programs tight/safe per-channel thresholds so selected channels hit alarm (**`i2ctransfer`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-read-status.sh`** | From OpenBMC **`max1363_read_status.sh`**: debug — prints first read bytes / decoded status flags (**`i2ctransfer`**, **`awk`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — writes CPLD **`spi_chnl_select`** then **`flashcp`** to **`spidev`** (default **`/dev/spidev1.0`**). Requires **`mtd-utils`**, hw-management runtime (**`/var/run/hw-management/system/spi_chnl_select`**). **`#!/bin/bash`**. |
+| **`hw-management-bmc-get-reset-cause.sh`** | Reset-cause exporter under **`bmc/usr/usr/bin/`**. Reads SCU reset logs from U-Boot env keys (**`reset_cause_scu0_0`**, **`reset_cause_scu0_2`**, **`reset_cause_scu1_0`**, **`reset_cause_scu1_3`**) with per-register `devmem` fallback, writes raw SCU words under **`/var/run/hw-management/bmc/`**. **`reset_power_on`** plus **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_others`** live at that root; domain-detail flags (**`reset_ahb`**, **`reset_caliptra`**, **`reset_emmc`**, **`reset_espi`**, **`reset_external`**, **`reset_msi`**, **`reset_soc`**, **`reset_spi`**, **`reset_usb`**) under **`/var/run/hw-management/bmc/domains/`**. |
+| **`hw-management-bmc-show-reset-cause.sh`** | Operator view of reset causes: **`bmc`** (BMC root **`reset_*`** with value 1), **`host`** (**`/var/run/hw-management/system/reset_*`**, same idea as host **`hw-management.sh reset-cause`**), **`bmc-domain`** (**`.../bmc/domains/reset_*`**), **`bmc-raw`** (**`raw_scu*_reset_event_log*`** under the BMC dir). With no arguments, prints all four sections. Overrides: **`BMC_DIR`**, **`BMC_DOMAINS_DIR`**, **`HOST_SYSTEM_DIR`**. **`#!/bin/sh`**. |
 
 ### BIOS recovery flash (`hw-management-bmc-bios-recovery-flash.sh`)
 
@@ -187,9 +191,24 @@ Stand-alone operator tool — **no** **`systemd`** unit; invoke from the shell w
 | **Usage** | **`hw-management-bmc-bios-recovery-flash.sh <bios_image> [spidev] [channel]`** — **`channel`** is **`0`** or **`1`** for CPLD mux (default **`1`**). Run with no arguments to print a short usage summary. |
 | **Safety** | Use a verified image and the correct **`spidev`** / channel for your SKU; flashing the wrong device or a bad image can brick the host flash path. |
 
+### Reset-cause policy (`hw-management-bmc-get-reset-cause.sh`)
+
+Policy for collecting and exporting reset cause on SONiC BMC:
+
+| Topic | Policy |
+|-------|--------|
+| **Source priority** | For each SCU log, read U-Boot env first (**`reset_cause_scu0_0`**, **`reset_cause_scu0_2`**, **`reset_cause_scu1_0`**, **`reset_cause_scu1_3`**) via **`fw_printenv -n`**. If missing/invalid, fallback to `devmem` at **`0x12c02050`**, **`0x12c02070`**, **`0x14c02050`**, **`0x14c02080`** respectively. |
+| **`devmem` fallback** | Run **`devmem <addr> 32 || busybox devmem <addr> 32`** (stderr discarded; same **`32`**-bit read). |
+| **Normalization / validation** | Env and `devmem` values are normalized to `0x...` and validated as hex (`[0-9A-Fa-f]` digits only). |
+| **Published raw values** | Store all SCU words as `0x%08x`: **`raw_scu0_reset_event_log0`**, **`raw_scu0_reset_event_log2`**, **`raw_scu1_reset_event_log0`**, **`raw_scu1_reset_event_log3`**. |
+| **Published semantic files** | Under **`/var/run/hw-management/bmc/`**: **`reset_power_on`**, **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_others`**. Under **`/var/run/hw-management/bmc/domains/`** only: **`reset_external`**, **`reset_soc`**, **`reset_ahb`**, **`reset_caliptra`**, **`reset_usb`**, **`reset_spi`**, **`reset_espi`**, **`reset_emmc`**, **`reset_msi`**. |
+| **Failure behavior** | If any required SCU word cannot be obtained from env or `devmem`, exit non-zero and print an error to stderr. |
+| **AST2700 event-log policy** | Primary logs are **SCU0 0x050**, **SCU0 0x070**, **SCU1 0x050**, **SCU1 0x080**. |
+| **AST2700 mapping policy** | Combine SCU0+SCU1 where applicable: **`power_on`** from PWRST (SCU0/SCU1), **`external`** from EXTRST/SRST (SCU0/SCU1), **`soc`** and **`ahb`** from both domains, **`usb`** from SCU1 USB2D/USB2C/UHCI plus SCU0 USB bus/VHUB/UHCI mask. **`watchdog`** uses SCU1 non-SW WDT bits plus SCU0 watchdog evidence; **`software`** uses SCU1 SW WDT bits; **`security_watchdog2`** is SCU1 WDT2 nibble. **`reset_others`** is 1 only when **`power_on`**, **`watchdog`**, **`software`**, **`cpu`**, and **`security_watchdog2`** are all 0 (domain **`reset_*`** under **`bmc/domains/`** do not affect **`reset_others`**). |
+
 ### BMC debug bundle (`hw-management-bmc-generate-dump.sh`)
 
-Archive default path: **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Top-level entries include **`dmesg.txt`**, **`uname.txt`**, **`proc/`** (**`interrupts.txt`**), **`network/`** (**`ifconfig.txt`** or **`ip addr`** fallback), **`i2c/`** (**`i2cdetect -l`**, **`i2cdetect-l_grep-v-mux.txt`**, per-bus **`i2cdetect-y_<N>.txt`**), **`systemctl/`** (**`list-units`**, **`list-unit-files`**, per-unit **`.status.txt`** / **`.show.txt`**), **`cpld/`**, **`var_run_hw-management/`** (**`tree/`**, **`values/`**).
+Archive default path: **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Top-level entries include **`dmesg.txt`**, **`uname.txt`**, **`proc/`** (**`interrupts.txt`**), **`network/`** (**`ifconfig.txt`** or **`ip addr`** fallback), **`i2c/`** (**`i2cdetect -l`**, **`i2cdetect-l_grep-v-mux.txt`**, per-bus **`i2cdetect-y_<N>.txt`**), **`systemctl/`** (**`list-units`**, **`list-unit-files`**, per-unit **`.status.txt`** / **`.show.txt`**), **`cpld/`**, **`var_run_hw-management/`** (**`tree/`**, **`values/`** — live **`bmc/show-reset-cause`** is captured as **`values/bmc_show-reset-cause.txt`**).
 
 **`systemd-analyze/`** — best-effort; if **`systemd-analyze`** is not in **`PATH`**, **`skipped.txt`** is written and the rest of the bundle is unchanged.
 
@@ -201,6 +220,7 @@ Archive default path: **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Top-level entries incl
 | **`critical-chain_default.target.txt`** | **`systemd-analyze critical-chain default.target`**. |
 | **`critical-chain_sysinit.target.txt`** | **`systemd-analyze critical-chain sysinit.target`**. |
 | **`critical-chain_per_unit/`** | **`systemd-analyze critical-chain <unit>`** for each **`hw-management-bmc*.service`** (filename = unit with **`/` `@` `:`** → **`_`**). Capped count per run; if truncated, **`README_cap.txt`** notes the limit. |
+| **`var_run_hw-management/values/`** (reset cause) | **`hw-management-bmc-show-reset-cause.sh`** (all sections) is written to live **`/var/run/hw-management/bmc/show-reset-cause`** as the first step of runtime collection, then copied like any other file under **`/var/run/hw-management`** (archive **`values/bmc_show-reset-cause.txt`**). BMC **`reset_*`** / **`raw_scu*`** files remain under **`var_run_hw-management/values/`** when present. |
 
 ### Shell portability (BusyBox `ash` vs bash)
 
@@ -217,7 +237,9 @@ SONiC BMC images often ship **BusyBox** (`/bin/sh` → **ash**) and may also inc
 | **`hw-management-bmc-powerctrl.sh`** | **bash** | **`#!/bin/bash`**, **`set -euo pipefail`**, **`logger`** for journal messages; requires **`bash`**. |
 | **`hw-management-bmc-boot-complete.sh`** | Yes | **`#!/bin/sh`**: waits on **`/var/run/hw-management/`** entry counts vs **`/etc/hw-management-bmc-boot-complete.conf`**. |
 | **`hw-management-bmc-cpld-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`BASH_SOURCE`**, brace expansion in **`take_cpld_dump_internal`**, sourced **`return`** guard for **`timeout bash -c '. …; take_cpld_dump_internal'`**. |
-| **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`source`** **`hw-management-bmc-cpld-dump.sh`** (**`take_cpld_dump`**), **`find`**, **`timeout`**, **`systemd-analyze`** (optional). Uses **`tar cf - \| gzip -9`** (not GNU **`tar -I`**) and **`ls -ld`** per path (not GNU **`find -ls`**) so BusyBox **tar/find** work; **`readlink_canonical`** if **`readlink -f`** missing. Needs **`gzip`** in **`PATH`** (BusyBox or GNU). |
+| **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`source`** **`hw-management-bmc-cpld-dump.sh`** (**`take_cpld_dump`**), **`find`**, **`timeout`**, **`systemd-analyze`** (optional). Uses **`tar cf - \| gzip -9`** (not GNU **`tar -I`**) and **`ls -ld`** per path (not GNU **`find -ls`**) so BusyBox **tar/find** work; **`readlink_canonical`** if **`readlink -f`** missing. Needs **`gzip`** in **`PATH`** (BusyBox or GNU). Invokes **`hw-management-bmc-show-reset-cause.sh`** into **`/var/run/hw-management/bmc/show-reset-cause`** before archiving **`/var/run/hw-management`**. |
+| **`hw-management-bmc-show-reset-cause.sh`** | Yes | **`#!/bin/sh`**: lists active **`reset_*`** (value 1) or raw SCU lines; no bashisms. |
+| **`hw-management-bmc-get-reset-cause.sh`** | Yes | **`#!/bin/sh`**: SCU read / semantic export. |
 | **`hw-management-bmc-bios-recovery-flash.sh`** | **bash** | **`#!/bin/bash`**, **`set -e`**: **`flashcp`** (**`mtd-utils`**), **`spi_chnl_select`** sysfs. |
 
 If **`/usr/bin/hw-management-bmc-helpers.sh`** is sourced, it is written for bash but parses under BusyBox ash; some code paths use bash-style arithmetic — prefer **`bash`** where the full helper API is used.
@@ -267,7 +289,7 @@ flowchart TB
 | **hw-management-bmc-i2c-slave-setup** | oneshot | `/usr/bin/hw-management-bmc-i2c-slave-setup.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**. **`Before=`** `hw-management-bmc-recovery-handler`. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. |
 | **hw-management-bmc-recovery-handler** | simple | `/usr/bin/hw-management-bmc-recovery-handler.sh` | `WantedBy=multi-user.target` | **`After=`** `multi-user.target`, **`hw-management-bmc-i2c-slave-setup`**. **`Requires=`** i2c-slave-setup. **`EnvironmentFile=/etc/hw-management-bmc-recovery.conf`**. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. **`Restart=always`**. |
 
-Scripts **`hw-management-bmc-powerctrl.sh`**, **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-gpio-set.sh`**, **`hw-management-bmc-leakage-handler.sh`**, etc., are invoked by other scripts, **udev**, or operators; they are not tied 1:1 to a dedicated systemd unit in this package.
+Scripts **`hw-management-bmc-powerctrl.sh`**, **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-gpio-set.sh`**, **`hw-management-bmc-leakage-handler.sh`**, **`hw-management-bmc-get-reset-cause.sh`**, **`hw-management-bmc-show-reset-cause.sh`**, etc., are invoked by other scripts, **udev**, or operators; they are not tied 1:1 to a dedicated systemd unit in this package. The logger unit uses **`hw-management-bmc-reset-cause-logger.sh`** for boot diagnostics, while **`hw-management-bmc-get-reset-cause.sh`** exports reset-cause sysfs-style files: most primary flags at **`/var/run/hw-management/bmc/`**, domain-detail **`reset_*`** under **`/var/run/hw-management/bmc/domains/`** (see reset-cause policy table), raw SCU words at the bmc runtime root.
 
 ### Platform deploy (what plat-specific-preps does)
 

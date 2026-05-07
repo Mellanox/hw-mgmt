@@ -44,6 +44,10 @@
 # tar|gzip pipeline (not GNU tar -I), find + ls -ld (not GNU find -ls),
 # readlink fallback if -f unsupported. grep/awk/sort/cat/timeout/hexdump from
 # BusyBox are OK when those applets are enabled.
+#
+# Reset cause: collect_hw_management_runtime() writes hw-management-bmc-show-reset-cause.sh
+# (all sections) to ${HW_MGMT}/bmc/show-reset-cause first; that file is then archived with
+# the rest of /var/run/hw-management (tree + values).
 ################################################################################
 
 # Best-effort canonical path (GNU readlink -f, BusyBox readlink, or realpath).
@@ -83,6 +87,8 @@ Usage: hw-management-bmc-generate-dump.sh [output_tarball]
   systemctl status/show for all hw-management-bmc* units, systemd-analyze time/blame
   (plus hw-management-bmc-only lines) and critical-chain for default.target/sysinit.target,
   and /var/run/hw-management tree + values (EEPROM paths: hexdump -C).
+  Before archiving, hw-management-bmc-show-reset-cause.sh output is written to
+  /var/run/hw-management/bmc/show-reset-cause so it is included with the runtime snapshot.
 
   Default output: /tmp/hw-mgmt-bmc-dump.tar.gz
 EOF
@@ -125,11 +131,23 @@ is_eeprom_path()
 collect_hw_management_runtime()
 {
 	local out_root=$1
-	local tree_dir values_dir
+	local tree_dir values_dir show
 
 	tree_dir="${out_root}/tree"
 	values_dir="${out_root}/values"
 	mkdir -p "$tree_dir" "$values_dir"
+
+	if [ -d "$HW_MGMT" ]; then
+		mkdir -p "${HW_MGMT}/bmc"
+		show="/usr/bin/hw-management-bmc-show-reset-cause.sh"
+		if [ -x "$show" ]; then
+			"$show" >"${HW_MGMT}/bmc/show-reset-cause" 2>&1 \
+				|| log_message warning "hw-management-bmc-show-reset-cause.sh returned non-zero"
+		else
+			log_message warning "hw-management-bmc-show-reset-cause.sh not installed — stub ${HW_MGMT}/bmc/show-reset-cause"
+			echo "hw-management-bmc-show-reset-cause.sh not found or not executable" >"${HW_MGMT}/bmc/show-reset-cause"
+		fi
+	fi
 
 	if [ ! -d "$HW_MGMT" ]; then
 		log_message warning "Missing $HW_MGMT — skipping runtime tree"
