@@ -562,6 +562,55 @@ class TestModuleTempPopulate(unittest.TestCase):
             "/var/run/hw-management/thermal/module1_cooling_level_warning", writes
         )
 
+    def test_module_present_writes_hcrit_and_cooling_levels(self):
+        """Present module -> optional hcrit and TEC cooling-level files are written."""
+        m = self.thermal_module
+        afw = MagicMock()
+
+        def open_side_effect(path, *args, **kwargs):
+            read_values = {
+                "/present": "1",
+                "/temperature/input": "40",
+                "/temperature/threshold_hi": "60",
+                "/temperature/threshold_critical_hi": "80",
+                "/temperature/tec/cooling_level": "7",
+                "/temperature/tec/warning_cooling_level": "9",
+            }
+            for suffix, value in read_values.items():
+                if path.endswith(suffix):
+                    return mock_open(read_data=value).return_value
+            raise FileNotFoundError(path)
+
+        def isfile_side_effect(path):
+            return path.endswith((
+                "/temperature/threshold_hi",
+                "/temperature/threshold_critical_hi",
+                "/temperature/tec/cooling_level",
+                "/temperature/tec/warning_cooling_level",
+            ))
+
+        with patch.object(m, 'atomic_file_write', afw), \
+             patch.object(m, 'is_module_host_management_mode', return_value=False), \
+             patch('os.path.islink', return_value=False), \
+             patch('os.path.isfile', side_effect=isfile_side_effect), \
+             patch('builtins.open', side_effect=open_side_effect):
+            m.module_temp_populate(self._arg_list(), None)
+
+        writes = self._writes_map(afw)
+        expected_emergency = m.sdk_temp2degree(80)
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_temp_emergency"],
+            "{}\n".format(expected_emergency),
+        )
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_cooling_level_input"],
+            "7\n",
+        )
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_cooling_level_warning"],
+            "9\n",
+        )
+
     def test_host_management_mode_skips_module(self):
         """Host-management (SW) mode -> no writes for the module."""
         m = self.thermal_module

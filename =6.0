@@ -1,6 +1,0 @@
-Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: pytest in /labhome/nhugi/.local/lib/python3.12/site-packages (9.0.3)
-Requirement already satisfied: iniconfig>=1.0.1 in /labhome/nhugi/.local/lib/python3.12/site-packages (from pytest) (2.3.0)
-Requirement already satisfied: packaging>=22 in /usr/lib/python3.12/site-packages (from pytest) (23.1)
-Requirement already satisfied: pluggy<2,>=1.5 in /labhome/nhugi/.local/lib/python3.12/site-packages (from pytest) (1.6.0)
-Requirement already satisfied: pygments>=2.7.2 in /labhome/nhugi/.local/lib/python3.12/site-packages (from pytest) (2.20.0)
