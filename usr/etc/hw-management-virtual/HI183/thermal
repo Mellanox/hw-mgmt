@@ -351,6 +351,15 @@ module9_temp_fault 0
 module9_temp_input 0
 module9_temp_trip_crit 0
 port_amb 24125
+sodimm1_temp_crit 95000
+sodimm1_temp_crit_alarm 0
+sodimm1_temp_crit_hyst 89000
+sodimm1_temp_input 38750
+sodimm1_temp_max 85000
+sodimm1_temp_max_alarm 0
+sodimm1_temp_max_hyst 79000
+sodimm1_temp_min 0
+sodimm1_temp_min_alarm 0
 sodimm2_temp_crit 95000
 sodimm2_temp_crit_alarm 0
 sodimm2_temp_crit_hyst 89000
