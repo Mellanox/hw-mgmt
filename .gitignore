@@ -34,6 +34,7 @@ debian/hw-management-bmc/
 # IDE and editor files
 .vscode/
 .idea/
+.cursor/plans/
 *.swp
 *.swo
 *~

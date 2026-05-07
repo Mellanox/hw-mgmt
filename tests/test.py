@@ -372,16 +372,6 @@ class TestRunner:
                 'cmd': ['python3', 'simple_test.py'],
                 'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate'
             },
-            {
-                'name': 'Module Temperature Populate (unittest)',
-                'cmd': ['python3', 'legacy_module_temp_populate.py'],
-                'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate'
-            },
-            {
-                'name': 'Module Temperature Populate Extended (unittest)',
-                'cmd': ['python3', 'legacy_module_temp_populate_extended.py'],
-                'cwd': self.offline_dir / 'hw_mgmgt_sync' / 'module_populate_temperature'
-            },
             # Disabled TEC tests for V.7.0040.4000_BR - thermal_module_tec_sensor function not available in base
             # {
             #     'name': 'Thermal Control 2.0 TEC module test FR:4359937 (unittest)',
@@ -480,7 +470,7 @@ class TestRunner:
                 'cwd': self.tests_dir
             },
             {
-                'name': 'Pytest: TC _exit_wait (stop timeout)',
+                'name': 'Pytest: TC exit_wait (stop timeout)',
                 'cmd': ['python3', '-m', 'pytest', 'offline/test_hw_management_thermal_exit_wait.py', '--tb=short'],
                 'cwd': self.tests_dir
             },

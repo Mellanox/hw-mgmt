@@ -23,6 +23,7 @@ import unittest
 import re
 from collections import defaultdict
 import importlib.util
+from unittest.mock import MagicMock, patch, mock_open
 
 
 class TestThermalConfigValidation(unittest.TestCase):
@@ -431,6 +432,183 @@ class TestThermalConfigValidation(unittest.TestCase):
         print("=" * 70)
 
         print("\n[PASS] Configuration report generated")
+
+
+class TestModuleTempPopulate(unittest.TestCase):
+    """
+    Focused unit tests for module_temp_populate(arg_list, _dummy).
+
+    Recovers coverage previously provided by the deleted
+    legacy_module_temp_populate*.py files. Targets the function's main
+    branches: symlink-skip, host-management-mode skip, absent-module zero
+    defaults, present-module degree conversion, and the OSError fail-safe
+    on the present file read.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Load hw_management_thermal_updater for use in tests."""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        hw_mgmt_dir = os.path.abspath(
+            os.path.join(script_dir, '..', '..', 'usr', 'usr', 'bin')
+        )
+        if hw_mgmt_dir not in sys.path:
+            sys.path.insert(0, hw_mgmt_dir)
+
+        thermal_path = os.path.join(hw_mgmt_dir, 'hw_management_thermal_updater.py')
+        spec = importlib.util.spec_from_file_location(
+            "hw_management_thermal_updater", thermal_path
+        )
+        cls.thermal_module = importlib.util.module_from_spec(spec)
+        sys.modules.setdefault("hw_management_lib", MagicMock())
+        spec.loader.exec_module(cls.thermal_module)
+
+    def setUp(self):
+        # Source initializes LOGGER = None at module scope and only sets it
+        # inside main(); inject a fresh MagicMock per test so LOGGER.debug /
+        # LOGGER.notice / LOGGER.warning / LOGGER.info calls don't AttributeError
+        # and counts don't leak between tests.
+        self._logger_patch = patch.object(self.thermal_module, 'LOGGER', MagicMock())
+        self._logger_patch.start()
+        self.addCleanup(self._logger_patch.stop)
+
+    @staticmethod
+    def _arg_list(module_count=1, offset=1):
+        return {
+            "fin": "/sys/module/sx_core/asic0/module{}",
+            "module_count": module_count,
+            "fout_idx_offset": offset,
+        }
+
+    @staticmethod
+    def _writes_map(mock_afw):
+        """Build {path: contents} from atomic_file_write call_args_list."""
+        return {call.args[0]: call.args[1] for call in mock_afw.call_args_list}
+
+    def test_module_absent_writes_zero_defaults_for_fw_control_module(self):
+        """Absent module in FW mode -> all temps written as '0\\n', no cooling-level writes."""
+        m = self.thermal_module
+        afw = MagicMock()
+        with patch.object(m, 'atomic_file_write', afw), \
+             patch.object(m, 'is_module_host_management_mode', return_value=False), \
+             patch('os.path.islink', return_value=False), \
+             patch('builtins.open', mock_open(read_data="0")):
+            m.module_temp_populate(self._arg_list(), None)
+
+        writes = self._writes_map(afw)
+        for suffix in ("_temp_input", "_temp_crit", "_temp_emergency",
+                       "_temp_fault", "_temp_trip_crit", "_status"):
+            path = "/var/run/hw-management/thermal/module1{}".format(suffix)
+            self.assertIn(path, writes)
+            self.assertEqual(writes[path], "0\n")
+        # Cooling levels stay None and must therefore be skipped by the writer.
+        self.assertNotIn(
+            "/var/run/hw-management/thermal/module1_cooling_level_input", writes
+        )
+        self.assertNotIn(
+            "/var/run/hw-management/thermal/module1_cooling_level_warning", writes
+        )
+
+    def test_module_present_writes_real_temperatures(self):
+        """Present module -> sdk_temp2degree-converted temps; emergency = crit + offset."""
+        m = self.thermal_module
+        afw = MagicMock()
+
+        def open_side_effect(path, *args, **kwargs):
+            if path.endswith("/present"):
+                return mock_open(read_data="1").return_value
+            if path.endswith("/temperature/input"):
+                return mock_open(read_data="40").return_value
+            if path.endswith("/temperature/threshold_hi"):
+                return mock_open(read_data="60").return_value
+            raise FileNotFoundError(path)
+
+        def isfile_side_effect(path):
+            # threshold_hi exists; threshold_critical_hi and cooling-level files do not.
+            return path.endswith("/temperature/threshold_hi")
+
+        with patch.object(m, 'atomic_file_write', afw), \
+             patch.object(m, 'is_module_host_management_mode', return_value=False), \
+             patch('os.path.islink', return_value=False), \
+             patch('os.path.isfile', side_effect=isfile_side_effect), \
+             patch('builtins.open', side_effect=open_side_effect):
+            m.module_temp_populate(self._arg_list(), None)
+
+        writes = self._writes_map(afw)
+        expected_temp = m.sdk_temp2degree(40)
+        expected_crit = m.sdk_temp2degree(60)
+        expected_emergency = expected_crit + m.CONST.MODULE_TEMP_EMERGENCY_OFFSET
+
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_temp_input"],
+            "{}\n".format(expected_temp),
+        )
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_temp_crit"],
+            "{}\n".format(expected_crit),
+        )
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_temp_emergency"],
+            "{}\n".format(expected_emergency),
+        )
+        self.assertEqual(
+            writes["/var/run/hw-management/thermal/module1_status"], "1\n"
+        )
+        # Cooling-level files absent -> None values -> skipped by writer.
+        self.assertNotIn(
+            "/var/run/hw-management/thermal/module1_cooling_level_input", writes
+        )
+        self.assertNotIn(
+            "/var/run/hw-management/thermal/module1_cooling_level_warning", writes
+        )
+
+    def test_host_management_mode_skips_module(self):
+        """Host-management (SW) mode -> no writes for the module."""
+        m = self.thermal_module
+        afw = MagicMock()
+        with patch.object(m, 'atomic_file_write', afw), \
+             patch.object(m, 'is_module_host_management_mode', return_value=True), \
+             patch('os.path.islink', return_value=False):
+            m.module_temp_populate(self._arg_list(), None)
+
+        self.assertEqual(afw.call_count, 0)
+
+    def test_symlink_destination_skips_module(self):
+        """Symlinked _temp_input destination -> short-circuit before mode check or writes."""
+        m = self.thermal_module
+        afw = MagicMock()
+        host_mock = MagicMock()
+        with patch.object(m, 'atomic_file_write', afw), \
+             patch.object(m, 'is_module_host_management_mode', host_mock), \
+             patch('os.path.islink', return_value=True):
+            m.module_temp_populate(self._arg_list(), None)
+
+        self.assertEqual(afw.call_count, 0)
+        host_mock.assert_not_called()
+
+    def test_read_error_on_present_uses_zero_default(self):
+        """OSError reading present file -> fail-safe to absent-module behavior."""
+        m = self.thermal_module
+        afw = MagicMock()
+
+        def open_raise(path, *args, **kwargs):
+            if path.endswith("/present"):
+                raise OSError("simulated read failure")
+            raise FileNotFoundError(path)
+
+        with patch.object(m, 'atomic_file_write', afw), \
+             patch.object(m, 'is_module_host_management_mode', return_value=False), \
+             patch('os.path.islink', return_value=False), \
+             patch('builtins.open', side_effect=open_raise):
+            # Must not raise; documents the try/except fail-safe in the source.
+            m.module_temp_populate(self._arg_list(), None)
+
+        writes = self._writes_map(afw)
+        for suffix in ("_temp_input", "_temp_crit", "_temp_emergency",
+                       "_temp_fault", "_temp_trip_crit", "_status"):
+            path = "/var/run/hw-management/thermal/module1{}".format(suffix)
+            self.assertIn(path, writes)
+            self.assertEqual(writes[path], "0\n")
 
 
 def main():
