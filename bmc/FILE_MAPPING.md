@@ -87,7 +87,8 @@ On the target system the **hw-management-bmc** Debian package installs this tree
 | .../spc6-ast2700-a1/.../i2c-slave-config.sh | usr/usr/bin/**hw-management-bmc-i2c-slave-config.sh** |
 | ~~spc6-svn-check.sh~~ | removed (Microsoft doesn't need) |
 | meta-nvidia/meta-switch/recipes-phosphor/**dump**/files/**cpld_dump.sh** + **dump_utils.sh** ( **`take_cpld_dump_internal`**, **`take_cpld_dump`** only) | usr/usr/bin/**hw-management-bmc-cpld-dump.sh** (merged SONiC script; no **`switch-erots-info`** / Phosphor **`add_copy_file`**; **`log_message`** + **`hw-management-bmc-platform.conf`** via **`helpers-common`**) |
-| *(SONiC BMC; analogous to host **`usr/usr/bin/hw-management-generate-dump.sh`**) | usr/usr/bin/**hw-management-bmc-generate-dump.sh** — bundle: **`dmesg`**, **`/proc/interrupts`**, **`ifconfig`**, **`i2cdetect -y`** per non-mux bus (**`i2cdetect -l \| grep -v mux`**), CPLD (**`take_cpld_dump`**), **`systemctl`** (**`hw-management-bmc*`**), **`/var/run/hw-management`** (**`hexdump -C`** on EEPROM) → **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. |
+| *(SONiC BMC; analogous to host **`usr/usr/bin/hw-management-generate-dump.sh`**) | usr/usr/bin/**hw-management-bmc-generate-dump.sh** — bundle: **`dmesg`**, **`/proc/interrupts`**, **`ifconfig`**, **`i2cdetect -y`** per non-mux bus (**`i2cdetect -l \| grep -v mux`**), CPLD (**`take_cpld_dump`**), **`systemctl`** (**`hw-management-bmc*`**), **`/var/run/hw-management`** (**`hw-management-bmc-show-reset-cause.sh`** → **`bmc/show-reset-cause`** (dump adds **`.txt`** under **`values/`**), then tree + values + **`hexdump -C`** on EEPROM) → **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. |
+| *(SONiC BMC reset-cause viewer)* | usr/usr/bin/**hw-management-bmc-show-reset-cause.sh** — sections **`bmc`**, **`host`**, **`bmc-domain`**, **`bmc-raw`**; default all. |
 
 ---
 

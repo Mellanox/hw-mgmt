@@ -134,9 +134,14 @@ bmc_debug_step()
 #   1 BMC_READY not asserted, due to failure in ready sequence
 bmc_ready_sequence()
 {
-	bmc_debug_step "bmc_ready_sequence: start (wait standby, EEPROM, A2D, hook post)"
+	bmc_debug_step "bmc_ready_sequence: start (wait standby, reset cause, EEPROM, A2D, hook post)"
 
 	wait_bmc_standby_ready 10 1
+
+	# Export BMC reset cause (SCU / U-Boot env) to /var/run/hw-management/bmc/.
+	if ! hw-management-bmc-get-reset-cause.sh; then
+		logger -t "${LOG_TAG}" -p daemon.warning "hw-management-bmc-get-reset-cause.sh failed; reset_* under /var/run/hw-management/bmc/ may be missing"
+	fi
 
 	# Obtain CPU type.
 	get_cpu_type
