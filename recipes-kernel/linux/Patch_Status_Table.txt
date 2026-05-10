@@ -821,6 +821,11 @@ Kernel-6.12
 |0061-platform-mellanox-mlxreg-io-Increase-max-supported-a.patch  |                    | Downstream accepted                      |            |                                                |
 |0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
 |0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
+|0001-mctp-driver-net-Extend-MCTP-support.patch                   |                    | Downstream accepted                      |            |                                                |
+|0002-mctp-aspeed-IRoT-Add-initial-support.patch                  |                    | Downstream accepted                      |            |                                                |
+|0003-mctp-driver-net-Add-global-APIs-for-MCTP.patch              |                    | Downstream accepted                      |            |                                                |
+|0004-mctp-driver-net-Fix-MCTP-over-VDM-PCIe.patch                |                    | Downstream accepted                      |            |                                                |
+|0005-mctp-driver-net-Fix-MCTP-over-USB.patch                     |                    | Downstream accepted                      |            |                                                |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
