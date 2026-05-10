@@ -311,7 +311,7 @@ Kernel-5.10
 |0301-crypto-ccp-Reject-SEV-commands-with-mismatching-comm.patch  | d5760dee127b       | Bugfix upstream                          | 5.1.184    |                                                |
 |0302-crypto-ccp-Play-nice-with-vmalloc-d-memory-for-SEV-c.patch  | 8347b99473a3       | Bugfix upstream                          | 5.1.184    |                                                |
 |0303-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
-|0304-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|0304-nvme-pci-try-function-level-reset-on-init-failure.patch     |                    | Downstream accepted                      |            | NVME SSD fallback recovery                     |
 |0305-nvme-hmb-corrupt-injection.patch                            |                    | Downstream accepted                      |            | NVME SSD HMB corruption inject                 |
 |0306-nvme-pci-enable-flr-injection.patch                         |                    | Downstream accepted                      |            | NVME SSD CTRL+FLR reset inject                 |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
