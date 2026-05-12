@@ -1,5 +1,6 @@
  {
 	"name": "q3200/q3200_ra",
+	"tc_version": "2.0",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
