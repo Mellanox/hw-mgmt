@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,20 @@
 
 # hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
+
+# Read tc_version value from a tc_config.json path (grep-based). Prints 2.0 when missing or unreadable.
+get_tc_version()
+{
+	local json_path="$1"
+	local v
+
+	[ -f "$json_path" ] || {
+		echo "2.0"
+		return
+	}
+	v=$(grep -o '"tc_version"[[:space:]]*:[[:space:]]*"[^"]*"' "$json_path" 2>/dev/null | head -n1 | cut -d'"' -f4)
+	echo "${v:-2.0}"
+}
 
 # Local constants and paths.
 CPLD3_VER_DEF="0"
@@ -84,7 +98,7 @@ fi
 if check_simx; then
         if check_if_simx_supported_platform; then
                 case $sku in
-                        HI166|HI176|HI171|HI180)
+                        HI166|HI176|HI171|HI180|HI185|HI193)
                                 process_simx_links
                                 ;;
                         *)
@@ -96,7 +110,7 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI179|HI180)
+	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI179|HI180|HI185)
 		ui_tree_archive_file="$(get_ui_tree_archive_file)"
 		if [ -e "$ui_tree_archive_file" ]; then
 			# Extract the ui_tree archive to /var/run/hw-management
@@ -162,20 +176,27 @@ fi
 # The unit is rewritten only when those strings would actually change (avoid needless reload).
 service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
 if [ -f "$service_file_path" ]; then
-	case $sku in
-		HI172|HI171|HI179)	# Systems allowed to use new hw-management-tc
-			tc_version="2.5"
-			tc_executable="hw_management_thermal_control_2_5.py"
-			;;
-		*)
-			tc_version="2.0"
-			tc_executable="hw_management_thermal_control.py"
-			;;
-	esac
+	# TC application (v2.0 vs v2.5) is selected from tc_config.json (tc_version), not SKU.
+	tc_cfg_json="$config_path/tc_config.json"
+	tc_version="2.0"
+	tc_executable="hw_management_thermal_control.py"
+	if [ -f "$tc_cfg_json" ]; then
+		tc_ver_raw=$(get_tc_version "$tc_cfg_json")
+		case $tc_ver_raw in
+			2.5|2.5.*)
+				tc_version="2.5"
+				tc_executable="hw_management_thermal_control_2_5.py"
+				;;
+			*)
+				tc_version="2.0"
+				tc_executable="hw_management_thermal_control.py"
+				;;
+		esac
+	fi
 
 	# 1) Substitutions we would apply to the unit (TC executable basename and "ver X.Y" marker).
-	sed_edit_executable="s/hw_management_thermal_control\.py/$tc_executable/g"
-	sed_edit_version="s/ver 2\.0/ver $tc_version/g"
+	sed_edit_executable="s/hw_management_thermal_control_2_5\.py/$tc_executable/g;s/hw_management_thermal_control\.py/$tc_executable/g"
+	sed_edit_version="s/ver [0-9][0-9.]*/ver $tc_version/g"
 
 	# 2) Rewrite only if disk and "sed output" differ. cmp compares the file to stdin (-);
 	#    stdin is the unit text after the two sed rules (no temp file).
