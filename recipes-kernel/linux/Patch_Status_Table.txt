@@ -828,6 +828,7 @@ Kernel-6.12
 |0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
 |0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
 |0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
+|0068-platform-mellanox-Add-support-for-SN6200_LD.patch           |                    | Downstream accepted                      |            | SN6200_LD                                      |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
