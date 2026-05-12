@@ -7,6 +7,8 @@ Kernel-6.12
 |0003-mctp-driver-net-Add-global-APIs-for-MCTP.patch              |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0004-mctp-driver-net-Fix-MCTP-over-VDM-PCIe.patch                |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0005-mctp-driver-net-Fix-MCTP-over-USB.patch                     |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
+|0006-jtag-Add-JTAG-core-headers-GPIO-mux-and-locking-support.patch|                   | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
+|0007-JTAG-Aspeed-Fix-kernel-configuration.patch                  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
