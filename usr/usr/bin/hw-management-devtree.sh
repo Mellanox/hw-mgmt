@@ -721,6 +721,9 @@ declare -A sn66xxld_platform_alternatives=( \
 	["mp2975_1"]="mp2975 0x6a 5 comex_voltmon2" \
 )
 
+# SN6200_LD (HI195) device definitions are loaded at runtime from:
+# /etc/hw-management-cfg/HI195/devtree.json
+
 # Old connection table assumes that Fan amb temp sensors is located on main/switch board.
 # Actually it's located on fan board and in this way it will be passed through SMBIOS
 # string generated from Agile settings. Thus, declare also Fan board alternatives.
@@ -932,6 +935,27 @@ devtr_clean()
 	if [ -e "$devtree_codes_file" ]; then
 		rm -f "$devtree_codes_file"
 	fi
+}
+
+# Fill one associative array from a named section in a BOM JSON file.
+# Requires hw-management-devtree-json-parser.sh (nameref needs bash 4.3+).
+# Usage: devtr_bom_fill_alternatives_from_json <json_file> <section> <array_name>
+devtr_bom_fill_alternatives_from_json()
+{
+	local json_file="$1"
+	local section="$2"
+	local -n _dest="$3"
+	local n i block k v
+
+	n=$(cat "$json_file" | json_count_nested_array "$section")
+	for ((i = 0; i < n; i++)); do
+		block=$(cat "$json_file" | json_get_nested_array_element "$section" "$i")
+		k=$(echo "$block" | json_get_string "key")
+		v=$(echo "$block" | json_get_string "spec")
+		if [ -n "$k" ] && [ -n "$v" ]; then
+			_dest["$k"]="$v"
+		fi
+	done
 }
 
 # Check if system has SMBIOS BOM changes mechanism support.
@@ -1384,6 +1408,24 @@ devtr_check_supported_system_init_alternatives()
 				for key in "${!sn66xxld_port_alternatives[@]}"; do
 					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
 				done
+				;;
+			HI195)
+				local devtr_bom_json="/etc/hw-management-cfg/HI195/devtree.json"
+				if [ -f "$devtr_bom_json" ] && [ -f /usr/bin/hw-management-devtree-json-parser.sh ]; then
+					# shellcheck source=/dev/null
+					source /usr/bin/hw-management-devtree-json-parser.sh
+					if json_validate "$devtr_bom_json"; then
+						devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "swb" swb_alternatives
+						devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "port" port_alternatives
+						devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "pwr" pwr_alternatives
+						devtr_bom_fill_alternatives_from_json "$devtr_bom_json" "platform" platform_alternatives
+					elif [ "$devtr_verb_display" -eq 1 ]; then
+						log_info "DBG SMBIOS BOM: skip, invalid JSON: ${devtr_bom_json}"
+					fi
+				else
+					log_info "SMBIOS BOM info: HI195 BOM JSON not found: ${devtr_bom_json}"
+					return 1
+				fi
 				;;
 			*)
 				log_info "SMBIOS BOM info: unsupported board_type: ${board_type}, sku ${sku}"
