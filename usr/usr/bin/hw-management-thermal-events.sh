@@ -1169,6 +1169,26 @@ if [ "$1" == "add" ]; then
 			fi
 		fi
 
+		# Mark PSU discovery as complete once all expected hot-pluggable
+		# PSU's are present AND have AC power (psu*_pwr_status == 1).
+		# The persistent psu*_on toggle flips psu*_pwr_status, so a PSU
+		# whose power cable is "disconnected" before boot is correctly
+		# excluded from the count.
+		if [ -f $config_path/hotplug_psus ]; then
+			expected_psus=$(< $config_path/hotplug_psus)
+			if [ "$expected_psus" -gt 0 ]; then
+				available_psus=0
+				for f in "$thermal_path"/psu*_pwr_status; do
+					[ -e "$f" ] || continue
+					if [ "$(< "$f")" = "1" ]; then
+						available_psus=$((available_psus + 1))
+					fi
+				done
+				if [ "$available_psus" -ge "$expected_psus" ]; then
+					touch "$eeprom_path"/psu_done
+				fi
+			fi
+		fi
 	fi
 	if [ "$2" == "sxcore" ]; then
 		if [ -f "$config_path"/minimal_unsupported ]; then
@@ -1534,6 +1554,9 @@ else
 		if [ -e "$config_path"/"$psu_name"_i2c_bus ]; then
 			rm -f "$config_path"/"$psu_name"_i2c_bus
 		fi
+
+		# At least one PSU is gone -> invalidate the discovery indicator.
+		rm -f "$eeprom_path"/psu_done
 	fi
 	if [ "$2" == "sxcore" ]; then
 		/usr/bin/hw-management.sh chipdown 0 "$4/$5"
