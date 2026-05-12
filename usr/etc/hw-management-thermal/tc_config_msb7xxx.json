@@ -1,5 +1,6 @@
  {
 	"name": "msb77xx/msb78xx",
+	"tc_version": "2.0",
 	"dmin" : {
 		"C2P": {
 			"untrusted": {"-127:30": 30, "31:40": 40, "41:120": 50},
