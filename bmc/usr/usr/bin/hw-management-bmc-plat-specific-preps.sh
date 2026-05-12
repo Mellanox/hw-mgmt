@@ -82,6 +82,35 @@ get_hwid() {
 	echo "plat-specific: could not find nvsw* / hidNNN in device-tree (try HW_MANAGEMENT_BMC_HID_OVERRIDE=hidNNN)" >&2
 }
 
+# If get_hwid left sku empty, still deploy when the image exposes exactly one packaged
+# /etc/HI* (or /usr/etc/HI*) tree, or when HID=HI### is set (matches early-config / first-boot).
+plat_specific_resolve_sku_fallback()
+{
+	[ -n "$sku" ] && return 0
+	if [ -n "${HID:-}" ] && [[ "$HID" =~ ^HI[0-9]+$ ]]; then
+		sku="hid${HID#HI}"
+		echo "plat-specific: sku from HID=$HID -> $sku"
+		return 0
+	fi
+	local _shopt_nullglob
+	_shopt_nullglob=$(shopt -p nullglob 2>/dev/null || echo "shopt -u nullglob")
+	shopt -s nullglob
+	local dirs=(/etc/HI[0-9]*/ /usr/etc/HI[0-9]*/)
+	eval "$_shopt_nullglob"
+	[ ${#dirs[@]} -eq 0 ] && return 0
+	local n=0 last="" line
+	while IFS= read -r line; do
+		[ -z "$line" ] && continue
+		[[ "$line" =~ ^HI[0-9]+$ ]] || continue
+		n=$((n + 1))
+		last=$line
+	done < <(for x in "${dirs[@]}"; do [ -d "$x" ] || continue; basename "$x"; done | LC_ALL=C sort -u)
+	[ "$n" -eq 1 ] && [ -n "$last" ] || return 0
+	sku="hid${last#HI}"
+	echo "plat-specific: sku from sole packaged platform dir $last -> $sku"
+	return 0
+}
+
 # Map device-tree SKU (hidNNN) to packaged platform ID directory (HINNN) under /etc/.
 # Package installs e.g. /etc/HI189/ (from bmc/usr/etc/HI189/ in the source tree); at boot we mirror JSON and configs to /etc, scripts to /usr/bin.
 deploy_hw_management_bmc_platform_files()
@@ -201,6 +230,7 @@ reload_udev_rules_after_deploy()
 }
 
 get_hwid
+plat_specific_resolve_sku_fallback
 deploy_hw_management_bmc_platform_files
 reload_udev_rules_after_deploy
 
