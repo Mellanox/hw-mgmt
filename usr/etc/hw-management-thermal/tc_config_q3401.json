@@ -1,5 +1,6 @@
  {
 	"name": "q3401_rd",
+	"tc_version": "2.5",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {

@@ -1,5 +1,6 @@
  {
 	"name": "q3450/q3450_ld",
+	"tc_version": "2.0",
 	"dmin" : {
 		"C2P": {
 			"fan_err": {
