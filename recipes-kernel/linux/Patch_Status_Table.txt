@@ -726,6 +726,7 @@ Kernel-6.1
 |0110-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
 |0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
 |0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
+|0113-net-usb-usbnet-restore-usb-d-name-exception-for-loca.patch  | 07f8bdce68b9       | Bugfix accepted;skip[nvos]               | v6.1.133   | Required for kernels 6.1.115-6.1.132           |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
