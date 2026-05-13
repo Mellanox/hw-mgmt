@@ -38,38 +38,25 @@ source /usr/bin/hw-management-helpers.sh
 
 INTERFACE=$1
 
+# Check if interface parameter exists
 if [ -z "${INTERFACE}" ]; then
-	log_err "Missing interface parameter"
+	log_err "Interface parameter is missing"
 	exit 1
 fi
 
+# Check if /etc/network/interfaces exists
 if [ ! -e /etc/network/interfaces ]; then
 	log_err "/etc/network/interfaces is missing"
 	exit 1
 fi
 
-# In kernel 6.1 the interface is renamed from ethX to usb0
-# Wait for usb0 to become available
-MAX_RETRIES=10
-RETRY_DELAY=0.1
-for ((i=1; i<=MAX_RETRIES; i++)); do
-	if [ -d "/sys/class/net/$INTERFACE" ] && ip link show "$INTERFACE" >/dev/null 2>&1; then
-		log_info "Interface $INTERFACE existence check succeeded on attempt $i"
-		break
-	fi
-
-	if [ "$i" -lt "$MAX_RETRIES" ]; then
-		log_info "Interface $INTERFACE existence check unsuccessful. Retrying in ${RETRY_DELAY} seconds..."
-		sleep "${RETRY_DELAY}"
-	fi
-done
-
+# Check if interface exists
 if [ ! -d "/sys/class/net/$INTERFACE" ]; then
 	log_err "Interface $INTERFACE does not exist"
 	exit 1
 fi
 
-# Now check if interface is defined in /etc/network/interfaces
+# Check if interface is defined in /etc/network/interfaces
 if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
 	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
 	exit 1
