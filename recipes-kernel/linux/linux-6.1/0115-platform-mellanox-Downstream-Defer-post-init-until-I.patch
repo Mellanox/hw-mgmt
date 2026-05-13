@@ -1,4 +1,4 @@
-From 9d63c9a9c811b9ce12e35d5311c9289e6a72f9fe Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vadim Pasternak <vadimp@nvidia.com>
 Date: Wed, 6 May 2026 08:10:50 +0300
 Subject: [PATCH] platform: mellanox: Defer post-init until I2C mux adapters
@@ -6,15 +6,16 @@ Subject: [PATCH] platform: mellanox: Defer post-init until I2C mux adapters
 
 Defer mlxplat_post_init() until i2c-mux-reg / i2c-mux-regmap completion_notify
 callbacks complete, with spinlock, completion, timeout, NULL-adapter abandon,
-and regmap legacy detection across all mux slots.
+mux teardown vs late-notifier coordination, and unconditional regmap notify hooks.
+Regenerated against linux-6.1.150 mellanox mlx-platform.c (split-free diff).
 
 Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
 ---
- drivers/platform/mellanox/mlx-platform.c | 134 ++++++++++++++++++++---
- 1 file changed, 121 insertions(+), 13 deletions(-)
+ drivers/platform/mellanox/mlx-platform.c | 129 ++++++++++++++++++++++++++++---
+ 1 file changed, 117 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/platform/mellanox/mlx-platform.c b/drivers/platform/mellanox/mlx-platform.c
-index d5efcbb7..e22a94f2 100644
+index d5efcbb7..d60d0bcd 100644
 --- a/drivers/platform/mellanox/mlx-platform.c
 +++ b/drivers/platform/mellanox/mlx-platform.c
 @@ -19,6 +19,9 @@
@@ -27,7 +28,7 @@ index d5efcbb7..e22a94f2 100644
  
  #define MLX_PLAT_DEVICE_NAME		"mlxplat"
  
-@@ -423,8 +426,12 @@
+@@ -423,8 +426,14 @@
   * @regmap: device register map
   * @hotplug_resources: system hotplug resources
   * @hotplug_resources_size: size of system hotplug resources
@@ -39,32 +40,30 @@ index d5efcbb7..e22a94f2 100644
 + * @mux_platdevs_done: signaled when deferred mlxplat_post_init() has finished
 + * @mux_platdevs_err: result of mlxplat_post_init() from completion_notify; updated with
 + *	WRITE_ONCE where the last notifier runs post_init outside mux_notify_lock
++ * @mux_abandon: mux topology is being torn down; last notifier skips post_init
++ * @mux_post_init_claimed: post_init is running (topology path may join on timeout)
   * @irq_fpga: FPGA IRQ number
   */
  struct mlxplat_priv {
-@@ -441,6 +448,9 @@ struct mlxplat_priv {
+@@ -441,6 +450,11 @@ struct mlxplat_priv {
  	unsigned int hotplug_resources_size;
  	u8 i2c_main_init_status;
  	int mux_added;
 +	spinlock_t mux_notify_lock;
 +	struct completion mux_platdevs_done;
 +	int mux_platdevs_err;
++	bool mux_abandon;
++	bool mux_post_init_claimed;
  	int irq_fpga;
  };
  
-@@ -9063,19 +9073,47 @@ static void mlxplat_pre_exit(struct mlxplat_priv *priv)
- }
- 
- static int
--mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
-+mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent __maybe_unused,
- 				  struct i2c_adapter *adapters[])
+@@ -9068,14 +9082,43 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
  {
--	struct mlxplat_priv *priv = handle;
+ 	struct mlxplat_priv *priv = handle;
  	struct mlxreg_core_item *item;
-+	struct mlxplat_priv *priv = handle;
-+	unsigned long flags;
 +	bool run_post_init = false;
++	bool need_complete = false;
++	unsigned long flags;
 +	int ret = 0;
  	int i, j;
  
@@ -103,48 +102,46 @@ index d5efcbb7..e22a94f2 100644
  		item = mlxplat_hotplug->items;
  		for (i = 0; i < mlxplat_hotplug->counter; i++, item++) {
  			struct mlxreg_core_data *data = item->data;
-@@ -9087,15 +9125,37 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
+@@ -9087,15 +9130,34 @@ mlxplat_i2c_mux_complition_notify(void *handle, struct i2c_adapter *parent,
  		}
  	}
  
 -	/* Start post initialization only after last nux segment is added */
-+	/* Run post-init only after the last mux segment has finished probe. */
- 	if (++priv->mux_added == mlxplat_mux_num)
+-	if (++priv->mux_added == mlxplat_mux_num)
 -		return mlxplat_post_init(priv);
-+		run_post_init = true;
-+	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
- 
--	return 0;
-+	/*
-+	 * Exactly one notifier sets run_post_init (last mux to reach mux_num).
-+	 * mux_platdevs_err uses *_ONCE outside mux_notify_lock: prior abandon may
-+	 * have set -EIO under the lock; post_init runs here without holding it.
-+	 */
-+	if (run_post_init) {
-+		int st;
-+
-+		st = READ_ONCE(priv->mux_platdevs_err);
-+		if (st) {
-+			complete(&priv->mux_platdevs_done);
-+			return st;
++	/* Run post-init only after the last mux segment has finished probe. */
++	if (++priv->mux_added == mlxplat_mux_num) {
++		if (priv->mux_abandon || READ_ONCE(priv->mux_platdevs_err)) {
++			need_complete = true;
++		} else {
++			priv->mux_post_init_claimed = true;
++			run_post_init = true;
 +		}
++	}
++	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
++
++	if (run_post_init) {
 +		ret = mlxplat_post_init(priv);
 +		WRITE_ONCE(priv->mux_platdevs_err, ret);
++		spin_lock_irqsave(&priv->mux_notify_lock, flags);
++		priv->mux_post_init_claimed = false;
++		spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
++		complete(&priv->mux_platdevs_done);
++	} else if (need_complete) {
 +		complete(&priv->mux_platdevs_done);
 +	}
-+
+ 
+-	return 0;
 +	return ret;
  }
  
  static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
  {
 +	unsigned long flags;
-+	bool mux_regmap_no_notify = false;
-+	unsigned int j;
  	int i, err;
  
  	if (!priv->pdev_i2c) {
-@@ -9104,8 +9164,40 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
+@@ -9104,8 +9166,27 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
  	}
  
  	priv->i2c_main_init_status = MLXPLAT_I2C_MAIN_BUS_HANDLE_CREATED;
@@ -155,22 +152,9 @@ index d5efcbb7..e22a94f2 100644
 +
 +	spin_lock_irqsave(&priv->mux_notify_lock, flags);
 +	priv->mux_added = 0;
++	priv->mux_abandon = false;
++	priv->mux_post_init_claimed = false;
 +	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
-+
-+	/*
-+	 * Legacy synchronous post-init only when every regmap pdata slot leaves
-+	 * completion_notify unset (do not infer from element 0 alone).
-+	 */
-+	if (!mlxplat_mux_data && mlxplat_mux_regmap_data) {
-+		mux_regmap_no_notify = true;
-+		for (j = 0; j < mlxplat_mux_num; j++) {
-+			if (mlxplat_mux_regmap_data[j].completion_notify) {
-+				mux_regmap_no_notify = false;
-+				break;
-+			}
-+		}
-+	}
-+
 +	if (!mlxplat_mux_num)
 +		return mlxplat_post_init(priv);
 +
@@ -185,32 +169,36 @@ index d5efcbb7..e22a94f2 100644
  			priv->pdev_mux[i] =
  				platform_device_register_resndata(&priv->pdev_i2c->dev,
  								  "i2c-mux-reg", i, NULL, 0,
-@@ -9114,8 +9206,9 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
- 		} else {
+@@ -9115,7 +9196,7 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
  			mlxplat_mux_regmap_data[i].handle = priv;
  			mlxplat_mux_regmap_data[i].regmap = priv->regmap;
--			mlxplat_mux_regmap_data[i].completion_notify =
+ 			mlxplat_mux_regmap_data[i].completion_notify =
 -								mlxplat_i2c_mux_complition_notify;
-+			if (!mux_regmap_no_notify)
-+				mlxplat_mux_regmap_data[i].completion_notify =
 +					mlxplat_i2c_mux_complition_notify;
  			priv->pdev_mux[i] =
  			platform_device_register_resndata(&priv->pdev_i2c->dev,
  							  "i2c-mux-regmap", i, NULL, 0,
-@@ -9128,14 +9221,27 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
+@@ -9128,14 +9209,36 @@ static int mlxplat_i2c_mux_topology_init(struct mlxplat_priv *priv)
  		}
  	}
  
 -	if (mlxplat_mux_regmap_data && mlxplat_mux_regmap_data->completion_notify)
 -		return 0;
-+	if (mux_regmap_no_notify)
-+		return mlxplat_post_init(priv);
- 
+-
 -	return mlxplat_post_init(priv);
 +	if (!wait_for_completion_timeout(&priv->mux_platdevs_done,
 +					 msecs_to_jiffies(120000))) {
 +		dev_err(&priv->pdev_i2c->dev,
 +			"timeout waiting for I2C mux probe\n");
++		spin_lock_irqsave(&priv->mux_notify_lock, flags);
++		if (priv->mux_post_init_claimed) {
++			spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
++			wait_for_completion(&priv->mux_platdevs_done);
++		} else {
++			if (!READ_ONCE(priv->mux_platdevs_err))
++				WRITE_ONCE(priv->mux_platdevs_err, -ETIMEDOUT);
++			spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
++		}
 +		err = -ETIMEDOUT;
 +		goto fail_platform_mux_register;
 +	}
@@ -220,6 +208,9 @@ index d5efcbb7..e22a94f2 100644
 +	return 0;
  
  fail_platform_mux_register:
++	spin_lock_irqsave(&priv->mux_notify_lock, flags);
++	priv->mux_abandon = true;
++	spin_unlock_irqrestore(&priv->mux_notify_lock, flags);
  	while (--i >= 0)
  		platform_device_unregister(priv->pdev_mux[i]);
 +	spin_lock_irqsave(&priv->mux_notify_lock, flags);
@@ -228,7 +219,7 @@ index d5efcbb7..e22a94f2 100644
  	return err;
  }
  
-@@ -9234,6 +9340,8 @@ static int mlxplat_probe(struct platform_device *pdev)
+@@ -9234,6 +9337,8 @@ static int mlxplat_probe(struct platform_device *pdev)
  	priv->hotplug_resources = hotplug_resources;
  	priv->hotplug_resources_size = hotplug_resources_size;
  	priv->irq_fpga = irq_fpga;
@@ -237,6 +228,6 @@ index d5efcbb7..e22a94f2 100644
  
  	if (!mlxplat_regmap_config)
  		mlxplat_regmap_config = &mlxplat_mlxcpld_regmap_config;
+
 -- 
 2.34.1
-

@@ -1,0 +1,881 @@
+Kernel-5.10
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-i2c-mlxcpld-Update-module-license.patch                     | f069291bd5fc       | Feature upstream                         |            |                                                |
+|0002-i2c-mlxcpld-Decrease-polling-time-for-performance-im.patch  | cb9744178f33       | Feature upstream                         |            |                                                |
+|0003-i2c-mlxcpld-Add-support-for-I2C-bus-frequency-settin.patch  | 66b0c2846ba8       | Feature upstream                         |            |                                                |
+|0004-i2c-mux-mlxcpld-Update-module-license.patch                 | 337bc68c294d       | Feature upstream                         |            |                                                |
+|0005-i2c-mux-mlxcpld-Move-header-file-out-of-x86-realm.patch     | 98d29c410475       | Feature upstream                         |            |                                                |
+|0006-i2c-mux-mlxcpld-Convert-driver-to-platform-driver.patch     | 84af1b168c50       | Feature upstream                         |            |                                                |
+|0007-i2c-mux-mlxcpld-Prepare-mux-selection-infrastructure.patch  | 81566938083a       | Feature upstream                         |            |                                                |
+|0008-i2c-mux-mlxcpld-Get-rid-of-adapter-numbers-enforceme.patch  | cae5216387d1       | Feature upstream                         |            |                                                |
+|0009-i2c-mux-mlxcpld-Extend-driver-to-support-word-addres.patch  | c52a1c5f5db5       | Feature upstream                         |            |                                                |
+|0010-i2c-mux-mlxcpld-Extend-supported-mux-number.patch           | 699c0506543e       | Feature upstream                         |            |                                                |
+|0011-i2c-mux-mlxcpld-Add-callback-to-notify-mux-creation-.patch  | a39bd92e92b9       | Feature upstream                         |            |                                                |
+|0012-hwmon-mlxreg-fan-Add-support-for-fan-drawers-capabil.patch  | f7bf7eb2d734       | Feature upstream                         |            |                                                |
+|0013-hwmon-pmbus-shrink-code-and-remove-pmbus_do_remove.patch    | 3bce071a301f       | Feature upstream;os[sonic,opt,nvos,dvs]  |            |                                                |
+|0014-thermal-drivers-core-Use-a-char-pointer-for-the-cool.patch  | 584837618100       | Bugfix upstream                          |  5.10.121  |                                                |
+|0015-mlxsw-core-Remove-critical-trip-points-from-thermal-.patch  | d567fd6e82fa       | Feature upstream                         |            |                                                |
+|0016-net-don-t-include-ethtool.h-from-netdevice.h.patch          | cc69837fcaf4       | Feature upstream                         |            |                                                |
+|0017-mlxsw-reg-Extend-MTMP-register-with-new-threshold-fi.patch  | 314dbb19f95b       | Feature upstream                         |            |                                                |
+|0018-mlxsw-thermal-Add-function-for-reading-module-temper.patch  | e57977b34ab5       | Feature upstream                         |            |                                                |
+|0019-mlxsw-thermal-Read-module-temperature-thresholds-usi.patch  | 72a64c2fe9d8       | Feature upstream                         |            |                                                |
+|0020-mlxsw-thermal-Fix-null-dereference-of-NULL-temperatu.patch  | f3b5a8907543       | Feature upstream                         |            |                                                |
+|0021-mlxsw-reg-Add-bank-number-to-MCIA-register.patch            | d51ea60e01f9       | Feature upstream                         |            |                                                |
+|0022-mlxsw-reg-Document-possible-MCIA-status-values.patch        | cecefb3a6eeb       | Feature upstream                         |            |                                                |
+|0023-ethtool-Allow-network-drivers-to-dump-arbitrary-EEPR.patch  | c781ff12a2f3       | Feature upstream                         |            |                                                |
+|0024-net-ethtool-Export-helpers-for-getting-EEPROM-info.patch    | 95dfc7effd88       | Feature upstream                         |            |                                                |
+|0025-ethtool-Add-fallback-to-get_module_eeprom-from-netli.patch  | 96d971e307cc       | Feature upstream                         |            |                                                |
+|0026-mlxsw-core-Add-support-for-module-EEPROM-read-by-pag.patch  | 1e27b9e40803       | Feature upstream                         |            |                                                |
+|0027-ethtool-Decrease-size-of-module-EEPROM-get-policy-ar.patch  | f5fe211d13af       | Feature upstream                         |            |                                                |
+|0028-ethtool-Use-kernel-data-types-for-internal-EEPROM-st.patch  | b8c48be23c2d       | Feature upstream                         |            |                                                |
+|0029-ethtool-Validate-module-EEPROM-length-as-part-of-pol.patch  | 0dc7dd02ba7a       | Feature upstream                         |            |                                                |
+|0030-ethtool-Validate-module-EEPROM-offset-as-part-of-pol.patch  | 88f9a87afeee       | Feature upstream                         |            |                                                |
+|0031-mlxsw-core_env-Read-module-temperature-thresholds-us.patch  | befc2048088a       | Feature upstream                         |            |                                                |
+|0032-mlxsw-core_env-Avoid-unnecessary-memcpy-s.patch             | 911bd1b1f08f       | Feature upstream                         |            |                                                |
+|0033-mlxsw-core-Set-thermal-zone-polling-delay-argument-t.patch  | 2fd8d84ce309       | Bugfix upstream                          |  5.10.46   |                                                |
+|0034-mlxsw-Verify-the-accessed-index-doesn-t-exceed-the-a.patch  | 0c1acde1d3d0       | Bugfix upstream                          |  5.10.83   |                                                |
+|0035-hwmon-pmbus-Increase-maximum-number-of-phases-per-pa.patch  | e4db7719d037       | Feature upstream                         |            |                                                |
+|0036-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2888-c.patch  | 0c1acde1d3d0       | Feature upstream;os[sonic,opt,nvos,dvs]  |            |                                                |
+|0037-dt-bindings-Add-MP2888-voltage-regulator-device.patch       | 9abfb52b5028       | Feature upstream                         |            |                                                |
+|0038-ethtool-wire-in-generic-SFP-module-access.patch             | c97a31f66ebc       | Feature upstream                         |            |                                                |
+|0039-ethtool-Fix-NULL-pointer-dereference-during-module-E.patch  | 51c96a561f24       | Feature upstream                         |            |                                                |
+|0040-phy-sfp-add-netlink-SFP-support-to-generic-SFP-code.patch   | d740513f05a2       | Feature upstream                         |            |                                                |
+|0041-net-ethtool-clear-heap-allocations-for-ethtool-funct.patch  | 80ec82e3d2c1       | Bugfix upstream                          |  5.10.47   |                                                |
+|0042-ethtool-support-FEC-settings-over-netlink.patch             | 1e5d1f69d9fb       | Feature upstream                         |            |                                                |
+|0043-platform-mellanox-mlxreg-io-Fix-argument-base-in-kst.patch  | 452dcfab9954       | Bugfix upstream                          |  5.10.75   |                                                |
+|0044-platform-mellanox-mlxreg-io-Fix-read-access-of-n-byt.patch  | 5fd56f11838d       | Bugfix upstream                          |  5.10.75   |                                                |
+|0045-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch        | 52f57396c75a       | Feature upstream                         |            |                                                |
+|0046-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch  | 669b2e4aa1a8       | Feature upstream                         |            | (5.16)                                         |
+|0047-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch  | 712d6617d0a2       | Feature upstream                         |            | (5.16)                                         |
+|0048-hwmon-pmbus-mp2975-Add-missed-POUT-attribute-for-pag.patch  | 2292e2f685cd       | Bugfix upstream                          |  5.10.71   |                                                |
+|0049-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted; take[ALL]           |            |Need to check patch apply. Can break patch apply|
+|0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
+|0051-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|0052-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch  | e6fab7af6ba1       | Bugfix upstream                          |  5.10.71   |                                                |
+|0053-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                |
+|0054-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream accepted                      |            | must exist in Sonic/CL from 4.9                |
+|0055-platform_data-mlxreg-Add-new-type-to-support-modular.patch  | aafa1cafedca       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0056-platform-x86-mlx-platform-Add-initial-support-for-ne.patch  | a5d8f57edfb4       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0057-platform-mellanox-mlxreg-hotplug-Extend-logic-for-ho.patch  | bb1023b6da37       | Feature upstream                         |            | Modular SN4800  accepted in (5.16)             |
+|0058-platform-x86-mlx-platform-Configure-notifier-callbac.patch  | 67eb006cc1d1       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0059-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  | bbfd79c68170       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0060-platform_data-mlxreg-Add-new-field-for-secured-acces.patch  | 9d93d7877c91       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0061-platform-mellanox-mlxreg-lc-Add-initial-support-for-.patch  | 62f9529b8d5c       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0062-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch  | 5b0a315c3db5       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0063-Documentation-ABI-Add-new-line-card-attributes-for-m.patch  | 164e32717cbd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0064-hwmon-mlxreg-fan-Extend-the-maximum-number-of-tachom.patch  | bc8de07e8812       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0065-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch  | 9045512ca6cd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0066-platform-x86-mlx-platform-Add-new-attributes-for-Cof.patch  | 4289fd4ad43a       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0067-platform-mellanox-Add-dedicated-match-for-system-typ.patch  |                    | Downstream accepted                      |            | for MQM8700                                    |
+|0068-mlxsw-core-Initialize-switch-driver-last.patch              | 3d7a6f677905       | Feature upstream                         |            |                                                |
+|0069-mlxsw-core-Remove-mlxsw_core_is_initialized.patch           | 25a91f835a7b       | Feature upstream                         |            |                                                |
+|0070-mlxsw-core_env-Defer-handling-of-module-temperature-.patch  | 163f3d2dd01c       | Feature upstream                         |            |                                                |
+|0071-mlxsw-core_env-Convert-module_info_lock-to-a-mutex.patch    | bd6e43f5953d       | Feature upstream                         |            |                                                |
+|0072-mlxsw-Track-per-module-port-status.patch                    | 896f399be078       | Feature upstream                         |            |                                                |
+|0073-mlxsw-reg-Add-fields-to-PMAOS-register.patch                | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0074-mlxsw-Make-PMAOS-pack-function-more-generic.patch           | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0075-mlxsw-Add-support-for-transceiver-modules-reset.patch       | 49fd3b645de8       | Feature upstream                         |            |                                                |
+|0076-ethtool-Add-ability-to-control-transceiver-modules-p.patch  | 353407d917b2       | Feature upstream                         |            |                                                |
+|0077-mlxsw-reg-Add-Port-Module-Memory-Map-Properties-regi.patch  | f10ba086f7e3       | Feature upstream                         |            |                                                |
+|0078-mlxsw-reg-Add-Management-Cable-IO-and-Notifications-.patch  | fc53f5fb8037       | Feature upstream                         |            |                                                |
+|0079-mlxsw-Add-ability-to-control-transceiver-modules-pow.patch  | 0455dc50bcca       | Feature upstream                         |            |                                                |
+|0080-ethtool-Add-transceiver-module-extended-states.patch        | 3dfb51126064       | Feature upstream                         |            |                                                |
+|0081-platform-x86-mlx-platform-Add-support-for-multiply-c.patch  | 249606d37d20       | Feature upstream                         |            | (5.16)                                         |
+|0082-mlxsw-core-Extend-external-cooling-device-whitelist-.patch  |                    | Feature pending                          |            | SN2201                                         |
+|0083-platform_data-mlxreg-Add-field-for-notification-call.patch  | abcebcd39fe0       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0084-i2c-mlxcpld-Add-callback-to-notify-probing-completio.patch  | 1f438d2318f4       | Feature upstream                         |            | SN2201                                         |
+|0085-hwmon-powr1220-Upgrade-driver-to-support-hwmon-info-.patch  | 15b1c188f8cf       | Feature upstream                         |            | SN2201 SN2201                                  |
+|0086-hwmon-powr1220-Add-support-for-Lattice-s-POWR1014-po.patch  | 9f93aa1005fa       | Feature upstream                         |            | SN2201 SN2201                                  |
+|0087-hwmon-Add-support-for-EMC2305-RPM-based-PWM-Fan-Spee.patch  | 0d8400c5a2ce       | Feature upstream                         |            | SN2201                                         |
+|0088-dt-bindings-Add-description-for-EMC2305-for-RPM-base.patch  |                    | Rejected                                 |            | SN2201 (relevant for ARM ARCH only)            |
+|0089-platform-mellanox-Add-support-for-new-SN2201-system.patch   | 662f24826f95       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0090-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch  | b1a9c69792ca       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0091-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 4616e54795cc       | Feature upstream                         |            |                                                |
+|0092-platform-mellanox-mlxreg-lc-fix-error-code-in-mlxreg.patch  | 287273a80be5       | Feature upstream                         |            |                                                |
+|0093-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-P.patch  | 150f1e0c6fa8       | Feature upstream                         |            |                                                |
+|0094-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch  | d7efb2ebc7b3       | Feature upstream                         |            |                                                |
+|0095-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                |
+|0096-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                |
+|0097-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                |
+|0097-1-mlxsw-Use-u16-for-local_port-field.patch                  |                    | Downstream;skip[sonic]                   |            |                                                |
+|0097-2-mlxsw-i2c-Fix-chunk-size-setting.patch                    |                    | Downstream                               | 5.10.195   |                                                |
+|0097-3-mlxsw-core_hwmon-Adjust-module-label-names.patch          |                    | Downstream;skip[sonic]                   |            |                                                |
+|0098-1-Revert-mlxsw-Use-u16-for-local_port-field.patch           |                    | Downstream;skip[sonic]                   |            |                                                |
+|0098-3-Revert-mlxsw-core_hwmon-Adjust-module-label-names.patch   |                    | Downstream;skip[sonic]                   |            |                                                |
+|0098-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | IB Disable FW update                           |
+|0099-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Downstream accepted                      |            | Modular SN4800                                 |
+|0100-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Downstream accepted                      |            | Modular SN4800                                 |
+|0101-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch  | bfb82c9cceac       | Downstream accepted                      |            | Modular SN4800                                 |
+|0102-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch  | 719fc0662cdc       | Downstream accepted                      |            | Modular SN4800                                 |
+|0103-mlxsw-core-Remove-unnecessary-asserts.patch                 | af9911c569d5       | Downstream accepted                      |            | Modular SN4800                                 |
+|0104-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch  | d30bed29a718       | Downstream accepted                      |            | Modular SN4800                                 |
+|0105-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch  | c6e6ad703ed2       | Downstream accepted                      |            | Modular SN4800                                 |
+|0106-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch  | 89dd6fcd07f9       | Downstream accepted                      |            | Modular SN4800                                 |
+|0107-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch  | 655cbb1d7530       | Downstream accepted                      |            | Modular SN4800                                 |
+|0108-mlxsw-reg-Extend-PMMP-register-with-new-slot-number-.patch  | 7cb85d3c696e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0109-mlxsw-reg-Extend-MGPIR-register-with-new-slot-fields.patch  | b691602c6f96       | Downstream accepted                      |            | Modular SN4800                                 |
+|0110-mlxsw-core_env-Pass-slot-index-during-PMAOS-register.patch  | 64e65a540e6d       | Downstream accepted                      |            | Modular SN4800                                 |
+|0111-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch  | e94295e0ed27       | Downstream accepted                      |            | Modular SN4800                                 |
+|0112-mlxsw-core-Extend-interfaces-for-cable-info-access-w.patch  | 349454526f5f       | Downstream accepted                      |            | Modular SN4800                                 |
+|0113-mlxsw-core-Extend-port-module-data-structures-for-li.patch  | e5b6a5bac8cc       | Downstream accepted                      |            | Modular SN4800                                 |
+|0114-mlxsw-core-Move-port-module-events-enablement-to-a-s.patch  | b244143a085e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0115-mlxsw-core_hwmon-Split-gearbox-initialization.patch         |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0116-mlxsw-core_hwmon-Extend-internal-structures-to-suppo.patch  | b890ad418e1f       | Downstream accepted                      |            | Modular SN4800                                 |
+|0117-mlxsw-core_hwmon-Introduce-slot-parameter-in-hwmon-i.patch  | fd27849dd6fd       | Downstream accepted                      |            | Modular SN4800                                 |
+|0118-mlxsw-core_hwmon-Extend-hwmon-device-with-gearbox-ma.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0119-mlxsw-core_thermal-Extend-internal-structures-to-sup.patch  | ef0df4fa324a       | Downstream accepted                      |            | Modular SN4800                                 |
+|0120-mlxsw-core_thermal-Split-gearbox-initialization.patch       |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0121-mlxsw-core_thermal-Extend-thermal-area-with-gearbox-.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0122-mlxsw-core_thermal-Add-line-card-id-prefix-to-line-c.patch  | 6d94449a7d7d       | Downstream accepted                      |            | Modular SN4800                                 |
+|0123-mlxsw-core_thermal-Use-exact-name-of-cooling-devices.patch  | 739d56bc635e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0124-mlxsw-core_thermal-Use-common-define-for-thermal-zon.patch  | 03978fb88b06       | Downstream accepted                      |            | Modular SN4800                                 |
+|0125-devlink-add-support-to-create-line-card-and-expose-t.patch  | c246f9b5fd61       | Downstream accepted                      |            | Modular SN4800                                 |
+|0126-devlink-implement-line-card-provisioning.patch              | fcdc8ce23a30       | Downstream accepted                      |            | Modular SN4800                                 |
+|0127-devlink-implement-line-card-active-state.patch              | fc9f50d5b366       | Downstream accepted                      |            | Modular SN4800                                 |
+|0128-devlink-add-port-to-line-card-relationship-set.patch        | b83758598538       | Downstream accepted                      |            | Modular SN4800                                 |
+|0129-devlink-introduce-linecard-info-get-message.patch           | 276910aecc6a       | Downstream accepted                      |            | Modular SN4800                                 |
+|0130-devlink-introduce-linecard-info-get-message.patch           |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|0131-mlxsw-reg-Add-Ports-Mapping-event-Configuration-Regi.patch  | ebf0c5341731       | Downstream accepted                      |            | Modular SN4800                                 |
+|0132-mlxsw-reg-Add-Management-DownStream-Device-Query-Reg.patch  | 505f524dc660       | Downstream accepted                      |            | Modular SN4800                                 |
+|0133-mlxsw-reg-Add-Management-DownStream-Device-Control-R.patch  | 5290a8ff2e11       | Downstream accepted                      |            | Modular SN4800                                 |
+|0134-mlxsw-reg-Add-Management-Binary-Code-Transfer-Regist.patch  | 5bade5aa4afc       | Downstream accepted                      |            | Modular SN4800                                 |
+|0135-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch  | b217127e5e4e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0136-mlxsw-core_linecards-Implement-line-card-activation-.patch  | ee7a70fa671b       | Downstream accepted                      |            | Modular SN4800                                 |
+|0137-mlxsw-core-Extend-driver-ops-by-remove-selected-port.patch  | 45bf3b7267e0       | Downstream accepted                      |            | Modular SN4800                                 |
+|0138-mlxsw-spectrum-Add-port-to-linecard-mapping.patch           | 6445eef0f600       | Downstream accepted                      |            | Modular SN4800                                 |
+|0139-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0140-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch        |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0141-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Downstream accepted                      |            | Modular SN4800                                 |
+|0142-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0143-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Downstream accepted                      |            | Modular SN4800                                 |
+|0144-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted;os[sonic,opt,nvos,dvs]|           | Modular SN4800 squashed (required rebasing)    |
+|0145-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0146-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0147-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|0148-mlxsw-core-Add-interfaces-for-line-card-initializati.patch  | 06a0fc43bb10       | Downstream accepted                      |            | Modular SN4800                                 |
+|0149-mlxsw-core_thermal-Add-interfaces-for-line-card-init.patch  | f11a323da46c       | Downstream accepted                      |            | Modular SN4800                                 |
+|0150-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch  | 99a03b3193f6       | Downstream accepted                      |            | Modular SN4800                                 |
+|0151-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0152-mlxsw-core-Extend-bus-init-function-with-event-handl.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0152-mlxsw-i2c-Prevent-transaction-execution-for-spec.patch      |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|0153-mlxsw-i2c-Add-support-for-system-events-handling.patch      | 33fa6909a263       | Downstream accepted                      |            | Modular SN4800                                 |
+|0154-mlxsw-core-Export-line-card-API.patch                       |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0155-mlxsw-minimal-Add-system-event-handler.patch                |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0156-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0157-platform-x86-mlx-platform-Make-activation-of-some-dr.patch  | e05d6b658fcd       | Feature upstream                         |            | E3597                                          |
+|0158-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch  | 7bf8a14dedaf       | Feature upstream                         |            | E3597                                          |
+|0159-mlx-platform-Add-support-for-systems-equipped-with-t.patch  | 08fdb6f3acae       | Feature upstream                         |            | E3597                                          |
+|0160-platform-mellanox-Introduce-support-for-COMe-managem.patch  | 6995e711b69c       | Feature upstream                         |            | E3597                                          |
+|0161-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 2deb92864348       | Feature upstream                         |            | E3597                                          |
+|0162-platform-mellanox-Add-COME-board-revision-register.patch    | 095a2c189151       | Feature upstream                         |            |                                                |
+|0163-platform-mellanox-Introduce-support-for-rack-manager.patch  | f8dacbf7da2e       | Feature upstream                         |            | E3597                                          |
+|0164-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  | c7250b5d553c       | Feature upstream                         |            | relevant for CFL systems only                  |
+|0165-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch  | 7964f8fc52b1       | Feature upstream                         |            |                                                |
+|0166-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream accepted                      |            | SN2201                                         |
+|0167-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream accepted                      |            | P2317 only                                     |
+|0168-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch  |                    | Downstream accepted                      |            | MQM8700 only                                   |
+|0170-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
+|0171-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Downstream accepted                      |            | Modular SN4800                                 |
+|0172-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream accepted                      |            | P4697                                          |
+|0173-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                |
+|0174-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch  |                    | Downstream accepted                      |            | SN4800                                         |
+|0175-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch  | 9054416afcb4       | Feature upstream                         |            |                                                |
+|0176-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  | 488f0fca0db0       | Feature upstream                         |            | SN5600                                         |
+|0177-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  | e7210563432a       | Feature upstream                         |            | SN5600                                         |
+|0178-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         |
+|0179-hwmon-mlxreg-fan-TMP-Do-not-return-negative-value-fo.patch  |                    | Rejected                                 |            | (temporary fix until new TC)                   |
+|0180-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                |
+|0181-Revert-Fix-out-of-bounds-memory-accesses-in-thermal.patch   |                    | Downstream accepted                      |            | disable upstream patch, must exist from 5.10.74|
+|0182-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
+|0183-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3                                            |
+|0184-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3                                            |
+|0185-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
+|0186-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
+|0187-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
+|0188-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
+|0189-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
+|0190-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
+|0192-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
+|0193-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            | BF3                                            |
+|0194-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            | BF3                                            |
+|0195-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            | BF3                                            |
+|0195-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch  |                    | Bugfix upstream                          |  5.10.175  | BF3                                            |
+|0196-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
+|0197-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
+|0198-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
+|0199-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            | P4262                                          |
+|0200-dt-bindings-i2c-mellanox-i2c-mlxbf-convert-txt-to-YA.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0201-i2c-mlxbf-incorrect-base-address-passed-during-io-wr.patch  | 2a5be6d1340c       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0202-i2c-mlxbf-prevent-stack-overflow-in-mlxbf_i2c_smbus_.patch  | de24aceb07d4       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0203-i2c-mlxbf-remove-IRQF_ONESHOT.patch                         | 92be2c122e49       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0204-i2c-mlxbf-Fix-frequency-calculation.patch                   | 37f071ec327b       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0205-i2c-mlxbf-support-lock-mechanism.patch                      | 86067ccfa142       | Bugfix upstream                          |  5.10.162  | BF3                                            |
+|0206-i2c-mlxbf-add-multi-slave-functionality.patch               | bdc4af281b70       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0207-i2c-mlxbf-support-BlueField-3-SoC.patch                     | 19e13e1330c6       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0208-i2c-mlxbf-remove-device-tree-support.patch                  | be18c5ede25d       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0209-UBUNTU-SAUCE-i2c-mlxbf.c-Add-driver-version.patch           |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0210-platform-mellanox-Typo-fix-in-the-file-mlxbf-bootctl.patch  | 04cdaf6d8f52       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0211-UBUNTU-SAUCE-platform-mellanox-mlxbf-tmfifo-Add-Blue.patch  | bc05ea63b394       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0212-workqueue-Add-resource-managed-version-of-delayed-wo.patch  | 0341ce544394       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0213-devm-helpers-Fix-devm_delayed_work_autocancel-kernel.patch  | a943d76352db       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0214-devm-helpers-Add-resource-managed-version-of-work-in.patch  | 7a2c4cc537fa       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0215-UBUNTU-SAUCE-Add-support-to-pwr-mlxbf.c-driver.patch        |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0216-Add-Mellanox-BlueField-Gigabit-Ethernet-driver.patch        | f92e1869d74e       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0217-mlxbf_gige-clear-valid_polarity-upon-open.patch             | ee8a9600b539       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0218-net-mellanox-mlxbf_gige-Replace-non-standard-interru.patch  | 6c2a6ddca763       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0219-mlxbf_gige-increase-MDIO-polling-rate-to-5us.patch          | 0a02e282bad4       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0220-mlxbf_gige-remove-driver-managed-interrupt-counts.patch     | f4826443f4d6       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0221-mlxbf_gige-remove-own-module-name-define-and-use-KBU.patch  | cfbc80e34e3a       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0222-UBUNTU-SAUCE-mlxbf_gige-add-ethtool-mlxbf_gige_set_r.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0223-UBUNTU-SAUCE-Fix-OOB-handling-RX-packets-in-heavy-tr.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0224-UBUNTU-SAUCE-mlxbf_gige-clear-MDIO-gateway-lock-afte.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0225-mlxbf_gige-compute-MDIO-period-based-on-i1clk.patch         | 3a1a274e933f       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0226-net-mlxbf_gige-Fix-an-IS_ERR-vs-NULL-bug-in-mlxbf_gi.patch  | 4774db8dfc6a       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0227-UBUNTU-SAUCE-mlxbf_gige-add-MDIO-support-for-BlueFie.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0228-UBUNTU-SAUCE-mlxbf_gige-support-10M-100M-1G-speeds-o.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0229-mmc-sdhci-of-dwcmshc-add-rockchip-platform-support.patch    | 08f3dff799d4       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0230-mmc-sdhci-of-dwcmshc-add-ACPI-support-for-BlueField-.patch  | eb81ed518079       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0231-mmc-sdhci-of-dwcmshc-fix-error-return-code-in-dwcmsh.patch  | 34884c4f6483       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0232-mmc-sdhci-of-dwcmshc-set-MMC_CAP_WAIT_WHILE_BUSY.patch      | 57ac3084f598       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0233-mmc-sdhci-of-dwcmshc-Re-enable-support-for-the-BlueF.patch  | a0753ef66c34       | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0234-UBUNTU-SAUCE-Support-BlueField-3-GPIO-driver.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0235-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0236-mmc-sdhci-of-dwcmshc-Enable-host-V4-support-for-Blue.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0237-mlxbf-ptm-power-and-thermal-management-debugfs-drive.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0238-UBUNTU-SAUCE-platform-mellanox-Add-ctrl-message-and-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0239-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix upstream                          |  5.10.173  |                                                |
+|0240-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-add-the-missing-de.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0241-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch  |                    | Downstream accepted                      |            |                                                |
+|0242-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            | P4262                                          |
+|0243-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
+|0244-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Downstream accepted                      |            | SN5600                                         |
+|0245-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Downstream accepted                      |            | SN5600                                         |
+|0246-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Downstream accepted                      |            | SN5600                                         |
+|0247-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | SN5600                                         |
+|0248-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | P4262                                          |
+|0249-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            | P4262                                          |
+|0250-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
+|0251-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
+|0252-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
+|0253-UBUNTU-SAUCE-mlxbf-gige-Fix-intermittent-no-ip-issue.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0254-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0255-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0255-UBUNTU-SAUCE-gpio-mmio-handle-ngpios-properly-in-bgp.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0256-UBUNTU-SAUCE-gpio-mlxbf3-Add-gpio-driver-support.patch      |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0257-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Downstream accepted                      |            | SN3750SX                                       |
+|0258-mlxsw-i2c-Limit-single-transaction.patch                    |                    | Downstream accepted                      |  5.10.195  |                                                |
+|0259-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Downstream accepted                      |            | BF3                                            |
+|0260-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Downstream accepted                      |            |                                                |
+|0261-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending;os[sonic,opt,nvos,dvs]   |            |                                                |
+|0262-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
+|0262-UBUNTU-SAUCE-mmc-sdhci-of-dwcmshc-Add-runtime-PM-ope.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0263-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0264-UBUNTU-SAUCE-mlxbf-ptm-add-atx-debugfs-nodes.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0265-UBUNTU-SAUCE-mlxbf-ptm-update-module-version.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0266-UBUNTU-SAUCE-mlxbf-gige-Fix-kernel-panic-at-shutdown.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0267-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
+|0268-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream;skip[ALL]                     |            |                                                |
+|0270-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
+|0271-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
+|0272-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
+|0273-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream accepted                      |            |                                                |
+|0274-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Downstream accepted                      |            |                                                |
+|0275-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0276-platform-mellanox-mlx-platform-Add-reset-callback.patch     |                    | Feature pending                          |            |                                                |
+|0277-platform-mellanox-mlx-platform-Prepare-driver-to-all.patch  |                    | Feature pending                          |            |                                                |
+|0278-platform-mellanox-mlx-platform-Introduce-ACPI-init-f.patch  |                    | Feature pending                          |            |                                                |
+|0279-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
+|0280-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
+|0281-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
+|0282-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted;os[sonic]            |            |                                                |
+|0283-UBUNTU-SAUCE-mlxbf-tmfifo-fix-potential-race.patch          |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0284-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-the-Rx-packet-if-no-m.patch  |                    | Downstream;skip[sonic,cumulus]           | 5.10.195   | BF3                                            |
+|0285-UBUNTU-SAUCE-mlxbf-tmfifo-Drop-jumbo-frames.patch           |                    | Downstream;skip[sonic,cumulus]           | 5.10.195   | BF3                                            |
+|0286-UBUNTU-SAUCE-mlxbf-tmfifo.c-Amend-previous-tmfifo-pa.patch  |                    | Downstream;skip[sonic,cumulus]           | 5.10.195   | BF3                                            |
+|0287-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0288-mlxbf_gige-fix-white-space-in-mlxbf_gige_eth_ioctl.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0290-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
+|0291-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
+|0292-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
+|0293-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0294-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
+|0295-mlxsw-i2c-DBG-Add-debug-output-for-failed-transactio.patch  |                    | Downstream accepted                      |            |                                                |
+|0296-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0297-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted;skip[sonic]          |            | SN4280                                         |
+|0298-platform-mellanox-mlx-platform-Fix-FAN-tacho-reading.patch  |                    | Downstream accepted                      |            | MQM9700                                        |
+|0299-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted;skip[sonic]          |            | SN4280                                         |
+|0300-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            |                                                |
+|0301-crypto-ccp-Reject-SEV-commands-with-mismatching-comm.patch  | d5760dee127b       | Bugfix upstream                          | 5.1.184    |                                                |
+|0302-crypto-ccp-Play-nice-with-vmalloc-d-memory-for-SEV-c.patch  | 8347b99473a3       | Bugfix upstream                          | 5.1.184    |                                                |
+|0303-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
+|0304-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted                      |            | SN5640                                         |
+|0305-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
+|0306-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0307-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
+|0308-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
+|0309-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp2869                                         |
+|0310-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp29502                                        |
+|0311-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
+|7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
+|7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
+|7004-mctp-Add-sockaddr_mctp-to-uapi.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7005-mctp-Add-initial-driver-infrastructure.patch                |                    | Downstream                               |            | MCTP                                           |
+|7006-mctp-Add-device-handling-and-netlink-interface.patch        |                    | Downstream                               |            | MCTP                                           |
+|7007-mctp-Add-initial-routing-framework.patch                    |                    | Downstream                               |            | MCTP                                           |
+|7008-mctp-Add-netlink-route-management.patch                     |                    | Downstream                               |            | MCTP                                           |
+|7009-mctp-Add-neighbour-implementation.patch                     |                    | Downstream                               |            | MCTP                                           |
+|7010-mctp-Add-neighbour-netlink-interface.patch                  |                    | Downstream                               |            | MCTP                                           |
+|7011-mctp-Populate-socket-implementation.patch                   |                    | Downstream                               |            | MCTP                                           |
+|7012-mctp-Implement-message-fragmentation-reassembly.patch       |                    | Downstream                               |            | MCTP                                           |
+|7013-mctp-Add-dest-neighbour-lladdr-to-route-output.patch        |                    | Downstream                               |            | MCTP                                           |
+|7014-mctp-Allow-per-netns-default-networks.patch                 |                    | Downstream                               |            | MCTP                                           |
+|7015-mctp-Add-MCTP-overview-document.patch                       |                    | Downstream                               |            | MCTP                                           |
+|7016-mctp-remove-duplicated-assignment-of-pointer-hdr.patch      |                    | Downstream                               |            | MCTP                                           |
+|7017-mctp-Specify-route-types-require-rtm_type-in-RTM_-RO.patch  |                    | Downstream                               |            | MCTP                                           |
+|7018-mctp-Remove-the-repeated-declaration.patch                  |                    | Downstream                               |            | MCTP                                           |
+|7019-mctp-perform-route-destruction-under-RCU-read-lock.patch    |                    | Downstream                               |            | MCTP                                           |
+|7020-perf-beauty-Update-copy-of-linux-socket.h-with-the-k.patch  |                    | Downstream                               |            | MCTP                                           |
+|7021-mctp-Allow-MCTP-on-tun-devices.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7022-mctp-Allow-local-delivery-to-the-null-EID.patch             |                    | Downstream                               |            | MCTP                                           |
+|7023-mctp-locking-lifetime-and-validity-changes-for-sk_ke.patch  |                    | Downstream                               |            | MCTP                                           |
+|7024-mctp-Add-refcounts-to-mctp_dev.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7025-mctp-Implement-a-timeout-for-tags.patch                     |                    | Downstream                               |            | MCTP                                           |
+|7026-mctp-Add-tracepoints-for-tag-key-handling.patch             |                    | Downstream                               |            | MCTP                                           |
+|7027-mctp-Do-inits-as-a-subsys_initcall.patch                    |                    | Downstream                               |            | MCTP                                           |
+|7028-doc-mctp-Add-a-little-detail-about-kernel-internals.patch   |                    | Downstream                               |            | MCTP                                           |
+|7029-mctp-Set-route-MTU-via-netlink.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7030-mctp-Warn-if-pointer-is-set-for-a-wrong-dev-type.patch      |                    | Downstream                               |            | MCTP                                           |
+|7031-mctp-Avoid-leak-of-mctp_sk_key.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7032-mctp-Implement-extended-addressing.patch                    |                    | Downstream                               |            | MCTP                                           |
+|7033-i2c-core-smbus-Expose-PEC-calculate-function-for-gen.patch  |                    | Downstream                               |            | MCTP                                           |
+|7034-dt-bindings-net-New-binding-mctp-i2c-controller.patch       |                    | Downstream                               |            | MCTP                                           |
+|7035-mctp-unify-sockaddr_mctp-types.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7036-mctp-Be-explicit-about-struct-sockaddr_mctp-padding.patch   |                    | Downstream                               |            | MCTP                                           |
+|7037-mctp-Return-new-key-from-mctp_alloc_local_tag.patch         |                    | Downstream                               |            | MCTP                                           |
+|7038-mctp-Add-flow-extension-to-skb.patch                        |                    | Downstream                               |            | MCTP                                           |
+|7039-mctp-Pass-flow-data-flow-release-events-to-drivers.patch    |                    | Downstream                               |            | MCTP                                           |
+|7040-mctp-unify-extended-addressing-implementation-with-u.patch  |                    | Downstream                               |            | MCTP                                           |
+|7041-mctp-handle-the-struct-sockaddr_mctp-padding-fields.patch   |                    | Downstream                               |            | MCTP                                           |
+|7042-mctp-handle-the-struct-sockaddr_mctp_ext-padding-fie.patch  |                    | Downstream                               |            | MCTP                                           |
+|7043-mctp-i2c-MCTP-I2C-binding-driver.patch                      |                    | Downstream                               |            | MCTP                                           |
+|7044-mctp-i2c-Fix-potential-use-after-free.patch                 |                    | Downstream                               |            | MCTP                                           |
+|7045-mctp-i2c-Fix-hard-head-TX-bounds-length-check.patch         |                    | Downstream                               |            | MCTP                                           |
+|7046-mctp-remove-unnecessary-check-before-calling-kfree_s.patch  |                    | Downstream                               |            | MCTP                                           |
+|7047-mctp-Remove-redundant-if-statements.patch                   |                    | Downstream                               |            | MCTP                                           |
+|7048-mctp-Don-t-let-RTM_DELROUTE-delete-local-routes.patch       |                    | Downstream                               |            | MCTP                                           |
+|7049-mctp-emit-RTM_NEWADDR-and-RTM_DELADDR.patch                 |                    | Downstream                               |            | MCTP                                           |
+|7050-mctp-Remove-only-static-neighbour-on-RTM_DELNEIGH.patch     |                    | Downstream                               |            | MCTP                                           |
+|7051-mctp-Add-helper-for-address-match-checking.patch            |                    | Downstream                               |            | MCTP                                           |
+|7052-mctp-Allow-keys-matching-any-local-address.patch            |                    | Downstream                               |            | MCTP                                           |
+|7053-mctp-Add-SIOCMCTP-ALLOC-DROP-TAG-ioctls-for-tag-cont.patch  |                    | Downstream                               |            | MCTP                                           |
+|7054-mctp-fix-use-after-free.patch                               |                    | Downstream                               |            | MCTP                                           |
+|7055-mctp-replace-mctp_address_ok-with-more-fine-grained-.patch  |                    | Downstream                               |            | MCTP                                           |
+|7056-mctp-add-address-validity-checking-for-packet-receiv.patch  |                    | Downstream                               |            | MCTP                                           |
+|7057-mctp-make-__mctp_dev_get-take-a-refcount-hold.patch         |                    | Downstream                               |            | MCTP                                           |
+|7058-mctp-Fix-incorrect-netdev-unref-for-extended-addr.patch     |                    | Downstream                               |            | MCTP                                           |
+|7059-mctp-Fix-warnings-reported-by-clang-analyzer.patch          |                    | Downstream                               |            | MCTP                                           |
+|7060-mctp-Avoid-warning-if-unregister-notifies-twice.patch       |                    | Downstream                               |            | MCTP                                           |
+|7061-mctp-Fix-check-for-dev_hard_header-result.patch             |                    | Downstream                               |            | MCTP                                           |
+|7062-mctp-i2c-correct-mctp_i2c_header_create-result.patch        |                    | Downstream                               |            | MCTP                                           |
+|7063-mctp-Use-output-netdev-to-allocate-skb-headroom.patch       |                    | Downstream                               |            | MCTP                                           |
+|7064-mctp-defer-the-kfree-of-object-mdev-addrs.patch             |                    | Downstream                               |            | MCTP                                           |
+|7065-mctp-prevent-double-key-removal-and-unref.patch             |                    | Downstream                               |            | MCTP                                           |
+|7066-mctp-Fix-an-error-handling-path-in-mctp_init.patch          |                    | Downstream                               |            | MCTP                                           |
+|7067-mctp-i2c-don-t-count-unused-invalid-keys-for-flow-re.patch  |                    | Downstream                               |            | MCTP                                           |
+|7068-mctp-Remove-device-type-check-at-unregister.patch           |                    | Downstream                               |            | MCTP                                           |
+|7069-net-mctp-add-an-explicit-reference-from-a-mctp_sk_ke.patch  |                    | Downstream                               |            | MCTP                                           |
+|7070-net-mctp-move-expiry-timer-delete-to-unhash.patch           |                    | Downstream                               |            | MCTP                                           |
+|7071-net-mctp-hold-key-reference-when-looking-up-a-genera.patch  |                    | Downstream                               |            | MCTP                                           |
+|7072-net-mctp-mark-socks-as-dead-on-unhash-prevent-re-add.patch  |                    | Downstream                               |            | MCTP                                           |
+|7073-net-mctp-purge-receive-queues-on-sk-destruction.patch       |                    | Downstream                               |            | MCTP                                           |
+|7074-kernel-resource-Introduce-request_mem_region_muxed.patch    |                    | Downstream                               |            | MCTP                                           |
+|7075-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream                               |            | MCTP                                           |
+|9000-DS-OPT-iio-pressure-icp20100-add-driver-for-InvenSense-.patch|                   | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9001-DS-OPT-e1000e-skip-NVM-checksum.patch                       |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9002-TMP-fix-for-fan-minimum-speed.patch                         |                    | Downstream accepted                      |            |                                                |
+|9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream accepted                      |            | P4300                                          |
+|9004-DS-OPT-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch|                 | Downstream accepted                      |            |                                                |
+|9005-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic]                   |            |                                                |
+|9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9007-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9008-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+|9009-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream accepted; skip[sonic,cumulus] |            | Q3401-RD                                       |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Kernel-5.14
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-i2c-mlxcpld-Reduce-polling-time-for-performance-impr.patch  | 669b2e4aa1a8       | Feature upstream                         |            | (5.16)                                         |
+|0001-1-i2c-mlxcpld-Fix-criteria-for-frequency-setting.patch      |                    | Feature upstream                         | 5.14.12    | (5.16)                                         |
+|0002-i2c-mlxcpld-Allow-flexible-polling-time-setting-for-.patch  | 712d6617d0a2       | Feature upstream                         |            | (5.16)                                         |
+|0003-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
+|0004-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
+|0005-leds-mlxreg-Allow-multi-instantiation-of-same-name-L.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|0006-mlxsw-core-Avoid-creation-virtual-hwmon-objects-by-t.patch  | f8a36880f474       | Feature upstream                         |            |                                                |
+|0007-mlxsw-minimal-Simplify-method-of-modules-number-dete.patch  |                    | Downstream accepted                      |            | must exist in Sonic/CL from 4.9                |
+|0008-platform_data-mlxreg-Add-new-type-to-support-modular.patch  | aafa1cafedca       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0009-platform-x86-mlx-platform-Add-initial-support-for-ne.patch  | a5d8f57edfb4       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0010-platform-mellanox-mlxreg-hotplug-Extend-logic-for-ho.patch  | bb1023b6da37       | Feature upstream                         |            | Modular SN4800  accepted in (5.16)             |
+|0011-platform-x86-mlx-platform-Configure-notifier-callbac.patch  | 67eb006cc1d1       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0012-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  | bbfd79c68170       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0013-platform_data-mlxreg-Add-new-field-for-secured-acces.patch  | 9d93d7877c91       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0014-platform-mellanox-mlxreg-lc-Add-initial-support-for-.patch  | 62f9529b8d5c       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0015-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch  | 5b0a315c3db5       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0016-Documentation-ABI-Add-new-line-card-attributes-for-m.patch  | 164e32717cbd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0017-hwmon-mlxreg-fan-Extend-the-maximum-number-of-tachom.patch  | bc8de07e8812       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0018-platform-x86-mlx-platform-Extend-FAN-and-LED-config-.patch  | 9045512ca6cd       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0019-platform-x86-mlx-platform-Add-new-attributes-for-Cof.patch  | 4289fd4ad43a       | Feature upstream                         |            | Modular SN4800 accepted in (5.16)              |
+|0020-platform-mellanox-Add-dedicated-match-for-system-typ.patch  |                    | Downstream accepted                      |            | for MQM8700                                    |
+|0021-mlxsw-core-Initialize-switch-driver-last.patch              | 3d7a6f677905       | Feature upstream                         |            |                                                |
+|0022-mlxsw-core-Remove-mlxsw_core_is_initialized.patch           | 25a91f835a7b       | Feature upstream                         |            |                                                |
+|0023-mlxsw-core_env-Defer-handling-of-module-temperature-.patch  | 163f3d2dd01c       | Feature upstream                         |            |                                                |
+|0024-mlxsw-core_env-Convert-module_info_lock-to-a-mutex.patch    | bd6e43f5953d       | Feature upstream                         |            |                                                |
+|0025-mlxsw-Track-per-module-port-status.patch                    | 896f399be078       | Feature upstream                         |            |                                                |
+|0026-mlxsw-reg-Add-fields-to-PMAOS-register.patch                | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0027-mlxsw-Make-PMAOS-pack-function-more-generic.patch           | 8f4ebdb0a274       | Feature upstream                         |            |                                                |
+|0028-mlxsw-Add-support-for-transceiver-modules-reset.patch       | 49fd3b645de8       | Feature upstream                         |            |                                                |
+|0029-ethtool-Add-ability-to-control-transceiver-modules-p.patch  | 353407d917b2       | Feature upstream                         |            |                                                |
+|0030-mlxsw-reg-Add-Port-Module-Memory-Map-Properties-regi.patch  | f10ba086f7e3       | Feature upstream                         |            |                                                |
+|0031-mlxsw-reg-Add-Management-Cable-IO-and-Notifications-.patch  | fc53f5fb8037       | Feature upstream                         |            |                                                |
+|0032-mlxsw-Add-ability-to-control-transceiver-modules-pow.patch  | 0455dc50bcca       | Feature upstream                         |            |                                                |
+|0033-ethtool-Add-transceiver-module-extended-states.patch        | 3dfb51126064       | Feature upstream                         |            |                                                |
+|0034-platform-x86-mlx-platform-Add-support-for-multiply-c.patch  | 249606d37d20       | Feature upstream                         |            | (5.16)                                         |
+|0035-mlxsw-core-Extend-external-cooling-device-whitelist-.patch  |                    | Feature pending                          |            | SN2201                                         |
+|0036-platform_data-mlxreg-Add-field-for-notification-call.patch  | abcebcd39fe0       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0037-i2c-mlxcpld-Add-callback-to-notify-probing-completio.patch  | 1f438d2318f4       | Feature upstream                         |            | SN2201                                         |
+|0038-hwmon-powr1220-Upgrade-driver-to-support-hwmon-info-.patch  | 15b1c188f8cf       | Feature upstream                         |            | SN2201 SN2201                                  |
+|0039-hwmon-powr1220-Add-support-for-Lattice-s-POWR1014-po.patch  | 9f93aa1005fa       | Feature upstream                         |            | SN2201 SN2201                                  |
+|0040-hwmon-Add-support-for-EMC2305-RPM-based-PWM-Fan-Spee.patch  | 0d8400c5a2ce       | Feature upstream                         |            | SN2201                                         |
+|0041-platform-mellanox-Add-support-for-new-SN2201-system.patch   | 662f24826f95       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0042-Documentation-ABI-Add-new-attributes-for-mlxreg-io-s.patch  | b1a9c69792ca       | Feature upstream                         |            | SN2201 SN2201 platform-next (5.19)             |
+|0043-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 4616e54795cc       | Feature upstream                         |            |                                                |
+|0044-platform-mellanox-mlxreg-lc-fix-error-code-in-mlxreg.patch  | 287273a80be5       | Feature upstream                         |            |                                                |
+|0045-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-P.patch  | 150f1e0c6fa8       | Feature upstream                         |            |                                                |
+|0046-1-hwmon-mlxreg-fan-Return-non-zero-value-when-fan-curr.patch|                    | Feature upstream                         | 5.14.10    |                                                |
+|0046-hwmon-mlxreg-fan-Extend-driver-to-support-multiply-c.patch  | d7efb2ebc7b3       | Feature upstream                         |            |                                                |
+|0047-hwmon-mlxreg-fan-Fix-out-of-bounds-read-on-array-fan.patch  | 000cc5bc49aa       | Feature upstream                         |            |                                                |
+|0048-hwmon-mlxreg-fan-Modify-PWM-connectivity-validation.patch   | b1c24237341f       | Feature upstream                         |            |                                                |
+|0049-hwmon-mlxreg-fan-Support-distinctive-names-per-diffe.patch  | b2be2422c0c9       | Feature upstream                         |            |                                                |
+|0050-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | IB Disable FW update                           |
+|0051-mlxsw-core_hwmon-Fix-variable-names-for-hwmon-attrib.patch  | bed8f4197cb2       | Downstream accepted                      |            | Modular SN4800                                 |
+|0052-mlxsw-core_thermal-Rename-labels-according-to-naming.patch  | 009da9fad567       | Downstream accepted                      |            | Modular SN4800                                 |
+|0053-mlxsw-core_thermal-Remove-obsolete-API-for-query-res.patch  | bfb82c9cceac       | Downstream accepted                      |            | Modular SN4800                                 |
+|0054-mlxsw-reg-Add-mgpir_-prefix-to-MGPIR-fields-comments.patch  | 719fc0662cdc       | Downstream accepted                      |            | Modular SN4800                                 |
+|0055-mlxsw-core-Remove-unnecessary-asserts.patch                 | af9911c569d5       | Downstream accepted                      |            | Modular SN4800                                 |
+|0056-mlxsw-reg-Extend-MTMP-register-with-new-slot-number-.patch  | d30bed29a718       | Downstream accepted                      |            | Modular SN4800                                 |
+|0057-mlxsw-reg-Extend-MTBR-register-with-new-slot-number-.patch  | c6e6ad703ed2       | Downstream accepted                      |            | Modular SN4800                                 |
+|0058-mlxsw-reg-Extend-MCIA-register-with-new-slot-number-.patch  | 89dd6fcd07f9       | Downstream accepted                      |            | Modular SN4800                                 |
+|0059-mlxsw-reg-Extend-MCION-register-with-new-slot-number.patch  | 655cbb1d7530       | Downstream accepted                      |            | Modular SN4800                                 |
+|0060-mlxsw-reg-Extend-PMMP-register-with-new-slot-number-.patch  | 7cb85d3c696e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0061-mlxsw-reg-Extend-MGPIR-register-with-new-slot-fields.patch  | b691602c6f96       | Downstream accepted                      |            | Modular SN4800                                 |
+|0062-mlxsw-core_env-Pass-slot-index-during-PMAOS-register.patch  | 64e65a540e6d       | Downstream accepted                      |            | Modular SN4800                                 |
+|0063-mlxsw-reg-Add-new-field-to-Management-General-Periph.patch  | e94295e0ed27       | Downstream accepted                      |            | Modular SN4800                                 |
+|0064-mlxsw-core-Extend-interfaces-for-cable-info-access-w.patch  | 349454526f5f       | Downstream accepted                      |            | Modular SN4800                                 |
+|0065-mlxsw-core-Extend-port-module-data-structures-for-li.patch  | e5b6a5bac8cc       | Downstream accepted                      |            | Modular SN4800                                 |
+|0066-mlxsw-core-Move-port-module-events-enablement-to-a-s.patch  | b244143a085e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0067-mlxsw-core_hwmon-Split-gearbox-initialization.patch         |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0068-mlxsw-core_hwmon-Extend-internal-structures-to-suppo.patch  | b890ad418e1f       | Downstream accepted                      |            | Modular SN4800                                 |
+|0069-mlxsw-core_hwmon-Introduce-slot-parameter-in-hwmon-i.patch  | fd27849dd6fd       | Downstream accepted                      |            | Modular SN4800                                 |
+|0070-mlxsw-core_hwmon-Extend-hwmon-device-with-gearbox-ma.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0071-mlxsw-core_thermal-Extend-internal-structures-to-sup.patch  | ef0df4fa324a       | Downstream accepted                      |            | Modular SN4800                                 |
+|0072-mlxsw-core_thermal-Split-gearbox-initialization.patch       |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0073-mlxsw-core_thermal-Extend-thermal-area-with-gearbox-.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0074-mlxsw-core_thermal-Add-line-card-id-prefix-to-line-c.patch  | 6d94449a7d7d       | Downstream accepted                      |            | Modular SN4800                                 |
+|0075-mlxsw-core_thermal-Use-exact-name-of-cooling-devices.patch  | 739d56bc635e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0076-1-mlxsw-thermal-Fix-out-of-bounds-memory-accesses.patch     |                    | Downstream accepted                      | 5.14.14    | Modular SN4800                                 |
+|0076-mlxsw-core_thermal-Use-common-define-for-thermal-zon.patch  | 03978fb88b06       | Downstream accepted                      |            | Modular SN4800                                 |
+|0077-devlink-add-support-to-create-line-card-and-expose-t.patch  | c246f9b5fd61       | Downstream accepted                      |            | Modular SN4800                                 |
+|0078-devlink-implement-line-card-provisioning.patch              | fcdc8ce23a30       | Downstream accepted                      |            | Modular SN4800                                 |
+|0079-devlink-implement-line-card-active-state.patch              | fc9f50d5b366       | Downstream accepted                      |            | Modular SN4800                                 |
+|0080-devlink-add-port-to-line-card-relationship-set.patch        | b83758598538       | Downstream accepted                      |            | Modular SN4800                                 |
+|0081-devlink-introduce-linecard-info-get-message.patch           | 276910aecc6a       | Downstream accepted                      |            | Modular SN4800                                 |
+|0082-devlink-introduce-linecard-info-get-message.patch           |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|0083-mlxsw-reg-Add-Ports-Mapping-event-Configuration-Regi.patch  | ebf0c5341731       | Downstream accepted                      |            | Modular SN4800                                 |
+|0084-mlxsw-reg-Add-Management-DownStream-Device-Query-Reg.patch  | 505f524dc660       | Downstream accepted                      |            | Modular SN4800                                 |
+|0085-mlxsw-reg-Add-Management-DownStream-Device-Control-R.patch  | 5290a8ff2e11       | Downstream accepted                      |            | Modular SN4800                                 |
+|0086-mlxsw-reg-Add-Management-Binary-Code-Transfer-Regist.patch  | 5bade5aa4afc       | Downstream accepted                      |            | Modular SN4800                                 |
+|0087-mlxsw-core_linecards-Add-line-card-objects-and-imple.patch  | b217127e5e4e       | Downstream accepted                      |            | Modular SN4800                                 |
+|0088-mlxsw-core_linecards-Implement-line-card-activation-.patch  | ee7a70fa671b       | Downstream accepted                      |            | Modular SN4800                                 |
+|0089-mlxsw-core-Extend-driver-ops-by-remove-selected-port.patch  | 45bf3b7267e0       | Downstream accepted                      |            | Modular SN4800                                 |
+|0090-mlxsw-spectrum-Add-port-to-linecard-mapping.patch           | 6445eef0f600       | Downstream accepted                      |            | Modular SN4800                                 |
+|0091-mlxsw-reg-Introduce-Management-Temperature-Extended-.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0092-mlxsw-core-Add-APIs-for-thermal-sensor-mapping.patch        |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0093-mlxsw-reg-Add-Management-DownStream-Device-Tunneling.patch  | 8f9b0513a950       | Downstream accepted                      |            | Modular SN4800                                 |
+|0094-mlxsw-core_linecards-Probe-devices-for-provisioned-l.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0095-mlxsw-core_linecards-Expose-device-FW-version-over-d.patch  | e932b4bdbd7c       | Downstream accepted                      |            | Modular SN4800                                 |
+|0096-mlxsw-core-Introduce-flash-update-components.patch          |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0097-mlxfw-Get-the-PSID-value-using-op-instead-of-passing.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0098-mlxsw-core_linecards-Implement-line-card-device-flas.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0099-mlxsw-core_linecards-Introduce-ops-for-linecards-sta.patch  |                    | Downstream accepted                      |            | Modular SN4800                                 |
+|0100-mlxsw-core-Add-interfaces-for-line-card-initializati.patch  | 06a0fc43bb10       | Downstream accepted                      |            | Modular SN4800                                 |
+|0101-mlxsw-core_thermal-Add-interfaces-for-line-card-init.patch  | f11a323da46c       | Downstream accepted                      |            | Modular SN4800                                 |
+|0102-mlxsw-core_hwmon-Add-interfaces-for-line-card-initia.patch  | 99a03b3193f6       | Downstream accepted                      |            | Modular SN4800                                 |
+|0103-mlxsw-minimal-Prepare-driver-for-modular-system-supp.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0104-mlxsw-i2c-Prevent-transaction-execution-for-special-.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|0105-mlxsw-core-Extend-bus-init-function-with-event-handl.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0106-mlxsw-i2c-Add-support-for-system-events-handling.patch      | 33fa6909a263       | Downstream accepted                      |            | Modular SN4800                                 |
+|0107-mlxsw-core-Export-line-card-API.patch                       |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0108-mlxsw-minimal-Add-system-event-handler.patch                |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0109-mlxsw-minimal-Add-interfaces-for-line-card-initializ.patch  |                    | Downstream accepted                      |            | Modular SN4800 squashed (required rebasing)    |
+|0110-platform-x86-mlx-platform-Make-activation-of-some-dr.patch  | e05d6b658fcd       | Feature upstream                         |            | E3597                                          |
+|0111-platform-x86-mlx-platform-Add-cosmetic-changes-for-a.patch  | 7bf8a14dedaf       | Feature upstream                         |            | E3597                                          |
+|0112-mlx-platform-Add-support-for-systems-equipped-with-t.patch  | 08fdb6f3acae       | Feature upstream                         |            | E3597                                          |
+|0113-platform-mellanox-Introduce-support-for-COMe-managem.patch  | 6995e711b69c       | Feature upstream                         |            | E3597                                          |
+|0114-platform-x86-mlx-platform-Add-support-for-new-system.patch  | 2deb92864348       | Feature upstream                         |            | E3597                                          |
+|0115-platform-mellanox-Add-COME-board-revision-register.patch    | 095a2c189151       | Feature upstream                         |            |                                                |
+|0116-platform-mellanox-Introduce-support-for-rack-manager.patch  | f8dacbf7da2e       | Feature upstream                         |            | E3597                                          |
+|0117-hwmon-jc42-Add-support-for-Seiko-Instruments-S-34TS0.patch  | c7250b5d553c       | Feature upstream                         |            | relevant for CFL systems only                  |
+|0118-platform-mellanox-mlxreg-io-Add-locking-for-io-opera.patch  | 7964f8fc52b1       | Feature upstream                         |            |                                                |
+|0119-DS-leds-leds-mlxreg-Send-udev-event-from-leds-mlxreg.patch  |                    | Downstream accepted                      |            | SN2201                                         |
+|0120-DS-lan743x-Add-support-for-fixed-phy.patch                  |                    | Downstream accepted                      |            | P2317 only                                     |
+|0121-TMP-mlxsw-minimal-Ignore-error-reading-SPAD-register.patch  |                    | Downstream accepted                      |            | MQM8700 only                                   |
+|0122-1-i2c-mlxcpld-Modify-register-setting-for-400KHz-frequ.patch|                    | Feature upstream                         |  5.14.12   |                                                |
+|0122-i2c-mlxcpld-Fix-register-setting-for-400KHz-frequenc.patch  | e1f77ecc75aa       | Feature upstream                         |            |                                                |
+|0123-platform-mellanox-mlxreg-lc-Fix-cleanup-on-failure-a.patch  | 52e01c0b1d80       | Downstream accepted                      |            | Modular SN4800                                 |
+|0124-DS-platform-mlx-platform-Add-SPI-path-for-rack-switc.patch  |                    | Downstream accepted                      |            | P4697                                          |
+|0125-mlxsw-core-Add-support-for-OSFP-transceiver-modules.patch   | f881c4ab37db       | Feature upstream                         |            |                                                |
+|0126-DS-mlxsw-core_linecards-Skip-devlink-and-provisionin.patch  |                    | Downstream accepted                      |            | SN4800                                         |
+|0127-hwmon-pmbus-Add-support-for-Infineon-Digital-Multi-p.patch  | 9054416afcb4       | Feature upstream                         |            |                                                |
+|0128-platform-mellanox-fix-reset_pwr_converter_fail-attri.patch  | 488f0fca0db0       | Feature upstream                         |            | SN5600                                         |
+|0129-Documentation-ABI-fix-description-of-fix-reset_pwr_c.patch  | e7210563432a       | Feature upstream                         |            | SN5600                                         |
+|0130-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         |
+|0131-hwmon-pmbus-Fix-sensors-readouts-for-MPS-Multi-phase.patch  | 525dd5aed67a       | Feature upstream                         |            |                                                |
+|0132-Revert-mlxsw-thermal-Fix-out-of-bounds-memory-access.patch  |                    | Downstream accepted                      |            | disable upstream patch, must exist from 5.10.74|
+|0133-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
+|0134-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3                                            |
+|0135-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3                                            |
+|0136-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
+|0137-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
+|0138-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
+|0139-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
+|0140-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
+|0141-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
+|0142-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
+|0143-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc7815660      | Feature upstream                         |            | BF3                                            |
+|0144-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357e      | Feature upstream                         |            | BF3                                            |
+|0145-platform-x86-MLX_PLATFORM-select-REGMAP-instead-of-d.patch  |                    | Bugfix upstream                          |            | BF3                                            |
+|0146-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Feature pending                          |            | BF3                                            |
+|0147-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
+|0148-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            |                                                |
+|0149-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
+|0150-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            | P4262                                          |
+|0151-regmap-debugfs-Enable-writing-to-the-regmap-debugfs-.patch  |                    | Downstream                               |            | BF3                                            |
+|0152-hwmon-mlxreg-fan-Return-zero-speed-for-broken-fan.patch     |                    | Bugfix upstream                          |            |                                                |
+|0153-DS-mlxsw-core_linecards-Disable-firmware-bundling-ma.patch  |                    | Downstream accepted                      |            |                                                |
+|0154-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            | P4262                                          |
+|0155-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
+|0156-mlxsw-Use-u16-for-local_port-field-instead-of-u8.patch      | c934757d9000       | Downstream accepted                      |            | SN5600                                         |
+|0157-mlxsw-minimal-Change-type-for-local-port.patch              |                    | Downstream accepted                      |            | SN5600                                         |
+|0158-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  |                    | Downstream accepted                      |            | SN5600                                         |
+|0159-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | SN5600                                         |
+|0160-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | P4262                                          |
+|0161-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            | P4262                                          |
+|0162-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            | P4262                                          |
+|0163-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
+|0164-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
+|0165-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  |                    | Downstream                               |            | BF3                                            |
+|0166-mlxsw-core_hwmon-Align-modules-label-name-assignment.patch  |                    | Downstream accepted                      |            | SN3750SX                                       |
+|0167-mlxsw-i2c-Limit-single-transaction.patch                    |                    | Downstream accepted                      |            |                                                |
+|0168-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        |                    | Downstream accepted                      |            | BF3                                            |
+|0169-mlxsw-reg-Limit-MTBR-register-records-buffer-by-one-.patch  |                    | Downstream accepted                      |            |                                                |
+|0170-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Feature pending                          |            |                                                |
+|0171-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Feature pending                          |            |                                                |
+|0172-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
+|0173-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Feature pending                          |            |                                                |
+|0174-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream accepted                      |            |                                                |
+|0175-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
+|0176-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
+|0177-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
+|0178-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream accepted                      |            |                                                |
+|0179-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Downstream accepted                      |            |                                                |
+|0180-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0181-platform-mellanox-mlx-platform-Add-reset-callback.patch     |                    | Feature pending                          |            |                                                |
+|0182-platform-mellanox-mlx-platform-Prepare-driver-to-all.patch  |                    | Feature pending                          |            |                                                |
+|0183-platform-mellanox-mlx-platform-Introduce-ACPI-init-f.patch  |                    | Feature pending                          |            |                                                |
+|0184-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
+|0185-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
+|0186-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
+|0187-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted                      |            |                                                |
+|0188-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
+|0189-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
+|0190-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
+|0191-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
+|0192-mlxsw-i2c-DBG-Add-debug-output-for-failed-transactio.patch  |                    | Downstream accepted                      |            |                                                |
+|0193-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0194-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted                      |            | SN4280                                         |
+|0195-platform-mellanox-mlx-platform-Fix-FAN-tacho-reading.patch  |                    | Downstream accepted                      |            | MQM9700                                        |
+|0196-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted                      |            | SN4280                                         |
+|0197-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
+|9000-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Kernel-6.1
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-platform-mellanox-Introduce-support-for-rack-manager.patch  | f8dacbf7da2e       | Feature upstream                         |            | E3597                                          |
+|0002-platform-mellanox-Change-reset_pwr_converter_fail-at.patch  | 488f0fca0db0       | Feature upstream                         |            |                                                |
+|0003-platform-mellanox-Cosmetic-changes-rename-to-more-co.patch  | acc6ea304590       | Feature upstream                         |            |                                                |
+|0004-platform-mellanox-Introduce-support-for-next-generat.patch  | fcf3790b9b63       | Feature upstream                         |            | SN5600                                         |
+|0005-platform-mellanox-Introduce-support-of-new-Nvidia-L1.patch  | dd635e33b5c9       | Feature upstream                         |            | P4262                                          |
+|0006-platform-mellanox-Split-initialization-procedure.patch      | 0170f616f496       | Feature upstream                         |            | BF3                                            |
+|0007-platform-mellanox-Split-logic-in-init-and-exit-flow.patch   | 158cd8320776       | Feature upstream                         |            | BF3                                            |
+|0008-platform-mellanox-Extend-all-systems-with-I2C-notifi.patch  | 233fd7e44cd7       | Feature upstream                         |            |                                                |
+|0009-platform-mellanox-mlx-platform-Add-mux-selection-reg.patch  | cefdbc781566       | Feature upstream                         |            | BF3                                            |
+|0010-platform-mellanox-mlx-platform-Move-bus-shift-assign.patch  | 50b823fdd357       | Feature upstream                         |            | BF3                                            |
+|0011-platform-mellanox-mlx-platform-Initialize-shift-vari.patch  | 1a0009abfa78       | Feature upstream                         |            | BF3                                            |
+|0012-platform-mellanox-Fix-order-in-exit-flow.patch              |                    | Bugfix pending                           |            | Accepted for 6.4                               |
+|0013-platform-mellanox-mlx-platform-Fix-signals-polarity-.patch  |                    | Bugfix pending                           |            | Accepted for 6.4                               |
+|0014-platform-mellanox-mlx-platform-Modify-graceful-shutd.patch  |                    | Bugfix pending                           |            | Accepted for 6.4                               |
+|0015-platform-mellanox-Change-register-offset-addresses.patch    |                    | Bugfix pending                           |            | Accepted for 6.4                               |
+|0016-platform-mellanox-Add-new-attributes.patch                  |                    | Feature pending                          |            |                                                |
+|0017-platform-mellanox-Add-field-upgrade-capability-regis.patch  |                    | Feature pending                          |            |                                                |
+|0018-platform-mellanox-Modify-reset-causes-description.patch     |                    | Feature pending                          |            |                                                |
+|0019-platform-mellanox-mlx-platform-Modify-health-and-pow.patch  |                    | Feature pending                          |            |                                                |
+|0020-platform-mellanox-mlx-platform-Add-reset-cause-attri.patch  |                    | Feature pending                          |            |                                                |
+|0021-platform-mellanox-mlx-platform-add-support-for-addit.patch  |                    | Feature pending                          |            |                                                |
+|0022-platform-mellanox-mlx-platform-Modify-power-off-call.patch  |                    | Feature pending                          |            |                                                |
+|0023-platform-mellanox-Cosmetic-changes.patch                    |                    | Feature pending                          |            |                                                |
+|0024-platform-mellanox-mlx-platform-Add-reset-callback.patch     |                    | Feature pending                          |            |                                                |
+|0025-platform-mellanox-mlx-platform-Prepare-driver-to-all.patch  |                    | Feature pending                          |            |                                                |
+|0026-platform-mellanox-mlx-platform-Introduce-ACPI-init-f.patch  |                    | Feature pending                          |            |                                                |
+|0027-platform-mellanox-mlx-platform-Get-interrupt-line-th.patch  |                    | Feature pending                          |            |                                                |
+|0028-platform-mellanox-Add-initial-support-for-PCIe-based.patch  |                    | Feature pending                          |            |                                                |
+|0029-platform-mellanox-mlxreg-hotplug-Extend-condition-fo.patch  |                    | Feature pending                          |            |                                                |
+|0030-1-platform-mellanox-nvsw-sn2201-Add-check-for-platform.patch| d56fbfbaf592       | Bugfix accepted                          | v6.1.101   |                                                |
+|0030-platform-mellanox-nvsw-sn2201-change-fans-i2c-busses.patch  |                    | Feature pending                          |            |                                                |
+|0032-platform_data-mlxreg-Add-field-with-mapped-resource-.patch  | 26917eab144c       | Feature upstream                         |            |                                                |
+|0033-i2c-mlxcpld-Allow-driver-to-run-on-ARM64-architectur.patch  |                    | Feature pending                          |            |                                                |
+|0034-i2c-mlxcpld-Add-support-for-extended-transaction-len.patch  |                    | Feature pending                          |            |                                                |
+|0035-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Downstream accepted                      |            |                                                |
+|0036-mlxsw-i2c-Fix-chunk-size-setting-in-output-mailbox-b.patch  | d7248f1cc835       | Bugfix pending                           | v6.1.53    | Added in v6.1.53                               |
+|0037-mlxsw-i2c-Limit-single-transaction-buffer-size.patch        | 6406a95c4a5e       | Bugfix pending                           | v6.1.53    | Added in v6.1.53                               |
+|0038-mlxsw-core_hwmon-Adjust-module-label-names-based-on-.patch  | 8b2fb4b671b3       | Bugfix pending                           | v6.1.53    | Added in v6.1.53                               |
+|0039-mlxsw-reg-Limit-MTBR-register-payload-to-a-single-da.patch  |                    | Feature pending                          |            |                                                |
+|0040-mlxsw-core-Extend-allowed-list-of-external-cooling-d.patch  |                    | Feature pending                          |            |                                                |
+|0041-mlxsw-i2c-Utilize-standard-macros-for-dividing-buffe.patch  |                    | Feature pending                          |            |                                                |
+|0042-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream accepted                      |            |                                                |
+|0043-hwmon-mlxreg-fan-Extend-number-of-supporetd-fans.patch      |                    | Feature pending                          |            |                                                |
+|0044-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
+|0045-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
+|0046-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream;skip[ALL]                     |            |                                                |
+|0047-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream;skip[ALL]                     |            |                                                |
+|0048-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2891-c.patch  |                    | Downstream accepted                      |            |                                                |
+|0049-dt-bindings-trivial-devices-Add-mps-mp2891.patch            |                    | Downstream accepted                      |            |                                                |
+|0050-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
+|0051-platform-mellanox-mlxreg-hotplug-Allow-more-flexible.patch  | 26e118ea98cf       | Feature upstream                         |            |                                                |
+|0052-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Feature pending                          |            |                                                |
+|0053-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream accepted                      |            |                                                |
+|0054-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            |                                                |
+|0055-mellanox-Relocate-mlx-platform-driver.patch                 |                    | Downstream accepted                      |            |                                                |
+|0056-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature upstream                         |            |                                                |
+|0057-Documentation-ABI-Add-new-attribute-for-mlxreg-io-sy.patch  | e7210563432a       | Feature pending                          |            |                                                |
+|0061-pinctrl-Introduce-struct-pinfunction-and-PINCTRL_PIN.patch  | 443a0a0f0cf4       | Feature upstream;skip[sonic,cumulus]     | v6.1.92    | BF3                                            |
+|0062-pinctrl-mlxbf3-Add-pinctrl-driver-support.patch             | d11f932808dc       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0063-pinctrl-mlxbf3-set-varaiable-mlxbf3_pmx_funcs-storag.patch  | 743d3336029f       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0064-pinctrl-mlxbf3-Remove-gpio_disable_free.patch               | 69657e60b8a7       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0065-gpio-mlxbf3-Add-gpio-driver-support.patch                   | cd33f216d241       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0066-gpio-mlxbf3-Support-add_pin_ranges.patch                    | 38a700efc510       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0067-gpio-mlxbf3-Fix-error-message.patch                         |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0068-mmc-sdhci-of-dwcmshc-enable-host-V4-support-for-Blue.patch  | 95921151e043       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0069-mmc-sdhci-of-dwcmshc-add-the-missing-device-table-ID.patch  | cfd4ea4815d1       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0070-mlxbf_gige-fix-receive-packet-race-condition.patch          | ac5cbe931c43       | Feature upstream;skip[sonic,cumulus]     | v6.1.75    | BF3                                            |
+|0071-mlxbf_gige-Fix-intermittent-no-ip-issue.patch               | 7ad5e7a35c3f       | Feature upstream;skip[sonic,cumulus]     | v6.1.75    | BF3                                            |
+|0072-mlxbf_gige-Enable-the-GigE-port-in-mlxbf_gige_open.patch    | 1b481cb53601       | Feature upstream;skip[sonic,cumulus]     | v6.1.75    | BF3                                            |
+|0073-mlxbf_gige-stop-PHY-during-open-error-paths.patch           | 57beec623ac5       | Feature upstream;skip[sonic,cumulus]     | v6.1.85    | BF3                                            |
+|0074-mlxbf_gige-call-request_irq-after-NAPI-initialized.patch    | 24444af5ddf7       | Feature upstream;skip[sonic,cumulus]     | v6.1.85    | BF3                                            |
+|0075-mlxbf_gige-stop-interface-during-shutdown.patch             | 80247e0eca14       | Feature upstream;skip[sonic,cumulus]     | v6.1.85    | BF3                                            |
+|0076-mlxbf_gige-add-MDIO-support-for-BlueField-3.patch           | 2321d69f92aa       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0077-mlxbf_gige-support-10M-100M-1G-speeds-on-BlueField-3.patch  | 20d03d4d9437       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0078-mlxbf_gige-add-set_link_ksettings-ethtool-callback.patch    | cedd97737a1f       | Feature upstream;skip[sonic,cumulus]     |            | BF3                                            |
+|0079-UBUNTU-SAUCE-mlxbf_gige-add-RX_DMA-disable-to-NAPI-p.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0080-mlxbf-bootctl-correctly-identify-secure-boot-with-de.patch  | 646f1e9c1978       | Feature upstream;skip[sonic,cumulus]     | v6.1.68    | BF3                                            |
+|0081-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0082-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0083-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0085-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  | 1e11552ee54d       | Bugfix upstream                          | v6.1.155   |                                                |
+|0087-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0087-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
+|0088-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
+|0089-platform-mellanox-mlx-platform-Change-register-name.patch   |                    | Downstream accepted                      |            |                                                |
+|0090-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            |                                                |
+|0091-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  |                    | Downstream accepted                      |            |                                                |
+|0092-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  |                    | Downstream accepted                      |            |                                                |
+|0093-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
+|0094-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
+|0095-platform-mellanox-nvsw-sn2201-Add-support-for-new-sy.patch  |                    | Downstream accepted                      |            |                                                |
+|0096-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Rejected                                 |            | Add dedicated match for QMB8700                |
+|0097-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  |                    | Downstream accepted                      |            | SN5640                                         |
+|0098-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch  |                    | Downstream accepted                      |            | MQM9701                                        |
+|0099-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0099-1-platform-mellanox-mlx-platform-Add-support-DGX-flav.patch |                    | Downstream accepted                      |            | SN4700d                                        |
+|0100-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
+|0101-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
+|0102-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
+|0103-platform-mellanox-mlx-dpu-improve-interrupt-handling.patch  |                    | Downstream accepted                      |            | SN4280                                         |
+|0104-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Downstream accepted                      |            | mp2869                                         |
+|0105-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Downstream accepted                      |            | mp29502                                        |
+|0106-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  |                    | Downstream accepted                      |            |                                                |
+|0107-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
+|0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
+|0110-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
+|0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
+|0113-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
+|0114-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
+|0115-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_post_init after last mux (4151613)     |
+|8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
+|8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
+|8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|8004-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream accepted                      |            | IB only                                        |
+|8005-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
+|8006-i2c-mlxcpld-Downstream-WA-to-avoid-error-for-SMBUS-r.patch  |                    | Downstream accepted                      |            | HW bug WA: MUST for all systems until HW fix   |
+|8007-hwmon-mlxreg-fan-Downstream-Allow-fan-speed-setting-.patch  |                    | Downstream accepted                      |            | Fix for mlreg-fan cooling level granularity    |
+|8008-hwmon-emc2305-Downstream-Allow-fan-speed-setting-gra.patch  |                    | Downstream accepted                      |            | Fix for emc2305 cooling level granularity      |
+|8009-hwmon-mlxsw-Downstream-Allow-fan-speed-setting-granu.patch  |                    | Downstream accepted                      |            | Fix for mlxminimal cooling level granularity   |
+|8010-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
+|8011-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream accepted                      |            |                                                |
+|8012-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
+|8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
+|9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
+|9003-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
+|9004-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9006-mlxsw-core_hwmon-Downstream-Fix-module-sensor-number-for-QM3200.patch|           | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9007-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
+|9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+|9010-platform-mellanox-Downstream-Add-support-for-Q3401-R.patch  |                    | Downstream accepted; skip[sonic,cumulus] |            | Q3401-RD                                       |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Kernel-6.12
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0002-platform-mellanox-mlxbf-pmc-Add-support-for-monitori.patch  | 5efc8009           | Feature upstream                         | 6.15.1     |                                                |
+|0003-platform-mellanox-mlxbf-pmc-Add-support-for-clock_me.patch  | 8e3b3e1            | Feature upstream                         | 6.15.1     |                                                |
+|0004-platform-mellanox-mlxbf-bootctl-use-sysfs_emit-inste.patch  | 9886f57            | Feature upstream                         | 6.15.1     |                                                |
+|0005-platform-mellanox-mlxreg-hotplug-use-sysfs_emit-inst.patch  | fcf1b6f            | Feature upstream                         | 6.15.1     |                                                |
+|0006-platform-mellanox-mlxreg-io-use-sysfs_emit-instead-o.patch  | ff44b1c            | Feature upstream                         | 6.15.1     |                                                |
+|0007-mlxbf-bootctl-Support-sysfs-entries-for-RTC-battery-.patch  | 5d40a85            | Feature upstream                         | 6.15.1     |                                                |
+|0008-mlxbf-bootctl-use-sysfs_emit_at-in-secure_boot_fuse_.patch  | b129005            | Feature upstream                         | 6.15.1     |                                                |
+|0009-platform-mellanox-mlxbf-pmc-Support-additional-PMC-b.patch  | 3acb492            | Feature upstream                         | 6.15.1     |                                                |
+|0010-platform-mellanox-nvsw-sn2200-Fix-.items-in-nvsw_sn2.patch  | 8e725ff            | Feature upstream                         | 6.15.1     |                                                |
+|0011-platform-mellanox-Fix-spelling-and-comment-clarity-i.patch  | c3ac7e3            | Feature upstream                         | 6.15.1     |                                                |
+|0012-platform-mellanox-mlxbf-pmc-Remove-newline-char-from.patch  | 44e6ca8            | Feature upstream                         | 6.12.41    |                                                |
+|0013-platform-mellanox-mlxbf-pmc-Validate-event-enable-in.patch  | f8c1311            | Feature upstream                         | 6.12.41    |                                                |
+|0014-platform-mellanox-mlxbf-pmc-Use-kstrtobool-to-check-.patch  | 0e2cebd            | Feature upstream                         | 6.12.41    |                                                |
+|0015-i2c-mlxcpld-Support-PCIe-mapped-register-space.patch        |                    | Feature pending                          |            |                                                |
+|0016-hwmon-mlxreg-fan-Add-support-for-new-flavour-of-capa.patch  |                    | Downstream accepted                      |            |                                                |
+|0017-leds-mlxreg-Add-support-for-new-flavour-of-capabilit.patch  |                    | Downstream accepted                      |            |                                                |
+|0018-leds-mlxreg-Remove-code-for-amber-LED-colour.patch          |                    | Downstream accepted                      |            |                                                |
+|0019-Extend-driver-to-support-Infineon-Digital-Multi-phas.patch  |                    | Downstream accepted                      |            |                                                |
+|0020-dt-bindings-trivial-devices-Add-infineon-xdpe1a2g7.patch    |                    | Downstream accepted                      |            |                                                |
+|0021-leds-mlxreg-Skip-setting-LED-color-during-initializa.patch  |                    | Downstream accepted                      |            |                                                |
+|0022-i2c-mux-Add-register-map-based-mux-driver.patch             | b04d17a            | Feature upstream                         | 6.15.1     |                                                |
+|0023-platform-mellanox-Add-support-for-dynamic-I2C-channe.patch  |                    | Downstream accepted                      |            |                                                |
+|0024-1-platform-x86-Fix-initialization-order-for-firmware_a.patch|                    | Feature upstream                         | 6.12.41    |                                                |
+|0024-mellanox-Relocate-mlx-platform-driver.patch                 | 8c03f64            | Feature upstream                         | 6.15.1     |                                                |
+|0025-platform-mellanox-mlx-platform-Cosmetic-changes.patch       | 749d3e0            | Feature upstream                         | 6.15.1     |                                                |
+|0026-platform-mellanox-Rename-field-to-improve-code-reada.patch  | 9815278            | Feature upstream                         | 6.15.1     |                                                |
+|0027-platform-mellanox-mlx-platform-Change-register-name.patch   | e75394b            | Feature upstream                         | 6.15.1     |                                                |
+|0028-platform-mellanox-mlxreg-dpu-Add-initial-support-for.patch  | d00f779            | Feature upstream                         | 6.15.1     |                                                |
+|0029-platform-mellanox-Introduce-support-of-Nvidia-smart-.patch  | 783259e            | Feature upstream                         | 6.15.1     |                                                |
+|0030-hwmon-mlxreg-fan-Separate-methods-of-fan-setting-com.patch  |                    | Bugfix pending                           | 6.12.53    |                                                |
+|0031-platform-mellanox-indicate-deferred-I2C-bus-creation.patch  |                    | Bugfix pending                           |            | SN2201                                         |
+|0032-platform_data-mlxreg-Add-capability-bit-and-mask-fie.patch  |                    | Downstream accepted                      |            |                                                |
+|0033-platform-mellanox-mlxreg-hotplug-Add-support-for-new.patch  |                    | Downstream accepted                      |            |                                                |
+|0034-platform-mellanox-Cosmetic-changes-to-improve-code-s.patch  | f48cf5e            | Feature upstream                         | 6.15.1     |                                                |
+|0035-platform-mellanox-mlx-platform-Add-support-for-new-N.patch  | 317bbe1            | Feature upstream                         | 6.15.1     |                                                |
+|0036-platform-mellanox-mlxreg-dpu-Fix-smatch-warnings.patch      | f94ffc3            | Feature upstream                         | 6.15.1     |                                                |
+|0037-platform-mellanox-mlxreg-io-Extend-number-of-hwmon-a.patch  |                    | Downstream accepted                      |            |                                                |
+|0038-platform_data-mlxreg-Add-fields-for-interrupt-storm-.patch  |                    | Downstream accepted                      |            |                                                |
+|0039-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
+|0040-platform-mellanox-mlxreg-dpu-Introduce-completion-ca.patch  |                    | Downstream accepted                      |            |                                                |
+|0041-hwmon-add-MP2869-MP29608-MP29612-and-MP29816-series-.patch  |                    | Feature pending                          |            |                                                |
+|0042-hwmon-add-MP29502-driver.patch                              |                    | Feature pending                          |            |                                                |
+|0043-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2855-c.patch  |                    | Feature pending                          |            |                                                |
+|0044-platform_data-mlxreg-Add-non-sticky-bit-indication-f.patch  | 3a1f095            | Feature upstream                         | 6.15.1     |                                                |
+|0045-platform-mellanox-mlxreg-hotplug-Add-handling-of-non.patch  | 623a39e            | Feature upstream                         | 6.15.1     |                                                |
+|0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  | 51717e8            | Feature upstream                         | 6.15.1     |                                                |
+|0047-hwmon-mlxreg-fan-Prevent-fans-from-getting-stuck-at-.patch  | b82f116            | Feature upstream                         | 6.12.45    |                                                |
+|0048-UBUNTU-SAUCE-mlxbf_gige-add-RX_DMA-disable-to-NAPI-p.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0049-UBUNTU-SAUCE-mlxbf-ptm-power-and-thermal-management-.patch  |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0050-UBUNTU-SAUCE-mlxbf-ptm-update-license.patch                 |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0051-UBUNTU-SAUCE-mlxbf-ptm-use-0444-instead-of-S_IRUGO.patch    |                    | Downstream;skip[sonic,cumulus]           |            | BF3                                            |
+|0052-platform-mellanox-Introduce-support-for-switches-equ.patch  |                    | Downstream accepted                      |            | BF3                                            |
+|0053-platform-mellanox-mlx-platform-Add-support-for-new-X.patch  |                    | Downstream accepted                      |            | QM3400                                         |
+|0054-i2c-asf-Introduce-MCTP-support-over-ASF-controller.patch    |                    | Downstream accepted                      |            |                                                |
+|0054-1-platform-mellanox-Downstream-Add-support-for-new-Nvi.patch|                    | Downstream accepted                      |            | MQM9701                                        |
+|0055-platform-mellanox-Downstream-Add-support-DGX-flavor-.patch  |                    | Downstream accepted                      |            | SN5610d                                        |
+|0055-1-platform-mellanox-mlx-platform-Add-support-DGX-flavo.patch|                    | Downstream accepted                      |            | SN4700d                                        |
+|0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
+|0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
+|0058-PCI-DOE-Poll-DOE-Busy-bit-for-up-to-1-second-in-pci.patch   | 86efc62            | Feature upstream                         | 6.13.0     |                                                |
+|0059-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch  |                    | Downstream accepted                      |            | xdpe1a2g7b                                     |
+|0060-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            | CPLD power LED                                 |
+|0060-platform-mellanox-nvsw-bmc-Downstream-Add-protection.patch  |                    | Downstream accepted                      |            |                                                |
+|0061-platform-mellanox-mlxreg-io-Increase-max-supported-a.patch  |                    | Downstream accepted                      |            |                                                |
+|0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
+|0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
+|0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
+|0065-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
+|0066-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
+|0067-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_platdevs_init after last mux (4151613) |
+|8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
+|8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
+|8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
+|8003-mlxsw-minimal-Downstream-Ignore-error-reading-SPAD-r.patch  |                    | Downstream accepted                      |            | IB only                                        |
+|8004-leds-leds-mlxreg-Downstream-Send-udev-event-from-led.patch  |                    | Downstream accepted                      |            | SN2201                                         |
+|8005-i2c-mlxcpld-Downstream-WA-to-avoid-error-for-SMBUS-r.patch  |                    | Downstream accepted                      |            | HW bug WA: MUST for all systems until HW fix   |
+|8006-hwmon-mlxreg-fan-Downstream-Allow-fan-speed-setting-.patch  |                    | Downstream accepted                      |            | Fix for mlreg-fan cooling level granularity    |
+|8007-hwmon-emc2305-Downstream-Allow-fan-speed-setting-gra.patch  |                    | Downstream accepted                      |            | Fix for emc2305 cooling level granularity      |
+|8008-hwmon-mlxsw-Downstream-Allow-fan-speed-setting-granu.patch  |                    | Downstream accepted                      |            | Fix for mlxminimal cooling level granularity   |
+|8009-mlxsw-i2c-Downstream-Add-retry-mechanism-for-failed-.patch  |                    | Downstream accepted                      |            |                                                |
+|8010-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream accepted                      |            |                                                |
+|8011-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
+|8012-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
+|8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
+|9001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Rejected                                 |            | Add dedicated match for QMB8700                |
+|9002-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9003-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9004-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
+|9005-platform-mellanox-Introduce-support-of-Nvidia-L1-tra.patch  |                    | Downstream;skip[sonic,cumulus]           |            | P4300                                          |
+|9006-mlxsw-core_hwmon-Fix-module-sensor-number-for-QM3200.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
+|9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9008-platform-mellanox-mlx-platform-Change-register-0x28-.patch  |                    | Downstream;skip[sonic,cumulus]           |            |                                                |
+|9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Legend:
+Feature upstream: Has commit Id in upstream
+Feature accepted: Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
+Feature pending:  Pending maintainer review or not sent yet
+downstream:       Not plan to upstream
+downstream accepted: Not plan to upstream but following patches depend on this. This patch will be taken to the accepted list.
+Bugfix upstream:  Has commit Id in upstream and backported as bugfix  | v5.10.145
+Bugfix accepted:  Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
+Bugfix pending:   Bugfix pending maintainer review or not sent yet
+Rejected:         Not take this patch
+ 
+Additional options in status: 
+os['sonic', '...'] - take this patch from the OS folder under patch folder(sonic, ..).
+				 		hw-mgmt/recipes-kernel/linux/linux-5.10/{OS}
+take['sonic', '...'] - take this patch for specified OS (sonic, ..)
+                       Will take patch, even for patches that should be ignored, NOS can be set to ALL
+skip['sonic', '...'] - skip this patch for specified OS (sonic, ..), NOS can be set to ALL
+
+
+Example status: 
+Feature  upstream, take[sonic] -- take this patch for all OS form patches folder. For sonic - take from sonic repo
+Feature  upstream, skip[sonic] -- take this patch for all OS form patches folder. For sonic - skip
+Feature  upstream, take[sonic], skip[cumulus] -- take this patch for all OS form patches folder.
+								Special options: for cumulus - skip, for sonic - take from sonic repo
+ 
+
+© 2023 GitHub, Inc.
