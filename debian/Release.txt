@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0060.1050
+- Fri, 15 May 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: bmc: speed up debug dump and CPLD grid collection, d6a154b
+    o #N/A, Update changelog and release notes for V.7.0060.1049, 72841ec
+    o #N/A, hw-mgmt: bmc: services: Modify dependency, d2553a0
+    o #N/A, Update changelog and release notes for V.7.0060.1048, 10c09cf
+    o #N/A, hw-mgmt: bmc: add AST2700 reset-cause exporter and update docs, 352e497
+    o #4992267, hw-mgmt: bmc: Fix first boot issue, 343fc55
+    o #N/A, Update changelog and release notes for V.7.0060.1047, ca327db
+    o #N/A, hw-mgmt: kernel: bmc: patches: Update patches, 5533cbe
+    o #N/A, Promote tag, b8ef0fa
+    o #N/A, hw-mgmt: kernel: Update patch tables, cf265b3
+    o #N/A, Update changelog and release notes for V.7.0060.1045, e404a68
+    o #N/A, Update changelog and release notes for V.7.0060.1044, d8f403b
+    o #N/A, hw-mgmt: bmc: Add script for setting cartridge info, 2757718
+    o #N/A, hw-mgmt: bmc: Extend leakage support with ADS7924 follow up, 43c58d4
+    o #N/A, hw-mgmt: kernel: config: Set A2D modules to yes, 06bceeb
+    o #N/A, hw-mgmt: bmc: Extend leakage support with ADS7924, c9f5d5b
+    o #N/A, Merge pull request #2467 from Mellanox/sonic-bmc-review, 70f2860
+    o #N/A, hw-mgmt: bmc: leakage: rename severity fields and restructure runtime layout, 50fca35
+    o #N/A, bmc: leakage: fix duplicate key and stale field refs in example JSON, f0525a2
+    o #N/A, Update bmc/examples/hw-management-bmc-a2d-leakage-config-example.json, 2af9a13
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1050/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.1049
 - Wed, 13 May 2026
 --------------------------------------------------------------------------------
