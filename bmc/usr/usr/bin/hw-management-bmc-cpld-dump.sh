@@ -97,14 +97,42 @@ cleanup()
 	return "$res_ret"
 }
 
+# Normalize i2ctransfer r1 output (e.g. "0x12") to a grid cell token.
+cpld_format_byte()
+{
+	local raw=$1
+	local b
+
+	raw=${raw#"${raw%%[![:space:]]*}"}
+	raw=${raw%"${raw##*[![:space:]]}"}
+
+	case "$raw" in
+	0x* | 0X*)
+		b=${raw#0x}
+		b=${b#0X}
+		b=${b,,}
+		if [[ $b =~ ^[0-9a-f]{2}$ ]]; then
+			printf '%s' "$b"
+			return 0
+		fi
+		;;
+	*ER*)
+		printf 'ER'
+		return 0
+		;;
+	*NA*)
+		printf 'NA'
+		return 0
+		;;
+	esac
+	printf '--'
+}
+
 # Hex grid dump to stdout (archive content; not sent to syslog).
 take_cpld_dump_internal()
 {
-	echo -n "Offset "
-	for col in {0..15}; do
-		printf "%02x " "$col"
-	done
-	echo
+	local -a cpld_bytes=()
+	local offset hex_offset raw_output row col cell
 
 	if [ -f "$PLATFORM_CONFIG_FILE" ]; then
 		# shellcheck source=/dev/null
@@ -113,25 +141,24 @@ take_cpld_dump_internal()
 		CPLD_I2C_BUS=5
 	fi
 
+	for ((offset = 0; offset < 256; offset++)); do
+		printf -v hex_offset '%02x' "$offset"
+		raw_output=$(i2ctransfer -f -y "$CPLD_I2C_BUS" w2@0x31 0x25 "0x${hex_offset}" r1 2>/dev/null)
+		cpld_bytes[offset]=$(cpld_format_byte "$raw_output")
+	done
+
+	echo -n "Offset "
+	for ((col = 0; col < 16; col++)); do
+		printf "%02x " "$col"
+	done
+	echo
+
 	for ((row = 0; row <= 240; row += 16)); do
 		printf "0x%02x:  " "$row"
-
 		for ((col = 0; col < 16; col++)); do
 			offset=$((row + col))
-			hex_offset=$(printf "%02x" "$offset")
-
-			raw_output=$(i2ctransfer -f -y "$CPLD_I2C_BUS" w2@0x31 0x25 "0x${hex_offset}" r1 2>/dev/null)
-			byte=$(echo "$raw_output" | awk 'match($0, /0x[0-9a-fA-F]{2}/) {print substr($0, RSTART+2, 2)}')
-
-			if [[ $byte =~ ^[0-9a-fA-F]{2}$ ]]; then
-				printf "%02x " "0x$byte" | tr '[:upper:]' '[:lower:]'
-			elif [[ $byte == "ER" ]]; then
-				printf "ER "
-			elif [[ $byte == "NA" ]]; then
-				printf "NA "
-			else
-				printf '%s' '-- '
-			fi
+			cell=${cpld_bytes[offset]}
+			printf '%s ' "$cell"
 		done
 		echo
 	done
@@ -144,27 +171,23 @@ take_cpld_dump()
 
 	log_message info "Starting CPLD data collection..."
 
-	local tmp_log
-	tmp_log=$(mktemp /tmp/cpld_dump.XXXXXX.log)
-	local _my_script="${BASH_SOURCE[0]}"
+	local out _my_script="${BASH_SOURCE[0]}"
 
 	if [ "1${output_path}" = "1add_copy_file" ]; then
 		log_message err "output mode add_copy_file is not supported (Phosphor dump integration only)"
-		rm -f "$tmp_log"
 		return 1
 	fi
 
-	if ! timeout 20s bash -c ". $(printf '%q' "$_my_script"); take_cpld_dump_internal" >"$tmp_log" 2>&1; then
-		log_message warning "CPLD dump command timed out or returned non-zero (partial data may be in temp file)"
-	fi
-
 	if [ -d "$output_path" ]; then
-		cp -f "$tmp_log" "${output_path}/cpld_dump.log"
+		out="${output_path}/cpld_dump.log"
 	else
-		cp -f "$tmp_log" "$output_path"
+		out="$output_path"
 	fi
 
-	rm -f "$tmp_log"
+	if ! timeout 20s bash -c ". $(printf '%q' "$_my_script"); take_cpld_dump_internal" >"$out" 2>&1; then
+		log_message warning "CPLD dump command timed out or returned non-zero (partial data may be in $out)"
+	fi
+
 	log_message info "CPLD data collection completed"
 }
 

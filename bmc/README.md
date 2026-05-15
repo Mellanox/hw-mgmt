@@ -172,8 +172,8 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | Script | Role |
 |--------|------|
 | **`hw-management-bmc-helpers-common.sh`** | From OpenBMC **`hw-management-helpers-common.sh`**: shared routines (**`log_event`**, **`log_cpld_dump`** — compact CPLD read for events), PHY **`mdio`** helpers, **`bmc_init_eth`**, **`get_mgmt_board_revision`**, etc.). **`hw-management-bmc-ready.sh`** sources it before **`hw-management-bmc-helpers.sh`**. Requires **bash** (uses **`[[ ]]`, `(( ))`, …). |
-| **`hw-management-bmc-cpld-dump.sh`** | **Merged** from OpenBMC **`recipes-phosphor/dump/files/cpld_dump.sh`** and **`dump_utils.sh`** (**`take_cpld_dump_internal`**, **`take_cpld_dump`** only). Full **grid** CPLD register dump, optional **`.tar.xz`** packaging (**`-p`**, **`-i`**). Uses **`log_message`** and **`${HW_MANAGEMENT_BMC_PLATFORM_CONF:-/etc/hw-management-bmc-platform.conf}`** (via **`hw-management-bmc-helpers-common.sh`**); no **`switch-erots-info.sh`**, no Phosphor **`add_copy_file`**. Requires **bash**. |
-| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (same idea as host **`hw-management-generate-dump.sh`**). Collects **`dmesg`**, **`proc/`**, **`network/`**, **`i2c/`** (non-mux buses), CPLD (**`take_cpld_dump`**), **`systemctl/`** for **`hw-management-bmc*`**, **`systemd-analyze/`** (boot timing, **`blame`**, **`critical-chain`** — see below), and **`var_run_hw-management/`** (runtime tree + values; EEPROM via **`hexdump -C`**). Before archiving **`/var/run/hw-management`**, runs **`hw-management-bmc-show-reset-cause.sh`** and writes **`/var/run/hw-management/bmc/show-reset-cause`** so it is included in **`values/`** (as **`bmc_show-reset-cause.txt`**). Default output **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Requires **bash**. |
+| **`hw-management-bmc-cpld-dump.sh`** | **Merged** from OpenBMC **`recipes-phosphor/dump/files/cpld_dump.sh`** and **`dump_utils.sh`** (**`take_cpld_dump_internal`**, **`take_cpld_dump`** only). Full **16×16** CPLD grid via **256× `i2ctransfer … r1`** (one byte per offset), then prints the grid; optional **`.tar.xz`** CLI (**`-p`**, **`-i`**). Uses **`log_message`** and **`${HW_MANAGEMENT_BMC_PLATFORM_CONF:-/etc/hw-management-bmc-platform.conf}`** (via **`hw-management-bmc-helpers-common.sh`**); no Phosphor **`add_copy_file`**. Requires **bash**. |
+| **`hw-management-bmc-generate-dump.sh`** | SONiC BMC debug bundle (host analog **`hw-management-generate-dump.sh`**). **Parallel** collectors; default **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. **`-v` / `--verbose`** adds **`systemd-analyze/`** (~1 min). Without **`-v`**, writes **`systemd-analyze/skipped.txt`**. See **BMC debug bundle** below. Requires **bash**. |
 | **`hw-management-bmc-json-parser.sh`** | From OpenBMC **`switch_json_parser.sh`**: **`json_validate`**, **`json_get_nested_array_element`**, etc. (awk/BusyBox). Sourced by **`hw-management-bmc-a2d-leakage-config.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-gpio-set.sh`** (**`bmc_init_sysfs_gpio`**). |
 | **`hw-management-bmc-copy-cartridge-data.sh`** | **Cartridge SKUs:** sources **`/usr/bin/switch_json_parser.sh`** when **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`** exists; reads cartridge FRU over I2C and programs SWB CPLD registers. See **`README-hw-management-bmc-copy-cartridge-data.md`**. |
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
@@ -212,19 +212,43 @@ Policy for collecting and exporting reset cause on SONiC BMC:
 
 ### BMC debug bundle (`hw-management-bmc-generate-dump.sh`)
 
-Archive default path: **`/tmp/hw-mgmt-bmc-dump.tar.gz`**. Top-level entries include **`dmesg.txt`**, **`uname.txt`**, **`proc/`** (**`interrupts.txt`**), **`network/`** (**`ifconfig.txt`** or **`ip addr`** fallback), **`i2c/`** (**`i2cdetect -l`**, **`i2cdetect-l_grep-v-mux.txt`**, per-bus **`i2cdetect-y_<N>.txt`**), **`systemctl/`** (**`list-units`**, **`list-unit-files`**, per-unit **`.status.txt`** / **`.show.txt`**), **`cpld/`**, **`var_run_hw-management/`** (**`tree/`**, **`values/`** — live **`bmc/show-reset-cause`** is captured as **`values/bmc_show-reset-cause.txt`**).
+**Usage:** **`hw-management-bmc-generate-dump.sh [-v|--verbose] [output_tarball]`** (default tarball **`/tmp/hw-mgmt-bmc-dump.tar.gz`**).
 
-**`systemd-analyze/`** — best-effort; if **`systemd-analyze`** is not in **`PATH`**, **`skipped.txt`** is written and the rest of the bundle is unchanged.
+| Mode | Behavior | Typical wall time (4-core BMC, order of magnitude) |
+|------|----------|------------------------------------------------------|
+| **default** | All sections below except full **`systemd-analyze`** (writes **`systemd-analyze/skipped.txt`**) | **~20s** |
+| **`-v` / `--verbose`** | Also collects **`systemd-analyze/`** (time, blame, target critical-chains, per-unit critical-chains) | **~70s** ( **`systemd-analyze`** is usually the critical path) |
+
+Collectors run **in parallel** (disjoint subdirs under **`/tmp/hw-mgmt-bmc-dump/`**). Each logs **`collect <name>: start` / `end (Ns)`** via **`log_message`** (syslog tag **`hw-management-bmc-generate-dump`**). After **`wait`**, **`pkill -P $$`** cleans stray child processes, then **`tar \| gzip -9`**.
+
+**Environment (optional overrides):**
+
+| Variable | Default | Used for |
+|----------|---------|----------|
+| **`MAX_PARALLEL`** | **`nproc + 1`** ( **`4`** if **`nproc`** missing) | Worker cap when section-specific vars unset |
+| **`HW_MGMT_BMC_DUMP_WORKERS`** | **`$MAX_PARALLEL`** | **`var_run_hw-management`** value capture (stride workers) |
+| **`HW_MGMT_CAPTURE_PARALLEL_MAX`** | fallback for **`HW_MGMT_BMC_DUMP_WORKERS`** | same |
+| **`SYSTEMD_ANALYZE_PARALLEL_MAX`** | **`$MAX_PARALLEL`** | Per-unit **`systemd-analyze critical-chain`** pool (verbose only) |
+
+Archive top-level: **`dmesg.txt`**, **`uname.txt`**, **`proc/`**, **`network/`**, **`i2c/`**, **`systemctl/`**, **`cpld/`** (**`cpld_dump.log`** via **`take_cpld_dump`**), **`var_run_hw-management/`** (**`tree/`**, **`values/`**).
+
+**`var_run_hw-management/`** — single **`find`** over **`/var/run/hw-management`**, then parallel capture of file/symlink values (EEPROM: **`hexdump -C`**). **`hw-management-bmc-show-reset-cause.sh`** runs first into live **`bmc/show-reset-cause`** (archive **`values/bmc_show-reset-cause.txt`**). For **mlxreg-io** sysfs nodes that are **write-only** (**`--w-------`**), **`[ -r file ]`** may still succeed as root; the dump runs **`cat`** and records **`cat`** errors plus **`(cat returned non-zero; likely write-only or EIO)`** when read fails.
+
+**`systemd-analyze/`** (only with **`-v`**): if **`systemd-analyze`** is missing, **`skipped.txt`**. Otherwise parallel **`time`**, **`blame`**, **`critical-chain`** for **`default.target`** / **`sysinit.target`**, then per-unit chains for **`hw-management-bmc*.service`** (cap **16** units). Sub-steps log **`systemd-analyze <label>: start/end`**.
 
 | File / directory | Contents |
 |------------------|----------|
-| **`time.txt`** | **`systemd-analyze time`** — firmware / loader / kernel / userspace summary. |
-| **`blame.txt`** | **`systemd-analyze blame`** — units sorted by startup time (includes **oneshot** services in the boot graph). |
-| **`blame_hw-management-bmc_only.txt`** | Lines from **`blame.txt`** containing **`hw-management-bmc`**. |
+| **`time.txt`** | **`systemd-analyze time`**. |
+| **`blame.txt`** | **`systemd-analyze blame`**. |
+| **`blame_hw-management-bmc_only.txt`** | **`grep hw-management-bmc`** on **`blame.txt`**. |
 | **`critical-chain_default.target.txt`** | **`systemd-analyze critical-chain default.target`**. |
 | **`critical-chain_sysinit.target.txt`** | **`systemd-analyze critical-chain sysinit.target`**. |
-| **`critical-chain_per_unit/`** | **`systemd-analyze critical-chain <unit>`** for each **`hw-management-bmc*.service`** (filename = unit with **`/` `@` `:`** → **`_`**). Capped count per run; if truncated, **`README_cap.txt`** notes the limit. |
-| **`var_run_hw-management/values/`** (reset cause) | **`hw-management-bmc-show-reset-cause.sh`** (all sections) is written to live **`/var/run/hw-management/bmc/show-reset-cause`** as the first step of runtime collection, then copied like any other file under **`/var/run/hw-management`** (archive **`values/bmc_show-reset-cause.txt`**). BMC **`reset_*`** / **`raw_scu*`** files remain under **`var_run_hw-management/values/`** when present. |
+| **`critical-chain_per_unit/`** | Per **`hw-management-bmc*.service`**; **`README_cap.txt`** if capped. |
+| **`skipped.txt`** | Written when **`-v`** was **not** used (routine fast dump). |
+
+### CPLD grid dump (`hw-management-bmc-cpld-dump.sh`)
+
+**`take_cpld_dump_internal`** — reads offsets **0x00–0xFF** with **`i2ctransfer -f -y $CPLD_I2C_BUS w2@0x31 0x25 0x<off> r1`**, stores each byte in a bash array, then prints a **16×16** hex grid (header row **0x00–0x0f**, data rows **0x00**–**0xf0**). **`take_cpld_dump <dir>`** writes **`cpld_dump.log`** (or a file path); **`hw-management-bmc-generate-dump.sh`** calls it for **`cpld/`**. Stand-alone CLI: **`hw-management-bmc-cpld-dump.sh -p <dest> -i <id>`** → **`.tar.xz`**. I2C time is ~**3s** for 256 reads on a quiet bus; total collector time includes shell/format overhead (~**10s** in parallel dumps).
 
 ### Shell portability (BusyBox `ash` vs bash)
 
@@ -240,8 +264,8 @@ SONiC BMC images often ship **BusyBox** (`/bin/sh` → **ash**) and may also inc
 | **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-devtree-check.sh`**, **`hw-management-bmc.sh`** | **bash** | Associative arrays / bash-only syntax; require **`bash`**. |
 | **`hw-management-bmc-powerctrl.sh`** | **bash** | **`#!/bin/bash`**, **`set -euo pipefail`**, **`logger`** for journal messages; requires **`bash`**. |
 | **`hw-management-bmc-boot-complete.sh`** | Yes | **`#!/bin/sh`**: waits on **`/var/run/hw-management/`** entry counts vs **`/etc/hw-management-bmc-boot-complete.conf`**. |
-| **`hw-management-bmc-cpld-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`BASH_SOURCE`**, brace expansion in **`take_cpld_dump_internal`**, sourced **`return`** guard for **`timeout bash -c '. …; take_cpld_dump_internal'`**. |
-| **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`source`** **`hw-management-bmc-cpld-dump.sh`** (**`take_cpld_dump`**), **`find`**, **`timeout`**, **`systemd-analyze`** (optional). Uses **`tar cf - \| gzip -9`** (not GNU **`tar -I`**) and **`ls -ld`** per path (not GNU **`find -ls`**) so BusyBox **tar/find** work; **`readlink_canonical`** if **`readlink -f`** missing. Needs **`gzip`** in **`PATH`** (BusyBox or GNU). Invokes **`hw-management-bmc-show-reset-cause.sh`** into **`/var/run/hw-management/bmc/show-reset-cause`** before archiving **`/var/run/hw-management`**. |
+| **`hw-management-bmc-cpld-dump.sh`** | **bash** | **`#!/bin/bash`**: **`[[`**, **`BASH_SOURCE`**, **`take_cpld_dump_internal`** (256× **`r1`**, array + grid print), sourced **`return`** guard; **`take_cpld_dump`** uses **`timeout bash -c '. …; take_cpld_dump_internal'`**. |
+| **`hw-management-bmc-generate-dump.sh`** | **bash** | **`#!/bin/bash`**: parallel **`run_collect_bg`** collectors, **`MAX_PARALLEL`**, **`-v`** for **`systemd-analyze`**, **`source`** **`hw-management-bmc-cpld-dump.sh`**, single-pass **`find`** + stride workers for **`/var/run/hw-management`**. **`tar cf - \| gzip -9`**; BusyBox-friendly **`find`** / **`readlink_canonical`**. Needs **`gzip`**, **`bash`**. |
 | **`hw-management-bmc-show-reset-cause.sh`** | Yes | **`#!/bin/sh`**: lists active **`reset_*`** (value 1) or raw SCU lines; no bashisms. |
 | **`hw-management-bmc-get-reset-cause.sh`** | Yes | **`#!/bin/sh`**: SCU read / semantic export. |
 | **`hw-management-bmc-bios-recovery-flash.sh`** | **bash** | **`#!/bin/bash`**, **`set -e`**: **`flashcp`** (**`mtd-utils`**), **`spi_chnl_select`** sysfs. |
