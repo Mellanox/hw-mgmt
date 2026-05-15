@@ -74,29 +74,58 @@ source /usr/bin/hw-management-bmc-helpers-common.sh
 
 DUMP_FOLDER="/tmp/hw-mgmt-bmc-dump"
 HW_MGMT="/var/run/hw-management"
-OUTPUT_TAR="${1:-/tmp/hw-mgmt-bmc-dump.tar.gz}"
+OUTPUT_TAR="/tmp/hw-mgmt-bmc-dump.tar.gz"
+VERBOSE=0
 dump_process_pid=$$
 
 help()
 {
 	cat <<EOF
-Usage: hw-management-bmc-generate-dump.sh [output_tarball]
+Usage: hw-management-bmc-generate-dump.sh [-v|--verbose] [output_tarball]
 
   Collects dmesg, /proc/interrupts, ifconfig (fallback: ip addr), i2cdetect -y
   for each bus from "i2cdetect -l | grep -v mux", CPLD dump (hw-management-bmc-cpld-dump),
-  systemctl status/show for all hw-management-bmc* units, systemd-analyze time/blame
-  (plus hw-management-bmc-only lines) and critical-chain for default.target/sysinit.target,
-  and /var/run/hw-management tree + values (EEPROM paths: hexdump -C).
+  systemctl status/show for all hw-management-bmc* units, and /var/run/hw-management tree
+  + values (EEPROM paths: hexdump -C).
   Before archiving, hw-management-bmc-show-reset-cause.sh output is written to
   /var/run/hw-management/bmc/show-reset-cause so it is included with the runtime snapshot.
+
+  -v, --verbose   Also collect systemd-analyze (time, blame, critical-chain); slow (~1 min).
 
   Default output: /tmp/hw-mgmt-bmc-dump.tar.gz
 EOF
 }
 
-if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
-	help
-	exit 0
+parse_args()
+{
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		-h | --help)
+			help
+			exit 0
+			;;
+		-v | --verbose)
+			VERBOSE=1
+			;;
+		-*)
+			log_message err "Unknown option: $1"
+			help
+			exit 1
+			;;
+		*)
+			OUTPUT_TAR="$1"
+			;;
+		esac
+		shift
+	done
+}
+
+parse_args "$@"
+
+# Default worker count for parallel sections (hw-mgmt values, systemd-analyze per-unit).
+if [ -z "${MAX_PARALLEL:-}" ]; then
+	_cpus=$(nproc 2>/dev/null) || _cpus=4
+	MAX_PARALLEL=$((_cpus + 1))
 fi
 
 safe_unit_fname()
@@ -156,39 +185,74 @@ collect_hw_management_runtime()
 	fi
 
 	ls -Rla "$HW_MGMT" >"${tree_dir}/ls-Rla.txt" 2>&1
-	find "$HW_MGMT" -xdev 2>/dev/null | LC_ALL=C sort >"${tree_dir}/find_paths_sorted.txt"
-	# GNU find -ls is not in BusyBox; use ls -ld per path (bash process substitution).
+
+	# Single-pass find: walk $HW_MGMT once, save NUL-separated paths, then reuse
+	# the listing for sorted paths, ls -ld per path, and the value-capture loop.
+	local paths_nul="${tree_dir}/.paths.nul"
+	find "$HW_MGMT" -xdev -print0 2>/dev/null >"$paths_nul"
+
+	tr '\0' '\n' <"$paths_nul" | LC_ALL=C sort >"${tree_dir}/find_paths_sorted.txt"
+
+	# GNU find -ls is not in BusyBox; iterate the same listing with ls -ld per path.
 	{
 		while IFS= read -r -d '' p; do
 			ls -ld "$p" 2>/dev/null || printf '%s\n' "$p"
-		done < <(find "$HW_MGMT" -xdev -print0 2>/dev/null)
+		done <"$paths_nul"
 	} >"${tree_dir}/find_ls.txt" 2>&1
 
-	local f rel outf
+	local -a all_paths=()
+	local f
 	while IFS= read -r -d '' f; do
-		[ -e "$f" ] || continue
-		[ -d "$f" ] && continue
-		[ -p "$f" ] && continue
-		[ -S "$f" ] && continue
+		all_paths+=("$f")
+	done <"$paths_nul"
+	rm -f "$paths_nul"
 
-		rel=$(safe_rel_fname "$f")
-		outf="${values_dir}/${rel}.txt"
+	local total="${#all_paths[@]}"
+	local workers="${HW_MGMT_BMC_DUMP_WORKERS:-${HW_MGMT_CAPTURE_PARALLEL_MAX:-$MAX_PARALLEL}}"
+	[ "$workers" -lt 1 ] && workers=1
+	if [ "$total" -gt 0 ] && [ "$workers" -gt "$total" ]; then
+		workers="$total"
+	fi
 
-		{
-			echo "=== path: $f ==="
-			if [ -L "$f" ]; then
-				echo "symlink: $(readlink "$f" 2>/dev/null)"
-				readlink_canonical "$f" | sed 's/^/resolved: /'
-			fi
-			if [ ! -r "$f" ] && [ ! -L "$f" ]; then
-				echo "(not readable)"
-			elif is_eeprom_path "$f"; then
-				timeout 60 hexdump -C "$f" 2>&1
-			else
-				timeout 20 cat "$f" 2>&1
-			fi
-		} >"$outf" || log_message warning "Failed to capture: $f"
-	done < <(find "$HW_MGMT" -xdev \( -type f -o -type l \) ! -type s ! -type p -print0 2>/dev/null)
+	_hwm_value_worker() {
+		local stride=$1 offset=$2
+		local j f rel outf
+		for ((j = offset; j < total; j += stride)); do
+			f="${all_paths[$j]}"
+			[ -e "$f" ] || [ -L "$f" ] || continue
+			[ -d "$f" ] && continue
+			[ -p "$f" ] && continue
+			[ -S "$f" ] && continue
+
+			rel=$(safe_rel_fname "$f")
+			outf="${values_dir}/${rel}.txt"
+
+			{
+				echo "=== path: $f ==="
+				if [ -L "$f" ]; then
+					echo "symlink: $(readlink "$f" 2>/dev/null)"
+					readlink_canonical "$f" | sed 's/^/resolved: /'
+				fi
+				# -r follows symlinks: write-only targets get a one-line marker
+				# instead of a failed cat and a syslog warning per file.
+				if [ ! -r "$f" ]; then
+					echo "(not readable / write-only)"
+				elif is_eeprom_path "$f"; then
+					timeout 60 hexdump -C "$f" 2>&1 || echo "(hexdump returned non-zero)"
+				else
+					timeout 20 cat "$f" 2>&1 || echo "(cat returned non-zero; likely write-only or EIO)"
+				fi
+			} >"$outf"
+		done
+	}
+
+	if [ "$total" -gt 0 ]; then
+		local i
+		for ((i = 0; i < workers; i++)); do
+			_hwm_value_worker "$workers" "$i" &
+		done
+		wait
+	fi
 }
 
 collect_systemctl_bmc()
@@ -214,10 +278,44 @@ collect_systemctl_bmc()
 	done
 }
 
+# Run one systemd-analyze subcommand in background (separate outfile per caller).
+run_systemd_analyze_cmd_bg()
+{
+	local timeout_sec=$1
+	local outfile=$2
+	local label
+	shift 2
+
+	label=$(basename "$outfile" .txt)
+
+	(
+		local t0=$SECONDS rc elapsed
+
+		log_message info "systemd-analyze ${label}: start"
+		if timeout "$timeout_sec" systemd-analyze "$@" --no-pager >"$outfile" 2>&1; then
+			rc=0
+		else
+			rc=$?
+			log_message warning "systemd-analyze $* failed or timed out"
+		fi
+		elapsed=$((SECONDS - t0))
+		if [ "$rc" -eq 0 ]; then
+			log_message info "systemd-analyze ${label}: end (${elapsed}s)"
+		else
+			log_message warning "systemd-analyze ${label}: end (${elapsed}s, exit=${rc})"
+		fi
+		exit "$rc"
+	) &
+}
+
 # systemd-analyze: boot/startup timing, per-unit blame (incl. oneshot duration), critical-chain.
+# Independent subcommands run in parallel; per-unit critical-chain uses a concurrency cap.
 collect_systemd_analyze()
 {
 	local d=$1
+	local u uf units n max_cc max_parallel pid
+	local -a pids
+
 	mkdir -p "$d"
 	if ! command -v systemd-analyze >/dev/null 2>&1; then
 		log_message warning "systemd-analyze not found — skipping boot timing section"
@@ -225,27 +323,22 @@ collect_systemd_analyze()
 		return 0
 	fi
 
-	timeout 30 systemd-analyze time --no-pager >"${d}/time.txt" 2>&1 \
-		|| log_message warning "systemd-analyze time failed or timed out"
+	max_cc=16
+	max_parallel="${SYSTEMD_ANALYZE_PARALLEL_MAX:-$MAX_PARALLEL}"
 
+	run_systemd_analyze_cmd_bg 30 "${d}/time.txt" time
 	# Blame lists units sorted by startup time (oneshots included as wall-clock in chain).
-	timeout 120 systemd-analyze blame --no-pager >"${d}/blame.txt" 2>&1 \
-		|| log_message warning "systemd-analyze blame failed or timed out"
+	run_systemd_analyze_cmd_bg 120 "${d}/blame.txt" blame
+	run_systemd_analyze_cmd_bg 90 "${d}/critical-chain_default.target.txt" critical-chain default.target
+	run_systemd_analyze_cmd_bg 90 "${d}/critical-chain_sysinit.target.txt" critical-chain sysinit.target
+	wait
 
 	if [ -f "${d}/blame.txt" ]; then
 		grep 'hw-management-bmc' "${d}/blame.txt" >"${d}/blame_hw-management-bmc_only.txt" 2>/dev/null \
 			|| echo "(no hw-management-bmc lines in blame output)" >"${d}/blame_hw-management-bmc_only.txt"
 	fi
 
-	timeout 90 systemd-analyze critical-chain default.target --no-pager >"${d}/critical-chain_default.target.txt" 2>&1 \
-		|| log_message warning "systemd-analyze critical-chain default.target failed or timed out"
-	timeout 90 systemd-analyze critical-chain sysinit.target --no-pager >"${d}/critical-chain_sysinit.target.txt" 2>&1 \
-		|| log_message warning "systemd-analyze critical-chain sysinit.target failed or timed out"
-
 	# Per-unit critical-chain for hw-management-bmc *.service (oneshot ordering); cap count/time so dumps stay bounded.
-	local u uf units n max_cc
-	n=0
-	max_cc=16
 	units=$(
 		(
 			systemctl list-unit-files --no-legend 2>/dev/null
@@ -253,6 +346,8 @@ collect_systemd_analyze()
 		) | awk '$1 ~ /^hw-management-bmc/ && $1 ~ /\.service$/ {print $1}' | sort -u
 	)
 	mkdir -p "${d}/critical-chain_per_unit"
+	pids=()
+	n=0
 	for u in $units; do
 		[ -n "$u" ] || continue
 		n=$((n + 1))
@@ -262,8 +357,16 @@ collect_systemd_analyze()
 			break
 		fi
 		uf=$(safe_unit_fname "$u")
-		timeout 25 systemd-analyze critical-chain "$u" --no-pager >"${d}/critical-chain_per_unit/${uf}.txt" 2>&1 \
-			|| log_message warning "systemd-analyze critical-chain $u failed or timed out"
+		run_systemd_analyze_cmd_bg 25 "${d}/critical-chain_per_unit/${uf}.txt" critical-chain "$u"
+		pids+=($!)
+		if [ "${#pids[@]}" -ge "$max_parallel" ]; then
+			pid=${pids[0]}
+			pids=("${pids[@]:1}")
+			wait "$pid" 2>/dev/null || true
+		fi
+	done
+	for pid in "${pids[@]}"; do
+		wait "$pid" 2>/dev/null || true
 	done
 }
 
@@ -341,6 +444,28 @@ collect_i2c_non_mux()
 	done
 }
 
+# Run a collector in a background subshell; log start/end and wall time (journal + stderr).
+run_collect_bg()
+{
+	local name=$1
+	shift
+
+	(
+		local t0=$SECONDS rc elapsed
+
+		log_message info "collect ${name}: start"
+		"$@"
+		rc=$?
+		elapsed=$((SECONDS - t0))
+		if [ "$rc" -eq 0 ]; then
+			log_message info "collect ${name}: end (${elapsed}s)"
+		else
+			log_message warning "collect ${name}: end (${elapsed}s, exit=${rc})"
+		fi
+		exit "$rc"
+	) &
+}
+
 # --- main ---
 rm -rf "$DUMP_FOLDER"
 mkdir -p "$DUMP_FOLDER"
@@ -350,14 +475,22 @@ uname -a >"${DUMP_FOLDER}/uname.txt" 2>&1
 
 timeout 20 dmesg >"${DUMP_FOLDER}/dmesg.txt" 2>&1 || log_message warning "dmesg failed or timed out"
 
-collect_proc_interrupts "${DUMP_FOLDER}/proc"
-collect_network_ifconfig "${DUMP_FOLDER}/network"
-collect_i2c_non_mux "${DUMP_FOLDER}/i2c"
+run_collect_bg proc_interrupts collect_proc_interrupts "${DUMP_FOLDER}/proc"
+run_collect_bg network_ifconfig collect_network_ifconfig "${DUMP_FOLDER}/network"
+run_collect_bg i2c_non_mux collect_i2c_non_mux "${DUMP_FOLDER}/i2c"
+run_collect_bg systemctl_bmc collect_systemctl_bmc "${DUMP_FOLDER}/systemctl"
+if [ "$VERBOSE" -eq 1 ]; then
+	run_collect_bg systemd_analyze collect_systemd_analyze "${DUMP_FOLDER}/systemd-analyze"
+else
+	mkdir -p "${DUMP_FOLDER}/systemd-analyze"
+	echo "systemd-analyze collection skipped (use -v or --verbose)" \
+		>"${DUMP_FOLDER}/systemd-analyze/skipped.txt"
+	log_message info "systemd-analyze skipped (not verbose mode)"
+fi
+run_collect_bg cpld collect_cpld "${DUMP_FOLDER}/cpld"
+run_collect_bg hw_management_runtime collect_hw_management_runtime "${DUMP_FOLDER}/var_run_hw-management"
 
-collect_systemctl_bmc "${DUMP_FOLDER}/systemctl"
-collect_systemd_analyze "${DUMP_FOLDER}/systemd-analyze"
-collect_cpld "${DUMP_FOLDER}/cpld"
-collect_hw_management_runtime "${DUMP_FOLDER}/var_run_hw-management"
+wait
 
 pkill -P "$dump_process_pid" 2>/dev/null || true
 
@@ -367,6 +500,8 @@ if ! command -v gzip >/dev/null 2>&1; then
 	rm -rf "$DUMP_FOLDER"
 	exit 1
 fi
+archive_t0=$SECONDS
+log_message info "archive: start"
 set -o pipefail 2>/dev/null || true
 if ! tar cf - -C "$DUMP_FOLDER" . | gzip -9 >"$OUTPUT_TAR"; then
 	log_message err "Failed to create archive $OUTPUT_TAR"
@@ -374,6 +509,7 @@ if ! tar cf - -C "$DUMP_FOLDER" . | gzip -9 >"$OUTPUT_TAR"; then
 	exit 1
 fi
 set +o pipefail 2>/dev/null || true
+log_message info "archive: end ($((SECONDS - archive_t0))s)"
 
 rm -rf "$DUMP_FOLDER"
 log_message info "BMC dump created: $OUTPUT_TAR"
