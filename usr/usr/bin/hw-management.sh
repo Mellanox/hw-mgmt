@@ -3132,11 +3132,14 @@ do_start()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
+	/usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
 }
 
 do_stop()
 {
+	rm -f /var/run/hw-management/exec 2>/dev/null
+	rm -fR /var/run/hw-management/exec.d 2>/dev/null
 	check_cpu_type
 	# There is no need to perform extra work of check_system during
 	# hw-management stop in case of devtree exist. Directly init connect_table.
