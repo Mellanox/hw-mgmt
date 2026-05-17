@@ -460,7 +460,7 @@ class TestModuleTempPopulate(unittest.TestCase):
             "hw_management_thermal_updater", thermal_path
         )
         cls.thermal_module = importlib.util.module_from_spec(spec)
-        sys.modules.setdefault("hw_management_lib", MagicMock())
+        sys.modules["hw_management_lib"] = MagicMock()
         spec.loader.exec_module(cls.thermal_module)
 
     def setUp(self):

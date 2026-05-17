@@ -455,7 +455,7 @@ class TestHWMgmtLogger(unittest.TestCase):
             # ensures we catch (a) wrong/missing repeat count AND (b) a future
             # refactor that drops the lifecycle signal entirely.
             self.assertIn("(repeat=5", content)
-            self.assertIn("duration=", content)
+            self.assertIn("(repeat=5, duration=", content)
 
     def test_23_hash_collision_handling(self):
         """Test that different messages with same ID are handled correctly"""
