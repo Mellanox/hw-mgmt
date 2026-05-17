@@ -64,6 +64,17 @@ endif
 	cp -a usr/etc/hw-management-virtual/* debian/$(pname)/etc/hw-management-virtual
 	dh_installdirs -p$(pname) etc/hw-management-fast-sysfs-monitor
 	cp -a usr/etc/hw-management-fast-sysfs-monitor/* debian/$(pname)/etc/hw-management-fast-sysfs-monitor
+	@if [ -d usr/etc/hw-management-exec ] && [ -n "$$(find usr/etc/hw-management-exec -maxdepth 1 -type f 2>/dev/null | head -n1)" ]; then \
+		dh_installdirs -p$(pname) etc/hw-management-exec; \
+		cp -a usr/etc/hw-management-exec/* debian/$(pname)/etc/hw-management-exec/; \
+	fi
+	@for d in usr/etc/HI*; do \
+		if [ -d "$$d" ] && [ -n "$$(find "$$d" -maxdepth 1 -type f 2>/dev/null | head -n1)" ]; then \
+			hid=$$(basename "$$d"); \
+			dh_installdirs -p$(pname) etc/$$hid; \
+			cp -a "$$d"/* debian/$(pname)/etc/$$hid/; \
+		fi; \
+	done
 endif
 ifeq ($(with_bmc),1)
 # --- Package: hw-management-bmc (BMC / SONiC BMC) ---
