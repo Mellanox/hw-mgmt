@@ -468,13 +468,14 @@ function asic_cpld_add_handler()
 # set_fan_direction "fan1" 0 # Remove fan1 direction
 function set_fan_direction()
 {
-	print_function_call "$0" "${FUNCNAME[0]}" "$1 $2 $3. Starting..."
+	print_function_call "$0" "${FUNCNAME[0]}" "attr:$1 evt:$2 entering..."
 	attribute=$1
 	event=$2
 	case $attribute in
+	
 	fan*)
 		if [ "$event" -eq 0 ]; then
-			rm -f "$thermal_path/${attribute}_dir"
+			echo 2 > "$thermal_path/${attribute}_dir"
 			return
 		fi
 		if [ -f "$config_path/fan_dir_eeprom" ]; then
@@ -482,7 +483,7 @@ function set_fan_direction()
 		fi
 		# Check if CPLD fan direction exists
 		if [ ! -f "$system_path/fan_dir" ]; then
-			print_function_call "$0" "${FUNCNAME[0]}" "$1 $2 $3. ./system/fan_dir not found"
+			print_function_call "$0" "${FUNCNAME[0]}" "./system/fan_dir not found"
 			return
 		fi
 		if [[ "$sku" == "HI117" ]]; then
@@ -494,24 +495,23 @@ function set_fan_direction()
 		local fan_dir_old
 		# if $thermal_path / fanN_dir attribute missing - run debounce logic.
 		fan_dir=$(< "$system_path/fan_dir")
-		if [ ! -f "$thermal_path/${attribute}_dir" ]; then
-			fan_debounce_counter=0
-			fan_dir_old=-1
-			fan_debounce_timer=$fan_debounce_timeout_ms
-			while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
-			do
-				if [ "${fan_dir}_" == "${fan_dir_old}_" ];
-				then
-					fan_debounce_counter=$((fan_debounce_counter + 1))
-				else
-					fan_dir_old=$fan_dir
-					fan_debounce_counter=0
-				fi
-				fan_debounce_timer=$((fan_debounce_timer - 200))
-				sleep 0.2
-				fan_dir=$(< "$system_path/fan_dir")
-			done
-		fi
+		fan_debounce_counter=0
+		fan_dir_old=-1
+		fan_debounce_timer=$fan_debounce_timeout_ms
+		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
+		do
+			if [ "${fan_dir}_" == "${fan_dir_old}_" ];
+			then
+				fan_debounce_counter=$((fan_debounce_counter + 1))
+			else
+				fan_dir_old=$fan_dir
+				fan_debounce_counter=0
+			fi
+			fan_debounce_timer=$((fan_debounce_timer - 200))
+			sleep 0.2
+			fan_dir=$(< "$system_path/fan_dir")
+		done
+
 		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
 		fan_index=${attribute#fan}
 		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
@@ -528,7 +528,7 @@ function set_fan_direction()
 		fi
 		print_function_call "$0" "${FUNCNAME[0]}" "$1 $2 $3. Debounce timer left: $fan_debounce_timer ms, fan_dir: $fan_dir, fan_index: $fan_index, fan_direction: $fan_direction"
 		echo "$fan_direction" > "$thermal_path/${attribute}_dir"
-		print_function_call "$0" "${FUNCNAME[0]}" "$1 $2 $3. Finished"
+		print_function_call "$0" "${FUNCNAME[0]}" "attr:$1 evt:$2 exiting..."
 	;;
 	*)
 		;;
@@ -545,7 +545,7 @@ function set_fan_direction_for_all_fans()
 			# check if fan status is set
 			status=$(< "${thermal_path}"/fan"${i}"_status)
 			if [ "$status" -eq 1 ]; then
-				set_fan_direction "fan${i}" 1
+				set_fan_direction "fan${i}" "$status"
 			fi
 		fi
 	done
