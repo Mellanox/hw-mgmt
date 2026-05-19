@@ -75,7 +75,7 @@ fi
 dump_cmd "sensors" "sensors" "20"
 
 # Use find to handle symlinks with special characters (exclude /sys/kernel/)
-find /sys/ -path '/sys/kernel' -prune -o -ls > "$DUMP_FOLDER/sysfs_tree" 2>&1 || true
+find /sys/ -path '/sys/kernel' -prune -o -ls > "$DUMP_FOLDER/sysfs_tree" 2>/dev/null || true
 
 if [ -d "$HW_MGMT_FOLDER" ]; then
 	timeout 140 find -L "$HW_MGMT_FOLDER" -maxdepth 4 ! -name '*_info' ! -name '*_eeprom'  ! -name '*.sh' ! -name '*.py' ! -name 'led_*_state' -exec ls -la {} \; -exec cat {} \; > "$DUMP_FOLDER/hw-management_val" 2>/dev/null
