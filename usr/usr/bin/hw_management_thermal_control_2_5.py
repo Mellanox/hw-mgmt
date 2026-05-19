@@ -173,6 +173,7 @@ class CONST:
     # FAN calibration
     # Time for FAN rotation stabilize after change
     FAN_RELAX_TIME = 10
+    FAN_RELAX_PWM_JUMP_MIN = 4
 
     FAN_SHUTDOWN_ENA = "1"
     FAN_SHUTDOWN_DIS = "0"
@@ -1159,7 +1160,7 @@ class pwm_regulator_dynamic(pwm_regulator_simple):
             self.pwm_max_dynamic += self.increase_step * self.Iterm
             self.pwm_max_dynamic = min(self.pwm_max_dynamic, 100)
             if old_pwm != self.pwm_max_dynamic and self.log:
-                self.log.info("pwm_max_dynamic increased from {} to {}".format(old_pwm, self.pwm_max_dynamic))
+                self.log.info("pwm_max_dynamic increased from {} to {}".format(old_pwm, round(self.pwm_max_dynamic, 1)))
         elif value < self.val_max - self.val_down_trh:
             self.Iterm -= self.val_max - value - self.range
             if self.Iterm < self.Iterm_down_trh:
@@ -1167,7 +1168,7 @@ class pwm_regulator_dynamic(pwm_regulator_simple):
                 self.pwm_max_dynamic += self.decrease_step * self.Iterm
                 self.pwm_max_dynamic = max(self.pwm_max_dynamic, self.pwm_max)
                 if old_pwm != self.pwm_max_dynamic and self.log:
-                    self.log.info("pwm_max_dynamic decreased from {} to {}".format(old_pwm, self.pwm_max_dynamic))
+                    self.log.info("pwm_max_dynamic decreased from {} to {}".format(old_pwm, round(self.pwm_max_dynamic, 1)))
                 self.Iterm = 0
         else:
             self.Iterm = 0
@@ -2648,7 +2649,7 @@ class fan_sensor(system_device):
         self.is_calibrated = False
 
         self.rpm_relax_timeout = CONST.FAN_RELAX_TIME * 1000
-        self.rpm_relax_timestump = current_milli_time() + self.rpm_relax_timeout * 2
+        self.rpm_relax_timestamp = current_milli_time() + self.rpm_relax_timeout
         self.name = "{}:{}".format(self.name, list(range(self.tacho_idx, self.tacho_idx + self.tacho_cnt)))
         self.pwm_set = self.read_pwm(CONST.PWM_MIN)
 
@@ -2859,13 +2860,7 @@ class fan_sensor(system_device):
 
         for tacho_idx in range(self.tacho_cnt):
             fan_param = self.drwr_param[str(tacho_idx)]
-            rpm_file_name = "fan{}_speed_get".format(self.tacho_idx + tacho_idx)
-            try:
-                rpm_real = self.thermal_read_file_int(rpm_file_name)
-            except (ValueError, TypeError, OSError, IOError):
-                self.log.warn("{}: RPM reading from file: {}".format(self.name, rpm_file_name))
-                rpm_real = self.value[tacho_idx]
-
+            rpm_curr = self.value[tacho_idx]
             rpm_min = int(fan_param["rpm_min"])
             if rpm_min == 0:
                 rpm_min = self.val_min_def
@@ -2875,16 +2870,16 @@ class fan_sensor(system_device):
                 rpm_max = self.val_max_def
 
             pwm_min = float(fan_param["pwm_min"])
-            self.log.debug("Real:{} min:{} max:{}".format(rpm_real, rpm_min, rpm_max))
+            self.log.debug("Real:{} min:{} max:{}".format(rpm_curr, rpm_min, rpm_max))
             # 1. Check fan speed in range with tolerance.
             # Note: out-of-range is treated as an unconditional hardware fault and
             # does NOT fall back to the cached fan_tacho_state, even when PWM is
             # still stabilising. Only the trend-check (step 2) uses the cached
             # state during the relax period.
-            if rpm_real < rpm_min * (1 - self.rpm_tolerance) or rpm_real > rpm_max * (1 + self.rpm_tolerance):
+            if rpm_curr < rpm_min * (1 - self.rpm_tolerance) or rpm_curr > rpm_max * (1 + self.rpm_tolerance):
                 self.log.info("{} tacho{}={} out of RPM range {}:{}".format(self.name,
                                                                             tacho_idx + 1,
-                                                                            rpm_real,
+                                                                            rpm_curr,
                                                                             rpm_min,
                                                                             rpm_max))
                 fan_tacho_state = False
@@ -2898,7 +2893,7 @@ class fan_sensor(system_device):
                     slope = float(fan_param["slope"])
                     b = rpm_max - slope * CONST.PWM_MAX
                     rpm_calculated = slope * pwm_curr + b
-                    rpm_diff = abs(rpm_real - rpm_calculated)
+                    rpm_diff = abs(rpm_curr - rpm_calculated)
                     # Prevent division by zero
                     if rpm_calculated == 0:
                         self.log.warning("{} rpm_calculated is zero, cannot validate".format(self.name))
@@ -2915,7 +2910,7 @@ class fan_sensor(system_device):
                     if rpm_diff_norm >= self.rpm_tolerance:
                         self.log.warn("{} tacho{}: {} too much different {:.2f}% than calculated {} @pwm {}".format(self.name,
                                                                                                                     tacho_idx,
-                                                                                                                    rpm_real,
+                                                                                                                    rpm_curr,
                                                                                                                     rpm_diff_norm * 100,
                                                                                                                     rpm_calculated,
                                                                                                                     pwm_curr))
@@ -2951,13 +2946,15 @@ class fan_sensor(system_device):
         pwm_jump = abs(pwm_val - self.pwm_set)
 
         # For big PWM jumps - use longer FAN relax timeout
-        relax_time = (pwm_jump * self.rpm_relax_timeout) / 20
-        if relax_time > self.rpm_relax_timeout * 2:
-            relax_time = self.rpm_relax_timeout * 2
-        elif relax_time < self.rpm_relax_timeout / 2:
-            relax_time = self.rpm_relax_timeout / 2
+        # For small PWM jumps - use zero FAN relax timeout
+        if pwm_jump >= CONST.FAN_RELAX_PWM_JUMP_MIN:
+            relax_time = self.rpm_relax_timeout * (pwm_jump / 20)
+            if relax_time > self.rpm_relax_timeout * 2:
+                relax_time = self.rpm_relax_timeout * 2
+        else:
+            relax_time = 0
         self.rpm_relax_timestamp = current_milli_time() + relax_time
-        self.log.debug("{} pwm jump by:{} relax_time:{} timestump {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestamp))
+        self.log.debug("{} pwm jump by:{} relax_time:{} timestamp {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestamp))
 
         self.pwm_set = pwm_val
 
@@ -3055,7 +3052,7 @@ class fan_sensor(system_device):
             self.append_fault(CONST.TACHO)
 
         if (self.system_flow_dir == CONST.C2P and self.fan_dir == CONST.P2C) or \
-           (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
+                (self.system_flow_dir == CONST.P2C and self.fan_dir == CONST.C2P):
             self.append_fault(CONST.DIRECTION)
 
         if self.fread_err.check_err():
@@ -3132,12 +3129,17 @@ class fan_sensor(system_device):
         """
         @summary: returning info about device state.
         """
-        info_str = "\"{: <14}\" rpm:{}, dir:{} faults:[{}] tz_pwm {} {}".format(self.name,
-                                                                                self.value,
-                                                                                self.fan_dir,
-                                                                                self.get_fault_list_str(),
-                                                                                round(self.pwm, 1),
-                                                                                self.state)
+        fan_speed_stable_sign = ''
+        if self.rpm_relax_timestamp > current_milli_time():
+            fan_speed_stable_sign = u'\u2195'  # up/down arrow
+
+        info_str = "\"{: <14}\" rpm:{}{}, dir:{} faults:[{}] tz_pwm {} {}".format(self.name,
+                                                                                  self.value,
+                                                                                  fan_speed_stable_sign,
+                                                                                  self.fan_dir,
+                                                                                  self.get_fault_list_str(),
+                                                                                  round(self.pwm, 1),
+                                                                                  self.state)
         return info_str
 
 
