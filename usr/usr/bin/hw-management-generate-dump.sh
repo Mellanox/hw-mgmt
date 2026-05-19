@@ -75,7 +75,7 @@ fi
 dump_cmd "sensors" "sensors" "20"
 
 # Use find to handle symlinks with special characters (exclude /sys/kernel/)
-find /sys/ -path '/sys/kernel' -prune -o -ls > "$DUMP_FOLDER/sysfs_tree" 2>&1 || true
+find /sys/ -path '/sys/kernel' -prune -o -ls > "$DUMP_FOLDER/sysfs_tree" 2>/dev/null || true
 
 if [ -d "$HW_MGMT_FOLDER" ]; then
     ls -Rla "$HW_MGMT_FOLDER" > "$DUMP_FOLDER/hw-management_tree"
