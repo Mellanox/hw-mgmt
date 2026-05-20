@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.0931
+- Wed, 20 May 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o supports sonic bmc
+
+- Bug fixes
+    o #5029712, hw-mgmt: scripts: Update hw-mgmt dump generation script, 54006a2
+    o #0483183, hw-mgmt: bmc: speed up debug dump and CPLD grid collection, 0fc5540
+    o #N/A, hw-mgmt: bmc: services: Modify dependency, 8bc68e3
+    o #4979096, hw-mgmt: bmc: add AST2700 reset-cause exporter and update docs, b89dc2c
+    o #4992267, hw-mgmt: bmc: Fix first boot issue, f1c95a6
+    o #5001186, hw-mgmt: thermal: Remove FAN speed monitoring stabilization delay for small PWM changes, 3bf6875
+    o #N/A, hw-mgmt: scripts: Fix FAN direction debounce handling on insertion, 5d977ed
+    o #4151613, hw-mgmt: patches: Add mux completion notification, ce06d6d
+    o #4902558, hw-mgmt: thermal: TC fix attention_fans config for Q3200/Q3400, 64453db
+    o #N/A, hw-mgmt: scripts: Add JSON-driven hw-management exec helpers, 2da2fd2
+    o #5020389, hw-mgmt: scripts: Update usb0 hotplug handling, f818eae
+    o #N/A, hw-mgmt: thermal: drive TC version from tc_config.json, f3cbea5
+    o #N/A, hw-mgmt: kernel: bmc: patches: Update patches, 39d5905
+    o #N/A, hw-mgmt: Use 0x2E for MP29502 Power Controller in Juliet system, 03df97c
+    o #4944920, hw-mgmt: kernel 6.1: Upgrade patches to support version up to 6.1.169, 98e58bf
+    o #N/A, hw-mgmt: bmc: Add script for setting cartridge info, f3bf462
+    o #N/A, hw-mgmt: bmc: Extend leakage support with ADS7924 follow up, 376dc16
+    o #N/A, hw-mgmt: bmc: Extend leakage support with ADS7924, 66c75ac
+    o #4989885, hw-mgmt: kernel 6.12: patches: Fix arm64 build., 85c3f4a
+    o #N/A, hw-mgmt: Add support for Renesas RAA228943 Voltage Regulator, dd83e3f
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.0931/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0050.1930
 - Sun, 31 Aug 2025
 --------------------------------------------------------------------------------
