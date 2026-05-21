@@ -2,8 +2,11 @@
 [Unit]
 Description=BMC Early I2C Device Initialization
 DefaultDependencies=no
-After=hw-management-bmc-early-config.service
+# Requires= (in addition to After=) pulls early-config into the same
+# transaction on ad-hoc starts so the JSON config it deploys is on disk
+# before this unit reads it.  See issue #4992267.
 Requires=hw-management-bmc-early-config.service
+After=hw-management-bmc-early-config.service
 Before=nvidia_update_mac.service
 
 [Service]
