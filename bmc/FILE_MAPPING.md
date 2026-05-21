@@ -10,6 +10,16 @@ Use this as a checklist when copying or updating files from the OpenBMC meta-nvi
 
 ---
 
+## 0. Debian package scripts (repo root `debian/`, not under `bmc/usr/`)
+
+| File | Role |
+|------|------|
+| **`debian/hw-management-bmc.postinst`** | Custom **`configure`**: **`daemon-reload`**; fresh-install **`systemctl start --no-block`** (non-blocking first-boot under **`rc.local`**). See **`bmc/README.md`** § *Debian maintainer scripts*. Issue **#4992267**. |
+| **`debian/hw-management-bmc.prerm`** | Custom **`remove`**: parallel **`systemctl stop`** for nine BMC units. Upgrade path no-op. |
+| **`debian/rules`** (BMC **`override_dh_systemd_*`**) | Single positional **`dh_systemd_enable`** / **`dh_systemd_start --no-start --no-restart-after-upgrade`** allow-list (nine services). |
+
+---
+
 ## 1. systemd units → `bmc/usr/lib/systemd/system/`
 
 | Source file | Destination |

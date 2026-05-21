@@ -40,6 +40,19 @@ Built **`*.deb`** files appear in the **parent** of the build directory (e.g. **
 
 **What `debian/rules` installs into `hw-management-bmc` today** (under **`override_dh_auto_install`**, when **`with_bmc=1`**): **`bmc/usr/lib/systemd/system/*.service`** → **`/lib/systemd/system/`**; **`bmc/usr/lib/udev/rules.d/*`** → **`/lib/udev/rules.d/`**; **`bmc/usr/usr/bin/*`** → **`/usr/bin/`**; **`bmc/usr/etc/HI189/*`** → **`/etc/HI189/`** (source tree keeps **`bmc/usr/etc/<HID>/`**; on the image that becomes **`/etc/<HID>/`**). Extend **`debian/rules`** when new trees under **`bmc/usr/`** must be shipped (e.g. additional **`etc/<HID>/`** or **`usr/etc/systemd/network/`**).
 
+### Debian maintainer scripts (`debian/hw-management-bmc.postinst`, `debian/hw-management-bmc.prerm`)
+
+SONiC BMC first-boot installs **`hw-management-bmc`** from **`rc.local`** while **`serial-getty@ttyS12`** waits for **`rc-local.service`**. Issue **#4992267** replaces debhelper’s blocking **`postinst` start** and the **`9×9` `dh_systemd_enable`** trap with custom maintainer scripts (see **`debian/rules`** BMC block: one positional **`dh_systemd_enable`** / **`dh_systemd_start --no-start --no-restart-after-upgrade`** per package).
+
+| Script | Role |
+|--------|------|
+| **`debian/hw-management-bmc.postinst`** | After **`#DEBHELPER#`**: **`systemctl daemon-reload`** on configure (fresh + upgrade); on **fresh install** only, **`systemctl start --no-block`** for **`boot-complete`**, **`health-monitor`**, **`i2c-slave-setup`**, **`recovery-handler`**, **`reset-cause-logger`**. **Upgrade** does not start/restart (operator **`systemctl restart hw-management-bmc-init.service`** or reboot). **`DPKG_ROOT`** guard skips systemd when configuring a staging rootfs. **`abort-*`** cases are explicit no-ops. |
+| **`debian/hw-management-bmc.prerm`** | On **`remove`**: one **`systemctl stop`** for all nine BMC units (parallel). On **upgrade** / **deconfigure** / **failed-upgrade**: no-op. Needed because **`--no-start --no-restart-after-upgrade`** suppresses debhelper’s **`prerm`** stop snippets. |
+
+**Operator note:** **`apt install hw-management-bmc=NEW`** on a running BMC installs files and re-enables units but does **not** auto-restart the init chain.
+
+**Verify built `.deb`:** `dpkg-deb --ctrl-tarfile hw-management-bmc_*.deb | tar -xO ./postinst` → **9** `deb-systemd-helper unmask`, **0** `deb-systemd-invoke start` lines.
+
 ## Deployment of BMC kernel patches
 
 Vendor kernel patches for the BMC live under **`recipes-kernel/linux/linux-<kver>/`** in the **hw-mgmt** repository (same tree as **`debian/`**). Integration uses **`recipes-kernel/linux/deploy_kernel_patches.py`**, which copies patches into the customer’s kernel tree and can append to a **`series`** file.

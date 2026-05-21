@@ -3,8 +3,13 @@
 Description=Hardware management early config (copy platform files from /etc/<HID> to /etc and /usr/bin)
 Documentation=file:///usr/share/doc/hw-management-bmc/README.md
 DefaultDependencies=no
-After=local-fs.target hw-management-bmc-plat-specific-preps.service
+# Requires= (in addition to After=) makes the chain self-contained for ad-hoc
+# starts.  With only After=, an ad-hoc `systemctl start
+# hw-management-bmc-boot-complete.service` would not pull plat-specific-preps
+# into the transaction, and downstream units (early-i2c-init) would then run
+# before this unit deploys their JSON config.  See issue #4992267.
 Requires=hw-management-bmc-plat-specific-preps.service
+After=local-fs.target hw-management-bmc-plat-specific-preps.service
 Before=systemd-modules-load.service
 Before=hw-management-bmc-early-i2c-init.service
 
