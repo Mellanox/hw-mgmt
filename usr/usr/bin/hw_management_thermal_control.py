@@ -2605,7 +2605,7 @@ class fan_sensor(system_device):
                 relax_time = self.rpm_relax_timeout * 2
         else:
             relax_time = 0
-        self.rpm_relax_timestamp = current_milli_time() + relax_time
+        self.rpm_relax_timestamp = max(current_milli_time() + relax_time, self.rpm_relax_timestamp)
         self.log.debug("{} pwm jump by:{} relax_time:{} timestamp {}".format(self.name, pwm_jump, relax_time, self.rpm_relax_timestamp))
 
         self.pwm_set = pwm_val
