@@ -119,15 +119,37 @@ ifeq ($(with_host),1)
 	dh_systemd_enable --no-enable --name=hw-management-sync
 endif
 ifeq ($(with_bmc),1)
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-plat-specific-preps
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-early-config
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-health-monitor
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-reset-cause-logger
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-boot-complete
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-init
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-early-i2c-init
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-i2c-slave-setup
-	dh_systemd_enable -phw-management-bmc --name=hw-management-bmc-recovery-handler
+	# IMPORTANT: do NOT use one `dh_systemd_enable --name=X` call per service
+	# here.  `dh_systemd_enable` does NOT use --name to filter which units to
+	# emit autoscript snippets for -- with no positional arg, every call walks
+	# the package's $tmpdir/lib/systemd/system/ and emits a postinst-systemd-
+	# enable snippet for EVERY unit it finds (debhelper 13 source:
+	# dh_systemd_enable line 211: `@args = @ARGV > 0 ? @ARGV : @installed_units`).
+	# With 9 BMC services, 9 explicit --name calls produced 9 x 9 = 81 enable
+	# snippets in the generated postinst.  Each `deb-systemd-helper enable`
+	# call takes ~0.8 s on this BMC, so the postinst blocked dpkg for ~65 s --
+	# verified by /var/log/dpkg.log showing `configure hw-management-bmc`
+	# spanning ~67 s (18:38:49 -> 18:39:56) for issue #4992267's reproduction.
+	#
+	# Instead, pass each service file as a POSITIONAL argument to a single
+	# `dh_systemd_enable -phw-management-bmc <files>` invocation.  With
+	# positional arguments dh_systemd_enable processes ONLY those units
+	# (line 211: `@args = @ARGV > 0 ? @ARGV : @installed_units`).  This:
+	#   - emits exactly 9 enable snippets (one per service), ~7 s of
+	#     postinst work instead of ~65 s,
+	#   - keeps the allow-list explicit, so a future BMC service file
+	#     added under bmc/usr/lib/systemd/system/ is NOT silently auto-
+	#     enabled -- adding it to this list is an intentional decision.
+	dh_systemd_enable -phw-management-bmc \
+		hw-management-bmc-plat-specific-preps.service \
+		hw-management-bmc-early-config.service \
+		hw-management-bmc-early-i2c-init.service \
+		hw-management-bmc-init.service \
+		hw-management-bmc-boot-complete.service \
+		hw-management-bmc-health-monitor.service \
+		hw-management-bmc-reset-cause-logger.service \
+		hw-management-bmc-i2c-slave-setup.service \
+		hw-management-bmc-recovery-handler.service
 endif
 
 override_dh_systemd_start:
@@ -141,15 +163,43 @@ ifeq ($(with_host),1)
 	dh_systemd_start --name=hw-management-blacklist-generator
 endif
 ifeq ($(with_bmc),1)
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-plat-specific-preps
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-early-config
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-health-monitor
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-reset-cause-logger
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-boot-complete
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-init
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-early-i2c-init
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-i2c-slave-setup
-	dh_systemd_start -phw-management-bmc --name=hw-management-bmc-recovery-handler
+	# BMC services are boot-order units (DefaultDependencies=no,
+	# WantedBy=sysinit.target / multi-user.target). They are designed to be
+	# activated by the boot itself in declared After=/Before= order. Starting
+	# them from a postinst that runs after both sysinit and multi-user are
+	# already active is what causes the install-time race and the ~40 s dpkg
+	# block on SONiC BMC first boot (see issue #4992267).  A custom postinst
+	# (debian/hw-management-bmc.postinst) triggers the chain non-blocking
+	# after #DEBHELPER# has run dh_systemd_enable's enable snippets.  A
+	# custom prerm (debian/hw-management-bmc.prerm) stops BMC services on
+	# `apt remove` — needed because with the flag combination below
+	# dh_systemd_start emits no prerm snippet either.
+	#
+	# Why both flags:
+	#   --no-start                 : suppress deb-systemd-invoke start on fresh install ($$1=configure, $$2 empty)
+	#   --no-restart-after-upgrade : suppress deb-systemd-invoke restart on upgrade  ($$1=configure, $$2 set)
+	# Without --no-restart-after-upgrade, `apt-get install hw-management-bmc=NEW`
+	# on a running system would restart hw-management-bmc-init.service from
+	# inside dpkg, blocking it for the full bmc_init_main (~40 s) — i.e.
+	# reproducing the original P1 bug in the upgrade scenario.
+	# Same allow-list / positional-args approach as override_dh_systemd_enable
+	# above (see the comment there for the debhelper line-211 details).
+	# Today with `--no-start --no-restart-after-upgrade` dh_systemd_start
+	# emits NO postinst / prerm snippet at all (debhelper 13 source:
+	# dh_systemd_start lines 247-260 + 264-270), so the multiplication
+	# problem does not manifest here right now -- but listing each service
+	# explicitly keeps this block in sync with the enable block above and
+	# protects a future maintainer who removes one of the flags.
+	dh_systemd_start --no-start --no-restart-after-upgrade -phw-management-bmc \
+		hw-management-bmc-plat-specific-preps.service \
+		hw-management-bmc-early-config.service \
+		hw-management-bmc-early-i2c-init.service \
+		hw-management-bmc-init.service \
+		hw-management-bmc-boot-complete.service \
+		hw-management-bmc-health-monitor.service \
+		hw-management-bmc-reset-cause-logger.service \
+		hw-management-bmc-i2c-slave-setup.service \
+		hw-management-bmc-recovery-handler.service
 endif
 
 override_dh_strip_nondeterminism:
