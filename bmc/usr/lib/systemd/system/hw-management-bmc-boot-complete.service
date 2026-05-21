@@ -2,8 +2,14 @@
 [Unit]
 Description=BMC Ready Configuration
 After=hw-management-bmc-early-i2c-init.service hw-management-bmc-init.service
-Requires=hw-management-bmc-early-i2c-init.service
-Wants=hw-management-bmc-init.service
+# Why init is Requires=, not Wants=: with the previous Wants=init, if init
+# failed (e.g. BMC standby never went ready, A2D probe failed) systemd would
+# not propagate the failure to boot-complete -- boot-complete would activate
+# anyway and spin on its 1800-s timeout polling /var/run/hw-management/
+# {system,thermal,eeprom} counters that init never populated.  With Requires=,
+# init failure deactivates boot-complete immediately so `systemctl --failed`
+# surfaces it.  See issue #4992267.
+Requires=hw-management-bmc-early-i2c-init.service hw-management-bmc-init.service
 
 [Service]
 Restart=no

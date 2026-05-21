@@ -378,6 +378,8 @@ sudo apt-get install devscripts build-essential lintian
 or 'export LM_DEPENDS=0 && dpkg-buildpackage -us -uc -b'
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
 
+**SONiC BMC (`hw-management-bmc`):** the same source tree also builds **`hw-management-bmc_<version>_<arch>.deb`** (payload under **`bmc/`**, profiles in **`debian/rules`**). Packaging uses custom **`debian/hw-management-bmc.postinst`** and **`debian/hw-management-bmc.prerm`** so first-boot **`apt`** from **`rc.local`** does not block on synchronous **`bmc_init_main`** (issue **#4992267**). Details: **`bmc/README.md`** and **`bmc/FILE_MAPPING.md`** § *Debian package scripts*.
+
 **For converting .deb package to .rpm package:**
 - On a Debian-based system, install the `alien` program: `sudo apt-get install alien`
 - `alien --to-rpm hw-management_1.mlnx.18.12.2018_amd64.deb`
