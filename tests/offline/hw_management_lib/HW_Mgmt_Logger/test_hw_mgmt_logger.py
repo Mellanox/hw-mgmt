@@ -446,14 +446,6 @@ class TestHWMgmtLogger(unittest.TestCase):
 
         with open(self.test_log_file, 'r') as f:
             content = f.read()
-            # The repeat-finalization log line is now formatted as:
-            #   "<msg> (repeat=N, duration=Ms)"
-            # There is no separate "and stopped" suffix from the old format; the
-            # `duration=` token uniquely signals the finalization-lifecycle event
-            # because it is only emitted on the empty-message finalization path
-            # (hw_management_lib.py _push_log_hash). Asserting both substrings
-            # ensures we catch (a) wrong/missing repeat count AND (b) a future
-            # refactor that drops the lifecycle signal entirely.
             self.assertIn("(repeat=5", content)
             self.assertIn("(repeat=5, duration=", content)
 
