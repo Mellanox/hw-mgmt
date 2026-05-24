@@ -1,0 +1,43 @@
+From 23a29a81b44e3a7a139fee4d3eada5f299d8985e Mon Sep 17 00:00:00 2001
+From: Jon Hunter <jonathanh@nvidia.com>
+Date: Fri, 10 Oct 2025 11:36:12 +0100
+Subject: [PATCH 0416/0797] ARM: tegra: Enable EXT4 for Tegra
+
+After commit d6ace46c82fd ("ext4: remove obsolete EXT3 config options")
+was added, when using the 'tegra_defconfig' kernel configuration,
+mounting an MMC device on Tegra20, Tegra30 and Tegra124 boards is
+failing with "unknown filesystem type 'ext4'". Fix this by updating the
+'tegra_defconfig' to use the EXT4 config options and remove the
+obselete EXT2/3 options.
+
+Fixes: d6ace46c82fd ("ext4: remove obsolete EXT3 config options")
+Signed-off-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/configs/tegra_defconfig | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/configs/tegra_defconfig b/arch/arm/configs/tegra_defconfig
+index ba863b44541718..ce70ff07c978a5 100644
+--- a/arch/arm/configs/tegra_defconfig
++++ b/arch/arm/configs/tegra_defconfig
+@@ -315,13 +315,9 @@ CONFIG_AK8975=y
+ CONFIG_PWM=y
+ CONFIG_PWM_TEGRA=y
+ CONFIG_PHY_TEGRA_XUSB=y
+-CONFIG_EXT2_FS=y
+-CONFIG_EXT2_FS_XATTR=y
+-CONFIG_EXT2_FS_POSIX_ACL=y
+-CONFIG_EXT2_FS_SECURITY=y
+-CONFIG_EXT3_FS=y
+-CONFIG_EXT3_FS_POSIX_ACL=y
+-CONFIG_EXT3_FS_SECURITY=y
++CONFIG_EXT4_FS=y
++CONFIG_EXT4_FS_POSIX_ACL=y
++CONFIG_EXT4_FS_SECURITY=y
+ # CONFIG_DNOTIFY is not set
+ CONFIG_VFAT_FS=y
+ CONFIG_TMPFS=y
+-- 
+cgit 1.3.1-korg
+

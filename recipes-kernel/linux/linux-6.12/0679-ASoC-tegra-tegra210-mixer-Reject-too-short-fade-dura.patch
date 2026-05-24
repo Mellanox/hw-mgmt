@@ -1,0 +1,110 @@
+From 75a3e43339a2e66605deb8e726bb5d6372b1798a Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Tue, 19 May 2026 09:48:58 +0000
+Subject: [PATCH 0679/0797] ASoC: tegra: tegra210-mixer: Reject too-short fade durations
+
+DURATION_INV_N3 is computed from BIT_ULL(31 + prescalar) divided
+by the configured duration, and then written as a 32-bit RAM value.
+
+Durations of 32 samples or less overflow that value, so reject them
+and advertise the valid range through the fade duration control.
+
+Validate the ALSA integer control value as a long before storing it in
+the driver's u32 duration field. Use a u32 temporary for duration RAM
+writes because the largest valid inverse value can still exceed INT_MAX.
+
+Fixes: 36645381b864 ("ASoC: tegra: Add per-stream Mixer Fade controls")
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260519094858.1426057-1-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_mixer.c | 33 ++++++++++++++++++++++++++-------
+ sound/soc/tegra/tegra210_mixer.h |  4 +++-
+ 2 files changed, 29 insertions(+), 8 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_mixer.c b/sound/soc/tegra/tegra210_mixer.c
+index bfdd457f740c18..c237ba7531de03 100644
+--- a/sound/soc/tegra/tegra210_mixer.c
++++ b/sound/soc/tegra/tegra210_mixer.c
+@@ -150,7 +150,7 @@ static int tegra210_mixer_configure_gain(struct snd_soc_component *cmpnt,
+ 
+ 	/* Write duration parameters */
+ 	for (i = 0; i < NUM_DURATION_PARMS; i++) {
+-		int val;
++		u32 val;
+ 
+ 		if (instant_gain) {
+ 			val = 1;
+@@ -181,6 +181,17 @@ rpm_put:
+ 	return err;
+ }
+ 
++static int tegra210_mixer_fade_duration_info(struct snd_kcontrol *kcontrol,
++					     struct snd_ctl_elem_info *uinfo)
++{
++	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
++	uinfo->count = 1;
++	uinfo->value.integer.min = TEGRA210_MIXER_FADE_DURATION_MIN;
++	uinfo->value.integer.max = TEGRA210_MIXER_FADE_DURATION_MAX;
++
++	return 0;
++}
++
+ static int tegra210_mixer_get_fade_duration(struct snd_kcontrol *kcontrol,
+ 					    struct snd_ctl_elem_value *ucontrol)
+ {
+@@ -202,9 +213,10 @@ static int tegra210_mixer_put_fade_duration(struct snd_kcontrol *kcontrol,
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_mixer *mixer = snd_soc_component_get_drvdata(cmpnt);
+ 	unsigned int id = mc->reg;
+-	u32 duration = ucontrol->value.integer.value[0];
++	long duration = ucontrol->value.integer.value[0];
+ 
+-	if (duration == 0 || duration > TEGRA210_MIXER_FADE_DURATION_MAX)
++	if (duration < (long)TEGRA210_MIXER_FADE_DURATION_MIN ||
++	    duration > TEGRA210_MIXER_FADE_DURATION_MAX)
+ 		return -EINVAL;
+ 
+ 	if (mixer->duration[id] == duration)
+@@ -614,10 +626,17 @@ static int tegra210_mixer_fade_status_info(struct snd_kcontrol *kcontrol,
+ }
+ 
+ #define FADE_CTRL(id)							\
+-	SOC_SINGLE_EXT("RX" #id " Fade Duration", (id) - 1, 0,		\
+-		       TEGRA210_MIXER_FADE_DURATION_MAX, 0,		\
+-		       tegra210_mixer_get_fade_duration,			\
+-		       tegra210_mixer_put_fade_duration),		\
++	{								\
++		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,			\
++		.name = "RX" #id " Fade Duration",			\
++		.info = tegra210_mixer_fade_duration_info,		\
++		.get = tegra210_mixer_get_fade_duration,			\
++		.put = tegra210_mixer_put_fade_duration,			\
++		.private_value = SOC_SINGLE_VALUE((id) - 1, 0,		\
++				TEGRA210_MIXER_FADE_DURATION_MIN,	\
++				TEGRA210_MIXER_FADE_DURATION_MAX,	\
++				0, 0),					\
++	},								\
+ 	SOC_SINGLE_EXT("RX" #id " Fade Gain", (id) - 1, 0,		\
+ 		       TEGRA210_MIXER_GAIN_MAX, 0,			\
+ 		       tegra210_mixer_get_fade_gain,			\
+diff --git a/sound/soc/tegra/tegra210_mixer.h b/sound/soc/tegra/tegra210_mixer.h
+index bcbad08cbb9d32..d9c8fa6124ded4 100644
+--- a/sound/soc/tegra/tegra210_mixer.h
++++ b/sound/soc/tegra/tegra210_mixer.h
+@@ -87,9 +87,11 @@
+ 
+ #define NUM_GAIN_POLY_COEFFS 9
+ #define TEGRA210_MIXER_GAIN_MAX			0x20000
+-#define TEGRA210_MIXER_FADE_DURATION_MAX	0x7fffffff
+ 
+ #define TEGRA210_MIXER_PRESCALAR	    6
++#define TEGRA210_MIXER_FADE_DURATION_MIN	\
++	(BIT(TEGRA210_MIXER_PRESCALAR - 1) + 1)
++#define TEGRA210_MIXER_FADE_DURATION_MAX	0x7fffffff
+ #define TEGRA210_MIXER_FADE_IDLE	    0
+ #define TEGRA210_MIXER_FADE_ACTIVE	  1
+ 
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,35 @@
+From 6131690df4adae33e01c0b51b9b78b3e8ed3b76f Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Tue, 29 Jul 2025 16:28:02 +0200
+Subject: [PATCH 0348/0797] firmware: tegra: Do not warn on missing memory-region property
+
+The IPC shared memory can reside in system memory or SRAM. In the latter
+case the memory-region property is expected not to be present, so do not
+warn about it.
+
+Reported-by: Jonathan Hunter <jonathanh@nvidia.com>
+Fixes: dbe4efea38d0 ("firmware: tegra: bpmp: Use of_reserved_mem_region_to_resource() for "memory-region"")
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/firmware/tegra/bpmp-tegra186.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/firmware/tegra/bpmp-tegra186.c b/drivers/firmware/tegra/bpmp-tegra186.c
+index 7cfc5fdfa49d50..64863db7a71576 100644
+--- a/drivers/firmware/tegra/bpmp-tegra186.c
++++ b/drivers/firmware/tegra/bpmp-tegra186.c
+@@ -198,7 +198,10 @@ static int tegra186_bpmp_dram_init(struct tegra_bpmp *bpmp)
+ 
+ 	err = of_reserved_mem_region_to_resource(bpmp->dev->of_node, 0, &res);
+ 	if (err < 0) {
+-		dev_warn(bpmp->dev, "failed to parse memory region: %d\n", err);
++		if (err != -ENODEV)
++			dev_warn(bpmp->dev,
++				 "failed to parse memory region: %d\n", err);
++
+ 		return err;
+ 	}
+ 
+-- 
+cgit 1.3.1-korg
+

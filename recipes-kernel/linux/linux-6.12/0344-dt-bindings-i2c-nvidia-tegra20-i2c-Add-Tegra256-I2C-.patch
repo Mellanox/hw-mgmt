@@ -1,0 +1,46 @@
+From 69329daf16af7d0ec189a760f28ea6a1ffb7f23a Mon Sep 17 00:00:00 2001
+From: Akhil R <akhilrajeev@nvidia.com>
+Date: Mon, 18 Aug 2025 10:03:44 +0530
+Subject: [PATCH 0344/0797] dt-bindings: i2c: nvidia,tegra20-i2c: Add Tegra256 I2C compatible
+
+Add compatible for Tegra256 I2C controllers. Tegra256 consists of
+8 generic Tegra I2C controllers similar to previous generations.
+The parent clock frequency is different in these controllers and
+hence the timing parameter values are different from the previous
+ones.
+
+Signed-off-by: Akhil R <akhilrajeev@nvidia.com>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Signed-off-by: Wolfram Sang <wsa+renesas@sang-engineering.com>
+---
+ Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml b/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
+index 6b6f6762d122f9..32c3b69ccf3420 100644
+--- a/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
++++ b/Documentation/devicetree/bindings/i2c/nvidia,tegra20-i2c.yaml
+@@ -80,6 +80,11 @@ properties:
+           support for 64 KiB transactions whereas earlier chips supported no
+           more than 4 KiB per transactions.
+         const: nvidia,tegra194-i2c
++      - description: |
++          Tegra256 has 8 generic I2C controllers. The controllers are similar to
++          the previous generations, but have a different parent clock and hence
++          the timing parameters are configured differently.
++        const: nvidia,tegra256-i2c
+ 
+   reg:
+     maxItems: 1
+@@ -186,6 +191,7 @@ allOf:
+             contains:
+               enum:
+                 - nvidia,tegra194-i2c
++                - nvidia,tegra256-i2c
+     then:
+       required:
+         - resets
+-- 
+cgit 1.3.1-korg
+

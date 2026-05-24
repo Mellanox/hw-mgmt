@@ -1,0 +1,38 @@
+From 06dba254de95b16e7793224d29daa5195de2e581 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Mon, 23 Feb 2026 08:50:51 +0200
+Subject: [PATCH 0524/0797] ASoC: dt-bindings: nvidia,tegra-audio-max9808x: document additional board pins
+
+Document additional board pins that may be used in routing.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://patch.msgid.link/20260223065051.13070-6-clamor95@gmail.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../devicetree/bindings/sound/nvidia,tegra-audio-max9808x.yaml       | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-max9808x.yaml b/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-max9808x.yaml
+index 241d20f3aad08a..4957645a8e0358 100644
+--- a/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-max9808x.yaml
++++ b/Documentation/devicetree/bindings/sound/nvidia,tegra-audio-max9808x.yaml
+@@ -35,10 +35,15 @@ properties:
+     items:
+       enum:
+         # Board Connectors
++        - Speakers
+         - Int Spk
++        - Headphone
++        - Headphones
+         - Headphone Jack
+         - Earpiece
+         - Headset Mic
++        - Mic Jack
++        - Int Mic
+         - Internal Mic 1
+         - Internal Mic 2
+ 
+-- 
+cgit 1.3.1-korg
+

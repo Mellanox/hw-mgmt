@@ -1,0 +1,67 @@
+From 7361fb3e8c38a3868cec9118337590e3788bb175 Mon Sep 17 00:00:00 2001
+From: Binbin Zhou <zhoubinbin@loongson.cn>
+Date: Sat, 7 Jun 2025 15:52:16 +0800
+Subject: [PATCH 0255/0797] mmc: sdhci-tegra: Drop the use of sdhci_pltfm_free()
+
+Since the devm_mmc_alloc_host() helper is already in use,
+sdhci_pltfm_free() is no longer needed.
+
+Cc: Thierry Reding <thierry.reding@gmail.com>
+Cc: Jonathan Hunter <jonathanh@nvidia.com>
+Cc: linux-tegra@vger.kernel.org
+Signed-off-by: Binbin Zhou <zhoubinbin@loongson.cn>
+Acked-by: Thierry Reding <treding@nvidia.com>
+Link: https://lore.kernel.org/r/cee82eaad0392838fbe1fab8e2301e680d34c0c5.1749127796.git.zhoubinbin@loongson.cn
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+---
+ drivers/mmc/host/sdhci-tegra.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci-tegra.c b/drivers/mmc/host/sdhci-tegra.c
+index b2f5c3f8b8396..c811297185d8f 100644
+--- a/drivers/mmc/host/sdhci-tegra.c
++++ b/drivers/mmc/host/sdhci-tegra.c
+@@ -1693,7 +1693,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
+ 
+ 	rc = mmc_of_parse(host->mmc);
+ 	if (rc)
+-		goto err_parse_dt;
++		return rc;
+ 
+ 	if (tegra_host->soc_data->nvquirks & NVQUIRK_ENABLE_DDR50)
+ 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
+@@ -1739,7 +1739,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
+ 		if (IS_ERR(clk)) {
+ 			rc = PTR_ERR(clk);
+ 			if (rc == -EPROBE_DEFER)
+-				goto err_power_req;
++				return rc;
+ 
+ 			dev_warn(&pdev->dev, "failed to get tmclk: %d\n", rc);
+ 			clk = NULL;
+@@ -1750,7 +1750,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
+ 		if (rc) {
+ 			dev_err(&pdev->dev,
+ 				"failed to enable tmclk: %d\n", rc);
+-			goto err_power_req;
++			return rc;
+ 		}
+ 
+ 		tegra_host->tmclk = clk;
+@@ -1811,8 +1811,6 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
+ err_clk_get:
+ 	clk_disable_unprepare(tegra_host->tmclk);
+ err_power_req:
+-err_parse_dt:
+-	sdhci_pltfm_free(pdev);
+ 	return rc;
+ }
+ 
+@@ -1831,7 +1829,6 @@ static void sdhci_tegra_remove(struct platform_device *pdev)
+ 	pm_runtime_force_suspend(&pdev->dev);
+ 
+ 	clk_disable_unprepare(tegra_host->tmclk);
+-	sdhci_pltfm_free(pdev);
+ }
+ 
+ static int __maybe_unused sdhci_tegra_runtime_suspend(struct device *dev)

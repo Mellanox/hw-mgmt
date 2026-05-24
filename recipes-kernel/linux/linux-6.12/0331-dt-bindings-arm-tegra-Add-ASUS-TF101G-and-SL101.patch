@@ -1,0 +1,37 @@
+From 04f27a0fda6b6be104531eeb95d07ef1b3a72af8 Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Sat, 6 Sep 2025 09:29:33 +0300
+Subject: [PATCH 0331/0797] dt-bindings: arm: tegra: Add ASUS TF101G and SL101
+
+Add a compatible for ASUS Eee Pad Transformer TF101G and ASUS Eee Pad
+Slider SL101.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Acked-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra.yaml | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra.yaml b/Documentation/devicetree/bindings/arm/tegra.yaml
+index 5b0f03af370da0..6139407c2cbf7a 100644
+--- a/Documentation/devicetree/bindings/arm/tegra.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra.yaml
+@@ -36,8 +36,12 @@ properties:
+               - toradex,colibri_t20-iris
+           - const: toradex,colibri_t20
+           - const: nvidia,tegra20
+-      - items:
+-          - const: asus,tf101
++      - description: ASUS Transformers T20 Device family
++        items:
++          - enum:
++              - asus,sl101
++              - asus,tf101
++              - asus,tf101g
+           - const: nvidia,tegra20
+       - items:
+           - const: acer,picasso
+-- 
+cgit 1.3.1-korg
+

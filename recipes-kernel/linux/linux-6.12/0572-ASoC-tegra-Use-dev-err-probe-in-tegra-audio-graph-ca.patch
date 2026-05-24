@@ -1,0 +1,55 @@
+From f7d9eb0291ef00ebfb4ff4f0bec63536c15a0071 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 25 Mar 2026 10:14:37 +0000
+Subject: [PATCH 0572/0797] ASoC: tegra: Use dev_err_probe() in tegra_audio_graph_card probe
+
+Log errors in the Tegra audio graph card probe path using
+dev_err_probe().
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260325101437.3059693-15-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra_audio_graph_card.c | 21 ++++++++++++---------
+ 1 file changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra_audio_graph_card.c b/sound/soc/tegra/tegra_audio_graph_card.c
+index ea10e6e8a9fe78..b93a61db9ed0b0 100644
+--- a/sound/soc/tegra/tegra_audio_graph_card.c
++++ b/sound/soc/tegra/tegra_audio_graph_card.c
+@@ -174,20 +174,23 @@ static int tegra_audio_graph_card_probe(struct snd_soc_card *card)
+ {
+ 	struct simple_util_priv *simple = snd_soc_card_get_drvdata(card);
+ 	struct tegra_audio_priv *priv = simple_to_tegra_priv(simple);
++	int ret;
+ 
+ 	priv->clk_plla = devm_clk_get(card->dev, "pll_a");
+-	if (IS_ERR(priv->clk_plla)) {
+-		dev_err(card->dev, "Can't retrieve clk pll_a\n");
+-		return PTR_ERR(priv->clk_plla);
+-	}
++	if (IS_ERR(priv->clk_plla))
++		return dev_err_probe(card->dev, PTR_ERR(priv->clk_plla),
++				     "can't retrieve clk pll_a\n");
+ 
+ 	priv->clk_plla_out0 = devm_clk_get(card->dev, "plla_out0");
+-	if (IS_ERR(priv->clk_plla_out0)) {
+-		dev_err(card->dev, "Can't retrieve clk plla_out0\n");
+-		return PTR_ERR(priv->clk_plla_out0);
+-	}
++	if (IS_ERR(priv->clk_plla_out0))
++		return dev_err_probe(card->dev, PTR_ERR(priv->clk_plla_out0),
++				     "can't retrieve clk plla_out0\n");
++
++	ret = graph_util_card_probe(card);
++	if (ret < 0)
++		return dev_err_probe(card->dev, ret, "graph_util_card_probe failed\n");
+ 
+-	return graph_util_card_probe(card);
++	return ret;
+ }
+ 
+ static int tegra_audio_graph_probe(struct platform_device *pdev)
+-- 
+cgit 1.3.1-korg
+

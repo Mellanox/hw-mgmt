@@ -1,0 +1,39 @@
+From d0ef3c4a9fa3b4694a187f277527664919c2ecb4 Mon Sep 17 00:00:00 2001
+From: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Date: Tue, 27 Jan 2026 15:11:48 +0000
+Subject: [PATCH 0537/0797] usb: xhci: tegra: Remove redundant mutex when setting phy mode
+
+As the PHY subsystem already synchronizes concurrent accesses to a PHY
+instance with a core-internal mutex remove the driver specific mutex
+synchronization.
+
+Signed-off-by: Diogo Ivo <diogo.ivo@tecnico.ulisboa.pt>
+Link: https://patch.msgid.link/20260127-diogo-tegra_phy-v2-2-787b9eed3ed5@tecnico.ulisboa.pt
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/usb/host/xhci-tegra.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/usb/host/xhci-tegra.c b/drivers/usb/host/xhci-tegra.c
+index 3f6aa2440b05b9..ed4b11f8d298e2 100644
+--- a/drivers/usb/host/xhci-tegra.c
++++ b/drivers/usb/host/xhci-tegra.c
+@@ -1357,15 +1357,11 @@ static void tegra_xhci_id_work(struct work_struct *work)
+ 
+ 	dev_dbg(tegra->dev, "host mode %s\n", str_on_off(tegra->host_mode));
+ 
+-	mutex_lock(&tegra->lock);
+-
+ 	if (tegra->host_mode)
+ 		phy_set_mode_ext(phy, PHY_MODE_USB_OTG, USB_ROLE_HOST);
+ 	else
+ 		phy_set_mode_ext(phy, PHY_MODE_USB_OTG, USB_ROLE_NONE);
+ 
+-	mutex_unlock(&tegra->lock);
+-
+ 	tegra->otg_usb3_port = tegra_xusb_padctl_get_usb3_companion(tegra->padctl,
+ 								    tegra->otg_usb2_port);
+ 
+-- 
+cgit 1.3.1-korg
+

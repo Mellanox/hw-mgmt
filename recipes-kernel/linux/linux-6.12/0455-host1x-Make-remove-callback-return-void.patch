@@ -1,0 +1,118 @@
+From ba3588410cedb1696cfe56ebefcc4401c6d0bb36 Mon Sep 17 00:00:00 2001
+From: Uwe Kleine-König <u.kleine-koenig@baylibre.com>
+Date: Wed, 10 Dec 2025 09:31:37 +0100
+Subject: [PATCH 0455/0797] host1x: Make remove callback return void
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The return value of struct device_driver::remove is ignored by the core
+(see device_remove() in drivers/base/dd.c). So it doesn't make sense to
+let the host1x remove callback return an int just to ignore it later.
+
+So make the callback return void. All current implementors return 0, so
+they are easily converted.
+
+Signed-off-by: Uwe Kleine-König <u.kleine-koenig@baylibre.com>
+Tested-by: Luca Ceresoli <luca.ceresoli@bootlin.com> # tegra20 tegra-video
+Reviewed-by: Luca Ceresoli <luca.ceresoli@bootlin.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://patch.msgid.link/d364fd4ec043d36ee12e46eaef98c57658884f63.1765355236.git.u.kleine-koenig@baylibre.com
+---
+ drivers/crypto/tegra/tegra-se-main.c      | 4 +---
+ drivers/gpu/drm/tegra/drm.c               | 4 +---
+ drivers/gpu/host1x/bus.c                  | 2 +-
+ drivers/staging/media/tegra-video/video.c | 4 +---
+ include/linux/host1x.h                    | 2 +-
+ 5 files changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/crypto/tegra/tegra-se-main.c b/drivers/crypto/tegra/tegra-se-main.c
+index 7237f14eaf5ae4..4e7115b247e7fd 100644
+--- a/drivers/crypto/tegra/tegra-se-main.c
++++ b/drivers/crypto/tegra/tegra-se-main.c
+@@ -401,11 +401,9 @@ static int tegra_se_host1x_probe(struct host1x_device *dev)
+ 	return host1x_device_init(dev);
+ }
+ 
+-static int tegra_se_host1x_remove(struct host1x_device *dev)
++static void tegra_se_host1x_remove(struct host1x_device *dev)
+ {
+ 	host1x_device_exit(dev);
+-
+-	return 0;
+ }
+ 
+ static struct host1x_driver tegra_se_host1x_driver = {
+diff --git a/drivers/gpu/drm/tegra/drm.c b/drivers/gpu/drm/tegra/drm.c
+index 1d18d43292dc72..f7222819d67214 100644
+--- a/drivers/gpu/drm/tegra/drm.c
++++ b/drivers/gpu/drm/tegra/drm.c
+@@ -1301,7 +1301,7 @@ put:
+ 	return err;
+ }
+ 
+-static int host1x_drm_remove(struct host1x_device *dev)
++static void host1x_drm_remove(struct host1x_device *dev)
+ {
+ 	struct drm_device *drm = dev_get_drvdata(&dev->dev);
+ 	struct tegra_drm *tegra = drm->dev_private;
+@@ -1330,8 +1330,6 @@ static int host1x_drm_remove(struct host1x_device *dev)
+ 
+ 	kfree(tegra);
+ 	drm_dev_put(drm);
+-
+-	return 0;
+ }
+ 
+ static void host1x_drm_shutdown(struct host1x_device *dev)
+diff --git a/drivers/gpu/host1x/bus.c b/drivers/gpu/host1x/bus.c
+index 723a80895cd43b..ceb8212fa8c98e 100644
+--- a/drivers/gpu/host1x/bus.c
++++ b/drivers/gpu/host1x/bus.c
+@@ -640,7 +640,7 @@ static int host1x_device_remove(struct device *dev)
+ 	struct host1x_device *device = to_host1x_device(dev);
+ 
+ 	if (driver->remove)
+-		return driver->remove(device);
++		driver->remove(device);
+ 
+ 	return 0;
+ }
+diff --git a/drivers/staging/media/tegra-video/video.c b/drivers/staging/media/tegra-video/video.c
+index 074ad0dc56ca85..68783d5ffeb165 100644
+--- a/drivers/staging/media/tegra-video/video.c
++++ b/drivers/staging/media/tegra-video/video.c
+@@ -107,7 +107,7 @@ cleanup:
+ 	return ret;
+ }
+ 
+-static int host1x_video_remove(struct host1x_device *dev)
++static void host1x_video_remove(struct host1x_device *dev)
+ {
+ 	struct tegra_video_device *vid = dev_get_drvdata(&dev->dev);
+ 
+@@ -118,8 +118,6 @@ static int host1x_video_remove(struct host1x_device *dev)
+ 
+ 	/* This calls v4l2_dev release callback on last reference */
+ 	v4l2_device_put(&vid->v4l2_dev);
+-
+-	return 0;
+ }
+ 
+ static const struct of_device_id host1x_video_subdevs[] = {
+diff --git a/include/linux/host1x.h b/include/linux/host1x.h
+index 9fa9c30a34e65e..5e7a63143a4acf 100644
+--- a/include/linux/host1x.h
++++ b/include/linux/host1x.h
+@@ -380,7 +380,7 @@ struct host1x_driver {
+ 	struct list_head list;
+ 
+ 	int (*probe)(struct host1x_device *device);
+-	int (*remove)(struct host1x_device *device);
++	void (*remove)(struct host1x_device *device);
+ 	void (*shutdown)(struct host1x_device *device);
+ };
+ 
+-- 
+cgit 1.3.1-korg
+

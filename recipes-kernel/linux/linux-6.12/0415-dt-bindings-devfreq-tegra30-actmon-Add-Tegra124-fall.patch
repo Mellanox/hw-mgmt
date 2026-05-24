@@ -1,0 +1,43 @@
+From 22c788aec2efc80d6c8f4e8fa00c5a4fb10f8956 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Tue, 21 Oct 2025 22:09:26 -0500
+Subject: [PATCH 0415/0797] dt-bindings: devfreq: tegra30-actmon: Add Tegra124 fallback for Tegra210
+
+The Tegra210 actmon is compatible with the existing Tegra124 driver.
+Describe the compatibles as such.
+
+Acked-by: Chanwoo Choi <cw00c.choi@samsung.com>
+Reviewed-by: Krzysztof Kozlowski <krzysztof.kozlowski@linaro.org>
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../devicetree/bindings/devfreq/nvidia,tegra30-actmon.yaml  | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/devfreq/nvidia,tegra30-actmon.yaml b/Documentation/devicetree/bindings/devfreq/nvidia,tegra30-actmon.yaml
+index e3379d1067283e..ea1dc86bc31f63 100644
+--- a/Documentation/devicetree/bindings/devfreq/nvidia,tegra30-actmon.yaml
++++ b/Documentation/devicetree/bindings/devfreq/nvidia,tegra30-actmon.yaml
+@@ -19,11 +19,14 @@ description: |
+ 
+ properties:
+   compatible:
+-    enum:
+-      - nvidia,tegra30-actmon
+-      - nvidia,tegra114-actmon
+-      - nvidia,tegra124-actmon
+-      - nvidia,tegra210-actmon
++    oneOf:
++      - enum:
++          - nvidia,tegra30-actmon
++          - nvidia,tegra114-actmon
++          - nvidia,tegra124-actmon
++      - items:
++          - const: nvidia,tegra210-actmon
++          - const: nvidia,tegra124-actmon
+ 
+   reg:
+     maxItems: 1
+-- 
+cgit 1.3.1-korg
+

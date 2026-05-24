@@ -1,0 +1,43 @@
+From 8ed265c0b47201941698dfc935d71e2997315e66 Mon Sep 17 00:00:00 2001
+From: Guangshuo Li <lgs201920130244@gmail.com>
+Date: Wed, 8 Jul 2026 19:20:58 +0800
+Subject: [PATCH 0789/0797] clk: tegra: tegra124-emc: put EMC node on register failure
+
+[ Upstream commit f726279f5eab813f9a8b6f38ddf2a4b062d038ff ]
+
+tegra124_clk_register_emc() stores a device node reference returned by
+of_parse_phandle() in tegra->emc_node.
+
+If clk_register() fails, the function returns an error before that
+reference can be consumed and released by the normal runtime path. The
+tegra_clk_emc object is freed on this failure path, but freeing the
+object does not drop the OF node reference stored in it.
+
+Drop the EMC node reference before freeing the tegra_clk_emc object.
+of_node_put() is safe for a NULL node, so this also covers the case where
+the phandle is absent.
+
+Fixes: 2db04f16b589 ("clk: tegra: Add EMC clock driver")
+Signed-off-by: Guangshuo Li <lgs201920130244@gmail.com>
+Reviewed-by: Brian Masney <bmasney@redhat.com>
+Signed-off-by: Brian Masney <bmasney@redhat.com>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+---
+ drivers/clk/tegra/clk-tegra124-emc.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/clk/tegra/clk-tegra124-emc.c b/drivers/clk/tegra/clk-tegra124-emc.c
+index f3b2c96fdcfc24..94ac24ea1e6adc 100644
+--- a/drivers/clk/tegra/clk-tegra124-emc.c
++++ b/drivers/clk/tegra/clk-tegra124-emc.c
+@@ -537,6 +537,7 @@ struct clk *tegra124_clk_register_emc(void __iomem *base, struct device_node *np
+ 
+ 	clk = clk_register(NULL, &tegra->hw);
+ 	if (IS_ERR(clk)) {
++		of_node_put(tegra->emc_node);
+ 		kfree(tegra);
+ 		return clk;
+ 	}
+-- 
+cgit 1.3.1-korg
+

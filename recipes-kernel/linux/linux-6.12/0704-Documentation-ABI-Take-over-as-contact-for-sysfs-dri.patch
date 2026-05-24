@@ -1,0 +1,29 @@
+From 18c620ff671004a356b174e5f6d494fa449ce57c Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Fri, 17 Apr 2026 15:05:10 +0200
+Subject: [PATCH 0704/0797] Documentation: ABI: Take over as contact for sysfs-driver-tegra-fuse
+
+Peter sadly passed away a while ago, so I'll be taking over as contact
+for this ABI documentation.
+
+Suggested-by: Geert Uytterhoeven <geert@linux-m68k.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/ABI/testing/sysfs-driver-tegra-fuse | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Documentation/ABI/testing/sysfs-driver-tegra-fuse b/Documentation/ABI/testing/sysfs-driver-tegra-fuse
+index b8936fad2ccfc8..47d5513100f66a 100644
+--- a/Documentation/ABI/testing/sysfs-driver-tegra-fuse
++++ b/Documentation/ABI/testing/sysfs-driver-tegra-fuse
+@@ -1,6 +1,6 @@
+ What:		/sys/devices/*/<our-device>/fuse
+ Date:		February 2014
+-Contact:	Peter De Schrijver <pdeschrijver@nvidia.com>
++Contact:	Thierry Reding <thierry.reding@kernel.org>
+ Description:	read-only access to the efuses on Tegra20, Tegra30, Tegra114
+ 		and Tegra124 SoC's from NVIDIA. The efuses contain write once
+ 		data programmed at the factory. The data is laid out in 32bit
+-- 
+cgit 1.3.1-korg
+

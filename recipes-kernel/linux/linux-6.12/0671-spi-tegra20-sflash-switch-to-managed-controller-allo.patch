@@ -1,0 +1,93 @@
+From 3a14bf4f5453121cae3cbdfb6180317c5d74f424 Mon Sep 17 00:00:00 2001
+From: Johan Hovold <johan@kernel.org>
+Date: Tue, 5 May 2026 09:29:05 +0200
+Subject: [PATCH 0671/0797] spi: tegra20-sflash: switch to managed controller allocation
+
+Switch to device managed controller allocation to simplify error
+handling and to avoid having to take another reference during
+deregistration.
+
+Signed-off-by: Johan Hovold <johan@kernel.org>
+Link: https://patch.msgid.link/20260505072909.618363-17-johan@kernel.org
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/spi/spi-tegra20-sflash.c | 24 ++++++++----------------
+ 1 file changed, 8 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/spi/spi-tegra20-sflash.c b/drivers/spi/spi-tegra20-sflash.c
+index 9256729f2d4910..2caa33f0a52c5b 100644
+--- a/drivers/spi/spi-tegra20-sflash.c
++++ b/drivers/spi/spi-tegra20-sflash.c
+@@ -427,11 +427,9 @@ static int tegra_sflash_probe(struct platform_device *pdev)
+ 		return -ENODEV;
+ 	}
+ 
+-	host = spi_alloc_host(&pdev->dev, sizeof(*tsd));
+-	if (!host) {
+-		dev_err(&pdev->dev, "host allocation failed\n");
++	host = devm_spi_alloc_host(&pdev->dev, sizeof(*tsd));
++	if (!host)
+ 		return -ENOMEM;
+-	}
+ 
+ 	/* the spi->mode bits understood by this driver: */
+ 	host->mode_bits = SPI_CPOL | SPI_CPHA;
+@@ -450,14 +448,13 @@ static int tegra_sflash_probe(struct platform_device *pdev)
+ 		host->max_speed_hz = 25000000; /* 25MHz */
+ 
+ 	tsd->base = devm_platform_ioremap_resource(pdev, 0);
+-	if (IS_ERR(tsd->base)) {
+-		ret = PTR_ERR(tsd->base);
+-		goto exit_free_host;
+-	}
++	if (IS_ERR(tsd->base))
++		return PTR_ERR(tsd->base);
+ 
+ 	ret = platform_get_irq(pdev, 0);
+ 	if (ret < 0)
+-		goto exit_free_host;
++		return ret;
++
+ 	tsd->irq = ret;
+ 
+ 	ret = request_irq(tsd->irq, tegra_sflash_isr, 0,
+@@ -465,7 +462,7 @@ static int tegra_sflash_probe(struct platform_device *pdev)
+ 	if (ret < 0) {
+ 		dev_err(&pdev->dev, "Failed to register ISR for IRQ %d\n",
+ 					tsd->irq);
+-		goto exit_free_host;
++		return ret;
+ 	}
+ 
+ 	tsd->clk = devm_clk_get(&pdev->dev, NULL);
+@@ -518,8 +515,7 @@ exit_pm_disable:
+ 		tegra_sflash_runtime_suspend(&pdev->dev);
+ exit_free_irq:
+ 	free_irq(tsd->irq, tsd);
+-exit_free_host:
+-	spi_controller_put(host);
++
+ 	return ret;
+ }
+ 
+@@ -528,8 +524,6 @@ static void tegra_sflash_remove(struct platform_device *pdev)
+ 	struct spi_controller *host = platform_get_drvdata(pdev);
+ 	struct tegra_sflash_data	*tsd = spi_controller_get_devdata(host);
+ 
+-	spi_controller_get(host);
+-
+ 	spi_unregister_controller(host);
+ 
+ 	free_irq(tsd->irq, tsd);
+@@ -537,8 +531,6 @@ static void tegra_sflash_remove(struct platform_device *pdev)
+ 	pm_runtime_disable(&pdev->dev);
+ 	if (!pm_runtime_status_suspended(&pdev->dev))
+ 		tegra_sflash_runtime_suspend(&pdev->dev);
+-
+-	spi_controller_put(host);
+ }
+ 
+ #ifdef CONFIG_PM_SLEEP
+-- 
+cgit 1.3.1-korg
+

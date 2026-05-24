@@ -1,0 +1,44 @@
+From 34ff0bfda6f2960d8b897ef5c39af666a5fb63a0 Mon Sep 17 00:00:00 2001
+From: Aaron Kling <webgeek1234@gmail.com>
+Date: Sun, 13 Apr 2025 14:35:33 -0500
+Subject: [PATCH 0217/0797] arm64: tegra: Add fallback CEC compatibles
+
+The tegra_cec driver only declares support up to Tegra210 and will not
+declare support for Tegra186 or Tegra194. Thus list a fallback
+compatible for these chips to tegra210-cec as they work as-is with the
+existing driver.
+
+Signed-off-by: Aaron Kling <webgeek1234@gmail.com>
+Link: https://lore.kernel.org/r/20250413-tegra-cec-v4-2-b6337b66ccad@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm64/boot/dts/nvidia/tegra186.dtsi | 2 +-
+ arch/arm64/boot/dts/nvidia/tegra194.dtsi | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/nvidia/tegra186.dtsi b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+index ff88a905ee2a0..5778c93af3e6e 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra186.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra186.dtsi
+@@ -1185,7 +1185,7 @@
+ 	};
+ 
+ 	cec@3960000 {
+-		compatible = "nvidia,tegra186-cec";
++		compatible = "nvidia,tegra186-cec", "nvidia,tegra210-cec";
+ 		reg = <0x0 0x03960000 0x0 0x10000>;
+ 		interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
+ 		clocks = <&bpmp TEGRA186_CLK_CEC>;
+diff --git a/arch/arm64/boot/dts/nvidia/tegra194.dtsi b/arch/arm64/boot/dts/nvidia/tegra194.dtsi
+index 3a4e086dcc8c5..1399342f23e1c 100644
+--- a/arch/arm64/boot/dts/nvidia/tegra194.dtsi
++++ b/arch/arm64/boot/dts/nvidia/tegra194.dtsi
+@@ -1343,7 +1343,7 @@
+ 		};
+ 
+ 		cec@3960000 {
+-			compatible = "nvidia,tegra194-cec";
++			compatible = "nvidia,tegra194-cec", "nvidia,tegra210-cec";
+ 			reg = <0x0 0x03960000 0x0 0x10000>;
+ 			interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
+ 			clocks = <&bpmp TEGRA194_CLK_CEC>;

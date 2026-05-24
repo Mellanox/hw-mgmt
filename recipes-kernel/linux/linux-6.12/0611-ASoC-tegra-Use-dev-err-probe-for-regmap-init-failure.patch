@@ -1,0 +1,207 @@
+From 4a8fe27e122e5a1bb1896837ed47f99abaa965a0 Mon Sep 17 00:00:00 2001
+From: Sheetal <sheetal@nvidia.com>
+Date: Wed, 1 Apr 2026 11:24:59 +0000
+Subject: [PATCH 0611/0797] ASoC: tegra: Use dev_err_probe() for regmap init failures
+
+Use dev_err_probe() for regmap init failures in Tegra audio driver
+probe paths.
+
+Signed-off-by: Sheetal <sheetal@nvidia.com>
+Link: https://patch.msgid.link/20260401112500.4076861-4-sheetal@nvidia.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra186_asrc.c  | 7 +++----
+ sound/soc/tegra/tegra186_dspk.c  | 7 +++----
+ sound/soc/tegra/tegra210_adx.c   | 7 +++----
+ sound/soc/tegra/tegra210_ahub.c  | 7 +++----
+ sound/soc/tegra/tegra210_amx.c   | 7 +++----
+ sound/soc/tegra/tegra210_dmic.c  | 7 +++----
+ sound/soc/tegra/tegra210_i2s.c   | 7 +++----
+ sound/soc/tegra/tegra210_mixer.c | 7 +++----
+ sound/soc/tegra/tegra210_mvc.c   | 7 +++----
+ sound/soc/tegra/tegra210_sfc.c   | 7 +++----
+ 10 files changed, 30 insertions(+), 40 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra186_asrc.c b/sound/soc/tegra/tegra186_asrc.c
+index d2a5ec7c54cc7d..503836338da754 100644
+--- a/sound/soc/tegra/tegra186_asrc.c
++++ b/sound/soc/tegra/tegra186_asrc.c
+@@ -989,10 +989,9 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
+ 
+ 	asrc->regmap = devm_regmap_init_mmio(dev, regs,
+ 					     &tegra186_asrc_regmap_config);
+-	if (IS_ERR(asrc->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(asrc->regmap);
+-	}
++	if (IS_ERR(asrc->regmap))
++		return dev_err_probe(dev, PTR_ERR(asrc->regmap),
++				     "regmap init failed\n");
+ 
+ 	asrc->soc_data = of_device_get_match_data(&pdev->dev);
+ 
+diff --git a/sound/soc/tegra/tegra186_dspk.c b/sound/soc/tegra/tegra186_dspk.c
+index 8816e49673315f..66199f8359bb8c 100644
+--- a/sound/soc/tegra/tegra186_dspk.c
++++ b/sound/soc/tegra/tegra186_dspk.c
+@@ -506,10 +506,9 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
+ 		return PTR_ERR(regs);
+ 
+ 	dspk->regmap = devm_regmap_init_mmio(dev, regs, &tegra186_dspk_regmap);
+-	if (IS_ERR(dspk->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(dspk->regmap);
+-	}
++	if (IS_ERR(dspk->regmap))
++		return dev_err_probe(dev, PTR_ERR(dspk->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(dspk->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_adx.c b/sound/soc/tegra/tegra210_adx.c
+index 95875c75ddf87d..53d938af3f3cfa 100644
+--- a/sound/soc/tegra/tegra210_adx.c
++++ b/sound/soc/tegra/tegra210_adx.c
+@@ -693,10 +693,9 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
+ 
+ 	adx->regmap = devm_regmap_init_mmio(dev, regs,
+ 					    soc_data->regmap_conf);
+-	if (IS_ERR(adx->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(adx->regmap);
+-	}
++	if (IS_ERR(adx->regmap))
++		return dev_err_probe(dev, PTR_ERR(adx->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(adx->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_ahub.c b/sound/soc/tegra/tegra210_ahub.c
+index 43a45f785d5bd1..e96933e5650b3d 100644
+--- a/sound/soc/tegra/tegra210_ahub.c
++++ b/sound/soc/tegra/tegra210_ahub.c
+@@ -2276,10 +2276,9 @@ static int tegra_ahub_probe(struct platform_device *pdev)
+ 
+ 	ahub->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
+ 					     ahub->soc_data->regmap_config);
+-	if (IS_ERR(ahub->regmap)) {
+-		dev_err(&pdev->dev, "regmap init failed\n");
+-		return PTR_ERR(ahub->regmap);
+-	}
++	if (IS_ERR(ahub->regmap))
++		return dev_err_probe(&pdev->dev, PTR_ERR(ahub->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(ahub->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_amx.c b/sound/soc/tegra/tegra210_amx.c
+index bfda825052980a..8e86079426db05 100644
+--- a/sound/soc/tegra/tegra210_amx.c
++++ b/sound/soc/tegra/tegra210_amx.c
+@@ -743,10 +743,9 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
+ 
+ 	amx->regmap = devm_regmap_init_mmio(dev, regs,
+ 					    amx->soc_data->regmap_conf);
+-	if (IS_ERR(amx->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(amx->regmap);
+-	}
++	if (IS_ERR(amx->regmap))
++		return dev_err_probe(dev, PTR_ERR(amx->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(amx->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_dmic.c b/sound/soc/tegra/tegra210_dmic.c
+index 93def7ac4fdebf..1ab71d34139f05 100644
+--- a/sound/soc/tegra/tegra210_dmic.c
++++ b/sound/soc/tegra/tegra210_dmic.c
+@@ -518,10 +518,9 @@ static int tegra210_dmic_probe(struct platform_device *pdev)
+ 
+ 	dmic->regmap = devm_regmap_init_mmio(dev, regs,
+ 					     &tegra210_dmic_regmap_config);
+-	if (IS_ERR(dmic->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(dmic->regmap);
+-	}
++	if (IS_ERR(dmic->regmap))
++		return dev_err_probe(dev, PTR_ERR(dmic->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(dmic->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_i2s.c b/sound/soc/tegra/tegra210_i2s.c
+index d8e02f0a3025ae..630d9415f73e15 100644
+--- a/sound/soc/tegra/tegra210_i2s.c
++++ b/sound/soc/tegra/tegra210_i2s.c
+@@ -1090,10 +1090,9 @@ static int tegra210_i2s_probe(struct platform_device *pdev)
+ 
+ 	i2s->regmap = devm_regmap_init_mmio(dev, regs,
+ 					    i2s->soc_data->regmap_conf);
+-	if (IS_ERR(i2s->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(i2s->regmap);
+-	}
++	if (IS_ERR(i2s->regmap))
++		return dev_err_probe(dev, PTR_ERR(i2s->regmap),
++				     "regmap init failed\n");
+ 
+ 	tegra210_parse_client_convert(dev);
+ 
+diff --git a/sound/soc/tegra/tegra210_mixer.c b/sound/soc/tegra/tegra210_mixer.c
+index 6d3a2b76fd6174..85a22b86d80896 100644
+--- a/sound/soc/tegra/tegra210_mixer.c
++++ b/sound/soc/tegra/tegra210_mixer.c
+@@ -641,10 +641,9 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
+ 
+ 	mixer->regmap = devm_regmap_init_mmio(dev, regs,
+ 					      &tegra210_mixer_regmap_config);
+-	if (IS_ERR(mixer->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(mixer->regmap);
+-	}
++	if (IS_ERR(mixer->regmap))
++		return dev_err_probe(dev, PTR_ERR(mixer->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(mixer->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_mvc.c b/sound/soc/tegra/tegra210_mvc.c
+index 6cdc5e1f550738..13cab787adc275 100644
+--- a/sound/soc/tegra/tegra210_mvc.c
++++ b/sound/soc/tegra/tegra210_mvc.c
+@@ -731,10 +731,9 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
+ 
+ 	mvc->regmap = devm_regmap_init_mmio(dev, regs,
+ 					    &tegra210_mvc_regmap_config);
+-	if (IS_ERR(mvc->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(mvc->regmap);
+-	}
++	if (IS_ERR(mvc->regmap))
++		return dev_err_probe(dev, PTR_ERR(mvc->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(mvc->regmap, true);
+ 
+diff --git a/sound/soc/tegra/tegra210_sfc.c b/sound/soc/tegra/tegra210_sfc.c
+index b298bf0421b122..7afde8af0da0b5 100644
+--- a/sound/soc/tegra/tegra210_sfc.c
++++ b/sound/soc/tegra/tegra210_sfc.c
+@@ -3598,10 +3598,9 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
+ 
+ 	sfc->regmap = devm_regmap_init_mmio(dev, regs,
+ 					    &tegra210_sfc_regmap_config);
+-	if (IS_ERR(sfc->regmap)) {
+-		dev_err(dev, "regmap init failed\n");
+-		return PTR_ERR(sfc->regmap);
+-	}
++	if (IS_ERR(sfc->regmap))
++		return dev_err_probe(dev, PTR_ERR(sfc->regmap),
++				     "regmap init failed\n");
+ 
+ 	regcache_cache_only(sfc->regmap, true);
+ 
+-- 
+cgit 1.3.1-korg
+

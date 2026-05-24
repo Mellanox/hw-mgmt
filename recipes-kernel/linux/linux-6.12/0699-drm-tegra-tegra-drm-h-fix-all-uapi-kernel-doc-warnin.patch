@@ -1,0 +1,96 @@
+From b397cc489ae42c753c608cddd2dd6e9c2b2d86c0 Mon Sep 17 00:00:00 2001
+From: Randy Dunlap <rdunlap@infradead.org>
+Date: Mon, 27 Apr 2026 11:44:54 -0700
+Subject: [PATCH 0699/0797] drm/tegra: tegra_drm.h: fix all uapi kernel-doc warnings
+
+Add 2 struct member descriptions and convert #define macro constants
+comments to kernel-doc comments to eliminate all kernel-doc warnings:
+
+Warning: include/uapi/drm/tegra_drm.h:353 struct member 'cmdbuf' not
+ described in 'drm_tegra_reloc'
+Warning: include/uapi/drm/tegra_drm.h:353 struct member 'target' not
+ described in 'drm_tegra_reloc'
+
+Warning: include/uapi/drm/tegra_drm.h:780 This comment starts with '/**',
+ but isn't a kernel-doc comment.
+ * Specify that bit 39 of the patched-in address should be set to switch
+Warning: include/uapi/drm/tegra_drm.h:832 This comment starts with '/**',
+ but isn't a kernel-doc comment.
+ * Execute `words` words of Host1x opcodes specified in the
+ `gather_data_ptr`
+Warning: include/uapi/drm/tegra_drm.h:837 This comment starts with '/**',
+ but isn't a kernel-doc comment.
+ * Wait for a syncpoint to reach a value before continuing with further
+Warning: include/uapi/drm/tegra_drm.h:842 This comment starts with '/**',
+ but isn't a kernel-doc comment.
+ * Wait for a syncpoint to reach a value before continuing with further
+
+Signed-off-by: Randy Dunlap <rdunlap@infradead.org>
+Acked-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://patch.msgid.link/20260427184454.693794-1-rdunlap@infradead.org
+---
+ include/uapi/drm/tegra_drm.h | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/include/uapi/drm/tegra_drm.h b/include/uapi/drm/tegra_drm.h
+index 94cfc306d50abd..8f21f3a448323c 100644
+--- a/include/uapi/drm/tegra_drm.h
++++ b/include/uapi/drm/tegra_drm.h
+@@ -304,6 +304,7 @@ struct drm_tegra_cmdbuf {
+  * struct drm_tegra_reloc - GEM object relocation structure
+  */
+ struct drm_tegra_reloc {
++	/** @cmdbuf: cmd information */
+ 	struct {
+ 		/**
+ 		 * @cmdbuf.handle:
+@@ -321,6 +322,7 @@ struct drm_tegra_reloc {
+ 		 */
+ 		__u32 offset;
+ 	} cmdbuf;
++	/** @target: relocate target information */
+ 	struct {
+ 		/**
+ 		 * @target.handle:
+@@ -778,6 +780,9 @@ struct drm_tegra_channel_unmap {
+ /* Submission */
+ 
+ /**
++ * define DRM_TEGRA_SUBMIT_RELOC_SECTOR_LAYOUT - \
++ *    Select sector layout swizzling for in-memory buffers.
++ *
+  * Specify that bit 39 of the patched-in address should be set to switch
+  * swizzling between Tegra and non-Tegra sector layout on systems that store
+  * surfaces in system memory in non-Tegra sector layout.
+@@ -830,16 +835,27 @@ struct drm_tegra_submit_buf {
+ };
+ 
+ /**
++ * define DRM_TEGRA_SUBMIT_CMD_GATHER_UPTR - \
++ *    Execute Host1x opcodes from user pointer.
++ *
+  * Execute `words` words of Host1x opcodes specified in the `gather_data_ptr`
+  * buffer. Each GATHER_UPTR command uses successive words from the buffer.
+  */
+ #define DRM_TEGRA_SUBMIT_CMD_GATHER_UPTR		0
++
+ /**
++ * define DRM_TEGRA_SUBMIT_CMD_WAIT_SYNCPT - \
++ *    Wait for syncpoint (absolute).
++ *
+  * Wait for a syncpoint to reach a value before continuing with further
+  * commands.
+  */
+ #define DRM_TEGRA_SUBMIT_CMD_WAIT_SYNCPT		1
++
+ /**
++ * define DRM_TEGRA_SUBMIT_CMD_WAIT_SYNCPT_RELATIVE - \
++ *    Wait for syncpoint (relative).
++ *
+  * Wait for a syncpoint to reach a value before continuing with further
+  * commands. The threshold is calculated relative to the start of the job.
+  */
+-- 
+cgit 1.3.1-korg
+

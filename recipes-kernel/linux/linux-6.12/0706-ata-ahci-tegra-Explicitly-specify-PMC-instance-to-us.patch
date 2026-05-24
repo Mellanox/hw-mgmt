@@ -1,0 +1,75 @@
+From 64e609f9299d457a88dec0bce68b42a434a78502 Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Mon, 3 Feb 2025 16:25:29 +0100
+Subject: [PATCH 0706/0797] ata: ahci_tegra: Explicitly specify PMC instance to use
+
+Currently the kernel relies on a global variable to reference the PMC
+context. Use an explicit lookup for the PMC and pass that to the public
+PMC APIs.
+
+Acked-by: Damien Le Moal <dlemoal@kernel.org>
+Acked-by: Jon Hunter <jonathanh@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ drivers/ata/ahci_tegra.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/ata/ahci_tegra.c b/drivers/ata/ahci_tegra.c
+index 44584eed637442..554f05e09f9833 100644
+--- a/drivers/ata/ahci_tegra.c
++++ b/drivers/ata/ahci_tegra.c
+@@ -175,6 +175,7 @@ struct tegra_ahci_priv {
+ 	struct reset_control	   *sata_cold_rst;
+ 	/* Needs special handling, cannot use ahci_platform */
+ 	struct clk		   *sata_clk;
++	struct tegra_pmc	   *pmc;
+ 	struct regulator_bulk_data *supplies;
+ 	const struct tegra_ahci_soc *soc;
+ };
+@@ -246,9 +247,10 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
+ 		return ret;
+ 
+ 	if (!tegra->pdev->dev.pm_domain) {
+-		ret = tegra_powergate_sequence_power_up(TEGRA_POWERGATE_SATA,
+-							tegra->sata_clk,
+-							tegra->sata_rst);
++		ret = tegra_pmc_powergate_sequence_power_up(tegra->pmc,
++							    TEGRA_POWERGATE_SATA,
++							    tegra->sata_clk,
++							    tegra->sata_rst);
+ 		if (ret)
+ 			goto disable_regulators;
+ 	}
+@@ -269,7 +271,7 @@ disable_power:
+ 	clk_disable_unprepare(tegra->sata_clk);
+ 
+ 	if (!tegra->pdev->dev.pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_SATA);
++		tegra_pmc_powergate_power_off(tegra->pmc, TEGRA_POWERGATE_SATA);
+ 
+ disable_regulators:
+ 	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
+@@ -289,7 +291,7 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv)
+ 
+ 	clk_disable_unprepare(tegra->sata_clk);
+ 	if (!tegra->pdev->dev.pm_domain)
+-		tegra_powergate_power_off(TEGRA_POWERGATE_SATA);
++		tegra_pmc_powergate_power_off(tegra->pmc, TEGRA_POWERGATE_SATA);
+ 
+ 	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
+ }
+@@ -571,6 +573,11 @@ static int tegra_ahci_probe(struct platform_device *pdev)
+ 		return PTR_ERR(tegra->sata_clk);
+ 	}
+ 
++	tegra->pmc = devm_tegra_pmc_get(&pdev->dev);
++	if (IS_ERR(tegra->pmc))
++		return dev_err_probe(&pdev->dev, PTR_ERR(tegra->pmc),
++				     "failed to get PMC\n");
++
+ 	tegra->supplies = devm_kcalloc(&pdev->dev,
+ 				       tegra->soc->num_supplies,
+ 				       sizeof(*tegra->supplies), GFP_KERNEL);
+-- 
+cgit 1.3.1-korg
+

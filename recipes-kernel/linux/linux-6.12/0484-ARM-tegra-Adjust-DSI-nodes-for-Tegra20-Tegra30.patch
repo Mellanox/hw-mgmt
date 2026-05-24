@@ -1,0 +1,62 @@
+From 4d93678236678c4b6b0076fd11f4611a22b7e70b Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Thu, 4 Dec 2025 08:17:03 +0200
+Subject: [PATCH 0484/0797] ARM: tegra: Adjust DSI nodes for Tegra20/Tegra30
+
+Add missing nvidia,mipi-calibrate and cells properties to DSI nodes.
+
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ arch/arm/boot/dts/nvidia/tegra20.dtsi | 4 ++++
+ arch/arm/boot/dts/nvidia/tegra30.dtsi | 8 ++++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/arch/arm/boot/dts/nvidia/tegra20.dtsi b/arch/arm/boot/dts/nvidia/tegra20.dtsi
+index c60fc1971188c5..e4be3b62a51fe1 100644
+--- a/arch/arm/boot/dts/nvidia/tegra20.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra20.dtsi
+@@ -230,7 +230,11 @@
+ 			reset-names = "dsi";
+ 			power-domains = <&pd_core>;
+ 			operating-points-v2 = <&dsi_dvfs_opp_table>;
++			nvidia,mipi-calibrate = <&csi 3>; /* DSI pad */
+ 			status = "disabled";
++
++			#address-cells = <1>;
++			#size-cells = <0>;
+ 		};
+ 	};
+ 
+diff --git a/arch/arm/boot/dts/nvidia/tegra30.dtsi b/arch/arm/boot/dts/nvidia/tegra30.dtsi
+index 4c4e6097c9163b..ed1bbf86434ce9 100644
+--- a/arch/arm/boot/dts/nvidia/tegra30.dtsi
++++ b/arch/arm/boot/dts/nvidia/tegra30.dtsi
+@@ -343,7 +343,11 @@
+ 			reset-names = "dsi";
+ 			power-domains = <&pd_core>;
+ 			operating-points-v2 = <&dsia_dvfs_opp_table>;
++			nvidia,mipi-calibrate = <&csi 3>; /* DSIA pad */
+ 			status = "disabled";
++
++			#address-cells = <1>;
++			#size-cells = <0>;
+ 		};
+ 
+ 		dsi@54400000 {
+@@ -356,7 +360,11 @@
+ 			reset-names = "dsi";
+ 			power-domains = <&pd_core>;
+ 			operating-points-v2 = <&dsib_dvfs_opp_table>;
++			nvidia,mipi-calibrate = <&csi 4>; /* DSIB pad */
+ 			status = "disabled";
++
++			#address-cells = <1>;
++			#size-cells = <0>;
+ 		};
+ 	};
+ 
+-- 
+cgit 1.3.1-korg
+

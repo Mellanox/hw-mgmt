@@ -1,0 +1,52 @@
+From 04b8f96b10881006e8aadbf72c59427ec5eaa9b4 Mon Sep 17 00:00:00 2001
+From: Rosen Penev <rosenp@gmail.com>
+Date: Thu, 7 May 2026 16:21:31 -0700
+Subject: [PATCH 0668/0797] ASoC: tegra: tegra210-mixer: Use div_u64() for 64-bit division
+
+A MIPS allmodconfig build with LLVM fails during modpost:
+
+  ERROR: modpost: "__udivdi3"
+  [sound/soc/tegra/snd-soc-tegra210-mixer.ko] undefined!
+
+tegra210_mixer_configure_gain() divides a 64-bit BIT_ULL() value by the
+fade duration. On 32-bit MIPS, clang emits a call to __udivdi3 for that
+plain C division, but that compiler helper is not exported to modules.
+
+Use div_u64() for the inverse duration calculation so the driver uses the
+kernel's 64-bit division helper instead of emitting a compiler runtime
+call.
+
+Assisted-by: Codex:GPT-5.5
+Signed-off-by: Rosen Penev <rosenp@gmail.com>
+Link: https://patch.msgid.link/20260507232131.438589-1-rosenp@gmail.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_mixer.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_mixer.c b/sound/soc/tegra/tegra210_mixer.c
+index f05617b5f43356..bfdd457f740c18 100644
+--- a/sound/soc/tegra/tegra210_mixer.c
++++ b/sound/soc/tegra/tegra210_mixer.c
+@@ -7,6 +7,7 @@
+ #include <linux/clk.h>
+ #include <linux/device.h>
+ #include <linux/io.h>
++#include <linux/math64.h>
+ #include <linux/mod_devicetable.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
+@@ -157,8 +158,8 @@ static int tegra210_mixer_configure_gain(struct snd_soc_component *cmpnt,
+ 			if (i == DURATION_N3_ID)
+ 				val = mixer->duration[id];
+ 			else if (i == DURATION_INV_N3_ID)
+-				val = (u32)(BIT_ULL(31 + TEGRA210_MIXER_PRESCALAR) /
+-					    mixer->duration[id]);
++				val = div_u64(BIT_ULL(31 + TEGRA210_MIXER_PRESCALAR),
++					      mixer->duration[id]);
+ 			else
+ 				val = gain_params.duration[i];
+ 		}
+-- 
+cgit 1.3.1-korg
+

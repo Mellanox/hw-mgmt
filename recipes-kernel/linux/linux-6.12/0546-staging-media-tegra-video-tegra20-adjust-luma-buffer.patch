@@ -1,0 +1,32 @@
+From d974a67033f4c4bd8cf6864a6b30c5f997c6841e Mon Sep 17 00:00:00 2001
+From: Svyatoslav Ryhel <clamor95@gmail.com>
+Date: Tue, 3 Mar 2026 10:42:37 +0200
+Subject: [PATCH 0546/0797] staging: media: tegra-video: tegra20: adjust luma buffer stride
+
+Luma buffer stride is calculated by multiplying height in pixels of image
+by bytes per line. Adjust that value accordingly.
+
+Tested-by: Luca Ceresoli <luca.ceresoli@bootlin.com> # tegra20, parallel camera
+Signed-off-by: Svyatoslav Ryhel <clamor95@gmail.com>
+Reviewed-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Hans Verkuil <hverkuil+cisco@kernel.org>
+---
+ drivers/staging/media/tegra-video/tegra20.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/media/tegra-video/tegra20.c b/drivers/staging/media/tegra-video/tegra20.c
+index 36a57078d539a2..1b8f2a2213f241 100644
+--- a/drivers/staging/media/tegra-video/tegra20.c
++++ b/drivers/staging/media/tegra-video/tegra20.c
+@@ -504,7 +504,7 @@ static void tegra20_camera_capture_setup(struct tegra_vi_channel *chan)
+ 	u32 data_type = chan->fmtinfo->img_dt;
+ 	int width  = chan->format.width;
+ 	int height = chan->format.height;
+-	int stride_l = chan->format.bytesperline;
++	int stride_l = chan->format.bytesperline * height;
+ 	int stride_c = (output_fourcc == V4L2_PIX_FMT_YUV420 ||
+ 			output_fourcc == V4L2_PIX_FMT_YVU420) ? 1 : 0;
+ 	enum tegra_vi_out output_channel = (data_type == TEGRA_IMAGE_DT_RAW8 ||
+-- 
+cgit 1.3.1-korg
+

@@ -1,0 +1,131 @@
+From 4002ccd266b665f1097e20addbe8f3baeb2136f9 Mon Sep 17 00:00:00 2001
+From: Prathamesh Shete <pshete@nvidia.com>
+Date: Thu, 14 May 2026 12:48:34 +0000
+Subject: [PATCH 0677/0797] dt-bindings: gpio: Add Tegra238 support
+
+Extend the existing Tegra186 GPIO controller device tree bindings with
+support for the GPIO controllers found on Tegra238. Tegra238 has two
+GPIO controllers: the main controller and always-on (AON) controller.
+The number of pins is slightly different, but the programming model
+remains the same.
+
+Add a new header, include/dt-bindings/gpio/nvidia,tegra238-gpio.h,
+that defines port IDs as well as the TEGRA238_MAIN_GPIO() helper,
+both of which are used in conjunction to create a unique specifier
+for each pin.
+
+Signed-off-by: Prathamesh Shete <pshete@nvidia.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+Link: https://patch.msgid.link/20260514124835.108532-1-pshete@nvidia.com
+Signed-off-by: Bartosz Golaszewski <bartosz.golaszewski@oss.qualcomm.com>
+---
+ .../bindings/gpio/nvidia,tegra186-gpio.yaml        |  6 +++
+ include/dt-bindings/gpio/nvidia,tegra238-gpio.h    | 58 ++++++++++++++++++++++
+ 2 files changed, 64 insertions(+)
+ create mode 100644 include/dt-bindings/gpio/nvidia,tegra238-gpio.h
+
+diff --git a/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml b/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml
+index 17748dd1015d70..adeb3b3a2902d8 100644
+--- a/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml
++++ b/Documentation/devicetree/bindings/gpio/nvidia,tegra186-gpio.yaml
+@@ -85,6 +85,8 @@ properties:
+       - nvidia,tegra194-gpio-aon
+       - nvidia,tegra234-gpio
+       - nvidia,tegra234-gpio-aon
++      - nvidia,tegra238-gpio
++      - nvidia,tegra238-gpio-aon
+       - nvidia,tegra256-gpio
+       - nvidia,tegra264-gpio
+       - nvidia,tegra264-gpio-uphy
+@@ -163,6 +165,7 @@ allOf:
+               - nvidia,tegra186-gpio
+               - nvidia,tegra194-gpio
+               - nvidia,tegra234-gpio
++              - nvidia,tegra238-gpio
+               - nvidia,tegra256-gpio
+               - nvidia,tegra264-gpio
+               - nvidia,tegra264-gpio-uphy
+@@ -180,6 +183,7 @@ allOf:
+               - nvidia,tegra186-gpio-aon
+               - nvidia,tegra194-gpio-aon
+               - nvidia,tegra234-gpio-aon
++              - nvidia,tegra238-gpio-aon
+               - nvidia,tegra264-gpio-aon
+     then:
+       properties:
+@@ -192,6 +196,8 @@ allOf:
+         compatible:
+           contains:
+             enum:
++              - nvidia,tegra238-gpio
++              - nvidia,tegra238-gpio-aon
+               - nvidia,tegra264-gpio
+               - nvidia,tegra264-gpio-uphy
+               - nvidia,tegra264-gpio-aon
+diff --git a/include/dt-bindings/gpio/nvidia,tegra238-gpio.h b/include/dt-bindings/gpio/nvidia,tegra238-gpio.h
+new file mode 100644
+index 00000000000000..8a616a1df54c02
+--- /dev/null
++++ b/include/dt-bindings/gpio/nvidia,tegra238-gpio.h
+@@ -0,0 +1,58 @@
++/* SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause */
++/* Copyright (c) 2026, NVIDIA CORPORATION. All rights reserved. */
++
++/*
++ * This header provides constants for binding nvidia,tegra238-gpio*.
++ *
++ * The first cell in Tegra's GPIO specifier is the GPIO ID. The macros below
++ * provide names for this.
++ *
++ * The second cell contains standard flag values specified in gpio.h.
++ */
++
++#ifndef _DT_BINDINGS_GPIO_TEGRA238_GPIO_H
++#define _DT_BINDINGS_GPIO_TEGRA238_GPIO_H
++
++#include <dt-bindings/gpio/gpio.h>
++
++/* GPIOs implemented by main GPIO controller */
++#define TEGRA238_MAIN_GPIO_PORT_A   0
++#define TEGRA238_MAIN_GPIO_PORT_B   1
++#define TEGRA238_MAIN_GPIO_PORT_C   2
++#define TEGRA238_MAIN_GPIO_PORT_D   3
++#define TEGRA238_MAIN_GPIO_PORT_E   4
++#define TEGRA238_MAIN_GPIO_PORT_F   5
++#define TEGRA238_MAIN_GPIO_PORT_G   6
++#define TEGRA238_MAIN_GPIO_PORT_H   7
++#define TEGRA238_MAIN_GPIO_PORT_J   8
++#define TEGRA238_MAIN_GPIO_PORT_K   9
++#define TEGRA238_MAIN_GPIO_PORT_L  10
++#define TEGRA238_MAIN_GPIO_PORT_M  11
++#define TEGRA238_MAIN_GPIO_PORT_N  12
++#define TEGRA238_MAIN_GPIO_PORT_P  13
++#define TEGRA238_MAIN_GPIO_PORT_Q  14
++#define TEGRA238_MAIN_GPIO_PORT_R  15
++#define TEGRA238_MAIN_GPIO_PORT_S  16
++#define TEGRA238_MAIN_GPIO_PORT_T  17
++#define TEGRA238_MAIN_GPIO_PORT_U  18
++#define TEGRA238_MAIN_GPIO_PORT_V  19
++#define TEGRA238_MAIN_GPIO_PORT_W  20
++#define TEGRA238_MAIN_GPIO_PORT_X  21
++
++#define TEGRA238_MAIN_GPIO(port, offset) \
++	((TEGRA238_MAIN_GPIO_PORT_##port * 8) + (offset))
++
++/* GPIOs implemented by AON GPIO controller */
++#define TEGRA238_AON_GPIO_PORT_AA 0
++#define TEGRA238_AON_GPIO_PORT_BB 1
++#define TEGRA238_AON_GPIO_PORT_CC 2
++#define TEGRA238_AON_GPIO_PORT_DD 3
++#define TEGRA238_AON_GPIO_PORT_EE 4
++#define TEGRA238_AON_GPIO_PORT_FF 5
++#define TEGRA238_AON_GPIO_PORT_GG 6
++#define TEGRA238_AON_GPIO_PORT_HH 7
++
++#define TEGRA238_AON_GPIO(port, offset) \
++	((TEGRA238_AON_GPIO_PORT_##port * 8) + (offset))
++
++#endif
+-- 
+cgit 1.3.1-korg
+

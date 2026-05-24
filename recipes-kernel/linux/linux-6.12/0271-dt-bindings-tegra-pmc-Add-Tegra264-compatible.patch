@@ -1,0 +1,31 @@
+From cbbdea0dc4293bc5d902179766c5a89eebd4496c Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Tue, 6 May 2025 15:31:08 +0200
+Subject: [PATCH 0271/0797] dt-bindings: tegra: pmc: Add Tegra264 compatible
+
+The PMC found on Tegra264 is similar to the version in earlier chips but
+some of the register offsets and bitfields differ, so add a specific
+compatible string for this new generation.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://lore.kernel.org/r/20250506133118.1011777-2-thierry.reding@gmail.com
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ Documentation/devicetree/bindings/arm/tegra/nvidia,tegra186-pmc.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra186-pmc.yaml b/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra186-pmc.yaml
+index ea4fbf655220be..be70819020c5af 100644
+--- a/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra186-pmc.yaml
++++ b/Documentation/devicetree/bindings/arm/tegra/nvidia,tegra186-pmc.yaml
+@@ -16,6 +16,7 @@ properties:
+       - nvidia,tegra186-pmc
+       - nvidia,tegra194-pmc
+       - nvidia,tegra234-pmc
++      - nvidia,tegra264-pmc
+ 
+   reg:
+     minItems: 4
+-- 
+cgit 1.3.1-korg
+

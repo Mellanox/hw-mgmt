@@ -1,0 +1,68 @@
+From 7da6a3578ab4bcff5f6bdea5fcef08a82139c868 Mon Sep 17 00:00:00 2001
+From: Prathamesh Shete <pshete@nvidia.com>
+Date: Tue, 17 Dec 2024 21:02:49 +0530
+Subject: [PATCH 0130/0797] pinctrl-tegra: Add config property GPIO mode
+
+The SFIO/GPIO select bit is a crucial part of Tegra's pin multiplexing
+system:
+- When set to 1, the pin operates in SFIO mode, controlled by the
+  pin's assigned special function.
+- When set to 0, the pin operates as a general-purpose GPIO.
+
+This SFIO/GPIO select bit that is set for a given pin is not displayed,
+adding the support to retrieve this information from the
+pinmux set for each pin.
+
+Signed-off-by: Prathamesh Shete <pshete@nvidia.com>
+Link: https://lore.kernel.org/20241217153249.5712-1-pshete@nvidia.com
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+---
+ drivers/pinctrl/tegra/pinctrl-tegra.c | 11 +++++++++++
+ drivers/pinctrl/tegra/pinctrl-tegra.h |  2 ++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/drivers/pinctrl/tegra/pinctrl-tegra.c b/drivers/pinctrl/tegra/pinctrl-tegra.c
+index c83e5a65e6801c..314309c797d7df 100644
+--- a/drivers/pinctrl/tegra/pinctrl-tegra.c
++++ b/drivers/pinctrl/tegra/pinctrl-tegra.c
+@@ -96,6 +96,7 @@ static const struct cfg_param {
+ 	{"nvidia,slew-rate-falling",	TEGRA_PINCONF_PARAM_SLEW_RATE_FALLING},
+ 	{"nvidia,slew-rate-rising",	TEGRA_PINCONF_PARAM_SLEW_RATE_RISING},
+ 	{"nvidia,drive-type",		TEGRA_PINCONF_PARAM_DRIVE_TYPE},
++	{"nvidia,gpio-mode",		TEGRA_PINCONF_PARAM_GPIO_MODE},
+ };
+ 
+ static int tegra_pinctrl_dt_subnode_to_map(struct pinctrl_dev *pctldev,
+@@ -468,6 +469,16 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
+ 		*bit = g->drvtype_bit;
+ 		*width = 2;
+ 		break;
++	case TEGRA_PINCONF_PARAM_GPIO_MODE:
++		if (pmx->soc->sfsel_in_mux) {
++			*bank = g->mux_bank;
++			*reg = g->mux_reg;
++			*bit = g->sfsel_bit;
++			*width = 1;
++		} else {
++			*reg = -EINVAL;
++		}
++		break;
+ 	default:
+ 		dev_err(pmx->dev, "Invalid config param %04x\n", param);
+ 		return -ENOTSUPP;
+diff --git a/drivers/pinctrl/tegra/pinctrl-tegra.h b/drivers/pinctrl/tegra/pinctrl-tegra.h
+index b3289bdf727d82..216cc59b62b4ba 100644
+--- a/drivers/pinctrl/tegra/pinctrl-tegra.h
++++ b/drivers/pinctrl/tegra/pinctrl-tegra.h
+@@ -54,6 +54,8 @@ enum tegra_pinconf_param {
+ 	TEGRA_PINCONF_PARAM_SLEW_RATE_RISING,
+ 	/* argument: Integer, range is HW-dependant */
+ 	TEGRA_PINCONF_PARAM_DRIVE_TYPE,
++	/* argument: Boolean */
++	TEGRA_PINCONF_PARAM_GPIO_MODE,
+ };
+ 
+ enum tegra_pinconf_pull {
+-- 
+cgit 1.3.1-korg
+

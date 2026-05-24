@@ -1,0 +1,42 @@
+From b4505b6ad9444c8c517240c74f8b9cbbba94a86b Mon Sep 17 00:00:00 2001
+From: Akhilesh Patil <akhilesh@ee.iitb.ac.in>
+Date: Fri, 22 Aug 2025 11:44:04 +0530
+Subject: [PATCH 0342/0797] gpu: host1x: Use dev_err_probe() in probe path
+
+Use dev_err_probe() helper as recommended by core driver model in
+drivers/base/core.c to handle deferred probe error. Improve code
+consistency and debuggability using standard helper.
+
+Signed-off-by: Akhilesh Patil <akhilesh@ee.iitb.ac.in>
+Tested-by: Mikko Perttunen <mperttunen@nvidia.com>
+Acked-by: Mikko Perttunen <mperttunen@nvidia.com>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+Link: https://lore.kernel.org/r/aKgKrCxUvP9Sw0YI@bhairav-test.ee.iitb.ac.in
+---
+ drivers/gpu/host1x/dev.c | 10 ++--------
+ 1 file changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/gpu/host1x/dev.c b/drivers/gpu/host1x/dev.c
+index e1a9246d35f4b7..e365df6af353b6 100644
+--- a/drivers/gpu/host1x/dev.c
++++ b/drivers/gpu/host1x/dev.c
+@@ -585,14 +585,8 @@ static int host1x_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	host->clk = devm_clk_get(&pdev->dev, NULL);
+-	if (IS_ERR(host->clk)) {
+-		err = PTR_ERR(host->clk);
+-
+-		if (err != -EPROBE_DEFER)
+-			dev_err(&pdev->dev, "failed to get clock: %d\n", err);
+-
+-		return err;
+-	}
++	if (IS_ERR(host->clk))
++		return dev_err_probe(&pdev->dev, PTR_ERR(host->clk), "failed to get clock\n");
+ 
+ 	err = host1x_get_resets(host);
+ 	if (err)
+-- 
+cgit 1.3.1-korg
+

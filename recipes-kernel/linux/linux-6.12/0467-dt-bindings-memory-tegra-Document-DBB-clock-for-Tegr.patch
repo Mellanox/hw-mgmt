@@ -1,0 +1,71 @@
+From d3b9e6d5b4da3961d8cc4fce1d867f89621420cb Mon Sep 17 00:00:00 2001
+From: Thierry Reding <treding@nvidia.com>
+Date: Wed, 5 Nov 2025 20:53:40 +0100
+Subject: [PATCH 0467/0797] dt-bindings: memory: tegra: Document DBB clock for Tegra264
+
+Accesses to external memory are routed through the data backbone (DBB)
+on Tegra264. A separate clock feeds this path and needs to be enabled
+whenever an IP block makes an access to external memory. The external
+memory controller driver is the best place to control this clock since
+it knows how many devices are actively accessing memory.
+
+Document the presence of this clock on Tegra264 only.
+
+Acked-by: Rob Herring (Arm) <robh@kernel.org>
+Signed-off-by: Thierry Reding <treding@nvidia.com>
+---
+ .../bindings/memory-controllers/nvidia,tegra186-mc.yaml     | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra186-mc.yaml b/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra186-mc.yaml
+index b901f1b3e0fc33..7b03b589168b1b 100644
+--- a/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra186-mc.yaml
++++ b/Documentation/devicetree/bindings/memory-controllers/nvidia,tegra186-mc.yaml
+@@ -92,10 +92,14 @@ patternProperties:
+       clocks:
+         items:
+           - description: external memory clock
++          - description: data backbone clock
++        minItems: 1
+ 
+       clock-names:
+         items:
+           - const: emc
++          - const: dbb
++        minItems: 1
+ 
+       "#interconnect-cells":
+         const: 0
+@@ -115,6 +119,9 @@ patternProperties:
+             reg:
+               maxItems: 1
+ 
++            clocks:
++              maxItems: 1
++
+       - if:
+           properties:
+             compatible:
+@@ -124,6 +131,9 @@ patternProperties:
+             reg:
+               minItems: 2
+ 
++            clocks:
++              maxItems: 1
++
+       - if:
+           properties:
+             compatible:
+@@ -133,6 +143,9 @@ patternProperties:
+             reg:
+               minItems: 2
+ 
++            clocks:
++              maxItems: 1
++
+       - if:
+           properties:
+             compatible:
+-- 
+cgit 1.3.1-korg
+

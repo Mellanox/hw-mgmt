@@ -1,0 +1,181 @@
+From 72660d1ac9f1d4eb535e502b404c5cb4f15ada1a Mon Sep 17 00:00:00 2001
+From: Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
+Date: Thu, 12 Mar 2026 00:15:13 +0000
+Subject: [PATCH 0549/0797] ASoC: tegra: use snd_soc_component_regmap_val_bytes()
+
+component has component->val_bytes which is set via
+snd_soc_component_setup_regmap(). But it can be calculated via
+component->regmap. No need to keep it as component->val_bytes.
+
+Use snd_soc_component_regmap_val_bytes().
+
+Signed-off-by: Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
+Link: https://patch.msgid.link/877brhzywd.wl-kuninori.morimoto.gx@renesas.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ sound/soc/tegra/tegra210_ahub.c  |  8 +++++---
+ sound/soc/tegra/tegra210_mbdrc.c | 18 ++++++++++++------
+ sound/soc/tegra/tegra210_peq.c   |  6 ++++--
+ 3 files changed, 21 insertions(+), 11 deletions(-)
+
+diff --git a/sound/soc/tegra/tegra210_ahub.c b/sound/soc/tegra/tegra210_ahub.c
+index 43a45f785d5bd1..a4ed02617472ff 100644
+--- a/sound/soc/tegra/tegra210_ahub.c
++++ b/sound/soc/tegra/tegra210_ahub.c
+@@ -20,6 +20,7 @@ static int tegra_ahub_get_value_enum(struct snd_kcontrol *kctl,
+ 	struct snd_soc_component *cmpnt = snd_soc_dapm_kcontrol_to_component(kctl);
+ 	struct tegra_ahub *ahub = snd_soc_component_get_drvdata(cmpnt);
+ 	struct soc_enum *e = (struct soc_enum *)kctl->private_value;
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	unsigned int reg, i, bit_pos = 0;
+ 
+ 	/*
+@@ -35,7 +36,7 @@ static int tegra_ahub_get_value_enum(struct snd_kcontrol *kctl,
+ 
+ 		if (reg_val) {
+ 			bit_pos = ffs(reg_val) +
+-				  (8 * cmpnt->val_bytes * i);
++				  (8 * val_bytes * i);
+ 			break;
+ 		}
+ 	}
+@@ -59,6 +60,7 @@ static int tegra_ahub_put_value_enum(struct snd_kcontrol *kctl,
+ 	struct snd_soc_dapm_context *dapm = snd_soc_dapm_kcontrol_to_dapm(kctl);
+ 	struct soc_enum *e = (struct soc_enum *)kctl->private_value;
+ 	struct snd_soc_dapm_update update[TEGRA_XBAR_UPDATE_MAX_REG] = { };
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	unsigned int *item = uctl->value.enumerated.item;
+ 	unsigned int value = e->values[item[0]];
+ 	unsigned int i, bit_pos, reg_idx = 0, reg_val = 0;
+@@ -69,8 +71,8 @@ static int tegra_ahub_put_value_enum(struct snd_kcontrol *kctl,
+ 
+ 	if (value) {
+ 		/* Get the register index and value to set */
+-		reg_idx = (value - 1) / (8 * cmpnt->val_bytes);
+-		bit_pos = (value - 1) % (8 * cmpnt->val_bytes);
++		reg_idx = (value - 1) / (8 * val_bytes);
++		bit_pos = (value - 1) % (8 * val_bytes);
+ 		reg_val = BIT(bit_pos);
+ 	}
+ 
+diff --git a/sound/soc/tegra/tegra210_mbdrc.c b/sound/soc/tegra/tegra210_mbdrc.c
+index 6a268dbb71978c..64f1c91646ce54 100644
+--- a/sound/soc/tegra/tegra210_mbdrc.c
++++ b/sound/soc/tegra/tegra210_mbdrc.c
+@@ -307,13 +307,14 @@ static int tegra210_mbdrc_band_params_get(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 *data = (u32 *)ucontrol->value.bytes.data;
+ 	u32 regs = params->soc.base;
+ 	u32 mask = params->soc.mask;
+ 	u32 shift = params->shift;
+ 	unsigned int i;
+ 
+-	for (i = 0; i < params->soc.num_regs; i++, regs += cmpnt->val_bytes) {
++	for (i = 0; i < params->soc.num_regs; i++, regs += val_bytes) {
+ 		regmap_read(ope->mbdrc_regmap, regs, &data[i]);
+ 
+ 		data[i] = ((data[i] & mask) >> shift);
+@@ -328,6 +329,7 @@ static int tegra210_mbdrc_band_params_put(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 *data = (u32 *)ucontrol->value.bytes.data;
+ 	u32 regs = params->soc.base;
+ 	u32 mask = params->soc.mask;
+@@ -335,7 +337,7 @@ static int tegra210_mbdrc_band_params_put(struct snd_kcontrol *kcontrol,
+ 	bool change = false;
+ 	unsigned int i;
+ 
+-	for (i = 0; i < params->soc.num_regs; i++, regs += cmpnt->val_bytes) {
++	for (i = 0; i < params->soc.num_regs; i++, regs += val_bytes) {
+ 		bool update = false;
+ 
+ 		regmap_update_bits_check(ope->mbdrc_regmap, regs, mask,
+@@ -353,13 +355,14 @@ static int tegra210_mbdrc_threshold_get(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 *data = (u32 *)ucontrol->value.bytes.data;
+ 	u32 regs = params->soc.base;
+ 	u32 num_regs = params->soc.num_regs;
+ 	u32 val;
+ 	unsigned int i;
+ 
+-	for (i = 0; i < num_regs; i += 4, regs += cmpnt->val_bytes) {
++	for (i = 0; i < num_regs; i += 4, regs += val_bytes) {
+ 		regmap_read(ope->mbdrc_regmap, regs, &val);
+ 
+ 		data[i] = (val & TEGRA210_MBDRC_THRESH_1ST_MASK) >>
+@@ -381,13 +384,14 @@ static int tegra210_mbdrc_threshold_put(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 *data = (u32 *)ucontrol->value.bytes.data;
+ 	u32 regs = params->soc.base;
+ 	u32 num_regs = params->soc.num_regs;
+ 	bool change = false;
+ 	unsigned int i;
+ 
+-	for (i = 0; i < num_regs; i += 4, regs += cmpnt->val_bytes) {
++	for (i = 0; i < num_regs; i += 4, regs += val_bytes) {
+ 		bool update = false;
+ 
+ 		data[i] = (((data[i] >> TEGRA210_MBDRC_THRESH_1ST_SHIFT) &
+@@ -413,9 +417,10 @@ static int tegra210_mbdrc_biquad_coeffs_get(struct snd_kcontrol *kcontrol,
+ {
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 *data = (u32 *)ucontrol->value.bytes.data;
+ 
+-	memset(data, 0, params->soc.num_regs * cmpnt->val_bytes);
++	memset(data, 0, params->soc.num_regs * val_bytes);
+ 
+ 	return 0;
+ }
+@@ -426,8 +431,9 @@ static int tegra210_mbdrc_biquad_coeffs_put(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 reg_ctrl = params->soc.base;
+-	u32 reg_data = reg_ctrl + cmpnt->val_bytes;
++	u32 reg_data = reg_ctrl + val_bytes;
+ 	u32 *data = (u32 *)ucontrol->value.bytes.data;
+ 
+ 	tegra210_mbdrc_write_ram(ope->mbdrc_regmap, reg_ctrl, reg_data,
+diff --git a/sound/soc/tegra/tegra210_peq.c b/sound/soc/tegra/tegra210_peq.c
+index 2f72e9d541dca7..022a20f1ef7d21 100644
+--- a/sound/soc/tegra/tegra210_peq.c
++++ b/sound/soc/tegra/tegra210_peq.c
+@@ -148,8 +148,9 @@ static int tegra210_peq_ram_get(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 i, reg_ctrl = params->soc.base;
+-	u32 reg_data = reg_ctrl + cmpnt->val_bytes;
++	u32 reg_data = reg_ctrl + val_bytes;
+ 	s32 *data = (s32 *)biquad_coeff_buffer;
+ 
+ 	pm_runtime_get_sync(cmpnt->dev);
+@@ -171,8 +172,9 @@ static int tegra210_peq_ram_put(struct snd_kcontrol *kcontrol,
+ 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
+ 	struct snd_soc_component *cmpnt = snd_kcontrol_chip(kcontrol);
+ 	struct tegra210_ope *ope = snd_soc_component_get_drvdata(cmpnt);
++	int val_bytes = snd_soc_component_regmap_val_bytes(cmpnt);
+ 	u32 i, reg_ctrl = params->soc.base;
+-	u32 reg_data = reg_ctrl + cmpnt->val_bytes;
++	u32 reg_data = reg_ctrl + val_bytes;
+ 	s32 *data = (s32 *)biquad_coeff_buffer;
+ 
+ 	for (i = 0; i < params->soc.num_regs; i++)
+-- 
+cgit 1.3.1-korg
+
