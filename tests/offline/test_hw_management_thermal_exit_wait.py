@@ -5,16 +5,8 @@
 #
 # Unit tests for hw_management_lib.exit_wait():
 #   chunked Event.wait so SIGTERM handler can run during long waits.
-#
-# Feature history (verified against git on Nhugi_dev):
-#   - d73ee15d (2026-03-17, Bug 4879247) introduced ThermalManagement._exit_wait
-#     as a class method in TC 2.0 and 2.5.
-#   - 6703a009 (2026-03-25, Bug 4946747) introduced module-level
-#     hw_management_lib.exit_wait() and adopted it in thermal-updater and
-#     peripheral-updater.
-#   - 8aaba0f1 (2026-04-02, Bug 4953142) added the `if timeout <= 0: return`
-#     guard and migrated the TC 2.0 / TC 2.5 call sites from the per-class
-#     ThermalManagement._exit_wait method to the module-level function.
+# exit_wait() is the module-level successor to ThermalManagement._exit_wait();
+# it is shared by thermal-updater and peripheral-updater.
 ################################################################################
 
 import sys
@@ -95,9 +87,8 @@ def test_exit_wait_zero_timeout_is_noop():
 
 
 def test_exit_wait_negative_timeout_is_noop():
-    # Production passes `sleep_ms / 1000` (e.g. hw_management_thermal_control.py:4352)
-    # which can be negative when computed; the `if timeout <= 0: return` guard
-    # in hw_management_lib.exit_wait must cover this case.
+    # Production computes timeout as sleep_ms / 1000, which can be negative;
+    # the `if timeout <= 0: return` guard in exit_wait must cover this case.
     fe = _FakeExit()
     exit_wait(fe, -1.0, chunk_sec=1.0)
     assert fe._wait_calls == []
