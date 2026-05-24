@@ -854,6 +854,18 @@ Kernel-6.12
 |9009-platform-mellanox-mlx-platform-Add-support-for-Q3450.patch  |                    | Downstream;skip[sonic,cumulus]           |            | Q3450                                          |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+Kernel-7.2
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| patch name                                                      | Upstream commit id |  status                                  | subversion | Notes                                          |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|0001-i2c-mux-Add-register-map-based-mux-driver.patch             |                    | Downstream accepted                      |            |                                                |
+|0002-platform_data-mlxreg-Add-non-sticky-bit-indication-f.patch  |                    | Downstream accepted                      |            |                                                |
+|0003-platform-mellanox-mlxreg-hotplug-Add-handling-of-non.patch  |                    | Downstream accepted                      |            |                                                |
+|0004-platform-mellanox-Add-host-side-CPLD-FPGA-control-dr.patch  |                    | Downstream accepted                      |            |                                                |
+|0005-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch  |                    | Downstream accepted                      |            |                                                |
+|0006-dt-bindings-trivial-devices-Add-support-for-nvsw-bmc.patch  |                    | Downstream accepted                      |            |                                                |
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Legend:
 Feature upstream: Has commit Id in upstream
 Feature accepted: Accepted by maintainer don’t have commit Id in upstream yet (in maintainer queue)
