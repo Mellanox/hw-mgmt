@@ -446,7 +446,6 @@ class TestHWMgmtLogger(unittest.TestCase):
 
         with open(self.test_log_file, 'r') as f:
             content = f.read()
-            self.assertIn("(repeat=5", content)
             self.assertIn("(repeat=5, duration=", content)
 
     def test_23_hash_collision_handling(self):
