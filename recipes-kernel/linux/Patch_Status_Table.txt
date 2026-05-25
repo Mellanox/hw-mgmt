@@ -317,7 +317,8 @@ Kernel-5.10
 |0308-platform-mellanox-mlxreg-hotplug-Add-support-for-han.patch  |                    | Downstream accepted                      |            |                                                |
 |0309-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp2869-c.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp2869                                         |
 |0310-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp29502                                        |
-|0311-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|0311-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          |            | NVME SSD fallback recovery                     |
+|0312-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
 |7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
 |7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
@@ -723,13 +724,14 @@ Kernel-6.1
 |0107-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch      |                    | Downstream accepted                      |            |                                                |
 |0109-hwmon-pmbus-xdpe1a2g7b-Add-support-for-XDPE1A2G7B-5B.patch  |                    | Downstream accepted; os[nvos]            |            | xdpe1a2g7b                                     |
-|0110-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          | 6.17       | NVME SSD fallback recovery                     |
+|0110-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          |            | NVME SSD fallback recovery                     |
 |0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
 |0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
 |0113-net-usb-usbnet-restore-usb-d-name-exception-for-loca.patch  | 07f8bdce68b9       | Bugfix accepted;skip[nvos]               | v6.1.133   | Required for kernels 6.1.115-6.1.132           |
 |0114-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
 |0115-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
 |0116-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_post_init after last mux (4151613)     |
+|0117-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
