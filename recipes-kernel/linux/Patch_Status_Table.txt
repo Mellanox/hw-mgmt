@@ -319,6 +319,7 @@ Kernel-5.10
 |0310-hwmon-pmbus-Add-support-for-MPS-Multi-phase-mp29502-.patch  |                    | Feature pending; os[sonic,opt,nvos,dvs]  |            | mp29502                                        |
 |0311-nvme-pci-try-function-level-reset-on-init-failure.patch     | 5b2c214a9594       | Bugfix upstream                          |            | NVME SSD fallback recovery                     |
 |0312-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
+|0313-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
 |7001-mctp-Add-MCTP-base.patch                                    |                    | Downstream                               |            | MCTP                                           |
 |7002-mctp-Add-base-socket-protocol-definitions.patch             |                    | Downstream                               |            | MCTP                                           |
 |7003-mctp-Add-base-packet-definitions.patch                      |                    | Downstream                               |            | MCTP                                           |
@@ -745,6 +746,7 @@ Kernel-6.1
 |8011-mlxsw-minimal-Downstream-Disable-ethtool-interface.patch    |                    | Downstream accepted                      |            |                                                |
 |8012-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
 |8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
+|8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
 |9000-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9001-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9002-regmap-debugfs-FT-Enable-writing-to-the-regmap-debug.patch  |                    | Downstream;skip[ALL];take[opt]           |            | BF3 (FT purpose)                               |
@@ -845,6 +847,7 @@ Kernel-6.12
 |8011-hwmon-pmbus-Downstream-Workaround-for-psu-attributes.patch  |                    | Downstream accepted                      |            |                                                |
 |8012-mlxsw-core-Downstream-Fix-uninitialized-variable.patch      |                    | Downstream accepted;skip[sonic]          |            |                                                |
 |8013-hwmon-pmbus-mp2975-Clear-interrupts-at-probe.patch          |                    | Downstream accepted                      |            |                                                |
+|8014-mlxsw-i2c-Downstream-Increase-I2C-timeout-for-HW-sem.patch  |                    | Downstream accepted                      |            | Increase I2C timeout 5000->10000 (#4954530)    |
 |9001-platform-mellanox-Downstream-Add-dedicated-match-for.patch  |                    | Rejected                                 |            | Add dedicated match for QMB8700                |
 |9002-e1000e-OPT-skip-NVM-checksum.patch                          |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
 |9003-iio-pressure-icp20100-OPT-add-driver-for-InvenSense-.patch  |                    | Downstream;skip[ALL];take[opt]           |            |                                                |
