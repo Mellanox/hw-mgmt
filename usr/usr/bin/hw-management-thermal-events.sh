@@ -605,12 +605,8 @@ if [ "$1" == "add" ]; then
 	if [ "$2" == "hotplug" ]; then
 		print_function_call "$0" "fan hotplug" "$1 $2 $3 $4 start"
 		for ((i=1; i<=max_tachos; i+=1)); do
-			if [ -f "$3""$4"/fan$i ]; then
-				check_n_link "$3""$4"/fan$i $thermal_path/fan"$i"_status
-				event=$(< $thermal_path/fan"$i"_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/fan"$i"
-				fi
+			if init_hotplug_sysfs_event "$3$4" "fan$i" \
+				"$thermal_path/fan${i}_status" "fan$i"; then
 				(( fan_drwr_num++ ))
 			fi
 		done
@@ -629,136 +625,47 @@ if [ "$1" == "add" ]; then
 		fi
 
 		for ((i=1; i<=max_psus; i+=1)); do
-			if [ -f "$3""$4"/psu$i ]; then
-				check_n_link "$3""$4"/psu$i $thermal_path/psu"$i"_status
-				event=$(< $thermal_path/psu"$i"_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/psu"$i"
-				fi
-			fi
-			if [ -f "$3""$4"/pwr$i ]; then
-				check_n_link "$3""$4"/pwr$i $thermal_path/psu"$i"_pwr_status
-				event=$(< "$thermal_path"/psu"$i"_pwr_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/pwr"$i"
-				fi
-			fi
-			if [ -f "$3""$4"/pdb$i ]; then
-				check_n_link "$3""$4"/pdb$i $thermal_path/pdb"$i"_pwr_status
-				event=$(< "$thermal_path"/pdb"$i"_pwr_status)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/pdb"$i"
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "psu$i" \
+				"$thermal_path/psu${i}_status" "psu$i"
+			init_hotplug_sysfs_event "$3$4" "pwr$i" \
+				"$thermal_path/psu${i}_pwr_status" "pwr$i"
+			init_hotplug_sysfs_event "$3$4" "pdb$i" \
+				"$thermal_path/pdb${i}_pwr_status" "pdb$i"
 		done
 		for ((i=1; i<=max_lcs; i+=1)); do
-			if [ -f "$3""$4"/lc"$i"_active ]; then
-				check_n_link "$3""$4"/lc"$i"_active $system_path/lc"$i"_active
-				event=$(< $system_path/lc"$i"_active)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_active
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_powered ]; then
-				check_n_link "$3""$4"/lc"$i"_powered $system_path/lc"$i"_powered
-				event=$(< $system_path/lc"$i"_powered)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_powered
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_present ]; then
-				check_n_link "$3""$4"/lc"$i"_present $system_path/lc"$i"_present
-				event=$(< $system_path/lc"$i"_present)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_present
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_ready ]; then
-				check_n_link "$3""$4"/lc"$i"_ready $system_path/lc"$i"_ready
-				event=$(< $system_path/lc"$i"_ready)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_ready
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_shutdown ]; then
-				check_n_link "$3""$4"/lc"$i"_shutdown $system_path/lc"$i"_shutdown
-				event=$(< $system_path/lc"$i"_shutdown)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_shutdown
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_synced ]; then
-				check_n_link "$3""$4"/lc"$i"_synced $system_path/lc"$i"_synced
-				event=$(< $system_path/lc"$i"_synced)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_synced
-				fi
-			fi
-			if [ -f "$3""$4"/lc"$i"_verified ]; then
-				check_n_link "$3""$4"/lc"$i"_verified $system_path/lc"$i"_verified
-				event=$(< $system_path/lc"$i"_verified)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/lc"$i"_verified
-				fi
-			fi
+			for attr in active powered present ready shutdown synced verified; do
+				init_hotplug_sysfs_event "$3$4" "lc${i}_${attr}" \
+					"$system_path/lc${i}_${attr}" "lc${i}_${attr}"
+			done
 		done
 		for ((i=1; i<=max_erots; i+=1)); do
-			if [ -f "$3""$4"/erot"$i"_ap ]; then
-				check_n_link "$3""$4"/erot"$i"_ap $system_path/erot"$i"_ap
-				event=$(< $system_path/erot"$i"_ap)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/erot"$i"_ap
-				fi
-			fi
-			if [ -f "$3""$4"/erot"$i"_error ]; then
-				check_n_link "$3""$4"/erot"$i"_error $system_path/erot"$i"_error
-				event=$(< $system_path/erot"$i"_error)
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/erot"$i"_error
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "erot${i}_ap" \
+				"$system_path/erot${i}_ap" "erot${i}_ap"
+			init_hotplug_sysfs_event "$3$4" "erot${i}_error" \
+				"$system_path/erot${i}_error" "erot${i}_error"
 		done
 		for ((i=1; i<=max_leakage; i+=1)); do
-			if [ -f "$3""$4"/leakage"$i" ]; then
-				check_n_link "$3""$4"/leakage$i $system_path/leakage"$i"
-				event=$(< $system_path/leakage"$i")
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/leakage"$i"
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "leakage$i" \
+				"$system_path/leakage${i}" "leakage${i}"
 		done
 		for ((i=1; i<=max_leakage_rope; i+=1)); do
-			if [ -f "$3""$4"/leakage_rope"$i" ]; then
-				check_n_link "$3""$4"/leakage_rope"$i" $system_path/leakage_rope"$i"
-				event=$(< $system_path/leakage_rope"$i")
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/leakage_rope"$i"
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "leakage_rope$i" \
+				"$system_path/leakage_rope${i}" "leakage_rope${i}"
 		done
 		for ((i=0; i<=max_health_events; i+=1)); do
-			if [ -f "$3""$4"/${l1_switch_health_events[$i]} ]; then
-				check_n_link "$3""$4"/${l1_switch_health_events[$i]} $system_path/${l1_switch_health_events[$i]}
-				event=$(< $system_path/${l1_switch_health_events[$i]})
-				if [ "$event" -eq 1 ]; then
-					echo 1 > $events_path/${l1_switch_health_events[$i]}
-				fi
-			fi
+			init_hotplug_sysfs_event "$3$4" "${l1_switch_health_events[$i]}" \
+				"$system_path/${l1_switch_health_events[$i]}" \
+				"${l1_switch_health_events[$i]}"
 		done
-		if [ -f "$3""$4"/power_button ]; then
-			check_n_link "$3""$4"/power_button $system_path/power_button
-			event=$(< $system_path/power_button)
-			if [ "$event" -eq 1 ]; then
-				echo 1 > $events_path/power_button
-			fi
-		fi
+		init_hotplug_sysfs_event "$3$4" "power_button" \
+			"$system_path/power_button" "power_button"
 		# Add DPU ready/shutdown_ready attributes
-		init_hotplug_events "$dpu2host_events_file" "$3$4" 0
+		init_hotplug_dpu_events "$dpu2host_events_file" "$3$4" 0
 		# Add hotplug attributes from DPU
-		init_hotplug_events "$dpu_events_file" "$3$4" 1
-		init_hotplug_events "$dpu_events_file" "$3$4" 2
-		init_hotplug_events "$dpu_events_file" "$3$4" 3
-		init_hotplug_events "$dpu_events_file" "$3$4" 4
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 1
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 2
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 3
+		init_hotplug_dpu_events "$dpu_events_file" "$3$4" 4
 		# Based on the DPU ready signal, connect the DPU sensors
 		load_dpu_sensors 1
 		load_dpu_sensors 2
@@ -1449,7 +1356,7 @@ else
 			check_n_unlink $system_path/${l1_switch_health_events[$i]}
 		done
 		check_n_unlink  $system_path/power_button
-		deinit_hotplug_events "$dpu2host_events_file" 0
+		deinit_hotplug_dpu_events "$dpu2host_events_file" 0
 	fi
 	if [ "$2" == "cputemp" ]; then
 		unlink $thermal_path/cpu_pack

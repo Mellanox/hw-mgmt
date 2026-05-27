@@ -874,7 +874,54 @@ create_hotplug_smart_switch_event_files()
 	done
 }
 
-init_hotplug_events()
+# Link hotplug sysfs attribute and mirror active state to events
+#    1 - Creating symlink to target status file
+#    2 - Mirroring active state to event file
+# $1 - hwmon base path (no trailing slash)
+# $2 - sysfs attribute name (e.g. fan1, lc2_active)
+# $3 - status symlink target (thermal_path or system_path)
+# $4 - eventfile name under events_path
+# Returns 0 if sysfs attribute exists, 1 otherwise.
+init_hotplug_sysfs_event()
+{
+	local hwmon_path="$1"
+	local attr="$2"
+	local status_link="$3"
+	local event_name="$4"
+	local event
+	local src="${hwmon_path}/${attr}"
+
+	if [ ! -f "$src" ]; then
+		return 1
+	fi
+	check_n_link "$src" "$status_link"
+	event=$(< "$status_link")
+	if [ "$event" -eq 1 ]; then
+		echo 1 > "$events_path/$event_name"
+	fi
+	return 0
+}
+
+# Unlink hotplug sysfs attribute and mirror active state from events.
+#    1 - Unlinking symlink to target status
+#    2 - Clearing event file
+# $1 - hwmon base path (no trailing slash)
+# $2 - sysfs attribute name (e.g. fan1, lc2_active)
+# $3 - status symlink target (thermal_path or system_path)
+# $4 - eventfile name under events_path
+# Returns 0 if sysfs attribute exists, 1 otherwise.
+deinit_hotplug_sysfs_event()
+{
+	local hwmon_path="$1"
+	local attr="$2"
+	local status_link="$3"
+	local event_name="$4"
+
+	check_n_unlink "$status_link"
+	echo 0 > "$events_path/$event_name"
+}
+
+init_hotplug_dpu_events()
 {
 	local event_file="$1"
 	local path="$2"
@@ -910,7 +957,7 @@ init_hotplug_events()
 	done
 }
 
-deinit_hotplug_events()
+deinit_hotplug_dpu_events()
 {
 	local event_file="$1"
 	local slot_num="$2"
