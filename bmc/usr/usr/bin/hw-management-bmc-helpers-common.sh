@@ -376,3 +376,37 @@ leak_detection_on_init() {
 	done
 	return 1
 }
+
+# Cached bc backend: "bc", "busybox", or "none".
+_HW_MGMT_BC_BACKEND=""
+
+_hw_mgmt_bc_resolve() {
+	case "$_HW_MGMT_BC_BACKEND" in
+	bc|busybox) return 0 ;;
+	none) return 1 ;;
+	esac
+	if command -v bc >/dev/null 2>&1 && echo "1+1" | bc >/dev/null 2>&1; then
+		_HW_MGMT_BC_BACKEND=bc
+		return 0
+	fi
+	if command -v busybox >/dev/null 2>&1 && echo "1+1" | busybox bc >/dev/null 2>&1; then
+		_HW_MGMT_BC_BACKEND=busybox
+		return 0
+	fi
+	_HW_MGMT_BC_BACKEND=none
+	return 1
+}
+
+# Pipe calculator expressions on stdin; prefer bc(1), else busybox bc on BMC images.
+hw_mgmt_bc() {
+	_hw_mgmt_bc_resolve || return 127
+	case "$_HW_MGMT_BC_BACKEND" in
+	bc) bc 2>/dev/null ;;
+	busybox) busybox bc 2>/dev/null ;;
+	*) return 127 ;;
+	esac
+}
+
+hw_mgmt_bc_available() {
+	_hw_mgmt_bc_resolve
+}
