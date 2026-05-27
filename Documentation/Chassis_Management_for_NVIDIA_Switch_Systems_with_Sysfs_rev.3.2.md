@@ -400,7 +400,7 @@ Rev. 3.2
 
 | Revision | Date | Description |
 |----------|------|-------------|
-| 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text |
+| 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
 | 3.0 | September 2025 | Complete document alignment with Word document source<br>• Updated title and branding to NVIDIA<br>• Complete sysfs hierarchy coverage with 300+ attributes<br>• Professional markdown formatting throughout<br>• Added comprehensive examples for all attributes<br>• Updated all 22 major sections (3.1-3.22)<br>• Added Watchdog, JTAG, and BMC sections<br>• Complete thermal monitoring documentation<br>• Enterprise-grade documentation ready for production |
 | 2.8 | April 1st 2024 | Added temperature, BMC and power related attributes |
@@ -1143,22 +1143,30 @@ cat $bsp_path/config/psu1_i2c_addr
 
 ### Read PSU I2C Bus
 
-**Node name:** `$bsp_path/config/psu<power supply module number>_i2c_bus`
+**Node name:** `$bsp_path/config/psu<X>_i2c_bus`
 
-**Description:** Get the I2C bus of PSU for direct connection
+Where `<X>` is the power supply module index (for example `psu1_i2c_bus`, `psu2_i2c_bus`).
+
+**Description:** Contains the I2C bus number of PSU<X> used for direct connection to that power supply module.
+
+This configuration parameter is **optional** and is **not mandatory** on all platforms. It is created and used by the hw-management package for internal purposes (for example dummy PSU detection and mapping on supported switch systems). The OS and user-space applications **must not** assume that `psu<X>_i2c_bus` is always present; check for the file before reading it.
 
 **Access:** Read only
 
-**Release version:** 1.0
+**Mandatory:** No
+
+**Release version:** 3.2
 
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| Status | Integer | X |
+| Bus index | Integer | Platform-specific I2C bus number (for example `3`, `4`) |
 
-**Example:** Get PSU1 I2C bus:
+**Example:** Get PSU1 I2C bus when the file exists:
 ```bash
-cat $bsp_path/config/psu1_i2c_bus
+if [ -f $bsp_path/config/psu1_i2c_bus ]; then
+	cat $bsp_path/config/psu1_i2c_bus
+fi
 ```
 
 ### Read Thermal Delay

@@ -673,36 +673,27 @@ function handle_hotplug_dpu_event()
     fi
 }
 
+# Handle PSU hotplug event.
+# $1 - PSU name (e.g. psu1, psu2, psu3, psu4, psu5, psu6, psu7, psu8)
+# $2 - Event (0 or 1)
 function handle_hotplug_psu_event()
 {
 	local psu_name=$1
 	local event=$2
-	local psu_num
-	local psu_i2c_bus
-	local psu_i2c_addr
+	local psu_bus
+	local psu_addr
 	local psu_is_dummy
 	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
 
+	psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
 	if [ ${dummy_psus_supported} -eq 1 ]; then
-		case ${dmi_sku} in
-		HI157)
-			psu_i2c_bus=(4 4 4 4)
-			psu_i2c_addr=(59 58 5b 5a)
-			;;
-		HI158)
-			psu_i2c_bus=(4 4 3 3 3 3 4 4)
-			psu_i2c_addr=(59 58 5b 5a 5d 5c 5e 5f)
-			;;
-		*)
-			;;
-		esac
-
-		psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
-		psu_num=${psu_name#psu}
-
 		if [ $event -eq 1 ]; then
-			psu_bus=${psu_i2c_bus[$((psu_num-1))]}
-			psu_addr=${psu_i2c_addr[$((psu_num-1))]}
+			# Bus/addr from set_config_data() in hw-management.sh
+			psu_addr=$(< "${config_path}/${psu_name}_i2c_addr")
+			psu_bus=$(< "${config_path}/${psu_name}_i2c_bus")
+			if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
+				return
+			fi
 			psu_is_dummy=1
 			for ((i=0; i<5; i++)); do
 				if [ -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
