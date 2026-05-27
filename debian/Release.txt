@@ -1,4 +1,33 @@
 ================================================================================
+- V.7.0060.1431
+- Wed, 27 May 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: scripts: Add support for new N6100_LD SMBIOS BOM record (#2547), ffdb44f
+    o #N/A, support renesas VR, da450c0
+    o #N/A, hw-mgmt: patches: Support FLR flows in NVME controller hang., 592ec69
+    o #5020389, hw-mgmt: scripts: Update usb0 hotplug handling, 353e046
+    o #N/A, Update changelog and release notes for V.7.0060.1430, 9d39122
+
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1431/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.1430
 - Thu, 30 Apr 2026
 --------------------------------------------------------------------------------
