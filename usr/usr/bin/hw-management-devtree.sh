@@ -93,6 +93,7 @@ declare -A regulator_arr=( \
 	["i"]="mp2855" \
 	["j"]="mp29816" \
 	["k"]="mp2845" \
+	["l"]="raa228943" \
 )
 
 declare -A a2d_arr=( \
@@ -548,6 +549,24 @@ declare -A n61xxld_swb_alternatives=( \
 	["mp29816_13"]="mp29816 0x68 56 voltmon14" \
 	["mp29816_14"]="mp29816 0x6c 56 voltmon15" \
 	["mp29816_15"]="mp29816 0x6e 56 voltmon16" \
+	# Renesas VR is only raa228943 here (BOM R:l). No raa228942_* rows: that
+	# kernel ID is not used on N61/N63; driver keeps both IDs for upstream.
+	["raa228943_0"]="raa228943 0x66 8 voltmon1" \
+	["raa228943_1"]="raa228943 0x68 8 voltmon2" \
+	["raa228943_2"]="raa228943 0x6c 8 voltmon3" \
+	["raa228943_3"]="raa228943 0x6e 8 voltmon4" \
+	["raa228943_4"]="raa228943 0x66 24 voltmon5" \
+	["raa228943_5"]="raa228943 0x68 24 voltmon6" \
+	["raa228943_6"]="raa228943 0x6c 24 voltmon7" \
+	["raa228943_7"]="raa228943 0x6e 24 voltmon8" \
+	["raa228943_8"]="raa228943 0x66 40 voltmon9" \
+	["raa228943_9"]="raa228943 0x68 40 voltmon10" \
+	["raa228943_10"]="raa228943 0x6c 40 voltmon11" \
+	["raa228943_11"]="raa228943 0x6e 40 voltmon12" \
+	["raa228943_12"]="raa228943 0x66 56 voltmon13" \
+	["raa228943_13"]="raa228943 0x68 56 voltmon14" \
+	["raa228943_14"]="raa228943 0x6c 56 voltmon15" \
+	["raa228943_15"]="raa228943 0x6e 56 voltmon16" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 8 voltmon1" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 8 voltmon2" \
 	["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 8 voltmon3" \
@@ -590,6 +609,24 @@ declare -A n63xxld_swb_alternatives=( \
 	["mp29816_13"]="mp29816 0x68 56 voltmon14" \
 	["mp29816_14"]="mp29816 0x6c 56 voltmon15" \
 	["mp29816_15"]="mp29816 0x6e 56 voltmon16" \
+	# Renesas VR is only raa228943 here (BOM R:l). No raa228942_* rows: that
+	# kernel ID is not used on N61/N63; driver keeps both IDs for upstream.
+	["raa228943_0"]="raa228943 0x66 8 voltmon1" \
+	["raa228943_1"]="raa228943 0x68 8 voltmon2" \
+	["raa228943_2"]="raa228943 0x6c 8 voltmon3" \
+	["raa228943_3"]="raa228943 0x6e 8 voltmon4" \
+	["raa228943_4"]="raa228943 0x66 24 voltmon5" \
+	["raa228943_5"]="raa228943 0x68 24 voltmon6" \
+	["raa228943_6"]="raa228943 0x6c 24 voltmon7" \
+	["raa228943_7"]="raa228943 0x6e 24 voltmon8" \
+	["raa228943_8"]="raa228943 0x66 40 voltmon9" \
+	["raa228943_9"]="raa228943 0x68 40 voltmon10" \
+	["raa228943_10"]="raa228943 0x6c 40 voltmon11" \
+	["raa228943_11"]="raa228943 0x6e 40 voltmon12" \
+	["raa228943_12"]="raa228943 0x66 56 voltmon13" \
+	["raa228943_13"]="raa228943 0x68 56 voltmon14" \
+	["raa228943_14"]="raa228943 0x6c 56 voltmon15" \
+	["raa228943_15"]="raa228943 0x6e 56 voltmon16" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x66 8 voltmon1" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x68 8 voltmon2" \
 	["xdpe1a2g7_2"]="xdpe1a2g7b 0x6c 8 voltmon3" \
