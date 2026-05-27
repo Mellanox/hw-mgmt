@@ -1,0 +1,800 @@
+From c65d22427f42121323c89d930f3566e45e02e822 Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Mon, 18 May 2026 15:08:45 +0300
+Subject: [PATCH] platform: mellanox: Add support for new SN6600 Nvidia system
+
+Add support for SN6600 Nvidia switch.
+SN6600 is a 102.4Tbps switch based on Nvidia SPC-6 ASIC equipped with 64
+OSFP ports supporting 100Gbps - 800Gbps speeds, 1+2 service ports
+
+Both equipped with:
+- Air-cooled with 4 + 4 redundant fan units.
+- 2 + 2 redundant 2700W PSUs.
+- System management board based on AMD CPU with secure-boot support.
+
+Reviewed-by: Oleksandr Shamray <oleksandrs@nvidia.com>
+Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
+---
+ drivers/platform/mellanox/nvsw-core.c      |  20 +
+ drivers/platform/mellanox/nvsw-host-spc6.c | 594 ++++++++++++++++++++-
+ drivers/platform/mellanox/nvsw.h           |  11 +
+ 3 files changed, 619 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/platform/mellanox/nvsw-core.c b/drivers/platform/mellanox/nvsw-core.c
+index 1bd2dfc622ce..aec0010a9692 100644
+--- a/drivers/platform/mellanox/nvsw-core.c
++++ b/drivers/platform/mellanox/nvsw-core.c
+@@ -202,6 +202,7 @@ static bool nvsw_readable_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_VR2_ALERT_OFFSET:
+ 	case NVSW_REG_VR2_ALERT_EVENT_OFFSET:
+ 	case NVSW_REG_VR2_ALERT_MASK_OFFSET:
++	case NVSW_REG_PWR_OFFSET:
+ 	case NVSW_REG_PS_DC_OK_OFFSET:
+ 	case NVSW_REG_PS_DC_OK_EVENT_OFFSET:
+ 	case NVSW_REG_PS_DC_OK_MASK_OFFSET:
+@@ -209,6 +210,7 @@ static bool nvsw_readable_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_CPLD8_PN1_OFFSET:
+ 	case NVSW_REG_CPLD8_VER_OFFSET:
+ 	case NVSW_REG_FAN_OFFSET:
++	case NVSW_REG_FAN2_OFFSET:
+ 	case NVSW_REG_FAN_EVENT_OFFSET:
+ 	case NVSW_REG_FAN_MASK_OFFSET:
+ 	case NVSW_REG_CPLD5_VER_OFFSET:
+@@ -246,6 +248,14 @@ static bool nvsw_readable_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_TACHO10_OFFSET:
+ 	case NVSW_REG_TACHO11_OFFSET:
+ 	case NVSW_REG_TACHO12_OFFSET:
++	case NVSW_REG_TACHO13_OFFSET:
++	case NVSW_REG_TACHO14_OFFSET:
++	case NVSW_REG_TACHO15_OFFSET:
++	case NVSW_REG_TACHO16_OFFSET:
++	case NVSW_REG_TACHO17_OFFSET:
++	case NVSW_REG_TACHO18_OFFSET:
++	case NVSW_REG_TACHO19_OFFSET:
++	case NVSW_REG_TACHO20_OFFSET:
+ 	case NVSW_REG_FAN_CAP1_OFFSET:
+ 	case NVSW_REG_FAN_DRW_CAP_OFFSET:
+ 	case NVSW_REG_TACHO_SPEED_OFFSET:
+@@ -369,6 +379,7 @@ static bool nvsw_volatile_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_VR2_ALERT_OFFSET:
+ 	case NVSW_REG_VR2_ALERT_EVENT_OFFSET:
+ 	case NVSW_REG_VR2_ALERT_MASK_OFFSET:
++	case NVSW_REG_PWR_OFFSET:
+ 	case NVSW_REG_PS_DC_OK_OFFSET:
+ 	case NVSW_REG_PS_DC_OK_EVENT_OFFSET:
+ 	case NVSW_REG_PS_DC_OK_MASK_OFFSET:
+@@ -376,6 +387,7 @@ static bool nvsw_volatile_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_CPLD8_PN1_OFFSET:
+ 	case NVSW_REG_CPLD8_VER_OFFSET:
+ 	case NVSW_REG_FAN_OFFSET:
++	case NVSW_REG_FAN2_OFFSET:
+ 	case NVSW_REG_FAN_EVENT_OFFSET:
+ 	case NVSW_REG_FAN_MASK_OFFSET:
+ 	case NVSW_REG_CPLD5_VER_OFFSET:
+@@ -415,6 +427,14 @@ static bool nvsw_volatile_reg(struct device *dev, unsigned int reg)
+ 	case NVSW_REG_TACHO10_OFFSET:
+ 	case NVSW_REG_TACHO11_OFFSET:
+ 	case NVSW_REG_TACHO12_OFFSET:
++	case NVSW_REG_TACHO13_OFFSET:
++	case NVSW_REG_TACHO14_OFFSET:
++	case NVSW_REG_TACHO15_OFFSET:
++	case NVSW_REG_TACHO16_OFFSET:
++	case NVSW_REG_TACHO17_OFFSET:
++	case NVSW_REG_TACHO18_OFFSET:
++	case NVSW_REG_TACHO19_OFFSET:
++	case NVSW_REG_TACHO20_OFFSET:
+ 	case NVSW_REG_FAN_CAP1_OFFSET:
+ 	case NVSW_REG_FAN_DRW_CAP_OFFSET:
+ 	case NVSW_REG_TACHO_SPEED_OFFSET:
+diff --git a/drivers/platform/mellanox/nvsw-host-spc6.c b/drivers/platform/mellanox/nvsw-host-spc6.c
+index 449ba5ffd589..f296fadf35c0 100644
+--- a/drivers/platform/mellanox/nvsw-host-spc6.c
++++ b/drivers/platform/mellanox/nvsw-host-spc6.c
+@@ -56,6 +56,7 @@ static struct mlxcpld_mux_plat_data *nvsw_host_mux_data[NVSW_MUX_MAX];
+ static struct i2c_board_info *nvsw_host_mux_brdinfo;
+ static struct mlxreg_core_platform_data *nvsw_led_data;
+ static struct mlxreg_core_platform_data *nvsw_regs_io_data;
++static struct mlxreg_core_platform_data *nvsw_fan_data;
+ static struct mlxreg_core_platform_data *nvsw_wd_data[NVSW_WD_MAX];
+ static int mux_num;
+ static enum nvsw_core_hid_type nvsw_host_hid;
+@@ -272,10 +273,10 @@ static struct mlxreg_core_data nvsw_host_spc6_regs_io_data[] = {
+ 		.mode = 0644,
+ 	},
+ 	{
+-		 .label = "cpu_shutdown_req",
+-		 .reg = NVSW_REG_GP0_OFFSET,
+-		 .mask = GENMASK(7, 0) & ~BIT(2),
+-		 .mode = 0444,
++		.label = "cpu_shutdown_req",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
+ 	},
+ 	{
+ 		.label = "vpd_wp",
+@@ -518,6 +519,391 @@ static struct mlxreg_core_platform_data nvsw_host_spc6_regs_io = {
+ 	.counter = ARRAY_SIZE(nvsw_host_spc6_regs_io_data),
+ };
+ 
++/* Platform register access data */
++static struct mlxreg_core_data nvsw_host_spc6_hid186_regs_io_data[] = {
++	{
++		.label = "cpld1_version",
++		.reg = NVSW_REG_CPLD1_VER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld2_version",
++		.reg = NVSW_REG_CPLD2_VER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld3_version",
++		.reg = NVSW_REG_CPLD3_VER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld4_version",
++		.reg = NVSW_REG_CPLD4_VER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld1_pn",
++		.reg = NVSW_REG_CPLD1_PN_OFFSET,
++		.bit = GENMASK(15, 0),
++		.mode = 0444,
++		.regnum = 2,
++	},
++	{
++		.label = "cpld2_pn",
++		.reg = NVSW_REG_CPLD2_PN_OFFSET,
++		.bit = GENMASK(15, 0),
++		.mode = 0444,
++		.regnum = 2,
++	},
++	{
++		.label = "cpld3_pn",
++		.reg = NVSW_REG_CPLD3_PN_OFFSET,
++		.bit = GENMASK(15, 0),
++		.mode = 0444,
++		.regnum = 2,
++	},
++	{
++		.label = "cpld4_pn",
++		.reg = NVSW_REG_CPLD4_PN_OFFSET,
++		.bit = GENMASK(15, 0),
++		.mode = 0444,
++		.regnum = 2,
++	},
++	{
++		.label = "cpld1_version_min",
++		.reg = NVSW_REG_CPLD1_MVER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld2_version_min",
++		.reg = NVSW_REG_CPLD2_MVER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld3_version_min",
++		.reg = NVSW_REG_CPLD3_MVER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "cpld4_version_min",
++		.reg = NVSW_REG_CPLD4_MVER_OFFSET,
++		.bit = GENMASK(7, 0),
++		.mode = 0444,
++	},
++	{
++		.label = "pwr_converter_prog_en",
++		.reg = NVSW_REG_GP7_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0644,
++	},
++	{
++		.label = "graceful_pwr_off",
++		.reg = NVSW_REG_GP7_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
++	},
++	{
++		.label = "cpu_mctp_ready",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0644,
++	},
++	{
++		.label = "cpu_shutdown_req",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "vpd_wp",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
++		.secured = 1,
++	},
++	{
++		.label = "pcie_asic_reset_dis",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0644,
++	},
++	{
++		.label = "shutdown_unlock",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
++		.label = "cpu_power_off_ready",
++		.reg = NVSW_REG_GP0_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0644,
++	},
++	{
++		.label = "pwr_cycle",
++		.reg = NVSW_REG_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0244,
++	},
++	{
++		.label = "pwr_down",
++		.reg = NVSW_REG_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0200,
++	},
++	{
++		.label = "aux_pwr_cycle",
++		.reg = NVSW_REG_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0200,
++	},
++	{
++		.label = "bmc_to_cpu_ctrl",
++		.reg = NVSW_REG_GP1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0644,
++	},
++	{
++		.label = "uart_sel",
++		.reg = NVSW_REG_GP1_OFFSET,
++		.mask = NVSW_UART_SEL_MASK,
++		.bit = 7,
++		.mode = 0644,
++	},
++	{
++		.label = "asic_reset",
++		.reg = NVSW_REG_RESET_GP2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0644,
++	},
++	{
++		.label = "reset_long_pb",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_short_pb",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_aux_pwr_or_reload",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_swb_dc_dc_pwr_fail",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_platform",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_swb_wd",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_asic_thermal",
++		.reg = NVSW_REG_RESET_CAUSE_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_soc",
++		.reg = NVSW_REG_RESET_CAUSE1_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_system",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_sw_pwr_off",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_cpu_thermal",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_pwr_converter_fail",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_main_51v",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
++		.label = "reset_mgmt_pwr",
++		.reg = NVSW_REG_RESET_CAUSE2_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0444,
++	},
++	{
++		.label = "jtag_cap",
++		.reg = NVSW_REG_FU_CAP_OFFSET,
++		.mask = NVSW_FU_CAP_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
++		.label = "jtag_enable",
++		.reg = NVSW_REG_FIELD_UPGRADE,
++		.mask = GENMASK(1, 0),
++		.bit = 1,
++		.mode = 0644,
++	},
++	{
++		.label = "asic_health",
++		.reg = NVSW_REG_ASIC1_HEALTH_OFFSET,
++		.mask = NVSW_ASIC_MASK,
++		.bit = 1,
++		.mode = 0444,
++	},
++	{
++		.label = "asic_pg_fail",
++		.reg = NVSW_REG_GP4_RO_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0444,
++	},
++	{
++		.label = "spi_chnl_select",
++		.reg = NVSW_REG_SPI_CHNL_SELECT,
++		.mask = GENMASK(7, 0),
++		.bit = 1,
++		.mode = 0644,
++	},
++	{
++		.label = "psu1",
++		.reg = NVSW_REG_VR1_ALERT_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "psu2",
++		.reg = NVSW_REG_VR1_ALERT_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "psu3",
++		.reg = NVSW_REG_VR1_ALERT_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "psu4",
++		.reg = NVSW_REG_VR1_ALERT_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
++	{
++		.label = "pwr1",
++		.reg = NVSW_REG_PWR_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "pwr2",
++		.reg = NVSW_REG_PWR_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "pwr3",
++		.reg = NVSW_REG_PWR_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "pwr4",
++		.reg = NVSW_REG_PWR_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
++	{
++		.label = "fan1",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(0),
++		.mode = 0444,
++	},
++	{
++		.label = "fan2",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(1),
++		.mode = 0444,
++	},
++	{
++		.label = "fan3",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(2),
++		.mode = 0444,
++	},
++	{
++		.label = "fan4",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(3),
++		.mode = 0444,
++	},
++	{
++		.label = "fan5",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(4),
++		.mode = 0444,
++	},
++	{
++		.label = "fan6",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(5),
++		.mode = 0444,
++	},
++	{
++		.label = "fan7",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(6),
++		.mode = 0444,
++	},
++	{
++		.label = "fan8",
++		.reg = NVSW_REG_FAN_OFFSET,
++		.mask = GENMASK(7, 0) & ~BIT(7),
++		.mode = 0444,
++	},
++};
++
++static struct mlxreg_core_platform_data nvsw_host_spc6_hid186_regs_io = {
++	.data = nvsw_host_spc6_hid186_regs_io_data,
++	.counter = ARRAY_SIZE(nvsw_host_spc6_hid186_regs_io_data),
++};
++
+ /* Platform led data */
+ static struct mlxreg_core_data nvsw_host_spc6_lc_led_data[] = {
+ 	{
+@@ -627,6 +1013,185 @@ static struct mlxreg_core_platform_data nvsw_host_wd_set_type3[] = {
+ 	},
+ };
+ 
++/* SPC6 platform fan data */
++static struct mlxreg_core_data nvsw_host_cpld_hid186_fan_data[] = {
++	{
++		.label = "pwm1",
++		.reg = NVSW_REG_PWM1_OFFSET,
++	},
++	{
++		.label = "tacho1",
++		.reg = NVSW_REG_TACHO1_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 1,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho2",
++		.reg = NVSW_REG_TACHO2_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 2,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho3",
++		.reg = NVSW_REG_TACHO3_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 3,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho4",
++		.reg = NVSW_REG_TACHO4_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 4,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho5",
++		.reg = NVSW_REG_TACHO5_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 5,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho6",
++		.reg = NVSW_REG_TACHO6_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 6,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho7",
++		.reg = NVSW_REG_TACHO7_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 7,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho8",
++		.reg = NVSW_REG_TACHO8_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 8,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho9",
++		.reg = NVSW_REG_TACHO9_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 9,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho10",
++		.reg = NVSW_REG_TACHO10_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 10,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho11",
++		.reg = NVSW_REG_TACHO11_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 11,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho12",
++		.reg = NVSW_REG_TACHO12_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 12,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho13",
++		.reg = NVSW_REG_TACHO13_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 13,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho14",
++		.reg = NVSW_REG_TACHO14_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 14,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho15",
++		.reg = NVSW_REG_TACHO15_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 15,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho16",
++		.reg = NVSW_REG_TACHO16_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 16,
++		.reg_prsnt = NVSW_REG_FAN_OFFSET,
++	},
++	{
++		.label = "tacho17",
++		.reg = NVSW_REG_TACHO17_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 17,
++		.reg_prsnt = NVSW_REG_FAN2_OFFSET,
++	},
++	{
++		.label = "tacho18",
++		.reg = NVSW_REG_TACHO18_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 18,
++		.reg_prsnt = NVSW_REG_FAN2_OFFSET,
++	},
++	{
++		.label = "tacho19",
++		.reg = NVSW_REG_TACHO19_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 19,
++		.reg_prsnt = NVSW_REG_FAN2_OFFSET,
++	},
++	{
++		.label = "tacho20",
++		.reg = NVSW_REG_TACHO20_OFFSET,
++		.mask = GENMASK(7, 0),
++		.capability = NVSW_REG_FAN_CAP1_OFFSET,
++		.slot = 20,
++		.reg_prsnt = NVSW_REG_FAN2_OFFSET,
++	},
++	{
++		.label = "conf",
++		.capability = NVSW_REG_TACHO_SPEED_OFFSET,
++	},
++};
++
++static struct mlxreg_core_platform_data nvsw_host_spc6_hid186_fan_data = {
++		.data = nvsw_host_cpld_hid186_fan_data,
++		.counter = ARRAY_SIZE(nvsw_host_cpld_hid186_fan_data),
++		.capability = NVSW_REG_FAN_DRW_CAP_OFFSET,
++		.version = 1,
++};
++
+ /* Callback is used to indicate that all adapter devices have been created. */
+ static int
+ nvsw_host_spc6_completion_notify(void *handle, struct i2c_adapter *parent,
+@@ -688,6 +1253,9 @@ static void nvsw_host_spc6_mux_topology_exit(struct nvsw_core *nvsw_core)
+ static int __init nvsw_host_dmi_spc6_switch_matched(const struct dmi_system_id *dmi)
+ {
+ 	int i, err;
++	const char *sku;
++
++	sku = dmi_get_system_info(DMI_PRODUCT_SKU);
+ 
+ 	/* Allocate the platform device structure */
+ 	nvsw_host_pdev =
+@@ -708,8 +1276,15 @@ static int __init nvsw_host_dmi_spc6_switch_matched(const struct dmi_system_id *
+ 	for (i = 0; i < mux_num; i++)
+ 		nvsw_host_mux_data[i] = &nvsw_host_spc6_mux_data[i];
+ 	nvsw_host_mux_brdinfo = &nvsw_host_spc6_mux_brdinfo;
++
++	if (sku && !strcmp(sku, "HI186")) {
++		nvsw_regs_io_data = &nvsw_host_spc6_hid186_regs_io;
++		nvsw_fan_data = &nvsw_host_spc6_hid186_fan_data;
++	} else {
++		nvsw_regs_io_data = &nvsw_host_spc6_regs_io;
++	}
+ 	nvsw_led_data = &nvsw_host_spc6_lc_led;
+-	nvsw_regs_io_data = &nvsw_host_spc6_regs_io;
++
+ 	for (i = 0; i < ARRAY_SIZE(nvsw_host_wd_set_type3); i++)
+ 		nvsw_wd_data[i] = &nvsw_host_wd_set_type3[i];
+ 
+@@ -724,6 +1299,13 @@ static const struct dmi_system_id nvsw_host_dmi_table[] __initconst = {
+ 			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI193"),
+ 		},
+ 	},
++	{
++		.callback = nvsw_host_dmi_spc6_switch_matched,
++		.matches = {
++			DMI_MATCH(DMI_BOARD_NAME, "VMOD0025"),
++			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "HI186"),
++		},
++	},
+ 	{ }
+ };
+ 
+@@ -785,6 +1367,7 @@ static int nvsw_host_probe(struct platform_device *pdev)
+ 		nvsw_core->wd_data[i] = nvsw_wd_data[i];
+ 	nvsw_core->regio_data = nvsw_regs_io_data;
+ 	nvsw_core->led_data = nvsw_led_data;
++	nvsw_core->fan_data = nvsw_fan_data;
+ 	nvsw_core->mux_init = nvsw_host_spc6_mux_topology_init;
+ 	nvsw_core->mux_exit = nvsw_host_spc6_mux_topology_exit;
+ 	platform_set_drvdata(pdev, nvsw_core);
+@@ -849,4 +1432,3 @@ module_exit(nvsw_host_exit);
+ MODULE_AUTHOR("Vadim Pasternak <vadimp@mellanox.com>");
+ MODULE_DESCRIPTION("Nvidia platform driver");
+ MODULE_LICENSE("Dual BSD/GPL");
+-
+diff --git a/drivers/platform/mellanox/nvsw.h b/drivers/platform/mellanox/nvsw.h
+index 4fa0d9d31bdd..a609550a1026 100644
+--- a/drivers/platform/mellanox/nvsw.h
++++ b/drivers/platform/mellanox/nvsw.h
+@@ -89,6 +89,7 @@
+ #define NVSW_REG_VR2_ALERT_OFFSET	0x255e
+ #define NVSW_REG_VR2_ALERT_EVENT_OFFSET	0x255f
+ #define NVSW_REG_VR2_ALERT_MASK_OFFSET	0x2560
++#define NVSW_REG_PWR_OFFSET			0x2564
+ #define NVSW_REG_PS_DC_OK_OFFSET	0x2567
+ #define NVSW_REG_PS_DC_OK_EVENT_OFFSET	0x2568
+ #define NVSW_REG_PS_DC_OK_MASK_OFFSET	0x2569
+@@ -114,6 +115,7 @@
+ #define NVSW_REG_ASIC4_EVENT_OFFSET	0x2586
+ #define NVSW_REG_ASIC4_MASK_OFFSET	0x2587
+ #define NVSW_REG_FAN_OFFSET		0x2588
++#define NVSW_REG_FAN2_OFFSET		0x258b
+ #define NVSW_REG_FAN_EVENT_OFFSET	0x2589
+ #define NVSW_REG_FAN_MASK_OFFSET	0x258a
+ #define NVSW_REG_CPLD5_VER_OFFSET	0x258e
+@@ -134,6 +136,10 @@
+ #define NVSW_REG_LEAK_OFFSET		0x25af
+ #define NVSW_REG_LEAK_EVENT_OFFSET	0x25b0
+ #define NVSW_REG_LEAK_MASK_OFFSET	0x25b1
++#define NVSW_REG_TACHO19_OFFSET		0x25b4
++#define NVSW_REG_TACHO20_OFFSET		0x25b5
++#define NVSW_REG_TACHO17_OFFSET		0x25ba
++#define NVSW_REG_TACHO18_OFFSET		0x25bb
+ #define NVSW_REG_CURRENT_TEMP_RO	0x25c0
+ #define NVSW_REG_SWITCH_IC_QTY		0x25c1
+ #define NVSW_REG_GP4_RO_OFFSET		0x25c2
+@@ -176,6 +182,8 @@
+ #define NVSW_REG_TACHO10_OFFSET		0x25ee
+ #define NVSW_REG_TACHO11_OFFSET		0x25ef
+ #define NVSW_REG_TACHO12_OFFSET		0x25f0
++#define NVSW_REG_TACHO13_OFFSET		0x25f1
++#define NVSW_REG_TACHO14_OFFSET		0x25f2
+ #define NVSW_REG_FAN_CAP1_OFFSET	0x25f5
+ #define NVSW_REG_FAN_DRW_CAP_OFFSET	0x25f7
+ #define NVSW_REG_TACHO_SPEED_OFFSET	0x25f8
+@@ -183,6 +191,9 @@
+ #define NVSW_REG_CONFIG1_OFFSET		0x25fb
+ #define NVSW_REG_CONFIG2_OFFSET		0x25fc
+ #define NVSW_REG_CONFIG3_OFFSET		0x25fd
++#define NVSW_REG_TACHO15_OFFSET		0x25fe
++#define NVSW_REG_TACHO16_OFFSET		0x25ff
++
+ #define NVSW_REG_SYS_CPBLTY0		NVSW_REG_PSU_I2C_CAP_OFFSET
+ #define NVSW_REG_MIN			0x2500
+ #define NVSW_REG_MAX			0x26ff
+-- 
+2.47.3
+
