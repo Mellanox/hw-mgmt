@@ -33,6 +33,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+if ! declare -f hw_mgmt_bc >/dev/null 2>&1; then
+	# shellcheck source=/dev/null
+	source /usr/bin/hw-management-bmc-helpers-common.sh
+fi
+
 devtr_verb_display=0
 devtree_codes_file=
 # Deployed per platform to /etc by hw-management-bmc-plat-specific-preps (usr/etc/<HID>/).
@@ -384,7 +389,7 @@ devtr_check_board_components()
 #					fi
 					if [ $board_bus_offset -ne 0 ]; then
 						curr_component[2]=$((curr_component[2]+board_bus_offset*brd))
-						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|bc)
+						curr_component[2]=0x$(echo "obase=16; ${curr_component[2]}"|hw_mgmt_bc)
 					fi
 					# Check if component from SMBIOS BOM string is defined in layout
 					if [ -z "${curr_component[0]}" ]; then

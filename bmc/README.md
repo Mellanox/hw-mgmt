@@ -143,6 +143,10 @@ bmc/
         ├── hw-management-bmc-i2c-slave-setup.sh
         ├── hw-management-bmc-json-parser.sh
         ├── hw-management-bmc-leakage-handler.sh
+        ├── hw-management-bmc-ads1015-force-alarm.sh
+        ├── hw-management-bmc-ads1015-read-status.sh
+        ├── hw-management-bmc-ads7924-force-alarm.sh
+        ├── hw-management-bmc-ads7924-read-status.sh
         ├── hw-management-bmc-max1363-force-alarm.sh
         ├── hw-management-bmc-max1363-read-status.sh
         ├── hw-management-bmc-plat-specific-preps.sh
@@ -190,7 +194,11 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-json-parser.sh`** | From OpenBMC **`switch_json_parser.sh`**: **`json_validate`**, **`json_get_nested_array_element`**, etc. (awk/BusyBox). Sourced by **`hw-management-bmc-a2d-leakage-config.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-gpio-set.sh`** (**`bmc_init_sysfs_gpio`**). |
 | **`hw-management-bmc-copy-cartridge-data.sh`** | **Cartridge SKUs:** sources **`/usr/bin/switch_json_parser.sh`** when **`/etc/hw-mgmt-bmc-copy-cartridge-data.json`** exists; reads cartridge FRU over I2C and programs SWB CPLD registers. See **`README-hw-management-bmc-copy-cartridge-data.md`**. |
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
-| **`hw-management-bmc-a2d-leakage-read.sh`** | From OpenBMC **`a2d_leakage_read.sh`**: walks **`/var/run/hw-management/leakage/<idx>/<bus>-<addr>/`** (after **`hw-management-bmc-a2d-leakage-config.sh`**), reads **ADS1015** / **ADS7924** (IIO symlink or **`i2ctransfer`**) and writes per-channel **`value`** (volts); **MAX1363** path is still a placeholder. Requires **`bash`**, **`bc`**, **`i2ctransfer`**. |
+| **`hw-management-bmc-a2d-leakage-read.sh`** | From OpenBMC **`a2d_leakage_read.sh`**: walks **`/var/run/hw-management/leakage/<idx>/<bus>-<addr>/`** (after **`hw-management-bmc-a2d-leakage-config.sh`**), reads **ADS1015** / **ADS7924** (IIO symlink or **`i2ctransfer`**) and writes per-channel **`value`** (volts); **MAX1363** path is still a placeholder. Requires **`bash`**, **`bc`** or **`busybox bc`**, **`i2ctransfer`**. |
+| **`hw-management-bmc-ads1015-force-alarm.sh`** | Debug — per MUX channel **0–3**, programs tight or wide comparator thresholds (**`LoThresh`/`HiThresh`**) and config (**`i2ctransfer`**). **`#!/bin/sh`**. |
+| **`hw-management-bmc-ads1015-read-status.sh`** | Debug — reads ADS1015 config (0x01) and conversion (0x00) via **`i2ctransfer`**; optional MUX channel **0–3** (same numbering as **`ads1015-force-alarm`**). **`#!/bin/sh`**. |
+| **`hw-management-bmc-ads7924-force-alarm.sh`** | Debug — programs per-channel **ULR/LLR**, enables **INTCNTRL** alarm bits, and starts auto-scan (same sequence as **`hw-management-bmc-a2d-leakage-config.sh`**). **`#!/bin/sh`**. |
+| **`hw-management-bmc-ads7924-read-status.sh`** | Debug — reads ADS7924 **MODECNTRL**, **INTCNTRL** (alarm status/enable), and all four channel data registers (**`i2ctransfer`**, optional **scale**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-force-alarm.sh`** | From OpenBMC **`max1363_force_alarm.sh`**: debug — programs tight/safe per-channel thresholds so selected channels hit alarm (**`i2ctransfer`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-read-status.sh`** | From OpenBMC **`max1363_read_status.sh`**: debug — prints first read bytes / decoded status flags (**`i2ctransfer`**, **`awk`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — writes CPLD **`spi_chnl_select`** then **`flashcp`** to **`spidev`** (default **`/dev/spidev1.0`**). Requires **`mtd-utils`**, hw-management runtime (**`/var/run/hw-management/system/spi_chnl_select`**). **`#!/bin/bash`**. |
@@ -270,8 +278,8 @@ SONiC BMC images often ship **BusyBox** (`/bin/sh` → **ash**) and may also inc
 | Script | BusyBox `ash` | Notes |
 |--------|---------------|--------|
 | **`hw-management-bmc-a2d-leakage-config.sh`** | Yes | **`#!/bin/sh`** — POSIX-style, no bash arrays / `[[ ]]`. |
-| **`hw-management-bmc-a2d-leakage-read.sh`** | **bash** | Associative arrays, **`[[`**, **`declare -A`**; requires **`bc`** for voltage math. |
-| **`hw-management-bmc-max1363-force-alarm.sh`**, **`hw-management-bmc-max1363-read-status.sh`** | Yes | **`#!/bin/sh`** — POSIX **`[`** and **`i2ctransfer`**. |
+| **`hw-management-bmc-a2d-leakage-read.sh`** | **bash** | Associative arrays, **`[[`**, **`declare -A`**; requires **`bc`** or **`busybox bc`** for voltage math (via **`hw_mgmt_bc`** in helpers-common). |
+| **`hw-management-bmc-ads1015-force-alarm.sh`**, **`hw-management-bmc-ads1015-read-status.sh`**, **`hw-management-bmc-ads7924-force-alarm.sh`**, **`hw-management-bmc-ads7924-read-status.sh`**, **`hw-management-bmc-max1363-force-alarm.sh`**, **`hw-management-bmc-max1363-read-status.sh`** | Yes | **`#!/bin/sh`** — POSIX **`[`** and **`i2ctransfer`**. |
 | **`hw-management-bmc-leakage-handler.sh`** | Yes | Uses `[`, `awk`; **`shopt -s nullglob`** is supported by BusyBox ash. |
 | **`hw-management-bmc-early-config.sh`**, **`hw-management-bmc-plat-specific-preps.sh`**, **`hw-management-bmc-early-i2c-init.sh`**, **`hw-management-bmc-recovery-handler.sh`**, and most other **`usr/usr/bin/*.sh`** helpers | Parse OK under ash | Shebang may still say **`#!/bin/bash`**; runtime is fine on ash-heavy systems if invoked via **`sh`** or **`ash`**. |
 | **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-devtree-check.sh`**, **`hw-management-bmc.sh`** | **bash** | Associative arrays / bash-only syntax; require **`bash`**. |

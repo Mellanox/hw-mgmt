@@ -17,6 +17,9 @@ set +e
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/../usr/usr/bin/hw-management-bmc-helpers-common.sh"
+
 UNITS_DEFAULT=(
 	hw-management-bmc-reset-cause-logger.service
 	hw-management-bmc-plat-specific-preps.service
@@ -122,8 +125,8 @@ main()
 	done
 
 	t1=$(date +%s.%N 2>/dev/null || date +%s)
-	if command -v bc >/dev/null 2>&1 && [[ "$t0" == *.* ]]; then
-		wall=$(echo "scale=3; $t1 - $t0" | bc)
+	if hw_mgmt_bc_available && [[ "$t0" == *.* ]]; then
+		wall=$(echo "scale=3; $t1 - $t0" | hw_mgmt_bc)
 	else
 		wall=$((t1 - t0))
 		wall="${wall}s (approx)"
