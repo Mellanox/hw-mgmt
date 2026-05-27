@@ -2336,7 +2336,14 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3200.json"
 		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
-		psu_i2c_map=(4 59 4 58 4 5b 4 5a)
+		psu1_i2c_bus=4
+		psu1_i2c_addr=59
+		psu2_i2c_bus=4
+		psu2_i2c_addr=58
+		psu3_i2c_bus=4
+		psu3_i2c_addr=5b
+		psu4_i2c_bus=4
+		psu4_i2c_addr=5a
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI158" ]; then
 		# Set according to front fan max.
@@ -2359,7 +2366,25 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
-		psu_i2c_map=(4 59 4 58 3 5b 3 5a 4 5d 4 5c 3 5e 3 5f)
+
+		# Map I2C bus and address to psu number
+		psu1_i2c_bus=4
+		psu1_i2c_addr=59
+		psu2_i2c_bus=4
+		psu2_i2c_addr=58
+		psu3_i2c_bus=3
+		psu3_i2c_addr=5b
+		psu4_i2c_bus=3
+		psu4_i2c_addr=5a
+		psu5_i2c_bus=4
+		psu5_i2c_addr=5d
+		psu6_i2c_bus=4
+		psu6_i2c_addr=5c
+		psu7_i2c_bus=3
+		psu7_i2c_addr=5e
+		psu8_i2c_bus=3
+		psu8_i2c_addr=5f
+
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
 		# Set according to front fan max.
@@ -3130,6 +3155,11 @@ set_config_data()
 {
 	local asic_num=0
 	for ((idx=1; idx<=psu_count; idx+=1)); do
+		# if psuX_i2c_bus variable is set - add file psuX_i2c_bus to config_path
+		local psu_i2c_bus=psu"$idx"_i2c_bus
+		if [ ${!psu_i2c_bus} ]; then
+			echo ${!psu_i2c_bus} > $config_path/psu"$idx"_i2c_bus
+		fi
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
@@ -3765,14 +3795,20 @@ map_dummy_psus()
 		return
 	fi
 
-	for ((i=0; i < "${#psu_i2c_map[@]}"; i+=2)); do
-		psu_bus=${psu_i2c_map[$i]}
-		psu_addr=${psu_i2c_map[$i+1]}
-		psu_num=$(((i/2)+1))
-		psu_present=$(< $thermal_path/psu${psu_num}_status)
+	for ((psu_idx=1; psu_idx <= psu_count; psu_idx+=1)); do
+		# Bus/addr from set_config_data() in hw-management.sh
+		psu_bus=$(< "${config_path}/psu${psu_idx}_i2c_bus")
+		psu_addr=$(< "${config_path}/psu${psu_idx}_i2c_addr")
+
+		# psuX_i2c_bus is optional; set_config_data() writes it only when set
+		if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
+			continue
+		fi
+
+		psu_present=$(< $thermal_path/psu${psu_idx}_status)
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
 		if [ ${psu_present} -eq 1 ] && [ ! -d ${psu_dev_path} ]; then
-			touch ${config_path}/psu${psu_num}_is_dummy
+			touch ${config_path}/psu${psu_idx}_is_dummy
 		fi
 	done
 }
