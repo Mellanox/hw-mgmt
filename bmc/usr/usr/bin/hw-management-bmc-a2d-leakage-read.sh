@@ -42,6 +42,9 @@
 LEAKAGE_BASE="/var/run/hw-management/leakage"
 LOG_TAG="a2d_read"
 
+# shellcheck source=/dev/null
+source /usr/bin/hw-management-bmc-helpers-common.sh
+
 # Function to log messages
 log_message()
 {
@@ -87,7 +90,7 @@ ads1015_read_channel()
 
     # Convert to voltage: (read_val / 16) * 0.002
     local result
-    result=$(echo "scale=6; ($read_val/16)*0.002" | bc 2>/dev/null)
+    result=$(echo "scale=6; ($read_val/16)*0.002" | hw_mgmt_bc)
 
     if [[ -z "$result" ]]; then
         log_message "warning" "Failed to calculate voltage for channel $channel"
@@ -207,7 +210,7 @@ ads7924_read_channel_volts()
     lo=$((lo))
     val=$(( (hi << 8) | lo ))
     raw12=$(( val >> 4 ))
-    echo "scale=10; ($raw12 * $scale) / 1" | bc 2>/dev/null
+    echo "scale=10; ($raw12 * $scale) / 1" | hw_mgmt_bc
 }
 
 # Read all ADS7924 channels under device_dir (uses ch_dir/input + scale when present, else I2C).
@@ -267,7 +270,7 @@ ads7924_read_channels()
             raw_input="${raw_input//$'\r'/}"
             raw_input="${raw_input// /}"
             if [ -n "$raw_input" ] && ads7924_is_decimal_int "$raw_input"; then
-                result=$(echo "scale=10; ($raw_input * $scale_f) / 1" | bc 2>/dev/null)
+                result=$(echo "scale=10; ($raw_input * $scale_f) / 1" | hw_mgmt_bc)
             fi
         fi
         if [ -z "$result" ]; then
@@ -403,9 +406,9 @@ main()
 {
     log_message "info" "A2D Leakage Channel Reader"
 
-    # Check for bc (needed for floating point calculations)
-    if ! command -v bc >/dev/null 2>&1; then
-        log_message "err" "bc is not installed. Cannot perform voltage calculations."
+    # Check for bc or busybox bc (floating point voltage calculations)
+    if ! hw_mgmt_bc_available; then
+        log_message "err" "Neither bc nor busybox bc is available. Cannot perform voltage calculations."
         exit 1
     fi
 
