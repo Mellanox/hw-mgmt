@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0060.1005
+- Wed, 27 May 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #4902558, hw-mgmt: thermal: TC fix attention_fans config for Q3200/Q3400, 6304b35
+    o #5001186, hw-mgmt: thermal: Preserve FAN relax period on small PWM jumps, cdd57ed
+    o #5001186, hw-mgmt: thermal: Remove FAN speed monitoring stabilization delay for small PWM changes, 7b9b7be
+    o #N/A, hw-mgmt: scripts: Fix FAN direction debounce handling on insertion, da86c4f
+    o #5029712, hw-mgmt: scripts: Update hw-mgmt dump generation script, a850da1
+    o #4989885, hw-mgmt: kernel 6.12: patches: Fix arm64 build., b1f956c
+    o #N/A, hw-mgmt: scripts: Fix potential issues caused by system datetime changes, 3c93659
+    o #N/A, hw-mgmt: patches: Add missing 6.1 and 6.12 LED driver patch, 053be79
+    o #4975719, hw-mgmgt: thermal: Fix FAN min/max speed limits for sn4700/5600, 3569722
+    o #N/A, Update changelog and release notes for V.7.0060.1004, 7de861a
+    o #4989885, hw-mgmt: kernel 6.12: patches: Fix arm64 build., c34d91a
+    o #N/A, Dpc update v.7.0060.1000 br (#2434), 0a020c3
+    o #N/A, Update changelog and release notes for V.7.0060.1003, a07aad3
+    o #4929992, hw-mgmt: thermal: Add grace period for ASIC sensor errors while SDK loads, 5175f0b
+    o #N/A, Update changelog and release notes for V.7.0060.1002, ed5e4ab
+    o #4970442, hw-mgmt: thermal: Fix amb sensor logs Incorrect duration in TC service, 0e08d11
+    o #4968939, hw-mgmt: udev: more strict match for mlxsw PCI udev rules., d6e1932
+    o #N/A, Update changelog and release notes for V.7.0060.1001, 906fe7e
+    o #4967076, hw-mgmt: thermal: Fix fan dir logs duplicate from TC service, a04a425
+    o #4966264, hw-mgmt: scripts: Fix thermal/chassis updater service scheduler, a961455
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1005/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.1004
 - Tue, 28 Apr 2026
 --------------------------------------------------------------------------------
