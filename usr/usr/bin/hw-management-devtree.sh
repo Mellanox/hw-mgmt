@@ -94,6 +94,7 @@ declare -A regulator_arr=( \
 	["j"]="mp29816" \
 	["k"]="mp2845" \
 	["l"]="raa228943" \
+	["m"]="mp29816-6x" \
 )
 
 declare -A a2d_arr=( \
@@ -549,6 +550,22 @@ declare -A n61xxld_swb_alternatives=( \
 	["mp29816_13"]="mp29816 0x68 56 voltmon14" \
 	["mp29816_14"]="mp29816 0x6c 56 voltmon15" \
 	["mp29816_15"]="mp29816 0x6e 56 voltmon16" \
+	["mp29816-6x_0"]="mp29816 0x66 8 voltmon1" \
+	["mp29816-6x_1"]="mp29816 0x68 8 voltmon2" \
+	["mp29816-6x_2"]="mp29816 0x6c 8 voltmon3" \
+	["mp29816-6x_3"]="mp29816 0x69 8 voltmon4" \
+	["mp29816-6x_4"]="mp29816 0x66 24 voltmon5" \
+	["mp29816-6x_5"]="mp29816 0x68 24 voltmon6" \
+	["mp29816-6x_6"]="mp29816 0x6c 24 voltmon7" \
+	["mp29816-6x_7"]="mp29816 0x69 24 voltmon8" \
+	["mp29816-6x_8"]="mp29816 0x66 40 voltmon9" \
+	["mp29816-6x_9"]="mp29816 0x68 40 voltmon10" \
+	["mp29816-6x_10"]="mp29816 0x6c 40 voltmon11" \
+	["mp29816-6x_11"]="mp29816 0x69 40 voltmon12" \
+	["mp29816-6x_12"]="mp29816 0x66 56 voltmon13" \
+	["mp29816-6x_13"]="mp29816 0x68 56 voltmon14" \
+	["mp29816-6x_14"]="mp29816 0x6c 56 voltmon15" \
+	["mp29816-6x_15"]="mp29816 0x69 56 voltmon16" \
 	# Renesas VR is only raa228943 here (BOM R:l). No raa228942_* rows: that
 	# kernel ID is not used on N61/N63; driver keeps both IDs for upstream.
 	["raa228943_0"]="raa228943 0x66 8 voltmon1" \
