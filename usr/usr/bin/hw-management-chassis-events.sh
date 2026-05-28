@@ -673,44 +673,85 @@ function handle_hotplug_dpu_event()
     fi
 }
 
-# Handle PSU hotplug event.
-# $1 - PSU name (e.g. psu1, psu2, psu3, psu4, psu5, psu6, psu7, psu8)
-# $2 - Event (0 or 1)
+# Input parameters:
+# 1 - attribute
+# 2 - event
+# 3 - sysfs path
+# 4 - device path
 function handle_hotplug_psu_event()
 {
 	local psu_name=$1
 	local event=$2
+	local psu_bus_raw
+	local psu_addr_raw
 	local psu_bus
 	local psu_addr
+	local psu_addr_hex
+	local psu_driver
 	local psu_is_dummy
 	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
+	
+	init_hotplug_sysfs_event "$3$4" "$psu_name" \
+				"$thermal_path/${psu_name}_status" "$psu_name"
 
-	psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
-	if [ ${dummy_psus_supported} -eq 1 ]; then
-		if [ $event -eq 1 ]; then
-			# Bus/addr from set_config_data() in hw-management.sh
-			psu_addr=$(< "${config_path}/${psu_name}_i2c_addr")
-			psu_bus=$(< "${config_path}/${psu_name}_i2c_bus")
-			if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
-				return
+	# hotplug initialization logic:
+	# 1. Get psu i2c bus and address
+	# 2. get device driver from devtree (based on device i2c bus and address)
+	# 3. Connect/disconnect psu driver
+	# 3.1 don't connect if psu already connected
+	if [ -f "${config_path}/${psu_name}_i2c_addr" ]; then
+		psu_addr_raw=$(< "${config_path}/${psu_name}_i2c_addr") || true
+		psu_bus_raw=$(< "${config_path}/${psu_name}_i2c_bus") || true
+	fi
+	
+	if [ ! -z "$psu_bus_raw" ] && [ ! -z "$psu_addr_raw" ]; then
+		psu_addr_hex=$(i2c_config_addr_to_hex "$psu_addr_raw")
+		psu_addr="${psu_addr_hex:2}"
+		find_i2c_bus
+		psu_bus=$((psu_bus_raw + i2c_bus_offset))
+
+		psu_driver=$(get_devtree_device_driver_name "$psu_bus_raw" "$psu_addr_hex")
+		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
+		# if psu driver is not empty, then connect/disconnect psu driver
+		if [ ! -z "$psu_driver" ]; then
+			# PSU eeprom offset = psu_addr - 8 (psu_addr is in hex)
+			psu_eeprom_addr_hex=$(printf '0x%02x\n' $((0x$psu_addr - 8)))
+			if [ "$event" -eq 1 ]; then
+				# Validation which gate, to connect already connected device is in "connect_device" function
+				connect_device "$psu_driver" "$psu_addr_hex" "$psu_bus_raw"
+				connect_device "24c32" "$psu_eeprom_addr_hex" "$psu_bus_raw"
+			else
+				# Validation which gate, to disconnect already disconnected device is in "disconnect_device" function
+				disconnect_device "$psu_addr_hex" "$psu_bus_raw"
+				disconnect_device "$psu_eeprom_addr_hex" "$psu_bus_raw"
 			fi
-			psu_is_dummy=1
-			for ((i=0; i<5; i++)); do
-				if [ -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
-					psu_is_dummy=0
-					break
+		fi
+
+		if [ ${dummy_psus_supported} -eq 1 ]; then
+			if [ $event -eq 1 ]; then
+				psu_is_dummy=1
+				for ((i=0; i<5; i++)); do
+					if [ -d "${psu_dev_path}" ]; then
+						psu_is_dummy=0
+						break
+					fi
+					sleep 1
+				done
+				if [ ${psu_is_dummy} -eq 1 ]; then
+					touch ${config_path}/${psu_name}_is_dummy
 				fi
-				sleep 1
-			done
-			if [ ${psu_is_dummy} -eq 1 ]; then
-				touch ${config_path}/${psu_name}_is_dummy
+			else
+				rm -f ${config_path}/${psu_name}_is_dummy
 			fi
-		else
-			rm -f ${config_path}/${psu_name}_is_dummy
 		fi
 	fi
 }
 
+# Input parameters:
+# 1 - attribute
+# 2 - event
+# 3 - sysfs path
+# 4 - device path
 function handle_hotplug_event()
 {
 	local attribute
@@ -721,6 +762,8 @@ function handle_hotplug_event()
 	local board_type=dynamic
 	attribute=$(echo "$1" | awk '{print tolower($0)}')
 	event=$2
+	sysfs_path=$3
+	device_path=$4
 
 	if [ -f "$events_path"/"$attribute" ]; then
 		echo "$event" > "$events_path"/"$attribute"
@@ -734,7 +777,7 @@ function handle_hotplug_event()
 		set_fpga_combined_version "$lc_path"
 		;;
 	fan*)
-		handle_hotplug_fan_event "$attribute" "$event"
+		handle_hotplug_fan_event "$attribute" "$event" "$sysfs_path" "$device_path"
 		;;
 	dpu[1-8]_ready)
 		if [ "$event" -eq 1 ]; then
@@ -777,7 +820,12 @@ function handle_hotplug_event()
 		fi
 		;;
 	psu*)
-		handle_hotplug_psu_event "$attribute" "$event"
+		handle_hotplug_psu_event "$attribute" "$event" "$sysfs_path" "$device_path"
+		;;
+	pwr*)
+		pwr_index=$(echo "$attribute" | cut -c 4-)
+		init_hotplug_sysfs_event "$sysfs_path$device_path" "$attribute" \
+			"$thermal_path/psu${pwr_index}_pwr_status" "$attribute"
 		;;
 	*)
 		;;
@@ -1428,7 +1476,7 @@ elif [ "$1" == "hotplug-event" ]; then
 	if [ ! -f ${udev_ready} ]; then
 		exit 0
 	fi
-	handle_hotplug_event "${2}" "${3}"
+	handle_hotplug_event "${2}" "${3}" "${4}" "${5}"
 elif [ "$1" == "hotplug-dpu-event" ]; then
 	# Don't process udev events until service is started and directories are created
 	if [ ! -f ${udev_ready} ]; then
