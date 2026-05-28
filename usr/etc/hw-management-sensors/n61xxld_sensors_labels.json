@@ -236,6 +236,8 @@
 		"drivetemp" : "SSD+Temp"
 	},
 	"labels_scale_HI180_rev1_array" : {
+		"pdb_hotswap1_power1" : "4.7238",
+		"pdb_hotswap1_curr1"  : "4.7238"
 	},
 	"labels_HI185_alternatives" : {
 		"pwr_conv1": {
