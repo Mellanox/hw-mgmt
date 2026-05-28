@@ -111,6 +111,7 @@ declare -A pwr_conv_arr=( \
 	["d"]="raa228000" \
 	["e"]="mp29502" \
 	["f"]="raa228004" \
+	["g"]="dps460" \
 )
 
 declare -A hotswap_arr=( \
@@ -727,6 +728,10 @@ declare -A sn66xxld_pwr_alternatives=( \
 	["lm5066i_0"]="lm5066i 0x12 6 pdb_hotswap1" \
 	["mp5926_0"]="mp5926 0x12 6 pdb_hotswap1" \
 	["tmp451_0"]="tmp451 0x4c 6 pdb_temp1" \
+	["dps460_0"]="dps460 0x58 4 psu1" \
+	["dps460_1"]="dps460 0x5a 4 psu2" \
+	["dps460_2"]="dps460 0x5c 4 psu3" \
+	["dps460_3"]="dps460 0x5e 4 psu4" \
 )
 
 # Devices located on SN66XX_LD platform board
