@@ -1,10 +1,10 @@
 [
     {
-        "Name": "Chassis_0_LeakDetector_0_Mgmt",
+        "Name": "Mngm_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Chassis_0_LeakDetector_0_A",
-            "Chassis_0_LeakDetector_0_B"
+            "Mngm_ADC0_Ch0_Embedded_0",
+            "Mngm_ADC0_Ch1_Embedded_1"
         ],
         "Device": [
             {
@@ -12,12 +12,12 @@
                 "Bus": 27,
                 "Address": "0x49",
                 "Probe": true,
-                "Type": "rop",
+                "Type": "embedded",
                 "Scale": 0.000244140625,
-                "WarningMin": 0.05,
-                "CriticalMin": 0.02,
-                "WarningMax": 0.85,
-                "CriticalMax": 0.95,
+                "WarningMin": 0.7,
+                "CriticalMin": 0.1,
+                "WarningMax": 0.8,
+                "CriticalMax": 0.7,
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
             },
@@ -26,12 +26,12 @@
                 "Bus": 27,
                 "Address": "0x49",
                 "Probe": true,
-                "Type": "rop",
+                "Type": "embedded",
                 "Scale": 0.000244140625,
-                "WarningMin": 0.05,
-                "CriticalMin": 0.02,
-                "WarningMax": 0.85,
-                "CriticalMax": 0.95,
+                "WarningMin": 0.7,
+                "CriticalMin": 0.1,
+                "WarningMax": 0.8,
+                "CriticalMax": 0.7,
                 "CfgReg": "0x01",
                 "CfgRegVal": "0xc4 0x90",
                 "LoThreshReg": "0x02",
@@ -42,11 +42,11 @@
         ]
     },
     {
-        "Name": "Chassis_0_LeakDetector_1_Swb",
+        "Name": "Swb_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Chassis_0_LeakDetector_1_A",
-            "Chassis_0_LeakDetector_1_B"
+            "Swb_ADC0_Ch0_Embedded_0",
+            "Swb_ADC0_Ch1_Embedded_1"
         ],
         "Device": [
             {
@@ -54,12 +54,12 @@
                 "Bus": 28,
                 "Address": "0x48",
                 "Probe": true,
-                "Type": "rop",
+                "Type": "embedded",
                 "Scale": 0.000244140625,
-                "WarningMin": 0.05,
-                "CriticalMin": 0.02,
-                "WarningMax": 0.85,
-                "CriticalMax": 0.95,
+                "WarningMin": 0.7,
+                "CriticalMin": 0.1,
+                "WarningMax": 0.8,
+                "CriticalMax": 0.7,
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x01 0x00 0x11 0x1f 0x13 0x14 0x15"
             },
@@ -68,12 +68,12 @@
                 "Bus": 28,
                 "Address": "0x48",
                 "Probe": true,
-                "Type": "rop",
+                "Type": "embedded",
                 "Scale": 0.000244140625,
-                "WarningMin": 0.05,
-                "CriticalMin": 0.02,
-                "WarningMax": 0.85,
-                "CriticalMax": 0.95,
+                "WarningMin": 0.7,
+                "CriticalMin": 0.1,
+                "WarningMax": 0.8,
+                "CriticalMax": 0.7,
                 "CfgReg": "0x01",
                 "CfgRegVal": "0xc4 0x90",
                 "LoThreshReg": "0x02",
