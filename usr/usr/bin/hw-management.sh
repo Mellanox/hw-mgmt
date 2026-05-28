@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -3418,11 +3418,14 @@ do_start()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
+	[ -x /usr/bin/hw-management-exec-parser.sh ] && /usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
 }
 
 do_stop()
 {
+	rm -f /var/run/hw-management/exec 2>/dev/null
+	rm -rf /var/run/hw-management/exec.d 2>/dev/null
 	check_cpu_type
 	# There is no need to perform extra work of check_system during
 	# hw-management stop in case of devtree exist. Directly init connect_table.
