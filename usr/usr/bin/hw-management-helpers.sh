@@ -569,6 +569,19 @@ unlock_service_state_change_update_and_match()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
+# Normalize I2C address from config (59 or 0x59) to 0xNN for connect_device/disconnect_device.
+# $1 - raw address from config (59 or 0x59).
+# Prints normalized address on stdout (e.g. 0x59). Zero-pads a single hex digit (5 -> 0x05).
+i2c_config_addr_to_hex() {
+	local raw="$1"
+	local val="${raw,,}"   # convert to lowercase
+	val="${val#0x}"
+	if [ ${#val} -eq 1 ]; then
+		val="0${val}"
+	fi
+	printf '0x%s\n' "$val"
+}
+
 # Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
 # Poll every 100 ms for device driver connection.
 # Input: 
@@ -837,6 +850,34 @@ function get_i2c_busdev_name()
 
 	echo "$dev_name"
 }
+
+# Get device driver name from devtree based on device i2c bus and address
+# $1 - device i2c bus
+# $2 - device i2c address
+# return device driver name if match is found or empty string in other case.
+get_devtree_device_driver_name()
+{
+	local i2c_bus=$1
+	local i2c_address=$2
+
+	if [ -f "$devtree_file" ]; then
+		declare -a devtree_table=($(<"$devtree_file"))
+	else
+		echo ""
+		return
+	fi
+
+	for ((i=0; i<${#devtree_table[@]}; i+=4)); do
+		if [ $i2c_bus == "${devtree_table[i+2]}" ] && [ $i2c_address == "${devtree_table[i+1]}" ];
+		then
+			echo "${devtree_table[i]}"
+			return
+		fi
+	done
+
+	echo ""
+}
+
 
 find_dpu_slot_from_i2c_bus()
 {
