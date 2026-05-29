@@ -42,11 +42,13 @@
 #   SCU0 0x050 is also read for eMMC/MSI reset logs.
 #   AST2700 SCU base uses +0x2000 window (e.g. 0x12c02050, 0x14c02080).
 #
-# U-Boot env names (per SCU register):
+# U-Boot env / kernel cmdline names (per SCU register; snap_bootargs tokens):
 #   reset_cause_scu0_0 -> SCU0 0x050
 #   reset_cause_scu0_2 -> SCU0 0x070
 #   reset_cause_scu1_0 -> SCU1 0x050
 #   reset_cause_scu1_3 -> SCU1 0x080
+#
+# Source priority per word: fw_printenv, then /proc/cmdline, then devmem.
 #
 # Domain-detail flags (ahb, caliptra, emmc, espi, external, msi, soc, spi, usb)
 # go under OUT_DIR/domains/. reset_power_on, watchdog, software, cpu,
@@ -105,6 +107,20 @@ read_env_val() {
 	return 0
 }
 
+read_cmdline_val() {
+	name="$1"
+	outvar="$2"
+	raw=""
+
+	if [ -r /proc/cmdline ]; then
+		raw="$(awk -v RS=' ' -F= -v n="${name}" '$1 == n { print $2; exit }' /proc/cmdline 2>/dev/null || true)"
+	fi
+	[ -n "${raw}" ] || return 1
+	normalize_hex "${raw}" || return 1
+	eval "${outvar}=\$val"
+	return 0
+}
+
 set_reset_file() {
 	name="$1"
 	value="$2"
@@ -118,7 +134,7 @@ set_reset_file() {
 	esac
 }
 
-# Prefer per-register U-Boot env values; fallback to devmem for missing values.
+# Per-register: U-Boot env, then /proc/cmdline, then devmem.
 scu0_log2_ok=0
 scu0_log0_ok=0
 scu1_log0_ok=0
@@ -139,6 +155,19 @@ if command -v fw_printenv >/dev/null 2>&1; then
 	fi
 fi
 
+if [ "${scu0_log0_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU0_LOG0}" scu0_log0; then
+	scu0_log0_ok=1
+fi
+if [ "${scu0_log2_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU0_LOG2}" scu0_log2; then
+	scu0_log2_ok=1
+fi
+if [ "${scu1_log0_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU1_LOG0}" scu1_log0; then
+	scu1_log0_ok=1
+fi
+if [ "${scu1_log3_ok}" -ne 1 ] && read_cmdline_val "${ENV_SCU1_LOG3}" scu1_log3; then
+	scu1_log3_ok=1
+fi
+
 if [ "${scu0_log2_ok}" -ne 1 ] && read_devmem_val "${SCU0_LOG2_ADDR}" scu0_log2; then
 	scu0_log2_ok=1
 fi
@@ -153,7 +182,7 @@ if [ "${scu1_log3_ok}" -ne 1 ] && read_devmem_val "${SCU1_LOG3_ADDR}" scu1_log3;
 fi
 
 if [ "${scu0_log2_ok}" -ne 1 ] || [ "${scu0_log0_ok}" -ne 1 ] || [ "${scu1_log0_ok}" -ne 1 ] || [ "${scu1_log3_ok}" -ne 1 ]; then
-	echo "cannot get complete reset causes from env/devmem (SCU0_LOG2, SCU0_LOG0, SCU1_LOG0, SCU1_LOG3)" >&2
+	echo "cannot get complete reset causes from env/cmdline/devmem (SCU0_LOG2, SCU0_LOG0, SCU1_LOG0, SCU1_LOG3)" >&2
 	exit 1
 fi
 

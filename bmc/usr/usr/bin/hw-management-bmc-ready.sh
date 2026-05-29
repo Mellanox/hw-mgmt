@@ -123,6 +123,85 @@ bmc_debug_step()
 # bmc_init_sysfs_gpio() is defined in hw-management-bmc-gpio-set.sh (JSON: /etc/hw-management-bmc-gpio-pins.json).
 
 #######################################
+# SONiC BMC only: /etc/sonic/sonic_version.yml present on SONiC OS images.
+is_sonic_bmc()
+{
+	[ -f /etc/sonic/sonic_version.yml ]
+}
+
+# OpenBMC U-Boot 0004: snap_* must exist in fw env before patching sonic_image_*.
+uboot_snap_reset_cause_macros_present()
+{
+	local v
+
+	v="$(fw_printenv -n snap_sonic_postboot 2>/dev/null)" || return 1
+	[ -n "${v}" ] || return 1
+	v="$(fw_printenv -n snap_reset_cause 2>/dev/null)" || return 1
+	[ -n "${v}" ] || return 1
+	v="$(fw_printenv -n snap_bootargs 2>/dev/null)" || return 1
+	[ -n "${v}" ] || return 1
+	return 0
+}
+
+# Insert run snap_sonic_postboot after sonic_bootargs(_old) in sonic_image_* (eMMC env).
+ensure_sonic_snap_bootenv_image()
+{
+	local img="$1"
+	local bootargs_macro="$2"
+	local cur new
+
+	cur="$(fw_printenv -n "${img}" 2>/dev/null)" || return 0
+
+	case "${cur}" in
+	*snap_sonic_postboot*)
+		return 0
+		;;
+	*snap_sonic_preboot*)
+		new="${cur//run snap_sonic_preboot; run ${bootargs_macro}/run ${bootargs_macro}; run snap_sonic_postboot}"
+		;;
+	*run\ ${bootargs_macro}*)
+		new="${cur/run ${bootargs_macro};/run ${bootargs_macro}; run snap_sonic_postboot;}"
+		;;
+	*)
+		return 0
+		;;
+	esac
+
+	if [ "${new}" = "${cur}" ]; then
+		return 0
+	fi
+	if ! fw_setenv "${img}" "${new}"; then
+		logger -t "${LOG_TAG}" -p daemon.warning "fw_setenv ${img} failed (snap_sonic_postboot)"
+		return 1
+	fi
+	logger -t "${LOG_TAG}" -p daemon.info "updated ${img} for reset_cause snap_sonic_postboot"
+	return 0
+}
+
+ensure_sonic_uboot_reset_cause_snap()
+{
+	local rc=0
+
+	if ! is_sonic_bmc; then
+		return 0
+	fi
+	if ! command -v fw_setenv >/dev/null 2>&1 || ! command -v fw_printenv >/dev/null 2>&1; then
+		logger -t "${LOG_TAG}" -p daemon.info \
+			"skip sonic snap bootenv: fw_setenv/fw_printenv not available"
+		return 0
+	fi
+	if ! uboot_snap_reset_cause_macros_present; then
+		logger -t "${LOG_TAG}" -p daemon.info \
+			"skip sonic snap bootenv: snap_reset_cause/snap_bootargs/snap_sonic_postboot not in U-Boot env"
+		return 0
+	fi
+
+	ensure_sonic_snap_bootenv_image sonic_image_1 sonic_bootargs || rc=1
+	ensure_sonic_snap_bootenv_image sonic_image_2 sonic_bootargs_old || rc=1
+	return "${rc}"
+}
+
+#######################################
 # Execute required steps before asserting BMC_READY signal
 #
 # ARGUMENTS:
@@ -137,6 +216,11 @@ bmc_ready_sequence()
 	bmc_debug_step "bmc_ready_sequence: start (wait standby, reset cause, EEPROM, A2D, hook post)"
 
 	wait_bmc_standby_ready 10 1
+
+	# SONiC BMC: wire snap_sonic_postboot into sonic_image_* after installer env.
+	ensure_sonic_uboot_reset_cause_snap || \
+		logger -t "${LOG_TAG}" -p daemon.warning \
+			"ensure_sonic_uboot_reset_cause_snap failed"
 
 	# Export BMC reset cause (SCU / U-Boot env) to /var/run/hw-management/bmc/.
 	if ! hw-management-bmc-get-reset-cause.sh; then
