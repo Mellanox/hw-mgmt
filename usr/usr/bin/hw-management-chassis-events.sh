@@ -714,15 +714,18 @@ function handle_hotplug_psu_event()
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
 		# if psu driver is not empty, then connect/disconnect psu driver
 		if [ ! -z "$psu_driver" ]; then
+			psu_eeprom_addr_hex=$(printf '%02x\n' $((psu_addr - 8)))
 			if [ "$event" -eq 1 ]; then
 				# check if psu already connected and connect if not
 				if [ ! -L "${psu_dev_path}/driver" ]; then
 					connect_device "$psu_driver" "$psu_addr_hex" "$psu_bus_raw"
+					connect_device "24c32" "$psu_eeprom_addr_hex" "$psu_bus_raw"
 				fi
 			else
 				# check if psu is connected and disconnect if connected
 				if [ -L "${psu_dev_path}/driver" ]; then
 					disconnect_device "$psu_addr_hex" "$psu_bus_raw"
+					disconnect_device "$psu_eeprom_addr_hex" "$psu_bus_raw"
 				fi
 			fi
 		fi
