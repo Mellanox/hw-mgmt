@@ -318,17 +318,17 @@ check_labels_enabled()
 }
 
 # This function checks if the platform is having BSP emulation support.
+# return 0 if supported, 1 otherwise.
 check_if_simx_supported_platform()
 {
-	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI193|HI194)
-			return 0
-			;;
-
-		*)
-			return 1
-			;;
-	esac
+    case "$vm_sku" in
+    HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|\
+    HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI186|\
+    HI193|HI194)
+        return 0
+        ;;
+    esac
+    return 1
 }
 
 # It also checks if the environment is SimX.
