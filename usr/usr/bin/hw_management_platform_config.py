@@ -198,6 +198,25 @@ PLATFORM_CONFIG = {
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
     ],
+    "HI186": [
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan2', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN2 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan3', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN3 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan4', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN4 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan5', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN5 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan6', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN6 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan7', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN7 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan8', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN8 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu1', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu2', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU2 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu3', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU3 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu4', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU4 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr1', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr2', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR2 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr3', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR3 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr4', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR4 {arg1}"], "poll": 2, "ts": 0},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+    ],
     "HI193": [
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
@@ -211,51 +230,4 @@ def get_platform_config(product_sku):
     Get the complete platform configuration for a given SKU.
 
     This function matches the product_sku against regex patterns in PLATFORM_CONFIG keys.
-    For example, a key "HI144|HI174" will match both "HI144" and "HI174" SKUs.
-
-    @param product_sku: Platform SKU identifier (e.g., "HI162", "MSN3700", "HI144")
-    @return: List of monitoring entries, or empty list if not found
-
-    Example:
-        config = get_platform_config("HI144")  # Matches "HI144|HI174" key
-        if config:
-            for entry in config:
-                print(f"Function: {entry['fn']}, Poll: {entry['poll']}s")
-    """
-    import re
-
-    config = []
-    for key, val in PLATFORM_CONFIG.items():
-        if re.match(key, product_sku):
-            config = val
-            break
-    return config
-
-
-def get_module_count(product_sku):
-    """
-    Get the number of optical modules for a given platform.
-
-    Uses regex matching to find the platform config, then extracts module_count
-    from the module_temp_populate entry.
-
-    @param product_sku: Platform SKU identifier (e.g., "HI144")
-    @return: Number of modules, or 0 if not found
-    """
-    # Use get_platform_config which handles regex matching
-    config = get_platform_config(product_sku)
-    if not config:
-        return 0
-    if isinstance(config, list):
-        for entry in config:
-            if entry.get("fn") == "module_temp_populate":
-                arg = entry.get("arg", {})
-                if isinstance(arg, dict):
-                    return arg.get("module_count", 0)
-        return 0
-    return config.get("module_count", 0)
-
-
-def get_all_platform_skus():
-    """Get a list of all supported platform SKUs."""
-    return list(PLATFORM_CONFIG.keys())
+    For

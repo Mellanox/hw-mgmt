@@ -111,7 +111,6 @@ declare -A pwr_conv_arr=( \
 	["d"]="raa228000" \
 	["e"]="mp29502" \
 	["f"]="raa228004" \
-	["g"]="dps460" \
 )
 
 declare -A hotswap_arr=( \
@@ -719,6 +718,9 @@ declare -A sn66xxld_port_alternatives=( \
 	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
+	["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+	["adt75_0"]="adt75 0x4a 7 port_amb" \
+	["stts751_0"]="stts751 0x4a 7 port_amb" \
 )
 
 # Devices located on SN66XX_LD power board
@@ -727,11 +729,7 @@ declare -A sn66xxld_pwr_alternatives=( \
 	["mp29502_0"]="mp29502 0x2e 6 pdb_pwr_conv1" \
 	["lm5066i_0"]="lm5066i 0x12 6 pdb_hotswap1" \
 	["mp5926_0"]="mp5926 0x12 6 pdb_hotswap1" \
-	["tmp451_0"]="tmp451 0x4c 6 pdb_temp1" \
-	["dps460_0"]="dps460 0x58 4 psu1" \
-	["dps460_1"]="dps460 0x5a 4 psu2" \
-	["dps460_2"]="dps460 0x5c 4 psu3" \
-	["dps460_3"]="dps460 0x5e 4 psu4" \
+	["tmp451_0"]="tmp451 0x4c 6 pdb_temp1"
 )
 
 # Devices located on SN66XX_LD platform board
@@ -1405,6 +1403,22 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn66xxld_port_alternatives[@]}"; do
 					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
+				done
+				;;
+			HI186)
+				for key in "${!sn66xxld_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn66xxld_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_port_alternatives[@]}"; do
+					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
+				done
+				for key in "${!fan_type0_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
 				done
 				;;
 			*)
