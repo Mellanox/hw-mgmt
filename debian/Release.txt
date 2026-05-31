@@ -1,4 +1,18 @@
 ================================================================================
+- V.7.0060.1052
+- Sun, 31 May 2026
+--------------------------------------------------------------------------------
+- New features
+    o hw-management-bmc: HI189: realign A2D leakage config (Mngm_ADC0 / Swb_ADC0 detector + channel names, Type rop → embedded, updated Warning/Critical
+      Min/Max thresholds).
+
+- Kernel Patches for New Features:
+    o SPC6 AST2700-A2 BMC: add device-tree extensions — new 0008-arm64-dts-aspeed-spc6-bmc-ext-phram-env-tpm-i3c-pull.patch
+      adds a persistent phram-env region (recovery counter / U-Boot env survive warm boots), fixes TPM probe ordering and SPI/TPM level-shifter
+      enablement, adds GPIO-expander reset, and enables I3C internal pull-ups.
+    o SPC6 AST2700-A2 BMC: enable CONFIG_MTD_PHRAM in the kernel config to back the new phram-env MTD region.
+
+================================================================================
 - V.7.0060.1051
 - Thu, 21 May 2026
 --------------------------------------------------------------------------------
