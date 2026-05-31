@@ -74,7 +74,7 @@ fi
 
 dump_cmd "sensors" "sensors" "20"
 
-ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree
+ls -Rla /sys/ > $DUMP_FOLDER/sysfs_tree 2>/dev/null
 if [ -d $HW_MGMT_FOLDER ]; then
     ls -Rla $HW_MGMT_FOLDER > $DUMP_FOLDER/hw-management_tree
     timeout 140 find -L $HW_MGMT_FOLDER -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' -exec ls -la {} \; -exec cat {} \; > $DUMP_FOLDER/hw-management_val 2> /dev/null
