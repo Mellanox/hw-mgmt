@@ -63,8 +63,8 @@ ads1015_read_channel()
     local channel="$3"
     local offset="$4"
 
-    # Write channel selection (register 0x01, offset, 0x90)
-    if ! i2ctransfer -f -y "$bus" w3@"$addr" 0x01 "$offset" 0x90 >/dev/null 2>&1; then
+    # Write channel selection (register 0x01, MUX high byte, cfg low 0x94 — matches leakage-config init)
+    if ! i2ctransfer -f -y "$bus" w3@"$addr" 0x01 "$offset" 0x94 >/dev/null 2>&1; then
         log_message "warning" "Failed to select ADS1015 channel $channel on bus $bus addr $addr"
         return 1
     fi

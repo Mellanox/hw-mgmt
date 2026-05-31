@@ -48,8 +48,8 @@ BUS="$1"
 ADDR="$2"
 CHS="$3"
 
-# Config register low byte: comparator enabled (see example CfgRegVal 0xc4 0x90).
-CFG_LO=0x90
+# Config register low byte: window comparator + latched ALERT (see CfgRegVal 0xc4 0x94).
+CFG_LO=0x94
 
 # Tight window → alarm (example LoThreshRegVal / HiThreshRegVal).
 ALARM_LO_MSB=0x38
