@@ -1,7 +1,7 @@
 Source: hw-management
 Section: utils
 Priority: optional
-Maintainer: Yehuda Yehudai <yyehudai@nvidia.com>
+Maintainer: NVIDIA Switch BSP <acoifman@nvidia.com>
 Build-Depends: debhelper (>= 10.0.0)
 Standards-Version: 3.9.8
 Homepage: http://www.nvidia.com
