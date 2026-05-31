@@ -41,33 +41,23 @@
 #   hw-management-bmc-ads1015-read-status.sh <bus> <addr> [channel]
 # Examples:
 #   hw-management-bmc-ads1015-read-status.sh 12 0x49
-#   hw-management-bmc-ads1015-read-status.sh 12 0x49 1
-#
-# Channel numbering matches hw-management-bmc-ads1015-force-alarm.sh (0–3).
+#   hw-management-bmc-ads1015-read-status.sh 12 0x49 2
 
 BUS="$1"
 ADDR="$2"
 CHANNEL="$3"
 
-# Config register low byte: comparator enabled (same as force-alarm).
-CFG_LO=0x90
+# Legacy MUX high bytes (same as hw-management-bmc-a2d-leakage-read.sh); cfg low 0x94.
+ADS1015_CFG_LO=0x94
+ADS1015_CH_OFFSET_1=0xc2
+ADS1015_CH_OFFSET_2=0xd2
+ADS1015_CH_OFFSET_3=0xe2
+ADS1015_CH_OFFSET_4=0xf2
 
 usage() {
     echo "Usage: $0 <bus> <i2c_addr> [channel]"
-    echo "  channel: 0-3 optional — program MUX then read conversion"
-    echo "  (same numbering as hw-management-bmc-ads1015-force-alarm.sh)"
+    echo "  channel: 1-4 optional — program MUX then read conversion"
     exit 1
-}
-
-# MUX high byte per channel (same as hw-management-bmc-ads1015-force-alarm.sh).
-ads1015_mux_byte() {
-    case "$1" in
-    0) printf '%s' 0xc2 ;;
-    1) printf '%s' 0xd2 ;;
-    2) printf '%s' 0xe2 ;;
-    3) printf '%s' 0xf2 ;;
-    *) return 1 ;;
-    esac
 }
 
 if [ -z "$BUS" ] || [ -z "$ADDR" ]; then
@@ -76,14 +66,13 @@ fi
 
 if [ -n "$CHANNEL" ]; then
     case "$CHANNEL" in
-    0|1|2|3) ;;
-    *)
-        echo "Invalid channel: $CHANNEL (use 0-3)"
-        exit 1
-        ;;
+    1) CH_OFF=$ADS1015_CH_OFFSET_1 ;;
+    2) CH_OFF=$ADS1015_CH_OFFSET_2 ;;
+    3) CH_OFF=$ADS1015_CH_OFFSET_3 ;;
+    4) CH_OFF=$ADS1015_CH_OFFSET_4 ;;
+    *) echo "Invalid channel: $CHANNEL (use 1-4)"; exit 1 ;;
     esac
-    CH_OFF=$(ads1015_mux_byte "$CHANNEL") || exit 1
-    if ! i2ctransfer -f -y "$BUS" w3@"$ADDR" 0x01 "$CH_OFF" "$CFG_LO" >/dev/null 2>&1; then
+    if ! i2ctransfer -f -y "$BUS" w3@"$ADDR" 0x01 "$CH_OFF" "$ADS1015_CFG_LO" >/dev/null 2>&1; then
         echo "Failed to select ADS1015 channel $CHANNEL"
         exit 1
     fi

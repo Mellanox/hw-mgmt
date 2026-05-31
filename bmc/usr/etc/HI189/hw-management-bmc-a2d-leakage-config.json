@@ -10,7 +10,7 @@
             {
                 "DeviceType": "MAX1363",
                 "Bus": 27,
-                "Address": "0x49",
+                "Address": "0x34",
                 "Probe": true,
                 "Type": "embedded",
                 "Scale": 0.000244140625,
@@ -33,9 +33,10 @@
                 "WarningMax": 0.8,
                 "CriticalMax": 0.7,
                 "CfgReg": "0x01",
-                "CfgRegVal": "0xc4 0x90",
+                "CfgRegVal": "0xc4 0x94",
+                "CfgRegVal_comment": "Interrupt mode (window comparator, ALERT enabled). For polling-only with no hardware ALERT, change CfgRegVal to 0xc4 0x93 (COMP_QUE=11 disables comparator); Lo/Hi threshold registers are optional then.",
                 "LoThreshReg": "0x02",
-                "LoThreshRegVal": "0x38 0x40",
+                "LoThreshRegVal": "0x20 0x00",
                 "HiThreshReg": "0x03",
                 "HiThreshRegVal": "0x7f 0xf0"
             }
@@ -52,7 +53,7 @@
             {
                 "DeviceType": "MAX1363",
                 "Bus": 28,
-                "Address": "0x48",
+                "Address": "0x35",
                 "Probe": true,
                 "Type": "embedded",
                 "Scale": 0.000244140625,
@@ -75,9 +76,10 @@
                 "WarningMax": 0.8,
                 "CriticalMax": 0.7,
                 "CfgReg": "0x01",
-                "CfgRegVal": "0xc4 0x90",
+                "CfgRegVal": "0xc4 0x94",
+                "CfgRegVal_comment": "Interrupt mode (window comparator, ALERT enabled). For polling-only with no hardware ALERT, change CfgRegVal to 0xc4 0x93 (COMP_QUE=11 disables comparator); Lo/Hi threshold registers are optional then.",
                 "LoThreshReg": "0x02",
-                "LoThreshRegVal": "0x4b 0x00",
+                "LoThreshRegVal": "0x20 0x00",
                 "HiThreshReg": "0x03",
                 "HiThreshRegVal": "0x7f 0xf0"
             }
