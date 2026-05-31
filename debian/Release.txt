@@ -1,25 +1,43 @@
 ================================================================================
 - V.7.0050.3530
-- Mon, 25 May 2026
+- Sun, 31 May 2026
 --------------------------------------------------------------------------------
 
+- New supported platforms
+    - SN6600_LD (SKU HI193) — liquid-cooled Spectrum switch; ES quality release
+    - SN6600_LD virtual platform for simulation and pre-silicon validation
+
 - New features
-    o Supports SN6600 in ES quality
+    - Chassis management (sysfs) for SN6600_LD: thermal monitoring, ASIC and COMEX
+      voltage regulators, dual hot-plug PDBs, leakage detection, SODIMM
+      temperature sensors, switch-board EEPROM, port-board devices, and BMC
+      connectivity checks
+    - User documentation: Chassis Management User Manual rev. 3.2 and SN6600_LD
+      Hardware Interfaces reference guide
+    - Kernel platform support for SN6600_LD on Linux 6.1 and 6.12 (SPC6 host
+      driver, MPS PMIC devices, platform LED control)
+    - Supported kernel versions for this release: Linux 5.10, 5.14, 6.1 (through
+      6.1.155), and 6.12 (through 6.12.62); SN6600_LD validated on 6.1.x and
+      6.12.x
 
-- Bug fixes
-    o #N/A, docs: Chassis sysfs user manual rev 3.2 and SN6600_LD reference, 027a7c5
-    o #N/A, hw-mgmt: patches: Update platform driver for SPC6 platforms, 8b053c5
-    o #N/A, hw-mgmt: patches: Add missing 6.1 and 6.12 LED driver patch, a7519db
-    o #4906456, hw-mgmt: package: Update Debian package dependency list, 9167f69
-    o #4855732, hw-mgmt: script: Update handling of usb0 hot plug events, 1130580
-    o #4854459, hw-mgmt: patches: Add 6.12 kernel patch to fix PCI DOE warnings, 33e20ec
-    o #N/A, hw-mgmt: patches: Fix error handling of SN66XX_LD platform driver, 4bb515a
-    o #N/A, hw-mgmt: rules: Add temp sensor udev rules for SN66XX_LD platforms, b1133d8
-
-- Kernel Patches for New Features:
-    o 
-
-- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.3530/recipes-kernel/linux/Patch_Status_Table.txt
+- Kernel patches (for new features / fixes)
+    - platform/mellanox: nvsw-bmc system control and monitoring driver (SPC6
+      host, SKU HI193 / VMOD0025)
+        recipes-kernel/linux/linux-6.1/0106-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+        recipes-kernel/linux/linux-6.12/0046-platform-mellanox-nvsw-bmc-Add-system-control-and-mo.patch
+    - hwmon: (pmbus) MP2845 digital multi-phase power controller
+        recipes-kernel/linux/linux-6.1/0107-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch
+        recipes-kernel/linux/linux-6.12/0056-hwmon-pmbus-mp2845-Add-support-for-MP2845-device.patch
+    - hwmon: (pmbus) MP5926 power controller
+        recipes-kernel/linux/linux-6.1/0108-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch
+        recipes-kernel/linux/linux-6.12/0057-hwmon-pmbus-mp5926-Add-support-for-MP5926-device.patch
+    - leds: mlxreg hardware LED color conversion
+        recipes-kernel/linux/linux-6.1/0109-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
+        recipes-kernel/linux/linux-6.12/0059-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch
+    - PCI/DOE: poll DOE busy bit (Linux 6.12)
+        recipes-kernel/linux/linux-6.12/0058-PCI-DOE-Poll-DOE-Busy-bit-for-up-to-1-second-in-pci.patch
+    - For detailed patch list: Please view:
+      https://github.com/Mellanox/hw-mgmt/blob/V.7.0050.3530/recipes-kernel/linux/Patch_Status_Table.txt
 
 - Known issues and limitations:
     o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
