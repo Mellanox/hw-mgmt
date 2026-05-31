@@ -365,3 +365,5 @@ CONFIG_RTC_DRV_PCF85053A=y
 # Nvidia switch
 CONFIG_NVSW_BMC_HID162=m
 CONFIG_I2C_MUX_REGMAP=y
+# phram-backed MTD for persistent fw_env (recovery counter) across warm boots
+CONFIG_MTD_PHRAM=y
