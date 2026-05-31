@@ -47,7 +47,8 @@ BUS="$1"
 ADDR="$2"
 CHANNEL="$3"
 
-# Legacy MUX/config high bytes (same as hw-management-bmc-a2d-leakage-read.sh).
+# Legacy MUX high bytes (same as hw-management-bmc-a2d-leakage-read.sh); cfg low 0x94.
+ADS1015_CFG_LO=0x94
 ADS1015_CH_OFFSET_1=0xc2
 ADS1015_CH_OFFSET_2=0xd2
 ADS1015_CH_OFFSET_3=0xe2
@@ -71,7 +72,7 @@ if [ -n "$CHANNEL" ]; then
     4) CH_OFF=$ADS1015_CH_OFFSET_4 ;;
     *) echo "Invalid channel: $CHANNEL (use 1-4)"; exit 1 ;;
     esac
-    if ! i2ctransfer -f -y "$BUS" w3@"$ADDR" 0x01 "$CH_OFF" 0x90 >/dev/null 2>&1; then
+    if ! i2ctransfer -f -y "$BUS" w3@"$ADDR" 0x01 "$CH_OFF" "$ADS1015_CFG_LO" >/dev/null 2>&1; then
         echo "Failed to select ADS1015 channel $CHANNEL"
         exit 1
     fi
