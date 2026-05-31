@@ -9,6 +9,7 @@ Kernel-6.12
 |0005-mctp-driver-net-Fix-MCTP-over-USB.patch                     |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0006-jtag-Add-JTAG-core-headers-GPIO-mux-and-locking-support.patch|                   | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
 |0007-JTAG-Aspeed-Fix-kernel-configuration.patch                  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC                                            |
+|0008-arm64-dts-aspeed-spc6-bmc-ext-phram-env-tpm-i3c-pull.patch  |                    | Downstream;skip[ALL];take[sonic]         |            | BMC; SPC6 AST2700 A2 DTS                       |
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Legend:
