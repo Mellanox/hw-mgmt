@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2
+Rev. 3.2.1
 
 ## Table of Contents
 
@@ -400,6 +400,7 @@ Rev. 3.2
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
 | 3.0 | September 2025 | Complete document alignment with Word document source<br>• Updated title and branding to NVIDIA<br>• Complete sysfs hierarchy coverage with 300+ attributes<br>• Professional markdown formatting throughout<br>• Added comprehensive examples for all attributes<br>• Updated all 22 major sections (3.1-3.22)<br>• Added Watchdog, JTAG, and BMC sections<br>• Complete thermal monitoring documentation<br>• Enterprise-grade documentation ready for production |
@@ -5278,9 +5279,9 @@ echo 1 > $bsp_path/system/dpu1_reset_enable
 
 ### Get Reset Cause
 
-**Node name:** `$bsp_path/system/reset_cause`
+**Node name:** `$bsp_path/system/reset_<cause>`
 
-**Description:** Get system reset cause
+**Description:** Get last system reset cause. Reset causes vary between platform families. Each supported cause is exposed as a separate read-only attribute under `$bsp_path/system/`. Reading `$bsp_path/system/reset_cause` returns the primary cause string. For most causes only one attribute reads `1`; the rest read `0`.
 
 **Access:** Read only
 
@@ -5289,12 +5290,51 @@ echo 1 > $bsp_path/system/dpu1_reset_enable
 **Arguments:**
 | Name | Data type | Values |
 |------|-----------|--------|
-| cause | String |  |
+| cause | String | Primary reset cause (via `reset_cause`) |
+| `reset_<cause>` | Integer | `1` = this cause triggered the reset, `0` = not related |
 
-**Example:** Get reset cause:
+**Example:** Check if long button press caused reset:
+```bash
+cat $bsp_path/system/reset_long_pb
+```
+
+**Example:** Get reset cause string:
 ```bash
 cat $bsp_path/system/reset_cause
 ```
+
+#### Juliet platform family (N51XX_LD)
+
+Per CPLD design, Juliet platforms do **not** support `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, or `reset_reload_bios`. Those attributes must not be documented or tested as available on Juliet systems.
+
+Applies to N5110_LD, N5112_LD, N5100_LD, N5101_LD, N5200_LD, N5201_LD, N5300_LD, N5400_LD, N5120_LD, N5121_LD, N5320_LD, N5500_LD (GB200/GB300), and N5240_LD (Kyber). `config/reset_attr_num` = 22.
+
+| Reset cause attribute | Description |
+|-----------------------|-------------|
+| `reset_long_pb` | Reset button was pushed for more than 15 seconds |
+| `reset_short_pb` | Reset button was pushed for less than 15 seconds |
+| `reset_aux_pwr_or_fu` | Reset due to CPLD power down or CPLD code refresh |
+| `reset_swb_dc_dc_pwr_fail` | Switch board DC/DC power failure |
+| `reset_sw_reset` | Power cycle command initiated by software |
+| `reset_pwr_button_or_leak_con` | Reset triggered by power button or leak connector event |
+| `reset_swb_wd` | Reset or power off initiated by switch-board watchdog |
+| `reset_asic_thermal` | ASIC power drop due to failure or thermal shutdown |
+| `reset_cpu_thermal` | CPU thermal shutdown |
+| `reset_aux_pwr_or_reload` | Auxiliary power failure or CPLD field upgrade |
+| `reset_comex_pwr_fail` | COMe module power failure |
+| `reset_platform` | Reboot command initiated by software |
+| `reset_soc` | Power off initiated by SoC (for example Linux `poweroff`) |
+| `reset_from_erot` | Reset initiated by eRoT |
+| `reset_erot` | eRoT reset |
+| `reset_system` | System reset cycle, power on, power cycle, or ASIC reset |
+| `reset_sw_pwr_off` | Power off initiated by software through CPLD |
+| `reset_comex_thermal` | COMe thermal shutdown |
+| `reset_comex_power` | COMe power event |
+| `reset_pwr_converter_fail` | Power converter failure |
+| `reset_main_5v` | Management board 5 V rail failure |
+| `reset_mgmt_pwr` | Management board power failure |
+
+Validation source: `recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch`, `usr/usr/bin/hw-management.sh` (`n51xx_reset_attr_num`).
 
 ### Cartridge
 

@@ -1,11 +1,35 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** March 22, 2026
+**Last Updated:** May 31, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.1 - May 31, 2026
+
+#### Fixed: Juliet (N51XX_LD) reset-cause documentation (#5014001)
+
+**Affected platforms:** Juliet platform family (N51XX_LD), including GB200 systems such as N5110_LD and N5500_LD.
+
+**Overview:**  
+Aligned the user manual with Juliet CPLD-supported reset causes. The following are not supported by the Juliet CPLD and must not be documented as available sysfs attributes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios`.
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| Get Reset Cause (3.18.39) | Added Juliet platform family table with 22 supported reset causes |
+| Get Reset Cause (3.18.39) | Documented unsupported legacy causes for Juliet |
+| Config | Referenced `reset_attr_num` = 22 for N51XX_LD |
+
+**Validation source:**
+
+- `recipes-kernel/linux/linux-6.12/9007-platform-mellanox-Downstream-Introduce-support-of-Nv.patch`
+- `usr/usr/bin/hw-management.sh` (`n51xx_reset_attr_num`)
+
+---
 
 ### Rev. 3.2 (SN66XX_LD) - March 22, 2026
 
