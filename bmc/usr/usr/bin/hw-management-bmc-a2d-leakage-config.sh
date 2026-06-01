@@ -432,7 +432,9 @@ hex_concat_apply_mask()
 	local data="$1"
 	local byte mb pos=0 out="" n=${#data}
 
+	set -f
 	set -- $2
+	set +f
 	while [ "$pos" -lt "$n" ]; do
 		byte="${data:$pos:2}"
 		if [ -n "$1" ]; then
