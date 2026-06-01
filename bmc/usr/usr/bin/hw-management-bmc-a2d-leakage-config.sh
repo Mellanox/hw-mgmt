@@ -95,8 +95,9 @@ check_config_file()
 	return 0
 }
 
-# Optional JSON field "Probe": true — bind kernel driver (new_device) before register writes so
-# the driver does not later overwrite programmed thresholds/configuration.
+# Optional JSON field "Probe": true — bind kernel driver (new_device) before register programming,
+# briefly unbind for raw i2ctransfer, then rebind for IIO sysfs so driver probe does not run after
+# our final register values are written.
 # JSON booleans are unquoted (true/false); json_get_string only sees quoted values — use json_get_bool.
 json_probe_true()
 {
@@ -148,13 +149,56 @@ bind_kernel_driver()
 		log_message "info" "I2C device $dev_id already present — assuming driver or early init"
 		return 0
 	fi
-	log_message "info" "Binding $driver at $address on bus $bus (new_device before register config)"
+	log_message "info" "Binding $driver at $address on bus $bus (new_device before register config, then unbind/program/rebind)"
 	if ! echo "$driver $address" > "${adapter}/new_device" 2>/dev/null; then
 		log_message "warning" "new_device failed for $driver $address on i2c-$bus (driver missing or device conflict) — continuing with raw I2C config"
 		return 1
 	fi
 	sleep 0.2
 	return 0
+}
+
+# Release driver so i2ctransfer can program device registers (I2C client node remains).
+unbind_kernel_driver()
+{
+	local bus="$1" address="$2"
+	local suf devpath driver_name unbind_file dev_id
+
+	suf=$(i2c_addr_sysfs_suffix "$address") || return 1
+	devpath="/sys/bus/i2c/devices/${bus}-${suf}"
+	[ -L "$devpath/driver" ] || return 0
+	driver_name=$(basename "$(readlink "$devpath/driver" 2>/dev/null)" 2>/dev/null) || return 1
+	unbind_file="/sys/bus/i2c/drivers/${driver_name}/unbind"
+	[ -f "$unbind_file" ] || return 1
+	dev_id=$(basename "$devpath")
+	if ! echo "$dev_id" >"$unbind_file" 2>/dev/null; then
+		log_message "warning" "Failed to unbind $driver_name from $dev_id (Bus $bus, Addr $address) — cannot program registers via raw I2C"
+		return 1
+	fi
+	log_message "info" "Unbound $driver_name from $dev_id for raw register programming"
+	sleep 0.2
+	return 0
+}
+
+# Re-attach driver after raw I2C programming (uses bind, not new_device).
+rebind_kernel_driver()
+{
+	local bus="$1" address="$2" device_type="$3"
+	local driver suf dev_id bind_file
+
+	driver=$(kernel_driver_for_type "$device_type")
+	[ -n "$driver" ] || return 1
+	suf=$(i2c_addr_sysfs_suffix "$address") || return 1
+	dev_id="${bus}-${suf}"
+	bind_file="/sys/bus/i2c/drivers/${driver}/bind"
+	[ -f "$bind_file" ] || return 1
+	if echo "$dev_id" >"$bind_file" 2>/dev/null; then
+		log_message "info" "Rebound $driver to $dev_id after register programming"
+		sleep 0.2
+		return 0
+	fi
+	log_message "warning" "Rebind $driver to $dev_id failed"
+	return 1
 }
 
 # sysfs name for /sys/bus/i2c/devices/<bus>-<addr> (4-digit hex address).
@@ -380,7 +424,33 @@ i2c_readback_hex_concat()
 	printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | grep -oE '0x[0-9a-f]{1,2}' | sed 's/^0x//' | tr -d '\n'
 }
 
+# AND a concatenated hex string (2 chars per byte) with a space-separated 0xNN mask list.
+# Used to ignore volatile/status bits during readback verify (e.g. ADS1015 Config OS bit).
+# Mask shorter than data: trailing bytes pass through unmasked.
+hex_concat_apply_mask()
+{
+	local data="$1"
+	local byte mb pos=0 out="" n=${#data}
+
+	set -- $2
+	while [ "$pos" -lt "$n" ]; do
+		byte="${data:$pos:2}"
+		if [ -n "$1" ]; then
+			mb="${1#0x}"
+			mb="${mb#0X}"
+			out="$out$(printf '%02x' $((16#$byte & 16#$mb)))"
+			shift
+		else
+			out="$out$byte"
+		fi
+		pos=$((pos + 2))
+	done
+	printf '%s' "$out"
+}
+
 # Function to write and verify register
+# Optional 7th arg: per-byte verify mask (space-separated 0xNN). Bits cleared in the mask
+# are ignored on readback compare — needed for registers with volatile/read-only bits.
 write_and_verify_register()
 {
 	local bus="$1"
@@ -389,6 +459,7 @@ write_and_verify_register()
 	local reg_val="$4"
 	local reg_name="$5"
 	local device_name="$6"
+	local verify_mask="${7:-}"
 
 	# Count number of bytes in reg_val (word-split; reg_val is space-separated hex bytes)
 	set -- $reg_val
@@ -419,6 +490,11 @@ write_and_verify_register()
 	local read_n exp_n
 	read_n=$(i2c_readback_hex_concat "$readback")
 	exp_n=$(i2c_readback_hex_concat "$reg_val")
+
+	if [ -n "$verify_mask" ]; then
+		read_n=$(hex_concat_apply_mask "$read_n" "$verify_mask")
+		exp_n=$(hex_concat_apply_mask "$exp_n" "$verify_mask")
+	fi
 
 	if [ "$read_n" != "$exp_n" ]; then
 		log_message "warning" "$reg_name mismatch on $device_name (Bus $bus, Addr $addr): expected hex [$exp_n] from [$reg_val], readback hex [$read_n] from i2ctransfer — continuing"
@@ -504,6 +580,103 @@ ads7924_hex_byte_to_uint()
 	*[!0-9a-f]*) return 1 ;;
 	esac
 	printf '%d' "$((16#$x))"
+}
+
+# ADS1015 config register MUX high byte (AINn single-ended vs GND); channel 0..3.
+ads1015_mux_high_byte()
+{
+	case "$1" in
+	0) printf '%s' 0xc2 ;;
+	1) printf '%s' 0xd2 ;;
+	2) printf '%s' 0xe2 ;;
+	3) printf '%s' 0xf2 ;;
+	*) return 1 ;;
+	esac
+}
+
+# Program ADS1015 window comparator per MUX channel (TI SBAS173; one Lo/Hi pair per rotation).
+configure_ads1015_raw_i2c()
+{
+	local device_json="$1"
+	local device_name="$2"
+	local bus="$3"
+	local address="$4"
+	local num_channels="$5"
+
+	local cfg_lo lo_val hi_val lo_reg hi_reg mux ch nch failed
+	local t
+
+	cfg_lo="0x94"
+	t=$(echo "$device_json" | json_get_string "CfgRegVal" 2>/dev/null) || true
+	t=$(echo "$t" | tr -d '"')
+	if [ -n "$t" ] && [ "$t" != "null" ]; then
+		set -- $t
+		shift
+		[ -n "$1" ] && cfg_lo="$1"
+	fi
+
+	local default_lo default_hi
+	default_lo="0x20 0x00"
+	default_hi="0x7f 0xf0"
+	t=$(echo "$device_json" | json_get_string "LoThreshRegVal" 2>/dev/null) || true
+	t=$(echo "$t" | tr -d '"')
+	[ -n "$t" ] && [ "$t" != "null" ] && default_lo="$t"
+	t=$(echo "$device_json" | json_get_string "HiThreshRegVal" 2>/dev/null) || true
+	t=$(echo "$t" | tr -d '"')
+	[ -n "$t" ] && [ "$t" != "null" ] && default_hi="$t"
+
+	lo_reg="0x02"
+	hi_reg="0x03"
+	t=$(echo "$device_json" | json_get_string "LoThreshReg" 2>/dev/null) || true
+	t=$(echo "$t" | tr -d '"')
+	[ -n "$t" ] && [ "$t" != "null" ] && lo_reg="$t"
+	t=$(echo "$device_json" | json_get_string "HiThreshReg" 2>/dev/null) || true
+	t=$(echo "$t" | tr -d '"')
+	[ -n "$t" ] && [ "$t" != "null" ] && hi_reg="$t"
+
+	nch=4
+	if [ -n "$num_channels" ] && [ "$num_channels" -ge 1 ] 2>/dev/null; then
+		nch="$num_channels"
+		[ "$nch" -gt 4 ] && nch=4
+	fi
+
+	log_message "info" "ADS1015 $device_name: per-channel init (window comparator, cfg_lo=$cfg_lo, channels=0..$((nch - 1)))"
+	failed=0
+	ch=0
+	while [ "$ch" -lt "$nch" ]; do
+		mux=$(ads1015_mux_high_byte "$ch") || {
+			failed=1
+			break
+		}
+		lo_val="$default_lo"
+		hi_val="$default_hi"
+		t=$(json_optional_scalar "$device_json" "Ads1015LoThreshCh$((ch + 1))") && lo_val="$t"
+		t=$(json_optional_scalar "$device_json" "Ads1015HiThreshCh$((ch + 1))") && hi_val="$t"
+
+		# Config high byte bit 15 (OS) is a volatile single-shot/status bit, not stored config:
+		# write 1 starts a conversion, read returns 0 while converting (continuous mode reads 0).
+		# Mask it off (0x7f) so verify checks MUX/PGA/MODE/comparator bits without false-failing.
+		if ! write_and_verify_register "$bus" "$address" 0x01 \
+			"$mux $cfg_lo" "ADS1015 Config ch $ch" "$device_name" "0x7f 0xff"; then
+			failed=1
+		fi
+		if ! write_and_verify_register "$bus" "$address" "$lo_reg" \
+			"$lo_val" "ADS1015 Lo_thresh ch $ch" "$device_name"; then
+			failed=1
+		fi
+		if ! write_and_verify_register "$bus" "$address" "$hi_reg" \
+			"$hi_val" "ADS1015 Hi_thresh ch $ch" "$device_name"; then
+			failed=1
+		fi
+		ch=$((ch + 1))
+	done
+
+	if [ "$failed" -ne 0 ]; then
+		log_message "warning" "ADS1015 $device_name: one or more channel programs failed"
+		return 1
+	fi
+	log_message "info" "ADS1015 $device_name: raw I2C configuration complete (last MUX channel $((nch - 1)) selected)"
+	return 0
 }
 
 # Program ADS7924 when no kernel driver is bound (TI SBAS482 register map).
@@ -801,15 +974,18 @@ populate_leakage_channel_dir()
 	lo_hex=$(echo "$lo_hex" | tr -d '"')
 	hi_hex=$(echo "$hi_hex" | tr -d '"')
 
-	if [ -n "$lo_hex" ] && [ "$lo_hex" != "null" ]; then
-		local lo_u
-		lo_u=$(hex_bytes_to_uint_be "$lo_hex")
-		awk -v u="$lo_u" -v s="$sc_num" 'BEGIN { printf "%.12g\n", u * s }' >"$ch_dir/min"
-	fi
-	if [ -n "$hi_hex" ] && [ "$hi_hex" != "null" ]; then
-		local hi_u
-		hi_u=$(hex_bytes_to_uint_be "$hi_hex")
-		awk -v u="$hi_u" -v s="$sc_num" 'BEGIN { printf "%.12g\n", u * s }' >"$ch_dir/max"
+	# ADS1015 Lo/Hi registers are hardware-only; sysfs min/max align with MAX1363 via Warning*.
+	if [ "$device_type" != "ADS1015" ]; then
+		if [ -n "$lo_hex" ] && [ "$lo_hex" != "null" ]; then
+			local lo_u
+			lo_u=$(hex_bytes_to_uint_be "$lo_hex")
+			awk -v u="$lo_u" -v s="$sc_num" 'BEGIN { printf "%.12g\n", u * s }' >"$ch_dir/min"
+		fi
+		if [ -n "$hi_hex" ] && [ "$hi_hex" != "null" ]; then
+			local hi_u
+			hi_u=$(hex_bytes_to_uint_be "$hi_hex")
+			awk -v u="$hi_u" -v s="$sc_num" 'BEGIN { printf "%.12g\n", u * s }' >"$ch_dir/max"
+		fi
 	fi
 
 	# min/max when Lo/Hi register hex absent (e.g. MAX1363): optional NormalMin/NormalMax scalars, else WarningMin/WarningMax
@@ -902,6 +1078,66 @@ create_channel_infrastructure()
 	return 0
 }
 
+# Program device registers over raw I2C (caller must have unbound any kernel driver).
+configure_a2d_registers_raw()
+{
+	local device_json="$1"
+	local device_name="$2"
+	local bus="$3"
+	local address="$4"
+	local device_type="$5"
+	local num_channels="$6"
+
+	local cfg_reg cfg_reg_val lo_thresh_reg lo_thresh_val hi_thresh_reg hi_thresh_val
+	local success failed
+
+	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
+	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
+	lo_thresh_reg=$(echo "$device_json" | json_get_string "LoThreshReg")
+	lo_thresh_val=$(echo "$device_json" | json_get_string "LoThreshRegVal")
+	hi_thresh_reg=$(echo "$device_json" | json_get_string "HiThreshReg")
+	hi_thresh_val=$(echo "$device_json" | json_get_string "HiThreshRegVal")
+
+	if [ "$device_type" = "ADS7924" ]; then
+		configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"
+		return $?
+	fi
+	if [ "$device_type" = "ADS1015" ]; then
+		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"
+		return $?
+	fi
+
+	success=0
+	failed=0
+
+	if [ -n "$cfg_reg" ] && [ -n "$cfg_reg_val" ] && [ "$cfg_reg" != "null" ] && [ "$cfg_reg_val" != "null" ]; then
+		if write_and_verify_register "$bus" "$address" "$cfg_reg" "$cfg_reg_val" "Configuration Register" "$device_name"; then
+			success=$((success + 1))
+		else
+			failed=$((failed + 1))
+		fi
+	fi
+
+	if [ -n "$lo_thresh_reg" ] && [ -n "$lo_thresh_val" ] && [ "$lo_thresh_reg" != "null" ] && [ "$lo_thresh_val" != "null" ]; then
+		if write_and_verify_register "$bus" "$address" "$lo_thresh_reg" "$lo_thresh_val" "Low Threshold Register" "$device_name"; then
+			success=$((success + 1))
+		else
+			failed=$((failed + 1))
+		fi
+	fi
+
+	if [ -n "$hi_thresh_reg" ] && [ -n "$hi_thresh_val" ] && [ "$hi_thresh_reg" != "null" ] && [ "$hi_thresh_val" != "null" ]; then
+		if write_and_verify_register "$bus" "$address" "$hi_thresh_reg" "$hi_thresh_val" "High Threshold Register" "$device_name"; then
+			success=$((success + 1))
+		else
+			failed=$((failed + 1))
+		fi
+	fi
+
+	log_message "info" "Device configuration for $device_name: $success successful, $failed failed"
+	[ "$failed" -eq 0 ]
+}
+
 # Args: device_json, device_name, num_channels, chnames (space-separated words from ChnlNames)
 configure_device()
 {
@@ -910,17 +1146,12 @@ configure_device()
 	local num_channels="$3"
 	local chnames="$4"
 
-	# Extract device parameters using library functions
-	local device_type bus address cfg_reg cfg_reg_val lo_thresh_reg lo_thresh_val hi_thresh_reg hi_thresh_val
+	local device_type bus address need_rebind
+
 	device_type=$(echo "$device_json" | json_get_string "DeviceType")
 	bus=$(echo "$device_json" | json_get_number "Bus")
 	address=$(echo "$device_json" | json_get_string "Address")
-	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
-	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
-	lo_thresh_reg=$(echo "$device_json" | json_get_string "LoThreshReg")
-	lo_thresh_val=$(echo "$device_json" | json_get_string "LoThreshRegVal")
-	hi_thresh_reg=$(echo "$device_json" | json_get_string "HiThreshReg")
-	hi_thresh_val=$(echo "$device_json" | json_get_string "HiThreshRegVal")
+	need_rebind=0
 
 	log_message "info" "Checking $device_type device at Bus $bus, Address $address for $device_name"
 
@@ -933,70 +1164,49 @@ configure_device()
 
 	log_message "info" "Configuring $device_type for $device_name..."
 
-	# 2) Optional kernel driver bind before register access (JSON Probe)
+	# 2) Bind kernel driver first when Probe is true (instantiates client; driver probe may run once).
 	if json_probe_true "$device_json"; then
-		if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
-			if ! probe_i2c_sysfs_present "$bus" "$address"; then
-				log_message "info" "Bind failed and no I2C client in sysfs — try next alternative"
-				return 1
+		bind_kernel_driver "$bus" "$address" "$device_type"
+	fi
+
+	# 3) Unbind so i2ctransfer can program registers (MAX1363 / ADS1015 / ADS7924).
+	if i2c_client_has_bound_driver "$bus" "$address"; then
+		if ! unbind_kernel_driver "$bus" "$address"; then
+			log_message "info" "Leak detector $device_name: driver unbind failed — try next Device alternative"
+			return 1
+		fi
+		need_rebind=1
+	fi
+
+	# 4) Raw register programming — final values for all supported A2D types.
+	if ! configure_a2d_registers_raw "$device_json" "$device_name" "$bus" "$address" "$device_type" "$num_channels"; then
+		log_message "info" "Register programming failed — try next Device alternative"
+		if [ "$need_rebind" -eq 1 ] && json_probe_true "$device_json"; then
+			rebind_kernel_driver "$bus" "$address" "$device_type"
+		fi
+		return 1
+	fi
+
+	# 5) Rebind for IIO sysfs when Probe is true and we unbound for step 4.
+	if json_probe_true "$device_json"; then
+		if [ "$need_rebind" -eq 1 ]; then
+			if ! rebind_kernel_driver "$bus" "$address" "$device_type"; then
+				if ! probe_i2c_sysfs_present "$bus" "$address"; then
+					log_message "info" "Rebind failed and no I2C client in sysfs — try next alternative"
+					return 1
+				fi
+			fi
+		elif ! i2c_client_has_bound_driver "$bus" "$address"; then
+			if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
+				if ! probe_i2c_sysfs_present "$bus" "$address"; then
+					log_message "info" "Bind failed and no I2C client in sysfs — try next alternative"
+					return 1
+				fi
 			fi
 		fi
 	fi
 
-	# 3) Register writes via i2ctransfer only when no kernel driver owns the client — otherwise
-	#    userspace gets "No such device or address"; configuration is expected from the driver / IIO.
-	if i2c_client_has_bound_driver "$bus" "$address"; then
-		log_message "info" "Kernel driver bound — skipping raw i2ctransfer register writes for $device_name (Bus $bus, Addr $address); use driver sysfs or program before bind if needed"
-		log_message "info" "Device configuration complete for $device_name: register writes skipped (driver active)"
-		return 0
-	fi
-
-	if [ "$device_type" = "ADS7924" ]; then
-		if ! configure_ads7924_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"; then
-			log_message "info" "ADS7924 programming failed — try next Device alternative"
-			return 1
-		fi
-		log_message "info" "Device configuration complete for $device_name: ADS7924 raw I2C done"
-		return 0
-	fi
-
-	local success=0
-	local failed=0
-
-	# Write and verify configuration register (if provided)
-	if [ -n "$cfg_reg" ] && [ -n "$cfg_reg_val" ] && [ "$cfg_reg" != "null" ] && [ "$cfg_reg_val" != "null" ]; then
-		if write_and_verify_register "$bus" "$address" "$cfg_reg" "$cfg_reg_val" "Configuration Register" "$device_name"; then
-			success=$((success + 1))
-		else
-			failed=$((failed + 1))
-		fi
-	fi
-
-	# Write and verify low threshold register (if provided)
-	if [ -n "$lo_thresh_reg" ] && [ -n "$lo_thresh_val" ] && [ "$lo_thresh_reg" != "null" ] && [ "$lo_thresh_val" != "null" ]; then
-		if write_and_verify_register "$bus" "$address" "$lo_thresh_reg" "$lo_thresh_val" "Low Threshold Register" "$device_name"; then
-			success=$((success + 1))
-		else
-			failed=$((failed + 1))
-		fi
-	fi
-
-	# Write and verify high threshold register (if provided)
-	if [ -n "$hi_thresh_reg" ] && [ -n "$hi_thresh_val" ] && [ "$hi_thresh_reg" != "null" ] && [ "$hi_thresh_val" != "null" ]; then
-		if write_and_verify_register "$bus" "$address" "$hi_thresh_reg" "$hi_thresh_val" "High Threshold Register" "$device_name"; then
-			success=$((success + 1))
-		else
-			failed=$((failed + 1))
-		fi
-	fi
-
-	log_message "info" "Device configuration complete for $device_name: $success successful, $failed failed"
-
-	if [ "$failed" -gt 0 ]; then
-		log_message "info" "Register programming had failures — try next Device alternative"
-		return 1
-	fi
-
+	log_message "info" "Device configuration complete for $device_name"
 	return 0
 }
 
