@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 #
 # This program is free software; you can redistribute it and/or modify it

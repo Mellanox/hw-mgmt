@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Test Suite for thermal_config structure validation
 #
@@ -490,9 +490,9 @@ class TestModuleTempPopulate(unittest.TestCase):
         m = self.thermal_module
         afw = MagicMock()
         with patch.object(m, 'atomic_file_write', afw), \
-             patch.object(m, 'is_module_host_management_mode', return_value=False), \
-             patch('os.path.islink', return_value=False), \
-             patch('builtins.open', mock_open(read_data="0")):
+                patch.object(m, 'is_module_host_management_mode', return_value=False), \
+                patch('os.path.islink', return_value=False), \
+                patch('builtins.open', mock_open(read_data="0")):
             m.module_temp_populate(self._arg_list(), None)
 
         writes = self._writes_map(afw)
@@ -528,10 +528,10 @@ class TestModuleTempPopulate(unittest.TestCase):
             return path.endswith("/temperature/threshold_hi")
 
         with patch.object(m, 'atomic_file_write', afw), \
-             patch.object(m, 'is_module_host_management_mode', return_value=False), \
-             patch('os.path.islink', return_value=False), \
-             patch('os.path.isfile', side_effect=isfile_side_effect), \
-             patch('builtins.open', side_effect=open_side_effect):
+                patch.object(m, 'is_module_host_management_mode', return_value=False), \
+                patch('os.path.islink', return_value=False), \
+                patch('os.path.isfile', side_effect=isfile_side_effect), \
+                patch('builtins.open', side_effect=open_side_effect):
             m.module_temp_populate(self._arg_list(), None)
 
         writes = self._writes_map(afw)
@@ -590,10 +590,10 @@ class TestModuleTempPopulate(unittest.TestCase):
             ))
 
         with patch.object(m, 'atomic_file_write', afw), \
-             patch.object(m, 'is_module_host_management_mode', return_value=False), \
-             patch('os.path.islink', return_value=False), \
-             patch('os.path.isfile', side_effect=isfile_side_effect), \
-             patch('builtins.open', side_effect=open_side_effect):
+                patch.object(m, 'is_module_host_management_mode', return_value=False), \
+                patch('os.path.islink', return_value=False), \
+                patch('os.path.isfile', side_effect=isfile_side_effect), \
+                patch('builtins.open', side_effect=open_side_effect):
             m.module_temp_populate(self._arg_list(), None)
 
         writes = self._writes_map(afw)
@@ -616,8 +616,8 @@ class TestModuleTempPopulate(unittest.TestCase):
         m = self.thermal_module
         afw = MagicMock()
         with patch.object(m, 'atomic_file_write', afw), \
-             patch.object(m, 'is_module_host_management_mode', return_value=True), \
-             patch('os.path.islink', return_value=False):
+                patch.object(m, 'is_module_host_management_mode', return_value=True), \
+                patch('os.path.islink', return_value=False):
             m.module_temp_populate(self._arg_list(), None)
 
         self.assertEqual(afw.call_count, 0)
@@ -628,8 +628,8 @@ class TestModuleTempPopulate(unittest.TestCase):
         afw = MagicMock()
         host_mock = MagicMock()
         with patch.object(m, 'atomic_file_write', afw), \
-             patch.object(m, 'is_module_host_management_mode', host_mock), \
-             patch('os.path.islink', return_value=True):
+                patch.object(m, 'is_module_host_management_mode', host_mock), \
+                patch('os.path.islink', return_value=True):
             m.module_temp_populate(self._arg_list(), None)
 
         self.assertEqual(afw.call_count, 0)
@@ -646,9 +646,9 @@ class TestModuleTempPopulate(unittest.TestCase):
             raise FileNotFoundError(path)
 
         with patch.object(m, 'atomic_file_write', afw), \
-             patch.object(m, 'is_module_host_management_mode', return_value=False), \
-             patch('os.path.islink', return_value=False), \
-             patch('builtins.open', side_effect=open_raise):
+                patch.object(m, 'is_module_host_management_mode', return_value=False), \
+                patch('os.path.islink', return_value=False), \
+                patch('builtins.open', side_effect=open_raise):
             # Must not raise; documents the try/except fail-safe in the source.
             m.module_temp_populate(self._arg_list(), None)
 
