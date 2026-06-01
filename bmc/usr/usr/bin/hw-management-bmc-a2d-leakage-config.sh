@@ -432,6 +432,14 @@ hex_concat_apply_mask()
 	local data="$1"
 	local byte mb pos=0 out="" n=${#data}
 
+	# Expect whole bytes (2 hex chars each). On malformed odd-length input, return the data
+	# unmasked so the caller's compare stays byte-exact and still flags a mismatch (fail-safe:
+	# never hide a real difference behind a partial-byte mask).
+	if [ $((n % 2)) -ne 0 ]; then
+		printf '%s' "$data"
+		return
+	fi
+
 	set -f
 	set -- $2
 	set +f
