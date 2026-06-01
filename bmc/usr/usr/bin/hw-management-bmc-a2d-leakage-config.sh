@@ -424,7 +424,43 @@ i2c_readback_hex_concat()
 	printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | grep -oE '0x[0-9a-f]{1,2}' | sed 's/^0x//' | tr -d '\n'
 }
 
+# AND a concatenated hex string (2 chars per byte) with a space-separated 0xNN mask list.
+# Used to ignore volatile/status bits during readback verify (e.g. ADS1015 Config OS bit).
+# Mask shorter than data: trailing bytes pass through unmasked.
+hex_concat_apply_mask()
+{
+	local data="$1"
+	local byte mb pos=0 out="" n=${#data}
+
+	# Expect whole bytes (2 hex chars each). On malformed odd-length input, return the data
+	# unmasked so the caller's compare stays byte-exact and still flags a mismatch (fail-safe:
+	# never hide a real difference behind a partial-byte mask).
+	if [ $((n % 2)) -ne 0 ]; then
+		printf '%s' "$data"
+		return
+	fi
+
+	set -f
+	set -- $2
+	set +f
+	while [ "$pos" -lt "$n" ]; do
+		byte="${data:$pos:2}"
+		if [ -n "$1" ]; then
+			mb="${1#0x}"
+			mb="${mb#0X}"
+			out="$out$(printf '%02x' $((16#$byte & 16#$mb)))"
+			shift
+		else
+			out="$out$byte"
+		fi
+		pos=$((pos + 2))
+	done
+	printf '%s' "$out"
+}
+
 # Function to write and verify register
+# Optional 7th arg: per-byte verify mask (space-separated 0xNN). Bits cleared in the mask
+# are ignored on readback compare — needed for registers with volatile/read-only bits.
 write_and_verify_register()
 {
 	local bus="$1"
@@ -433,6 +469,7 @@ write_and_verify_register()
 	local reg_val="$4"
 	local reg_name="$5"
 	local device_name="$6"
+	local verify_mask="${7:-}"
 
 	# Count number of bytes in reg_val (word-split; reg_val is space-separated hex bytes)
 	set -- $reg_val
@@ -463,6 +500,11 @@ write_and_verify_register()
 	local read_n exp_n
 	read_n=$(i2c_readback_hex_concat "$readback")
 	exp_n=$(i2c_readback_hex_concat "$reg_val")
+
+	if [ -n "$verify_mask" ]; then
+		read_n=$(hex_concat_apply_mask "$read_n" "$verify_mask")
+		exp_n=$(hex_concat_apply_mask "$exp_n" "$verify_mask")
+	fi
 
 	if [ "$read_n" != "$exp_n" ]; then
 		log_message "warning" "$reg_name mismatch on $device_name (Bus $bus, Addr $addr): expected hex [$exp_n] from [$reg_val], readback hex [$read_n] from i2ctransfer — continuing"
@@ -621,8 +663,11 @@ configure_ads1015_raw_i2c()
 		t=$(json_optional_scalar "$device_json" "Ads1015LoThreshCh$((ch + 1))") && lo_val="$t"
 		t=$(json_optional_scalar "$device_json" "Ads1015HiThreshCh$((ch + 1))") && hi_val="$t"
 
+		# Config high byte bit 15 (OS) is a volatile single-shot/status bit, not stored config:
+		# write 1 starts a conversion, read returns 0 while converting (continuous mode reads 0).
+		# Mask it off (0x7f) so verify checks MUX/PGA/MODE/comparator bits without false-failing.
 		if ! write_and_verify_register "$bus" "$address" 0x01 \
-			"$mux $cfg_lo" "ADS1015 Config ch $ch" "$device_name"; then
+			"$mux $cfg_lo" "ADS1015 Config ch $ch" "$device_name" "0x7f 0xff"; then
 			failed=1
 		fi
 		if ! write_and_verify_register "$bus" "$address" "$lo_reg" \

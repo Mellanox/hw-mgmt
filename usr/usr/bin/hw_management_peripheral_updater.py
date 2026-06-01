@@ -52,6 +52,7 @@ try:
     from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
+    from hw_management_sonic_check import is_sonic_os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -648,6 +649,13 @@ def main():
         if re.match(key, product_sku):
             sys_attr.extend(val)
             break
+
+    # On SONiC hosts, SONiC owns CPU<->BMC communication. Drop the BMC Redfish
+    # entries so this daemon never logs in to the BMC or polls BMC sensors over
+    # Redfish. On any other host OS the configuration is left unchanged.
+    if is_sonic_os():
+        sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
+        LOGGER.notice("hw-management-peripheral-updater: SONiC host detected, BMC Redfish sync disabled")
 
     # Write module_counter for other services (must be done before they start)
     # This is done here in peripheral_updater to ensure it's written even if
