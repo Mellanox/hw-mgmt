@@ -480,7 +480,241 @@ def run_cmd(cmd_list, arg):
 
 # ----------------------------------------------------------------------
 
+def _resolve_hwmon(src_path):
+    """
+    @summary: Resolve hwmon name under path (init_attr logic)
+    @param src_path: Path to hwmon directory
+    @return: hwmonN (e.g. hwmon0) or empty string on failure
+    """
+    try:
+        flist = os.listdir(os.path.join(src_path,"hwmon"))
+        hwmon_list = [fn for fn in flist if "hwmon" in fn]
+        if not hwmon_list:
+            return ""
+        else:
+            return hwmon_list[0]
+    except (OSError, IndexError):
+        return ""
 
+# ----------------------------------------------------------------------
+def _init_hotplug_dev_state(arg, dev_name):
+    """
+    @summary: One-time init for device hotplug polling (hwmon path and dev_state list)
+    @param arg: Platform config arg dict
+    @param dev_name: Device name (e.g. fan1, psu1, pwr1)
+    @return: Dict with dev_name, status, path_prefix, src_path
+    if path_prefix not set in config - set it empty string since it not used in event command
+    """
+    dev = {"dev_name": dev_name, "status": None}
+    src_path = arg.get("src_path", "")
+    if not src_path:
+        LOGGER.error("Failed to resolve src_path for: {}".format(dev_name), id="src_path_empty {}".format(dev_name), repeat=0, log_repeat=1)
+        return {}
+
+    dev["src_path"] = src_path
+    dev["dst_path"] = arg.get("_dst_path", None)
+    dev["path_prefix"] = arg.get("_path_prefix", "/")
+    return dev
+
+# ----------------------------------------------------------------------
+def _send_hotplug_event(arg, dev, status):
+    """
+    @summary: Send hotpl event for a given device
+    @param arg: Dict with path_prefix, evt_cmd (mutable)
+    @param dev: Dict with dev_name, status, path_prefix, src_path
+    @param status: Device status (0=absent/fault, 1=present)
+    """
+    # Mirror status bit to _dst_path (if _dst_path is set)
+    if dev["dst_path"]:
+        dst_path_name = os.path.join(dev["dst_path"], dev["dev_name"])
+        LOGGER.info("sw_hotplug_handler: mirroring status bit to dst_path: {}".format(dst_path_name))
+        if not os.path.exists(dev["dst_path"]):
+            # create parent directories if missing
+            os.makedirs(dev["dst_path"], exist_ok=True)
+
+        with open(dst_path_name, 'w', encoding="utf-8") as f:
+            f.write(str(status) + '\n')
+    dev["status"] = status
+    evt_cmd = arg.get("_evt_cmd", "")
+    if not evt_cmd:
+        return 1
+    try:
+        cmd = evt_cmd.format(**dev)
+    except (KeyError, ValueError, TypeError, NameError, AttributeError) as e:
+        LOGGER.error("update_hotplug_dev_event: failed to format command string: {}, error: {}".format(evt_cmd, e), id="failed_to_format_command_string {}".format(evt_cmd), repeat=0, log_repeat=3)
+        return 1
+    else:
+        # Clear the rate-limit counter for this error ID so it will be logged again if the error recurs.
+        LOGGER.notice(None, id="failed_to_format_command_string {}".format(evt_cmd))
+
+    LOGGER.info("sw_hotplug_handler: executing command: {}".format(cmd))
+    retcode = os.system(cmd + " 2> /dev/null 1> /dev/null")
+    if retcode != 0:
+        LOGGER.error("sw_hotplug_handler: failed to execute command: {}, retcode: {}".format(cmd, int(retcode)))
+    return retcode
+
+def sw_hotplug_handler(arg: dict, _dummy: any):
+    """
+    @summary: Software emulation of interrupt register handler. On interrupt event
+    happens - run hotplug event handler.
+    @param arg: dict with:
+        - name_list: List of device names (e.g. ["fan1", "fan2", "fan3", "fan4", "fan5"]).
+        - _event_reg: Event register name (e.g. fan_event). Bits packed to decimal value. Example:
+            2 => 00000010 => Event for device[1] (fan2) is set. index starts from 0.
+          '1' - event; '0' - no event
+          Should be cleaned after event is handled. Write ‘0’ to clear event.
+          On event change to 1 - get dev status from _status_reg. Check if status changed.
+             - Status changed - run hotplug event.
+             - Status not changed - it means we had fast insert/remove during the poll. Need to handle it
+               status = 0 : means dev was inserted and removed fast. Just send hotplug event with status = 0.
+               status = 1 : means dev was removed and inserted fast. Send 2 hotplug events with status = 0 and then with status = 1.
+        - _status_reg: Status register name (e.g. fan_status). Bits packed to decimal value
+          '1' - Present; '0' - Not Present
+        - _mask: Mask value (e.g. 00111111). LSB is first device.
+        - _src_path: Source path (e.g. /sys/devices/platform/mlxplat/mlxreg-io/hwmon/).
+          Sysfs path to read status/event register from. If path contains 'hwmon' - resolve hwmon name and append to path.
+        - _dst_path: Destination path (e.g. /var/run/hw-management/system/).
+          Sysfs path to write status to (write file with status).
+          Status file names defined in _name_list. If file already exists - replace it with new status or unlink it.
+          Optional. If not set - no mirroring to dst_path will be done and dst = src_path.
+          Example: /var/run/hw-management/system/fan1, /var/run/hw-management/system/fan2, etc.
+        - _evt_cmd: Event command (e.g. /usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {dst_path}).
+          Command to run hotplug event.
+          Example: /usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 1 {path_prefix} /var/run/hw-management/system/fan1
+          Note: path_prefix is optional and can be "/" for non-hwmon paths.
+    @param _dummy: Unused (interface compatibility with update_peripheral_attr)
+    """
+
+    # If first run - set event to mask value.
+    name_list = arg.get("name_list", [])
+    event_reg = arg.get("_event_reg", "")
+    status_reg = arg.get("_status_reg", "")
+    mask = arg.get("_mask", "")
+
+    src_path = arg.get("src_path", "")
+    if not src_path:
+        _src_path = arg.get("_src_path", "")
+        # resolve src_path
+        if "hwmon" in _src_path:
+            hwmon_name = _resolve_hwmon(_src_path.split("hwmon")[0])
+            if hwmon_name:
+                src_path = os.path.join(_src_path, hwmon_name)
+                LOGGER.info("sw_hotplug_handler: resolved src_path: {}".format(src_path))
+            else:
+                LOGGER.error("Failed to resolve hwmon name for: {}".format(_src_path), id="hwmon_name_empty {}".format(_src_path), repeat=0, log_repeat=1)
+                return
+        else:
+            src_path = _src_path
+            LOGGER.info("sw_hotplug_handler: resolved src_path: {}".format(src_path))
+    arg["src_path"] = src_path
+
+    if not name_list:
+        LOGGER.error("sw_hotplug_handler: failed to resolve name_list", id="name_list_empty", repeat=1, log_repeat=3)
+        return
+    if not event_reg:
+        LOGGER.error("sw_hotplug_handler: failed to resolve event_reg", id="event_reg_empty", repeat=1, log_repeat=3)
+        return
+    if not status_reg:
+        LOGGER.error("sw_hotplug_handler: failed to resolve status_reg", id="status_reg_empty", repeat=1, log_repeat=3)
+        return
+    if not mask:
+        LOGGER.error("sw_hotplug_handler: failed to resolve mask_reg", id="mask_reg_empty", repeat=1, log_repeat=3)
+        return
+
+    event_reg_name = os.path.join(src_path, event_reg)
+    # On first run - handle all devices like all events active.
+    if arg.get("first_run", True):
+        event = int(mask, 2)
+    else:
+        # read event register
+        try:
+            with open(event_reg_name, 'r', encoding="utf-8") as f:
+                event = f.read().rstrip('\n')
+            event = int(event)
+        except (OSError, ValueError, TypeError) as e:
+            LOGGER.error("sw_hotplug_handler: failed to read event register: {}, error: {}".format(event_reg_name, e), id="failed_to_read_event_register {}".format(event_reg_name), repeat=0, log_repeat=3)
+            return
+
+    event_to_handle = event & int(mask, 2)
+    if event_to_handle != 0:
+        try:
+            status_reg_name = os.path.join(src_path, status_reg)
+            try:
+                with open(status_reg_name, 'r', encoding="utf-8") as f:
+                    status_byte = f.read().rstrip('\n')
+                status_byte = int(status_byte)
+            except (OSError, ValueError, TypeError) as e:
+                LOGGER.error("sw_hotplug_handler: failed to read status register: {}, error: {}".format(status_reg_name, e), id="failed_to_read_status_register {}".format(status_reg_name), repeat=0, log_repeat=3)
+                return
+
+            # ACK: clear all masked snapshotted event bits immediately after reading.
+            # The hardware register is now free to accumulate new events throughout
+            # all subsequent processing; any new arrival re-sets its bit and is
+            # caught on the next poll instead of being lost to a stale-snapshot write.
+            # Re-reading current register state preserves bits that arrived in the
+            # narrow window between the snapshot read above and this write.
+            with open(event_reg_name, 'r', encoding="utf-8") as f:
+                current_event = int(f.read().rstrip('\n'))
+            with open(event_reg_name, 'w', encoding="utf-8") as f:
+                LOGGER.info("sw_hotplug_handler: clearing masked event bits: 0x{:x}".format(event_to_handle))
+                f.write(str(current_event & ~event_to_handle) + '\n')           
+        except (OSError, ValueError, TypeError) as e:
+            LOGGER.error("sw_hotplug_handler: failed to clear event register: {}, error: {}".format(event_reg_name, e),
+                         id="failed_to_clear_event_register {}".format(event_reg_name), repeat=0, log_repeat=3)
+            return
+
+    if not "devices_state" in arg:
+        arg["devices_state"] = {}
+    devices_state = arg["devices_state"]
+    arg["first_run"] = False
+
+    # if event_to_handle 0 - nothing to do
+    if event_to_handle != 0:
+        # Go over active masked event bits and run hotplug event for each device.
+        # Mask string is written MSB-first; LSB (rightmost bit) maps to device[0].
+        for i in range(len(mask)):
+            if (event_to_handle & (1 << i)) == 0:
+                continue
+
+            LOGGER.info("sw_hotplug_handler: event_to_handle: {} status_byte: {}".format(event_to_handle, status_byte))
+            # Extract status bit (1/0) from status register 1 - present, 0 - not present
+            status = 1 if (status_byte & (1 << i)) != 0 else 0
+            LOGGER.info("sw_hotplug_handler: status[{}]: {}".format(i, status))
+            # init dev state if not exists (only first run)
+            if i >= len(name_list):
+                break
+            name = name_list[i]
+            if name not in devices_state:
+                dev = _init_hotplug_dev_state(arg, name)
+                if not dev:
+                    LOGGER.error("sw_hotplug_handler: failed to init dev state for: {}".format(name))
+                    continue
+                devices_state[name] = dev
+            else:
+                dev = devices_state[name]
+            dev_status = dev.get("status", None)
+            LOGGER.info("sw_hotplug_handler: dev_status: {}, status: {}".format(dev_status, status))
+
+            # handle status change
+            if dev_status == status:
+                # status not changed but event is set. It means we had fast insetrt/remove during the poll.
+                if status == 0:
+                    # dev was inserted and removed fast
+                    LOGGER.info("sw_hotplug_handler: dev was inserted and removed fast - sending hotplug event with status: 0")
+                    _send_hotplug_event(arg, dev, 0)
+                else:
+                    # dev was removed and inserted fast
+                    # Start re-insert process
+                    LOGGER.info("sw_hotplug_handler: dev was removed and inserted fast - sending hotplug event with status: 0")
+                    _send_hotplug_event(arg, dev, 0)
+                    LOGGER.info("sw_hotplug_handler: dev was removed and inserted fast - sending hotplug event with status: 1")
+                    _send_hotplug_event(arg, dev, 1)
+            else:
+                # status changed
+                LOGGER.info("sw_hotplug_handler: status changed - sending hotplug event with status: {}".format(status))
+                _send_hotplug_event(arg, dev, status)
+
+# ----------------------------------------------------------------------
 def sync_fan(fan_id, val):
     """
     @summary: Synchronize fan status and trigger chassis events
@@ -550,13 +784,7 @@ def init_attr(attr_prop):
     LOGGER.info("init_attr: {}".format(attr_prop))
     if "hwmon" in str(attr_prop["fin"]):
         path = attr_prop["fin"].split("hwmon")[0]
-        try:
-            flist = os.listdir(os.path.join(path, "hwmon"))
-            hwmon_name = [fn for fn in flist if "hwmon" in fn]
-            attr_prop["hwmon"] = hwmon_name[0]
-        except (OSError, IndexError) as e:
-            attr_prop["hwmon"] = ""
-
+        attr_prop["hwmon"] = _resolve_hwmon(path)
 
 def write_module_counter(product_sku):
     """
