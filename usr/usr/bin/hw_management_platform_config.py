@@ -199,22 +199,42 @@ PLATFORM_CONFIG = {
         {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
     ],
     "HI186": [
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan1', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN1 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan2', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN2 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan3', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN3 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan4', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN4 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan5', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN5 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan6', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN6 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan7', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN7 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/fan8', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event FAN8 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu1', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU1 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu2', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU2 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu3', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU3 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/psu4', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PSU4 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr1', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR1 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr2', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR2 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr3', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR3 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/pwr4', 'fn': 'run_cmd', 'arg': ["/usr/bin/hw-management-chassis-events.sh hotplug-event PWR4 {arg1}"], "poll": 2, "ts": 0},
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["fan1", "fan2", "fan3", "fan4", "fan5", "fan6", "fan7", "fan8"],
+                "_event_reg": "fan_event",
+                "_status_reg": "fan_status",
+                "_mask" : "00011111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/system/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {src_path}"
+            },
+        },
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["psu1", "psu2", "psu3", "psu4"],
+                "_event_reg": "psu_event",
+                "_status_reg": "psu_status",
+                "_mask" : "00001111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/system/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {src_path}"
+            },
+        },
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["pwr1", "pwr2", "pwr3", "pwr4"],
+                "_event_reg": "pwr_event",
+                "_status_reg": "pwr_status",
+                "_mask" : "00001111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/system/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh hotplug-event {dev_name} {status} {path_prefix} {src_path}"
+            },
+        },
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
     "HI193": [
@@ -231,3 +251,4 @@ def get_platform_config(product_sku):
 
     This function matches the product_sku against regex patterns in PLATFORM_CONFIG keys.
     For
+    """
