@@ -52,9 +52,19 @@ try:
     from collections import Counter
 
     from hw_management_redfish_client import RedfishClient, BMCAccessor
-    from hw_management_sonic_check import is_sonic_os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+# Optional SONiC detector: keep daemon operational if this helper is
+# temporarily missing during partial upgrades/rollback scenarios.
+try:
+    from hw_management_sonic_check import is_sonic_os
+    SONIC_CHECK_AVAILABLE = True
+except ImportError:
+    SONIC_CHECK_AVAILABLE = False
+
+    def is_sonic_os():
+        return False
 
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
@@ -632,6 +642,9 @@ def main():
     global LOGGER
     LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
     LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
+
+    if not SONIC_CHECK_AVAILABLE:
+        LOGGER.warning("hw-management-peripheral-updater: hw_management_sonic_check unavailable, assuming non-SONiC host")
 
     if args["system_type"] is None:
         try:
