@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0-only
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ Focus on testing the critical business logic:
 import unittest
 import sys
 import os
+import builtins
 import tempfile
 import shutil
 import importlib.util
@@ -39,6 +40,112 @@ from unittest.mock import patch, MagicMock
 
 # Add parent directory to path to import the module under test
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../usr/usr/bin'))
+
+
+def _peripheral_updater_script_path():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.join(script_dir, '..', '..')
+    return os.path.join(repo_root, 'usr', 'usr', 'bin', 'hw_management_peripheral_updater.py')
+
+
+def _ensure_peripheral_dependency_mocks():
+    """Mock hard-required imports used at peripheral_updater module load time."""
+    lib_mock = MagicMock()
+    lib_mock.HW_Mgmt_Logger = MagicMock()
+    lib_mock.exit_wait = MagicMock()
+    lib_mock.current_milli_time = MagicMock(return_value=0)
+    sys.modules["hw_management_lib"] = lib_mock
+
+    rf_mock = MagicMock()
+    rf_mock.RedfishClient = MagicMock()
+    rf_mock.BMCAccessor = MagicMock()
+    sys.modules["hw_management_redfish_client"] = rf_mock
+
+
+def _load_peripheral_updater_module(module_suffix, sonic_check_available):
+    """
+    Load peripheral_updater in isolation with controlled SONiC helper presence.
+
+    @param module_suffix: unique suffix for importlib module name
+    @param sonic_check_available: True = inject mock sonic_check; False = simulate missing module
+    """
+    _ensure_peripheral_dependency_mocks()
+    mod_name = "hw_management_peripheral_updater_{}".format(module_suffix)
+    sys.modules.pop(mod_name, None)
+
+    if sonic_check_available:
+        sonic_mock = MagicMock()
+        sonic_mock.is_sonic_os = MagicMock(return_value=True)
+        sys.modules["hw_management_sonic_check"] = sonic_mock
+    else:
+        sys.modules.pop("hw_management_sonic_check", None)
+
+    spec = importlib.util.spec_from_file_location(mod_name, _peripheral_updater_script_path())
+    module = importlib.util.module_from_spec(spec)
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if not sonic_check_available and name == "hw_management_sonic_check":
+            raise ImportError("hw_management_sonic_check missing (test)")
+        return real_import(name, globals, locals, fromlist, level)
+
+    if sonic_check_available:
+        spec.loader.exec_module(module)
+    else:
+        with patch("builtins.__import__", side_effect=guarded_import):
+            spec.loader.exec_module(module)
+
+    return module
+
+
+class TestSonicCheckImportFallback(unittest.TestCase):
+    """SONiC detector import must be optional so daemon startup cannot hard-fail."""
+
+    def test_module_loads_when_sonic_check_missing(self):
+        """Missing hw_management_sonic_check falls back to non-SONiC behavior."""
+        module = _load_peripheral_updater_module("no_sonic", sonic_check_available=False)
+
+        self.assertFalse(module.SONIC_CHECK_AVAILABLE)
+        self.assertFalse(module.is_sonic_os())
+
+    def test_module_uses_sonic_check_when_present(self):
+        """When helper exists, peripheral_updater delegates to is_sonic_os()."""
+        module = _load_peripheral_updater_module("with_sonic", sonic_check_available=True)
+
+        self.assertTrue(module.SONIC_CHECK_AVAILABLE)
+        self.assertTrue(module.is_sonic_os())
+        sys.modules["hw_management_sonic_check"].is_sonic_os.assert_called()
+
+    @staticmethod
+    def _apply_sonic_redfish_filter(attrs, is_sonic):
+        """Mirror main() SONiC gating for peripheral attribute list."""
+        if is_sonic:
+            return [attr for attr in attrs if attr.get("fn") != "redfish_get_sensor"]
+        return list(attrs)
+
+    def test_sonic_host_strips_redfish_monitor_entries(self):
+        """SONiC hosts must not keep redfish_get_sensor peripheral entries."""
+        attrs = [
+            {"fn": "redfish_get_sensor", "arg": ["path", "sensor", 1000], "poll": 5, "ts": 0},
+            {"fn": "monitor_asic_chipup_status", "arg": {}, "poll": 1, "ts": 0},
+        ]
+
+        filtered = self._apply_sonic_redfish_filter(attrs, is_sonic=True)
+
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0]["fn"], "monitor_asic_chipup_status")
+
+    def test_non_sonic_host_keeps_redfish_monitor_entries(self):
+        """Non-SONiC hosts keep redfish_get_sensor entries unchanged."""
+        attrs = [
+            {"fn": "redfish_get_sensor", "arg": ["path", "sensor", 1000], "poll": 5, "ts": 0},
+            {"fn": "monitor_asic_chipup_status", "arg": {}, "poll": 1, "ts": 0},
+        ]
+
+        filtered = self._apply_sonic_redfish_filter(attrs, is_sonic=False)
+
+        self.assertEqual(len(filtered), 2)
 
 
 class TestMonitorAsicChipupStatusLogic(unittest.TestCase):
