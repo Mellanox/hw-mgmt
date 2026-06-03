@@ -7,6 +7,23 @@
 
 ## Change History
 
+### Rev. 3.2.4 - June 3, 2026
+
+#### Added: Host vs BMC stack reference (§2.2)
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §2.2 | New section: host (`usr/`, `hw-management`) vs BMC (`bmc/usr/`, `hw-management-bmc`) — packages, install paths, handlers, examples |
+| §2.4 | Clarified host-only init file list; pointer to BMC README |
+| §3 intro | Stack applicability note for §3.x nodes |
+| §3.20 | Thermal reference line for host vs BMC event scripts and example paths |
+
+**Cross-references:** `README.md`, `bmc/README.md`, `bmc/DEVELOPER_GUIDE.md`, `bmc/examples/`.
+
+---
+
 ### Rev. 3.2.3 - June 3, 2026
 
 #### Fixed: §3.20 thermal TOC/body alignment and BMC per-HID examples

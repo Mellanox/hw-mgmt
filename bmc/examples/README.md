@@ -4,6 +4,10 @@
 
 Reference material for SONiC BMC **hw-management-bmc** tooling: sample JSON and text descriptions of runtime sysfs layouts. These files are **not** installed automatically by the scripts under **`bmc/usr/`** unless your packaging explicitly copies them.
 
+**User manual:** Host vs BMC stacks are documented in **§2.2** of
+`Documentation/Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md`. Examples
+here apply to the **BMC package** only; host validated layouts are under `tests/system_tree/`.
+
 | File | Purpose |
 |------|---------|
 | [hw-management-bmc-a2d-leakage-config-example.json](hw-management-bmc-a2d-leakage-config-example.json) | A2D leakage config: field reference, example array, deploy notes → **`/etc/hw-management-bmc-a2d-leakage-config.json`**. |

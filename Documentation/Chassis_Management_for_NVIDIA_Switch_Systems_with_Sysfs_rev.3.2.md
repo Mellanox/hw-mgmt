@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.3
+Rev. 3.2.4
 
 ## Table of Contents
 
@@ -11,8 +11,9 @@ Rev. 3.2.3
 | 1 | Release Notes Update History | 12 |
 | 2 | Introduction | 14 |
 | 2.1 | Software Components | 14 |
-| 2.2 | Hierarchy and Structure | 15 |
-| 2.3 | Sysfs Initialization and Driver Registration | 16 |
+| 2.2 | Host and BMC software stacks | 14 |
+| 2.3 | Hierarchy and Structure | 15 |
+| 2.4 | Sysfs Initialization and Driver Registration | 16 |
 | 3 | Virtual SysFS Hierarchy | 17 |
 | 3.1 | Config Control | 17 |
 | 3.1.1 | Get ASIC Bus | 17 |
@@ -396,6 +397,8 @@ Rev. 3.2.3
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.4 | June 2026 | Added §2.2 **Host and BMC software stacks**: separate repo paths (`usr/` vs `bmc/usr/`), packages, handlers, and examples; stack notes in §3 intro and §3.20 Thermal |
+| 3.2.4 | June 2026 | Added §2.2 Host and BMC software stacks (host `usr/` vs BMC `bmc/usr/`); stack applicability notes in §3 and §3.20 |
 | 3.2.3 | June 2026 | §3.20 thermal: filled missing section bodies; TOC aligned; per-HID BMC examples under `bmc/examples/<HID>/examples/` |
 | 3.2.2 | June 2026 | BMC thermal sysfs (HI189 / `lm75`): documented `bmc_temp_input` and `bmc_temp`; removed obsolete TOC entries for `bmc_crit` / `bmc_min` (not created on BMC stack) |
 | 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
@@ -440,6 +443,38 @@ Figure 1 presents the software architecture layout and Figure 2 presents layer s
 
 ![Sysfs Layout](images/sysfs-layout.png)
 
+## Host and BMC software stacks
+
+The **hw-mgmt** repository ships two Debian packages that both expose the same virtual
+hierarchy under **`/var/run/hw-management/`** (`$bsp_path` in this manual), but they are built
+from **different source trees** and run on **different processors**:
+
+| | **Host stack** | **BMC stack** |
+|---|----------------|---------------|
+| **Role** | Switch CPU / NOS (SONiC, ONL, Cumulus, …) | Dedicated BMC SoC (for example AST2700 on Microsoft Sonic BMC OS) |
+| **Debian package** | `hw-management` | `hw-management-bmc` |
+| **Repository source** | `usr/` (scripts under `usr/usr/bin/`, platform data under `usr/etc/`) | `bmc/usr/` (mirrors host layout; platform data under `bmc/usr/etc/<HID>/`) |
+| **Installed on target** | `/usr/bin/hw-management*.sh`, `/usr/bin/hw_management_thermal_control*.py`, `/lib/udev/rules.d/50-hw-management-events.rules`, … | `/usr/bin/hw-management-bmc*.sh`, `/lib/udev/rules.d/5-hw-management-bmc-events.rules`, `/etc/<HID>/`, … |
+| **Primary event handlers** | `hw-management-chassis-events.sh`, `hw-management-thermal-events.sh` | `hw-management-bmc-events.sh` (and helpers under the same prefix) |
+| **Init / systemd** | `hw-management.service` | `hw-management-bmc-init.service` and related BMC units (see `bmc/README.md`) |
+| **Examples / reference layouts** | Validated trees under `tests/system_tree/`; platform sensors in `usr/etc/hw-management-sensors/` | `bmc/examples/` and per-HID `bmc/examples/<HID>/examples/` (for example HI189 thermal layout) |
+| **Developer guide** | Repository root `README.md` | `bmc/README.md`, `bmc/DEVELOPER_GUIDE.md` |
+
+**How to use this manual**
+
+- **§3.x attribute sections** describe **`$bsp_path` nodes** as seen by applications on either
+  CPU or BMC when that node is created on the platform.
+- Sections that name **host-only** handlers (for example `hw-management-thermal-events.sh`,
+  `hw_management_thermal_control.py`) apply to the **host package** unless stated otherwise.
+- Sections that name **`hw-management-bmc-*`** or **HI189 / BMC thermal stack** apply to the
+  **BMC package** on systems that ship it.
+- Some nodes exist on **one stack only** (for example host ASIC/voltmon thermal vs BMC
+  `bmc_temp_input` from `hw-management-bmc-events.sh`). Check the platform or the validated
+  system tree for your SKU.
+
+Both stacks may be present on the same product (CPU + BMC each running their own package);
+they do **not** share the same `/usr/bin` install tree on a single root filesystem.
+
 ## Hierarchy and Structure
 
 The package uses the Linux default hierarchy structure of sysfs under the directory /var/run/hw-management.
@@ -463,7 +498,13 @@ Chassis attributes information exported through sysfs can be utilized by a numbe
  sensors – print sensors information
 ## Sysfs Initialization and Driver Registration
 
-As described in the previous sections, sysfs structure provides access to HW drivers. These drivers need to be initialized before using sysfs. In addition, NVIDIA virtual hierarchy also needs to be created in order to use it.
+As described in the previous sections, sysfs structure provides access to HW drivers. These
+drivers need to be initialized before using sysfs. In addition, NVIDIA virtual hierarchy also
+needs to be created in order to use it.
+
+The following applies to the **host** package (`hw-management`). For the **BMC** package,
+see **§2.2** and `bmc/README.md` (systemd units, udev rules, and scripts under
+`hw-management-bmc-*`).
 
 The package provides a simple way to initialize the drivers using the set of shell scripts. These scripts support initialization and de-initialization of driver, virtual hierarchy structure, udev events handling, based on a set of NVIDIA system specific udev rules.
 
@@ -484,7 +525,7 @@ Package contains the following files, used within the workload:
 
  /etc/modprobe.d/hw-management.conf and /etc/modules-load.d/hw-management- modules.conf: configuration for kernel modules loading.
 
-For more details follow package README file.
+For more details follow package README file (`README.md` for host, `bmc/README.md` for BMC).
 
 ##### Figure 3 - Thermal Management Flow
 
@@ -517,6 +558,11 @@ NVIDIA virtual hierarchy supports the following HW control ($bsp_path below is a
 | $bsp_path/fast_sysfs_labels_rdy |  |
 
 Detailed information on each of these nodes can be found in the following sections.
+
+**Stack applicability:** Most §3.x nodes are created by the **host** stack
+(`hw-management-thermal-events.sh` / `hw-management-chassis-events.sh`). Nodes documented
+with **BMC stack** or **`hw-management-bmc-events.sh`** in the section text are created on
+the **BMC** image only (see **§2.2**).
 
 Note: some of the attributes described below are not relevant to all platforms and will exist only on the platforms which support this attribute.
 ## Config Control
@@ -5411,6 +5457,10 @@ cat $bsp_path/system/leakage1
 ```
 
 ## Thermal
+
+**Reference:** Host thermal symlinks — `usr/usr/bin/hw-management-thermal-events.sh`, validated
+trees under `tests/system_tree/`. BMC CPU/BMC ambient symlinks (for example `bmc_temp_input`) —
+`bmc/usr/etc/<HID>/hw-management-bmc-events.sh` and `bmc/examples/<HID>/examples/`.
 
 ### Ambient sensors
 
