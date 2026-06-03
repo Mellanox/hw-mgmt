@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# Example for SONiC BMC images: copy to hw-management-bmc-network.conf in the
+# platform directory (or install as /etc/hw-management-bmc-usb0.conf) so
+# hw-management-bmc does not assign a static usb0 address. SONiC's
+# sonic-usb-network-init (or host NOS networking) owns the link instead.
+#
+# Do not set USB0_ADDRESS when USB0_MANAGED_BY_NOS is enabled.
+USB0_MANAGED_BY_NOS=1
