@@ -419,25 +419,31 @@ bmc_init_bootargs()
 #######################################
 # USB gadget Ethernet (usb0): load g_ether if needed, then either rely on
 # systemd-networkd (00-hw-management-bmc-usb0.network) or apply static
-# USB0_ADDRESS when networkd is not active (e.g. SONiC images).
+# USB0_ADDRESS when networkd is not active.
+# When USB0_MANAGED_BY_NOS=1, only bring up the link; addressing is NOS-owned.
 # Reads /etc/hw-management-bmc-usb0.conf and/or /etc/systemd/network/00-hw-management-bmc-usb0.network.
 # Never fails the caller; logs and returns 0.
 #######################################
 usb_net_config()
 {
-	local net_unit="/etc/systemd/network/00-hw-management-bmc-usb0.network"
-	local conf="/etc/hw-management-bmc-usb0.conf"
+	# shellcheck source=/usr/bin/hw-management-bmc-usb0-common.sh
+	. /usr/bin/hw-management-bmc-usb0-common.sh
+	local net_unit="$HW_MANAGEMENT_BMC_USB0_NETWORK_UNIT"
+	local conf="$HW_MANAGEMENT_BMC_USB0_CONF"
 	local addr=""
+	local nos_managed=0
 	local logtag="${LOG_TAG:-${_HW_MANAGEMENT_BMC_READY_COMMON_LOG_TAG}}"
 
-	if [ -f "$conf" ]; then
-		addr=$(sed -n 's/^[[:space:]]*USB0_ADDRESS=//p' "$conf" | head -1 | tr -d " '\"")
-	fi
-	if [ -z "$addr" ] && [ -f "$net_unit" ]; then
-		addr=$(sed -n 's/^[[:space:]]*Address=//p' "$net_unit" | head -1 | tr -d " '\"")
-	fi
-	if [ -z "$addr" ] || ! printf '%s' "$addr" | grep -qE '^[0-9a-fA-F.:/]+/[0-9]+$'; then
-		return 0
+	if hw_management_bmc_usb0_managed_by_nos; then
+		nos_managed=1
+	else
+		addr=$(_hw_management_bmc_usb0_conf_value USB0_ADDRESS "$conf")
+		if [ -z "$addr" ] && [ -f "$net_unit" ]; then
+			addr=$(sed -n 's/^[[:space:]]*Address=//p' "$net_unit" | head -1 | tr -d " '\"")
+		fi
+		if [ -z "$addr" ] || ! printf '%s' "$addr" | grep -qE '^[0-9a-fA-F.:/]+/[0-9]+$'; then
+			return 0
+		fi
 	fi
 
 	if [ ! -d /sys/module/g_ether ]; then
@@ -456,6 +462,12 @@ usb_net_config()
 	done
 	if [ ! -d /sys/class/net/usb0 ]; then
 		logger -t "$logtag" -p daemon.warning "usb_net_config: usb0 not present after g_ether"
+		return 0
+	fi
+
+	if [ "$nos_managed" -eq 1 ]; then
+		ip link set usb0 up 2>/dev/null || true
+		logger -t "$logtag" -p daemon.info "usb_net_config: USB0_MANAGED_BY_NOS; link up, NOS owns addressing"
 		return 0
 	fi
 
