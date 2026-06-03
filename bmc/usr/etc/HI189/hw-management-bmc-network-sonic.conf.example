@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# hw-mgmt reference template for SONiC BMC images. In the SONiC tree, prefer
+# bmc-network-sonic.conf; install on the image as
+# /etc/<HID>/hw-management-bmc-network.conf (see bmc/SONIC_USB0_INTEGRATION.md).
+# Do not assign USB0_ADDRESS here; sonic-usb-network-init owns addressing.
+#
+# Do not set USB0_ADDRESS when USB0_MANAGED_BY_NOS is enabled.
+USB0_MANAGED_BY_NOS=1
