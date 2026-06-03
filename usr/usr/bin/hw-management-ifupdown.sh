@@ -44,6 +44,12 @@ if [ -z "${INTERFACE}" ]; then
 	exit 1
 fi
 
+# On SONiC hosts the NOS owns usb0 addressing (not ifup/static interfaces).
+if [ "${INTERFACE}" = "usb0" ] && check_host_os_is_sonic; then
+	log_info "SONiC host: skip ifup ${INTERFACE} (NOS-owned)"
+	exit 0
+fi
+
 # Check if /etc/network/interfaces exists
 if [ ! -e /etc/network/interfaces ]; then
 	log_err "/etc/network/interfaces is missing"
@@ -82,4 +88,3 @@ done
 
 log_err "Failed to ifup interface ${INTERFACE}"
 exit 1
-
