@@ -1,11 +1,32 @@
 # User Manual Changelog
 
 **Document:** Chassis_Management_for_NVIDIA_Switch_Systems_with_Sysfs_rev.3.2.md  
-**Last Updated:** May 31, 2026
+**Last Updated:** June 3, 2026
 
 ---
 
 ## Change History
+
+### Rev. 3.2.2 - June 3, 2026
+
+#### Fixed: BMC thermal sysfs documentation (HI189 / lm75)
+
+**Affected platforms:** Systems with hw-mgmt BMC thermal stack (for example HI189 /
+SN6600 BMC ambient sensor on I2C `4-0048`, `lm75` driver).
+
+**User manual updates:**
+
+| Area | Change |
+|------|--------|
+| §3.20.9 | Document `thermal/bmc_temp_input` (was missing; rev 2.8 used obsolete `thermal/bmc`) |
+| §3.20.10 | Document `thermal/bmc_temp` as BMC max/limit (replaces obsolete `bmc_crit` / `bmc_max` TOC entries) |
+| §3.20.11–3.20.12 | Removed from TOC — critical/min BMC nodes are not created on `lm75` (no `temp1_min` / `temp1_crit`) |
+| BMC example | Aligned with `bmc/examples/hw-management-bmc-thermal-sysfs.txt` |
+
+**Validation source:** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`, mainline
+`drivers/hwmon/lm75.c` (`HWMON_T_MIN` not registered).
+
+---
 
 ### Rev. 3.2.1 - May 31, 2026
 

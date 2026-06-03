@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.1
+Rev. 3.2.2
 
 ## Table of Contents
 
@@ -290,9 +290,7 @@ Rev. 3.2.1
 | 3.20.7 | Read Switch Comex Temperature | 109 |
 | 3.20.8 | MNG Temperature | 109 |
 | 3.20.9 | Read BMC Temperature | 110 |
-| 3.20.10 | Read BMC Critical Temperature | 110 |
-| 3.20.11 | Read BMC Max Temperature | 110 |
-| 3.20.12 | Read BMC Minimal Temperature | 111 |
+| 3.20.10 | Read BMC Max Temperature | 110 |
 | 3.20.13 | Read PDB Hotswap Temperature | 111 |
 | 3.20.14 | PDB Hotswap Critical Temperature Threshold | 111 |
 | 3.20.15 | PDB Hotswap Max Temperature Threshold | 112 |
@@ -400,6 +398,7 @@ Rev. 3.2.1
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.2 | June 2026 | BMC thermal sysfs (HI189 / `lm75`): documented `bmc_temp_input` and `bmc_temp`; removed obsolete TOC entries for `bmc_crit` / `bmc_min` (not created on BMC stack) |
 | 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
 | 3.1 | January 2026 | Added N6100_LD (N61XX_LD family) liquid-cooled multi-ASIC platform support<br>**New Sections for N6100_LD:**<br>• Multi-ASIC Health (asic_health, asic2_health, asic3_health, asic4_health)<br>• MCU Reset Control (mcu1_reset, mcu2_reset)<br>• Cable Cartridge EEPROM (cable_cartridge1-4_eeprom)<br>• Cartridge Counter (config/cartridge_counter)<br>• Cartridge Status (cartridge1-4)<br>• eRoT Events (erot1_ap, erot1_error)<br>• Config: asic_num=4, erot_count=1<br>**Updated Sections:**<br>• Power Converters: Added pwr_conv naming (vs pdb_pwr_conv for SN58XX_LD)<br>• Updated all liquid-cooled references to include N61XX_LD family<br>• Extended voltmon support for 16 PMICs (voltmon1-16)<br>• SODIMM Temperature Sensors: Updated to include both SN58XX_LD and N61XX_LD |
@@ -5532,6 +5531,60 @@ cat $bsp_path/thermal/asic1_temp_trip_crit
 **Example:** Read Comex temperature:
 ```bash
 cat $bsp_path/thermal/comex_temp_input
+```
+
+### Read BMC Temperature
+
+**Node name:** `$bsp_path/thermal/bmc_temp_input`
+
+**Description:** Read BMC ambient temperature (instantaneous reading from the BMC
+hwmon sensor). Symlink is created under `/var/run/hw-management/thermal/` by
+`hw-management-bmc-events.sh` when the BMC temperature hwmon device appears
+(for example HI189 / SN6600: I2C `4-0048`, `lm75` driver, `temp1_input`).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Note:** Supported on systems with the hw-mgmt BMC thermal stack only. Values are
+typically millidegrees Celsius (Linux hwmon convention).
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read BMC ambient temperature:
+```bash
+cat $bsp_path/thermal/bmc_temp_input
+```
+
+### Read BMC Max Temperature
+
+**Node name:** `$bsp_path/thermal/bmc_temp`
+
+**Description:** Read BMC ambient high-temperature limit (maps to hwmon `temp1_max`
+on the BMC sensor). Created by the same BMC thermal udev handler as
+`bmc_temp_input`. On HI189 the BMC sensor uses the `lm75` driver, which exposes
+`temp1_input` and `temp1_max` only (no `temp1_min`).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Note:** Supported on systems with the hw-mgmt BMC thermal stack only. Do not
+expect `thermal/bmc_min` on `lm75`-backed BMC sensors; the driver does not
+register a minimum temperature attribute, so `hw-management-bmc-events.sh` does
+not create that symlink.
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | driver-specific limit semantics |
+
+**Example:** Read BMC max temperature threshold:
+```bash
+cat $bsp_path/thermal/bmc_temp
 ```
 
 ### Read Cooling State
