@@ -2,7 +2,7 @@
 
 ![NVIDIA Logo](images/logo.png)
 
-Rev. 3.2.2
+Rev. 3.2.3
 
 ## Table of Contents
 
@@ -291,13 +291,14 @@ Rev. 3.2.2
 | 3.20.8 | MNG Temperature | 109 |
 | 3.20.9 | Read BMC Temperature | 110 |
 | 3.20.10 | Read BMC Max Temperature | 110 |
-| 3.20.13 | Read PDB Hotswap Temperature | 111 |
-| 3.20.14 | PDB Hotswap Critical Temperature Threshold | 111 |
-| 3.20.15 | PDB Hotswap Max Temperature Threshold | 112 |
-| 3.20.16 | Read Power Converter Temperature | 112 |
-| 3.20.17 | Power Converter Critical Temperature Threshold | 112 |
-| 3.20.18 | Read Cooling State | 113 |
-| 3.20.19 | Cooling Name | 113 |
+| 3.20.11 | Read BMC Critical Temperature | 110 |
+| 3.20.12 | Read BMC Minimal Temperature | 111 |
+| 3.20.13 | Read PDB Hotswap Controller Temperature | 111 |
+| 3.20.14 | Read PDB Hotswap Controller Temperature Thresholds | 111 |
+| 3.20.15 | Read PDB Power Converter Temperature | 112 |
+| 3.20.16 | Read PDB Power Converter Temperature Thresholds | 112 |
+| 3.20.17 | Read Cooling State | 113 |
+| 3.20.18 | Cooling Name | 113 |
 | 3.20.20 | Read CPU Core Temperature | 113 |
 | 3.20.21 | CPU Core Critical Temperature | 113 |
 | 3.20.22 | CPU Core Critical Temperature Alarm | 114 |
@@ -338,15 +339,12 @@ Rev. 3.2.2
 | 3.20.57 | Read Switch Fan Temperature | 123 |
 | 3.20.58 | Read Switch Port Temperature | 124 |
 | 3.20.59 | Read Switch Power Supply Temperature | 124 |
-| 3.20.60 | SODIMM Max temperature | 124 |
-| 3.20.61 | SODIMM Max temperature alarm | 125 |
-| 3.20.62 | SODIMM Min temperature | 125 |
-| 3.20.63 | SODIMM critical alarm | 125 |
-| 3.20.64 | SODIMM Max hyst | 126 |
-| 3.20.65 | SODIMM Temperature input | 126 |
-| 3.20.66 | SODIMM Min temperature alarm | 126 |
-| 3.20.67 | SODIMM Critical hyst | 126 |
-| 3.20.68 | SODIMM Critical temperature | 127 |
+| 3.20.60 | SODIMM Temperature Input | 124 |
+| 3.20.61 | SODIMM Critical Temperature | 125 |
+| 3.20.62 | SODIMM Max Temperature | 125 |
+| 3.20.63 | SODIMM Min Temperature | 125 |
+| 3.20.64 | SODIMM Temperature Alarms | 126 |
+| 3.20.65 | SODIMM Temperature Hysteresis | 126 |
 | 3.20.69 | SWB ASIC Temperature | 127 |
 | 3.20.70 | Drive Temperature | 127 |
 | 3.20.71 | Drive Critical Temperature | 128 |
@@ -398,6 +396,7 @@ Rev. 3.2.2
 
 | Revision | Date | Description |
 |----------|------|-------------|
+| 3.2.3 | June 2026 | §3.20 thermal: filled missing section bodies; TOC aligned; per-HID BMC examples under `bmc/examples/<HID>/examples/` |
 | 3.2.2 | June 2026 | BMC thermal sysfs (HI189 / `lm75`): documented `bmc_temp_input` and `bmc_temp`; removed obsolete TOC entries for `bmc_crit` / `bmc_min` (not created on BMC stack) |
 | 3.2.1 | May 2026 | Corrected Juliet platform family (N51XX_LD) reset-cause list in **Get Reset Cause** (#5014001)<br>• Documented 22 CPLD-supported reset causes for Juliet/GB200 systems<br>• Removed unsupported causes: `reset_ac_pwr_fail`, `reset_aux_pwr_or_ref`, `reset_from_asic`, `reset_reload_bios` |
 | 3.2 | March 2026 | Added SN6600_LD (SN66XX_LD family, SKU HI193) liquid-cooled platform support<br>• Hardware reference: `Documentation/SN6600_LD_Hardware_Interfaces.md`<br>• Validation: `tests/system_tree/hw-management-tree-SN6600_LD.txt`, `usr/etc/hw-management-sensors/sn66xxld_sensors.conf`<br>**Platform notes:**<br>• Single ASIC (`asic_num`=1), 4 CPLDs, `hotplug_pdbs`=2, `pdb_hotswap1/2` and `pdb_pwr_conv1/2`<br>• ASIC voltmons: 19 sysfs indexes (`voltmon1`-`14`, `voltmon16`-`20` on captured tree)<br>• SODIMM temp: JC42 at 0x52/0x53 on I2C bus 10<br>• Watchdog: `watchdog/main/` and `watchdog/aux/` hierarchy<br>• PDB hot-plug events: `events/pdb1`, `events/pdb2`<br>**Updated Sections:**<br>• Liquid-cooled applicability notes extended to SN66XX_LD across environment, alarms, thermal, and leakage-related text<br>• Config: documented optional `psu<X>_i2c_bus` (hw-management internal; OS must not require it) |
@@ -5413,6 +5412,34 @@ cat $bsp_path/system/leakage1
 
 ## Thermal
 
+### Ambient sensors
+
+**Node name:** `$bsp_path/thermal/<ambient_name>` (platform-specific; examples include
+`mng_amb`, `comex_amb`, `port_amb`, `fan_amb`, `swb_amb`, `cpu_amb`)
+
+**Description:** Ambient temperature sensors are created by `hw-management-thermal-events.sh`
+when the corresponding hwmon device appears. The stable symlink name under
+`$bsp_path/thermal/` depends on the platform label and sensor type.
+
+Some platforms also expose management ambient via `$bsp_path/thermal/mng_amb` (see **MNG
+Temperature**). Legacy documentation referenced `$bsp_path/system/amb_sens` for mlxreg
+ambient enablement on certain systems.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read management ambient temperature (when present):
+```bash
+cat $bsp_path/thermal/mng_amb
+```
+
+
 ### Read Switch ASIC Temperature
 
 **Node name:** `$bsp_path/thermal/asic<index>_temp_input`
@@ -5533,6 +5560,28 @@ cat $bsp_path/thermal/asic1_temp_trip_crit
 cat $bsp_path/thermal/comex_temp_input
 ```
 
+### MNG Temperature
+
+**Node name:** `$bsp_path/thermal/mng_amb`
+
+**Description:** Read management (MNG) ambient temperature when the platform exposes this
+sensor through the hw-mgmt thermal events handler.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read MNG ambient temperature:
+```bash
+cat $bsp_path/thermal/mng_amb
+```
+
+
 ### Read BMC Temperature
 
 **Node name:** `$bsp_path/thermal/bmc_temp_input`
@@ -5587,6 +5636,46 @@ not create that symlink.
 cat $bsp_path/thermal/bmc_temp
 ```
 
+### Read BMC Critical Temperature
+
+**Node name:** `$bsp_path/thermal/bmc_crit` (legacy); not created on HI189 BMC stack
+
+**Description:** On systems with the hw-mgmt BMC thermal stack (HI189), the BMC ambient sensor
+uses the `lm75` driver, which does not expose `temp1_crit` in sysfs. `hw-management-bmc-events.sh`
+does not create a `bmc_crit` symlink. Rev. 2.8 documented `$bsp_path/thermal/bmc_crit`; use
+`bmc_temp` (max/limit) and `bmc_temp_input` on current BMC platforms.
+
+**Access:** Read only (when node exists on other platforms)
+
+**Release version:** 1.0
+
+**Note:** Virtual test trees (for example HI193) may still ship fixture files named `bmc_crit`
+under `usr/etc/hw-management-virtual/`; that naming does not apply to live HI189 runtime
+symlinks.
+
+**Example:** Not applicable on HI189 — verify with `ls $bsp_path/thermal/` on the device.
+
+
+### Read BMC Minimal Temperature
+
+**Node name:** `$bsp_path/thermal/bmc_min` (legacy); not created on HI189 BMC stack
+
+**Description:** The BMC events handler attempts `temp1_min` → `bmc_min`, but `check_n_link`
+silently skips missing sources. The HI189 BMC sensor (`lm75` at I2C `4-0048`) has no
+`temp1_min` attribute, so **`bmc_min` never appears** on production SONiC images using this
+stack. See `bmc/examples/HI189/examples/hw-management-bmc-thermal-sysfs.txt`.
+
+**Access:** Read only (when node exists on other platforms)
+
+**Release version:** 1.0
+
+**Example:** Not applicable on HI189:
+```bash
+# Expected absent on lm75-backed BMC:
+ls $bsp_path/thermal/bmc_min
+```
+
+
 ### Read Cooling State
 
 **Node name:** `$bsp_path/thermal/cooling_state`
@@ -5606,6 +5695,28 @@ cat $bsp_path/thermal/bmc_temp
 ```bash
 cat $bsp_path/thermal/cooling_state
 ```
+
+### Cooling Name
+
+**Node name:** `$bsp_path/config/cooling_name`
+
+**Description:** Thermal control cooling device name written by `hw-management-thermal-events.sh`
+during cooling device registration. Used by the thermal control daemon configuration.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| name | String | platform-specific |
+
+**Example:** Read cooling name:
+```bash
+cat $bsp_path/config/cooling_name
+```
+
 
 ### Read CPU Core Temperature
 
@@ -5807,6 +5918,51 @@ cat $bsp_path/thermal/fan1_max_speed
 cat $bsp_path/thermal/fan1_min_speed
 ```
 
+### Set Fan Speed
+
+**Node name:** `$bsp_path/thermal/fan<index>_speed_set`
+
+**Description:** Set fan PWM/speed for fan `<index>`. Symlink is created by
+`hw-management-thermal-events.sh` from the cooling device `pwm1` attribute when supported.
+
+**Access:** Write
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| speed | Integer | platform-specific PWM scale |
+
+**Example:** Set fan1 speed:
+```bash
+echo 50 > $bsp_path/thermal/fan1_speed_set
+```
+
+
+### Fan Speed Tolerance
+
+**Node name:** `$bsp_path/thermal/fan<index>_speed_tolerance`
+
+**Description:** Fan speed tolerance for fan `<index>` when exposed under the thermal hierarchy.
+For system-wide tolerance configuration see also `$bsp_path/config/fan_speed_tolerance`
+(§3.1.24).
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| tolerance | Integer |  |
+
+**Example:** Read fan1 speed tolerance (when present):
+```bash
+cat $bsp_path/thermal/fan1_speed_tolerance
+```
+
+
 ### Read Fan Direction
 
 **Node name:** `$bsp_path/thermal/fan<index>_direction`
@@ -5865,6 +6021,67 @@ cat $bsp_path/thermal/fan1_status
 ```bash
 cat $bsp_path/thermal/fan1_fault
 ```
+
+### Comex Voltmon Temperature
+
+**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_input`
+
+**Description:** Read Comex PMBus voltmon temperature input.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:** Read comex voltmon1 temperature:
+```bash
+cat $bsp_path/thermal/comex_voltmon1_temp1_input
+```
+
+### Comex Voltmon Critical Temperature
+
+**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_crit`
+
+**Description:** Read Comex voltmon critical temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/comex_voltmon1_temp1_crit
+```
+
+### Comex Voltmon Max Temperature
+
+**Node name:** `$bsp_path/thermal/comex_voltmon<index>_temp<index>_max`
+
+**Description:** Read Comex voltmon maximum temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/comex_voltmon1_temp1_max
+```
+
 
 ### Read Port Ambient
 
@@ -6578,6 +6795,94 @@ cat $bsp_path/thermal/sodimm1_temp_max_hyst
 cat $bsp_path/thermal/sodimm2_temp_crit_hyst
 cat $bsp_path/thermal/sodimm2_temp_max_hyst
 ```
+
+### SWB ASIC Temperature
+
+**Node name:** `$bsp_path/thermal/swb_asic<index>`
+
+**Description:** Read switch-board (SWB) ASIC temperature when present on multi-board systems.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/swb_asic1
+```
+
+
+### Drive Temperature
+
+**Node name:** `$bsp_path/thermal/drivetemp`
+
+**Description:** Read NVMe/drive temperature from the `drivetemp` hwmon driver when linked by
+`hw-management-thermal-events.sh`.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Arguments:**
+| Name | Data type | Values |
+|------|-----------|--------|
+| temperature | Integer | millidegrees Celsius |
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp
+```
+
+### Drive Critical Temperature
+
+**Node name:** `$bsp_path/thermal/drivetemp_crit`
+
+**Description:** Read drive critical temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp_crit
+```
+
+### Drive Maximum Temperature Threshold
+
+**Node name:** `$bsp_path/thermal/drivetemp_max`
+
+**Description:** Read drive maximum temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp_max
+```
+
+### Drive Minimum Temperature Threshold
+
+**Node name:** `$bsp_path/thermal/drivetemp_min`
+
+**Description:** Read drive minimum temperature threshold.
+
+**Access:** Read only
+
+**Release version:** 1.0
+
+**Example:**
+```bash
+cat $bsp_path/thermal/drivetemp_min
+```
+
 
 ## Watchdog
 

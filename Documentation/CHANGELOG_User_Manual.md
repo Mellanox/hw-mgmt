@@ -7,6 +7,37 @@
 
 ## Change History
 
+### Rev. 3.2.3 - June 3, 2026
+
+#### Fixed: §3.20 thermal TOC/body alignment and BMC per-HID examples
+
+**Affected platforms:** All (user manual); BMC thermal stack HI189 / SN6600 (`lm75`).
+
+**User manual updates (§3.20 Thermal):**
+
+| Area | Change |
+|------|--------|
+| §3.20.1, §3.20.8 | Added **Ambient sensors** and **MNG Temperature** bodies |
+| §3.20.9–§3.20.12 | BMC temperature: `bmc_temp_input`, `bmc_temp`; §3.20.11–12 document crit/min as N/A on `lm75` |
+| §3.20.13–§3.20.16 | TOC titles aligned with PDB hotswap/converter section bodies |
+| §3.20.18 | **Cooling Name** body added |
+| §3.20.30–§3.20.31 | **Set Fan Speed** and thermal **Fan Speed Tolerance** bodies added |
+| §3.20.35–§3.20.37 | **Comex Voltmon** temperature bodies added |
+| §3.20.60–§3.20.65 | SODIMM TOC titles aligned with existing section bodies |
+| §3.20.69–§3.20.73 | **SWB ASIC** and **Drive** temperature bodies added |
+
+**BMC examples layout:**
+
+| Path | Purpose |
+|------|---------|
+| `bmc/examples/hw-management-bmc-thermal-sysfs.txt` | Index pointer to per-HID examples |
+| `bmc/examples/HI189/examples/` | HI189 canonical thermal sysfs example |
+| `bmc/examples/HIxxx/examples/` | Template for next HID |
+
+**Validation source:** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`, `tests/system_tree/` thermal nodes.
+
+---
+
 ### Rev. 3.2.2 - June 3, 2026
 
 #### Fixed: BMC thermal sysfs documentation (HI189 / lm75)
@@ -19,9 +50,8 @@ SN6600 BMC ambient sensor on I2C `4-0048`, `lm75` driver).
 | Area | Change |
 |------|--------|
 | §3.20.9 | Document `thermal/bmc_temp_input` (was missing; rev 2.8 used obsolete `thermal/bmc`) |
-| §3.20.10 | Document `thermal/bmc_temp` as BMC max/limit (replaces obsolete `bmc_crit` / `bmc_max` TOC entries) |
-| §3.20.11–3.20.12 | Removed from TOC — critical/min BMC nodes are not created on `lm75` (no `temp1_min` / `temp1_crit`) |
-| BMC example | Aligned with `bmc/examples/hw-management-bmc-thermal-sysfs.txt` |
+| §3.20.10 | Document `thermal/bmc_temp` as BMC max/limit (replaces obsolete `bmc_crit` / `bmc_max` names) |
+| BMC example | Aligned with `bmc/examples/HI189/examples/hw-management-bmc-thermal-sysfs.txt` |
 
 **Validation source:** `bmc/usr/etc/HI189/hw-management-bmc-events.sh`, mainline
 `drivers/hwmon/lm75.c` (`HWMON_T_MIN` not registered).

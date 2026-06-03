@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
+#
+# HI189 — /var/run/hw-management/thermal runtime layout (example)
+#
+# Created by udev when hwmon thermal devices appear; handler:
+#   /usr/bin/hw-management-bmc-events.sh add|rm <event> %S %p
+#
+# Platform rules: bmc/usr/etc/HI189/5-hw-management-bmc-events.rules
+#   • cpu_temp — SUBSYSTEM=="hwmon", DEVPATH=="*/15-004c/hwmon/hwmon*", ACTION=="add"|"remove"
+#   • bmc_temp — SUBSYSTEM=="hwmon", DEVPATH=="*/4-0048/hwmon/hwmon*", ACTION=="add"|"remove"
+#
+# Early I2C map: bmc/usr/etc/HI189/hw-management-bmc-early-i2c-devices.json
+#   bus 15 / 0x4c → sbtsi (CPU) ; bus 4 / 0x48 → lm75 (BMC ambient)
+#
+# $3 in the script is the hwmon directory path (%p from udev). Symlinks point at
+# standard hwmon temperature attributes for temp1.
+
+/var/run/hw-management/thermal/
+├── cpu_temp_input                     # symlink → …/15-004c/…/hwmon*/temp1_input (instantaneous, m°C)
+├── cpu_temp                           # symlink → …/temp1_max (high limit / max, driver-specific)
+├── cpu_min                            # symlink → …/temp1_min (low limit / min)
+├── bmc_temp_input                     # symlink → …/4-0048/…/hwmon*/temp1_input
+└── bmc_temp                           # symlink → …/temp1_max
+
+# Notes
+#
+# • Naming follows hw-management-bmc-events.sh: CPU uses cpu_* ; BMC uses bmc_* .
+#   CPU (sbtsi) maps temp1_{input,max,min}; BMC (lm75) maps temp1_{input,max} only.
+#   The lm75 driver exposes no temp1_min register, so no bmc_min link is created
+#   (check_n_link skips it silently). Do not expect bmc_min on lm75-backed sensors.
+#
+# • Units are typically millidegrees Celsius for *_input (Linux hwmon convention);
+#   consult the sensor driver for temp1_max semantics on your board.
+#
+# • Implementation: bmc/usr/etc/HI189/hw-management-bmc-events.sh (THERMAL_RUN_DIR,
+#   cases cpu_temp / bmc_temp).

@@ -1,36 +1,14 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 #
-# /var/run/hw-management/thermal — runtime layout (example)
+# Platform index pointer — BMC thermal runtime layout
 #
-# Created by udev when hwmon thermal devices appear; handler:
-#   /usr/bin/hw-management-bmc-events.sh add|rm <event> %S %p
+# Per-HID examples live under bmc/examples/<HID>/examples/. This file stays at the
+# repo root of bmc/examples/ so existing links and packaging references keep working.
 #
-# Platform rules (example: usr/etc/HI189/5-hw-management-bmc-events.rules):
-#   • cpu_temp — SUBSYSTEM=="hwmon", DEVPATH=="*/15-004c/hwmon/hwmon*", ACTION=="add"|"remove"
-#   • bmc_temp — SUBSYSTEM=="hwmon", DEVPATH=="*/4-0048/hwmon/hwmon*", ACTION=="add"|"remove"
+# Canonical example for HI189 (SN6600 / lm75 BMC ambient + sbtsi CPU):
+#   bmc/examples/HI189/examples/hw-management-bmc-thermal-sysfs.txt
 #
-# $3 in the script is the hwmon directory path (%p from udev). Symlinks point at
-# standard hwmon temperature attributes for temp1.
-
-/var/run/hw-management/thermal/
-├── cpu_temp_input                     # symlink → …/15-004c/…/hwmon*/temp1_input (instantaneous, m°C)
-├── cpu_temp                           # symlink → …/temp1_max (high limit / max, driver-specific)
-├── cpu_min                            # symlink → …/temp1_min (low limit / min)
-├── bmc_temp_input                     # symlink → …/4-0048/…/hwmon*/temp1_input
-└── bmc_temp                           # symlink → …/temp1_max
-
-# Notes
+# Template for the next HID:
+#   bmc/examples/HIxxx/examples/README.md
 #
-# • Naming follows hw-management-bmc-events.sh: CPU uses cpu_* ; BMC uses bmc_* .
-#   CPU (sbtsi) maps temp1_{input,max,min}; BMC (lm75) maps temp1_{input,max} only.
-#   The lm75 driver exposes no temp1_min register, so no bmc_min link is created
-#   (check_n_link skips it silently). Do not expect bmc_min on lm75-backed sensors.
-#
-# • Units are typically millidegrees Celsius for *_input (Linux hwmon convention);
-#   consult the sensor driver for temp1_max semantics on your board.
-#
-# • DEVPATH globs are platform-specific; other HIDs may bind different I2C
-#   addresses while reusing the same stable names under /var/run/hw-management/thermal/.
-#
-# • Implementation: bmc/usr/etc/HI189/hw-management-bmc-events.sh (THERMAL_RUN_DIR,
-#   cases cpu_temp / bmc_temp).
+# See bmc/examples/README.md for the full examples index.
