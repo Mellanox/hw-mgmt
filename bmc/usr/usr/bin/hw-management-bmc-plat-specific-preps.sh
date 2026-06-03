@@ -176,13 +176,18 @@ deploy_hw_management_bmc_platform_files()
 	shopt -u nullglob
 
 	# USB0 (CPU ↔ BMC): copy platform network params and render systemd-networkd unit.
+	# shellcheck source=/usr/bin/hw-management-bmc-usb0-common.sh
+	. /usr/bin/hw-management-bmc-usb0-common.sh
 	default_usb0_addr="169.254.0.1/16"
 	if [ -f "$HID_SRC/hw-management-bmc-network.conf" ]; then
 		cp -f "$HID_SRC/hw-management-bmc-network.conf" /etc/hw-management-bmc-usb0.conf
 		chmod 0644 /etc/hw-management-bmc-usb0.conf
 	fi
 
-	if [ ! -f /usr/etc/systemd/network/00-hw-management-bmc-usb0.network ]; then
+	if hw_management_bmc_usb0_managed_by_nos; then
+		rm -f "$HW_MANAGEMENT_BMC_USB0_NETWORK_UNIT"
+		echo "plat-specific: USB0_MANAGED_BY_NOS set; NOS owns usb0 (no static .network)"
+	elif [ ! -f /usr/etc/systemd/network/00-hw-management-bmc-usb0.network ]; then
 		:
 	else
 		local usb0_addr
