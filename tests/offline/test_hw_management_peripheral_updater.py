@@ -1105,12 +1105,11 @@ class TestWriteModuleCounterError(unittest.TestCase):
 
         mock_logger = MagicMock()
         with patch('hw_management_peripheral_updater.get_module_count', return_value=32):
-            with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
-                with patch('builtins.open', side_effect=OSError("Permission denied")):
-                    peripheral_module.write_module_counter("TEST_SKU")
-
-                    # Should log warning about failure
-                    mock_logger.warning.assert_called()
+            with patch('hw_management_peripheral_updater.get_platform_config', return_value=[{}]):
+                with patch('hw_management_peripheral_updater.LOGGER', mock_logger):
+                    with patch('builtins.open', side_effect=OSError("Permission denied")):
+                        peripheral_module.write_module_counter("TEST_SKU")
+                        mock_logger.warning.assert_called()
 
 
 class TestPlatformChipupCoverage(unittest.TestCase):
