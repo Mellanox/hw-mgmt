@@ -38,28 +38,44 @@ source /usr/bin/hw-management-helpers.sh
 
 INTERFACE=$1
 
-# Check if interface parameter exists
 if [ -z "${INTERFACE}" ]; then
-	log_err "Interface parameter is missing"
+	log_err "Missing interface parameter"
 	exit 1
 fi
 
-# Check if /etc/network/interfaces exists
+# On SONiC hosts the NOS owns usb0 addressing (not ifup/static interfaces).
+if [ "${INTERFACE}" = "usb0" ] && check_host_os_is_sonic; then
+	log_info "SONiC host: skip ifup ${INTERFACE} (NOS-owned)"
+	exit 0
+fi
+
+if [ ! -e "/sys/class/net/${INTERFACE}" ]; then
+	log_info "Interface ${INTERFACE} is missing"
+	exit 0
+fi
+
 if [ ! -e /etc/network/interfaces ]; then
-	log_err "/etc/network/interfaces is missing"
-	exit 1
+	log_info "/etc/network/interfaces is missing"
+	exit 0
 fi
 
-# Check if interface exists
-if [ ! -d "/sys/class/net/$INTERFACE" ]; then
-	log_err "Interface $INTERFACE does not exist"
-	exit 1
-fi
+# Exact name match per list (avoid substring false positives, e.g. usb0 vs usb01).
+_hw_mgmt_ifupdown_iface_auto_or_hotplug()
+{
+	local iface="$1"
+	local entry
 
-# Check if interface is defined in /etc/network/interfaces
-if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
-	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
-	exit 1
+	for entry in $(ifquery -l 2>/dev/null); do
+		[ "$entry" = "$iface" ] && return 0
+	done
+	for entry in $(ifquery -l --allow=hotplug 2>/dev/null); do
+		[ "$entry" = "$iface" ] && return 0
+	done
+	return 1
+}
+
+if ! _hw_mgmt_ifupdown_iface_auto_or_hotplug "${INTERFACE}"; then
+	exit 0
 fi
 
 # Retry ifup to work around locking conflicts with Debian networking service.
@@ -75,11 +91,10 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
 	fi
 
 	if [ "$i" -lt "$MAX_RETRIES" ]; then
-		log_info "Unsuccessful attempt $i to ifup ${INTERFACE}. Retrying in ${RETRY_DELAY} seconds..."
+		log_info "Attempt $i to ifup ${INTERFACE} failed. Retrying in ${RETRY_DELAY} seconds..."
 		sleep "${RETRY_DELAY}"
 	fi
 done
 
 log_err "Failed to ifup interface ${INTERFACE}"
 exit 1
-
