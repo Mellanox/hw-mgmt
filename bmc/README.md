@@ -371,10 +371,10 @@ Static addressing for the BMC↔host **`usb0`** gadget interface (out-of-band li
 | Artifact | Location | Role |
 |----------|----------|------|
 | Template | **`usr/etc/systemd/network/00-hw-management-bmc-usb0.network`** | Shipped on the image as **`/usr/etc/systemd/network/…`**; contains **`Address=__USB0_ADDRESS__`**. Not read by networkd until rendered into **`/etc/systemd/network/`**. |
-| Platform params (optional) | **`usr/etc/<HID>/hw-management-bmc-network.conf`** | One line: **`USB0_ADDRESS=<addr>/<prefix>`** (e.g. **`169.254.0.1/16`**). Copied to **`/etc/hw-management-bmc-usb0.conf`** when present. |
+| Platform params (optional) | **`usr/etc/<HID>/hw-management-bmc-network.conf`** | Non-SONiC: **`USB0_ADDRESS=…`**. SONiC/NOS: install **`/etc/bmc-network-sonic.conf`** (see **`SONIC_USB0_INTEGRATION.md`**). Copied to **`/etc/hw-management-bmc-usb0.conf`** at boot. |
 | Runtime params | **`/etc/hw-management-bmc-usb0.conf`** | Effective source for substitution; may be written by plat-specific-preps (packaged copy, default fallback, or left as an operator-maintained file). |
-| Generated unit | **`/etc/systemd/network/00-hw-management-bmc-usb0.network`** | Written by **`hw-management-bmc-plat-specific-preps.sh`** before **`systemd-networkd`** starts. |
-| SONiC **`dhclient`** guard | **`/usr/lib/systemd/system/sonic-usb-network-init.service.d/10-hw-management-bmc.conf`** | When the generated **`.network`** file exists, **`sonic-usb-network-init`** is skipped so it does not run **`dhclient`** on **`usb0`**. That avoids fighting **`systemd-networkd`** (our unit sets **`DHCP=no`** and a static **`Address=`**) and avoids AppArmor denials on **`dhclient`**. If **`.network`** generation is skipped (invalid **`USB0_ADDRESS`**), SONiC’s service can still run. |
+| Generated unit | **`/etc/systemd/network/00-hw-management-bmc-usb0.network`** | Written by **`hw-management-bmc-plat-specific-preps.sh`** before **`systemd-networkd`** starts when **`USB0_MANAGED_BY_NOS`** is not set. |
+| SONiC **`dhclient`** guard | **`/usr/lib/systemd/system/sonic-usb-network-init.service.d/10-hw-management-bmc.conf`** | When the generated **`.network`** file exists, **`sonic-usb-network-init`** is skipped so it does not run **`dhclient`** on **`usb0`**. That avoids fighting **`systemd-networkd`** (our unit sets **`DHCP=no`** and a static **`Address=`**) and avoids AppArmor denials on **`dhclient`**. If **`.network`** generation is skipped (**`USB0_MANAGED_BY_NOS=1`**, invalid **`USB0_ADDRESS`**, etc.), SONiC’s service can run. |
 
 **Boot order:** **`hw-management-bmc-plat-specific-preps.service`** has **`Before=systemd-networkd.service`**, so the **`/etc/systemd/network/`** file exists before networkd loads configuration. No race on first boot for this unit.
 
@@ -384,8 +384,11 @@ Static addressing for the BMC↔host **`usb0`** gadget interface (out-of-band li
 
 **Defaults and overrides**
 
-- If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`** and **`USB0_ADDRESS`** is read from there. If **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), **`.network`** generation is **skipped** for that boot (fix the platform file).
+- **`USB0_MANAGED_BY_NOS=1`** (values **`1`**, **`yes`**, **`true`**, case-insensitive): hw-management-bmc does **not** write **`00-hw-management-bmc-usb0.network`**, does **not** apply a static **`ip addr`**, and **`usb_net_config`** only loads **`g_ether`** and sets the link up. On **SONiC BMC** images, SONiC installs **`/etc/bmc-network-sonic.conf`** (or **`/etc/bmc-usb-network.conf`**) so **`sonic-usb-network-init`** can configure **`usb0`**. See **`bmc/SONIC_USB0_INTEGRATION.md`**.
+- If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`** without **`USB0_MANAGED_BY_NOS`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`** and **`USB0_ADDRESS`** is read from there. If **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), **`.network`** generation is **skipped** for that boot (fix the platform file).
 - If the packaged **`hw-management-bmc-network.conf`** is **absent**: use a valid **`USB0_ADDRESS`** from existing **`/etc/hw-management-bmc-usb0.conf`** if present; otherwise apply default **`169.254.0.1/16`** and write **`/etc/hw-management-bmc-usb0.conf`** with a comment so the active value is visible.
+
+**Host CPU (hw-management package):** On SONiC hosts (**`/etc/sonic/sonic_version.yml`**), **`hw-management-ifupdown.sh`** skips **`ifup usb0`** so the host NOS owns addressing (same pattern as BMC Redfish sync).
 
 **Changing address after install:** Edit **`/etc/hw-management-bmc-usb0.conf`** (when no packaged file overrides it each boot), or add **`hw-management-bmc-network.conf`** under the correct **`/etc/<HID>/`**. Then **`networkctl reload`** or restart **`systemd-networkd`** as usual for **`.network`** edits.
 
