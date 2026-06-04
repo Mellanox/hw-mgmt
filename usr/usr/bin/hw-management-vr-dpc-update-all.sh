@@ -47,6 +47,12 @@ log_message()
     echo "[$level] $message"
 }
 
+# MPS updater expects hid### (see hw-management-vr-dpc-update.sh); JSON may use HI### or HID###.
+normalize_system_hid_for_mps()
+{
+    echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/'
+}
+
 # Function to display usage
 usage()
 {
@@ -144,9 +150,9 @@ validate_json_config()
         echo "FAILED"
         echo "[ERROR] Missing 'System HID' field"
         validation_errors=$((validation_errors + 1))
-    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii][0-9]{3}$'; then
+    elif ! echo "$system_hid" | grep -qE '^[Hh][Ii]([Dd])?[0-9]{3}$'; then
         echo "FAILED"
-        echo "[ERROR] Invalid 'System HID' format. Expected format: HI### or hi### (where ### is 3 digits)"
+        echo "[ERROR] Invalid 'System HID' format. Expected HI###, HID###, or hid###"
         validation_errors=$((validation_errors + 1))
     else
         echo "OK (System HID: $system_hid)"
@@ -431,9 +437,9 @@ process_json_config()
                 continue
             fi
 
-            # Convert system HID to lowercase for MPS command
+            # Normalize System HID for MPS updater (HI180 / HID180 -> hid180)
             local system_hid_lower
-            system_hid_lower=$(echo "$system_hid" | tr '[:upper:]' '[:lower:]')
+            system_hid_lower="$(normalize_system_hid_for_mps "$system_hid")"
 
             # Build MPS command
             cmd=("$DPC_UPDATE_SCRIPT" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file")
