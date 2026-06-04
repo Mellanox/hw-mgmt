@@ -150,6 +150,22 @@ find_tool() {
   return 1
 }
 
+# Infineon VRs use DeviceType xdpe* and omit MPS-only CrcFile / DeviceConfigFile.
+is_infineon_device_type() {
+  [[ "${1,,}" =~ ^xdpe ]]
+}
+
+json_config_has_infineon_devices() {
+  local json_file="$1"
+  local dt
+  while IFS= read -r dt; do
+    if is_infineon_device_type "$dt"; then
+      return 0
+    fi
+  done < <(jq -r '.Devices[]?.DeviceType // empty' "$json_file" 2>/dev/null)
+  return 1
+}
+
 find_tool_candidates() {
   # find_tool_candidates <filename>
   # Prints matching full paths, one per line, in preference order.
@@ -478,9 +494,10 @@ apply_cmd() {
 
       local i=0
       while [[ $i -lt $num_devices ]]; do
-        local device_type bus config_file crc_file device_config_file
+        local device_type bus addr config_file crc_file device_config_file
         device_type="$(jq -r ".Devices[$i].DeviceType // empty" "$json_file")"
         bus="$(jq -r ".Devices[$i].Bus // empty" "$json_file")"
+        addr="$(jq -r ".Devices[$i].Addr // empty" "$json_file")"
         config_file="$(jq -r ".Devices[$i].ConfigFile // empty" "$json_file")"
         crc_file="$(jq -r ".Devices[$i].CrcFile // empty" "$json_file")"
         device_config_file="$(jq -r ".Devices[$i].DeviceConfigFile // empty" "$json_file")"
@@ -497,13 +514,20 @@ apply_cmd() {
           info "ERROR: Devices[$i] missing ConfigFile"
           errors=$((errors + 1))
         fi
-        if [[ -z "$crc_file" ]]; then
-          info "ERROR: Devices[$i] missing CrcFile"
-          errors=$((errors + 1))
-        fi
-        if [[ -z "$device_config_file" ]]; then
-          info "ERROR: Devices[$i] missing DeviceConfigFile"
-          errors=$((errors + 1))
+        if is_infineon_device_type "$device_type"; then
+          if [[ -z "$addr" ]]; then
+            info "ERROR: Devices[$i] missing Addr (required for Infineon)"
+            errors=$((errors + 1))
+          fi
+        else
+          if [[ -z "$crc_file" ]]; then
+            info "ERROR: Devices[$i] missing CrcFile (required for MPS)"
+            errors=$((errors + 1))
+          fi
+          if [[ -z "$device_config_file" ]]; then
+            info "ERROR: Devices[$i] missing DeviceConfigFile (required for MPS)"
+            errors=$((errors + 1))
+          fi
         fi
 
         # Resolve and verify files exist when provided
@@ -559,9 +583,14 @@ apply_cmd() {
     debug "verify json_cfg=$json_cfg"
     validate_json_config_pkg "$pkg_dir" "$json_cfg" || die "JSON validation failed"
 
-    # Ensure per-device updater exists (/usr/bin preferred, then $DPC_TOOLS_PATHS)
+    # Ensure per-device updater scripts exist (/usr/bin preferred, then $DPC_TOOLS_PATHS)
     if ! find_tool hw-management-vr-dpc-update.sh >/dev/null 2>&1; then
       die "Missing hw-management-vr-dpc-update.sh (searched /usr/bin and \$DPC_TOOLS_PATHS)"
+    fi
+    if json_config_has_infineon_devices "${pkg_dir}/${json_cfg}"; then
+      if ! find_tool hw-management-vr-dpc-infineon-update.sh >/dev/null 2>&1; then
+        die "Missing hw-management-vr-dpc-infineon-update.sh (JSON has Infineon xdpe* devices)"
+      fi
     fi
 
     VERIFIED_PKG_DIR="$pkg_dir"
@@ -586,9 +615,14 @@ apply_cmd() {
     local system_hid_lower
     system_hid_lower="$(echo "$system_hid" | tr '[:upper:]' '[:lower:]' | sed -E 's/^hi(d)?/hid/')"
 
-    local updater
+    local updater infineon_updater
     updater="$(find_tool hw-management-vr-dpc-update.sh)" || die "Per-device updater not found (searched /usr/bin and \$DPC_TOOLS_PATHS): hw-management-vr-dpc-update.sh"
     debug "updater selected: $updater"
+    infineon_updater=""
+    if json_config_has_infineon_devices "$json_file"; then
+      infineon_updater="$(find_tool hw-management-vr-dpc-infineon-update.sh)" || die "Infineon updater not found: hw-management-vr-dpc-infineon-update.sh"
+      debug "infineon updater selected: $infineon_updater"
+    fi
 
     local num_devices
     num_devices="$(jq -r '.Devices | length // 0' "$json_file")"
@@ -601,15 +635,16 @@ apply_cmd() {
 
     local i=0
     while [[ $i -lt $num_devices ]]; do
-      local device_type bus config_file crc_file device_config_file
+      local device_type bus addr config_file crc_file device_config_file
       device_type="$(jq -r ".Devices[$i].DeviceType // empty" "$json_file")"
       bus="$(jq -r ".Devices[$i].Bus // empty" "$json_file")"
+      addr="$(jq -r ".Devices[$i].Addr // empty" "$json_file")"
       config_file="$(jq -r ".Devices[$i].ConfigFile // empty" "$json_file")"
       crc_file="$(jq -r ".Devices[$i].CrcFile // empty" "$json_file")"
       device_config_file="$(jq -r ".Devices[$i].DeviceConfigFile // empty" "$json_file")"
 
-      if [[ -z "$device_type" || -z "$bus" || -z "$config_file" || -z "$crc_file" || -z "$device_config_file" ]]; then
-        info "ERROR: JSON device[$i] is missing required fields (DeviceType/Bus/ConfigFile/CrcFile/DeviceConfigFile)"
+      if [[ -z "$device_type" || -z "$bus" || -z "$config_file" ]]; then
+        info "ERROR: JSON device[$i] missing DeviceType, Bus, or ConfigFile"
         fail=$((fail + 1))
         i=$((i + 1))
         continue
@@ -618,23 +653,44 @@ apply_cmd() {
 
       # Resolve relative file paths within the package directory.
       if [[ "$config_file" != /* ]]; then config_file="${pkg_dir}/${config_file}"; fi
-      if [[ "$crc_file" != /* ]]; then crc_file="${pkg_dir}/${crc_file}"; fi
-      if [[ "$device_config_file" != /* ]]; then device_config_file="${pkg_dir}/${device_config_file}"; fi
 
       [[ -f "$config_file" ]] || { info "ERROR: Missing ConfigFile for device[$i]: $config_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
-      [[ -f "$crc_file" ]] || { info "ERROR: Missing CrcFile for device[$i]: $crc_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
-      [[ -f "$device_config_file" ]] || { info "ERROR: Missing DeviceConfigFile for device[$i]: $device_config_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
 
-      info "Updating device[$i]: Type=$device_type Bus=$bus"
-      local cmd=(
-        bash "$updater"
-        "$bus"
-        "$device_type"
-        "$system_hid_lower"
-        "$config_file"
-        "$crc_file"
-        "$device_config_file"
-      )
+      local cmd=()
+      if is_infineon_device_type "$device_type"; then
+        if [[ -z "$addr" ]]; then
+          info "ERROR: JSON device[$i] missing Addr (required for Infineon)"
+          fail=$((fail + 1))
+          i=$((i + 1))
+          continue
+        fi
+        info "Updating device[$i]: Type=$device_type Bus=$bus Addr=$addr (Infineon)"
+        cmd=(
+          bash "$infineon_updater"
+          flash -y -b "$bus" -a "$addr" -f "$config_file"
+        )
+      else
+        if [[ -z "$crc_file" || -z "$device_config_file" ]]; then
+          info "ERROR: JSON device[$i] missing CrcFile or DeviceConfigFile (required for MPS)"
+          fail=$((fail + 1))
+          i=$((i + 1))
+          continue
+        fi
+        if [[ "$crc_file" != /* ]]; then crc_file="${pkg_dir}/${crc_file}"; fi
+        if [[ "$device_config_file" != /* ]]; then device_config_file="${pkg_dir}/${device_config_file}"; fi
+        [[ -f "$crc_file" ]] || { info "ERROR: Missing CrcFile for device[$i]: $crc_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
+        [[ -f "$device_config_file" ]] || { info "ERROR: Missing DeviceConfigFile for device[$i]: $device_config_file"; fail=$((fail + 1)); i=$((i + 1)); continue; }
+        info "Updating device[$i]: Type=$device_type Bus=$bus (MPS)"
+        cmd=(
+          bash "$updater"
+          "$bus"
+          "$device_type"
+          "$system_hid_lower"
+          "$config_file"
+          "$crc_file"
+          "$device_config_file"
+        )
+      fi
 
       if "${cmd[@]}"; then
         ok=$((ok + 1))
@@ -644,7 +700,7 @@ apply_cmd() {
         info "ERROR: rc=$rc (updater may log details to syslog via logger)"
         if [[ "${DPC_DEBUG:-0}" == "1" ]]; then
           info "DEBUG: Re-running failed device[$i] with 'bash -x' (may be verbose)..."
-          ( set +e; bash -x "$updater" "$bus" "$device_type" "$system_hid_lower" "$config_file" "$crc_file" "$device_config_file" ) || true
+          ( set +e; "${cmd[@]}" ) || true
         fi
         fail=$((fail + 1))
       fi
