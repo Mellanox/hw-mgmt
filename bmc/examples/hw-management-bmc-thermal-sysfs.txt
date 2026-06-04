@@ -17,19 +17,22 @@
 ├── cpu_temp                           # symlink → …/temp1_max (high limit / max, driver-specific)
 ├── cpu_min                            # symlink → …/temp1_min (low limit / min)
 ├── bmc_temp_input                     # symlink → …/4-0048/…/hwmon*/temp1_input
-├── bmc_temp                           # symlink → …/temp1_max
-└── bmc_min                            # symlink → …/temp1_min
+└── bmc_temp                           # symlink → …/temp1_max
 
 # Notes
 #
 # • Naming follows hw-management-bmc-events.sh: CPU uses cpu_* ; BMC uses bmc_* .
-#   Both map temp1_{input,max,min} from their respective hwmon instances.
+#   CPU (sbtsi) maps temp1_{input,max,min}; BMC (lm75) maps temp1_{input,max} only.
+#   The lm75 driver exposes no temp1_min register, so no bmc_min link is created
+#   (check_n_link skips it silently). Do not expect bmc_min on lm75-backed sensors.
 #
 # • Units are typically millidegrees Celsius for *_input (Linux hwmon convention);
-#   consult the sensor driver for temp1_max / temp1_min semantics on your board.
+#   consult the sensor driver for temp1_max semantics on your board.
 #
 # • DEVPATH globs are platform-specific; other HIDs may bind different I2C
 #   addresses while reusing the same stable names under /var/run/hw-management/thermal/.
 #
 # • Implementation: bmc/usr/etc/HI189/hw-management-bmc-events.sh (THERMAL_RUN_DIR,
 #   cases cpu_temp / bmc_temp).
+#
+# • Per-HID layout for new platforms: bmc/examples/<HID>/examples/ (see HIxxx/examples/).
