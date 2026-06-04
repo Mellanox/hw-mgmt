@@ -125,7 +125,7 @@ ip -4 addr show dev usb0
 - On SONiC **with** **`/etc/bmc-network-sonic.conf`** (or alt): **does not** call
   **`ifup usb0`**. Without that file, **ifup** runs (misaligned / static-BMC case).
 - Other interfaces / missing **`/etc/network/interfaces`**: unchanged defensive behavior
-  (silent **exit 0**, auto/hotplug class guard via **`ifquery -l`**).
+  (**`log_err`** and **exit 1** when **`ifquery`** does not define the interface).
 - Does **not** assign a host **usb0** IP when the NOS contract file is present (SONiC owns it).
 
 ### Host verification

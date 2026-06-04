@@ -61,23 +61,9 @@ if [ ! -e /etc/network/interfaces ]; then
 	exit 0
 fi
 
-# Exact name match per list (avoid substring false positives, e.g. usb0 vs usb01).
-_hw_mgmt_ifupdown_iface_auto_or_hotplug()
-{
-	local iface="$1"
-	local entry
-
-	for entry in $(ifquery -l 2>/dev/null); do
-		[ "$entry" = "$iface" ] && return 0
-	done
-	for entry in $(ifquery -l --allow=hotplug 2>/dev/null); do
-		[ "$entry" = "$iface" ] && return 0
-	done
-	return 1
-}
-
-if ! _hw_mgmt_ifupdown_iface_auto_or_hotplug "${INTERFACE}"; then
-	exit 0
+if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
+	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
+	exit 1
 fi
 
 # Retry ifup to work around locking conflicts with Debian networking service.
@@ -93,7 +79,7 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
 	fi
 
 	if [ "$i" -lt "$MAX_RETRIES" ]; then
-		log_info "Attempt $i to ifup ${INTERFACE} failed. Retrying in ${RETRY_DELAY} seconds..."
+		log_info "Unsuccessful attempt $i to ifup ${INTERFACE}. Retrying in ${RETRY_DELAY} seconds..."
 		sleep "${RETRY_DELAY}"
 	fi
 done
