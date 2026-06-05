@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Comprehensive Test Suite for hw_management_redfish_client.py
 # Tests RedfishClient and BMCAccessor classes with simple, medium, and complex scenarios
@@ -462,7 +462,11 @@ class TestBMCAccessorPasswordGeneration:
             stderr=''
         )
 
-        with patch('builtins.open', mock_open(read_data=mock_file_data)):
+        # Mock the advisory file lock so the test does not depend on a writable
+        # /run/lock; locking is infrastructure, not the unit under test.
+        with patch('builtins.open', mock_open(read_data=mock_file_data)), \
+                patch.object(BMCAccessor, '_acquire_lock', return_value=123), \
+                patch.object(BMCAccessor, '_release_lock'):
             accessor = BMCAccessor()
             password = accessor.get_login_password()
 

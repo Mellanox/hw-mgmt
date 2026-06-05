@@ -44,8 +44,10 @@ def _asic_handle_input_harness():
     h.read_file_float = Mock(return_value=55.0)
     h.get_hw_path = lambda p: "/mock/" + p
     h.is_crit_range_violation = Mock(return_value=False)
-    h._sdk_init_in_progress = lambda: False
-    h._read_asic_ready = lambda: True
+    # SDK fully initialized: sensor read errors are real (not suppressed as
+    # transient) so the normal fread_err handling path runs (commit 381c955d).
+    h._sdk_init_in_progress = Mock(return_value=False)
+    h._read_asic_ready = Mock(return_value=True)
 
     h._updated = []
 
@@ -58,23 +60,36 @@ def _asic_handle_input_harness():
     return h
 
 
+def _call_kwargs(c):
+    """Extract kwargs dict from a mock call — works on Python 3.6 and 3.8+.
+
+    On Python 3.6, call objects are plain 2-tuples (args, kwargs); the .kwargs
+    attribute exists only for call-chaining (call.method()), so it returns
+    another _Call, not a dict. Index access is reliable across all versions.
+    """
+    kw = c[1]
+    return kw if isinstance(kw, dict) else {}
+
+
+def _call_args(c):
+    """Extract positional args tuple from a mock call."""
+    return c[0]
+
+
 def test_asic_successful_read_resets_fread_err():
     import hw_management_thermal_control_2_5 as tc25
 
     h = _asic_handle_input_harness()
     tc25.thermal_asic_sensor.handle_input(h, {}, tc25.CONST.C2P, 25.0)
 
-    def _kwargs(c):
-        return c.kwargs if hasattr(c, "kwargs") else c[1]
-
     reset_calls = [
-        c for c in h.fread_err.handle_err.call_args_list if _kwargs(c).get("reset") is True
+        c for c in h.fread_err.handle_err.call_args_list if _call_kwargs(c).get("reset") is True
     ]
     assert len(reset_calls) >= 1, (
         "Expected fread_err.handle_err(..., reset=True) after good ASIC read; "
         "got %s" % h.fread_err.handle_err.call_args_list
     )
-    path = reset_calls[0].args[0]
+    path = _call_args(reset_calls[0])[0]
     assert "thermal/asic0" in path or path.endswith("asic0")
     assert h._updated == [55.0]
     h.validate_value_in_min_max_range.assert_called_once()
@@ -87,12 +102,9 @@ def test_asic_crit_range_sets_fread_err_no_reset():
     h.is_crit_range_violation = Mock(return_value=True)
     tc25.thermal_asic_sensor.handle_input(h, {}, tc25.CONST.C2P, 25.0)
 
-    def _kw(c):
-        return c.kwargs if hasattr(c, "kwargs") else c[1]
-
-    crit_calls = [c for c in h.fread_err.handle_err.call_args_list if _kw(c).get("cause") == "crit range"]
+    crit_calls = [c for c in h.fread_err.handle_err.call_args_list if _call_kwargs(c).get("cause") == "crit range"]
     assert len(crit_calls) == 1
-    reset_calls = [c for c in h.fread_err.handle_err.call_args_list if _kw(c).get("reset") is True]
+    reset_calls = [c for c in h.fread_err.handle_err.call_args_list if _call_kwargs(c).get("reset") is True]
     assert reset_calls == []
     assert h._updated == []
 
@@ -106,7 +118,7 @@ def test_asic_read_exception_fread_err_value():
 
     h.fread_err.handle_err.assert_called_once()
     ca = h.fread_err.handle_err.call_args
-    kw = ca.kwargs if hasattr(ca, "kwargs") else ca[1]
+    kw = _call_kwargs(ca)
     assert kw.get("cause") == "value"
     assert kw.get("reset") is not True
 

@@ -84,8 +84,9 @@ def _run_bash_flags(env):
     r = subprocess.run(
         ["bash", "-e", "-c", _BASH_TC_FLAGS],
         env=e,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
         timeout=5,
     )
     assert r.returncode == 0, r.stderr
@@ -99,8 +100,9 @@ def _run_bash_cmdline(env):
     r = subprocess.run(
         ["bash", "-e", "-c", _BASH_CMD_LINE],
         env=e,
-        capture_output=True,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
         timeout=5,
     )
     assert r.returncode == 0, r.stderr

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -620,6 +620,35 @@ class AsicTempPopulateTestSuite:
             temp_dir = os.path.join(asic_dir, "temperature")
             os.makedirs(temp_dir, exist_ok=True)
             self.asic_dirs[f"asic{i}"] = asic_dir
+
+        self._install_atomic_write_redirect()
+
+    def _install_atomic_write_redirect(self):
+        """Redirect atomic_file_write() into the temp tree.
+
+        asic_temp_populate()/asic_temp_reset() write output via
+        atomic_file_write(), which bypasses builtins.open (it uses
+        tempfile.mkstemp + os.replace) and targets the real /var/run path. Point
+        it at the temp directories so the tests do not depend on a writable
+        /var/run. The real open is captured here, before any test patches
+        builtins.open, so redirected writes always succeed.
+        """
+        real_open = open
+        thermal_dir = self.thermal_dir
+        config_dir = self.config_dir
+
+        def redirected_atomic_write(file_name, value):
+            if file_name.startswith('/var/run/hw-management/thermal/'):
+                file_name = file_name.replace('/var/run/hw-management/thermal/',
+                                              thermal_dir + '/')
+            elif file_name.startswith('/var/run/hw-management/config/'):
+                file_name = file_name.replace('/var/run/hw-management/config/',
+                                              config_dir + '/')
+            os.makedirs(os.path.dirname(file_name), exist_ok=True)
+            with real_open(file_name, 'w', encoding="utf-8") as f:
+                f.write("{}".format(value))
+
+        hw_management_thermal_updater.atomic_file_write = redirected_atomic_write
 
     def cleanup_test_environment(self):
         """Clean up temporary test directories"""
