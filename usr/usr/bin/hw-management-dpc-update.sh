@@ -242,6 +242,64 @@ csv_expected_for_page_cmd() {
   ' "$csv_file"
 }
 
+# Infineon GUI .txt/.mic export metadata before [Configuration Data].
+# Header lines use "Field : value"; [User Data] uses "Loop A USER_DATA_XX = value".
+infineon_txt_field_get() {
+  local txt_file="$1"
+  local field="$2"
+  local line val
+  [[ -f "$txt_file" ]] || { echo ""; return 0; }
+  line="$(grep -iE "^[[:space:]]*${field}[[:space:]]*[:=]" "$txt_file" 2>/dev/null | head -n 1 || true)"
+  [[ -z "$line" ]] && { echo ""; return 0; }
+  if [[ "$line" == *"="* ]]; then
+    val="${line#*=}"
+  else
+    val="${line#*:}"
+  fi
+  val="$(echo "$val" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/#.*//')"
+  echo "$val"
+}
+
+# Expected model/revision for xdpe*: Infineon GUI [User Data] Loop A USER_DATA_*.
+# read-vr-model-version.sh reports the post-flash PMBUS MFR model/revision word values;
+# USER_DATA_01/00 in the package are the package-declared targets for skip-identical / --verify.
+infineon_txt_expected_mfr() {
+  local txt_file="$1"
+  local which="$2" # model | rev
+  local raw
+  case "$which" in
+    model) raw="$(infineon_txt_field_get "$txt_file" "Loop A USER_DATA_01")" ;;
+    rev)   raw="$(infineon_txt_field_get "$txt_file" "Loop A USER_DATA_00")" ;;
+    *) echo ""; return 1 ;;
+  esac
+  [[ -z "$raw" ]] && { echo ""; return 0; }
+  raw="$(echo "$raw" | tr '[:upper:]' '[:lower:]')"
+  if [[ "$raw" =~ ^0x[0-9a-f]{1,4}$ ]]; then
+    printf '0x%04x\n' "$((raw))"
+    return 0
+  fi
+  if [[ "$raw" =~ ^[0-9a-f]{1,4}$ ]]; then
+    printf '0x%04x\n' "$((16#$raw))"
+    return 0
+  fi
+  echo ""
+}
+
+normalize_i2c_addr() {
+  local addr="$1"
+  addr="$(echo "${addr:-}" | tr -d '\r' | tr '[:upper:]' '[:lower:]')"
+  [[ -z "$addr" ]] && { echo ""; return 0; }
+  if [[ "$addr" =~ ^0x[0-9a-f]+$ ]]; then
+    echo "$addr"
+    return 0
+  fi
+  if [[ "$addr" =~ ^[0-9a-f]+$ ]]; then
+    printf '0x%02x\n' "$((16#$addr))"
+    return 0
+  fi
+  echo ""
+}
+
 show_cmd() {
   local json=0
   while [[ $# -gt 0 ]]; do
@@ -300,36 +358,45 @@ apply_cmd() {
     local pkg_dir="$1"
     local json_cfg="$2" # filename inside pkg_dir
 
-    jq -r '.Devices[] | [.Bus, .DeviceType, .ConfigFile, .DeviceConfigFile] | @tsv' "${pkg_dir}/${json_cfg}" | \
-    while IFS=$'\t' read -r bus devtype cfg cfgconf; do
+    jq -r '.Devices[] | [.Bus, .DeviceType, (.Addr // ""), .ConfigFile, (.DeviceConfigFile // "")] | @tsv' "${pkg_dir}/${json_cfg}" | \
+    while IFS=$'\t' read -r bus devtype json_addr cfg cfgconf; do
       [[ -n "$bus" && -n "$devtype" ]] || continue
 
       if [[ "$cfg" != /* ]]; then cfg="${pkg_dir}/${cfg}"; fi
-      if [[ "$cfgconf" != /* ]]; then cfgconf="${pkg_dir}/${cfgconf}"; fi
+      if [[ -n "$cfgconf" && "$cfgconf" != /* ]]; then cfgconf="${pkg_dir}/${cfgconf}"; fi
 
-      local model_reg rev_reg model_page rev_page
-      model_reg="$(conf_get "$cfgconf" DPC_MODEL_ID 0xba)"
-      rev_reg="$(conf_get "$cfgconf" DPC_REVISION_ID 0xbb)"
-      model_page="$(conf_get "$cfgconf" DPC_MODEL_ID_PAGE 1)"
-      rev_page="$(conf_get "$cfgconf" DPC_REVISION_ID_PAGE 1)"
+      local addr exp_model exp_rev
 
-      # Device I2C address comes from the CSV (first column of first data row).
-      local addr
-      addr="$(
-        awk -F',' '
-          NR==1 { next }
-          {
-            a=$1
-            gsub(/\r/,"",a)
-            gsub(/^[[:space:]]+|[[:space:]]+$/,"",a)
-            if (a!="") { print tolower(a); exit }
-          }
-        ' "$cfg"
-      )"
+      if is_infineon_device_type "$devtype"; then
+        addr="$(normalize_i2c_addr "$json_addr")"
+        if [[ -z "$addr" ]]; then
+          addr="$(normalize_i2c_addr "$(infineon_txt_field_get "$cfg" "PMBus Address")")"
+        fi
+        exp_model="$(infineon_txt_expected_mfr "$cfg" model)"
+        exp_rev="$(infineon_txt_expected_mfr "$cfg" rev)"
+      else
+        local model_reg rev_reg model_page rev_page
+        model_reg="$(conf_get "$cfgconf" DPC_MODEL_ID 0xba)"
+        rev_reg="$(conf_get "$cfgconf" DPC_REVISION_ID 0xbb)"
+        model_page="$(conf_get "$cfgconf" DPC_MODEL_ID_PAGE 1)"
+        rev_page="$(conf_get "$cfgconf" DPC_REVISION_ID_PAGE 1)"
 
-      local exp_model exp_rev
-      exp_model="$(csv_expected_for_page_cmd "$cfg" "$model_page" "$model_reg")"
-      exp_rev="$(csv_expected_for_page_cmd "$cfg" "$rev_page" "$rev_reg")"
+        # Device I2C address comes from the CSV (first column of first data row).
+        addr="$(
+          awk -F',' '
+            NR==1 { next }
+            {
+              a=$1
+              gsub(/\r/,"",a)
+              gsub(/^[[:space:]]+|[[:space:]]+$/,"",a)
+              if (a!="") { print tolower(a); exit }
+            }
+          ' "$cfg"
+        )"
+
+        exp_model="$(csv_expected_for_page_cmd "$cfg" "$model_page" "$model_reg")"
+        exp_rev="$(csv_expected_for_page_cmd "$cfg" "$rev_page" "$rev_reg")"
+      fi
 
       echo -e "${bus}\t${devtype}\t${addr}\t${exp_model}\t${exp_rev}"
     done
@@ -341,7 +408,7 @@ apply_cmd() {
 
     info "Reading current VR versions..."
     local current_json
-    current_json="$(read_vr_json_or_die "$pkg_dir")"
+    current_json="$(read_vr_json_or_die)"
 
     info "Deriving target VR versions from package..."
     local targets
