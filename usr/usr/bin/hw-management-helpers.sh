@@ -77,6 +77,7 @@ l1_power_events=("power_button graceful_pwr_off")
 ui_tree_sku=`cat $sku_file`
 ui_tree_archive=
 udev_event_log="/var/log/udev_events.log"
+udev_event_log_max_size=4194304
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
@@ -178,6 +179,12 @@ log_info()
 
 trace_udev_events()
 {
+	log_size=$(stat -c %s "$udev_event_log" 2>/dev/null || echo 0)
+	if [ "$log_size" -ge "$udev_event_log_max_size" ]; then
+		if ! pgrep -x logrotate > /dev/null 2>&1; then
+			/usr/sbin/logrotate --state /var/lib/logrotate/status /etc/logrotate.d/udev 2>/dev/null
+		fi
+	fi
 	echo "[$(date '+%Y-%m-%d %H:%M:%S.%3N')] $@" >> $udev_event_log
 	return 0
 }
