@@ -662,7 +662,7 @@ show_voltmon_info_json()
                 "$(json_escape "$internal_name")" \
                 "$(json_escape "${pmic_prefix:-}")" \
                 "$(json_escape "$device_type")" \
-                "$(json_escape "$bus")" \
+                "$(json_escape "$bus_abs")" \
                 "$(json_escape "$address")" \
                 "$(json_escape "$model_id")" \
                 "$(json_escape "$rev_id")"
