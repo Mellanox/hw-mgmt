@@ -2,7 +2,7 @@
 # pylint: disable=line-too-long
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -59,57 +59,57 @@ PLATFORM_CONFIG = {
     ],
     "HI112|HI116|HI136|MSN3700|MSN3700C": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 32}},
     ],
     "HI120": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 60}},
     ],
     "HI121": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 54}},
     ],
-    "HI122|HI156|HI184|MSN4700": [
+    "HI122|HI156|MSN4700": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 32}},
     ],
     "HI123|HI124": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 64}},
     ],
     "HI144|HI174": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 65}},
     ],
     "HI146": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 32}},
     ],
     "HI147|HI171|HI172": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 66}},
     ],
     "HI157": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 37}},
     ],
     "HI158": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 73}},
     ],
     "HI160": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 28}},
     ],
     "HI162": [
@@ -125,7 +125,7 @@ PLATFORM_CONFIG = {
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/var/run/hw-management/system/power_button_evt', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 36}},
         {'fin': None, 'fn': 'redfish_get_sensor', 'arg': ['/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP', 'bmc', 1000], 'poll': 30, 'ts': 0},
     ],
@@ -138,70 +138,21 @@ PLATFORM_CONFIG = {
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}'], 'poll': 2, 'ts': 0},
         {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
+        {'fin': '/var/run/hw-management/system/graseful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 36}},
         {'fin': None, 'fn': 'redfish_get_sensor', 'arg': ['/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP', 'bmc', 1000], 'poll': 30, 'ts': 0},
     ],
     "HI175": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 91}},
     ],
     "HI178": [
         {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
         {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 24}},
-    ],
-    "HI176": [
-        {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
-        {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}}},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': None, 'fn': 'redfish_get_sensor', 'arg': ['/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP', 'bmc', 1000], 'poll': 30, 'ts': 0},
-    ],
-    "HI177": [
-        {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
-        {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}}},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': None, 'fn': 'redfish_get_sensor', 'arg': ['/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP', 'bmc', 1000], 'poll': 30, 'ts': 0},
-    ],
-    "HI179": [
-        {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
-        {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 73}},
-    ],
-    "HI180": [
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
-    ],
-    "HI181": [
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
-    ],
-    "HI182": [
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage3", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE3 {arg1}"], "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage4", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE4 {arg1}"], "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage5", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE5 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}, 'asic2': {'fin': '/sys/module/sx_core/asic1/'}, 'asic3': {'fin': '/sys/module/sx_core/asic2/'}, 'asic4': {'fin': '/sys/module/sx_core/asic3/'}}},
-    ],
-    "HI185": [
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2', 'fn': 'run_cmd', 'arg': ['/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}'], 'poll': 2, 'ts': 0},
-        {'fin': '/var/run/hw-management/system/graceful_pwr_off', 'fn': 'run_power_button_event', 'arg': [], 'poll': 1, 'ts': 0},
-    ],
-    "HI193": [
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage1", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE1 {arg1}"], "poll": 2, "ts": 0},
-        {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
-        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
 }
 

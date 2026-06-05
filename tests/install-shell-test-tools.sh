@@ -59,49 +59,164 @@ error() {
 
 ################################################################################
 # Install kcov
+# Strategy:
+#   1. Package manager (apt/yum) — requires root, fastest
+#   2. Build from source — user-local, needs gcc + elfutils-devel
+#      cmake is bootstrapped via a portable binary if not present.
+#      libcurl-devel is not required: coveralls writer is replaced with a
+#      no-op stub and the url-escape function in utils.cc is stubbed inline.
 ################################################################################
+KCOV_VERSION_TAG="v42"
+KCOV_SRC_URL="https://github.com/SimonKagstrom/kcov/archive/refs/tags/${KCOV_VERSION_TAG}.tar.gz"
+CMAKE_VERSION="3.27.0"
+CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.sh"
+
+_install_cmake_portable() {
+    if command -v cmake &>/dev/null || command -v cmake3 &>/dev/null; then
+        return 0
+    fi
+    local prefix="${1:-$HOME/.local}"
+    local installer
+    installer=$(mktemp /tmp/cmake-install-XXXXXX.sh)
+    info "Downloading portable cmake ${CMAKE_VERSION}..."
+    if ! curl -fsSL "${CMAKE_URL}" -o "${installer}" 2>/dev/null; then
+        warn "Failed to download cmake; kcov build-from-source will be skipped"
+        rm -f "${installer}"
+        return 1
+    fi
+    bash "${installer}" --prefix="${prefix}" --skip-license --exclude-subdir >/dev/null 2>&1
+    rm -f "${installer}"
+    command -v cmake &>/dev/null || PATH="${prefix}/bin:${PATH}"
+    command -v cmake &>/dev/null
+}
+
+_build_kcov_from_source() {
+    local prefix="${1:-$HOME/.local}"
+    local build_dir
+    build_dir=$(mktemp -d /tmp/kcov-build-XXXXXX)
+
+    info "Downloading kcov source ${KCOV_VERSION_TAG}..."
+    if ! curl -fsSL "${KCOV_SRC_URL}" -o "${build_dir}/kcov.tar.gz" 2>/dev/null; then
+        warn "Failed to download kcov source"
+        rm -rf "${build_dir}"
+        return 1
+    fi
+
+    tar xf "${build_dir}/kcov.tar.gz" -C "${build_dir}" --strip-components=1
+
+    # Stub libcurl dependency: replace coveralls writer with no-op and
+    # forward-declare the three curl functions used in utils.cc.
+    if [[ -f "${build_dir}/src/writers/dummy-coveralls-writer.cc" ]]; then
+        cp "${build_dir}/src/writers/dummy-coveralls-writer.cc" \
+           "${build_dir}/src/writers/coveralls-writer.cc"
+    fi
+    if grep -q '<curl/curl.h>' "${build_dir}/src/utils.cc" 2>/dev/null; then
+        sed -i 's|#include <curl/curl.h>|// curl stubbed\ntypedef void CURL;\nextern "C" { CURL *curl_easy_init(void); char *curl_easy_escape(CURL*,const char*,int); void curl_easy_cleanup(CURL*); }|' \
+            "${build_dir}/src/utils.cc"
+    fi
+
+    # Create a minimal stub implementation so the linker is satisfied
+    cat > "${build_dir}/src/utils_curl_stub.cc" << 'STUB'
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+typedef void CURL;
+extern "C" {
+    CURL *curl_easy_init(void) { return (void*)1; }
+    char *curl_easy_escape(CURL *, const char *s, int) {
+        char *o = (char*)malloc(strlen(s)*3+1); char *d = o;
+        for (const char *p = s; *p; ++p) {
+            if ((*p>='A'&&*p<='Z')||(*p>='a'&&*p<='z')||(*p>='0'&&*p<='9')
+                ||*p=='-'||*p=='_'||*p=='.'||*p=='~') *d++=*p;
+            else { sprintf(d,"%%%02X",(unsigned char)*p); d+=3; }
+        }
+        *d=0; return o;
+    }
+    void curl_easy_cleanup(CURL *) {}
+}
+STUB
+
+    # Inject stub into CMakeLists so it gets compiled in
+    sed -i '/utils\.cc/a\    utils_curl_stub.cc' "${build_dir}/src/CMakeLists.txt" 2>/dev/null || true
+
+    local cmake_bin
+    cmake_bin=$(command -v cmake3 || command -v cmake)
+    mkdir -p "${build_dir}/build"
+    info "Configuring kcov..."
+    if ! "${cmake_bin}" "${build_dir}" \
+            -B "${build_dir}/build" \
+            -DCMAKE_INSTALL_PREFIX="${prefix}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSPECIFY_RPATH=OFF \
+            >/dev/null 2>&1; then
+        warn "kcov cmake configuration failed"
+        rm -rf "${build_dir}"
+        return 1
+    fi
+
+    info "Building kcov (this may take a few minutes)..."
+    local cpus
+    cpus=$(nproc 2>/dev/null || echo 2)
+    if ! make -C "${build_dir}/build" -j"${cpus}" kcov >/dev/null 2>&1; then
+        warn "kcov build failed"
+        rm -rf "${build_dir}"
+        return 1
+    fi
+
+    make -C "${build_dir}/build" install >/dev/null 2>&1
+    rm -rf "${build_dir}"
+
+    if command -v kcov &>/dev/null || [[ -x "${prefix}/bin/kcov" ]]; then
+        export PATH="${prefix}/bin:${PATH}"
+        info "✓ kcov built and installed from source"
+        return 0
+    fi
+    return 1
+}
+
 install_kcov() {
     info "Installing kcov..."
-    
-    # Check if kcov is already installed
-    if command -v kcov &> /dev/null; then
-        KCOV_VERSION=$(kcov --version 2>&1 | head -1 || echo "unknown")
-        info "kcov is already installed: $KCOV_VERSION"
+
+    # Already present?
+    if command -v kcov &>/dev/null; then
+        info "kcov is already installed: $(kcov --version 2>&1 | head -1)"
         return 0
     fi
-    
-    # Try package manager first
-    if command -v apt-get &> /dev/null; then
-        info "Attempting to install kcov via apt-get..."
-        if [[ $INSTALL_USER -eq 0 ]]; then
-            sudo apt-get update && sudo apt-get install -y kcov
-        else
-            warn "Cannot install kcov via apt to user directory. Please install system-wide or manually."
-            return 1
-        fi
-    elif command -v yum &> /dev/null; then
-        info "Attempting to install kcov via yum..."
-        if [[ $INSTALL_USER -eq 0 ]]; then
-            sudo yum install -y kcov
-        else
-            warn "Cannot install kcov via yum to user directory. Please install system-wide or manually."
-            return 1
-        fi
+
+    local prefix
+    if [[ $INSTALL_USER -eq 0 ]]; then
+        prefix="/usr/local"
     else
-        warn "No supported package manager found. Please install kcov manually:"
-        warn "  Ubuntu/Debian: sudo apt-get install kcov"
-        warn "  RHEL/Fedora:   sudo yum install kcov"
-        warn "  From source:   https://github.com/SimonKagstrom/kcov"
+        prefix="$HOME/.local"
+    fi
+
+    # 1. Package manager
+    if [[ $INSTALL_USER -eq 0 ]]; then
+        if command -v apt-get &>/dev/null; then
+            info "Attempting apt-get install kcov..."
+            sudo apt-get update -qq && sudo apt-get install -y -qq kcov && return 0
+        elif command -v yum &>/dev/null; then
+            info "Attempting yum install kcov..."
+            sudo yum install -y kcov && return 0
+        fi
+    fi
+
+    # 2. Build from source
+    info "Package manager install not available; building from source..."
+    _install_cmake_portable "${prefix}" || true
+    if ! _build_kcov_from_source "${prefix}"; then
+        warn "kcov build from source failed. Shell coverage will be unavailable."
+        warn "To install manually: https://github.com/SimonKagstrom/kcov"
         return 1
     fi
-    
-    # Verify installation
-    if command -v kcov &> /dev/null; then
+
+    # Verify
+    if command -v kcov &>/dev/null || [[ -x "${prefix}/bin/kcov" ]]; then
         info "✓ kcov installed successfully: $(kcov --version 2>&1 | head -1)"
         return 0
-    else
-        error "Failed to install kcov"
-        return 1
+    fi
+    error "Failed to install kcov"
+    return 1
     fi
 }
 

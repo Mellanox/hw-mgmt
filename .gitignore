@@ -5,44 +5,12 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-
-# Test artifacts
-tests/logs/
-tests/__pycache__/
-tests/htmlcov/
-tests/shell/coverage/
 .pytest_cache/
-.benchmarks/
-.coverage
 
-# Build artifacts
-*.egg-info/
-dist/
-build/
+# Test logs
+tests/logs/
 
-# Debian package build (generated under debian/)
-debian/.debhelper/
-debian/debhelper-build-stamp
-debian/files
-debian/*.substvars
-debian/*.debhelper
-debian/*.debhelper.log
-debian/hw-management/
-debian/hw-management-bmc/
-
-# IDE and editor files
-.vscode/
-.idea/
-.cursor/plans/
-*.swp
-*.swo
-*~
-
-# CI/CD tools
+# CI/Build artifacts
 .ngci_tool/
-
-# Temporary files
-*.log
-*.bak
-*.tmp
+build/
+tests/.venv/

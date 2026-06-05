@@ -211,17 +211,7 @@ class ThermalUpdaterIntegrationTest(unittest.TestCase):
         }
 
     def _check_files_have_default_values(self, files, timeout=5):
-        """
-        Check if files have default values when DVS/SDK is not running.
-
-        Expected behavior (from code review):
-        - ASIC files: EMPTY (SDK not loaded, asic_temp_reset writes empty strings)
-        - Module files: "0" (default values when module presence unknown)
-
-        This matches the actual hw_management_thermal_updater.py behavior:
-        - asic_temp_populate: Resets to empty on SDK read error
-        - module_temp_populate: Writes "0" as default when can't read module presence
-        """
+        """Check if files contain default values (0 or empty) when DVS is not running"""
         start_time = time.time()
 
         while time.time() - start_time < timeout:
@@ -232,7 +222,7 @@ class ThermalUpdaterIntegrationTest(unittest.TestCase):
                 try:
                     with open(filepath, 'r') as f:
                         content = f.read().strip()
-                        # Valid default values: empty (ASIC) or "0" (modules)
+                        # Valid default values: empty, "0", or empty string
                         if content and content != "0":
                             all_default = False
                             break
@@ -373,8 +363,7 @@ class ThermalUpdaterIntegrationTest(unittest.TestCase):
         Steps:
         1. Clean all thermal files
         2. Start thermal updater
-        3. Verify files have default values when DVS is not running
-           (ASIC files: empty, Module files: "0")
+        3. Verify files are created with default values (0 or empty) when DVS is not running
         """
         print("\n" + "-" * 70)
         print("TEST 1: Thermal files have default values without DVS")
@@ -408,7 +397,7 @@ class ThermalUpdaterIntegrationTest(unittest.TestCase):
         files_default = self._check_files_have_default_values(all_files, timeout=self.FILE_EMPTY_TIMEOUT)
         self.assertTrue(
             files_default,
-            "Thermal files should have default values when DVS is not running (ASIC: empty, Modules: 0)"
+            "Thermal files should have default values (0 or empty) when DVS is not running"
         )
 
         print("PASS: All thermal files have default values without DVS")
@@ -448,7 +437,7 @@ class ThermalUpdaterIntegrationTest(unittest.TestCase):
         self.assertGreater(len(all_files), 0, "No thermal files found")
 
         files_default = self._check_files_have_default_values(all_files, timeout=self.FILE_EMPTY_TIMEOUT)
-        self.assertTrue(files_default, "Files should have default values before DVS starts (ASIC: empty, Modules: 0)")
+        self.assertTrue(files_default, "Files should have default values before DVS starts")
         print("Confirmed: Files have default values before DVS")
 
         # Step 4: Start DVS
@@ -520,7 +509,7 @@ class ThermalUpdaterIntegrationTest(unittest.TestCase):
 
         self.assertTrue(
             files_default,
-            "Thermal files should have default values after DVS stops (ASIC: empty, Modules: 0)"
+            "Thermal files should return to default values (0 or empty) after DVS stops"
         )
         print("PASS: All thermal files returned to default values after DVS stop")
 

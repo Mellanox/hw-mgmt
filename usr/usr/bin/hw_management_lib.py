@@ -1,6 +1,6 @@
-##################################################################################
+########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -38,90 +38,9 @@ from logging.handlers import RotatingFileHandler
 import syslog
 import threading
 import time
-import json
-import tempfile
-from dataclasses import dataclass
-from typing import Any, Dict, Set, Optional, Hashable
 
-
-def to_int(value: Any, default: int = 0) -> int:
-    """
-    @summary:
-        Convert value to integer
-    @param value: value to convert
-    @param default: default value if conversion fails
-    @return: integer value
-    """
-    try:
-        return int(str(value).strip())
-    except (ValueError, TypeError):
-        return default
 
 # ----------------------------------------------------------------------
-
-
-def read_dmi_data(dmi_field_name):
-    """
-    @summary:
-        Read DMI data from file
-    @param dmi_field_name: name of DMI field
-    @return: value of DMI field
-    Only allows fields: system_type, board_name, product_version, product_sku
-    """
-    allowed_fields = {"system_type", "board_name", "product_version", "product_sku"}
-    if dmi_field_name not in allowed_fields:
-        return ""
-    dmi_file_name = f"/sys/devices/virtual/dmi/id/{dmi_field_name}"
-    if os.path.isfile(dmi_file_name):
-        with open(dmi_file_name, "r") as f:
-            return f.read().strip()
-    return ""
-
-# ----------------------------------------------------------------------
-
-
-def atomic_file_write(file_name, value):
-    """
-    @summary:
-        Write value to file atomically
-    @param file_name: name of file
-    @param value: value to write
-    """
-    fd, f_path_tmp = tempfile.mkstemp(dir=os.path.dirname(file_name), prefix='.tmp_')
-    try:
-        with os.fdopen(fd, 'w', encoding="utf-8") as f:
-            f.write("{}".format(value))
-        os.replace(f_path_tmp, file_name)  # Atomic on POSIX
-    except Exception as e:
-        os.unlink(f_path_tmp)  # Cleanup on failure
-        raise Exception(f"Error writing {file_name}: {e}")
-
-# ----------------------------------------------------------------------
-
-
-def exit_wait(exit_event, timeout, chunk_sec=1.0):
-    """
-    @summary:
-        Wait up to timeout seconds in short chunks for graceful shutdown visibility.
-    @param exit_event: threading.Event cleared on run, set by signal handler
-    @param timeout: Total seconds to wait (may end early if exit_event is set)
-    @param chunk_sec: Maximum duration of a single wait; smaller reacts faster to signals
-
-    The main-thread Python signal handler does not run while blocked in a single
-    long exit_event.wait(); chunking returns to the interpreter so SIGTERM/SIGINT
-    handlers can run and systemd stop timeouts are respected.
-    """
-    if timeout <= 0:
-        return
-    elapsed = 0.0
-    while elapsed < timeout and not exit_event.is_set():
-        wait_time = min(chunk_sec, timeout - elapsed)
-        exit_event.wait(wait_time)
-        elapsed += wait_time
-
-# ----------------------------------------------------------------------
-
-
 def current_milli_time():
     """
     @summary:
@@ -129,15 +48,6 @@ def current_milli_time():
     @return: int value time in milliseconds
     """
     return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
-
-
-@dataclass
-class _MsgState:
-    first_seen: float
-    last_seen: float
-    msg: str
-    max_repeat: int
-    seen_count: int = 0  # total times error was seen
 
 
 class HW_Mgmt_Logger:
@@ -175,9 +85,6 @@ class HW_Mgmt_Logger:
     DEBUG = logging.DEBUG
     NOTSET = logging.NOTSET
 
-    VALID_LOG_LEVELS = [DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, NOTSET]
-    VALID_SYSLOG_LEVELS = [DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, NOTSET]
-
     LOG_FACILITY_DAEMON = syslog.LOG_DAEMON
     LOG_FACILITY_USER = syslog.LOG_USER
     LOG_OPTION_NDELAY = syslog.LOG_NDELAY
@@ -196,9 +103,6 @@ class HW_Mgmt_Logger:
 
     LOG_REPEAT_UNLIMITED = 4294836225
 
-    # Logging error alerting interval (in seconds)
-    LOGGING_ERROR_ALERT_INTERVAL = 300  # Re-alert every 5 minutes (300 seconds)
-
     def __init__(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL, log_repeat=LOG_REPEAT_UNLIMITED, syslog_repeat=LOG_REPEAT_UNLIMITED):
         """
         Initialize the Hardware Management Logger.
@@ -207,8 +111,8 @@ class HW_Mgmt_Logger:
         @param log_file: Path to log file, "stdout", "stderr", or None for no file logging
         @param log_level: Minimum level for file logging (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
         @param syslog_level: Minimum level for syslog logging, or None/0 to disable syslog
-        @param log_repeat: Default max repeat count for file messages
-        @param syslog_repeat: Default max repeat count for syslog messages
+        @param log_repeat: Default max repeat count for file messages (0 = unlimited)
+        @param syslog_repeat: Default max repeat count for syslog messages (0 = unlimited)
         """
         # Configure global logging only once (thread-safe)
         if not logging.getLogger().handlers:
@@ -225,10 +129,6 @@ class HW_Mgmt_Logger:
         self._syslog = None
         self._syslog_min_log_priority = self.CRITICAL  # Initialize to high level
 
-        # Track logging errors to avoid spam but re-alert periodically
-        self._logging_error_alerted = False
-        self._logging_error_last_alert_time = 0
-
         # Validate repeat parameters
         if log_repeat < 0:
             raise ValueError(f"log_repeat must be >= 0, got {log_repeat}")
@@ -237,10 +137,9 @@ class HW_Mgmt_Logger:
 
         self.log_repeat = log_repeat
         self.syslog_repeat = syslog_repeat
-        self.syslog_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to syslog
-        self.log_hash: Dict[Hashable, _MsgState] = {}    # hash array of the messages which was logged to log
+        self.syslog_hash = {}    # hash array of the messages which was logged to syslog
+        self.log_hash = {}    # hash array of the messages which was logged to log
         self._lock = threading.Lock()  # Thread safety for all logger operations
-        self.log_hash_max_size = self.MAX_MSG_HASH_SIZE
 
         self._set_param(ident, log_file, log_level, syslog_level)
         for level in ("debug", "info", "notice", "warn", "warning", "error", "critical"):
@@ -275,8 +174,8 @@ class HW_Mgmt_Logger:
 
             @param msg: Message text to log
             @param id: Optional unique identifier for message grouping and repeat collapsing
-            @param repeat: Maximum times to repeat message to syslog
-            @param log_repeat: Maximum times to repeat message to file
+            @param repeat: Maximum times to repeat message to syslog (0 = unlimited)
+            @param log_repeat: Maximum times to repeat message to file (0 = unlimited)
             """
             self.log_handler(level_map[level], msg, id, log_repeat, repeat)
         return log_method
@@ -341,84 +240,6 @@ class HW_Mgmt_Logger:
         """
         return self._set_param(ident=ident, log_file=log_file, log_level=log_level, syslog_level=syslog_level)
 
-    def set_loglevel(self, log_level):
-        """
-        @summary:
-            Convenience method to set only the log level dynamically.
-            Used by services to adjust verbosity at runtime.
-        @param log_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
-        """
-        if log_level in self.VALID_LOG_LEVELS:
-            self.logger.setLevel(log_level)
-
-    def set_syslog_level(self, syslog_level):
-        """
-        @summary:
-            Convenience method to set only the syslog level dynamically.
-            Used by services to adjust verbosity at runtime.
-        @param syslog_level: log level (DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL)
-        """
-        if syslog_level in self.VALID_SYSLOG_LEVELS:
-            self._syslog_min_log_priority = syslog_level
-
-    def set_log_repeat(self, log_repeat):
-        """
-        @summary:
-            Set default log repeat. this value will be used in case of
-            log_repeat is not set in log_handler call.
-        @param log_repeat: log repeat
-        """
-        if isinstance(log_repeat, int) and log_repeat >= 0:
-            self.log_repeat = log_repeat
-
-    def set_syslog_repeat(self, syslog_repeat):
-        """
-        @summary:
-            Set default syslog repeat. this value will be used in case of
-            syslog_repeat is not set in log_handler call.
-        @param syslog_repeat: syslog repeat
-        """
-        if isinstance(syslog_repeat, int) and syslog_repeat >= 0:
-            self.syslog_repeat = syslog_repeat
-
-    def set_log_hash_max_size(self, log_hash_max_size):
-        """
-        @summary:
-            Set max size of log hash.
-        @param log_hash_max_size: max size of log hash
-        """
-        if isinstance(log_hash_max_size, int) and log_hash_max_size >= 0:
-            self.log_hash_max_size = log_hash_max_size
-
-    def set_log_rotation_size(self, file_size=None, file_count=None):
-        """
-        @summary:
-            Set log rotation size.
-        @param file_size: file size
-        @param file_count: file count
-        """
-
-        file_size = to_int(file_size)
-        file_count = to_int(file_count)
-        if file_size == 0:
-            file_size = self.MAX_LOG_FILE_SIZE
-        if file_count == 0:
-            file_count = self.MAX_LOG_FILE_BACKUP_COUNT
-
-        handler_list = self.logger.handlers[:]
-        for handler in handler_list:
-            if isinstance(handler, RotatingFileHandler):
-                prev_bytes = handler.maxBytes
-                prev_count = handler.backupCount
-                handler.maxBytes = file_size
-                handler.backupCount = file_count
-                # Rollover only when limits change. Unconditional doRollover() at
-                # startup rotated a fresh log and wasted a backup slot. When limits
-                # do change, rollover still applies so a log oversized vs the new cap
-                # from a prior config is split correctly.
-                if handler.maxBytes != prev_bytes or handler.backupCount != prev_count:
-                    handler.doRollover()
-
     def _set_param(self, ident=None, log_file=None, log_level=INFO, syslog_level=CRITICAL):
         """
         @summary:
@@ -433,7 +254,7 @@ class HW_Mgmt_Logger:
             raise ValueError("log_file must be a string")
 
         # Validate log levels
-        valid_levels = self.VALID_LOG_LEVELS
+        valid_levels = [self.DEBUG, self.INFO, self.NOTICE, self.WARNING, self.ERROR, self.CRITICAL, self.NOTSET]
         if log_level not in valid_levels:
             raise ValueError(f"Invalid log_level: {log_level}. Must be one of {valid_levels}")
         if syslog_level and syslog_level not in valid_levels:
@@ -462,51 +283,6 @@ class HW_Mgmt_Logger:
                                                 backupCount=self.MAX_LOG_FILE_BACKUP_COUNT)
 
             logger_fh.setFormatter(formatter)
-
-            # Reuse original handleError but add timed suppression to avoid spam
-            # Note: Python's default handleError prints traceback to stderr but does NOT raise exception
-            # This means the application will NOT crash even with original handleError
-            original_handle_error = logger_fh.handleError
-
-            def timed_error_handler(record):
-                """Wrap original handleError with time-based suppression."""
-                current_time = time.clock_gettime(time.CLOCK_MONOTONIC)
-
-                # Thread-safe check and update of error state
-                with self._lock:
-                    # Check if enough time has passed since last alert to re-alert
-                    time_since_last_alert = current_time - self._logging_error_last_alert_time
-                    if self._logging_error_alerted and time_since_last_alert < self.LOGGING_ERROR_ALERT_INTERVAL:
-                        return  # Already alerted recently, suppress the error output
-
-                    # Determine if this is the first error (send to syslog) or a retry (no syslog)
-                    is_first_error = not self._logging_error_alerted
-
-                    # Update alert status
-                    self._logging_error_alerted = True
-                    self._logging_error_last_alert_time = current_time
-
-                # Call the original handleError (prints traceback but doesn't crash app)
-                # Done outside lock to avoid holding lock during I/O
-                original_handle_error(record)
-
-                # Add syslog alert ONLY for the first error occurrence
-                if is_first_error:
-                    try:
-                        exc_type, exc_value, _ = sys.exc_info()
-                        if exc_type and self._syslog:
-                            # Create concise message: just error type and errno
-                            if exc_type == OSError and hasattr(exc_value, 'errno'):
-                                msg = "Logging error: OSError errno {}".format(exc_value.errno)
-                            else:
-                                msg = "Logging error: {}".format(exc_type.__name__)
-
-                            self._syslog.syslog(syslog.LOG_ERR, msg)
-
-                    except Exception:
-                        pass  # Don't let syslog errors break the handler
-
-            logger_fh.handleError = timed_error_handler
             self.logger.addHandler(logger_fh)
 
         if syslog_level:
@@ -647,16 +423,16 @@ class HW_Mgmt_Logger:
             error_msg = log_msg if log_msg else syslog_msg
             print("Error logging message: {} - {}".format(error_msg, e))
 
-    def _msg_hash_garbage_collect(self, log_hash):
+    def _hash_garbage_collect(self, log_hash):
         """
         @summary:
-            Remove from log_hash all messages older than MSG_HASH_TIMEOUT milliseconds or if hash is too big
+            Remove from log_hash all messages older than 60 minutes or if hash is too big
         """
         hash_size = len(log_hash)
 
-        # don't clean up if hash size < log_hash_max_size
-        if hash_size > self.log_hash_max_size:
-            # some major issue. We never expect to have more than log_hash_max_size messages in hash.
+        # don't clean up if hash size < MAX_MSG_TIMEOUT_HASH_SIZE and < MAX_MSG_HASH_SIZE
+        if hash_size > self.MAX_MSG_HASH_SIZE:
+            # some major issue. We never expect to have more than MAX_MSG_HASH_SIZE messages in hash.
             # Use print instead of logger to avoid potential circular logging issues
             print("hash_garbage_collect: too many ({}) messages in hash. Remove all messages.".format(hash_size))
             log_hash.clear()  # Clear the actual dictionary, not reassign local variable
@@ -664,17 +440,17 @@ class HW_Mgmt_Logger:
 
         if hash_size > self.MAX_MSG_TIMEOUT_HASH_SIZE:
             # some messages were not cleaned up.
-            # remove messages older than MSG_HASH_TIMEOUT milliseconds
-            now = current_milli_time()
-            cutoff_time = now - self.MSG_HASH_TIMEOUT
+            # remove messages older than MSG_HASH_TIMEOUT seconds
+            current_time = current_milli_time()
+            cutoff_time = current_time - self.MSG_HASH_TIMEOUT
 
             # More efficient: build list of keys to delete and batch delete
-            expired_keys = [key for key, msg_state in log_hash.items() if msg_state.last_seen < cutoff_time]
+            expired_keys = [key for key, value in log_hash.items() if value["ts"] < cutoff_time]
 
             for key in expired_keys:
-                msg_state = log_hash.pop(key)
                 # Use print instead of logger to avoid potential circular logging issues
-                print("hash_garbage_collect: removed message \"{}\" last seen at {} from hash".format(msg_state.msg, msg_state.last_seen))
+                print("hash_garbage_collect: remove message \"{}\" from hash".format(log_hash[key]["msg"]))
+                del log_hash[key]
 
     def _push_syslog(self, msg="", id=None, repeat=None):
         with self._lock:
@@ -721,39 +497,31 @@ class HW_Mgmt_Logger:
             id_hash = None
 
         # msg is not empty
-        now = current_milli_time()
         if msg:
             if repeat == 0:
                 log_emit = False
             else:
                 if id_hash:
-                    msg_state = log_hash.get(id_hash)
-                    if msg_state:
-                        msg_state.last_seen = now
-                        msg_state.seen_count += 1
+                    if id_hash in log_hash:
+                        log_hash[id_hash]["count"] += 1
                     else:
-                        msg_state = _MsgState(
-                            first_seen=now,
-                            last_seen=now,
-                            seen_count=1,
-                            msg=msg,
-                            max_repeat=repeat,
-                        )
-                        log_hash[id_hash] = msg_state
-                        self._msg_hash_garbage_collect(log_hash)
-                    if msg_state.seen_count <= msg_state.max_repeat:
+                        self._hash_garbage_collect(log_hash)
+                        log_hash[id_hash] = {"count": 1, "msg": msg, "ts": current_milli_time(), "repeat": repeat}
+                    log_hash[id_hash]["ts"] = current_milli_time()
+                    if log_hash[id_hash]["count"] <= repeat:
                         log_emit = True
                 else:
                     log_emit = True
         # msg is empty. print finalize message to log if id_hash is defined
         else:
             if id_hash:
-                msg_state = log_hash.pop(id_hash, None)
-                if msg_state:
+                if id_hash in log_hash:
                     # new message not defined - use message from hash
+                    msg = log_hash[id_hash]["msg"]
                     # add "finalization" mark to message
-                    duration = int((now - msg_state.first_seen) / 1000)  # Convert milliseconds to seconds
-                    msg = "{} (repeat={}, duration={}s)".format(msg_state.msg, msg_state.seen_count, duration)
+                    msg = "message repeated {} times: [ {} ] and stopped".format(log_hash[id_hash]["count"], msg)
+                    # remove message from hash
+                    del log_hash[id_hash]
                     log_emit = True
 
         return msg, log_emit
@@ -795,13 +563,13 @@ class RepeatedTimer:
             Run function in separate thread
         """
         while not self._stop_event.is_set():
-            start = time.clock_gettime(time.CLOCK_MONOTONIC)
+            start = time.time()
             try:
                 self.func()
             except Exception as e:
                 print(f"Error in periodic task: {e}")
             # Sleep remaining time if func took less than interval
-            elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
+            elapsed = time.time() - start
             sleep_time = max(0, self.interval - elapsed)
             if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately
@@ -819,9 +587,6 @@ class RepeatedTimer:
 
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, daemon=True)
-        # Set thread name for debugging
-        thread_name = "RepeatedTimer[{}]{:x}".format(self.func.__name__, id(self))
-        self._thread.name = thread_name
         self._thread.start()
 
     def stop(self):
@@ -852,348 +617,3 @@ class RepeatedTimer:
             Return True if the timer is currently running
         """
         return self._thread is not None and self._thread.is_alive()
-
-# ----------------------------------------------------------------------
-# Memory analysis tools
-# ----------------------------------------------------------------------
-
-
-class ObjectSnapshot:
-    """Represents a snapshot of object sizes in memory."""
-
-    def __init__(self, max_depth: int = 3):
-        """
-        Initialize a new snapshot collector.
-
-        Args:
-            max_depth: Maximum depth for recursive object traversal (default: 3)
-        """
-        self.max_depth = max_depth
-        self.snapshot: Dict[int, Dict[str, Any]] = {}
-
-    def collect_snapshot(self, obj: Any, name: str = "root") -> Dict[int, Dict[str, Any]]:
-        """
-        Scan an object and collect sizes of all child objects up to max_depth.
-
-        Args:
-            obj: The object to scan
-            name: Name/label for the root object
-
-        Returns:
-            Dictionary mapping object IDs to their metadata:
-            {
-                obj_id: {
-                    'size': size_in_bytes,
-                    'type': type_name,
-                    'name': object_name,
-                    'depth': depth_level,
-                    'refcount': reference_count
-                }
-            }
-        """
-        self.snapshot = {}
-        visited: Set[int] = set()
-
-        self._scan_object(obj, name, 0, visited)
-
-        return self.snapshot.copy()
-
-    def _scan_object(self, obj: Any, name: str, depth: int, visited: Set[int]) -> None:
-        """
-        Recursively scan an object and its children.
-
-        Args:
-            obj: Current object to scan
-            name: Name/label for the object
-            depth: Current depth level
-            visited: Set of already visited object IDs to avoid cycles
-        """
-        # Stop if we've exceeded max depth
-        if depth > self.max_depth:
-            return
-
-        obj_id = id(obj)
-
-        # Skip if already visited (avoid cycles)
-        if obj_id in visited:
-            return
-
-        visited.add(obj_id)
-
-        # Record this object's information
-        try:
-            obj_size = sys.getsizeof(obj)
-            obj_type = type(obj).__name__
-            obj_refcount = sys.getrefcount(obj) - 1  # Subtract 1 for the getrefcount call itself
-
-            self.snapshot[obj_id] = {
-                'size': obj_size,
-                'type': obj_type,
-                'name': name,
-                'depth': depth,
-                'refcount': obj_refcount
-            }
-        except Exception as e:
-            # Some objects may not support getsizeof
-            self.snapshot[obj_id] = {
-                'size': 0,
-                'type': type(obj).__name__,
-                'name': name,
-                'depth': depth,
-                'refcount': 0,
-                'error': str(e)
-            }
-            return
-
-        # Don't traverse further for certain types
-        if depth >= self.max_depth:
-            return
-
-        # Traverse child objects based on type
-        try:
-            if isinstance(obj, dict):
-                for key, value in obj.items():
-                    self._scan_object(key, f"{name}[key:{key!r}]", depth + 1, visited)
-                    self._scan_object(value, f"{name}[{key!r}]", depth + 1, visited)
-
-            elif isinstance(obj, (list, tuple, set, frozenset)):
-                for idx, item in enumerate(obj):
-                    self._scan_object(item, f"{name}[{idx}]", depth + 1, visited)
-
-            elif hasattr(obj, '__dict__'):
-                # For custom objects, scan their __dict__
-                for attr_name, attr_value in obj.__dict__.items():
-                    self._scan_object(attr_value, f"{name}.{attr_name}", depth + 1, visited)
-
-            elif hasattr(obj, '__slots__'):
-                # For objects using __slots__
-                for slot in obj.__slots__:
-                    if hasattr(obj, slot):
-                        attr_value = getattr(obj, slot)
-                        self._scan_object(attr_value, f"{name}.{slot}", depth + 1, visited)
-
-        except Exception:
-            # Skip objects that can't be traversed
-            pass
-
-
-def compare_snapshots(snapshot1: Dict[int, Dict[str, Any]],
-                      snapshot2: Dict[int, Dict[str, Any]],
-                      show_new: bool = True,
-                      show_deleted: bool = False,
-                      min_growth_bytes: int = 0) -> Dict[str, Any]:
-    """
-    Compare two snapshots and identify growing, shrinking, new, and deleted objects.
-
-    Args:
-        snapshot1: First (earlier) snapshot
-        snapshot2: Second (later) snapshot
-        show_new: Include newly created objects (default: True)
-        show_deleted: Include deleted objects (default: False)
-        min_growth_bytes: Minimum size growth to report (default: 0)
-
-    Returns:
-        Dictionary containing:
-        {
-            'growing': List of objects that grew in size
-            'shrinking': List of objects that shrank in size
-            'new': List of newly created objects
-            'deleted': List of deleted objects
-            'total_growth': Total memory growth in bytes
-            'total_shrink': Total memory shrinkage in bytes
-        }
-    """
-    result = {
-        'growing': [],
-        'shrinking': [],
-        'new': [],
-        'deleted': [],
-        'total_growth': 0,
-        'total_shrink': 0
-    }
-
-    # Find growing and shrinking objects
-    for obj_id, info1 in snapshot1.items():
-        if obj_id in snapshot2:
-            info2 = snapshot2[obj_id]
-            size_diff = info2['size'] - info1['size']
-
-            if size_diff > min_growth_bytes:
-                result['growing'].append({
-                    'id': obj_id,
-                    'name': info2['name'],
-                    'type': info2['type'],
-                    'old_size': info1['size'],
-                    'new_size': info2['size'],
-                    'growth': size_diff,
-                    'depth': info2['depth']
-                })
-                result['total_growth'] += size_diff
-
-            elif size_diff < 0:
-                result['shrinking'].append({
-                    'id': obj_id,
-                    'name': info2['name'],
-                    'type': info2['type'],
-                    'old_size': info1['size'],
-                    'new_size': info2['size'],
-                    'shrink': abs(size_diff),
-                    'depth': info2['depth']
-                })
-                result['total_shrink'] += abs(size_diff)
-
-        elif show_deleted:
-            # Object exists in snapshot1 but not in snapshot2 (deleted)
-            result['deleted'].append({
-                'id': obj_id,
-                'name': info1['name'],
-                'type': info1['type'],
-                'size': info1['size'],
-                'depth': info1['depth']
-            })
-
-    # Find new objects
-    if show_new:
-        for obj_id, info2 in snapshot2.items():
-            if obj_id not in snapshot1:
-                result['new'].append({
-                    'id': obj_id,
-                    'name': info2['name'],
-                    'type': info2['type'],
-                    'size': info2['size'],
-                    'depth': info2['depth']
-                })
-
-    # Sort by size for easier analysis
-    result['growing'].sort(key=lambda x: x['growth'], reverse=True)
-    result['shrinking'].sort(key=lambda x: x['shrink'], reverse=True)
-    result['new'].sort(key=lambda x: x['size'], reverse=True)
-    result['deleted'].sort(key=lambda x: x['size'], reverse=True)
-
-    return result
-
-
-def print_comparison(comparison: Dict[str, Any],
-                     max_items: int = 20,
-                     verbose: bool = False,
-                     output_format: str = "text",
-                     indent: Optional[int] = 2) -> Optional[str]:
-    """
-    Print or return the comparison results.
-
-    Args:
-        comparison: Result from compare_snapshots()
-        max_items: Maximum number of items to show per category (default: 20)
-        verbose: Show detailed information (default: False)
-        output_format: Output format - "text" or "json" (default: "text")
-        indent: JSON indentation level when output_format is "json" (default: 2, None for compact)
-
-    Returns:
-        JSON string if output_format is "json", None otherwise
-    """
-    if output_format == "json":
-        return _format_comparison_json(comparison, max_items, verbose, indent)
-    else:
-        _format_comparison_text(comparison, max_items, verbose)
-        return None
-
-
-def _format_comparison_json(comparison: Dict[str, Any],
-                            max_items: int,
-                            verbose: bool,
-                            indent: Optional[int]) -> str:
-    """
-    Format comparison results as JSON.
-
-    Args:
-        comparison: Result from compare_snapshots()
-        max_items: Maximum number of items to show per category
-        verbose: Include all details
-        indent: JSON indentation level (None for compact)
-
-    Returns:
-        JSON string representation of the comparison
-    """
-    output = {
-        "summary": {
-            "total_growth_bytes": comparison['total_growth'],
-            "total_growth_kb": round(comparison['total_growth'] / 1024, 2),
-            "total_shrink_bytes": comparison['total_shrink'],
-            "total_shrink_kb": round(comparison['total_shrink'] / 1024, 2),
-            "growing_objects_count": len(comparison['growing']),
-            "shrinking_objects_count": len(comparison['shrinking']),
-            "new_objects_count": len(comparison['new']),
-            "deleted_objects_count": len(comparison['deleted'])
-        },
-        "growing_objects": comparison['growing'][:max_items],
-        "new_objects": comparison['new'][:max_items]
-    }
-
-    if verbose:
-        output["shrinking_objects"] = comparison['shrinking'][:max_items]
-        output["deleted_objects"] = comparison['deleted'][:max_items]
-
-    json_str = json.dumps(output, indent=indent)
-    print(json_str)
-    return json_str
-
-
-def _format_comparison_text(comparison: Dict[str, Any],
-                            max_items: int,
-                            verbose: bool) -> None:
-    """
-    Format comparison results as human-readable text.
-
-    Args:
-        comparison: Result from compare_snapshots()
-        max_items: Maximum number of items to show per category
-        verbose: Show detailed information
-    """
-    print("=" * 80)
-    print("MEMORY SNAPSHOT COMPARISON")
-    print("=" * 80)
-
-    # Summary
-    print(f"\nSUMMARY:")
-    print(f"  Total Growth:    {comparison['total_growth']:,} bytes ({comparison['total_growth'] / 1024:.2f} KB)")
-    print(f"  Total Shrink:    {comparison['total_shrink']:,} bytes ({comparison['total_shrink'] / 1024:.2f} KB)")
-    print(f"  Growing Objects: {len(comparison['growing'])}")
-    print(f"  Shrinking Objects: {len(comparison['shrinking'])}")
-    print(f"  New Objects:     {len(comparison['new'])}")
-    print(f"  Deleted Objects: {len(comparison['deleted'])}")
-
-    # Growing objects
-    if comparison['growing']:
-        print(f"\nGROWING OBJECTS (Top {min(max_items, len(comparison['growing']))}):")
-        print(f"{'Name':<40} {'Type':<20} {'Old Size':>12} {'New Size':>12} {'Growth':>12}")
-        print("-" * 100)
-
-        for item in comparison['growing'][:max_items]:
-            name = item['name'][:37] + "..." if len(item['name']) > 40 else item['name']
-            print(f"{name:<40} {item['type']:<20} {item['old_size']:>12,} {item['new_size']:>12,} {item['growth']:>12,}")
-            if verbose:
-                print(f"  +-- ID: {item['id']}, Depth: {item['depth']}")
-
-    # New objects
-    if comparison['new']:
-        print(f"\nNEW OBJECTS (Top {min(max_items, len(comparison['new']))}):")
-        print(f"{'Name':<40} {'Type':<20} {'Size':>12}")
-        print("-" * 75)
-
-        for item in comparison['new'][:max_items]:
-            name = item['name'][:37] + "..." if len(item['name']) > 40 else item['name']
-            print(f"{name:<40} {item['type']:<20} {item['size']:>12,}")
-            if verbose:
-                print(f"  +-- ID: {item['id']}, Depth: {item['depth']}")
-
-    # Shrinking objects
-    if comparison['shrinking'] and verbose:
-        print(f"\nSHRINKING OBJECTS (Top {min(max_items, len(comparison['shrinking']))}):")
-        print(f"{'Name':<40} {'Type':<20} {'Old Size':>12} {'New Size':>12} {'Shrink':>12}")
-        print("-" * 100)
-
-        for item in comparison['shrinking'][:max_items]:
-            name = item['name'][:37] + "..." if len(item['name']) > 40 else item['name']
-            print(f"{name:<40} {item['type']:<20} {item['old_size']:>12,} {item['new_size']:>12,} {item['shrink']:>12,}")
-
-    print("\n" + "=" * 80)

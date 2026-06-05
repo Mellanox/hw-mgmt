@@ -1,6 +1,6 @@
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -45,9 +45,7 @@ import time
 import re
 import shlex
 import os
-import sys
 import base64
-import fcntl
 
 # TBD:
 # Support token persistency later on and remove RedfishClient.__password
@@ -381,7 +379,7 @@ class RedfishClient:
 
 '''
 BMCAccessor encapsulates BMC details such as IP address, credential management.
-It also acts as wrapper of RedfishClient. For each member function
+It also acts as wrapper of RedfishClient. For each memmber function
 RedfishClient.redfish_api_func(), there will be a wrapper member function
 BMCAccessor.func() implicitly defined.
 '''
@@ -389,6 +387,7 @@ BMCAccessor.func() implicitly defined.
 
 class BMCAccessor(object):
     CURL_PATH = '/usr/bin/curl'
+    BMC_INTERNAL_IP_ADDR = '10.0.1.1'
     BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
     BMC_NOS_ACCOUNT = 'yormnAnb'  # used for communication between NOS and BMC
@@ -396,11 +395,6 @@ class BMCAccessor(object):
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
-    # Advisory lock for get_login_password() TPM usage (legacy and modern path).
-    # Serializes access when called async from multiple processes / permission levels.
-    LOCK_DIR = "/run/lock"
-    LOCK_FILE = "hw_management_get_login_password.lock"
-    FLOCK_TIMEOUT_SEC = 10
     LEGACY_PLATFORM_PATTERN = r'N5\d{3}_LD'
 
     def __init__(self):
@@ -412,21 +406,18 @@ class BMCAccessor(object):
                                        self.get_login_password())
 
     def get_ip_addr(self):
-        # Return BMC IP address. get usb0 IP address and replace the last
-        # byte with '1'.
-        # The assumption is that BMC IP address is always X.X.X.1.
-        cmd = "/usr/sbin/ip -o -4 addr list usb0 | awk -F ' *|/' '{print $4}'"
-        result = subprocess.run(cmd,
+        redis_cmd = '/usr/bin/sonic-db-cli ' \
+                    'CONFIG_DB hget "DEVICE_METADATA|localhost" bmc_addr'
+        result = subprocess.run(redis_cmd,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 shell=True,
                                 universal_newlines=True)
 
-        addr = "0.0.0.0"
+        addr = self.BMC_INTERNAL_IP_ADDR
         if result.returncode == 0:
             if len(result.stdout.strip()):
                 addr = result.stdout.strip()
-                addr = '.'.join(addr.split('.')[:-1] + ['1'])
         return addr
 
     def __getattr__(self, name):
@@ -452,74 +443,19 @@ class BMCAccessor(object):
         err_msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
         raise AttributeError(err_msg)
 
-    def _acquire_lock(self, timeout_sec=None):
-        """Acquire advisory lock for TPM usage.
-        Returns lock_fd (int). Caller must release with _release_lock(lock_fd).
-        Waits up to timeout_sec (default: FLOCK_TIMEOUT_SEC).
-        """
-        if timeout_sec is None:
-            timeout_sec = self.FLOCK_TIMEOUT_SEC
-
-        lock_path = os.path.join(self.LOCK_DIR, self.LOCK_FILE)
-        deadline = time.clock_gettime(time.CLOCK_MONOTONIC) + timeout_sec
-        while True:
-            try:
-                lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
-            except OSError as e:
-                raise Exception(f"Cannot create lock file for TPM access: {e}") from e
-            try:
-                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                return lock_fd
-            except BlockingIOError:
-                os.close(lock_fd)
-                if time.clock_gettime(time.CLOCK_MONOTONIC) >= deadline:
-                    raise Exception(
-                        f"Cannot acquire TPM lock within {timeout_sec}s (timeout)"
-                    )
-                time.sleep(0.2)
-            except OSError as e:
-                os.close(lock_fd)
-                raise Exception(f"Cannot acquire TPM lock: {e}") from e
-
-    def _release_lock(self, lock_fd):
-        """Release advisory TPM lock and close fd."""
-        try:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
-        except OSError:
-            pass
-        try:
-            os.close(lock_fd)
-        except OSError:
-            pass
-
     def _handle_legacy_password(self):
-        """Handle legacy password generation for juliet platforms (e.g. N5500_LD)"""
+        """Handle legacy password generation for juliet platforms"""
         pass_len = 13
         attempt = 1
         max_attempts = 100
         max_repeat = int(3 + 0.09 * pass_len)
         hex_data = "1300NVOS-BMC-USER-Const"
-
-        lock_fd = self._acquire_lock()
-        try:
-            return self._handle_legacy_password_impl(
-                pass_len, attempt, max_attempts, max_repeat, hex_data)
-        finally:
-            self._release_lock(lock_fd)
-
-    def _handle_legacy_password_impl(self, pass_len, attempt, max_attempts, max_repeat, hex_data):
-        """Implementation of legacy password generation (called with lock held)."""
         os.makedirs(self.BMC_DIR, exist_ok=True)
         cmd = f'echo "{hex_data}" | xxd -r -p >  {self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}'
-        try:
-            subprocess.run(cmd, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            raise Exception(f"Failed to write hex file: {e}")
+        subprocess.run(cmd, shell=True, check=True)
+
         tpm_command = ["tpm2_createprimary", "-C", "o", "-u", f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
-        try:
-            result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
-        except subprocess.CalledProcessError as e:
-            raise Exception(f"Failed to create primary with hex file: {e}")
+        result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
 
         while attempt <= max_attempts:
             if attempt > 1:
@@ -527,13 +463,7 @@ class BMCAccessor(object):
                 mess = f"Password did not meet criteria; retrying with const: {const}"
                 # print(mess)
                 tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
-                try:
-                    result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
-                except subprocess.CalledProcessError as e:
-                    print(f"[_handle_legacy_password] tpm2_createprimary (stdin, attempt={attempt}) failed: returncode={e.returncode}", file=sys.stderr)
-                    if e.stderr:
-                        print(f"[_handle_legacy_password] stderr: {e.stderr.strip()}", file=sys.stderr)
-                    raise Exception(f"Failed to create primary with stdin: {e}")
+                result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
 
             symcipher_pattern = r"symcipher:\s+([\da-fA-F]+)"
             symcipher_match = re.search(symcipher_pattern, result.stdout)
@@ -587,32 +517,26 @@ class BMCAccessor(object):
             with open('/sys/devices/virtual/dmi/id/product_name') as f:
                 platform_name = f.read().strip()
             if re.match(self.LEGACY_PLATFORM_PATTERN, platform_name.upper()):
-                try:
-                    return self._handle_legacy_password()
-                except Exception as e:
-                    raise Exception(f"Failed to generate a valid password for legacy platform: {e}")
+                return self._handle_legacy_password()
             else:
-                lock_fd = self._acquire_lock()
-                try:
-                    const = "1300NVOS-BMC-USER-Const"
-                    tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
-                    result = subprocess.run(tpm_command, shell=True,
-                                            capture_output=True, check=True,
-                                            text=True).stdout
-                    match = re.search(r"symcipher:\s+([\da-fA-F]+)", result)
-                    if not match:
-                        raise Exception("Symmetric cipher not found in TPM output")
-                    # Extract symcipher and encode to base64
-                    return base64.b64encode(bytes.fromhex(match.group(1))).decode("ascii")
-                finally:
-                    self._release_lock(lock_fd)
-        # Lock is always released by inner finally before we get here.
+                const = "1300NVOS-BMC-USER-Const"
+                tpm_command = f'echo -n "{const}" | tpm2_createprimary -C o -G aes -u -'
+                result = subprocess.run(tpm_command, shell=True,
+                                        capture_output=True, check=True,
+                                        text=True).stdout
+                match = re.search(r"symcipher:\s+([\da-fA-F]+)", result)
+                if not match:
+                    raise Exception("Symmetric cipher not found in TPM output")
+                # Extract symcipher and encode to base64
+                return base64.b64encode(bytes.fromhex(match.group(1))).decode("ascii")
         except subprocess.CalledProcessError as e:
-            raise Exception(f"Failed to communicate with TPM: {e}")
+            # print(f"Error executing TPM command: {e}")
+            raise Exception("Failed to communicate with TPM")
         except (FileNotFoundError, PermissionError) as e:
-            raise Exception(f"No platform name found: {e}")
+            raise Exception("no platform name found")
         except Exception as e:
-            raise Exception(f"Failed to generate a valid password: {e}")
+            # print(f"Error: {e}")
+            raise
 
     def create_user(self, user, password):
         cmd = self.rf_client.build_post_cmd(RedfishClient.REDFISH_URI_ACCOUNTS, {

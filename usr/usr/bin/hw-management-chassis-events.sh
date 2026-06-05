@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,8 +33,8 @@
 #
 
 source hw-management-helpers.sh
-dmi_board_name=$(< "$board_type_file")
-dmi_sku=$(< "$sku_file")
+board_type=$(< $board_type_file)
+sku=$(< $sku_file)
 cpu_type=$(<"$config_path"/cpu_type)
 
 LED_STATE=/usr/bin/hw-management-led-state-conversion.sh
@@ -72,7 +72,7 @@ dpu_folders=("alarm" "config" "environment" "events" "system" "thermal")
 fan_debounce_timeout_ms=2000
 cfl_comex_vcore_out_idx=2
 
-case "$dmi_board_name" in
+case "$board_type" in
 VMOD0014)
 	i2c_bus_max=14
 	psu1_i2c_addr=0x50
@@ -301,7 +301,7 @@ find_eeprom_name()
 	fi
 	i2c_bus_def_off_eeprom_cpu=$(< $i2c_bus_def_off_eeprom_cpu_file)
 	if [ "$bus" -eq "$i2c_bus_def_off_eeprom_vpd" ]; then
-		if [ "$dmi_board_name" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
+		if [ "$board_type" == "VMOD0017" ] && [ "$addr" != "$vpd_i2c_addr" ]; then
 			eeprom_name=ipmi_info
 		else
 			eeprom_name=vpd_info
@@ -310,7 +310,7 @@ find_eeprom_name()
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
 		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		case $dmi_board_name in
+		case $board_type in
 		VMOD0014)
 			if [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ]; then
 				eeprom_name=psu1_info
@@ -329,7 +329,7 @@ find_eeprom_name()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				if [[ $dmi_sku == "HI144"  ||  $dmi_sku == "HI147" ]]; then
+				if [[ $sku == "HI144"  ||  $sku == "HI147" ]]; then
 					eeprom_name=psu2_info
 				else
 					eeprom_name=psu4_info
@@ -395,7 +395,7 @@ find_eeprom_name_on_remove()
 		eeprom_name=cpu_info
 	elif [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ] ||
 		[ "$bus" -eq "$i2c_bus_alt_off_eeprom_psu" ]; then
-		case $dmi_board_name in
+		case $board_type in
 		VMOD0014)
 			if [ "$bus" -eq "$i2c_bus_def_off_eeprom_psu" ]; then
 				eeprom_name=psu1_info
@@ -411,7 +411,7 @@ find_eeprom_name_on_remove()
 			elif [ "$addr" = "$psu3_i2c_addr" ]; then
 				eeprom_name=psu3_info
 			elif [ "$addr" = "$psu4_i2c_addr" ]; then
-				if [[ $dmi_sku == "HI144" || $dmi_sku == "HI147" ]]; then
+				if [[ $sku == "HI144" || $sku == "HI147" ]]; then
 					eeprom_name=psu2_info
 				else
 					eeprom_name=psu4_info
@@ -444,7 +444,7 @@ function asic_cpld_add_handler()
 {
 	local -r ASIC_I2C_PATH="${1}"
 
-	# Verify if CPLD attributes exist
+	# Verify if CPLD attributes are exist
 	if [ -f "$config_path/cpld_port" ]; then
 		local  cpld=$(< $config_path/cpld_port)
 		if [ "$cpld" == "cpld1" ]; then
@@ -456,51 +456,30 @@ function asic_cpld_add_handler()
 	fi
 }
 
-# Set fan direction for a single fan
-#
-# Input parameters:
-# 1 - "$attribute" (fan1, fan2, fan3, fan4)
-# 2 - "$event" (1 - Present, 0 - Removed)
-# Return: None
-#
-# Example:
-# set_fan_direction "fan1" 1 # Set fan1 direction
-# set_fan_direction "fan1" 0 # Remove fan1 direction
 function set_fan_direction()
 {
-	print_function_call "$0" "${FUNCNAME[0]}" "attr:$1 evt:$2 entering..."
 	attribute=$1
 	event=$2
 	case $attribute in
-	
 	fan*)
-		if [ "$event" -eq 0 ]; then
-			echo 2 > "$thermal_path/${attribute}_dir"
+		if [ -f $config_path/fan_dir_eeprom ]; then
 			return
 		fi
-		if [ -f "$config_path/fan_dir_eeprom" ]; then
+		# Check if CPLD fan direction is exists
+		if [ ! -f $system_path/fan_dir ]; then
 			return
 		fi
-		# Check if CPLD fan direction exists
-		if [ ! -f "$system_path/fan_dir" ]; then
-			print_function_call "$0" "${FUNCNAME[0]}" "./system/fan_dir not found"
+		if [[ "$sku" == "HI117" ]]; then
 			return
 		fi
-		if [[ "$dmi_sku" == "HI117" ]]; then
-			return
-		fi
-		local fan_debounce_timer
-		local fan_debounce_counter
-		local fan_dir
-		local fan_dir_old
-		# if $thermal_path / fanN_dir attribute missing - run debounce logic.
-		fan_dir=$(< "$system_path/fan_dir")
 		fan_debounce_counter=0
-		fan_dir_old=-1
+		fan_dir_old=2
 		fan_debounce_timer=$fan_debounce_timeout_ms
+		# debounce timeout for FAN dir. 2 times in a row read same value or delay > fan_debounce_timer.
 		while (("$fan_debounce_timer" > 0)) && (("$fan_debounce_counter" < 2))
 		do
-			if [ "${fan_dir}_" == "${fan_dir_old}_" ];
+			fan_dir=$(< $system_path/fan_dir)
+			if [ $fan_dir -eq $fan_dir_old ];
 			then
 				fan_debounce_counter=$((fan_debounce_counter + 1))
 			else
@@ -509,48 +488,27 @@ function set_fan_direction()
 			fi
 			fan_debounce_timer=$((fan_debounce_timer - 200))
 			sleep 0.2
-			fan_dir=$(< "$system_path/fan_dir")
 		done
-
-		# fanN: N must be a positive integer (1-based); becomes bit (N-1) in fan_dir.
-		fan_index=${attribute#fan}
-		if [ -z "$fan_index" ] || [[ ! "$fan_index" =~ ^[0-9]+$ ]] || [ "$fan_index" -le 0 ]; then
-			return
-		fi
-		fan_index=$((fan_index - 1))
-
-		#  Debounce is not success. Set fan dir as not recognized value "2".
-		if [ ! -z "$fan_debounce_timer" ] && [ "$fan_debounce_timer" -le 0 ]; then
-			fan_direction=2
+		fandirhex=$(printf "%x\n" "$fan_dir")
+		fan_bit_index=$(( ${attribute:3} - 1 ))
+		fan_direction_bit=$(( 0x$fandirhex & (1 << fan_bit_index) ))
+		fan_direction=($fan_direction_bit ? 1 : 0)
+		if [ "$fan_direction_bit" == 0 ]; then
+			fan_direction=0;
 		else
-			# fan_dir is an integer bitfield; one bit per fan direction.
-			fan_direction=$(( (fan_dir >> fan_index) & 1 ))
+			fan_direction=1;
 		fi
-		print_function_call "$0" "${FUNCNAME[0]}" "$1 $2 $3. Debounce timer left: $fan_debounce_timer ms, fan_dir: $fan_dir, fan_index: $fan_index, fan_direction: $fan_direction"
-		echo "$fan_direction" > "$thermal_path/${attribute}_dir"
-		print_function_call "$0" "${FUNCNAME[0]}" "attr:$1 evt:$2 exiting..."
-	;;
+		if [ "$event" == 1 ]; then
+			echo "$fan_direction" > $thermal_path/"${attribute}"_dir
+		else
+			rm -f $thermal_path/"${attribute}"_dir
+		fi
+		;;
 	*)
 		;;
 	esac
 }
 
-# Set fan direction for all fans
-function set_fan_direction_for_all_fans()
-{
-	print_function_call "$0" "${FUNCNAME[0]}" "Starting..."
-	local -r max_tachos=$(<"$config_path"/max_tachos)
-	for ((i=1; i<="$max_tachos"; i+=1)); do
-		if [ -L "${thermal_path}"/fan"${i}"_status ]; then
-			# check if fan status is set
-			status=$(< "${thermal_path}"/fan"${i}"_status)
-			if [ "$status" -eq 1 ]; then
-				set_fan_direction "fan${i}" "$status"
-			fi
-		fi
-	done
-	print_function_call "$0" "${FUNCNAME[0]}" "Finished"
-}
 
 # Get FAN direction based on VPD PN field
 #
@@ -615,7 +573,7 @@ function handle_hotplug_fan_event()
 	local bus=
 	local addr=
 
-	case "$dmi_board_name" in
+	case "$board_type" in
 	VMOD0014)
 		case $attribute in
 		fan1)
@@ -673,27 +631,36 @@ function handle_hotplug_dpu_event()
     fi
 }
 
-# Handle PSU hotplug event.
-# $1 - PSU name (e.g. psu1, psu2, psu3, psu4, psu5, psu6, psu7, psu8)
-# $2 - Event (0 or 1)
 function handle_hotplug_psu_event()
 {
 	local psu_name=$1
 	local event=$2
-	local psu_bus
-	local psu_addr
+	local psu_num
+	local psu_i2c_bus
+	local psu_i2c_addr
 	local psu_is_dummy
 	local dummy_psus_supported=$(< ${config_path}/dummy_psus_supported)
 
-	psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
 	if [ ${dummy_psus_supported} -eq 1 ]; then
+		case ${sku} in
+		HI157)
+			psu_i2c_bus=(4 4 4 4)
+			psu_i2c_addr=(59 58 5b 5a)
+			;;
+		HI158)
+			psu_i2c_bus=(4 4 3 3 3 3 4 4)
+			psu_i2c_addr=(59 58 5b 5a 5d 5c 5e 5f)
+			;;
+		*)
+			;;
+		esac
+
+		psu_name=$(echo ${psu_name} | awk '{print tolower($0)}')
+		psu_num=${psu_name#psu}
+
 		if [ $event -eq 1 ]; then
-			# Bus/addr from set_config_data() in hw-management.sh
-			psu_addr=$(< "${config_path}/${psu_name}_i2c_addr")
-			psu_bus=$(< "${config_path}/${psu_name}_i2c_bus")
-			if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
-				return
-			fi
+			psu_bus=${psu_i2c_bus[$((psu_num-1))]}
+			psu_addr=${psu_i2c_addr[$((psu_num-1))]}
 			psu_is_dummy=1
 			for ((i=0; i<5; i++)); do
 				if [ -d "/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}" ]; then
@@ -830,33 +797,31 @@ function handle_fantray_led_event()
 
 function check_cpld_attrs_num()
 {
-	local cpld_num
-	# Read cpld_num from config (avoid cat, use builtin read)
-	read -r cpld_num < "$config_path/cpld_num" 2>/dev/null || cpld_num=0
+   board=$(cat /sys/devices/virtual/dmi/id/board_name)
+   cpld_num=$(cat $config_path/cpld_num)
+   case "$board" in
+   VMOD0001|VMOD0003)
+       cpld_num=$((cpld_num-1))
+       ;;
+   *)
+       ;;
+   esac
 
-	case "$dmi_board_name" in
-		VMOD0001|VMOD0003)
-			cpld_num=$((cpld_num - 1))
-		;;
-	*)
-		;;
-	esac
-	[ "$cpld_num" -lt 0 ] && cpld_num=0
-	return "$cpld_num"
+   return $cpld_num
 }
 
 function check_cpld_attrs()
 {
-	local attrname="$1"
-	local cpld_num="$2"
-	local take=1 num
+    attrname="$1"
+    cpld_num="$2"
+    take=1
 
-	# Extract digits after "cpld" at start (pure bash, no grep)
-	if [[ "$attrname" =~ ^cpld([0-9]+) ]]; then
-		num="${BASH_REMATCH[1]}"
-		[[ -n "$num" && $num -gt $cpld_num ]] && take=0
-	fi
-	return $take
+    # Extracting the cpld number if the attribute starts with cpld<num>
+    num=`echo $attrname | grep -Po '^(cpld)\K\d+'`
+    # Seeing if the cpld index is valid for the platform
+    [[ ! -z "$num" ]] && [ $num -gt $cpld_num ] && take=0
+
+    return $take
 }
 
 handle_cpld_versions()
@@ -918,7 +883,7 @@ if [ "$1" == "add" ]; then
 			fi
 		fi
 		# ADS1015 used on SN2201 has scale for every input
-		if [ "$dmi_board_name" == "VMOD0014" ]; then
+		if [ "$board_type" == "VMOD0014" ]; then
 			for i in {0..7}; do
 				if [ -f "$3""$4"/in_voltage"$i"_scale ]; then
 					check_n_link "$3""$4"/in_voltage"$i"_scale $environment_path/"$2"_"$iio_name"_voltage_scale_"$i"
@@ -977,20 +942,18 @@ if [ "$1" == "add" ]; then
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
 			else
-				case $dmi_sku in
+				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+				case $sku in
 				HI160)
 					# DPU event, replace output folder.
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
 					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
-					if [ ! -z "$slot_num" ]; then
-						if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
-							environment_path="$hw_management_path"/dpu"$slot_num"/environment
-							alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
-							thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
-						else
-							# Skip other voltmons events, since its not present in DPU.
-							exit 0
-						fi
+					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
+                        			if [ ! -z "$slot_num" ]; then
+						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+                        			fi
 					fi
 					;;
 				*)
@@ -998,7 +961,7 @@ if [ "$1" == "add" ]; then
 				esac
 			fi
 		fi
-		case $dmi_board_name in
+		case $board_type in
 		VMOD0014)
 			# For SN2201 indexes are from 0 to 9.
 			for i in {0..9}; do 
@@ -1019,7 +982,8 @@ if [ "$1" == "add" ]; then
 		*)
 			# TMP workaround until dictionary is implemented.
 			dev_addr=$(echo "$4" | xargs dirname | xargs dirname | xargs basename )
-			if [[ $dmi_sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI132" && "$dev_addr" == "5-0027" ]]; then
 				prefix="voltmon6"
 			fi
 			# Creating links for only temp1 attribute. Skipping temp2 and others
@@ -1162,7 +1126,8 @@ if [ "$1" == "add" ]; then
 			# Default case, nothing to do.
 			;;
 		mlxreg-io.*)
-			if [[ $dmi_sku == "HI126" ]]; then
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI126" ]]; then
 				# Line card event, replace output folder.
 				input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
 				find_linecard_num "$input_bus_num"
@@ -1177,11 +1142,12 @@ if [ "$1" == "add" ]; then
 		esac
 		# Allow insertion of all the attributes, but skip redundant cpld entries.
 		if [ -d "$3""$4" ]; then
-			check_cpld_attrs_num
-			cpld_num=$?
+			local cpld_num
 			for attrpath in "$3""$4"/*; do
 				take=10
 				attrname=$(basename "${attrpath}")
+				check_cpld_attrs_num
+				cpld_num=$?
 				check_cpld_attrs "$attrname" "$cpld_num"
 				take=$?
 				if [ ! -d "$attrpath" ] && [ ! -L "$attrpath" ] &&
@@ -1193,9 +1159,14 @@ if [ "$1" == "add" ]; then
 			done
 			handle_cpld_versions "$cpld_num"
 		fi
-
-		# Set fan direction for all fans.
-		set_fan_direction_for_all_fans
+		for ((i=1; i<=$(<$config_path/max_tachos); i+=1)); do
+			if [ -L $thermal_path/fan"$i"_status ]; then
+				status=$(< $thermal_path/fan"$i"_status)
+				if [ "$status" -eq 1 ]; then
+					set_fan_direction fan"${i}" 1
+				fi
+			fi
+		done
 
 		# Handle linecard.
 		if [ "$linecard" -ne 0 ]; then
@@ -1297,11 +1268,12 @@ if [ "$1" == "add" ]; then
 		fi
 		case $eeprom_name in
 		fan*_info)
-			if [[ $dmi_sku == "HI138" ]] || [[ $dmi_sku == "HI139" ]]; then
+			sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+			if [[ $sku == "HI138" ]] || [[ $sku == "HI139" ]]; then
 				exit 0
 			fi
 			fan_prefix=$(echo $eeprom_name | cut -d_ -f1)
-			if [ "$dmi_board_name" == "VMOD0014" ]; then
+			if [ "$board_type" == "VMOD0014" ]; then
 				hw-management-vpd-parser.py -t FIXED_FIELD_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
 			else
 				hw-management-vpd-parser.py -t MLNX_FAN_VPD -i $eeprom_path/$eeprom_name -o $eeprom_path/"$fan_prefix"_data
@@ -1321,7 +1293,7 @@ if [ "$1" == "add" ]; then
 			hw-management-vpd-parser.py -i "$eeprom_path/$eeprom_name" -o "$eeprom_path"/pdb_data
 			;;
 		cable_cartridge*_eeprom*)
-			if [ "$dmi_board_name" == "VMOD0021" ] || [ "$dmi_board_name" == "VMOD0023" ]; then
+			if [ "$board_type" == "VMOD0021" ] || [ "$board_type" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/"$eeprom_name"_data
 				fi
@@ -1340,14 +1312,12 @@ if [ "$1" == "add" ]; then
 			fi
 			;;
 		swb_info)
-			case "$dmi_board_name" in
-				VMOD0021|VMOD0023|VMOD0025)
+			if [ "$board_type" == "VMOD0021" ] || [ "$board_type" == "VMOD0023" ]; then
 				if command -v ipmi-fru 2>&1 >/dev/null; then
 					ipmi-fru --fru-file="$eeprom_path"/"$eeprom_name" > "$eeprom_path"/swb_data
 				fi
-				;;
-			esac
-			;;
+			fi
+			;;			
 		*)
 			;;
 		esac
@@ -1379,7 +1349,7 @@ if [ "$1" == "add" ]; then
 	fi
 	# Creating dpu folders hierarchy upon dpu udev add event.
 	if [ "$2" == "dpu" ]; then
-		case $dmi_sku in
+		case $sku in
 		HI160)
 			slot_num=$(find_dpu_slot "$3$4")
 			if [ ! -d "$hw_management_path"/dpu"$slot_num" ]; then
@@ -1440,7 +1410,7 @@ elif [ "$1" == "fantray-led-event" ]; then
 	if [ ! -f "${udev_ready}" ]; then
 		exit 0
 	fi
-	case "$dmi_board_name" in
+	case "$board_type" in
 	VMOD0014)
 		handle_fantray_led_event "${2}" "${3}"
 		;;
@@ -1460,7 +1430,7 @@ else
 				environment_path="$hw_management_path"/lc"$linecard_num"/environment
 			fi
 		fi
-		if [ "$dmi_board_name" == "VMOD0014" ]; then
+		if [ "$board_type" == "VMOD0014" ]; then
 			for i in {0..7}; do
 				if [ -L $environment_path/"$2"_"$5"_voltage_scale_"$i" ]; then
 					unlink $environment_path/"$2"_"$5"_voltage_scale_"$i"
@@ -1511,21 +1481,19 @@ else
 					alarm_path="$hw_management_path"/lc"$linecard_num"/alarm
 				fi
 			else
-				case $dmi_sku in
+				sku=$(< /sys/devices/virtual/dmi/id/product_sku)
+				case $sku in
 				HI160)
 					# DPU event, replace output folder.
 					input_bus_num=$(echo "$3""$4" | xargs dirname | xargs dirname | xargs basename | cut -d"-" -f1)
 					slot_num=$(find_dpu_slot_from_i2c_bus $input_bus_num)
-					if [ ! -z "$slot_num" ]; then
-						if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
-							environment_path="$hw_management_path"/dpu"$slot_num"/environment
-							alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
-							thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
-						else
-							# Skip other voltmons events, since its not present in DPU.
-							exit 0
-						fi
-					fi
+					if [ "$prefix" == "voltmon1" ] || [ "$prefix" == "voltmon2" ]; then
+					    if [ ! -z "$slot_num" ]; then
+						    environment_path="$hw_management_path"/dpu"$slot_num"/environment
+						    alarm_path="$hw_management_path"/dpu"$slot_num"/alarm
+						    thermal_path="$hw_management_path"/dpu"$slot_num"/thermal
+					    fi
+                    	fi
 					;;
 				*)
 					;;
@@ -1617,7 +1585,7 @@ else
 			# Default case, nothing to do.
 			;;
 		mlxreg-io.*)
-			if [[ $dmi_sku == "HI126" ]]; then
+			if [[ $sku == "HI126" ]]; then
 				# Line card event, replace output folder.
 				input_bus_num=$(echo "$3""$4" | xargs dirname| xargs dirname| xargs dirname| xargs basename | cut -d"-" -f1)
 				find_linecard_num "$input_bus_num"
@@ -1693,7 +1661,7 @@ else
 	fi
 	# Clear dpu folders upon line card udev rm event.
 	if [ "$2" == "dpu" ]; then
-		case $dmi_sku in
+		case $sku in
 		HI160)
 			slot_num=$(find_dpu_slot "$3$4")
 			if [ -e "$devtree_file" ]; then

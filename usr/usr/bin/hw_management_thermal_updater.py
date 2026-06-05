@@ -5,7 +5,7 @@
 # pylint: disable=R0913:
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -48,17 +48,11 @@ of ASICs and optical modules with different poll intervals and lifecycle managem
 
 try:
     import os
+    import time
     import re
     import argparse
     import traceback
-    import signal
-    import threading
-    from hw_management_lib import (
-        HW_Mgmt_Logger as Logger,
-        atomic_file_write,
-        exit_wait,
-        current_milli_time,
-    )
+    from hw_management_lib import HW_Mgmt_Logger as Logger
     from collections import Counter
     from hw_management_platform_config import (
         PLATFORM_CONFIG,
@@ -100,11 +94,6 @@ class CONST(object):
     # Folder paths
     HW_MGMT_FOLDER_DEF = "/var/run/hw-management"
     LOG_LEVEL_FILENAME = "config/log_level"
-    LOG_FILE = "/var/log/hw-management-thermal-updater.log"
-
-    # Log rotation size
-    LOG_ROTATION_SIZE = 1 * 1024 * 1024  # 1MB
-    LOG_ROTATION_COUNT = 3
 
 
 # ----------------------------------------------------------------------
@@ -161,9 +150,6 @@ thermal_config = _build_thermal_config()
 # Module-level singleton for logging
 LOGGER = None
 
-EXIT = threading.Event()
-_sig_condition_name = ""
-
 # ----------------------------------------------------------------------
 
 
@@ -193,13 +179,9 @@ def is_module_host_management_mode(f_module_path):
         with open(f_module_control_path, 'r') as f:
             # reading module control. 1 - SW(independent), 0 - FW(dependent)
             module_mode = int(f.read().strip())
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError):
         # by default use FW control (dependent mode)
-        LOGGER.warning("{} read failed, using FW control: {} as default".format(f_module_control_path, e),
-                       id="{} read_fail".format(f_module_control_path))
         module_mode = CONST.SDK_FW_CONTROL
-    else:
-        LOGGER.notice(None, id="{} read_fail".format(f_module_control_path))
 
     # If control mode is FW, skip temperature reading (independent mode)
     return module_mode == CONST.SDK_SW_CONTROL
@@ -220,12 +202,8 @@ def is_asic_ready(asic_name, asic_attr):
         try:
             with open(f_asic_ready, 'r') as f:
                 asic_ready = int(f.read().strip())
-        except (OSError, ValueError, IOError, TypeError) as e:
-            LOGGER.warning("{} read failed: {}, assuming ready".format(f_asic_ready, e),
-                           id="{} read_fail".format(f_asic_ready))
+        except (OSError, ValueError):
             asic_ready = True
-        else:
-            LOGGER.notice(None, id="{} read_fail".format(f_asic_ready))
     return bool(asic_ready)
 
 # ----------------------------------------------------------------------
@@ -247,8 +225,8 @@ def asic_temp_reset(asic_name, f_asic_src_path):
     }
     for suffix, value in file_paths.items():
         f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-        atomic_file_write(f_name, str(value) + "\n")
-
+        with open(f_name, 'w', encoding="utf-8") as f:
+            f.write("{}\n".format(value))
 
 # ----------------------------------------------------------------------
 
@@ -332,11 +310,9 @@ def asic_temp_populate(arg_list, arg):
         # Write the temperature data to files
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(asic_name, suffix)
-            try:
-                atomic_file_write(f_name, str(value) + "\n")
-            except Exception as e:
-                LOGGER.error(f"Error writing {f_name}: {e}")
-                continue
+            with open(f_name, 'w', encoding="utf-8") as f:
+                f.write("{}\n".format(value))
+                LOGGER.debug(f"Write {asic_name}{suffix}: {value}")
 
 # ----------------------------------------------------------------------
 
@@ -384,7 +360,7 @@ def module_temp_populate(arg_list, _dummy):
                 module_present = int(f.read().strip())
         except (OSError, ValueError) as e:
             error_message = str(e)
-            LOGGER.warning("{} read failed: {}".format(f_src_present, error_message), id="{} present_read_fail".format(module_name))
+            LOGGER.warning("{} {}".format(f_src_present, error_message), id="{} present_read_fail".format(module_name))
         else:
             LOGGER.notice(None, id="{} present_read_fail".format(module_name))
 
@@ -408,21 +384,15 @@ def module_temp_populate(arg_list, _dummy):
                 try:
                     with open(f_src_cooling_level_input, 'r') as f:
                         cooling_level_input = f.read()
-                except OSError as e:
-                    LOGGER.warning("{} read failed: {}".format(f_src_cooling_level_input, e),
-                                   id="{} read_fail".format(f_src_cooling_level_input))
-                else:
-                    LOGGER.notice(None, id="{} read_fail".format(f_src_cooling_level_input))
+                except OSError:
+                    pass
 
             if os.path.isfile(f_src_cooling_level_warning):
                 try:
                     with open(f_src_cooling_level_warning, 'r') as f:
                         cooling_level_warning = f.read()
-                except OSError as e:
-                    LOGGER.warning("{} read failed: {}".format(f_src_cooling_level_warning, e),
-                                   id="{} read_fail".format(f_src_cooling_level_warning))
-                else:
-                    LOGGER.notice(None, id="{} read_fail".format(f_src_cooling_level_warning))
+                except OSError:
+                    pass
 
             try:
                 with open(f_src_input, 'r') as f:
@@ -445,14 +415,10 @@ def module_temp_populate(arg_list, _dummy):
 
                 temperature_trip_crit = CONST.MODULE_TEMP_CRIT_DEF
 
-            except (OSError, ValueError) as e:
-                error_message = str(e)
-                LOGGER.warning("{} {}".format(f_src_input, error_message),
-                               id="{} read_fail".format(module_name))
-            else:
-                LOGGER.info(None, id="{} read_fail".format(module_name))
+            except (OSError, ValueError):
+                pass
         else:
-            LOGGER.info(None, id="{} read_fail".format(module_name))
+            LOGGER.notice(None, id="{} read_fail".format(module_name), repeat=0)
 
         # Write the temperature data to files
         file_paths = {
@@ -469,11 +435,9 @@ def module_temp_populate(arg_list, _dummy):
         for suffix, value in file_paths.items():
             f_name = "/var/run/hw-management/thermal/{}{}".format(module_name, suffix)
             if value is not None:
-                try:
-                    atomic_file_write(f_name, str(value) + "\n")
-                except Exception as e:
-                    LOGGER.error(f"Error writing {f_name}: {e}")
-                    continue
+                with open(f_name, 'w', encoding="utf-8") as f:
+                    f.write("{}\n".format(value))
+                    LOGGER.debug(f"Write {module_name}{suffix}: {value}")
 
     return
 
@@ -488,7 +452,7 @@ def update_thermal_attr(attr_prop):
     at the configured polling interval. It invokes the appropriate thermal function
     (e.g., asic_temp_populate, module_temp_populate) to read and update temperature data.
     """
-    ts = current_milli_time() // 1000
+    ts = time.time()
     if ts >= attr_prop["ts"]:
         # update timestamp
         attr_prop["ts"] = ts + attr_prop["poll"]
@@ -501,22 +465,6 @@ def update_thermal_attr(attr_prop):
             # Catch common errors from dynamically called functions
             # to prevent daemon crash
             pass
-
-# ----------------------------------------------------------------------
-
-
-def handle_shutdown(sig, _frame):
-    """
-    @summary: Handle application signal
-    @param sig: Signal
-    @param _frame: Unused frame
-    """
-    global _sig_condition_name
-    try:
-        _sig_condition_name = signal.Signals(sig).name
-    except (ValueError, AttributeError):
-        _sig_condition_name = str(sig)
-    EXIT.set()
 
 # ----------------------------------------------------------------------
 
@@ -534,7 +482,7 @@ def main():
     CMD_PARSER.add_argument("-l", "--log_file",
                             dest="log_file",
                             help="Add output also to log file. Pass file name here",
-                            default=CONST.LOG_FILE)
+                            default="/var/log/hw_management_thermal_updater_log")
 
     CMD_PARSER.add_argument("-v", "--verbosity",
                             dest="verbosity",
@@ -551,16 +499,7 @@ def main():
 
     args = vars(CMD_PARSER.parse_args())
     global LOGGER
-
-    try:
-        LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
-        # System can have >100 ports. It means we can have potential >100 warnings in the logger
-        # We need enough space to store all warnings for all ports.
-        LOGGER.set_log_hash_max_size(256)
-        LOGGER.set_log_rotation_size(file_size=CONST.LOG_ROTATION_SIZE, file_count=CONST.LOG_ROTATION_COUNT)
-    except Exception as e:
-        print("Failed to initialize logger: {}. Stopping service.".format(e))
-        exit(1)
+    LOGGER = Logger(log_file=args["log_file"], log_level=args["verbosity"], log_repeat=2)
 
     if args["system_type"] is None:
         try:
@@ -579,13 +518,8 @@ def main():
             thermal_attr.extend(val)
             break
 
-    EXIT.clear()
-    signal.signal(signal.SIGTERM, handle_shutdown)
-    signal.signal(signal.SIGINT, handle_shutdown)
-    signal.signal(signal.SIGHUP, handle_shutdown)
-
     LOGGER.notice("hw-management-thermal-updater: start main loop")
-    while not EXIT.is_set():
+    while True:
         try:
             for attr in thermal_attr:
                 update_thermal_attr(attr)
@@ -606,9 +540,7 @@ def main():
             LOGGER.notice(traceback.format_exc())
             # Continue running despite error
 
-        exit_wait(EXIT, 1, chunk_sec=0.2)
-
-    LOGGER.notice("hw-management-thermal-updater: stopped main loop ({})".format(_sig_condition_name))
+        time.sleep(1)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,13 @@
+diff --git a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
+index e81ebd3..2a26cf4 100755
+--- a/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
++++ b/packages/base/any/kernels/4.9-lts/configs/x86_64-all/x86_64-all.config
+@@ -2682,7 +2682,7 @@ CONFIG_THERMAL_GOV_STEP_WISE=y
+ # CONFIG_THERMAL_GOV_BANG_BANG is not set
+ CONFIG_THERMAL_GOV_USER_SPACE=y
+ # CONFIG_THERMAL_GOV_POWER_ALLOCATOR is not set
+-# CONFIG_THERMAL_EMULATION is not set
++CONFIG_THERMAL_EMULATION=y
+ # CONFIG_INTEL_POWERCLAMP is not set
+ CONFIG_X86_PKG_TEMP_THERMAL=m
+ # CONFIG_INTEL_SOC_DTS_THERMAL is not set

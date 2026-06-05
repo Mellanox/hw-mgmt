@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -50,19 +50,9 @@ Options:
 do_start_sysfs_monitor()
 {
     log_info "Starting hw-mngmt-sysfs-monitor logic."
-
-    # Initialize timestamp to current time to avoid stale data
-    local current_time
-    current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
-    echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_A"
-    echo "$current_time" > "$SYSFS_MONITOR_RESET_FILE_B"
-
-    # Clear the ready file in case this is a service restart
-    [ -f "$SYSFS_MONITOR_RDY_FILE" ] && rm -f "$SYSFS_MONITOR_RDY_FILE"
-
     while true; do
         # Get the current time with milliseconds.
-        current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
+        local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
         # Read the last update time from both reset files.
         local last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
         local last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
@@ -89,11 +79,6 @@ do_start_sysfs_monitor()
             # Generate debug dump of hw-mgmt tree
             find -L $hw_management_path -maxdepth 4 ! -name '*_info' ! -name '*_eeprom' \
                ! -name '*.sh' ! -name '*.py' ! -name 'led_*_state' -exec ls -la {} \; -exec cat {} \; > /var/log/hw-mgmt-val.log 2>/dev/null
-            # Run post-init fixup hook
-            run_fixup_script post
-
-            # stop i2c bus trace recording (if running)
-            stop_i2c_trace
             # Exit the sysfs monitor.
             exit 0
         fi
@@ -104,22 +89,20 @@ do_start_sysfs_monitor()
 
 do_stop_sysfs_monitor()
 {
-    # stop i2c bus trace recording (if running)
-    stop_i2c_trace
     # Remove older sysfs-monitor process if it exists.
     if [ -f "$SYSFS_MONITOR_PID_FILE" ]; then
         local MONITOR_PID
         MONITOR_PID=$(cat "$SYSFS_MONITOR_PID_FILE")
         if kill -0 "$MONITOR_PID" 2>/dev/null; then
             if kill "$MONITOR_PID"; then
-                log_info "HW Management old sysfs monitor process killed succesfully."
+                log_info "HW Mangement old sysfs monitor process killed succesfully."
                 rm -f "$SYSFS_MONITOR_PID_FILE"
             else
-                log_info "HW Management failed to kill old sysfs monitor process."
+                log_info "HW Mangement failed to kill old sysfs monitor process."
                 exit 1
             fi
         else
-            log_info "HW Management old sysfs monitor process $MONITOR_PID already dead, remove the pid file."
+            log_info "HW Mangement old sysfs monitor process $MONITOR_PID already dead, remove the pid file."
             rm -f "$SYSFS_MONITOR_PID_FILE"
         fi
     fi
@@ -128,8 +111,9 @@ do_stop_sysfs_monitor()
 case $SYSFS_MONITOR_ACTION in
     start)
         # Save the PID of the sysfs monitor process.
-        echo $$ > "$SYSFS_MONITOR_PID_FILE"
-        log_info "HW Management Sysfs Monitor process created."
+        touch "$SYSFS_MONITOR_PID_FILE"
+        echo $! > "$SYSFS_MONITOR_PID_FILE"
+        log_info "HW Mangement Sysfs Monitor process created."
         do_start_sysfs_monitor
     ;;
     stop)
@@ -138,8 +122,6 @@ case $SYSFS_MONITOR_ACTION in
     restart|force-reload)
         do_stop_sysfs_monitor
         sleep 5
-        # Save the PID of the sysfs monitor process.
-        echo $$ > "$SYSFS_MONITOR_PID_FILE"
         do_start_sysfs_monitor
     ;;
     *)

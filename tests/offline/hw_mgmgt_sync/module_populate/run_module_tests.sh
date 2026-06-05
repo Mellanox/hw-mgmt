@@ -52,7 +52,7 @@ echo
 echo "==================================="
 
 if [ $TEST_RESULT -eq 0 ]; then
-    echo "✅ All tests PASSED!"
+    echo "All tests PASSED!"
     echo
     echo "Test Coverage Summary:"
     echo "- SW mode behavior (no thermal file modifications)"

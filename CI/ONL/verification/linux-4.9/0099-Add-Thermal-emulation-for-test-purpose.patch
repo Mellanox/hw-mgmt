@@ -1,0 +1,54 @@
+From 69afba6e315dbba1aebc9c5ae0d173c14205c1d7 Mon Sep 17 00:00:00 2001
+From: Oleksandr Shamray <oleksandrs@nvidia.com>
+Date: Tue, 6 Oct 2020 12:23:34 +0300
+Subject: [PATCH 1/2] Add Thermal emulation for test purpose
+
+---
+ drivers/net/ethernet/mellanox/mlxsw/core_thermal.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+index c13dc5b..2588a0d 100644
+--- a/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
++++ b/drivers/net/ethernet/mellanox/mlxsw/core_thermal.c
+@@ -418,6 +418,13 @@ struct thermal_zone_params mlxsw_thermal_params = {
+ 	.no_hwmon = true,
+ };
+ 
++static int
++mlxsw_thermal_set_emulation(struct thermal_zone_device *tzdev, int temp)
++{
++        tzdev->emul_temperature = temp;
++        return 0;
++}
++
+ static struct thermal_zone_device_ops mlxsw_thermal_ops = {
+ 	.bind = mlxsw_thermal_bind,
+ 	.unbind = mlxsw_thermal_unbind,
+@@ -430,6 +437,7 @@ static struct thermal_zone_device_ops mlxsw_thermal_ops = {
+ 	.get_trip_hyst	= mlxsw_thermal_get_trip_hyst,
+ 	.set_trip_hyst	= mlxsw_thermal_set_trip_hyst,
+ 	.get_trend	= mlxsw_thermal_trend_get,
++	.set_emul_temp = mlxsw_thermal_set_emulation,
+ };
+ 
+ static int mlxsw_thermal_module_bind(struct thermal_zone_device *tzdev,
+@@ -641,6 +649,7 @@ static struct thermal_zone_device_ops mlxsw_thermal_module_ops = {
+ 	.get_trip_hyst	= mlxsw_thermal_module_trip_hyst_get,
+ 	.set_trip_hyst	= mlxsw_thermal_module_trip_hyst_set,
+ 	.get_trend	= mlxsw_thermal_module_trend_get,
++	.set_emul_temp = mlxsw_thermal_set_emulation,
+ };
+ 
+ static int mlxsw_thermal_gearbox_temp_get(struct thermal_zone_device *tzdev,
+@@ -686,6 +695,7 @@ static struct thermal_zone_device_ops mlxsw_thermal_gearbox_ops = {
+ 	.get_trip_hyst	= mlxsw_thermal_module_trip_hyst_get,
+ 	.set_trip_hyst	= mlxsw_thermal_module_trip_hyst_set,
+ 	.get_trend	= mlxsw_thermal_module_trend_get,
++	.set_emul_temp = mlxsw_thermal_set_emulation,
+ };
+ 
+ static int mlxsw_thermal_get_max_state(struct thermal_cooling_device *cdev,
+-- 
+2.8.4
+

@@ -1,5 +1,5 @@
 [Unit]
-Description=HW Management Completion Monitor
+Description=HW management Lables Monitor
 After=hw-management.service
 Requires=hw-management.service
 PartOf=hw-management.service

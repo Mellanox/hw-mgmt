@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -446,7 +446,8 @@ class TestHWMgmtLogger(unittest.TestCase):
 
         with open(self.test_log_file, 'r') as f:
             content = f.read()
-            self.assertIn("(repeat=5, duration=", content)
+            self.assertIn("message repeated 5 times", content)
+            self.assertIn("and stopped", content)
 
     def test_23_hash_collision_handling(self):
         """Test that different messages with same ID are handled correctly"""
@@ -488,22 +489,13 @@ class TestHWMgmtLogger(unittest.TestCase):
             self.logger.info(f"Message {i}", id=f"id_{i}", log_repeat=1)
 
         # Manually set old timestamp for some messages
-        from hw_management_lib import _MsgState
         current_time = current_milli_time()
         old_time = current_time - HW_Mgmt_Logger.MSG_HASH_TIMEOUT - 1000
 
-        # Modify timestamps - update last_seen to make messages expired
+        # Modify timestamps
         keys = list(self.logger.log_hash.keys())[:3]
         for key in keys:
-            msg_state = self.logger.log_hash[key]
-            # Create new _MsgState with old timestamp
-            self.logger.log_hash[key] = _MsgState(
-                first_seen=msg_state.first_seen,
-                last_seen=old_time,
-                msg=msg_state.msg,
-                max_repeat=msg_state.max_repeat,
-                seen_count=msg_state.seen_count
-            )
+            self.logger.log_hash[key]["ts"] = old_time
 
         # Trigger garbage collection by adding new message
         for i in range(5):

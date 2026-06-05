@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -56,31 +56,7 @@ fi
 
 #TEMPORARY hw-management mockup values for simx
 if check_simx && [ "$product_sku" == "HI180" ]; then
-	echo "N6100_LD emulation, exiting"
-	exit 0
-fi
-
-#TEMPORARY hw-management mockup values for simx
-if check_simx && [ "$product_sku" == "HI181" ]; then
-	echo "SN5810_LD emulation, exiting"
-	exit 0
-fi
-
-#TEMPORARY hw-management mockup values for simx
-if check_simx && [ "$product_sku" == "HI185" ]; then
-	echo "N6300_LD emulation, exiting"
-	exit 0
-fi
-
-#TEMPORARY hw-management mockup values for simx
-if check_simx && [ "$product_sku" == "HI193" ]; then
-	echo "SN6600_LD emulation, exiting"
-	exit 0
-fi
-	
-#TEMPORARY hw-management mockup values for simx
-if check_simx && [ "$product_sku" == "HI194" ]; then
-	echo "SN7170_LD emulation, exiting"
+	echo "HI180 emulation, exiting"
 	exit 0
 fi
 

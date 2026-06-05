@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Test Suite for module_counter functionality
 #
@@ -74,13 +74,6 @@ class TestModuleCounterReliability(unittest.TestCase):
         hw_mgmt_dir = os.path.join(repo_root, 'usr', 'usr', 'bin')
         hw_mgmt_path = os.path.join(hw_mgmt_dir, 'hw_management_peripheral_updater.py')
 
-        # Load platform_config first (real module, not mocked)
-        platform_config_path = os.path.join(hw_mgmt_dir, 'hw_management_platform_config.py')
-        platform_spec = importlib.util.spec_from_file_location("hw_management_platform_config", platform_config_path)
-        platform_module = importlib.util.module_from_spec(platform_spec)
-        sys.modules["hw_management_platform_config"] = platform_module
-        platform_spec.loader.exec_module(platform_module)
-
         spec = importlib.util.spec_from_file_location("hw_management_peripheral_updater", hw_mgmt_path)
         module = importlib.util.module_from_spec(spec)
 
@@ -145,8 +138,7 @@ class TestModuleCounterReliability(unittest.TestCase):
         peripheral_module.LOGGER = mock_logger
 
         # Test with unknown platform (should write 0)
-        with patch('builtins.open', create=True) as mock_open, \
-                patch.object(peripheral_module, 'get_platform_config', return_value=[{}]):
+        with patch('builtins.open', create=True) as mock_open:
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 
@@ -217,8 +209,7 @@ class TestModuleCounterReliability(unittest.TestCase):
         peripheral_module.LOGGER = mock_logger
 
         # Test write_module_counter still works
-        with patch('builtins.open', create=True) as mock_open, \
-                patch.object(peripheral_module, 'get_platform_config', return_value=[{}]):
+        with patch('builtins.open', create=True) as mock_open:
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 

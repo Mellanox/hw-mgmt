@@ -80,8 +80,8 @@ For detailed information, see the documentation [here](https://github.com/Mellan
 ## Supported Kernel versions:
 - 5.10.103, 5.10.140, 5.10.179, 5.10.218, 5.10.226
 - 5.14 all up to 5.14.21
-- 6.1.38, 6.1.90, ,6.1.94, 6.1.119, 6.1.123, .. 6.1.169
-- 6.12.38, 6.12.41, 6.12.44, .. 6.12.62
+- 6.1.38, 6.1.90, ,6.1.94, 6.1.119, 6.1.123
+- 6.12.38, 6.12.41, 6.12.44
 
 ## Sysfs attributes:
 The thermal control operates over sysfs attributes.
@@ -149,8 +149,6 @@ CONFIG_MLXSW_SPECTRUM=m or CONFIG_MLXSW_MINIMAL=m
 CONFIG_I2C_MLXCPLD=m
 CONFIG_MLX_PLATFORM=m
 CONFIG_NVSW_HOST_L1=m
-CONFIG_NVSW_HOST_SPC5=m
-CONFIG_NVSW_HOST_SPC6=m
 CONFIG_MLXREG_HOTPLUG=m
 CONFIG_MLXREG_IO=m
 CONFIG_MLX_WDT=m
@@ -184,8 +182,6 @@ CONFIG_SENSORS_XDPE122=m
 CONFIG_SENSORS_MP2975=m
 CONFIG_SENSORS_MP2888=m
 CONFIG_SENSORS_MP2891=m
-CONFIG_SENSORS_MP2845=m
-CONFIG_SENSORS_MP5926=m
 CONFIG_GPIO_ICH=m
 CONFIG_LPC_ICH=m
 CONFIG_CPU_THERMAL=y
@@ -224,7 +220,6 @@ CONFIG_SECURITY_LOCKDOWN_LSM_EARLY=y (if kernel version >= v5.4, optional up to 
 CONFIG_LOCK_DOWN_KERNEL_FORCE_CONFIDENTIALITY=y (if kernel version >= v5.4, optional up to user)
 CONFIG_THERMAL_NETLINK=y (if kernel version >= v5.10)
 CONFIG_SENSORS_XDPE152=m
-CONFIG_SENSORS_XDPE1A2G7B=m
 CONFIG_SENSORS_DRIVETEMP=m
 CONFIG_SENSORS_IIO_HWMON=m
 CONFIG_SENSORS_LM25066=m
@@ -314,8 +309,6 @@ CONFIG_SENSORS_MP2975=m
 CONFIG_SENSORS_MP2888=m
 CONFIG_SENSORS_MP2891=m
 CONFIG_SENSORS_MP2855=m
-CONFIG_SENSORS_MP2845=m
-CONFIG_SENSORS_MP5926=m
 CONFIG_IGB=m
 CONFIG_IGB_HWMON=y
 CONFIG_INOTIFY_USER=y
@@ -329,7 +322,6 @@ CONFIG_I2C_MUX_PCA954x=m
 CONFIG_GPIO_PCA953X=m
 CONFIG_THERMAL_NETLINK=y
 CONFIG_SENSORS_XDPE152=m
-CONFIG_SENSORS_XDPE1A2G7B=m
 CONFIG_SENSORS_DRIVETEMP=m
 CONFIG_SENSORS_IIO_HWMON=m
 CONFIG_SENSORS_LM25066=m
@@ -377,8 +369,6 @@ sudo apt-get install devscripts build-essential lintian
 - To build without lm_sensor dependecy (for Sonic-based OS) run 'debuild --set-envvar=LM_DEPENDS=0 -us -uc -b'
 or 'export LM_DEPENDS=0 && dpkg-buildpackage -us -uc -b'
 - Find in upper folder the builded `.deb` package (for example `hw-management_1.mlnx.18.12.2018_amd64.deb`).
-
-**SONiC BMC (`hw-management-bmc`):** the same source tree also builds **`hw-management-bmc_<version>_<arch>.deb`** (payload under **`bmc/`**, profiles in **`debian/rules`**). Packaging uses custom **`debian/hw-management-bmc.postinst`** and **`debian/hw-management-bmc.prerm`** so first-boot **`apt`** from **`rc.local`** does not block on synchronous **`bmc_init_main`** (issue **#4992267**). Details: **`bmc/README.md`** and **`bmc/FILE_MAPPING.md`** § *Debian package scripts*.
 
 **For converting .deb package to .rpm package:**
 - On a Debian-based system, install the `alien` program: `sudo apt-get install alien`

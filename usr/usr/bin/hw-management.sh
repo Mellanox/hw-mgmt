@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2018-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2018-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -100,7 +100,6 @@ i2c_freq_reg=0x2004
 spc3_pci_id=cf70
 spc4_pci_id=cf80
 spc5_pci_id=cf82
-spc6_pci_id=cf84
 quantum2_pci_id=d2f2
 quantum3_pci_id=d2f4
 quantum4_pci_id=d2f8
@@ -119,14 +118,10 @@ chipup_log_size=4096
 reset_dflt_attr_num=18
 smart_switch_reset_attr_num=17
 n51xx_reset_attr_num=22
-sn58xx_reset_attr_num=15
-sn66xx_reset_attr_num=14
-n61xx_reset_attr_num=17
+n61xx_reset_attr_num=22
 q3401_reset_attr_num=17
 chipup_retry_count=3
-
-# Set FAN speed tolerance based on spec +-30%
-fan_speed_tolerance=30
+fan_speed_tolerance=15
 minimal_unsupported=0
 dummy_psus_supported=0
 sed_pba_guid=0d1d8ac9-9958-4e34-aae6-5236e3232bb5
@@ -647,7 +642,6 @@ n5110ld_virtual_vpd_connect_table=(24c512 0x51 10 vpd_info)
 cfl_come_named_busses=( come-vr 15 come-amb 15 come-fru 16 )
 amd_snw_named_busses=( come-vr 39 come-amb 39 come-fru 40 )
 msn47xx_mqm97xx_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 )
-msn4700d_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
 mqm9510_named_busses=( asic1 2 asic2 3 pwr 4 vr1 5 vr2 6 amb1 7 vpd 8 )
 mqm9520_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 asic2 10 vr2 13 )
 sn5600_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
@@ -660,8 +654,6 @@ smart_switch_named_busses=( asic1 2 pwr 4 vr1 5 amb1 7 vpd 8 dpu1 17 dpu2 18 dpu
 n5110ld_named_busses=( asic1 11 vr 13 pwr1 14 pwr2 30 amb 15 pcb_amb 16 vpd 2 cart1 55 cart2 56 cart3 57 cart4 58)
 n61xxld_named_busses=( asic1 5 asic2 21 asic3 37 asic4 53 pwr 7 vr1 8 vr2 24 vr3 40 vr4 56 vpd 1 cart1 68 cart2 69 cart3 70 cart4 71 cpu-vr 6)
 sn5640_named_busses=( asic1 2 pwr 4 vr1 5 fan-amb 6 port-amb 7 vpd 8 )
-sn58xxld_named_busses=(asic1 6 asic2 22 asic3 38 asic4 54 pwr1 7 pwr2 23 pwr3 39 pwr4 55 vr1 9 vr2 25 vr3 41 vr4 57 vpd 1 cpu-vr 69 cpu-vpd 70)
-sn66xxld_named_busses=(asic1 5 pwr1 7 pwr2 8 vr1 16 vr2 17 vpd 1 cpu-vr 6)
 
 ACTION=$1
 
@@ -773,6 +765,56 @@ function find_regio_sysfs_path()
 	return 1
 }
 
+# SODIMM temperatures (C) for setting in scale 1000
+SODIMM_TEMP_CRIT=95000
+SODIMM_TEMP_MAX=85000
+SODIMM_TEMP_MIN=0
+SODIMM_TEMP_HYST=6000
+
+set_sodimm_temp_limits()
+{
+	local s_list=""
+	# SODIMM temp reading is not supported on Broadwell-DE Comex
+	# and on BF# Comex.
+	# Broadwell-DE Comex can be installed interchangeably with new
+	# Coffee Lake Comex on part of systems e.g. on Anaconda.
+	# Thus check by CPU type and not by system type.
+	case $cpu_type in
+		$BDW_CPU|$BF3_CPU)
+			return 0
+			;;
+		*)
+			;;
+	esac
+
+	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
+		modprobe jc42 > /dev/null 2>&1
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			while : ; do
+				sleep 1
+				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
+			done
+		else
+			return 1
+		fi
+	fi
+
+	s_list=`find /sys/bus/i2c/drivers/jc42/[0-9]*/`
+	if echo $s_list | grep -q hwmon ; then
+		for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*; do
+			echo $SODIMM_TEMP_CRIT > "$temp_sens"/hwmon/hwmon*/temp1_crit
+			echo $SODIMM_TEMP_MAX > "$temp_sens"/hwmon/hwmon*/temp1_max
+			echo $SODIMM_TEMP_MIN > "$temp_sens"/hwmon/hwmon*/temp1_min
+			echo $SODIMM_TEMP_HYST > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
+		done
+	else
+		return 1
+	fi
+
+	return 0
+}
+
 set_jtag_gpio()
 {
 	local export_unexport=$1
@@ -805,7 +847,7 @@ set_jtag_gpio()
 			;;
 		$AMD_SNW_CPU)
 			case $sku in
-			HI180|HI185)
+			HI180)
 				echo 0x20e5 > $config_path/jtag_rw_reg
 				echo 0x20e6 > $config_path/jtag_ro_reg
 				;;
@@ -814,14 +856,6 @@ set_jtag_gpio()
 				echo 0x2095 > $config_path/jtag_ro_reg
 				;;
 			esac
-			;;
-		$AMD_V3000_CPU)
-			jtag_tdi=5
-			jtag_tck=132
-			jtag_tms=7
-			jtag_tdo=8
-			echo 0x20e5 > $config_path/jtag_rw_reg
-			echo 0x20e6 > $config_path/jtag_ro_reg
 			;;
 		*)
 			return 0
@@ -925,15 +959,10 @@ set_gpios()
 			;;
 		$AMD_SNW_CPU)
 			set_jtag_gpio $1
+			# TBD Remove "boot_completed","nvme_present"/4,42 GPIOs after AMD BU
 			gpiolabel="AMDI0030:00"
 			gpio_idx=(5 6 4 42)
 			gpio_names=("cpu_erot_present" "bmc_present" "boot_completed" "nvme_present")
-			;;
-		$AMD_V3000_CPU)
-			set_jtag_gpio $1
-			gpiolabel="AMDI0030:00"
-			gpio_idx=(89 10 12 23)
-			gpio_names=("conf_flash_rst" "boot_completed" "bmc_present" "cpu_erot_present")
 			;;
 		*)
 			return 1
@@ -1009,8 +1038,8 @@ add_cpu_board_to_connection_table()
 				*)
 					# COMEX BWD regular version not support HW_REV register
 					case $sku in
-						HI116|HI112|HI124|HI100|HI122|HI123|HI184|MSN3700|MSN3700C)
-							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700, SN4700d
+						HI116|HI112|HI124|HI100|HI122|HI123|MSN3700|MSN3700C)
+							# An MSN3700/MSN3700C,MQM7800, MSN4600/MSN4600C MSN4700
 							cpu_connection_table=( ${cpu_type1_connection_table[@]} )
 							;;
 						*)
@@ -1585,68 +1614,11 @@ msn47xx_specific()
 
 	max_tachos=12
 	minimal_unsupported=1
-
-	# Set according to front fan max.
-	echo 23000 > "$config_path"/fan_max_speed
-	# Set at rear (outlet) fan min, according to fan vendor table
-	echo 4800 > "$config_path"/fan_min_speed
-	# Only reverse fans are supported
-
-	# Set FAN front (inlet) speed limits
-	echo 23000 > "$config_path"/fan_front_max_speed
-	echo 5400 > "$config_path"/fan_front_min_speed
-
-	# Set FAN rear (outlet) speed limits 
-	echo 20500 > "$config_path"/fan_rear_max_speed
-	echo 4800 > "$config_path"/fan_rear_min_speed
-
+	echo 25000 > $config_path/fan_max_speed
+	echo 4500 > $config_path/fan_min_speed
 	echo 23000 > $config_path/psu_fan_max
 	echo 4600 > $config_path/psu_fan_min
 	echo 3 > $config_path/cpld_num
-}
-
-msn4700d_specific()
-{
-	if [ ! -e "$devtree_file" ]; then
-		system_ver_str="V0-S*RaRaRaR0RaR0RaT0EeAa-C*AaEeFdGeRcRcTb-F*H0Tc-P*EaHcH0OfO0T0Tk-O*FcFcTb"
-		devtr_check_smbios_device_description "$system_ver_str" "0" ""
-	fi
-	lm_sensors_config="$lm_sensors_configs_path/msn4700d_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_msn4700d.json"
-
-	max_tachos=12
-	hotplug_fans=6
-	hotplug_pwrs=1
-	hotplug_psus=0
-	hotplug_pdbs=1
-	psu_count=0
-	minimal_unsupported=1
-
-	echo 3 > "$config_path"/cpld_num
-	echo 6 > "$config_path"/fan_drwr_num
-
-	# Set according to front fan max.
-	echo 29700 > "$config_path"/fan_max_speed
-	# Set at rear (outlet) fan min, according to fan vendor table
-	echo 5650 > "$config_path"/fan_min_speed
-	# Only reverse fans are supported
-
-	# Set FAN front (inlet) speed limits
-	echo 29700 > "$config_path"/fan_front_max_speed
-	echo 6150 > "$config_path"/fan_front_min_speed
-
-	# Set FAN rear (outlet) speed limits 
-	echo 27500 > "$config_path"/fan_rear_max_speed
-	echo 5650 > "$config_path"/fan_rear_min_speed
-
-	# Only reverse fans are supported
-	echo C2P > "$config_path"/system_flow_capability
-
-	named_busses+=("${msn4700d_named_busses[@]}")
-	add_come_named_busses $ndr_cpu_bus_offset
-	echo 0 > "$config_path"/labels_ready
-	echo 17 > "$config_path"/reset_attr_num
-	echo -n "${named_busses[@]}" > "$config_path"/named_busses
 }
 
 msn46xx_specific()
@@ -1783,7 +1755,7 @@ mqm97xx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_mqm9701.json"
 		lm_sensors_config="$lm_sensors_configs_path/mqm9701_sensors.conf"
 		hotplug_psus=0
-		hotplug_pwrs=1
+		hotplug_pwrs=0
 		hotplug_pdbs=1
 		psu_count=0
 		add_i2c_dynamic_bus_dev_connection_table "${mqm97xx_pdb_connect_table[@]}"
@@ -2003,16 +1975,11 @@ msn_spc3_common()
 		HI142)
 			p4697_specific
 		;;
-		HI184)
-			msn4700d_specific
-		;;
 		*)
 			msn47xx_specific
 		;;
 	esac
-	if [ ! -f "$config_path/reset_attr_num" ]; then
-		echo "$reset_dflt_attr_num" > "$config_path/reset_attr_num"
-	fi
+	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 }
 
 bf3_common()
@@ -2139,19 +2106,9 @@ sn5x00_specific()
 		connect_table+=(${sn5600_base_connect_table[@]})
 		add_cpu_board_to_connection_table $ng800_cpu_bus_offset
 	fi
-
-	# Set according to fan min/max.
-	echo 13500 > "$config_path"/fan_max_speed
-	echo 3891 > "$config_path"/fan_min_speed
-
-	# Set FAN front (inlet) speed limits
-	echo 13500 > "$config_path"/fan_front_max_speed
-	echo 4143 > "$config_path"/fan_front_min_speed
-
-	# Set FAN rear (outlet) speed limits
-	echo 12603 > "$config_path"/fan_rear_max_speed
-	echo 3891 > "$config_path"/fan_rear_min_speed
-
+	# Set according to front fan max. Rear fan max is 13200
+	echo 13800 > $config_path/fan_max_speed
+	echo 2800 > $config_path/fan_min_speed
 	echo 32500 > $config_path/psu_fan_max
 	echo 9500 > $config_path/psu_fan_min
 	i2c_comex_mon_bus_default=$((ng800_cpu_bus_offset+5))
@@ -2187,7 +2144,7 @@ sn5600d_specific()
 	i2c_bus_def_off_eeprom_cpu=$((ng800_cpu_bus_offset+6))
 	max_tachos=8
 	hotplug_fans=4
-	hotplug_pwrs=1
+	hotplug_pwrs=0
 	hotplug_psus=0
 	hotplug_pdbs=1
 	psu_count=0
@@ -2336,14 +2293,7 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3200.json"
 		named_busses+=(${q3200_named_busses[@]})
 		asic_i2c_buses=(2 18)
-		psu1_i2c_bus=4
-		psu1_i2c_addr=59
-		psu2_i2c_bus=4
-		psu2_i2c_addr=58
-		psu3_i2c_bus=4
-		psu3_i2c_addr=5b
-		psu4_i2c_bus=4
-		psu4_i2c_addr=5a
+		psu_i2c_map=(4 59 4 58 4 5b 4 5a)
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI158" ]; then
 		# Set according to front fan max.
@@ -2366,25 +2316,7 @@ qm3xxx_specific()
 		thermal_control_config="$thermal_control_configs_path/tc_config_q3400.json"
 		named_busses+=(${q3400_named_busses[@]})
 		asic_i2c_buses=(2 18 34 50)
-
-		# Map I2C bus and address to psu number
-		psu1_i2c_bus=4
-		psu1_i2c_addr=59
-		psu2_i2c_bus=4
-		psu2_i2c_addr=58
-		psu3_i2c_bus=3
-		psu3_i2c_addr=5b
-		psu4_i2c_bus=3
-		psu4_i2c_addr=5a
-		psu5_i2c_bus=4
-		psu5_i2c_addr=5d
-		psu6_i2c_bus=4
-		psu6_i2c_addr=5c
-		psu7_i2c_bus=3
-		psu7_i2c_addr=5e
-		psu8_i2c_bus=3
-		psu8_i2c_addr=5f
-
+		psu_i2c_map=(4 59 4 58 3 5b 3 5a 4 5d 4 5c 3 5e 3 5f)
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
 		# Set according to front fan max.
@@ -2438,11 +2370,14 @@ qm3xx1_specific()
 	echo 12603 > $config_path/fan_rear_max_speed
 	echo 2741 > $config_path/fan_rear_min_speed
 
+	# Set FAN speed tolerance based on spec +-10%
+	fan_speed_tolerance=10
+
 	echo C2P > $config_path/system_flow_capability
 
 	max_tachos=16
 	hotplug_fans=8
-	hotplug_pwrs=1
+	hotplug_pwrs=0
 	hotplug_psus=0
 	psu_count=0
 	hotplug_pdbs=1
@@ -2481,7 +2416,6 @@ qm_qm3_common()
 
 smart_switch_common()
 {
-	modprobe mlxreg-dpu
 	if [ ! -e "$devtree_file" ]; then
 		connect_table+=(${msn4700_msn4600_A1_base_connect_table[@]})
 		add_cpu_board_to_connection_table $smart_switch_cpu_bus_offset
@@ -2678,25 +2612,6 @@ n61xxld_specific()
 		cpld_num=2
 		leakage_count=2
 		erot_count=1
-		hotplug_pdbs=1
-		;;
-	# N6300_LD
-	HI185)
-		add_i2c_dynamic_bus_dev_connection_table "${n61xxld_cartridge_eeprom_connect_table[@]}"
-		echo -n "${n61xxld_cartridge_eeprom_connect_table[@]}" >> "$devtree_file"
-		echo 4 > $config_path/cartridge_counter
-
-		asic_i2c_buses=(5 21 37 53)
-		echo 1 > $config_path/global_wp_wait_step
-		echo 20 > $config_path/global_wp_timeout
-		echo 0 > $config_path/i2c_bus_offset
-		lm_sensors_config="$lm_sensors_configs_path/n63xxld_sensors.conf"
-		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-
-		cpld_num=3
-		leakage_count=2
-		erot_count=1
-		hotplug_pdbs=2
 		;;
 	esac
 
@@ -2741,6 +2656,9 @@ sn5640_specific()
 	echo 20500 > $config_path/fan_rear_max_speed
 	echo 6468 > $config_path/fan_rear_min_speed
 	
+	# Set FAN speed tolerance based on spec +-10%
+	fan_speed_tolerance=10
+	
 	echo C2P > $config_path/system_flow_capability
 	echo 27500 > $config_path/psu_fan_max
 	# Set as 20% of max speed
@@ -2768,92 +2686,12 @@ sn5640_specific()
 		;;
 	esac
 
+	lm_sensors_labels="$lm_sensors_configs_path/sn5640_sensors_labels.json"
 	named_busses+=(${sn5640_named_busses[@]})
 	add_come_named_busses $ng800_cpu_bus_offset
 	echo -n "${named_busses[@]}" > $config_path/named_busses
 	echo "$reset_dflt_attr_num" > $config_path/reset_attr_num
 	echo 0 > "$config_path"/labels_ready
-}
-
-sn58xxld_specific()
-{
-	case $sku in
-	# SN5810_LD
-	HI181)
-		cpld_num=4
-		leakage_count=2
-		i2c_asic_bus_default=6
-		hotplug_pdbs=1
-		;;
-	# SN5800_LD
-	HI182)
-		cpld_num=10
-		leakage_count=5
-		asic_i2c_buses=(6 22 38 54)
-		hotplug_pdbs=4
-		;;
-	esac
-
-	echo 0 > $config_path/i2c_bus_offset
-	if [[ $(uname -r) == 6.1.* ]]; then
-		lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors_6.1.conf"
-	else
-		lm_sensors_config="$lm_sensors_configs_path/sn58xxld_sensors.conf"
-	fi
-	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-
-	echo $cpld_num > $config_path/cpld_num
-	echo 0 > $config_path/fan_drwr_num
-	psu_count=0
-	hotplug_fans=0
-	hotplug_pwrs=0
-	hotplug_psus=0
-	asic_control=0
-	max_tachos=0
-	health_events_count=0
-	minimal_unsupported=1
-	i2c_bus_def_off_eeprom_cpu=0
-	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=69
-	named_busses+=(${sn58xxld_named_busses[@]})
-	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo "$sn58xx_reset_attr_num" > $config_path/reset_attr_num
-	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
-}
-
-sn66xxld_specific()
-{
-	case $sku in
-	# SN6600_LD
-	HI193)
-		cpld_num=4
-		leakage_count=2
-		i2c_asic_bus_default=5
-		hotplug_pdbs=2
-		;;
-	esac
-
-	echo 0 > $config_path/i2c_bus_offset
-	lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-
-	echo $cpld_num > $config_path/cpld_num
-	echo 0 > $config_path/fan_drwr_num
-	psu_count=0
-	hotplug_fans=0
-	hotplug_pwrs=0
-	hotplug_psus=0
-	asic_control=0
-	max_tachos=0
-	health_events_count=0
-	minimal_unsupported=1
-	i2c_bus_def_off_eeprom_cpu=0
-	i2c_bus_def_off_eeprom_vpd=1
-	i2c_comex_mon_bus_default=6
-	named_busses+=(${sn66xxld_named_busses[@]})
-	echo -n "${named_busses[@]}" > $config_path/named_busses
-	echo "$sn66xx_reset_attr_num" > $config_path/reset_attr_num
-	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
 system_cleanup_specific()
@@ -2869,10 +2707,6 @@ system_cleanup_specific()
 
 check_system()
 {
-	# Reset reset_attr_num if it exists.
-	if [ -f "$config_path/reset_attr_num" ]; then
-		rm -f "$config_path"/reset_attr_num
-	fi
 	# Check ODM
 	case $board_type in
 		VMOD0001)
@@ -2931,12 +2765,6 @@ check_system()
 			;;
 		VMOD0023)
 			n61xxld_specific
-			;;
-		VMOD0024)
-			sn58xxld_specific
-			;;
-		VMOD0025)
-			sn66xxld_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3030,20 +2858,9 @@ check_system()
 	esac
 	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
-	# Obtain/rotate the BMC password and log in over Redfish only on platforms
-	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
-	# CPU<->BMC communication, so hw-management must not drive this flow.
-	if check_bmc_is_supported && ! check_host_os_is_sonic; then
+	if check_bmc_is_supported; then
 		pushd /usr/bin
-		for ((i=1; i<=5; i++)); do
-			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
-			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
-				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
-				break
-			fi
-			echo "Pinging BMC failed, i=$i"
-			sleep 3
-		done
+		python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
 		popd
 	fi
 }
@@ -3134,7 +2951,7 @@ load_modules()
 		fi
 	fi
 	case $cpu_type in
-		$AMD_SNW_CPU|$AMD_V3000_CPU|$BF3_CPU)
+		$AMD_SNW_CPU|$BF3_CPU)
 			# coretemp driver supported only on Intel chips
 			;;
 		*)
@@ -3156,13 +2973,7 @@ load_modules()
 
 set_config_data()
 {
-	local asic_num=0
 	for ((idx=1; idx<=psu_count; idx+=1)); do
-		# if psuX_i2c_bus variable is set - add file psuX_i2c_bus to config_path
-		local psu_i2c_bus=psu"$idx"_i2c_bus
-		if [ ${!psu_i2c_bus} ]; then
-			echo ${!psu_i2c_bus} > $config_path/psu"$idx"_i2c_bus
-		fi
 		psu_i2c_addr=psu"$idx"_i2c_addr
 		echo ${!psu_i2c_addr} > $config_path/psu"$idx"_i2c_addr
 	done
@@ -3193,21 +3004,6 @@ set_config_data()
 	if [ -v $thermal_control_configs_path/tc_config_user.json ]; then
 		cp $thermal_control_configs_path/tc_config_user.json $config_path/tc_config_user.json
 	fi
-	[ -f "$config_path/asic_num" ] && asic_num=$(< $config_path/asic_num)
-	for ((asic_id=1; asic_id<=asic_num; asic_id+=1)); do
-		# If SDK already started during hw-mgmt init we should update asic_ready to 1
-		# Use temperature label file as flag to check if SDK already started
-		sdk_asic_idx=$((asic_id-1))
-		if [ -f "/sys/module/sx_core/asic${sdk_asic_idx}/temperature/label" ]; then
-			asic_ready_status=1
-		else
-			asic_ready_status=0
-		fi
-		echo "$asic_ready_status" > "$config_path"/asic"$asic_id"_ready
-		if [ $asic_id -eq 1 ]; then
-			echo "$asic_ready_status" > "$config_path"/asic_ready
-		fi
-	done
 }
 
 connect_platform()
@@ -3389,7 +3185,7 @@ set_asic_pci_id()
 
 	# Get ASIC PCI Ids.
 	case $sku in
-	HI122|HI123|HI124|HI126|HI156|HI160|HI184)
+	HI122|HI123|HI124|HI126|HI156|HI160)
 		asic_pci_id=$spc3_pci_id
 		;;
 	HI130|HI140|HI141|HI151|HI173)
@@ -3414,17 +3210,14 @@ set_asic_pci_id()
 	HI158)
 		asic_pci_id="${quantum3_pci_id}|${quantum2_pci_id}"
 		;;
-	HI171|HI181|HI182)
+	HI171)
 		asic_pci_id=$spc5_pci_id
 		;;
 	HI172)
 		asic_pci_id=$spc4_pci_id
 		;;
-	HI180|HI185)
+	HI180)
 		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
-		;;
-	HI193)
-		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
 	*)
 		echo 1 > "$config_path"/asic_num
@@ -3508,26 +3301,13 @@ set_asic_pci_id()
 		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
 		echo 4 > "$config_path"/asic_num
 		;;
-	HI180|HI185)
+	HI180)
 		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
 		[ -z "$asics" ] && return
-		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic3_pci_bus_id=`echo $asics | awk '{print $3}'`
-		asic4_pci_bus_id=`echo $asics | awk '{print $4}'`
-		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
-		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
-		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
-		echo "$asic4_pci_bus_id" > "$config_path"/asic4_pci_bus_id
-		echo 4 > "$config_path"/asic_num
-		;;
-	HI182)
-		echo -n "$asics" | grep -c '^' > "$config_path"/asic_num
-		[ -z "$asics" ] && return
-		asic1_pci_bus_id=`echo $asics | awk '{print $2}'`
-		asic2_pci_bus_id=`echo $asics | awk '{print $1}'`
-		asic3_pci_bus_id=`echo $asics | awk '{print $4}'`
-		asic4_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic1_pci_bus_id=`echo $asics | awk '{print $4}'`
+		asic2_pci_bus_id=`echo $asics | awk '{print $3}'`
+		asic3_pci_bus_id=`echo $asics | awk '{print $1}'`
+		asic4_pci_bus_id=`echo $asics | awk '{print $2}'`
 		echo "$asic1_pci_bus_id" > "$config_path"/asic1_pci_bus_id
 		echo "$asic2_pci_bus_id" > "$config_path"/asic2_pci_bus_id
 		echo "$asic3_pci_bus_id" > "$config_path"/asic3_pci_bus_id
@@ -3668,14 +3448,9 @@ pre_devtr_init()
 	VMOD0018)
 		cpu_bus_offset=$xdr_cpu_bus_offset
 		case $sku in
-		HI158)
+		HI158|HI175|HI178)
 			echo 2 > "$config_path"/swb_brd_num
 			echo 32 > "$config_path"/swb_brd_bus_offset
-			;;
-		HI175|HI178)
-			echo 2 > "$config_path"/swb_brd_num
-			echo 32 > "$config_path"/swb_brd_bus_offset
-			echo 1 > "$config_path"/swb_brd_pdb_bus_offset
 			;;
 		HI179)
 			echo 2 > "$config_path"/swb_brd_num
@@ -3713,38 +3488,7 @@ pre_devtr_init()
 		HI171|HI172)
 			echo $ng800_cpu_bus_offset > $config_path/cpu_brd_bus_offset
 			;;
-		esac
-		;;
-	VMOD0024)
-		case $sku in
-		HI181)
-			echo 1 >  "$config_path"/swb_brd_num
-			echo 1 >  "$config_path"/pwr_brd_num
-			echo 11 > "$config_path"/swb_brd_vr_num
-			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
-			echo 1 >  "$config_path"/pwr_brd_hotswap_num
-			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
-			;;
-		HI182)
-			echo 4  > "$config_path"/swb_brd_num
-			echo 4  > "$config_path"/pwr_brd_num
-			echo 16 > "$config_path"/swb_brd_bus_offset
-			echo 16 > "$config_path"/pwr_brd_bus_offset
-			echo 11 > "$config_path"/swb_brd_vr_num
-			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
-			echo 1 >  "$config_path"/pwr_brd_hotswap_num
-			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
-			;;
-		esac
-		;;
-	VMOD0025)
-		case $sku in
-		HI193)
-			echo 2 >  "$config_path"/pwr_brd_num
-			echo 1 >  "$config_path"/pwr_brd_bus_offset
-			echo 1 >  "$config_path"/pwr_brd_pwr_conv_num
-			echo 1 >  "$config_path"/pwr_brd_hotswap_num
-			echo 1 >  "$config_path"/pwr_brd_temp_sens_num
+		*)
 			;;
 		esac
 		;;
@@ -3798,20 +3542,14 @@ map_dummy_psus()
 		return
 	fi
 
-	for ((psu_idx=1; psu_idx <= psu_count; psu_idx+=1)); do
-		# Bus/addr from set_config_data() in hw-management.sh
-		psu_bus=$(< "${config_path}/psu${psu_idx}_i2c_bus")
-		psu_addr=$(< "${config_path}/psu${psu_idx}_i2c_addr")
-
-		# psuX_i2c_bus is optional; set_config_data() writes it only when set
-		if [ -z "$psu_bus" ] || [ -z "$psu_addr" ]; then
-			continue
-		fi
-
-		psu_present=$(< $thermal_path/psu${psu_idx}_status)
+	for ((i=0; i < "${#psu_i2c_map[@]}"; i+=2)); do
+		psu_bus=${psu_i2c_map[$i]}
+		psu_addr=${psu_i2c_map[$i+1]}
+		psu_num=$(((i/2)+1))
+		psu_present=$(< $thermal_path/psu${psu_num}_status)
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
 		if [ ${psu_present} -eq 1 ] && [ ! -d ${psu_dev_path} ]; then
-			touch ${config_path}/psu${psu_idx}_is_dummy
+			touch ${config_path}/psu${psu_num}_is_dummy
 		fi
 	done
 }
@@ -3848,12 +3586,9 @@ report_sed_pba_ver()
 
 do_start()
 {
-	# start i2c bus trace recording
-	start_i2c_trace
 	show_hw_info
 	init_sysfs_monitor_timestamp_files
 	create_symbolic_links
-	run_fixup_script pre
 	check_cpu_type
 	pre_devtr_init
 	load_modules
@@ -3904,14 +3639,11 @@ do_start()
 	else
 		cp $thermal_control_configs_path/tc_config_not_supported.json $config_path/tc_config.json
 	fi
-	/usr/bin/hw-management-exec-parser.sh
 	log_info "Init completed."
 }
 
 do_stop()
 {
-	rm -f /var/run/hw-management/exec 2>/dev/null
-	rm -fR /var/run/hw-management/exec.d 2>/dev/null
 	check_cpu_type
 	# There is no need to perform extra work of check_system during
 	# hw-management stop in case of devtree exist. Directly init connect_table.
@@ -4095,20 +3827,6 @@ do_chip_down()
 	/usr/bin/hw-management-thermal-events.sh change hotplug_asic down %S %p
 }
 
-# Temporary trap for i2c trace started in do_start. Installed only from the start and
-# restart|force-reload case branches. While hw-management-sysfs-monitor.service is active
-# it owns teardown; otherwise stop_i2c_trace runs from the trap. Not used for chipup or
-# other actions: chipup uses the top-level i2c tracer and may exit while it stays on.
-_hw_management_install_i2c_trace_exit_trap()
-{
-	trap '
-		if ! systemctl is-active --quiet hw-management-sysfs-monitor.service 2>/dev/null; then
-			stop_i2c_trace
-		fi
-	' EXIT ERR QUIT TERM
-}
-
-
 __usage="
 Usage: $(basename "$0") [Options]
 
@@ -4149,26 +3867,16 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
-		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193/HI194 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
+		# TEMPORARY hw-management mockup values for HI180 in simx
+		if check_simx && [ "$sku" == "HI180" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
-			process_simx_links
 			log_info "Created mock hw management tree, exiting."
 			exit 0
 		fi
-		_hw_management_install_i2c_trace_exit_trap
 		do_start
-		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
-		# of asic chipup for the restart scenario.
-		check_asic_chipup_status && do_chip_up_down 1 1
 	;;
 	stop)
 		if [ -d /var/run/hw-management ]; then
-			# In SPC1/SPC2 switches that uses minimal driver, storing the state
-			# of asic chipup for the restart scenario.
-			if [ -f "$config_path/asic_chipup_completed" ]; then
-				cp "$config_path/asic_chipup_completed" $asic_chipup_status
-			fi
 			echo 1 > $config_path/stopping
 			if [ ! -f "$config_path/asic_num" ]; then
 				asic_num=1
@@ -4249,17 +3957,7 @@ case $ACTION in
 	restart|force-reload)
 		do_stop
 		sleep 3
-		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
-			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
-			log_info "Created mock hw management tree, exiting."
-			exit 0
-		fi
-		_hw_management_install_i2c_trace_exit_trap
 		do_start
-		# In SPC1/SPC2 switches that uses minimal driver, re-storing the state
-		# of asic chipup for the restart scenario.
-		check_asic_chipup_status && do_chip_up_down 1 1
 	;;
 	reset-cause)
 		for f in $system_path/reset_*;

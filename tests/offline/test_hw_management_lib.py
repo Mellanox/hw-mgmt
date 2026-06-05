@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Comprehensive Test Suite for hw_management_lib.py
 # Tests all functions with simple, medium, and complex scenarios
@@ -287,100 +287,6 @@ class TestSetParam:
         logger.stop()
 
 
-class TestSetLogLevel:
-    """Tests for set_loglevel() convenience method"""
-
-    def test_simple_set_loglevel(self, log_file):
-        """Simple: set_loglevel() changes log level"""
-        logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
-
-        # Change to DEBUG
-        logger.set_loglevel(HW_Mgmt_Logger.DEBUG)
-        assert logger.logger.level == HW_Mgmt_Logger.DEBUG
-
-        # Change to ERROR
-        logger.set_loglevel(HW_Mgmt_Logger.ERROR)
-        assert logger.logger.level == HW_Mgmt_Logger.ERROR
-
-        logger.stop()
-
-    def test_medium_runtime_log_level_adjustment(self, log_file):
-        """Medium: Dynamic log level adjustment affects what gets logged"""
-        logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.WARNING)
-
-        # INFO should not be logged initially
-        logger.info("This should not appear")
-
-        # Change to DEBUG
-        logger.set_loglevel(HW_Mgmt_Logger.DEBUG)
-        logger.info("This should appear")
-        logger.debug("Debug message")
-
-        # Verify messages were logged
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "This should not appear" not in content
-            assert "This should appear" in content
-            assert "Debug message" in content
-
-        logger.stop()
-
-    def test_complex_service_simulation(self, temp_dir):
-        """Complex: Simulate service reading log level from file (like thermal/peripheral updater)"""
-        # This simulates what thermal_updater.py and peripheral_updater.py do
-        log_file = os.path.join(temp_dir, "service.log")
-        log_level_file = os.path.join(temp_dir, "log_level")
-
-        # Create logger
-        logger = HW_Mgmt_Logger(log_file=log_file, log_level=HW_Mgmt_Logger.INFO)
-
-        # Initially INFO level
-        logger.debug("Initial debug - should not appear")
-        logger.info("Initial info - should appear")
-
-        # Simulate service reading log level file and adjusting
-        with open(log_level_file, 'w') as f:
-            f.write(str(HW_Mgmt_Logger.DEBUG))
-
-        # Service reads the file and calls set_loglevel
-        if os.path.isfile(log_level_file):
-            with open(log_level_file, 'r') as f:
-                new_level = int(f.read().rstrip('\n'))
-                logger.set_loglevel(new_level)
-
-        # Now debug should work
-        logger.debug("After adjustment - should appear")
-
-        # Verify
-        with open(log_file, 'r') as f:
-            content = f.read()
-            assert "Initial debug - should not appear" not in content
-            assert "Initial info - should appear" in content
-            assert "After adjustment - should appear" in content
-
-        logger.stop()
-
-    def test_complex_all_log_levels(self, log_file):
-        """Complex: Test all valid log levels"""
-        logger = HW_Mgmt_Logger(log_file=log_file)
-
-        valid_levels = [
-            HW_Mgmt_Logger.DEBUG,
-            HW_Mgmt_Logger.INFO,
-            HW_Mgmt_Logger.NOTICE,
-            HW_Mgmt_Logger.WARNING,
-            HW_Mgmt_Logger.ERROR,
-            HW_Mgmt_Logger.CRITICAL,
-            HW_Mgmt_Logger.NOTSET
-        ]
-
-        for level in valid_levels:
-            logger.set_loglevel(level)
-            assert logger.logger.level == level
-
-        logger.stop()
-
-
 class TestLogLevelMethods:
     """Tests for debug(), info(), notice(), warn(), error(), critical()"""
 
@@ -444,10 +350,8 @@ class TestLogLevelMethods:
         with open(log_file) as f:
             content = f.read()
             # Should see the message repeated and the finalization
-            # New format: "Repeat msg (repeat=5, duration=Xs)"
-            assert "Repeat msg" in content
-            assert "repeat=" in content
-            assert "duration=" in content
+            assert "message repeated" in content
+            assert "and stopped" in content
 
 
 class TestSyslogLog:
@@ -618,10 +522,8 @@ class TestPushLogHash:
         # Finalize
         msg, emit = basic_logger._push_log_hash(basic_logger.log_hash, "", "id1", 0)
         assert emit is True
-        # New format: "Repeat (repeat=5, duration=Xs)"
-        assert "Repeat" in msg
-        assert "repeat=" in msg
-        assert "duration=" in msg
+        assert "message repeated" in msg
+        assert "and stopped" in msg
 
     def test_complex_none_message(self, basic_logger):
         """Complex: None message is handled gracefully"""
@@ -658,267 +560,68 @@ class TestPushLogHash:
 
 
 class TestHashGarbageCollect:
-    """Tests for _msg_hash_garbage_collect() method"""
+    """Tests for hash_garbage_collect() method"""
 
     def test_simple_empty_hash(self, basic_logger):
         """Simple: Garbage collect on empty hash"""
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
         assert len(basic_logger.log_hash) == 0
 
     def test_medium_small_hash(self, basic_logger):
         """Medium: Garbage collect on small hash"""
-        from hw_management_lib import _MsgState
-
         # Add a few entries
-        now = current_milli_time()
         for i in range(10):
-            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                first_seen=now,
-                last_seen=now,
-                msg=f"Message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
+            basic_logger.log_hash[f"id_{i}"] = {
+                "count": 1,
+                "msg": f"Message {i}",
+                "ts": current_milli_time(),
+                "repeat": 2
+            }
 
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
         # Should not clear small hash
         assert len(basic_logger.log_hash) == 10
 
     def test_complex_exceed_max_size(self, basic_logger):
         """Complex: Hash exceeds MAX_MSG_HASH_SIZE (100)"""
-        from hw_management_lib import _MsgState
-
         # Add more than MAX_MSG_HASH_SIZE entries
-        now = current_milli_time()
         for i in range(150):
-            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                first_seen=now,
-                last_seen=now,
-                msg=f"Message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
+            basic_logger.log_hash[f"id_{i}"] = {
+                "count": 1,
+                "msg": f"Message {i}",
+                "ts": current_milli_time(),
+                "repeat": 2
+            }
 
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
         # Should clear the entire hash
         assert len(basic_logger.log_hash) == 0
 
     def test_complex_timeout_cleanup(self, basic_logger):
         """Complex: Cleanup of old messages (timeout)"""
-        from hw_management_lib import _MsgState
-
         current_time = current_milli_time()
 
         # Add mix of old and new messages
         for i in range(60):
             if i < 30:
                 # Old messages (> 60 min old)
-                old_time = current_time - (basic_logger.MSG_HASH_TIMEOUT + 10000)
-                basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                    first_seen=old_time,
-                    last_seen=old_time,
-                    msg=f"Message {i}",
-                    max_repeat=2,
-                    seen_count=1
-                )
+                ts = current_time - (basic_logger.MSG_HASH_TIMEOUT + 10000)
             else:
                 # Recent messages
-                recent_time = current_time - 1000
-                basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                    first_seen=recent_time,
-                    last_seen=recent_time,
-                    msg=f"Message {i}",
-                    max_repeat=2,
-                    seen_count=1
-                )
+                ts = current_time - 1000
 
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
+            basic_logger.log_hash[f"id_{i}"] = {
+                "count": 1,
+                "msg": f"Message {i}",
+                "ts": ts,
+                "repeat": 2
+            }
+
+        basic_logger._hash_garbage_collect(basic_logger.log_hash)
 
         # Old messages should be removed, recent ones kept
         assert len(basic_logger.log_hash) < 60
         assert len(basic_logger.log_hash) >= 30
-
-
-class TestHashMessageCountOverload:
-    """Tests for hash message count overload scenarios"""
-
-    def test_exceed_max_hash_size_clear_all(self, basic_logger):
-        """Test: Hash exceeds MAX_MSG_HASH_SIZE (100) - should clear all messages"""
-        from hw_management_lib import _MsgState
-
-        # Add more than MAX_MSG_HASH_SIZE entries manually
-        now = current_milli_time()
-        for i in range(basic_logger.MAX_MSG_HASH_SIZE + 20):  # 120 entries
-            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                first_seen=now,
-                last_seen=now,
-                msg=f"Message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
-
-        # Verify hash is overloaded
-        assert len(basic_logger.log_hash) > basic_logger.MAX_MSG_HASH_SIZE
-
-        # Trigger garbage collection
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
-
-        # Should clear the entire hash
-        assert len(basic_logger.log_hash) == 0
-
-    def test_exceed_timeout_hash_size_cleanup_expired(self, basic_logger):
-        """Test: Hash exceeds MAX_MSG_TIMEOUT_HASH_SIZE (50) but < 100 - should clean expired"""
-        from hw_management_lib import _MsgState
-
-        now = current_milli_time()
-        old_time = now - basic_logger.MSG_HASH_TIMEOUT - 10000  # Expired messages
-
-        # Add mix of expired and recent messages (total > 50 but < 100)
-        expired_count = 30
-        recent_count = 40
-        total_count = expired_count + recent_count
-
-        # Add expired messages
-        for i in range(expired_count):
-            basic_logger.log_hash[hash(f"expired_{i}")] = _MsgState(
-                first_seen=old_time,
-                last_seen=old_time,
-                msg=f"Expired message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
-
-        # Add recent messages
-        for i in range(recent_count):
-            basic_logger.log_hash[hash(f"recent_{i}")] = _MsgState(
-                first_seen=now,
-                last_seen=now,
-                msg=f"Recent message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
-
-        # Verify hash size is between thresholds
-        assert len(basic_logger.log_hash) == total_count
-        assert len(basic_logger.log_hash) > basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE
-        assert len(basic_logger.log_hash) < basic_logger.MAX_MSG_HASH_SIZE
-
-        # Trigger garbage collection
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
-
-        # Expired messages should be removed, recent ones kept
-        assert len(basic_logger.log_hash) < total_count
-        assert len(basic_logger.log_hash) >= recent_count
-        assert len(basic_logger.log_hash) <= recent_count  # All expired should be gone
-
-    def test_natural_population_via_logging_api(self, basic_logger):
-        """Test: Natural hash population through logging API triggers garbage collection"""
-        # Use logging API to naturally populate hash
-        # This will trigger automatic garbage collection when adding new entries
-
-        # Add messages up to just below threshold
-        for i in range(basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE - 5):
-            basic_logger.info(f"Message {i}", id=f"msg_{i}", log_repeat=1)
-
-        # Hash should have entries
-        initial_size = len(basic_logger.log_hash)
-        assert initial_size > 0
-
-        # Add more messages to exceed threshold
-        for i in range(basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE - 5, basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE + 10):
-            basic_logger.info(f"Message {i}", id=f"msg_{i}", log_repeat=1)
-            # Garbage collection is called automatically when adding new entries
-
-        # Hash size should be managed (may have been cleaned up)
-        final_size = len(basic_logger.log_hash)
-        assert final_size <= basic_logger.MAX_MSG_HASH_SIZE
-
-    def test_hash_size_boundary_conditions(self, basic_logger):
-        """Test: Boundary conditions for hash size thresholds"""
-        from hw_management_lib import _MsgState
-
-        now = current_milli_time()
-
-        # Test exactly at MAX_MSG_TIMEOUT_HASH_SIZE
-        basic_logger.log_hash.clear()
-        for i in range(basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE):
-            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                first_seen=now,
-                last_seen=now,
-                msg=f"Message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
-
-        # Should not trigger cleanup (exactly at threshold, not exceeding)
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
-        assert len(basic_logger.log_hash) == basic_logger.MAX_MSG_TIMEOUT_HASH_SIZE
-
-        # Test exactly at MAX_MSG_HASH_SIZE
-        basic_logger.log_hash.clear()
-        for i in range(basic_logger.MAX_MSG_HASH_SIZE):
-            basic_logger.log_hash[hash(f"id_{i}")] = _MsgState(
-                first_seen=now,
-                last_seen=now,
-                msg=f"Message {i}",
-                max_repeat=2,
-                seen_count=1
-            )
-
-        # Should not trigger full clear (exactly at threshold, not exceeding)
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
-        assert len(basic_logger.log_hash) == basic_logger.MAX_MSG_HASH_SIZE
-
-        # Test one over MAX_MSG_HASH_SIZE
-        basic_logger.log_hash[hash("one_more")] = _MsgState(
-            first_seen=now,
-            last_seen=now,
-            msg="One more message",
-            max_repeat=2,
-            seen_count=1
-        )
-
-        # Should trigger full clear
-        basic_logger._msg_hash_garbage_collect(basic_logger.log_hash)
-        assert len(basic_logger.log_hash) == 0
-
-    def test_concurrent_hash_overload(self, basic_logger):
-        """Test: Concurrent access during hash overload"""
-        import threading
-
-        results = []
-        lock = threading.Lock()
-
-        def add_messages(thread_id, count):
-            """Add messages from a thread"""
-            for i in range(count):
-                msg_id = f"thread_{thread_id}_msg_{i}"
-                basic_logger.info(f"Message from thread {thread_id}", id=msg_id, log_repeat=1)
-                with lock:
-                    results.append(len(basic_logger.log_hash))
-
-        # Create multiple threads adding messages concurrently
-        threads = []
-        for thread_id in range(5):
-            t = threading.Thread(target=add_messages, args=(thread_id, 25))
-            threads.append(t)
-            t.start()
-
-        # Wait for all threads
-        for t in threads:
-            t.join()
-
-        # Hash should be managed (garbage collection may have occurred)
-        final_size = len(basic_logger.log_hash)
-        assert final_size <= basic_logger.MAX_MSG_HASH_SIZE
-
-        # Verify no corruption occurred - all entries should be _MsgState instances
-        from hw_management_lib import _MsgState
-        for key, msg_state in basic_logger.log_hash.items():
-            assert isinstance(msg_state, _MsgState)
-            assert hasattr(msg_state, 'msg')
-            assert hasattr(msg_state, 'seen_count')
-            assert hasattr(msg_state, 'last_seen')
 
 
 class TestResourceManagement:
@@ -1037,9 +740,8 @@ class TestConcurrencyAndPerformance:
         # Verify repeat finalization messages
         with open(log_file) as f:
             content = f.read()
-            # Should have finalization messages with new format: "Repeat msg X (repeat=Y, duration=Zs)"
-            assert "repeat=" in content
-            assert "duration=" in content
+            # Should have finalization messages
+            assert "message repeated" in content
 
 
 class TestEdgeCasesAndErrors:
@@ -1121,339 +823,6 @@ class TestEdgeCasesAndErrors:
 
             with open(log_file) as f:
                 assert "Test message" in f.read()
-
-
-class TestErrorConditionsAndValidation:
-    """Test error conditions and validation to improve coverage"""
-
-    def test_invalid_syslog_level(self, log_file):
-        """Test initialization with invalid syslog_level"""
-        with pytest.raises(ValueError, match="Invalid syslog_level"):
-            HW_Mgmt_Logger(
-                log_file=log_file,
-                log_level=HW_Mgmt_Logger.INFO,
-                syslog_level=99999  # Invalid level
-            )
-
-    def test_log_directory_not_exists(self, temp_dir):
-        """Test error when log directory doesn't exist"""
-        non_existent_dir = os.path.join(temp_dir, "nonexistent", "subdir")
-        log_file = os.path.join(non_existent_dir, "test.log")
-
-        with pytest.raises(PermissionError, match="Log directory does not exist"):
-            HW_Mgmt_Logger(log_file=log_file)
-
-    def test_log_directory_not_writable(self, temp_dir):
-        """Test error when log directory is not writable"""
-        log_dir = os.path.join(temp_dir, "readonly")
-        os.makedirs(log_dir)
-        os.chmod(log_dir, 0o444)  # Read-only
-
-        log_file = os.path.join(log_dir, "test.log")
-
-        try:
-            with pytest.raises(PermissionError, match="Cannot write to log directory"):
-                HW_Mgmt_Logger(log_file=log_file)
-        finally:
-            os.chmod(log_dir, 0o755)  # Restore permissions for cleanup
-
-    def test_set_param_with_invalid_log_level(self, log_file):
-        """Test set_param with invalid log_level"""
-        logger = HW_Mgmt_Logger(log_file=log_file)
-
-        with pytest.raises(ValueError, match="Invalid log_level"):
-            logger.set_param(log_level=99999)
-
-        logger.stop()
-
-    def test_set_loglevel_with_all_valid_levels(self, log_file):
-        """Test set_loglevel covers all valid levels"""
-        logger = HW_Mgmt_Logger(log_file=log_file)
-
-        # Test all valid levels
-        for level in [HW_Mgmt_Logger.DEBUG, HW_Mgmt_Logger.INFO,
-                      HW_Mgmt_Logger.NOTICE, HW_Mgmt_Logger.WARNING,
-                      HW_Mgmt_Logger.ERROR, HW_Mgmt_Logger.CRITICAL,
-                      HW_Mgmt_Logger.NOTSET]:
-            logger.set_loglevel(level)
-            assert logger.logger.level == level
-
-        logger.stop()
-
-    def test_logger_without_log_file(self):
-        """Test logger with log_file=None"""
-        logger = HW_Mgmt_Logger(log_file=None, log_level=HW_Mgmt_Logger.INFO)
-
-        logger.info("Test message")
-        logger.debug("Debug message")
-        logger.error("Error message")
-
-        logger.stop()
-
-    def test_logger_suspend_multiple_times(self, log_file):
-        """Test suspending multiple times"""
-        logger = HW_Mgmt_Logger(log_file=log_file)
-
-        logger.suspend()
-        logger.suspend()  # Second suspend should be safe
-        logger.info("Suspended message")
-        logger.resume()
-        logger.resume()  # Second resume should be safe
-        logger.info("Resumed message")
-
-        logger.stop()
-
-    def test_set_param_change_to_none_log_file(self, log_file):
-        """Test set_param changing from file to None"""
-        logger = HW_Mgmt_Logger(log_file=log_file)
-        logger.info("First message")
-
-        # Change to None
-        logger.set_param(log_file=None)
-        logger.info("Second message")
-
-        logger.stop()
-
-    def test_log_file_without_directory(self, temp_dir):
-        """Test log file in current directory (empty log_dir)"""
-        import os
-        orig_cwd = os.getcwd()
-        try:
-            os.chdir(temp_dir)
-            logger = HW_Mgmt_Logger(log_file="test.log")
-            logger.info("Test message")
-            logger.stop()
-            assert os.path.exists("test.log")
-        finally:
-            os.chdir(orig_cwd)
-
-    def test_syslog_without_initialization(self, log_file):
-        """Test syslog_log when syslog is not initialized"""
-        logger = HW_Mgmt_Logger(log_file=log_file, syslog_level=None)
-        # This should not crash when _syslog is None
-        logger.syslog_log(HW_Mgmt_Logger.INFO, "Test message")
-        logger.stop()
-
-    def test_syslog_write_exception(self, log_file, mock_syslog):
-        """Test exception handling in syslog write"""
-        logger = HW_Mgmt_Logger(
-            log_file=log_file,
-            syslog_level=HW_Mgmt_Logger.INFO
-        )
-
-        # Mock syslog to raise exception
-        mock_syslog['syslog'].side_effect = Exception("Syslog error")
-
-        # Should not crash, just print warning
-        logger.syslog_log(HW_Mgmt_Logger.INFO, "Test")
-        logger.stop()
-
-    def test_handler_close_exception(self, log_file):
-        """Test exception handling when closing handlers"""
-        from unittest.mock import patch
-        logger = HW_Mgmt_Logger(log_file=log_file)
-
-        # Patch the handler's close method to raise an exception
-        with patch.object(logger.logger.handlers[0], 'close', side_effect=ValueError("Close error")):
-            # Should handle exception gracefully (catches ValueError and IOError)
-            logger.stop()
-
-        # Verify logger still cleaned up properly
-        assert len(logger.logger.handlers) == 0
-
-    def test_logging_with_different_syslog_levels(self, log_file):
-        """Test syslog logging with different levels"""
-        logger = HW_Mgmt_Logger(
-            log_file=log_file,
-            log_level=HW_Mgmt_Logger.DEBUG,
-            syslog_level=HW_Mgmt_Logger.INFO
-        )
-
-        # Test different levels that go to syslog
-        logger.error("Error message")  # ERROR
-        logger.warning("Warning message")  # WARNING
-        logger.info("Info message")  # INFO
-        logger.notice("Notice message")  # NOTICE
-        logger.debug("Debug message")  # DEBUG (won't go to syslog)
-
-        logger.stop()
-
-    def test_logging_exception_handling(self, log_file):
-        """Test exception handling during log_handler call"""
-        from unittest.mock import patch
-        import warnings
-
-        # Suppress ResourceWarning for this test
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=ResourceWarning)
-
-            logger = HW_Mgmt_Logger(
-                log_file=log_file,
-                log_level=HW_Mgmt_Logger.INFO,
-                syslog_level=None  # Disable syslog to simplify test
-            )
-
-            try:
-                # Mock logger.log to raise exception
-                with patch.object(logger.logger, 'log', side_effect=IOError("Logging error")):
-                    # Should handle error gracefully and not crash
-                    # The code prints error but doesn't re-raise
-                    try:
-                        logger.log_handler(HW_Mgmt_Logger.INFO, "Test message")
-                    except Exception as e:
-                        pytest.fail(f"Exception should have been caught but was raised: {e}")
-            finally:
-                # Ensure proper cleanup
-                logger.stop()
-
-    def test_push_syslog_with_lock(self, log_file):
-        """Test _push_syslog uses lock correctly"""
-        logger = HW_Mgmt_Logger(
-            log_file=log_file,
-            syslog_level=HW_Mgmt_Logger.INFO
-        )
-
-        # Call _push_syslog directly
-        msg, emit = logger._push_syslog("Test", id="test_id", repeat=3)
-        assert isinstance(msg, str)
-        assert isinstance(emit, bool)
-
-        logger.stop()
-
-    def test_log_with_repeat_zero(self, log_file):
-        """Test logging with repeat=0 (no emission)"""
-        logger = HW_Mgmt_Logger(log_file=log_file)
-
-        # Log with repeat=0 should not emit
-        logger.log_handler(HW_Mgmt_Logger.INFO, "Message", id="test", log_repeat=0)
-
-        logger.stop()
-
-
-class TestRepeatedTimerCoverage:
-    """Test RepeatedTimer to improve coverage"""
-
-    def test_auto_start_true(self):
-        """Test RepeatedTimer with auto_start=True"""
-        from hw_management_lib import RepeatedTimer
-        counter = {'count': 0}
-
-        def increment():
-            counter['count'] += 1
-
-        timer = RepeatedTimer(0.01, increment, auto_start=True)
-        time.sleep(0.05)
-        timer.stop()
-
-        assert counter['count'] > 0
-
-    def test_destructor_cleanup(self):
-        """Test __del__ method"""
-        from hw_management_lib import RepeatedTimer
-
-        def dummy():
-            pass
-
-        timer = RepeatedTimer(0.1, dummy)
-        timer.start()
-        # Delete should call stop
-        del timer
-
-    def test_exception_in_periodic_task(self):
-        """Test exception handling in periodic task"""
-        from hw_management_lib import RepeatedTimer
-
-        def raise_error():
-            raise ValueError("Task error")
-
-        timer = RepeatedTimer(0.01, raise_error)
-        timer.start()
-        time.sleep(0.05)
-        timer.stop()
-        # Should not crash
-
-    def test_start_with_immediately_run_true(self):
-        """Test start with immediately_run=True"""
-        from hw_management_lib import RepeatedTimer
-        counter = {'count': 0}
-
-        def increment():
-            counter['count'] += 1
-
-        timer = RepeatedTimer(1.0, increment)  # Long interval
-        timer.start(immediately_run=True)
-
-        # Should have run once immediately
-        assert counter['count'] >= 1
-        timer.stop()
-
-    def test_start_when_already_running(self):
-        """Test start when thread is already alive"""
-        from hw_management_lib import RepeatedTimer
-
-        def dummy():
-            pass
-
-        timer = RepeatedTimer(0.1, dummy)
-        timer.start()
-
-        # Second start should return early
-        timer.start()
-
-        assert timer.is_running()
-        timer.stop()
-
-    def test_stop_from_same_thread(self):
-        """Test stopping from within the timer thread (avoid deadlock)"""
-        from hw_management_lib import RepeatedTimer
-
-        timer_ref = {'timer': None}
-
-        def stop_self():
-            if timer_ref['timer']:
-                timer_ref['timer'].stop()
-
-        timer = RepeatedTimer(0.01, stop_self)
-        timer_ref['timer'] = timer
-        timer.start()
-        time.sleep(0.05)
-        # Should not deadlock
-
-    def test_thread_still_alive_after_timeout(self):
-        """Test warning when thread doesn't stop in time"""
-        from hw_management_lib import RepeatedTimer
-        import io
-        import sys
-
-        def long_running():
-            time.sleep(10)  # Longer than timeout
-
-        timer = RepeatedTimer(0.1, long_running)
-        timer.start()
-        time.sleep(0.05)  # Let it start
-
-        # Capture stdout
-        old_stdout = sys.stdout
-        sys.stdout = io.StringIO()
-
-        result = timer.stop()
-
-        output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
-
-        # May or may not timeout depending on timing
-        # Just ensure it doesn't crash
-
-    def test_stop_when_not_running(self):
-        """Test stop when timer was never started"""
-        from hw_management_lib import RepeatedTimer
-
-        def dummy():
-            pass
-
-        timer = RepeatedTimer(0.1, dummy)
-        result = timer.stop()  # Should return True
-        assert result
 
 
 # =============================================================================

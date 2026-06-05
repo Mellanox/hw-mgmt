@@ -143,7 +143,7 @@ class TestChipupStatusFiles(unittest.TestCase):
                 with patch('os.path.exists', return_value=True):
                     with patch('os.path.islink', return_value=False):
                         with patch('os.symlink'):
-                            # Call asic_temp_populate
+                            # Call monitor_asic_chipup_status
                             peripheral_module.monitor_asic_chipup_status(arg_list, None)
 
         # Verify asic_chipup_completed was written

@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2020-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2020-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -34,20 +34,6 @@
 
 # hw-management script that is executed at the end of hw-management start.
 source hw-management-helpers.sh
-
-# Read tc_version value from a tc_config.json path (grep-based). Prints 2.0 when missing or unreadable.
-get_tc_version()
-{
-	local json_path="$1"
-	local v
-
-	[ -f "$json_path" ] || {
-		echo "2.0"
-		return
-	}
-	v=$(grep -o '"tc_version"[[:space:]]*:[[:space:]]*"[^"]*"' "$json_path" 2>/dev/null | head -n1 | cut -d'"' -f4)
-	echo "${v:-2.0}"
-}
 
 # Local constants and paths.
 CPLD3_VER_DEF="0"
@@ -98,7 +84,7 @@ fi
 if check_simx; then
         if check_if_simx_supported_platform; then
                 case $sku in
-                        HI166|HI176|HI171|HI180|HI185|HI193)
+                        HI166|HI176|HI171|HI180)
                                 process_simx_links
                                 ;;
                         *)
@@ -110,7 +96,7 @@ fi
 
 ## Check SKU and run the below only for relevant.
 case $sku in
-	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI179|HI180|HI185)
+	HI130|HI151|HI157|HI158|HI162|HI166|HI167|HI169|HI170|HI171|HI172|HI173|HI174|HI175|HI176|HI177|HI178|HI179|HI180)
 		ui_tree_archive_file="$(get_ui_tree_archive_file)"
 		if [ -e "$ui_tree_archive_file" ]; then
 			# Extract the ui_tree archive to /var/run/hw-management
@@ -125,133 +111,57 @@ case $sku in
 		# Do nothing
 esac
 
-# Check if TC service is enabled (unit enabled at boot) and if it is currently running.
-tc_is_enabled=0
-if systemctl is-enabled --quiet hw-management-tc.service 2>/dev/null; then
-	tc_is_enabled=1
-fi
-# Check if TC service is running.
-tc_should_start=0
-if systemctl is-active --quiet hw-management-tc.service; then
-	tc_should_start=1
-fi
-
-# Initialize TC service control variables.
-tc_should_enable=0
-tc_should_disable=0
-tc_should_reload=0
-
-## Checking if system doesn't support TC and disable it if it doesn't.
-if check_tc_is_supported; then
-	# If TC is not supported, disable it.
-	log_info "Disable Thermal Control for current platform: $sku"
-	tc_should_disable=1
-else
-	# If we are running in SimX environment and the BSP emulation is not available for the platforms that run in the SimX
-	# environment, TC need to be stopped. Otherwise, enable and start TC.
-	if check_simx; then
-		# Check if SimX is supported for the current platform.
-		if ! check_if_simx_supported_platform; then
-			if [ $tc_is_enabled -eq 1 ]; then
-				echo "Stopping and disabling hw-management-tc on SimX"
-				logger -t hw-management -p daemon.notice "Stopping and disabling hw-management-tc on SimX"
-				# TC service should be stopped and disabled.
-				tc_should_disable=1
-				tc_should_start=0
-			fi
-		else
-			# If TC is supported in SimX.
-			if [ $tc_is_enabled -eq 0 ]; then
-				echo "Enable and start Thermal Control service."
-				logger -t hw-management -p daemon.notice "Thermal Control service scheduled to start."
-				# TC service should be enabled and started.
-				tc_should_enable=1
-				tc_should_start=1
-			fi
-		fi
-	fi
-fi
-
-# Align hw-management-tc.service on disk with this platform's TC script and version label.
-# The unit is rewritten only when those strings would actually change (avoid needless reload).
+# update Thermal Control service to use correct executable revision
 service_file_path=$(systemctl status hw-management-tc.service | grep hw-management-tc.service | sed -n '2p' | awk -F'[();]' '{print $2}')
-if [ -f "$service_file_path" ]; then
-	# TC application (v2.0 vs v2.5) is selected from tc_config.json (tc_version), not SKU.
-	tc_cfg_json="$config_path/tc_config.json"
-	tc_version="2.0"
-	tc_executable="hw_management_thermal_control.py"
-	if [ -f "$tc_cfg_json" ]; then
-		tc_ver_raw=$(get_tc_version "$tc_cfg_json")
-		case $tc_ver_raw in
-			2.5|2.5.*)
-				tc_version="2.5"
-				tc_executable="hw_management_thermal_control_2_5.py"
-				;;
-			*)
-				tc_version="2.0"
-				tc_executable="hw_management_thermal_control.py"
-				;;
-		esac
-	fi
-
-	# 1) Substitutions we would apply to the unit (TC executable basename and "ver X.Y" marker).
-	sed_edit_executable="s/hw_management_thermal_control_2_5\.py/$tc_executable/g;s/hw_management_thermal_control\.py/$tc_executable/g"
-	sed_edit_version="s/ver [0-9][0-9.]*/ver $tc_version/g"
-
-	# 2) Rewrite only if disk and "sed output" differ. cmp compares the file to stdin (-);
-	#    stdin is the unit text after the two sed rules (no temp file).
-	tc_unit_needs_update=1
-	if sed -e "$sed_edit_executable" -e "$sed_edit_version" -- "$service_file_path" |
-		cmp -s -- "$service_file_path" -; then
-		tc_unit_needs_update=0
-	fi
-
-	# 3) Apply the same two edits in place only when needed.
-	if [ "$tc_unit_needs_update" -eq 1 ]; then
-		sed -i -e "$sed_edit_executable" -e "$sed_edit_version" "$service_file_path"
-		log_info "Thermal Control service updated. Reload it in 10 seconds"
-		tc_should_reload=1
+if [ -f $service_file_path ]; then
+	md5sum_orig=$(md5sum $service_file_path | awk '{print $1}')
+	case $sku in
+		HI172|HI171|HI179)	# Systems allowed to use new hw-management-tc
+			tc_version="2.5"
+			tc_executable="hw_management_thermal_control_2_5.py"
+			;;
+		*)
+			tc_version="2.0"
+			tc_executable="hw_management_thermal_control.py"
+			;;
+	esac
+	sed -i "s/hw_management_thermal_control.py/$tc_executable/g" $service_file_path
+	sed -i "s/ver 2.0/ver $tc_version/g" $service_file_path
+	md5sum_new=$(md5sum $service_file_path | awk '{print $1}')
+	if [ "$md5sum_orig" != "$md5sum_new" ]; then
+		log_info "Thermal Control service updated. reload it in 10 seconds"
+		bash -c 'sleep 10 && systemctl daemon-reload && systemctl restart hw-management-tc.service' &
 	fi
 fi
 
-# Build and execute the command line for TC service control only when there is something to do.
-if [ $tc_should_reload -eq 1 ] || 
-   [ $tc_should_disable -eq 1 ] || 
-   [ $tc_should_enable -eq 1 ]; then
-	cmd_line="sleep 10 &&"
-
-	# Reload the systemd daemon if needed.
-	if [ $tc_should_reload -eq 1 ]; then
-		cmd_line="$cmd_line systemctl daemon-reload &&"
-	fi
-
-	# Disable TC service if needed.
-	if [ $tc_should_disable -eq 1 ]; then
-		cmd_line="$cmd_line systemctl stop hw-management-tc && systemctl disable hw-management-tc &&"
-		# TC service should not be started.
-		tc_should_start=0
-	elif [ $tc_should_enable -eq 1 ]; then
-		# TC service should be enabled.
-		cmd_line="$cmd_line systemctl enable hw-management-tc &&"
-	fi
-
-	# Start TC service if needed.
-	if [ $tc_should_start -ne 0 ]; then
-		if [ $tc_should_reload -eq 1 ]; then
-			# TC service should be restarted in case of reload.
-			cmd_line="$cmd_line systemctl restart hw-management-tc &&"
-		else
-			# TC service should be started.
-			cmd_line="$cmd_line systemctl start hw-management-tc &&"
-		fi
-	fi
-
-	# Run the command line in the background and log the output to /dev/null.
-	# it is necessary because on SIMX, hw-mgmt tries to start the TC service during initialization.
-	# However, the TC service has a strong dependency: 
-	# Requires=hw-management.service. This means the TC service cannot start
-	# before hw-mgmt starts. But hw-mgmt attempts to start TC earlier. In this
-	# case, neither hw-mgmt nor TC will complete initialization.
-	# to run it in the background to avoid blocking the startup process.
-	nohup bash -c "$cmd_line echo thermal control service configured" &>/dev/null &
+# If the BSP emulation is not available for the platforms that run in the SimX
+# environment, TC need to be stopped. Otherwise enabling TC.
+if check_simx; then
+    if ! check_if_simx_supported_platform; then
+	    if systemctl is-enabled --quiet hw-management-tc; then
+		    echo "Stopping and disabling hw-management-tc on SimX"
+		    systemctl stop hw-management-tc
+		    systemctl disable hw-management-tc
+	    fi
+	    echo "Start Chassis HW management service."
+	    logger -t hw-management -p daemon.notice "Start Chassis HW management service."
+	    exit 0
+    else
+	    if ! systemctl is-enabled --quiet hw-management-tc; then
+		    echo "Enabling and starting hw-management-tc"
+		    if check_tc_support; then
+			    systemctl enable hw-management-tc
+			    nohup systemctl start hw-management-tc &
+			fi
+	    fi
+    fi
 fi
+
+## Checking if system doesn't require TC
+check_tc_is_supported
+if [ $? -eq 0 ]; then
+	log_info "Disabe Thermal Control for current platform: $sku"
+	systemctl stop hw-management-tc.service
+	systemctl disable hw-management-tc.service  
+fi
+

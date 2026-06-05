@@ -34,10 +34,10 @@ Hardware tests automatically SSH to the target hardware, copy test files, and ru
 
 ```bash
 # Run all hardware tests via SSH
-python3 tests/test.py --hardware --host <hostname> --user <username> --password <credentials>
+python3 tests/test.py --hardware --host <hostname> --user <username> --password <password>
 
 # Example
-python3 tests/test.py --hardware --host 10.0.0.100 --user root --password ********
+python3 tests/test.py --hardware --host 10.0.0.100 --user root --password mypassword
 ```
 
 **Requirements for SSH-based testing:**
@@ -67,7 +67,7 @@ sudo python3 tests/hardware/test_thermal_updater_integration.py
 sudo python3 tests/hardware/test_peripheral_updater_integration.py
 
 # Via SSH (thermal only)
-python3 tests/test.py --hardware --host 10.0.0.100 --user root --password ********
+python3 tests/test.py --hardware --host 10.0.0.100 --user root --password pass
 ```
 
 ### Run Individual Test
@@ -188,7 +188,7 @@ which sshpass
 sudo apt-get install sshpass
 
 # Verify credentials are correct
-sshpass -p '********' ssh <user>@<host> 'echo "Connection successful"'
+sshpass -p '<password>' ssh <user>@<host> 'echo "Connection successful"'
 ```
 
 ### Tests Fail to Start Services (On Hardware)
@@ -225,7 +225,7 @@ Tests require root access on hardware:
 sudo python3 tests/hardware/test_thermal_updater_integration.py
 
 # Via SSH (automatically uses sudo)
-python3 tests/test.py --hardware --host <host> --user root --password ********
+python3 tests/test.py --hardware --host <host> --user root --password <pass>
 ```
 
 ### Files Not Created

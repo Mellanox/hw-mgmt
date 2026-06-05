@@ -1,7 +1,7 @@
 #!/bin/bash
 ##################################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2021-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2021-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -80,8 +80,6 @@ udev_event_log="/var/log/udev_events.log"
 vm_sku=`cat $sku_file`
 vm_vpd_path="/etc/hw-management-virtual/$vm_sku"
 cpldreg_log_file=/var/log/hw-mgmt-cpldreg.log
-fixup_hook_script=/usr/local/bin/hw-management-fixup.sh
-asic_chipup_status=/run/.asic_chipup_completed
 
 declare -A psu_fandir_vs_pn=(["00KX1W"]=R ["00MP582"]=F ["00MP592"]=R ["00WT061"]=F \
 ["00WT062"]=R ["00WT199"]=F ["01FT674"]=F ["01FT691"]=F ["01LL976"]=F \
@@ -125,8 +123,9 @@ i2c_bus_max=26
 bmc_i2c_bus_max=9
 bmc_i2c_bus_offset=70
 cpu_type=
+device_connect_delay=0.2
 
-# CPU Family + CPU Model should identify exact CPU architecture
+# CPU Family + CPU Model should idintify exact CPU architecture
 # IVB - Ivy-Bridge
 # RNG - Atom Rangeley
 # BDW - Broadwell-DE
@@ -134,8 +133,6 @@ cpu_type=
 # DNV - Denverton
 # BF3 - BlueField-3
 # AMD_SNW - AMD Snow Owl - EPYC Embedded 3000
-# AMD_V3000 - AMD V3000
-# AMD_FRNG - AMD FireRange
 # ARMv7 - Aspeed 2600
 IVB_CPU=0x63A
 RNG_CPU=0x64D
@@ -144,8 +141,6 @@ CFL_CPU=0x69E
 DNV_CPU=0x65F
 BF3_CPU=0xD42
 AMD_SNW_CPU=0x171
-AMD_V3000_CPU=0x1944
-AMD_FRNG_CPU=0x1A44
 ARMv7_CPU=0xC07
 amd_snw_i2c_sodimm_dev=/sys/devices/platform/AMDI0010:02
 n5110_mctp_bus="0"
@@ -287,11 +282,10 @@ unlock_service_state_change()
     /usr/bin/flock -u ${LOCKFD}
 }
 
-# This function checks if the labels are enabled for the current platform.
-# Returns 0 if labels are enabled, 1 otherwise.
 check_labels_enabled()
 {
-    if [ "$ui_tree_sku" = "HI130" ] ||
+    ui_tree_archive_file="$(get_ui_tree_archive_file)"
+    if ([ "$ui_tree_sku" = "HI130" ] ||
         [ "$ui_tree_sku" = "HI151" ] ||
         [ "$ui_tree_sku" = "HI157" ] ||
         [ "$ui_tree_sku" = "HI158" ] ||
@@ -307,21 +301,19 @@ check_labels_enabled()
         [ "$ui_tree_sku" = "HI177" ] ||
         [ "$ui_tree_sku" = "HI178" ] ||
         [ "$ui_tree_sku" = "HI179" ] ||
-        [ "$ui_tree_sku" = "HI180" ] ||
-        [ "$ui_tree_sku" = "HI185" ]; then
-        ui_tree_archive_file="$(get_ui_tree_archive_file)"
-        if [ ! -e "$ui_tree_archive_file" ]; then
-            return 0
-        fi
+        [ "$ui_tree_sku" = "HI180" ]) &&
+        ([ ! -e "$ui_tree_archive_file" ]); then
+        return 0
+    else
+        return 1
     fi
-    return 1
 }
 
 # This function checks if the platform is having BSP emulation support.
 check_if_simx_supported_platform()
 {
 	case $vm_sku in
-		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180|HI181|HI185|HI193|HI194)
+		HI130|HI122|HI144|HI147|HI157|HI112|MSN2700-CS2FO|MSN2410-CB2F|MSN2100|HI160|HI158|HI166|HI171|HI172|HI173|HI174|HI176|HI179|HI180)
 			return 0
 			;;
 
@@ -357,7 +349,7 @@ check_tc_is_supported()
 check_bmc_is_supported()
 {
 	case $vm_sku in
-		HI166|HI167|HI169|HI170|HI176|HI177|HI180|HI185|HI193)
+		HI166|HI167|HI169|HI170|HI176|HI177|HI180)
 			return 0
 			;;
 
@@ -365,25 +357,6 @@ check_bmc_is_supported()
 			return 1
 			;;
 	esac
-}
-
-# This function checks if the host NOS is SONiC.
-# On SONiC, SONiC itself owns CPU<->BMC communication, so hw-management must
-# skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
-# polling). On any other host OS the behavior is unchanged.
-# Returns 0 if the host runs SONiC, 1 otherwise (single source of truth:
-# hw_management_sonic_check.py).
-check_host_os_is_sonic()
-{
-	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
-}
-
-# Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
-# Requires SONiC plus a host-side contract file (same well-known paths as on the BMC).
-check_host_usb0_managed_by_nos()
-{
-	check_host_os_is_sonic || return 1
-	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
 }
 
 # This function create or cleans sysfs monitor helper files.
@@ -432,25 +405,14 @@ init_sysfs_monitor_timestamp_files()
 # Used by both hw-management service and sysfs monitor service.
 refresh_sysfs_monitor_timestamps()
 {
-    local uptime_sec int_part frac_part current_time
-    # Read uptime from /proc/uptime and extract integer and fractional parts.
-    read -r uptime_sec _ </proc/uptime 2>/dev/null || uptime_sec="0.000"
-    # Extract integer part of uptime.
-    int_part=${uptime_sec%%.*}
-    # Extract fractional part of uptime.
-    frac_part=${uptime_sec#*.}
-    # Take up to the first 3 digits of the fractional part.
-    frac_part=${frac_part:0:3}
-    # Default to 0 if fractional part is empty.
-    frac_part=${frac_part:-0}
-    # Pad fractional part with zeros if it has fewer than 3 digits.
-    while [ ${#frac_part} -lt 3 ]; do frac_part="${frac_part}0"; done
-    # Calculate current time in milliseconds.
-    current_time=$(( int_part * 1000 + 10#$frac_part ))
-
-    local last_reset_time_A last_reset_time_B
-    read -r last_reset_time_A < "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || last_reset_time_A=0
-    read -r last_reset_time_B < "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || last_reset_time_B=0
+    # Capture the current time with milliseconds.
+    local current_time=$(awk '{print int($1 * 1000)}' /proc/uptime)
+    # Read the last update time from both reset files.
+    local last_reset_time_A=$(cat "$SYSFS_MONITOR_RESET_FILE_A" 2>/dev/null || echo 0)
+    local last_reset_time_B=$(cat "$SYSFS_MONITOR_RESET_FILE_B" 2>/dev/null || echo 0)
+    # Ensure both variables are valid integers, defaulting to 0 if empty or invalid.
+    last_reset_time_A=${last_reset_time_A:-0}
+    last_reset_time_B=${last_reset_time_B:-0}
     # Determine which file was written most recently.
     if [ "$last_reset_time_A" -gt "$last_reset_time_B" ]; then
         # Write the current time to the less recently updated file (B).
@@ -467,7 +429,7 @@ process_simx_links()
 	local dir_list
 
 	# Create the attributes in thermal and environment directories of hw-management.
-        dir_list="thermal environment alarm"
+        dir_list="thermal environment"
         for i in $dir_list; do
                 while IFS=' ' read -r filename value; do
                         [ -z "$filename" ] && continue
@@ -561,18 +523,6 @@ unlock_service_state_change_update_and_match()
 	/usr/bin/flock -u ${LOCKFD}
 }
 
-# Connect device driver helper function. Returns 0 if device driver is connected, 1 otherwise.
-# Poll every 100 ms for device driver connection.
-# Input: 
-# - $1 - device name
-# - $2 - device address
-# - $3 - device bus
-# Output:
-# - 0 - success
-# - 1 - failure
-# Max wait for I2C new_device driver connect (milliseconds); connect_device polls every 100 ms.
-device_connect_delay_ms=400
-device_connect_poll_step_ms=100
 connect_device()
 {
 	find_i2c_bus
@@ -581,22 +531,12 @@ connect_device()
 	if [ -f /sys/bus/i2c/devices/i2c-"$bus"/new_device ]; then
 		if [ ! -d /sys/bus/i2c/devices/$bus-00"$addr" ] &&
 		   [ ! -d /sys/bus/i2c/devices/$bus-000"$addr" ]; then
-		   	local device_connect_timer=$device_connect_delay_ms
-			local step_sec
-			step_sec=$(awk "BEGIN {printf \"%.3f\", $device_connect_poll_step_ms/1000}")
 			echo "$1" "$2" > /sys/bus/i2c/devices/i2c-$bus/new_device
-			while true
-			do
-				if [ -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] ||
-				   [ -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
-					return 0
-				fi
-				device_connect_timer=$((device_connect_timer - device_connect_poll_step_ms))
-				[ "$device_connect_timer" -lt 0 ] && break
-				# We know that sleep is not accurate. But it is acceptable for this use case.
-				sleep "$step_sec"
-			done
-			return 1
+			sleep ${device_connect_delay}
+			if [ ! -L /sys/bus/i2c/devices/$bus-00"$addr"/driver ] &&
+			   [ ! -L /sys/bus/i2c/devices/$bus-000"$addr"/driver ]; then
+				return 1
+			fi
 		fi
 	fi
 
@@ -893,54 +833,7 @@ create_hotplug_smart_switch_event_files()
 	done
 }
 
-# Link hotplug sysfs attribute and mirror active state to events
-#    1 - Creating symlink to target status file
-#    2 - Mirroring active state to event file
-# $1 - hwmon base path (no trailing slash)
-# $2 - sysfs attribute name (e.g. fan1, lc2_active)
-# $3 - status symlink target (thermal_path or system_path)
-# $4 - eventfile name under events_path
-# Returns 0 if sysfs attribute exists, 1 otherwise.
-init_hotplug_sysfs_event()
-{
-	local hwmon_path="$1"
-	local attr="$2"
-	local status_link="$3"
-	local event_name="$4"
-	local event
-	local src="${hwmon_path}/${attr}"
-
-	if [ ! -f "$src" ]; then
-		return 1
-	fi
-	check_n_link "$src" "$status_link"
-	event=$(< "$status_link")
-	if [ "$event" -eq 1 ]; then
-		echo 1 > "$events_path/$event_name"
-	fi
-	return 0
-}
-
-# Unlink hotplug sysfs attribute and mirror active state from events.
-#    1 - Unlinking symlink to target status
-#    2 - Clearing event file
-# $1 - hwmon base path (no trailing slash)
-# $2 - sysfs attribute name (e.g. fan1, lc2_active)
-# $3 - status symlink target (thermal_path or system_path)
-# $4 - eventfile name under events_path
-# Returns 0 if sysfs attribute exists, 1 otherwise.
-deinit_hotplug_sysfs_event()
-{
-	local hwmon_path="$1"
-	local attr="$2"
-	local status_link="$3"
-	local event_name="$4"
-
-	check_n_unlink "$status_link"
-	echo 0 > "$events_path/$event_name"
-}
-
-init_hotplug_dpu_events()
+init_hotplug_events()
 {
 	local event_file="$1"
 	local path="$2"
@@ -976,7 +869,7 @@ init_hotplug_dpu_events()
 	done
 }
 
-deinit_hotplug_dpu_events()
+deinit_hotplug_events()
 {
 	local event_file="$1"
 	local slot_num="$2"
@@ -1129,155 +1022,4 @@ check_and_recreate_dpu_devices()
 			log_info "Found mlxreg-io on i2c-$bus"
 		fi
 	done
-}
-
-run_fixup_script()
-{
-	local status
-	local stage=$1
-
-	if [ -x ${fixup_hook_script} ] && [ -s ${fixup_hook_script} ]; then
-		${fixup_hook_script} $stage
-		status=$?
-		log_info "${stage}-init fixup hook completed with exit status $status"
-		echo $status > ${config_path}/fixup-status-${stage}
-	fi
-}
-
-check_asic_chipup_status()
-{
-	local chipup_status=0
-
-	if [ -f "$asic_chipup_status" ]; then
-		chipup_status=$(< "$asic_chipup_status")
-		if [ $chipup_status -eq 1 ]; then
-			return 0
-		fi
-	fi
-	return 1
-}
-
-# SODIMM temperatures (C) for setting in scale 1000
-SODIMM_TEMP_CRIT=95000
-SODIMM_TEMP_MAX=85000
-SODIMM_TEMP_MIN=0
-SODIMM_TEMP_HYST=6000
-
-set_sodimm_temp_limits()
-{
-	# SODIMM temp reading is not supported on Broadwell-DE Comex
-	# and on BF# Comex.
-	# Broadwell-DE Comex can be installed interchangeably with new
-	# Coffee Lake Comex on part of systems e.g. on Anaconda.
-	# Thus check by CPU type and not by system type.
-	case $cpu_type in
-		$BDW_CPU|$BF3_CPU)
-			return 0
-			;;
-		*)
-			;;
-	esac
-
-	if [ ! -d /sys/bus/i2c/drivers/jc42 ]; then
-		modprobe jc42 > /dev/null 2>&1
-		rc=$?
-		if [ $rc -eq 0 ]; then
-			while : ; do
-				sleep 1
-				[[ -d /sys/bus/i2c/drivers/jc42 ]] && break
-			done
-		else
-			return 1
-		fi
-	fi
-
-	for temp_sens in /sys/bus/i2c/drivers/jc42/[0-9]*-*; do
-		# Skip if the sensor path does not exist or lacks a hwmon subdirectory
-		[[ -e "$temp_sens" && -d "$temp_sens/hwmon" ]] || continue
-
-		echo "$SODIMM_TEMP_CRIT" > "$temp_sens"/hwmon/hwmon*/temp1_crit
-		echo "$SODIMM_TEMP_MAX"  > "$temp_sens"/hwmon/hwmon*/temp1_max
-		echo "$SODIMM_TEMP_MIN"  > "$temp_sens"/hwmon/hwmon*/temp1_min
-		echo "$SODIMM_TEMP_HYST" > "$temp_sens"/hwmon/hwmon*/temp1_crit_hyst
-	done
-
-	return 0
-}
-
-
-# Start i2c trace (ftrace i2c event class under tracefs).
-KERN_TRACE_FS="/sys/kernel/debug/tracing"
-start_i2c_trace() {
-	if [ ! -d "$KERN_TRACE_FS/events/i2c" ]; then
-		return
-	fi
-
-	# Already running: do not reconfigure (another tool may have enabled it with
-	# different buffer/filters; re-applying could fight that consumer).
-	if [ "$(< "$KERN_TRACE_FS"/events/i2c/enable)" -eq 1 ]; then
-		return
-	fi
-
-	# configure i2c trace buffer size
-	# echo 1024 > "$KERN_TRACE_FS"/buffer_size_kb  # 1 MiB (per-buffer; see tracing doc)
-	# reset i2c trace
-	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
-	# clear i2c trace buffer
-	echo 0 > "$KERN_TRACE_FS"/trace
-	# set i2c trace filter (only where the kernel exposes per-event filter files)
-	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/filter  2>/dev/null || true
-	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_write/filter  2>/dev/null || true
-	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_read/filter  2>/dev/null || true
-	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_result/filter  2>/dev/null || true
-	echo "adapter_nr!=1" > "$KERN_TRACE_FS"/events/i2c/i2c_reply/filter  2>/dev/null || true
-	# enable (start)i2c trace
-	echo 1 > "$KERN_TRACE_FS"/events/i2c/enable
-}
-
-# Stop i2c trace
-stop_i2c_trace() {
-	# check if i2c trace available
-	if [ ! -f "$KERN_TRACE_FS"/events/i2c/enable ]; then
-		return
-	fi
-	# check if trace is running (/sys/kernel/debug/tracing/events/i2c/enable == 1)
-	if [ "$(cat "$KERN_TRACE_FS"/events/i2c/enable)" -eq 0 ]; then
-		return
-	fi
-	# disable (stop) i2c trace
-	echo 0 > "$KERN_TRACE_FS"/events/i2c/enable
-	# save i2c trace to file
-	cat "$KERN_TRACE_FS"/trace >> /var/log/hw-mgmt-i2c-trace.log
-	# clear i2c trace buffer
-	echo 0 > "$KERN_TRACE_FS"/trace
-}
-
-# Print function trace to the log file(s)
-# log file is in /var/log/hw-mgmt.trace.log. Log rotation: maximum 3 rotated files, 2 MiB each (see logrotate).
-# log rotation is implemented by logrotate. See configuration file /etc/logrotate.d/hw-mgmt-trace
-# Arguments:
-# $1 - script name
-# $2 - function name
-# $3 - arguments (optional). Type: string.
-print_function_call() {
-	local script_name
-	local function_name
-	local argument
-	local TS LOG_FILE
-	local PID
-
-	script_name="${1##*/}" # Script name
-	function_name="$2" # Function name
-	argument="$3" # Arguments
-	PID="$$" # Process ID
-	# TS format is %Y_%m_%d_%H-%M-%S.%3N (23 chars).
-	TS="$(date +'%Y_%m_%d_%H-%M-%S.%3N')" # Timestamp
-	LOG_FILE="/var/log/hw-mgmt.trace.log" # Log file
-
-	printf "%s(%s) [%s]: %s %s\n" \
-		"$script_name" \
-		"$PID" \
-		"$TS" \
-		"$function_name" \
-		"$argument" >> "$LOG_FILE"
 }

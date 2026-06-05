@@ -1,7 +1,7 @@
 #!/bin/bash
 ###########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -31,58 +31,32 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# This script is executed by udev rule to bring up USB network interface
-# Usage: hw-management-ifupdown.sh <interface>
+# This script is executed by udev rules to up/down USB network interface
 
-source /usr/bin/hw-management-helpers.sh
-
+ACTION=$2
 INTERFACE=$1
 
-if [ -z "${INTERFACE}" ]; then
-	log_err "Missing interface parameter"
+if [ -z "${ACTION}" ] || [ -z "${INTERFACE}" ]; then
+	echo "Missing parameters"
 	exit 1
 fi
 
-# Skip ifup only when SONiC host and BMC/host images agree (NOS contract file present).
-# If the host is SONiC but the contract file is absent, BMC may still use static
-# usb0 and the host must run ifup as on non-SONiC images.
-if [ "${INTERFACE}" = "usb0" ] && check_host_usb0_managed_by_nos; then
-	log_info "SONiC host: skip ifup ${INTERFACE} (NOS-owned, contract file present)"
+if [ ! -e /sys/class/net/${INTERFACE} ] ||
+   [ ! -e /etc/network/interfaces ]; then
 	exit 0
 fi
 
-if [ ! -e "/sys/class/net/${INTERFACE}" ]; then
-	log_info "Interface ${INTERFACE} is missing"
+AUTO=$(ifquery -l 2>/dev/null)
+HOTPLUG=$(ifquery -l --allow=hotplug 2>/dev/null)
+
+if ! echo $AUTO $HOTPLUG | grep -q ${INTERFACE}; then
 	exit 0
 fi
 
-if [ ! -e /etc/network/interfaces ]; then
-	log_info "/etc/network/interfaces is missing"
-	exit 0
+if [ "${ACTION}" = "up" ]; then
+	ifup ${INTERFACE}
+else
+	ifdown ${INTERFACE}
 fi
 
-if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
-	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
-	exit 1
-fi
-
-# Retry ifup to work around locking conflicts with Debian networking service.
-# Since usb0 is the only hotplug interface in the system, running this retry
-# loop and blocking UDEV for maximum 8 seconds from processing further events
-# for the same device path is an acceptable tradeoff.
-MAX_RETRIES=5
-RETRY_DELAY=2
-for ((i=1; i<=MAX_RETRIES; i++)); do
-	if ifup "${INTERFACE}"; then
-		log_info "ifup ${INTERFACE} succeeded on attempt $i"
-		exit 0
-	fi
-
-	if [ "$i" -lt "$MAX_RETRIES" ]; then
-		log_info "Unsuccessful attempt $i to ifup ${INTERFACE}. Retrying in ${RETRY_DELAY} seconds..."
-		sleep "${RETRY_DELAY}"
-	fi
-done
-
-log_err "Failed to ifup interface ${INTERFACE}"
-exit 1
+exit 0
