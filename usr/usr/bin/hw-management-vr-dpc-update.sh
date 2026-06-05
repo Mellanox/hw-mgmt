@@ -445,6 +445,15 @@ parse_crc_file()
 	log_info "Parsed CRC values - Normal: ${CRC_EXP[0]}, Multi: ${CRC_EXP[1]}"
 }
 
+# Compare 0x-prefixed hex words numerically (not lexicographically).
+hex_word_to_int()
+{
+	local h="${1,,}"
+	h="${h#0x}"
+	[[ "$h" =~ ^[0-9a-f]+$ ]] || return 1
+	echo $((16#$h))
+}
+
 validate_revisions()
 {
 	log_info "Validating device revisions..."
@@ -481,12 +490,14 @@ validate_revisions()
 			cmd_code=$(echo "$cmd_code" | tr '[:upper:]' '[:lower:]')
 
 			if [[ "$page" == "$DPC_REVISION_ID_PAGE" ]] && [[ "$cmd_code" == "$DPC_REVISION_ID" ]]; then
-				# Compare expected and real values.
-				if [[ "$revision" < "$val" ]]; then
-					log_info "Input revision $revision is less than actual revision $val"
+				local rev_n val_n
+				rev_n="$(hex_word_to_int "$revision")" || return 1
+				val_n="$(hex_word_to_int "$val")" || return 1
+				if (( rev_n < val_n )); then
+					log_info "Device revision $revision ($rev_n) is less than package revision $val ($val_n)"
 					return 1
 				else
-					log_info "Input revision $revision, actual revision $val - OK"
+					log_info "Device revision $revision ($rev_n), package revision $val ($val_n) - OK"
 					return 0
 				fi
 			fi
