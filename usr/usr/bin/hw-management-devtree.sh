@@ -34,6 +34,7 @@
 
 devtr_verb_display=0
 devtree_codes_file=
+devtree_json_parser=/usr/bin/hw-management-devtree-json-parser.py
 
 # Declare common associative arrays for SMBIOS System Version parsing.
 declare -A board_arr=( \
@@ -951,6 +952,32 @@ devtr_clean()
 	fi
 }
 
+# Load all sections from a SKU devtree BOM JSON file into the corresponding
+# *_alternatives associative arrays. Calls $devtree_json_parser.
+# Returns non-zero and logs an error on parse failure.
+# Usage: devtr_bom_load_from_json <json_file>
+devtr_bom_load_from_json()
+{
+	local json_file="$1"
+	local output rc section key spec
+
+	output=$($devtree_json_parser "$json_file")
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		return $rc
+	fi
+
+	while read -r section key spec; do
+		if ! declare -p "${section}_alternatives" &>/dev/null; then
+			log_info "SMBIOS BOM info: no array for section '${section}', skipping"
+			continue
+		fi
+		local -n _arr="${section}_alternatives"
+		_arr["$key"]="$spec"
+		unset -n _arr
+	done <<< "$output"
+}
+
 # Check if system has SMBIOS BOM changes mechanism support.
 # If yes, init appropriate associative arrays.
 # Jaguar, Leopard, Gorilla are added just for debug.
@@ -1035,6 +1062,18 @@ devtr_check_supported_system_init_alternatives()
 			return 1
 			;;
 	esac
+
+	# For platforms with a per-SKU devtree JSON, load all board sections
+	# (swb, port, pwr, platform, etc.) and skip the hardcoded switch-case below.
+	local devtr_bom_json="/etc/hw-management-cfg/${sku}/devtree.json"
+	if [ -f "$devtr_bom_json" ] && [ -f "$devtree_json_parser" ]; then
+		if ! devtr_bom_load_from_json "$devtr_bom_json"; then
+			log_info "SMBIOS BOM info: invalid JSON for sku ${sku}: ${devtr_bom_json}"
+			return 1
+		fi
+		return 0
+	fi
+
 	case $board_type in
 #		VMOD0005)
 #			case $sku in
