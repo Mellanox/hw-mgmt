@@ -1,4 +1,46 @@
 ================================================================================
+- V.7.0040.4251
+- Sun, 07 Jun 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, Support additional FLR flow in NVME controller hang., 0911169
+    o #N/A, Update changelog and release notes for V.7.0040.4250, d0575ff
+    o #N/A, hw-mgmt: patches: wa for apply patch limitation. Change kernel ver. from 6.17 to 6.17.1, 314b15b
+    o #N/A, Update changelog and release notes for V.7.0040.4249, 629c31f
+    o #N/A, hw-mgmt: patches: backport NVME SSD fallback recovery patch., 967f2d0
+    o #4837925, hw-mgmt: thermal control: fix signal handling for clean shutdown, c1a83bd
+    o #N/A, hw-mgmt: thermal-control: Fix overlapping range keys in configs, 193927e
+    o #N/A, Update changelog and release notes for V.7.0040.4248, 9a9fe03
+    o #N/A, hw-mgmt: kernel patch: Extend patch for XDPE1A2G7B, 17d2054
+    o #N/A, hw-mgmt: kernel patch: Add dedicated patch for XDPE1A2G7B, 21a8d75
+    o #N/A, Update changelog and release notes for V.7.0040.4247, 4e719fe
+    o #4432197, hw-mgmt: config: Disable IPMI module for n5500ld, e1e48d8
+    o #N/A, hw-mgmt: scripts: Add service to dynamically generate kernel module blacklist, 8150edd
+    o #N/A, Update version  V.7.0040.4246, 2537744
+    o #4647791, hw-mgmgt: script: Fix race conditions for write in thermal updater, e66fc97
+    o #N/A, Update changelog and release notes for V.7.0040.4245, df80502
+    o #5449609, hw-mgmt: sensors: Add scales for current and power measurement for GB300 NVLink systems, 20ade4a
+    o #N/A, Update changelog and release notes for V.7.0040.4244, 7af1dfa
+    o #4280981, hw-management: thermal: Add retry for fro ASIC temperature reading, 046f6a1
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0040.4251/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0040.4250
 - Wed, 13 May 2026
 --------------------------------------------------------------------------------
