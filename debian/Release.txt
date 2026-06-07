@@ -1,4 +1,32 @@
 ================================================================================
+- V.7.0060.1056
+- Sun, 07 Jun 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o hw-mgmt: bmc: networking: Add USB0_MANAGED_BY_NOS option to allow usb net IP address by NOS, f299a86
+    o hw-mgmt: bmc: Host CPU: disable sync communication between CPU and BMC for SONiC only, 9e895d9
+
+- Bug fixes
+    o #5040812, hw-mgmt: scripts: Restrict udev event log size, 3e7ccef
+    o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 176a256
+    o #N/A, hw-mgmt: docs: BMC thermal sysfs and user manual (HI189 / lm75), 1227243
+    o #N/A, hw-mgmt: patches: Expand commit descriptions for SONiC integration, 6727e9d
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1056/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.1055
 - Tue, 02 Jun 2026
 --------------------------------------------------------------------------------
