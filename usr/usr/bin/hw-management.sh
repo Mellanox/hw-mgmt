@@ -2762,6 +2762,7 @@ sn68xxld_specific()
 
 	echo $cpld_num > $config_path/cpld_num
 	echo 0 > $config_path/fan_drwr_num
+	echo 5.333 > $config_path/pdb_hotswap_scale
 	psu_count=0
 	hotplug_fans=0
 	hotplug_pwrs=0
