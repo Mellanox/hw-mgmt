@@ -1110,6 +1110,9 @@ if [ "$1" == "add" ]; then
 					echo 0 > $environment_path/"$prefix"_in2_min
 				fi
 			fi
+			# Add power and current scaling factor links
+			check_n_link $config_path/pdb_hotswap_scale $environment_path/"$prefix"_power1_scale
+			check_n_link $config_path/pdb_hotswap_scale $environment_path/"$prefix"_curr1_scale
 		fi
 	fi
 	if [ "$2" == "led" ]; then
@@ -1548,6 +1551,12 @@ else
 			fi
 			if [ -L $environment_path/"$prefix"_power"$i"_input ]; then
 				unlink $environment_path/"$prefix"_power"$i"_input
+			fi
+			if [ -L  $environment_path/"$prefix"_curr"$i"_scale ]; then
+				unlink $environment_path/"$prefix"_curr"$i"_scale
+			fi
+			if [ -L  $environment_path/"$prefix"_power"$i"_scale ]; then
+				unlink $environment_path/"$prefix"_power"$i"_scale
 			fi
 			if [ -L $thermal_path/"$prefix"_temp"$i"_input ]; then
 				unlink $thermal_path/"$prefix"_temp"$i"_input
