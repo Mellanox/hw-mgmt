@@ -371,11 +371,18 @@ check_bmc_is_supported()
 # On SONiC, SONiC itself owns CPU<->BMC communication, so hw-management must
 # skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
 # polling). On any other host OS the behavior is unchanged.
-# Returns 0 if the host runs SONiC, 1 otherwise (single source of truth:
-# hw_management_sonic_check.py).
+#
+# SONiC ships /etc/sonic/sonic_version.yml; its presence is the single
+# criterion (same file used by hw_management_sonic_check.py for python/CLI
+# callers). This is intentionally a pure-bash file test: the boot-time BMC
+# gate must NOT depend on a python interpreter or on hw-management python
+# modules being installed, since those may be absent or relocated on a SONiC
+# image (e.g. hw_management_redfish_client may not exist in /usr/bin there).
+# Returns 0 if the host runs SONiC, 1 otherwise.
+SONIC_VERSION_FILE="${SONIC_VERSION_FILE:-/etc/sonic/sonic_version.yml}"
 check_host_os_is_sonic()
 {
-	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
+	[ -f "$SONIC_VERSION_FILE" ]
 }
 
 # This function create or cleans sysfs monitor helper files.

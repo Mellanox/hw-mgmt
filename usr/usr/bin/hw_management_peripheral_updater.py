@@ -50,11 +50,27 @@ try:
         current_milli_time,
     )
     from collections import Counter
-
-    from hw_management_redfish_client import RedfishClient, BMCAccessor
-    from hw_management_sonic_check import is_sonic_os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
+
+# SONiC detection. Single source of truth is hw_management_sonic_check.py; fall
+# back to a direct file test if that helper is not installed so detection still
+# works on minimal images.
+try:
+    from hw_management_sonic_check import is_sonic_os
+except ImportError:
+    def is_sonic_os():
+        return os.path.isfile("/etc/sonic/sonic_version.yml")
+
+# The BMC Redfish client is OPTIONAL. On SONiC (and any image without BMC
+# Redfish support) hw_management_redfish_client may not be installed. It is only
+# needed for the BMC sync flow, which is skipped on SONiC, so tolerate its
+# absence here instead of crashing the whole daemon on import.
+try:
+    from hw_management_redfish_client import RedfishClient, BMCAccessor
+except ImportError:
+    RedfishClient = None
+    BMCAccessor = None
 
 # Import platform configuration - SINGLE SOURCE OF TRUTH
 try:
@@ -300,6 +316,10 @@ class RedfishConnection:
         @return: BMCAccessor object or None if connection failed
         """
         if cls._instance is None:
+            # BMC Redfish client not available on this image (e.g. SONiC) -
+            # nothing to connect to.
+            if BMCAccessor is None or RedfishClient is None:
+                return None
             bmc_accessor = BMCAccessor()
             ret = bmc_accessor.login()
             if ret == RedfishClient.ERR_CODE_OK:
@@ -652,7 +672,8 @@ def main():
 
     # On SONiC hosts, SONiC owns CPU<->BMC communication. Drop the BMC Redfish
     # entries so this daemon never logs in to the BMC or polls BMC sensors over
-    # Redfish. On any other host OS the configuration is left unchanged.
+    # Redfish (the Redfish client module may not even be installed on SONiC).
+    # On any other host OS the configuration is left unchanged.
     if is_sonic_os():
         sys_attr = [attr for attr in sys_attr if attr.get("fn") != "redfish_get_sensor"]
         LOGGER.notice("hw-management-peripheral-updater: SONiC host detected, BMC Redfish sync disabled")

@@ -2984,7 +2984,8 @@ check_system()
 	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
 	# Obtain/rotate the BMC password and log in over Redfish only on platforms
 	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
-	# CPU<->BMC communication, so hw-management must not drive this flow.
+	# CPU<->BMC communication (and may not even ship hw_management_redfish_client),
+	# so hw-management must not drive this flow.
 	if check_bmc_is_supported && ! check_host_os_is_sonic; then
 		pushd /usr/bin
 		for ((i=1; i<=5; i++)); do
