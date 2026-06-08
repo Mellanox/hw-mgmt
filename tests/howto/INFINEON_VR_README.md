@@ -121,10 +121,23 @@ leave stale files if the config changes). Device captures go to **`-o`**
 - If the kernel driver is bound, the script **unbinds** for the operation and
   attempts **rebind** on exit (see logs if rebind fails).
 
+## Integration with other hw-management VR tools
+
+| Caller | Behavior |
+|--------|----------|
+| `hw-management-vr-dpc-update-all.sh` | `flash -y -b <Bus> -a <Addr> -f <ConfigFile>` per `xdpe*` JSON entry |
+| `hw-management-dpc-update.sh` | Same from DPC package JSON; `--verify` / skip-identical compare package `[User Data]` targets vs `read-vr` |
+| `hw-management-read-vr-model-version.sh` | Post-flash model/revision for **xdpe1a2g7b** via PMBUS `0x9a`/`0x9b` (block read) |
+
+Infineon GUI `.txt`/`.mic` exports use CRLF line endings; parsers strip `\r`.
+Utilities (`grep`, `sed`, `head`, `tr`) are BusyBox-safe when the script runs
+under **bash** (required).
+
 ## References
 
 - Infineon **AN001-XDPE1x2xx_programming Guide 2** (vendor collateral).
 - PMBus specification — [pmbus.org](https://pmbus.org).
+- [VR_DPC_README.md](VR_DPC_README.md) — package and batch entrypoints
 
 ## License
 
@@ -133,5 +146,7 @@ AFFILIATES; BSD-3-Clause / GPL-2.0 alternative).
 
 ## Changelog (this README)
 
+- **2026-06:** Integration table (update-all, dpc-update, read-vr); CRLF/BusyBox
+  note.
 - **2026-04:** Rewritten for `hw-management-vr-dpc-infineon-update.sh` (replaces
   obsolete `flash-infineon-xdpe.sh` / `infineon-vr-tools.sh` examples).
