@@ -59,6 +59,43 @@ Patch order follows the **rows in the active table**, not the numeric prefix in 
 
 See the comment block at the top of **`recipes-kernel/linux/Patch_BMC_Status_Table.txt`** for the same flow in brief.
 
+### SPC6 AST2700-A2: SONiC vs OpenBMC device tree (`0009`)
+
+Patches **`0008`** and **`0009`** in **`Patch_BMC_Status_Table.txt`** maintain the SPC6 BMC DTS.
+**`0009`** is **`take[sonic]`** only — it is deployed into the SONiC kernel tree, not OpenBMC.
+SONiC and OpenBMC boot differently on the same board:
+
+| Role | File in **`0009`** | Built DTB (SONiC kernel) | Boot model |
+|------|-------------------|--------------------------|------------|
+| SONiC runtime | **`aspeed-nvidia-spc6-bmc.dts`** | **`aspeed-nvidia-spc6-bmc.dtb`** (Aspeed baseline Makefile) | eMMC rootfs; **`nvidia-ast27xx-sunda-sonic.dtsi`** (IRoT without **`ramrofs@403920000`**) |
+| OpenBMC reference mirror | **`aspeed-nvidia-spc6-bmc-openbmc.dts`** | *not built* | Reference copy only — see below |
+
+**OpenBMC reference copy (not built here):** **`aspeed-nvidia-spc6-bmc-openbmc.dts`** in
+**`0009`** is a byte-for-byte mirror of the OpenBMC meta-layer source for diff and resync; it is
+**not** compiled in the SONiC kernel flow and **`0009`** is not applied to OpenBMC builds.
+OpenBMC continues to ship and build **`aspeed-nvidia-spc6-bmc.dts`** from its own layer
+(**`meta-spc6-ast2700/recipes-kernel/linux/linux-aspeed/`** → **`aspeed-nvidia-spc6-bmc.dtb`**).
+
+Mirror source path:
+
+`meta-nvidia/meta-switch/meta-ast2700/meta-spc6-ast2700/recipes-kernel/linux/linux-aspeed/aspeed-nvidia-spc6-bmc.dts`
+
+**When to resync:** after any change to that OpenBMC file (phram-env, TPM GPIO, expander reset,
+I3C pull-ups, or other board DTS fixes), replace the **`openbmc.dts`** hunk in **`0009`** and
+verify with **`diff`** against the OpenBMC tree. SONiC-only deltas stay in
+**`aspeed-nvidia-spc6-bmc.dts`** and the **`nvidia-ast27xx-*-sonic.dtsi`** fragments; do not edit
+**`openbmc.dts`** for SONiC-specific work.
+
+**Makefile:** **`0009`** intentionally does not touch **`arch/arm64/boot/dts/aspeed/Makefile`**.
+Only **`aspeed-nvidia-spc6-bmc.dtb`** is registered and built (Aspeed baseline). Do not add a
+Makefile entry for **`aspeed-nvidia-spc6-bmc-openbmc.dts`** unless a future build path actually
+compiles it.
+
+**Known upstream quirk (mirror only):** the OpenBMC source has a **`#if 0`** **`&pinctrl0`**
+block with an unresolved comment **`pinctrl_salt0_default ????`**. The mirror keeps it as-is; it is
+dead code today and does not affect DTB builds. If OpenBMC enables that block, fix the symbol in the
+meta-layer source first, then resync **`openbmc.dts`** — do not patch it only in **`0009`**.
+
 ## Repository tree (`bmc/`)
 
 Top-level files and everything under `usr/` as tracked in this branch:
