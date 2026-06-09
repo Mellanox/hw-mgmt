@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0060.1057
+- Tue, 09 Jun 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #N/A, hw-mgmt: bmc: Split SPC6 AST2700 A2 DTS for SONiC and OpenBMC boot, 5dcc55c
+    o #N/A, Update changelog and release notes for V.7.0060.1056, 92a9a5f
+    o #N/A, hw-mgmt: patches: Expand commit descriptions for SONiC integration, 6727e9d
+    o #5040812, hw-mgmt: scripts: Restrict udev event log size, 3e7ccef
+    o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 176a256
+    o #N/A, hw-mgmt: docs: BMC thermal sysfs and user manual (HI189 / lm75) (#2575), 1227243
+    o #N/A, Host CPU: disable sync communication between CPU and BMC for Sonic only, 9e895d9
+    o #N/A, hw-mgmt: bmc: netwroking: Add option to allow usb net IP address by NOS, f299a86
+    o #N/A, Update changelog and release notes for V.7.0060.1055, d3ba9a1
+    o #N/A, hw-mgmt: bmc: read AST2700 reset-cause SCU words from /proc/cmdline, fb708cd
+    o #N/A, Merge pull request #2565 from Mellanox/dzaguri-dev-sonic-bmc, 7dd5c86
+    o #N/A, Host CPU: disable sync communication between CPU and BMC for Sonic only, d7ee6b8
+    o #N/A, hw-mgmt: bmc: leakage: guard hex_concat_apply_mask against odd-length input, a0d8e12
+    o #N/A, Update bmc/usr/usr/bin/hw-management-bmc-a2d-leakage-config.sh, a01b963
+    o #N/A, hw-mgmt: bmc: leakage: ignore ADS1015 Config OS bit on readback verify, 58e7d59
+    o #N/A, Fix typo in changelog, f711a82
+    o #N/A, Fix typo in changelog, a392a19
+    o #N/A, fix typo bug in changelog, 4f092b1
+    o #N/A, Update changelog and release notes for V.7.0060.1052, 064b4c3
+    o #N/A, Update changelog and release notes for V.7.0060.1052, ad30c9a
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0060.1057/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0060.1056
 - Sun, 07 Jun 2026
 --------------------------------------------------------------------------------
