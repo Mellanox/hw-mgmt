@@ -462,7 +462,11 @@ class TestBMCAccessorPasswordGeneration:
             stderr=''
         )
 
-        with patch('builtins.open', mock_open(read_data=mock_file_data)):
+        # Mock the advisory file lock so the test does not depend on a writable
+        # /run/lock; locking is infrastructure, not the unit under test.
+        with patch('builtins.open', mock_open(read_data=mock_file_data)), \
+                patch.object(BMCAccessor, '_acquire_lock', return_value=123), \
+                patch.object(BMCAccessor, '_release_lock'):
             accessor = BMCAccessor()
             password = accessor.get_login_password()
 
