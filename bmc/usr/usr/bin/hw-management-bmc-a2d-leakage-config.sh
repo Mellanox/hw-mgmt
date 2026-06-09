@@ -126,7 +126,8 @@ kernel_driver_for_type()
 }
 
 # Instantiate device on I2C bus so the kernel driver binds (when Probe is true).
-# If the client already exists (e.g. early-i2c-init), skip quietly.
+# If the client already exists with a driver, skip. If the client exists without
+# a driver (e.g. after manual unbind), bind via the driver bind sysfs node.
 bind_kernel_driver()
 {
 	local bus="$1" address="$2" device_type="$3"
@@ -143,18 +144,28 @@ bind_kernel_driver()
 	fi
 	local a="${address#0x}"
 	a="${a#0X}"
-	local dev_id
+	local dev_id bind_file
 	dev_id=$(printf '%d-%04x' "$bus" $((16#$a)))
+	bind_file="/sys/bus/i2c/drivers/${driver}/bind"
 	if [ -d "/sys/bus/i2c/devices/$dev_id" ]; then
-		log_message "info" "I2C device $dev_id already present — assuming driver or early init"
-		return 0
+		if i2c_client_has_bound_driver "$bus" "$address"; then
+			log_message "info" "I2C device $dev_id already present with driver bound"
+			return 0
+		fi
+		log_message "info" "I2C device $dev_id present without driver — binding $driver"
+		if [ -f "$bind_file" ] && echo "$dev_id" >"$bind_file" 2>/dev/null; then
+			sleep 0.5
+			return 0
+		fi
+		log_message "warning" "Bind $driver to $dev_id failed (client present, driver not attached)"
+		return 1
 	fi
 	log_message "info" "Binding $driver at $address on bus $bus (new_device before register config, then unbind/program/rebind)"
 	if ! echo "$driver $address" > "${adapter}/new_device" 2>/dev/null; then
 		log_message "warning" "new_device failed for $driver $address on i2c-$bus (driver missing or device conflict) — continuing with raw I2C config"
 		return 1
 	fi
-	sleep 0.2
+	sleep 0.5
 	return 0
 }
 
@@ -194,7 +205,7 @@ rebind_kernel_driver()
 	[ -f "$bind_file" ] || return 1
 	if echo "$dev_id" >"$bind_file" 2>/dev/null; then
 		log_message "info" "Rebound $driver to $dev_id after register programming"
-		sleep 0.2
+		sleep 0.5
 		return 0
 	fi
 	log_message "warning" "Rebind $driver to $dev_id failed"
@@ -604,7 +615,74 @@ ads1015_mux_high_byte()
 	esac
 }
 
-# Program ADS1015 window comparator per MUX channel (TI SBAS173; one Lo/Hi pair per rotation).
+# True when ADS1015 config low byte has COMP_QUE=11 (comparator disabled, TI SBAS173).
+ads1015_cfg_comp_disabled()
+{
+	local lo="$1"
+	local v
+
+	v=$((${lo}))
+	v=$((v & 3))
+	[ "$v" -eq 3 ]
+}
+
+# Write ti-ads1015 IIO scale (±4.096 V PGA) to one sysfs path.
+ads1015_write_iio_scale_path()
+{
+	local scale_path="$1"
+	local avail_path v
+
+	[ -n "$scale_path" ] || return 1
+	[ -e "$scale_path" ] || return 1
+
+	for v in "4096 11" "2.000000" "2.0" "2"; do
+		if echo "$v" >"$scale_path" 2>/dev/null; then
+			log_message "info" "ADS1015 IIO scale -> $scale_path ($v) for ±4.096 V PGA"
+			return 0
+		fi
+	done
+
+	avail_path="${scale_path}_available"
+	if [ -r "$avail_path" ]; then
+		v=$(awk '$1 == 4096 && $2 == 11 { print $1, $2; exit }' "$avail_path" 2>/dev/null)
+		if [ -n "$v" ] && echo "$v" >"$scale_path" 2>/dev/null; then
+			log_message "info" "ADS1015 IIO scale -> $scale_path (from available: $v)"
+			return 0
+		fi
+	fi
+	return 1
+}
+
+# ti-ads1015 defaults to PGA index 2 (±2048 mV). Inputs above ~2 V clip to raw 2047.
+# Board init uses ±4096 mV (MUX bytes 0xc2/0xd2); set IIO scale to match before reads.
+# Tries per-channel in_voltage<N>_scale, then shared in_voltage_scale (driver-dependent).
+ads1015_set_iio_scale_for_raw()
+{
+	local raw_path="$1"
+	local scale_path iio_dir shared_scale
+
+	[ -n "$raw_path" ] || return 1
+	iio_dir=$(dirname "$raw_path")
+	scale_path="${raw_path%_raw}_scale"
+	shared_scale="$iio_dir/in_voltage_scale"
+
+	if [ -e "$scale_path" ] && ads1015_write_iio_scale_path "$scale_path"; then
+		return 0
+	fi
+	if [ -e "$shared_scale" ] && [ "$shared_scale" != "$scale_path" ] &&
+		ads1015_write_iio_scale_path "$shared_scale"; then
+		return 0
+	fi
+
+	if [ ! -e "$scale_path" ] && [ ! -e "$shared_scale" ]; then
+		log_message "warning" "ADS1015 IIO scale sysfs missing under $iio_dir (no per-channel or shared scale)"
+	else
+		log_message "warning" "ADS1015 IIO scale not set under $iio_dir — driver default ±2.048 V may clip to raw 2047"
+	fi
+	return 1
+}
+
+# Program ADS1015 config (and optional window comparator Lo/Hi) per MUX channel (TI SBAS173).
 configure_ads1015_raw_i2c()
 {
 	local device_json="$1"
@@ -613,7 +691,7 @@ configure_ads1015_raw_i2c()
 	local address="$4"
 	local num_channels="$5"
 
-	local cfg_lo lo_val hi_val lo_reg hi_reg mux ch nch failed
+	local cfg_lo lo_val hi_val lo_reg hi_reg mux mux0 ch nch failed skip_thresh mode_msg
 	local t
 
 	cfg_lo="0x94"
@@ -623,6 +701,14 @@ configure_ads1015_raw_i2c()
 		set -- $t
 		shift
 		[ -n "$1" ] && cfg_lo="$1"
+	fi
+
+	skip_thresh=0
+	if ads1015_cfg_comp_disabled "$cfg_lo"; then
+		skip_thresh=1
+		mode_msg="polling (comparator disabled, cfg_lo=$cfg_lo)"
+	else
+		mode_msg="window comparator (cfg_lo=$cfg_lo)"
 	fi
 
 	local default_lo default_hi
@@ -650,7 +736,7 @@ configure_ads1015_raw_i2c()
 		[ "$nch" -gt 4 ] && nch=4
 	fi
 
-	log_message "info" "ADS1015 $device_name: per-channel init (window comparator, cfg_lo=$cfg_lo, channels=0..$((nch - 1)))"
+	log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, channels=0..$((nch - 1)))"
 	failed=0
 	ch=0
 	while [ "$ch" -lt "$nch" ]; do
@@ -670,13 +756,15 @@ configure_ads1015_raw_i2c()
 			"$mux $cfg_lo" "ADS1015 Config ch $ch" "$device_name" "0x7f 0xff"; then
 			failed=1
 		fi
-		if ! write_and_verify_register "$bus" "$address" "$lo_reg" \
-			"$lo_val" "ADS1015 Lo_thresh ch $ch" "$device_name"; then
-			failed=1
-		fi
-		if ! write_and_verify_register "$bus" "$address" "$hi_reg" \
-			"$hi_val" "ADS1015 Hi_thresh ch $ch" "$device_name"; then
-			failed=1
+		if [ "$skip_thresh" -eq 0 ]; then
+			if ! write_and_verify_register "$bus" "$address" "$lo_reg" \
+				"$lo_val" "ADS1015 Lo_thresh ch $ch" "$device_name"; then
+				failed=1
+			fi
+			if ! write_and_verify_register "$bus" "$address" "$hi_reg" \
+				"$hi_val" "ADS1015 Hi_thresh ch $ch" "$device_name"; then
+				failed=1
+			fi
 		fi
 		ch=$((ch + 1))
 	done
@@ -685,7 +773,16 @@ configure_ads1015_raw_i2c()
 		log_message "warning" "ADS1015 $device_name: one or more channel programs failed"
 		return 1
 	fi
-	log_message "info" "ADS1015 $device_name: raw I2C configuration complete (last MUX channel $((nch - 1)) selected)"
+
+	# Leave MUX on channel 0 and read conversion so pointer reg is 0x00 before driver bind.
+	mux0=$(ads1015_mux_high_byte 0) || mux0=""
+	if [ -n "$mux0" ]; then
+		i2ctransfer -f -y "$bus" w3@"$address" 0x01 "$mux0" "$cfg_lo" >/dev/null 2>&1 || true
+		sleep 0.01
+		i2ctransfer -f -y "$bus" w1@"$address" 0x00 r2 >/dev/null 2>&1 || true
+	fi
+
+	log_message "info" "ADS1015 $device_name: raw I2C configuration complete (MUX channel 0 selected for driver handoff)"
 	return 0
 }
 
@@ -1026,6 +1123,9 @@ populate_leakage_channel_dir()
 			sleep 0.2
 		done
 		if [ -n "$raw_path" ] && [ -f "$raw_path" ]; then
+			if [ "$device_type" = "ADS1015" ]; then
+				ads1015_set_iio_scale_for_raw "$raw_path"
+			fi
 			check_n_link "$raw_path" "$ch_dir/input"
 			log_message "info" "Channel $ch_num input -> $raw_path"
 		else
@@ -1176,7 +1276,9 @@ configure_device()
 
 	# 2) Bind kernel driver first when Probe is true (instantiates client; driver probe may run once).
 	if json_probe_true "$device_json"; then
-		bind_kernel_driver "$bus" "$address" "$device_type"
+		if ! bind_kernel_driver "$bus" "$address" "$device_type"; then
+			log_message "warning" "Initial driver bind failed for $device_name (bus $bus addr $address) — continuing; will retry after register programming"
+		fi
 	fi
 
 	# 3) Unbind so i2ctransfer can program registers (MAX1363 / ADS1015 / ADS7924).
