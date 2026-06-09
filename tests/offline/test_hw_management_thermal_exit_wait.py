@@ -3,10 +3,11 @@
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
 # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
-# Unit tests for hw_management_lib.exit_wait():
-#   chunked Event.wait so SIGTERM handler can run during long waits.
-# exit_wait() is the module-level successor to ThermalManagement._exit_wait();
-# it is shared by thermal-updater and peripheral-updater.
+# Unit tests for the chunked exit wait (Bug 4879247): waits in short chunks so
+# the SIGTERM handler can run during long waits. Originally
+# ThermalManagement._exit_wait(); refactored in 8aaba0f1 into the shared
+# hw_management_lib.exit_wait(exit_event, timeout, chunk_sec) helper, which both
+# thermal_control modules import and call.
 ################################################################################
 
 import sys
@@ -59,7 +60,9 @@ def test_exit_wait_noop_when_exit_already_set():
 def test_exit_wait_chunks_until_timeout():
     fe = _FakeExit(stop_after_waits=9999)
     exit_wait(fe, 3.7, chunk_sec=1.0)
-    assert fe._wait_calls == [1.0, 1.0, 1.0, pytest.approx(0.7, rel=1e-9, abs=1e-9)]
+    assert len(fe._wait_calls) == 4
+    assert sum(fe._wait_calls) == pytest.approx(3.7, rel=1e-9, abs=1e-9)
+    assert fe._wait_calls[:3] == [1.0, 1.0, 1.0]
 
 
 def test_exit_wait_small_timeout_single_chunk():

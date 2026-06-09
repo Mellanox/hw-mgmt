@@ -144,14 +144,17 @@ class TestModuleCounterReliability(unittest.TestCase):
         mock_logger = MagicMock()
         peripheral_module.LOGGER = mock_logger
 
-        # Test with unknown platform (should write 0)
-        with patch('builtins.open', create=True) as mock_open, \
-                patch.object(peripheral_module, 'get_platform_config', return_value=[{}]):
+        # Test with a supported platform that has 0 modules (write 0). Unknown
+        # platforms (not in PLATFORM_CONFIG) are intentionally skipped now
+        # (commit 1496432d), so resolve the SKU as supported with 0 modules.
+        with patch.object(peripheral_module, 'get_platform_config', return_value=[{'fn': 'asic_temp_populate'}]), \
+                patch.object(peripheral_module, 'get_module_count', return_value=0), \
+                patch('builtins.open', create=True) as mock_open:
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 
-            # Call write_module_counter with unknown SKU
-            peripheral_module.write_module_counter("UNKNOWN_PLATFORM")
+            # Call write_module_counter for a supported, module-less platform
+            peripheral_module.write_module_counter("ZERO_MODULE_PLATFORM")
 
             # Verify file was opened for writing
             mock_open.assert_called_once_with("/var/run/hw-management/config/module_counter", 'w', encoding="utf-8")
@@ -198,7 +201,9 @@ class TestModuleCounterReliability(unittest.TestCase):
         # Mock platform_config module with proper return values
         mock_platform_config = MagicMock()
         mock_platform_config.get_module_count = MagicMock(return_value=0)  # Return actual int
-        mock_platform_config.get_platform_config = MagicMock(return_value=None)
+        # Supported platform: get_platform_config must be truthy or
+        # write_module_counter skips the write (commit 1496432d).
+        mock_platform_config.get_platform_config = MagicMock(return_value=[{'fn': 'asic_temp_populate'}])
         sys.modules["hw_management_platform_config"] = mock_platform_config
 
         # This should NOT raise an error
