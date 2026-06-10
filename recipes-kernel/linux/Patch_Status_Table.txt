@@ -836,6 +836,7 @@ Kernel-6.12
 |0066-i2c-mux-regmap-Amend-completion-notify-flow.patch           |                    | Downstream accepted                      |            |                                                |
 |0067-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_platdevs_init after last mux           |
 |0068-platform-mellanox-Fix-hotplug-bus-nr-fixup-on-multi.patch   |                    | Downstream accepted                      |            | Fix NULL deref in mux completion_notify        |
+|0069-platform-mellanox-Add-support-for-new-SN6600-Nvidia-.patch  |                    | Feature pending                          |            | SN6600                                         |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
