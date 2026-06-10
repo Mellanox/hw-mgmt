@@ -515,17 +515,19 @@ class TestModuleTempPopulate(unittest.TestCase):
         afw = MagicMock()
 
         def open_side_effect(path, *args, **kwargs):
-            if path.endswith("/present"):
+            norm = path.replace('\\', '/')
+            if norm.endswith("/present"):
                 return mock_open(read_data="1").return_value
-            if path.endswith("/temperature/input"):
+            if norm.endswith("/temperature/input"):
                 return mock_open(read_data="40").return_value
-            if path.endswith("/temperature/threshold_hi"):
+            if norm.endswith("/temperature/threshold_hi"):
                 return mock_open(read_data="60").return_value
             raise FileNotFoundError(path)
 
         def isfile_side_effect(path):
+            norm = path.replace('\\', '/')
             # threshold_hi exists; threshold_critical_hi and cooling-level files do not.
-            return path.endswith("/temperature/threshold_hi")
+            return norm.endswith("/temperature/threshold_hi")
 
         with patch.object(m, 'atomic_file_write', afw), \
                 patch.object(m, 'is_module_host_management_mode', return_value=False), \
@@ -568,6 +570,7 @@ class TestModuleTempPopulate(unittest.TestCase):
         afw = MagicMock()
 
         def open_side_effect(path, *args, **kwargs):
+            norm = path.replace('\\', '/')
             read_values = {
                 "/present": "1",
                 "/temperature/input": "40",
@@ -577,12 +580,13 @@ class TestModuleTempPopulate(unittest.TestCase):
                 "/temperature/tec/warning_cooling_level": "9",
             }
             for suffix, value in read_values.items():
-                if path.endswith(suffix):
+                if norm.endswith(suffix):
                     return mock_open(read_data=value).return_value
             raise FileNotFoundError(path)
 
         def isfile_side_effect(path):
-            return path.endswith((
+            norm = path.replace('\\', '/')
+            return norm.endswith((
                 "/temperature/threshold_hi",
                 "/temperature/threshold_critical_hi",
                 "/temperature/tec/cooling_level",

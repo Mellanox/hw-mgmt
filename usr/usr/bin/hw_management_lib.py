@@ -35,7 +35,31 @@ import os
 import sys
 import logging
 from logging.handlers import RotatingFileHandler
-import syslog
+try:
+    import syslog
+except ImportError:
+    class _SyslogStub:
+        LOG_DAEMON = 24
+        LOG_USER = 8
+        LOG_NDELAY = 8
+        LOG_PID = 1
+        LOG_DEBUG = 7
+        LOG_INFO = 6
+        LOG_NOTICE = 5
+        LOG_WARNING = 4
+        LOG_ERR = 3
+        LOG_CRIT = 2
+
+        def openlog(self, ident=None, logoption=0, facility=8):
+            pass
+
+        def closelog(self):
+            pass
+
+        def syslog(self, priority, message):
+            pass
+
+    syslog = _SyslogStub()
 import threading
 import time
 import json
@@ -128,7 +152,7 @@ def current_milli_time():
         get current time in milliseconds
     @return: int value time in milliseconds
     """
-    return round(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
+    return round(time.monotonic() * 1000)
 
 
 @dataclass
@@ -470,7 +494,7 @@ class HW_Mgmt_Logger:
 
             def timed_error_handler(record):
                 """Wrap original handleError with time-based suppression."""
-                current_time = time.clock_gettime(time.CLOCK_MONOTONIC)
+                current_time = time.monotonic()
 
                 # Thread-safe check and update of error state
                 with self._lock:
@@ -795,13 +819,13 @@ class RepeatedTimer:
             Run function in separate thread
         """
         while not self._stop_event.is_set():
-            start = time.clock_gettime(time.CLOCK_MONOTONIC)
+            start = time.monotonic()
             try:
                 self.func()
             except Exception as e:
                 print(f"Error in periodic task: {e}")
             # Sleep remaining time if func took less than interval
-            elapsed = time.clock_gettime(time.CLOCK_MONOTONIC) - start
+            elapsed = time.monotonic() - start
             sleep_time = max(0, self.interval - elapsed)
             if self._stop_event.wait(timeout=sleep_time):  # Interruptible sleep
                 break  # Event was set, exit immediately

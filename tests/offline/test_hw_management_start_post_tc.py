@@ -17,7 +17,14 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.offline
+pytestmark = [
+    pytest.mark.offline,
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Tests invoke bash subprocesses that test Linux TC service logic; "
+               "WSL subprocess interop is unreliable for env var passing",
+    ),
+]
 
 # Mirrors start-post.sh lines 114-159 (flag computation only)
 _BASH_TC_FLAGS = r"""

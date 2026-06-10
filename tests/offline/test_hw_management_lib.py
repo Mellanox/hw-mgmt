@@ -15,7 +15,7 @@ import tempfile
 import shutil
 import threading
 import time
-import syslog
+import hw_management_lib
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call, mock_open
 from io import StringIO
@@ -45,9 +45,9 @@ def log_file(temp_dir):
 @pytest.fixture
 def mock_syslog():
     """Mock syslog module"""
-    with patch('syslog.openlog') as mock_openlog, \
-            patch('syslog.syslog') as mock_syslog, \
-            patch('syslog.closelog') as mock_closelog:
+    with patch.object(hw_management_lib.syslog, 'openlog') as mock_openlog, \
+            patch.object(hw_management_lib.syslog, 'syslog') as mock_syslog, \
+            patch.object(hw_management_lib.syslog, 'closelog') as mock_closelog:
         yield {
             'openlog': mock_openlog,
             'syslog': mock_syslog,
@@ -1108,7 +1108,7 @@ class TestEdgeCasesAndErrors:
 
     def test_complex_syslog_failure_recovery(self, log_file):
         """Complex: Recovery from syslog failure"""
-        with patch('syslog.openlog', side_effect=OSError("Syslog unavailable")):
+        with patch.object(hw_management_lib.syslog, 'openlog', side_effect=OSError("Syslog unavailable")):
             logger = HW_Mgmt_Logger(
                 log_file=log_file,
                 log_level=HW_Mgmt_Logger.INFO,
@@ -1143,6 +1143,7 @@ class TestErrorConditionsAndValidation:
         with pytest.raises(PermissionError, match="Log directory does not exist"):
             HW_Mgmt_Logger(log_file=log_file)
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="os.chmod does not enforce directory write restrictions on Windows")
     def test_log_directory_not_writable(self, temp_dir):
         """Test error when log directory is not writable"""
         log_dir = os.path.join(temp_dir, "readonly")

@@ -62,6 +62,7 @@ import unittest
 # Add the source path to be able to import the module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'usr', 'usr', 'bin'))
 from hw_management_lib import HW_Mgmt_Logger, current_milli_time
+import hw_management_lib
 # fmt: on
 
 # Color codes for beautiful output
@@ -236,16 +237,19 @@ class TestHWMgmtLogger(unittest.TestCase):
     def tearDownClass(cls):
         """Clean up after all tests"""
         if os.path.exists(cls.temp_dir):
-            shutil.rmtree(cls.temp_dir)
+            shutil.rmtree(cls.temp_dir, ignore_errors=True)
         if not cls.quiet_mode:
             print(f"\n{Colors.CYAN}{Icons.CLEAN} Cleaned up test directory{Colors.END}")
 
     def setUp(self):
         """Set up before each test"""
         self.logger = None
-        # Clean up any previous log files
+        # Clean up any previous log files (use try/except for Windows file locking)
         if os.path.exists(self.test_log_file):
-            os.remove(self.test_log_file)
+            try:
+                os.remove(self.test_log_file)
+            except PermissionError:
+                pass
 
     def tearDown(self):
         """Clean up after each test"""
@@ -557,17 +561,17 @@ class TestHWMgmtLogger(unittest.TestCase):
     # Syslog Tests
     # ========================================================================
 
-    @patch('syslog.openlog')
-    @patch('syslog.syslog')
-    @patch('syslog.closelog')
+    @patch.object(hw_management_lib.syslog, 'openlog')
+    @patch.object(hw_management_lib.syslog, 'syslog')
+    @patch.object(hw_management_lib.syslog, 'closelog')
     def test_40_syslog_initialization(self, mock_closelog, mock_syslog, mock_openlog):
         """Test syslog initialization"""
         self.logger = HW_Mgmt_Logger(log_file=self.test_log_file,
                                      syslog_level=HW_Mgmt_Logger.NOTICE)
         self.assertIsNotNone(self.logger._syslog)
 
-    @patch('syslog.openlog')
-    @patch('syslog.syslog')
+    @patch.object(hw_management_lib.syslog, 'openlog')
+    @patch.object(hw_management_lib.syslog, 'syslog')
     def test_41_syslog_critical_always_logged(self, mock_syslog, mock_openlog):
         """Test that CRITICAL messages always go to syslog"""
         self.logger = HW_Mgmt_Logger(log_file=self.test_log_file,
@@ -577,8 +581,8 @@ class TestHWMgmtLogger(unittest.TestCase):
         # Critical should be logged to syslog
         mock_syslog.assert_called()
 
-    @patch('syslog.openlog')
-    @patch('syslog.syslog')
+    @patch.object(hw_management_lib.syslog, 'openlog')
+    @patch.object(hw_management_lib.syslog, 'syslog')
     def test_42_syslog_level_filtering(self, mock_syslog, mock_openlog):
         """Test syslog level filtering"""
         self.logger = HW_Mgmt_Logger(log_file=self.test_log_file,
@@ -594,8 +598,8 @@ class TestHWMgmtLogger(unittest.TestCase):
         # Error should trigger syslog
         self.assertGreater(mock_syslog.call_count, 0)
 
-    @patch('syslog.openlog')
-    @patch('syslog.syslog')
+    @patch.object(hw_management_lib.syslog, 'openlog')
+    @patch.object(hw_management_lib.syslog, 'syslog')
     def test_43_syslog_unicode_handling(self, mock_syslog, mock_openlog):
         """Test syslog handles unicode correctly"""
         # Don't log to file to avoid encoding issues on systems with latin-1
@@ -607,9 +611,9 @@ class TestHWMgmtLogger(unittest.TestCase):
         # Should handle without raising exception
         mock_syslog.assert_called()
 
-    @patch('syslog.openlog')
-    @patch('syslog.syslog')
-    @patch('syslog.closelog')
+    @patch.object(hw_management_lib.syslog, 'openlog')
+    @patch.object(hw_management_lib.syslog, 'syslog')
+    @patch.object(hw_management_lib.syslog, 'closelog')
     def test_44_syslog_close(self, mock_closelog, mock_syslog, mock_openlog):
         """Test syslog closure"""
         self.logger = HW_Mgmt_Logger(log_file=self.test_log_file,
@@ -639,9 +643,13 @@ class TestHWMgmtLogger(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_log_file))
         self.assertTrue(os.path.exists(log_file2))
 
-        # Clean up second file
+        # Clean up second file (stop logger first to release file handle on Windows)
+        self.logger.stop()
         if os.path.exists(log_file2):
-            os.remove(log_file2)
+            try:
+                os.remove(log_file2)
+            except PermissionError:
+                pass
 
     def test_51_set_param_invalid_log_file_type(self):
         """Test set_param with invalid log_file type"""

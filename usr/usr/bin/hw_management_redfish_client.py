@@ -47,7 +47,18 @@ import shlex
 import os
 import sys
 import base64
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    class _FcntlStub:
+        LOCK_EX = 2
+        LOCK_NB = 4
+        LOCK_UN = 8
+
+        def flock(self, fd, operation):
+            pass
+
+    fcntl = _FcntlStub()
 
 # TBD:
 # Support token persistency later on and remove RedfishClient.__password
@@ -461,7 +472,7 @@ class BMCAccessor(object):
             timeout_sec = self.FLOCK_TIMEOUT_SEC
 
         lock_path = os.path.join(self.LOCK_DIR, self.LOCK_FILE)
-        deadline = time.clock_gettime(time.CLOCK_MONOTONIC) + timeout_sec
+        deadline = time.monotonic() + timeout_sec
         while True:
             try:
                 lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
@@ -472,7 +483,7 @@ class BMCAccessor(object):
                 return lock_fd
             except BlockingIOError:
                 os.close(lock_fd)
-                if time.clock_gettime(time.CLOCK_MONOTONIC) >= deadline:
+                if time.monotonic() >= deadline:
                     raise Exception(
                         f"Cannot acquire TPM lock within {timeout_sec}s (timeout)"
                     )
