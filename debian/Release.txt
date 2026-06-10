@@ -1,4 +1,47 @@
 ================================================================================
+- V.7.0070.1071
+- Wed, 10 Jun 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5046588, hw-mgmt: sensors: Add scaling factor for SN6600_LD power and current, 9ebcff3
+    o #N/A, hw-mgmt: config: Add support for generic system configuration, 89c2636
+    o #N/A, hw-mgmt: scripts: JSON-driven devtree BOM loading, b0e8882
+    o #5040812, hw-mgmt: scripts: Restrict udev event log size, dd36a99
+    o #N/A, hw-mgmt: docs: BMC thermal sysfs and user manual (HI189 / lm75) (#2575), f3db858
+    o #N/A, hw-mgmt: ifupdown: Restore ifquery guard and retry log wording, 986f962
+    o #N/A, hw-mgmt: bmc: netwroking: Add option to allow usb net IP address by NOS (#2574), 2ee5411
+    o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 511dddb
+    o #N/A, hw-mgmt: tests: Fix offline test drift, 130194d
+    o #N/A, tests: cover optional SONiC check in peripheral-updater, 54e2906
+    o #N/A, hw-mgmt: peripheral-updater: make SONiC detector optional, c8151cf
+    o #N/A, hw-mgmt: bmc: docs follow-up for leakage debug scripts (da54e790), 6698862
+    o #N/A, Host CPU: disable sync communication between CPU and BMC for Sonic only, 9083eba
+    o #N/A, hw-mgmt: bmc: leakage: guard hex_concat_apply_mask against odd-length input, 4263f0f
+    o #N/A, Update bmc/usr/usr/bin/hw-management-bmc-a2d-leakage-config.sh, 9a69c68
+    o #N/A, hw-mgmt: bmc: leakage: ignore ADS1015 Config OS bit on readback verify, 62b1937
+    o #N/A, hw-mgmt: bmc: Enable CONFIG_MTD_PHRAM for SPC6 AST2700 A2 phram-env, 04c65b4
+    o #N/A, hw-mgmt: bmc: Add SPC6 AST2700 A2 DTS extension patch, a378fd3
+    o #N/A, Update changelog and release notes for V.7.0070.0933, a618f09
+    o #N/A, hw-mgmt: bmc: read AST2700 reset-cause SCU words from /proc/cmdline, a9f7033
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1071/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
+
+================================================================================
 - V.7.0070.0933
 - Tue, 02 Jun 2026
 --------------------------------------------------------------------------------
