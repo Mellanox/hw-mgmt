@@ -635,7 +635,7 @@ ads1015_write_iio_scale_path()
 	[ -n "$scale_path" ] || return 1
 	[ -e "$scale_path" ] || return 1
 
-	for v in "4096 11" "2.000000" "2.0" "2"; do
+	for v in "2.000000" "2.0" "2" "4096 11"; do
 		if echo "$v" >"$scale_path" 2>/dev/null; then
 			log_message "info" "ADS1015 IIO scale -> $scale_path ($v) for ±4.096 V PGA"
 			return 0
@@ -643,12 +643,9 @@ ads1015_write_iio_scale_path()
 	done
 
 	avail_path="${scale_path}_available"
-	if [ -r "$avail_path" ]; then
-		v=$(awk '$1 == 4096 && $2 == 11 { print $1, $2; exit }' "$avail_path" 2>/dev/null)
-		if [ -n "$v" ] && echo "$v" >"$scale_path" 2>/dev/null; then
-			log_message "info" "ADS1015 IIO scale -> $scale_path (from available: $v)"
-			return 0
-		fi
+	if [ -r "$avail_path" ] && echo "2.000000" >"$scale_path" 2>/dev/null; then
+		log_message "info" "ADS1015 IIO scale -> $scale_path (2.000000, scale_available present)"
+		return 0
 	fi
 	return 1
 }
