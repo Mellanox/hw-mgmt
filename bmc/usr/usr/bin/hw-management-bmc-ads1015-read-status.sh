@@ -48,7 +48,7 @@ ADDR="$2"
 CHANNEL="$3"
 
 # Legacy MUX high bytes (same as hw-management-bmc-a2d-leakage-config.sh).
-# Default cfg low 0x83 (comparator disabled, continuous) — override with third arg.
+# cfg low 0x83 = comparator disabled, continuous (polling); arg 3 is channel 1-4 only.
 ADS1015_CFG_LO=0x83
 ADS1015_CH_OFFSET_1=0xc2
 ADS1015_CH_OFFSET_2=0xd2
