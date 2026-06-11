@@ -90,6 +90,9 @@ VMOD0013)
 VMOD0021)
 	i2c_bus_def_off_eeprom_vpd=2
 	;;
+VMOD0025)
+	i2c_bus_def_off_eeprom_psu=6
+	;;
 default)
 	;;
 esac
