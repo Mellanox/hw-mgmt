@@ -203,6 +203,50 @@ PLATFORM_CONFIG = {
         {"fin": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/{hwmon}/leakage2", "fn": "run_cmd", "arg": ["/usr/bin/hw-management-chassis-events.sh hotplug-event LEAKAGE2 {arg1}"], "poll": 2, "ts": 0},
         {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
     ],
+    "HI186": [
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["fan1", "fan2", "fan3", "fan4", "fan5"],
+                "_event_reg": "fan_event",
+                "_status_reg": "fan_status",
+                "_inversed": True,
+                "_mask": "00011111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+            },
+        },
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["psu1", "psu2", "psu3", "psu4"],
+                "_event_reg": "psu_event",
+                "_status_reg": "psu_status",
+                "_inversed": True,
+                "_mask": "00001111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+            },
+        },
+        {"fin": None, "fn": "sw_hotplug_handler", "poll": 2, "ts": 0,
+            "arg": {
+                "name_list": ["pwr1", "pwr2", "pwr3", "pwr4"],
+                "_event_reg": "psu_dc_event",
+                "_status_reg": "psu_dc_status",
+                "_inversed": False,
+                "_mask": "00001111",
+                "_src_path": "/sys/devices/platform/mlxplat/mlxreg-io/hwmon/",
+                "_dst_path": "/var/run/hw-management/.hotplug-io-mimic/",
+                "_path_prefix": "/",
+                "_evt_cmd": "/usr/bin/hw-management-chassis-events.sh soft-hotplug-event {dev_name} {status} {path_prefix} {dst_path}"
+            },
+        },
+        {'fin': None, 'fn': 'asic_temp_populate', 'poll': 3, 'ts': 0, 'arg': {'asic': {'fin': '/sys/module/sx_core/asic0/'}, 'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+        {'fin': None, 'fn': 'module_temp_populate', 'poll': 20, 'ts': 0, 'arg': {'fin': '/sys/module/sx_core/asic0/module{}/', 'fout_idx_offset': 1, 'module_count': 64}},
+        {'fin': None, 'fn': 'monitor_asic_chipup_status', 'poll': 5, 'ts': 0, 'arg': {'asic1': {'fin': '/sys/module/sx_core/asic0/'}}},
+    ],
 }
 
 
