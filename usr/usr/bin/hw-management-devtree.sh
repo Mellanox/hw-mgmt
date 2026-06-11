@@ -724,6 +724,32 @@ declare -A sn66xxld_swb_alternatives=( \
 	["24c512_0"]="24c512 0x51 24 swb_info" \
 )
 
+# Devices located on SN66XX (AC) switch board
+declare -A sn66xx_swb_alternatives=( \
+	["mp29816_0"]="mp29816 0x61 15 voltmon1" \
+	["mp29816_1"]="mp29816 0x62 15 voltmon2" \
+	["mp29816_2"]="mp29816 0x63 15 voltmon3" \
+	["mp29816_3"]="mp29816 0x64 15 voltmon4" \
+	["mp29816_4"]="mp29816 0x65 15 voltmon5" \
+	["mp29816_5"]="mp29816 0x66 15 voltmon6" \
+	["mp29816_6"]="mp29816 0x67 15 voltmon7" \
+	["mp29816_7"]="mp29816 0x6a 15 voltmon8" \
+	["mp29816_8"]="mp29816 0x68 15 voltmon9" \
+	["mp29816_9"]="mp29816 0x61 16 voltmon10" \
+	["mp29816_10"]="mp29816 0x62 16 voltmon11" \
+	["mp29816_11"]="mp29816 0x63 16 voltmon12" \
+	["mp29816_12"]="mp29816 0x64 16 voltmon13" \
+	["mp29816_13"]="mp29816 0x65 16 voltmon14" \
+	["mp29816_14"]="mp29816 0x66 16 voltmon15" \
+	["mp29816_15"]="mp29816 0x60 16 voltmon16" \
+	["mp29816_16"]="mp29816 0x67 16 voltmon17" \
+	["mp29816_17"]="mp29816 0x68 16 voltmon18" \
+	["tmp102_0"]="tmp102 0x48 24 port_amb" \
+	["adt75_0"]="adt75 0x48 24 port_amb" \
+	["stts751_0"]="stts751 0x48 24 port_amb" \
+	["24c512_0"]="24c512 0x51 24 swb_info" \
+)
+
 # Devices located on SN68XX_LD switch board
 declare -A sn68xxld_swb_alternatives=( \
 	["mp29816_0"]="mp29816 0x60 15 voltmon1" \
@@ -776,6 +802,20 @@ declare -A sn66xxld_port_alternatives=( \
 	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
 	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
 	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
+	["tmp102_0"]="tmp102 0x4a 7 port_amb" \
+	["adt75_0"]="adt75 0x4a 7 port_amb" \
+	["stts751_0"]="stts751 0x4a 7 port_amb" \
+)
+
+# Devices located on SN66XX (AC) port board
+declare -A sn66xx_port_alternatives=( \
+	["mp29816_0"]="mp29816 0x68 15 voltmon19" \
+	["mp29816_1"]="mp29816 0x69 15 voltmon20" \
+	["xdpe1a2g7_0"]="xdpe1a2g7b 0x68 15 voltmon19" \
+	["xdpe1a2g7_1"]="xdpe1a2g7b 0x69 15 voltmon20" \
+	["tmp102_0"]="tmp102 0x48 26 port_amb" \
+	["adt75_0"]="adt75 0x48 26 port_amb" \
+	["stts751_0"]="stts751 0x48 26 port_amb" \
 )
 
 # Devices located on SN66XX_LD power board
@@ -1495,6 +1535,22 @@ devtr_check_supported_system_init_alternatives()
 
 				for key in "${!sn66xxld_port_alternatives[@]}"; do
 					port_alternatives["$key"]="${sn66xxld_port_alternatives["$key"]}"
+				done
+				;;
+			HI186)
+				for key in "${!sn66xx_swb_alternatives[@]}"; do
+					swb_alternatives["$key"]="${sn66xx_swb_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xxld_platform_alternatives[@]}"; do
+					platform_alternatives["$key"]="${sn66xxld_platform_alternatives["$key"]}"
+				done
+
+				for key in "${!sn66xx_port_alternatives[@]}"; do
+					port_alternatives["$key"]="${sn66xx_port_alternatives["$key"]}"
+				done
+				for key in "${!fan_type0_alternatives[@]}"; do
+					fan_alternatives["$key"]="${fan_type0_alternatives["$key"]}"
 				done
 				;;
 			*)
