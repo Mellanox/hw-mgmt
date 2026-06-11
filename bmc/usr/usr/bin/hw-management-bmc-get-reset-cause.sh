@@ -50,9 +50,9 @@
 #
 # Source priority per word: fw_printenv, then /proc/cmdline, then devmem.
 #
-# Domain-detail flags (ahb, caliptra, emmc, espi, external, msi, soc, spi, usb)
-# go under OUT_DIR/domains/. reset_power_on, watchdog, software, cpu,
-# security_watchdog2, and others stay in OUT_DIR.
+# SONiC BMC primary cause (exactly one 1 under OUT_DIR):
+#   reset_pwr_cycle | reset_soft_reboot | reset_unknown  (v2: WDT 0x070/0x080 + SCU0 0x050 EXTRST#)
+# Hardware / domain-detail flags under OUT_DIR/domains/ (reset_power_on, reset_watchdog, …).
 ################################################################################
 
 OUT_DIR="${OUT_DIR:-/var/run/hw-management/bmc}"
@@ -122,17 +122,34 @@ read_cmdline_val() {
 	return 0
 }
 
-set_reset_file() {
-	name="$1"
-	value="$2"
-	case "${name}" in
-	ahb|caliptra|emmc|espi|external|msi|soc|spi|usb)
-		echo "${value}" >"${DOMAINS_DIR}/reset_${name}"
-		;;
-	*)
-		echo "${value}" >"${OUT_DIR}/reset_${name}"
-		;;
-	esac
+set_primary_reset_file() {
+	_name="$1"
+	_value="$2"
+	_dest="${OUT_DIR}/reset_${_name}"
+	_tmp="${_dest}.tmp.$$"
+	echo "${_value}" >"${_tmp}" || return 1
+	mv -f "${_tmp}" "${_dest}"
+}
+
+set_domain_reset_file() {
+	echo "$2" >"${DOMAINS_DIR}/reset_$1"
+}
+
+# Pre-v2 primary flags at bmc/ root (hardware detail now under domains/). v2 primaries are
+# replaced atomically above, not removed here. Belt for apt upgrade from pre-v2 exporter.
+remove_v1_primary_reset_files() {
+	for legacy in power_on watchdog software cpu security_watchdog2 others; do
+		rm -f "${OUT_DIR}/reset_${legacy}"
+	done
+}
+
+# Write all v2 primary flags first (atomic per file), then drop stale v1 root flags.
+publish_primary_reset_cause() {
+	set_primary_reset_file pwr_cycle "${pwr_cycle}" || return 1
+	set_primary_reset_file soft_reboot "${soft_reboot}" || return 1
+	set_primary_reset_file unknown "${unknown}" || return 1
+	remove_v1_primary_reset_files
+	return 0
 }
 
 # Per-register: U-Boot env, then /proc/cmdline, then devmem.
@@ -218,24 +235,57 @@ watchdog=$((((scu1_log3 & non_soft_wdt_mask) != 0) | (scu0_log2 != 0)))
 # WDT2 group at bits [11:8] in SCU1 0x080.
 security_watchdog2=$((((scu1_log3 >> 8) & 0xF) != 0))
 
-# reset_others = 1 only when none of the dedicated (non-domain) reset causes is set.
-# Domain-detail flags live under OUT_DIR/domains/ and are excluded from this mask.
+# Diagnostic: no PWRST/WDT/CPU/WDT2 hardware bits (domains only).
 others=$((!(power_on | watchdog | software | cpu | security_watchdog2)))
 
-set_reset_file power_on "${power_on}"
-set_reset_file external "${external}"
-set_reset_file watchdog "${watchdog}"
-set_reset_file software "${software}"
-set_reset_file cpu "${cpu}"
-set_reset_file soc "${soc}"
-set_reset_file ahb "${ahb}"
-set_reset_file caliptra "${caliptra}"
-set_reset_file usb "${usb}"
-set_reset_file spi "${spi}"
-set_reset_file espi "${espi}"
-set_reset_file emmc "${emmc}"
-set_reset_file msi "${msi}"
-set_reset_file security_watchdog2 "${security_watchdog2}"
-set_reset_file others "${others}"
+# Primary SONiC cause: power-cycle-like vs warm reboot (HI189 heuristic v2).
+# Inputs:
+#   any_wdt_log      - SCU0 0x070 or SCU1 0x080 non-zero (WDT participation logged).
+#   scu0_extrst_bit1 - SCU0 0x050 bit 1 (EXTRST#); often set on AC-style reset, clear on warm
+#                      (e.g. 0xffffff32 vs 0xffffff30). Sticky; not a datasheet cold/warm enum.
+# Branches: reset_unknown when both signals conflict; reset_soft_reboot when WDT logged or
+# EXTRST# clear; reset_pwr_cycle when no WDT log and EXTRST# set.
+any_wdt_log=0
+if [ "${scu0_log2}" -ne 0 ] || [ "${scu1_log3}" -ne 0 ]; then
+	any_wdt_log=1
+fi
+scu0_extrst_bit1=$(((scu0_log0 >> 1) & 1))
+
+pwr_cycle=0
+soft_reboot=0
+unknown=0
+
+if [ "${any_wdt_log}" -eq 1 ] && [ "${scu0_extrst_bit1}" -eq 1 ]; then
+	# WDT log and EXTRST# both set: sticky or mixed reset path.
+	unknown=1
+elif [ "${any_wdt_log}" -eq 1 ]; then
+	# WDT participation in SCU0 0x070 or SCU1 0x080.
+	soft_reboot=1
+elif [ "${scu0_extrst_bit1}" -eq 0 ]; then
+	# No WDT log; EXTRST# clear (warm log0 pattern, e.g. 0xffffff30).
+	soft_reboot=1
+else
+	# No WDT log; EXTRST# set (power-cycle-like on this SKU, e.g. 0xffffff32).
+	pwr_cycle=1
+fi
+
+publish_primary_reset_cause || exit 1
+# Invariant: exactly one primary flag is 1 (pwr_cycle | soft_reboot | unknown).
+
+set_domain_reset_file power_on "${power_on}"
+set_domain_reset_file external "${external}"
+set_domain_reset_file watchdog "${watchdog}"
+set_domain_reset_file software "${software}"
+set_domain_reset_file cpu "${cpu}"
+set_domain_reset_file soc "${soc}"
+set_domain_reset_file ahb "${ahb}"
+set_domain_reset_file caliptra "${caliptra}"
+set_domain_reset_file usb "${usb}"
+set_domain_reset_file spi "${spi}"
+set_domain_reset_file espi "${espi}"
+set_domain_reset_file emmc "${emmc}"
+set_domain_reset_file msi "${msi}"
+set_domain_reset_file security_watchdog2 "${security_watchdog2}"
+set_domain_reset_file others "${others}"
 
 exit 0
