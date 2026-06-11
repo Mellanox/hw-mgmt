@@ -2369,21 +2369,21 @@ qm3xxx_specific()
 
 		# Map I2C bus and address to psu number
 		psu1_i2c_bus=4
-		psu1_i2c_addr=59
+		psu1_i2c_addr=0x59
 		psu2_i2c_bus=4
-		psu2_i2c_addr=58
+		psu2_i2c_addr=0x58
 		psu3_i2c_bus=3
-		psu3_i2c_addr=5b
+		psu3_i2c_addr=0x5b
 		psu4_i2c_bus=3
-		psu4_i2c_addr=5a
+		psu4_i2c_addr=0x5a
 		psu5_i2c_bus=4
-		psu5_i2c_addr=5d
+		psu5_i2c_addr=0x5d
 		psu6_i2c_bus=4
-		psu6_i2c_addr=5c
+		psu6_i2c_addr=0x5c
 		psu7_i2c_bus=3
-		psu7_i2c_addr=5e
+		psu7_i2c_addr=0x5e
 		psu8_i2c_bus=3
-		psu8_i2c_addr=5f
+		psu8_i2c_addr=0x5f
 
 		dummy_psus_supported=1
 	elif [ "$sku" == "HI175" ] || [ "$sku" == "HI178" ]; then
@@ -2821,30 +2821,89 @@ sn58xxld_specific()
 	echo 0 > /sys/devices/platform/mlxplat/mlxreg-io/hwmon/hwmon*/bmc_to_cpu_ctrl
 }
 
-sn66xxld_specific()
+sn66xx_specific()
 {
 	case $sku in
 	# SN6600_LD
 	HI193)
-		cpld_num=4
 		leakage_count=2
 		i2c_asic_bus_default=5
 		hotplug_pdbs=2
+		hotplug_psus=0
+		hotplug_pwrs=0
+		hotplug_fans=0
+		psu_count=0
+		max_fans=0
+		max_tachos=0
+		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
+		;;
+	# SN6600 (Air cooled)
+	HI186)
+		leakage_count=0
+		i2c_asic_bus_default=5
+		hotplug_psus=4
+		hotplug_pwrs=4
+		hotplug_fans=5
+		max_tachos=10
+		max_fans=5
+		psu_count=4
+
+		# Set according to front (inlet) fan max, 21800
+		echo 18700 > $config_path/fan_max_speed
+		# Set at 30% of rear (outlet) fan max, 20500 (according to fan vendor table)
+		echo 3650 > $config_path/fan_min_speed
+
+		# Set FAN front (inlet) speed limits
+		echo 18700 > $config_path/fan_front_max_speed
+		echo 4500 > $config_path/fan_front_min_speed
+
+		# Set FAN rear (outlet) speed limits 
+		echo 15100 > $config_path/fan_rear_max_speed
+		echo 3650 > $config_path/fan_rear_min_speed
+
+		echo 27500 > $config_path/psu_fan_max
+		# Set as 20% of max speed
+		echo 5500 > $config_path/psu_fan_min
+
+		echo C2P > $config_path/system_flow_capability
+
+		# PSU I2C bus and address
+		psu1_i2c_bus=4
+		psu1_i2c_addr=0x59
+		psu2_i2c_bus=4
+		psu2_i2c_addr=0x58
+		psu3_i2c_bus=4
+		psu3_i2c_addr=0x5b
+		psu4_i2c_bus=4
+		psu4_i2c_addr=0x5a
+
+		# Add PSU to devtree. It needed for PSU hotplug handler
+		psu_devtree_str=""
+		devtree_file_data=()
+		if [ -f "$devtree_file" ]; then
+			devtree_file_data=($(< "$devtree_file"))
+		fi
+		for ((psu_idx=1; psu_idx<=4; psu_idx++)); do
+			# Add psu to devtree if not already present
+			if ! [[ " ${devtree_file_data[*]} " =~ " psu${psu_idx} " ]]; then
+				psu_i2c_addr_var="psu${psu_idx}_i2c_addr"
+				psu_i2c_bus_var="psu${psu_idx}_i2c_bus"
+				psu_devtree_str+=" dps460 ${!psu_i2c_addr_var} ${!psu_i2c_bus_var} psu${psu_idx}"
+			fi
+		done
+		echo -n "${psu_devtree_str}" >> "$devtree_file"
+
+		lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
+		thermal_control_config="$thermal_control_configs_path/tc_config_sn6600.json"
 		;;
 	esac
 
+	cpld_num=4
+	asic_control=0
 	echo 0 > $config_path/i2c_bus_offset
-	lm_sensors_config="$lm_sensors_configs_path/sn66xxld_sensors.conf"
-	thermal_control_config="$thermal_control_configs_path/tc_config_not_supported.json"
-
 	echo $cpld_num > $config_path/cpld_num
 	echo 0 > $config_path/fan_drwr_num
-	psu_count=0
-	hotplug_fans=0
-	hotplug_pwrs=0
-	hotplug_psus=0
-	asic_control=0
-	max_tachos=0
 	health_events_count=0
 	minimal_unsupported=1
 	i2c_bus_def_off_eeprom_cpu=0
@@ -2936,7 +2995,7 @@ check_system()
 			sn58xxld_specific
 			;;
 		VMOD0025)
-			sn66xxld_specific
+			sn66xx_specific
 			;;
 		*)
 			product=$(< /sys/devices/virtual/dmi/id/product_name)
@@ -3420,7 +3479,7 @@ set_asic_pci_id()
 	HI180|HI185)
 		asic_pci_id="${quantum3_pci_id}|${quantum4_pci_id}"
 		;;
-	HI193)
+	HI193|HI186)
 		asic_pci_id="${spc5_pci_id}|${spc6_pci_id}"
 		;;
 	*)
@@ -3805,6 +3864,8 @@ map_dummy_psus()
 			continue
 		fi
 
+		# Remove 0x prefix from psu_addr
+		psu_addr=${psu_addr#0x}
 		psu_present=$(< $thermal_path/psu${psu_idx}_status)
 		psu_dev_path="/sys/bus/i2c/devices/${psu_bus}-00${psu_addr}"
 		if [ ${psu_present} -eq 1 ] && [ ! -d ${psu_dev_path} ]; then
@@ -4146,8 +4207,8 @@ case $ACTION in
 			log_err "hw-management is already started"
 			exit 1
 		fi
-		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI193/HI194 in simx
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
+		# TEMPORARY hw-management mockup values for HI180/HI181/HI185/HI186/HI193/HI194 in simx
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI186" -o "$sku" == "HI193" -o "$sku" == "HI194" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			process_simx_links
 			log_info "Created mock hw management tree, exiting."
@@ -4247,7 +4308,7 @@ case $ACTION in
 		do_stop
 		sleep 3
 		# TEMPORARY hw-management mockup values for SIMX
-		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI193" ]; then
+		if check_simx && [ "$sku" == "HI180" -o "$sku" == "HI181" -o "$sku" == "HI185" -o "$sku" == "HI186" -o "$sku" == "HI193" ]; then
 			tar -xzf /etc/hw-management-virtual/hwmgmt_$sku.tgz -C /var/run/
 			log_info "Created mock hw management tree, exiting."
 			exit 0
