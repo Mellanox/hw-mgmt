@@ -93,7 +93,7 @@ On the target system the **hw-management-bmc** Debian package installs this tree
 | .../spc6-ast2700-a1/.../bmc_set_extra_params.sh | usr/usr/bin/**hw-management-bmc-set-extra-params.sh** |
 | ~~ast2700-a1-spc6-switch-erots-info.sh~~ | removed (Microsoft doesn't need) |
 | .../spc6-ast2700-a1/.../bmc-plat-specific-preps.sh | usr/usr/bin/**hw-management-bmc-plat-specific-preps.sh** |
-| *(SONiC BMC; replaces OpenBMC i2c-boot-progress.sh)* | usr/usr/bin/**hw-management-bmc-boot-complete.sh** |
+| *(SONiC BMC; replaces OpenBMC i2c-boot-progress.sh)* | usr/usr/bin/**hw-management-bmc-boot-complete.sh** — sysfs entry-count gate; on success may set **`reset_pwr_cycle`** when **`system/reset_aux_pwr_or_fu`** or **`_ref`** is **1** (v2 CPLD fixup). |
 | .../spc6-ast2700-a1/.../i2c-slave-config.sh | usr/usr/bin/**hw-management-bmc-i2c-slave-config.sh** |
 | ~~spc6-svn-check.sh~~ | removed (Microsoft doesn't need) |
 | meta-nvidia/meta-switch/recipes-phosphor/**dump**/files/**cpld_dump.sh** + **dump_utils.sh** ( **`take_cpld_dump_internal`**, **`take_cpld_dump`** only) | usr/usr/bin/**hw-management-bmc-cpld-dump.sh** (merged SONiC script; no **`switch-erots-info`** / Phosphor **`add_copy_file`**; **`log_message`** + **`hw-management-bmc-platform.conf`** via **`helpers-common`**) |
