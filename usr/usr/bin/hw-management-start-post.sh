@@ -255,3 +255,8 @@ if [ $tc_should_reload -eq 1 ] ||
 	# to run it in the background to avoid blocking the startup process.
 	nohup bash -c "$cmd_line echo thermal control service configured" &>/dev/null &
 fi
+
+# Enable NVMe shutdown hook only on no-BMC platforms with NVMe storage.
+if [ -x /usr/bin/hw-management-nvme-shutdown-setup.sh ]; then
+	/usr/bin/hw-management-nvme-shutdown-setup.sh
+fi

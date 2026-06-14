@@ -1,0 +1,16 @@
+# Configuration for hw-management NVMe shutdown hook (software-only, no-BMC).
+#
+# Installed as /usr/lib/systemd/system-shutdown/hw-management-nvme-shutdown.
+# Runs in the final systemd-shutdown phase, after umount and service teardown,
+# immediately before the kernel poweroff/reboot path (pm_power_off / CPLD halt).
+#
+# Eligibility (checked at shutdown time):
+#   - NVMe block devices exist under /dev/nvme*, and
+#   - bmc_present == 0 and gp_bmc_presnt == 0 (no BMC on platform).
+#
+# NVME_SHUTDOWN_WAIT_SEC + 5 must not exceed NVME_SHUTDOWN_TIMEOUT_SEC.
+# Wait is clamped at runtime to fit the budget.
+NVME_SHUTDOWN_TIMEOUT_SEC=120
+
+# Max time to wait for NVMe controller shutdown (seconds).
+NVME_SHUTDOWN_WAIT_SEC=10
