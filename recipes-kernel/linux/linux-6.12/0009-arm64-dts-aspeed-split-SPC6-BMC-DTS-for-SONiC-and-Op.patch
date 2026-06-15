@@ -29,8 +29,8 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  .../aspeed/aspeed-nvidia-spc6-bmc-openbmc.dts | 527 ++++++++++++++++++
  .../dts/aspeed/aspeed-nvidia-spc6-bmc.dts     |   2 +-
  .../dts/aspeed/nvidia-ast27xx-irot-sonic.dtsi |  14 +
- .../aspeed/nvidia-ast27xx-sunda-sonic.dtsi    |   7 +
- 4 files changed, 548 insertions(+), 1 deletion(-)
+ .../aspeed/nvidia-ast27xx-sunda-sonic.dtsi    |   8 +
+ 4 files changed, 549 insertions(+), 1 deletion(-)
  create mode 100644 arch/arm64/boot/dts/aspeed/aspeed-nvidia-spc6-bmc-openbmc.dts
  create mode 100644 arch/arm64/boot/dts/aspeed/nvidia-ast27xx-irot-sonic.dtsi
  create mode 100644 arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda-sonic.dtsi
@@ -606,7 +606,7 @@ new file mode 100644
 index 000000000..db26b5096
 --- /dev/null
 +++ b/arch/arm64/boot/dts/aspeed/nvidia-ast27xx-sunda-sonic.dtsi
-@@ -0,0 +1,7 @@
+@@ -0,0 +1,8 @@
 +#include "nvidia-ast27xx-irot-sonic.dtsi"
 +// OP-TEE vROT not used on SONiC BMC; same as meta nvidia-ast27xx-sunda.dtsi.
 +//#include "nvidia-optee-vrot.dtsi"
