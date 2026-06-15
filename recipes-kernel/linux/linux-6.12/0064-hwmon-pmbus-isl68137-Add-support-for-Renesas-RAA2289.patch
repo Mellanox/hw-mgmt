@@ -14,14 +14,14 @@ dedicated OF match entries are needed.
 Signed-off-by: Dawei Liu <dawei.liu.jy@renesas.com>
 ---
  Documentation/hwmon/isl68137.rst | 20 ++++++++++++++++++++
- drivers/hwmon/pmbus/isl68137.c   |  2 ++
- 2 files changed, 22 insertions(+)
+ drivers/hwmon/pmbus/isl68137.c   | 22 ++++++++++++++++++++++---
+ 2 files changed, 40 insertions(+), 2 deletions(-)
 
 diff --git a/Documentation/hwmon/isl68137.rst b/Documentation/hwmon/isl68137.rst
 index 0e71b22047f8..1a1424dd640f 100644
 --- a/Documentation/hwmon/isl68137.rst
 +++ b/Documentation/hwmon/isl68137.rst
-@@ -374,6 +374,26 @@ Supported chips:
+@@ -374,6 +374,26 @@
  
        Publicly available (after August 2020 launch) at the Renesas website
  
@@ -49,10 +49,45 @@ index 0e71b22047f8..1a1424dd640f 100644
  
      Prefix: 'raa229001'
 diff --git a/drivers/hwmon/pmbus/isl68137.c b/drivers/hwmon/pmbus/isl68137.c
-index 7e53fb1d5ea3..f3baaee6227a 100644
+index 2af921039309..39e38e01e630 100644
 --- a/drivers/hwmon/pmbus/isl68137.c
 +++ b/drivers/hwmon/pmbus/isl68137.c
-@@ -311,6 +311,8 @@ static const struct i2c_device_id raa_dmpvr_id[] = {
+@@ -244,6 +244,19 @@
+ 	return ret;
+ }
+ 
++static int raa_dmpvr2_nontc_read_word_data(struct i2c_client *client, int page,
++					   int phase, int reg)
++{
++	switch (reg) {
++	case PMBUS_UT_FAULT_LIMIT:
++	case PMBUS_UT_WARN_LIMIT:
++	case PMBUS_POUT_MAX:
++		return -EIO;
++	default:
++		return raa_dmpvr2_read_word_data(client, page, phase, reg);
++	}
++}
++
+ static struct pmbus_driver_info raa_dmpvr_info = {
+ 	.pages = 3,
+ 	.format[PSC_VOLTAGE_IN] = direct,
+@@ -389,9 +406,13 @@
+ 		info->write_word_data = raa_dmpvr2_write_word_data;
+ 		break;
+ 	case raa_dmpvr2_2rail_nontc:
++		info->func[0] &= ~PMBUS_HAVE_VMON;
++		info->func[0] &= ~PMBUS_HAVE_TEMP2;
+ 		info->func[0] &= ~PMBUS_HAVE_TEMP3;
+ 		info->func[1] &= ~PMBUS_HAVE_TEMP3;
+-		fallthrough;
++		info->pages = 2;
++		info->read_word_data = raa_dmpvr2_nontc_read_word_data;
++		break;
+ 	case raa_dmpvr2_2rail:
+ 		info->pages = 2;
+ 		info->read_word_data = raa_dmpvr2_read_word_data;
+@@ -463,6 +484,8 @@
  	{"raa228004", raa_dmpvr2_hv},
  	{"raa228006", raa_dmpvr2_hv},
  	{"raa228228", raa_dmpvr2_2rail_nontc},
@@ -63,4 +98,3 @@ index 7e53fb1d5ea3..f3baaee6227a 100644
  	{}
 -- 
 2.34.1
-
