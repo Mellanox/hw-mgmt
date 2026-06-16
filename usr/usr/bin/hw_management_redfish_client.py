@@ -83,6 +83,7 @@ class RedfishClient:
     '''
     Constructor
     '''
+
     def __init__(self, curl_path, ip_addr, user, password):
         self.__curl_path = curl_path
         self.__svr_ip = ip_addr
@@ -119,6 +120,7 @@ class RedfishClient:
     '''
     Build curl stdin config for POST /login (credentials in config only, never argv).
     '''
+
     def __build_login_cmd(self, password, timeout=DEFAULT_GET_TIMEOUT):
         body = json.dumps({'username': self.__user, 'password': password})
         cred_escape = self.__curl_config_escape_double_quoted_value(body)
@@ -137,6 +139,7 @@ class RedfishClient:
     '''
     Build curl stdin config for GET (token off argv).
     '''
+
     def __build_get_cmd(self, uri, timeout=DEFAULT_GET_TIMEOUT):
         full_url_esc = self.__curl_config_escape_double_quoted_value(
             self.__curl_redfish_url(uri))
@@ -153,6 +156,7 @@ class RedfishClient:
     '''
     Build curl stdin config for firmware upload POST (token off argv).
     '''
+
     def __build_fw_update_cmd(self, fw_image):
         url_esc = self.__curl_config_escape_double_quoted_value(
             self.__curl_redfish_url(RedfishClient.REDFISH_URI_UPDATE_SERVICE))
@@ -170,6 +174,7 @@ class RedfishClient:
     '''
     Build curl stdin config for PATCH account password (token off argv).
     '''
+
     def __build_change_password_cmd(self, new_password):
         url_esc = self.__curl_config_escape_double_quoted_value(
             self.__curl_redfish_url(
@@ -235,6 +240,7 @@ class RedfishClient:
     '''
     Build curl stdin config for PATCH ForceUpdate (token off argv).
     '''
+
     def __build_set_force_update_cmd(self, force):
         body = json.dumps({'HttpPushUriOptions': {'ForceUpdate': bool(force)}})
         data_esc = self.__curl_config_escape_double_quoted_value(body)
@@ -253,6 +259,7 @@ class RedfishClient:
     '''
     Build curl stdin config for generic JSON POST (token off argv).
     '''
+
     def __build_post_cmd(self, uri, data_dict=None, timeout=DEFAULT_GET_TIMEOUT):
         url_esc = self.__curl_config_escape_double_quoted_value(
             self.__curl_redfish_url(uri))
@@ -297,6 +304,7 @@ class RedfishClient:
     '''
     Redact secrets from curl --config stdin for syslog / debug logs.
     '''
+
     def __curl_config_for_logging(self, curl_config):
 
         cfg = curl_config
@@ -334,12 +342,14 @@ class RedfishClient:
     '''
     Obfuscate username and password in curl config (delegates to __curl_config_for_logging).
     '''
+
     def __obfuscate_user_password(self, curl_config):
         return self.__curl_config_for_logging(curl_config)
 
     '''
     Obfuscate bearer token in a Redfish login response string (logging helpers/tests).
     '''
+
     def __obfuscate_token_response(self, response):
         pattern = r'"token": "[^"]*"'
         replacement = '"token": "******"'
@@ -348,6 +358,7 @@ class RedfishClient:
     '''
     Obfuscate bearer token passed to cURL (stdin config or legacy argv string).
     '''
+
     def __obfuscate_auth_token(self, cmd):
         obfuscated = self.__curl_config_for_logging(cmd)
         return re.sub(
@@ -358,6 +369,7 @@ class RedfishClient:
     '''
     Obfuscate password in curl config (delegates to __curl_config_for_logging).
     '''
+
     def __obfuscate_password(self, cmd):
         return self.__curl_config_for_logging(cmd)
 
@@ -373,6 +385,7 @@ class RedfishClient:
     '''
     Execute cURL command and return the output and error messages
     '''
+
     def __exec_curl_cmd_internal(self, curl_config):
 
         task_mon = RedfishClient.REDFISH_URI_TASKS in curl_config
@@ -440,6 +453,7 @@ class RedfishClient:
     Wrapper function to execute the given cURL command which can deal with
     invalid bearer token case.
     '''
+
     def exec_curl_cmd(self, curl_config):
         is_login_cmd = curl_config.startswith(RedfishClient._CFG_LOGIN_PREFIX)
 
@@ -476,12 +490,14 @@ class RedfishClient:
     '''
     Check if already login
     '''
+
     def has_login(self):
         return self.__token is not None
 
     '''
     Login Redfish server and get bearer token
     '''
+
     def login(self, password=None):
         if self.has_login():
             return RedfishClient.ERR_CODE_OK
@@ -544,7 +560,8 @@ class BMCAccessor(object):
     BMC_ADMIN_ACCOUNT = 'admin'
     BMC_DEFAULT_PASSWORD = '0penBmc'
     BMC_NOS_ACCOUNT = 'yormnAnb'  # used for communication between NOS and BMC
-    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51"  # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    # default pwd of the NOS/BMC user, during the flow will be changed to tpm_pwd
+    BMC_NOS_ACCOUNT_DEFAULT_PASSWORD = "ABYX12#14artb51"
     BMC_DIR = "/host/bmc"
     BMC_PASS_FILE = "bmc_pass"
     BMC_TPM_HEX_FILE = "hw_mgmt_const.bin"
@@ -667,7 +684,8 @@ class BMCAccessor(object):
             subprocess.run(cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             raise Exception(f"Failed to write hex file: {e}")
-        tpm_command = ["tpm2_createprimary", "-C", "o", "-u", f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
+        tpm_command = ["tpm2_createprimary", "-C", "o", "-u",
+                       f"{self.BMC_DIR}/{self.BMC_TPM_HEX_FILE}", "-G", "aes256cfb"]
         try:
             result = subprocess.run(tpm_command, capture_output=True, check=True, text=True)
         except subprocess.CalledProcessError as e:
@@ -682,7 +700,11 @@ class BMCAccessor(object):
                 try:
                     result = subprocess.run(tpm_command, shell=True, capture_output=True, check=True, text=True)
                 except subprocess.CalledProcessError as e:
-                    print(f"[_handle_legacy_password] tpm2_createprimary (stdin, attempt={attempt}) failed: returncode={e.returncode}", file=sys.stderr)
+                    print(
+                        f"[_handle_legacy_password] tpm2_createprimary "
+                        f"(stdin, attempt={attempt}) failed: "
+                        f"returncode={e.returncode}",
+                        file=sys.stderr)
                     if e.stderr:
                         print(f"[_handle_legacy_password] stderr: {e.stderr.strip()}", file=sys.stderr)
                     raise Exception(f"Failed to create primary with stdin: {e}")
@@ -714,7 +736,8 @@ class BMCAccessor(object):
                     break
 
             variety_check = len(set(symcipher_value)) >= 5
-            repeating_pattern_check = sum(1 for i in range(pass_len - 1) if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
+            repeating_pattern_check = sum(1 for i in range(pass_len - 1)
+                                          if symcipher_value[i] == symcipher_value[i + 1]) <= max_repeat
 
             # check for consecutive_pairs
             count = 0
