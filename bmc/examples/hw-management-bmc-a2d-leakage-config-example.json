@@ -5,16 +5,17 @@
       "Name": "string, required. Human-readable detector id.",
       "NumChnl": "number, required. Channel count for this detector (1-based channel indices under leakage/<i>/).",
       "ChnlNames": "array of strings, optional. If set, written as channel_name file inside leakage/<i>/<j>/.",
-      "Device": "array of device alternatives; first probed I2C match is configured."
+      "Device": "array of device entries. Default BOM-alternative mode: mutually-exclusive populations, first probed I2C match drives all NumChnl channels. Per-channel device-map mode (auto-selected when entry count == NumChnl and all Bus/Address pairs are distinct): entry k is the sensor for logical channel k, each configured and linked independently."
     },
     "device_object": {
       "DeviceType": "string, required. e.g. MAX1363, ADS1015, ADS7924 — maps to driver / register logic.",
       "Bus": "number, required. I2C bus number.",
       "Address": "string, required. Hex address; alternatives may share one address when BOMs are mutually exclusive (list MAX1363 before ADS1015).",
+      "ChannelId": "number, optional. Hardware A2D channel (1-based) wired on this device; defaults to the logical channel index (1..NumChnl). Used for IIO sysfs links (in_voltage<N>_raw) and ADS1015 MUX/threshold programming when channels are not sequential.",
       "Probe": "boolean, optional. If true, bind kernel driver (new_device) before register writes.",
       "Type": "string, optional. Sensor kind label (e.g. rop, flex). Published as runtime .../<j>/type.",
       "CfgReg": "string, optional. Configuration register address (hex).",
-      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg.",
+      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg. ADS1015: first byte is config high (MUX for ChannelId — 0xc2/0xd2/0xe2/0xf2 for channels 1–4), second byte is config low (mode/comparator). MAX1363: platform monitor burst; byte0 = scan-to-CS (0x01/0x03/0x05/0x07 for channels 1–4), first 0x1x byte = monitor channel tag (0x11/0x13/0x15/0x1f). Script patches these from ChannelId when needed.",
       "LoThreshReg": "string, optional. Low threshold register address.",
       "LoThreshRegVal": "string, optional. Bytes for low threshold (big-endian); scaled to min.",
       "HiThreshReg": "string, optional. High threshold register address.",
@@ -39,7 +40,8 @@
       "Ads7924_configuration_note": "All Ads7924* keys are optional. When omitted, hw-management-bmc-a2d-leakage-config.sh uses defaults: soft reset on (0xaa @ RESET), INT/SLP/ACQ/PWR = 0xe0 0x00 0x00 0x00, INTCNTRL AEN = 0x0f, AWAKE 0x20 then MODE 0x33 (auto-scan). For ULR/LLR and comparator-driven INT you need Scale plus NormalMin/NormalMax (or if those are absent, WarningMin/WarningMax) on raw I2C (Probe false). Per-channel ULR/LLR overrides use Ads7924UlCh1..4 / Ads7924LlCh1..4 only when you need registers to differ from that voltage-derived window."
     },
     "runtime_paths": {
-      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel.",
+      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel. j is 1..NumChnl (BOM-alternative mode) or the 1-based Device[] position (per-channel device-map mode; may be non-contiguous when an earlier device is absent).",
+      "input": "symlink to the kernel IIO raw attribute for the wired hardware channel: in_voltage<ChannelId-1>_raw (defaults to in_voltage<j-1>_raw when ChannelId is absent).",
       "type": "from Device.Type",
       "lwarn": "from Device.WarningMin",
       "lcrit": "from Device.CriticalMin",
@@ -113,6 +115,47 @@
           "CriticalMin": 0.02,
           "WarningMax": 0.85,
           "CriticalMax": 0.95
+        }
+      ]
+    },
+    {
+      "Name": "Example_PerChannel_DeviceMap_NonSequential",
+      "_comment": "Per-channel device-map mode: 2 distinct devices == NumChnl, so Device[0] -> channel 1, Device[1] -> channel 2. Each sensor is wired to hardware AIN3 (ChannelId 4), so input links to in_voltage3_raw and the ADS1015 MUX byte is 0xf2.",
+      "NumChnl": 2,
+      "ChnlNames": [
+        "Leak_Mgmt_AIN3",
+        "Leak_Swb_AIN3"
+      ],
+      "Device": [
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 27,
+          "Address": "0x49",
+          "ChannelId": 4,
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.002,
+          "NormalMin": 2.69,
+          "NormalMax": 3.09,
+          "WarningMin": 2.2,
+          "CriticalMin": 0.13,
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
+        },
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 28,
+          "Address": "0x48",
+          "ChannelId": 4,
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.002,
+          "NormalMin": 2.69,
+          "NormalMax": 3.09,
+          "WarningMin": 2.2,
+          "CriticalMin": 0.13,
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
         }
       ]
     }
