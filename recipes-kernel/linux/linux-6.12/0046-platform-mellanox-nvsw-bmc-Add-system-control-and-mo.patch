@@ -23,13 +23,13 @@ Signed-off-by: Vadim Pasternak <vadimp@nvidia.com>
  .../devicetree/bindings/trivial-devices.yaml  |    5 +
  drivers/platform/mellanox/Kconfig             |   38 +
  drivers/platform/mellanox/Makefile            |    4 +
- drivers/platform/mellanox/nvsw-bmc-hid162.c   | 7285 +++++++++++++++++
+ drivers/platform/mellanox/nvsw-bmc-hid162.c   | 7289 +++++++++++++++++
  drivers/platform/mellanox/nvsw-core.c         |  717 ++
  drivers/platform/mellanox/nvsw-host-l1.c      |  770 ++
  drivers/platform/mellanox/nvsw-host-spc5.c    |  943 +++
  drivers/platform/mellanox/nvsw-host-spc6.c    |  852 ++
  drivers/platform/mellanox/nvsw.h              |  318 +
- 9 files changed, 10932 insertions(+)
+ 9 files changed, 10936 insertions(+)
  create mode 100644 drivers/platform/mellanox/nvsw-bmc-hid162.c
  create mode 100644 drivers/platform/mellanox/nvsw-core.c
  create mode 100644 drivers/platform/mellanox/nvsw-host-l1.c
@@ -120,7 +120,7 @@ new file mode 100644
 index 000000000000..89343d7660a4
 --- /dev/null
 +++ b/drivers/platform/mellanox/nvsw-bmc-hid162.c
-@@ -0,0 +1,7285 @@
+@@ -0,0 +1,7289 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Nvidia BMC platform driver
@@ -1348,7 +1348,7 @@ index 000000000000..89343d7660a4
 +	},
 +	{
 +		.label = "thermtrip_alert",
-+		.reg = NVSW_REG_BRD1_OFFSET,
++		.reg = NVSW_REG_HEALTH_OFFSET,
 +		.mask = BIT(3),
 +		.hpdev.nr = NVSW_NR_NONE,
 +	},
@@ -1555,6 +1555,7 @@ index 000000000000..89343d7660a4
 +		.count = ARRAY_SIZE(nvsw_bmc_hid180_asic_temp_items_data),
 +		.inversed = 0,
 +		.health = false,
++		.non_sticky = true,
 +	},
 +	{
 +		.data = nvsw_bmc_hid180_leakage_items_data,
@@ -2372,6 +2373,7 @@ index 000000000000..89343d7660a4
 +		.count = ARRAY_SIZE(nvsw_bmc_hid181_asic_temp_items_data),
 +		.inversed = 0,
 +		.health = false,
++		.non_sticky = true,
 +	},
 +	{
 +		.data = nvsw_bmc_hid181_leakage_items_data,
@@ -3065,7 +3067,7 @@ index 000000000000..89343d7660a4
 +	},
 +	{
 +		.label = "thermtrip_alert",
-+		.reg = NVSW_REG_BRD1_OFFSET,
++		.reg = NVSW_REG_HEALTH_OFFSET,
 +		.mask = BIT(3),
 +		.hpdev.nr = NVSW_NR_NONE,
 +	},
@@ -3135,6 +3137,7 @@ index 000000000000..89343d7660a4
 +		.count = ARRAY_SIZE(nvsw_bmc_hid191_asic_temp_items_data),
 +		.inversed = 0,
 +		.health = false,
++		.non_sticky = true,
 +	},
 +	{
 +		.data = nvsw_bmc_hid191_vr1_pwr_alert_items_data,
@@ -3487,6 +3490,7 @@ index 000000000000..89343d7660a4
 +		.count = ARRAY_SIZE(nvsw_bmc_hid193_asic_temp_items_data),
 +		.inversed = 0,
 +		.health = false,
++		.non_sticky = true,
 +	},
 +	{
 +		.data = nvsw_bmc_hid193_dc_ok_events_items_data,
