@@ -7,7 +7,10 @@
 # hw-management-bmc-a2d-leakage-config-example.json).
 #
 # N = leak-detector index: 1-based order of objects in the top-level JSON array.
-# j = channel index: 1 … NumChnl for that detector.
+# j = channel index. BOM-alternative mode: 1 … NumChnl (contiguous). Per-channel
+#     device-map mode (Device[] count == NumChnl and all Bus/Address distinct): j is
+#     the 1-based Device[] position, so it can be non-contiguous (e.g. only 2/ exists
+#     when Device[0] is absent on the board).
 #
 # There is no I2C bus/address level under leakage/; only numeric detector dirs.
 
@@ -55,7 +58,20 @@
 # Notes
 #
 # • input: When JSON Probe is true, the script binds the driver and points input at the kernel
-#   sysfs raw attribute (e.g. …/iio:deviceX/in_voltageY_raw). Paths differ by SoC/driver.
+#   sysfs raw attribute for the wired hardware channel: in_voltage<ChannelId-1>_raw
+#   (defaults to in_voltage<j-1>_raw when ChannelId is absent). Paths differ by SoC/driver.
+#
+# • ChannelId (optional, per Device): 1-based hardware A2D input(s) the sensor is wired to (holes
+#   allowed). Scalar (e.g. 4) = one input for that Device entry (per-channel device-map mode).
+#   Array (e.g. [1,4]) = one input per logical channel; a single present chip serves all NumChnl
+#   channels (BOM-alternative), and each channel directory is named by its mapped input — so
+#   ChannelId [1,4] produces .../<N>/1/ and .../<N>/4/ (not 1/ and 2/). Drives the input symlink
+#   (in_voltage<ChannelId-1>_raw), the ADS1015 MUX byte (0xc2/0xd2/0xe2/0xf2 = inputs 1-4) and the
+#   MAX1363 scan/monitor bytes in CfgRegVal. See hw-management-bmc-a2d-leakage-config-example.json.
+#
+# • Validate on a live BMC with bmc/tests/hw-management-bmc-leakage-validate.sh: a minimal HW-vs-SW
+#   test that prints each configured Bus/Address I2C probe next to its SW runtime channel with a
+#   PASS/FAIL verdict, then live reading/volts/status per channel (exit non-zero on any failure).
 #
 # • min/max: From LoThreshRegVal / HiThreshRegVal (big-endian unsigned) × Scale;
 #   fallback NormalMin / NormalMax, then WarningMin / WarningMax.

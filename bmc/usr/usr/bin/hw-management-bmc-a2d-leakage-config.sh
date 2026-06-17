@@ -39,6 +39,14 @@
 CONFIG_FILE="${HW_MANAGEMENT_BMC_A2D_LEAKAGE_CONFIG:-/etc/hw-management-bmc-a2d-leakage-config.json}"
 LOG_TAG="a2d_config"
 
+# i2c-tools (i2ctransfer/i2cdetect) live in /usr/sbin; ensure they are reachable even
+# when invoked from a login shell whose PATH omits sbin (e.g. a manual root run).
+case ":$PATH:" in
+*:/usr/sbin:*) ;;
+*) PATH="/usr/sbin:/sbin:$PATH" ;;
+esac
+export PATH
+
 # Source JSON parser library
 if [ -f /usr/bin/hw-management-bmc-json-parser.sh ]; then
 	source /usr/bin/hw-management-bmc-json-parser.sh
@@ -64,7 +72,7 @@ fi
 check_dependencies()
 {
 	if ! command -v i2ctransfer >/dev/null 2>&1; then
-		log_message "err" "i2ctransfer is not installed. Cannot configure I2C devices."
+		log_message "err" "i2ctransfer not found in PATH ($PATH). Install i2c-tools and run as root (it lives in /usr/sbin)."
 		return 1
 	fi
 
@@ -615,6 +623,124 @@ ads1015_mux_high_byte()
 	esac
 }
 
+# MAX1363 config byte: scan/monitor upper channel (single-ended), ch = 0..3 (TI datasheet Table 2).
+max1363_scan_to_cs_config_byte()
+{
+	case "$1" in
+	0) printf '%s' 0x01 ;;
+	1) printf '%s' 0x03 ;;
+	2) printf '%s' 0x05 ;;
+	3) printf '%s' 0x07 ;;
+	*) return 1 ;;
+	esac
+}
+
+# Monitor-setup channel tag in platform CfgRegVal blob (first 0x1x byte selects channel).
+max1363_monitor_channel_tag_byte()
+{
+	case "$1" in
+	0) printf '%s' 0x11 ;;
+	1) printf '%s' 0x13 ;;
+	2) printf '%s' 0x15 ;;
+	3) printf '%s' 0x1f ;;
+	*) return 1 ;;
+	esac
+}
+
+# Adjust MAX1363 CfgRegVal (1-based channels). Patches the monitor tag byte for
+# hw_channel_id and the scan-to-CS range for scan_channel_id (defaults to
+# hw_channel_id). With an array ChannelId, pass the HIGHEST mapped input as
+# scan_channel_id so the scan range still covers every mapped channel, while the
+# monitor tag tracks the first mapped input.
+max1363_cfg_reg_val_for_channel()
+{
+	local cfg_reg_val="$1"
+	local hw_channel_id="$2"
+	local scan_channel_id="${3:-$2}"
+	local ch scan_ch b out first_mon scan_b mon_b
+
+	[ -n "$cfg_reg_val" ] || return 1
+	if [ -z "$hw_channel_id" ] || [ "$hw_channel_id" -lt 1 ] 2>/dev/null; then
+		printf '%s' "$cfg_reg_val"
+		return 0
+	fi
+	ch=$((hw_channel_id - 1))
+	[ "$ch" -le 3 ] || return 1
+	scan_ch=$((scan_channel_id - 1))
+	[ "$scan_ch" -ge "$ch" ] && [ "$scan_ch" -le 3 ] 2>/dev/null || scan_ch=$ch
+	scan_b=$(max1363_scan_to_cs_config_byte "$scan_ch") || return 1
+	mon_b=$(max1363_monitor_channel_tag_byte "$ch") || return 1
+
+	first_mon=0
+	out=""
+	for b in $cfg_reg_val; do
+		b=$(echo "$b" | tr -d '"')
+		case "$b" in
+		0x01|0x03|0x05|0x07)
+			b="$scan_b"
+			;;
+		0x11|0x13|0x15|0x1f)
+			if [ "$first_mon" -eq 0 ]; then
+				b="$mon_b"
+				first_mon=1
+			fi
+			;;
+		esac
+		out="$out${out:+ }$b"
+	done
+	printf '%s' "$out"
+}
+
+# Program MAX1363 register burst from JSON CfgReg/CfgRegVal (channel-aware when ChannelId set).
+configure_max1363_raw_i2c()
+{
+	local device_json="$1"
+	local device_name="$2"
+	local bus="$3"
+	local address="$4"
+	local hw_channel_id="${5:-0}"
+
+	local cfg_reg cfg_reg_val patched hw_ch scan_ch k cid
+
+	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
+	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
+	cfg_reg_val=$(echo "$cfg_reg_val" | tr -d '"')
+	cfg_reg=$(echo "$cfg_reg" | tr -d '"')
+
+	if [ -z "$cfg_reg" ] || [ -z "$cfg_reg_val" ] || [ "$cfg_reg" = "null" ] || [ "$cfg_reg_val" = "null" ]; then
+		log_message "warning" "MAX1363 $device_name: CfgReg/CfgRegVal missing — skipping raw init"
+		return 1
+	fi
+
+	hw_ch="$hw_channel_id"
+	if [ -z "$hw_ch" ] || [ "$hw_ch" -lt 1 ] 2>/dev/null; then
+		hw_ch=$(json_device_hw_channel_id "$device_json" 1)
+	fi
+
+	# With an array ChannelId the chip serves several inputs: keep the scan-to-CS
+	# range covering the HIGHEST mapped input so every mapped channel is converted
+	# (otherwise the scan would narrow to the first input and higher channels go
+	# stale). The monitor tag still tracks the first mapped input (hw_ch).
+	scan_ch="$hw_ch"
+	if json_channelid_is_array "$device_json"; then
+		k=1
+		while cid=$(json_channel_id_at "$device_json" "$k"); do
+			[ "$cid" -gt "$scan_ch" ] 2>/dev/null && scan_ch="$cid"
+			k=$((k + 1))
+		done
+	fi
+
+	patched=$(max1363_cfg_reg_val_for_channel "$cfg_reg_val" "$hw_ch" "$scan_ch") || patched="$cfg_reg_val"
+	if [ "$patched" != "$cfg_reg_val" ]; then
+		log_message "info" "MAX1363 $device_name: CfgRegVal adjusted (monitor ch $hw_ch, scan to ch $scan_ch): $cfg_reg_val -> $patched"
+	fi
+
+	if write_and_verify_register "$bus" "$address" "$cfg_reg" "$patched" "Configuration Register" "$device_name"; then
+		return 0
+	fi
+	return 1
+}
+
 # True when ADS1015 config low byte has COMP_QUE=11 (comparator disabled, TI SBAS173).
 ads1015_cfg_comp_disabled()
 {
@@ -635,7 +761,7 @@ ads1015_write_iio_scale_path()
 	[ -n "$scale_path" ] || return 1
 	[ -e "$scale_path" ] || return 1
 
-	for v in "2.000000" "2.0" "2" "4096 11"; do
+	for v in "4096 11" "2.000000" "2.0" "2"; do
 		if echo "$v" >"$scale_path" 2>/dev/null; then
 			log_message "info" "ADS1015 IIO scale -> $scale_path ($v) for ±4.096 V PGA"
 			return 0
@@ -643,9 +769,12 @@ ads1015_write_iio_scale_path()
 	done
 
 	avail_path="${scale_path}_available"
-	if [ -r "$avail_path" ] && echo "2.000000" >"$scale_path" 2>/dev/null; then
-		log_message "info" "ADS1015 IIO scale -> $scale_path (2.000000, scale_available present)"
-		return 0
+	if [ -r "$avail_path" ]; then
+		v=$(awk '$1 == 4096 && $2 == 11 { print $1, $2; exit }' "$avail_path" 2>/dev/null)
+		if [ -n "$v" ] && echo "$v" >"$scale_path" 2>/dev/null; then
+			log_message "info" "ADS1015 IIO scale -> $scale_path (from available: $v)"
+			return 0
+		fi
 	fi
 	return 1
 }
@@ -687,9 +816,10 @@ configure_ads1015_raw_i2c()
 	local bus="$3"
 	local address="$4"
 	local num_channels="$5"
+	local hw_channel_id="${6:-0}"
 
-	local cfg_lo lo_val hi_val lo_reg hi_reg mux mux0 ch nch failed skip_thresh mode_msg
-	local t
+	local cfg_lo lo_val hi_val lo_reg hi_reg mux mux_handoff ch nch ch_end ch_step failed skip_thresh mode_msg
+	local t ch_label ch_list k cid
 
 	cfg_lo="0x94"
 	t=$(echo "$device_json" | json_get_string "CfgRegVal" 2>/dev/null) || true
@@ -727,24 +857,49 @@ configure_ads1015_raw_i2c()
 	t=$(echo "$t" | tr -d '"')
 	[ -n "$t" ] && [ "$t" != "null" ] && hi_reg="$t"
 
-	nch=4
-	if [ -n "$num_channels" ] && [ "$num_channels" -ge 1 ] 2>/dev/null; then
-		nch="$num_channels"
-		[ "$nch" -gt 4 ] && nch=4
+	# Build the list of 0-based MUX indices to program.
+	#   - explicit hw_channel_id (per-channel device map): just that channel
+	#   - ChannelId array (BOM alternative): exactly the mapped hardware channels
+	#   - otherwise: contiguous 0..num_channels-1 (legacy sequential)
+	ch_list=""
+	if [ -n "$hw_channel_id" ] && [ "$hw_channel_id" -ge 1 ] 2>/dev/null; then
+		ch_list=$((hw_channel_id - 1))
+		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, hardware channel $hw_channel_id / MUX index $ch_list)"
+	elif json_channelid_is_array "$device_json"; then
+		k=1
+		while [ "$k" -le "${num_channels:-0}" ]; do
+			cid=$(json_channel_id_at "$device_json" "$k") || break
+			if [ "$cid" -ge 1 ] 2>/dev/null; then
+				ch_list="$ch_list${ch_list:+ }$((cid - 1))"
+			fi
+			k=$((k + 1))
+		done
+		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, ChannelId MUX indices: ${ch_list:-none})"
+	else
+		nch=4
+		if [ -n "$num_channels" ] && [ "$num_channels" -ge 1 ] 2>/dev/null; then
+			nch="$num_channels"
+			[ "$nch" -gt 4 ] && nch=4
+		fi
+		ch=0
+		while [ "$ch" -lt "$nch" ]; do
+			ch_list="$ch_list${ch_list:+ }$ch"
+			ch=$((ch + 1))
+		done
+		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, channel MUX indices: $ch_list)"
 	fi
 
-	log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, channels=0..$((nch - 1)))"
 	failed=0
-	ch=0
-	while [ "$ch" -lt "$nch" ]; do
+	for ch in $ch_list; do
 		mux=$(ads1015_mux_high_byte "$ch") || {
 			failed=1
 			break
 		}
 		lo_val="$default_lo"
 		hi_val="$default_hi"
-		t=$(json_optional_scalar "$device_json" "Ads1015LoThreshCh$((ch + 1))") && lo_val="$t"
-		t=$(json_optional_scalar "$device_json" "Ads1015HiThreshCh$((ch + 1))") && hi_val="$t"
+		ch_label=$((ch + 1))
+		t=$(json_optional_scalar "$device_json" "Ads1015LoThreshCh${ch_label}") && lo_val="$t"
+		t=$(json_optional_scalar "$device_json" "Ads1015HiThreshCh${ch_label}") && hi_val="$t"
 
 		# Config high byte bit 15 (OS) is a volatile single-shot/status bit, not stored config:
 		# write 1 starts a conversion, read returns 0 while converting (continuous mode reads 0).
@@ -763,7 +918,6 @@ configure_ads1015_raw_i2c()
 				failed=1
 			fi
 		fi
-		ch=$((ch + 1))
 	done
 
 	if [ "$failed" -ne 0 ]; then
@@ -771,15 +925,23 @@ configure_ads1015_raw_i2c()
 		return 1
 	fi
 
-	# Leave MUX on channel 0 and read conversion so pointer reg is 0x00 before driver bind.
-	mux0=$(ads1015_mux_high_byte 0) || mux0=""
-	if [ -n "$mux0" ]; then
-		i2ctransfer -f -y "$bus" w3@"$address" 0x01 "$mux0" "$cfg_lo" >/dev/null 2>&1 || true
+	# Leave MUX on the configured channel and read conversion so pointer reg is 0x00 before driver bind.
+	if [ -n "$hw_channel_id" ] && [ "$hw_channel_id" -ge 1 ] 2>/dev/null; then
+		mux_handoff=$(ads1015_mux_high_byte $((hw_channel_id - 1))) || mux_handoff=""
+	else
+		mux_handoff=$(ads1015_mux_high_byte 0) || mux_handoff=""
+	fi
+	if [ -n "$mux_handoff" ]; then
+		i2ctransfer -f -y "$bus" w3@"$address" 0x01 "$mux_handoff" "$cfg_lo" >/dev/null 2>&1 || true
 		sleep 0.01
 		i2ctransfer -f -y "$bus" w1@"$address" 0x00 r2 >/dev/null 2>&1 || true
 	fi
 
-	log_message "info" "ADS1015 $device_name: raw I2C configuration complete (MUX channel 0 selected for driver handoff)"
+	if [ -n "$hw_channel_id" ] && [ "$hw_channel_id" -ge 1 ] 2>/dev/null; then
+		log_message "info" "ADS1015 $device_name: raw I2C configuration complete (MUX channel $((hw_channel_id - 1)) selected for driver handoff)"
+	else
+		log_message "info" "ADS1015 $device_name: raw I2C configuration complete (MUX channel 0 selected for driver handoff)"
+	fi
 	return 0
 }
 
@@ -954,6 +1116,121 @@ json_optional_scalar()
 	echo "$v"
 }
 
+# True (0) when the device JSON has a ChannelId array (vs a scalar / absent).
+json_channelid_is_array()
+{
+	echo "$1" | awk '
+	BEGIN { buf = "" }
+	{ buf = buf $0 }
+	END {
+		p = "\"ChannelId\""
+		i = index(buf, p)
+		if (i == 0) exit 1
+		j = i + length(p)
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) != ":") exit 1
+		j++
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) == "[") exit 0
+		exit 1
+	}'
+}
+
+# n-th value (1-based) of a ChannelId array, or the scalar ChannelId, from device JSON.
+# Prints the value and returns 0; returns 1 if ChannelId is absent or the index is out of range.
+json_channel_id_at()
+{
+	local device_json="$1"
+	local n="$2"
+	echo "$device_json" | awk -v n="$n" '
+	BEGIN { buf = "" }
+	{ buf = buf $0 }
+	END {
+		p = "\"ChannelId\""
+		i = index(buf, p)
+		if (i == 0) exit 1
+		j = i + length(p)
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) != ":") exit 1
+		j++
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) == "[") {
+			# array: return the n-th integer element (1-based)
+			j++
+			cnt = 0; num = ""
+			while (j <= length(buf)) {
+				c = substr(buf, j, 1)
+				if (c ~ /[0-9]/) {
+					num = num c
+				} else if (c == "," || c == "]") {
+					if (num != "") {
+						cnt++
+						if (cnt == n) { print num + 0; exit 0 }
+						num = ""
+					}
+					if (c == "]") exit 1
+				}
+				j++
+			}
+			exit 1
+		}
+		# scalar: same value for any logical channel (legacy per-device single channel)
+		start = j
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[0-9]/) j++
+		if (j > start) { print substr(buf, start, j - start); exit 0 }
+		exit 1
+	}'
+}
+
+# Hardware A2D channel for a logical channel (1-based). Honors a ChannelId array
+# (per logical channel) or a scalar ChannelId; defaults to the logical index.
+json_device_hw_channel_id()
+{
+	local device_json="$1"
+	local logical_ch="$2"
+	local v
+
+	if v=$(json_channel_id_at "$device_json" "$logical_ch"); then
+		echo "$v"
+	else
+		echo "$logical_ch"
+	fi
+}
+
+# True when each Device[] entry is a distinct I2C target for one logical channel (not BOM alternatives).
+leak_detector_per_channel_devices()
+{
+	local block="$1"
+	local num_devices num_channels d addrs key bus addr dj
+
+	num_devices=$(echo "$block" | json_count_nested_array "Device")
+	num_channels=$(echo "$block" | json_get_number "NumChnl")
+	[ -z "$num_channels" ] && num_channels=0
+	[ "$num_devices" -eq "$num_channels" ] || return 1
+	[ "$num_channels" -gt 0 ] || return 1
+
+	addrs=""
+	d=0
+	while [ "$d" -lt "$num_devices" ]; do
+		dj=$(echo "$block" | json_get_nested_array_element "Device" "$d")
+		# An array ChannelId means this Device serves every logical channel itself
+		# (BOM alternative), so the detector is NOT a per-channel device map.
+		if json_channelid_is_array "$dj"; then
+			return 1
+		fi
+		bus=$(echo "$dj" | json_get_number "Bus")
+		addr=$(echo "$dj" | json_get_string "Address")
+		addr=$(echo "$addr" | tr -d '"')
+		key="${bus}:${addr}"
+		case " $addrs " in
+		*" $key "*) return 1 ;;
+		esac
+		addrs="$addrs $key"
+		d=$((d + 1))
+	done
+	return 0
+}
+
 # Space-separated 0xNN bytes -> unsigned integer (big-endian).
 hex_bytes_to_uint_be()
 {
@@ -1045,8 +1322,13 @@ populate_leakage_channel_dir()
 	local bus="$4"
 	local address="$5"
 	local device_type="$6"
+	local hw_channel_id="${7:-}"
 
 	rm -f "$ch_dir/min" "$ch_dir/max" "$ch_dir/warn" "$ch_dir/crit" "$ch_dir/lwarn" "$ch_dir/lcrit" "$ch_dir/type" "$ch_dir/scale" "$ch_dir/input" "$ch_dir/channel_name"
+
+	if [ -z "$hw_channel_id" ]; then
+		hw_channel_id=$(json_device_hw_channel_id "$device_json" "$ch_num")
+	fi
 
 	local scale_s=""
 	if scale_s=$(json_optional_scalar "$device_json" "Scale"); then
@@ -1115,7 +1397,7 @@ populate_leakage_channel_dir()
 		dev_id=$(printf '%d-%04x' "$bus" $((16#$a)))
 		raw_path=""
 		for _try in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-			raw_path=$(find_iio_channel_raw "$dev_id" "$((ch_num - 1))")
+			raw_path=$(find_iio_channel_raw "$dev_id" "$((hw_channel_id - 1))")
 			[ -n "$raw_path" ] && [ -f "$raw_path" ] && break
 			sleep 0.2
 		done
@@ -1124,9 +1406,9 @@ populate_leakage_channel_dir()
 				ads1015_set_iio_scale_for_raw "$raw_path"
 			fi
 			check_n_link "$raw_path" "$ch_dir/input"
-			log_message "info" "Channel $ch_num input -> $raw_path"
+			log_message "info" "Channel $ch_num input (hardware channel $hw_channel_id) -> $raw_path"
 		else
-			log_message "warning" "No IIO raw sysfs for channel $ch_num (device $dev_id, type $device_type) — check /sys/bus/i2c/devices/$dev_id and /sys/bus/iio/devices"
+			log_message "warning" "No IIO raw sysfs for channel $ch_num (hardware channel $hw_channel_id, device $dev_id, type $device_type) — check /sys/bus/i2c/devices/$dev_id and /sys/bus/iio/devices"
 		fi
 	fi
 }
@@ -1170,18 +1452,67 @@ create_channel_infrastructure()
 	fi
 
 	local ch=1
-	local channel_name
+	local channel_name hw_ch ch_dir_num
 	while [ "$ch" -le "$num_channels" ]; do
-		mkdir -p "$leakage_base/$ch"
-		populate_leakage_channel_dir "$leakage_base/$ch" "$ch" "$device_json" "$bus" "$address" "$device_type"
+		hw_ch=$(json_device_hw_channel_id "$device_json" "$ch")
+		# Channel directory is named by the (hardware) ChannelId so a non-sequential
+		# map such as ChannelId [1,4] surfaces as leakage/<i>/1 and leakage/<i>/4,
+		# and the input symlink targets in_voltage<ChannelId-1>_raw.
+		ch_dir_num="$hw_ch"
+		[ -n "$ch_dir_num" ] && [ "$ch_dir_num" -ge 1 ] 2>/dev/null || ch_dir_num="$ch"
+		mkdir -p "$leakage_base/$ch_dir_num"
+		populate_leakage_channel_dir "$leakage_base/$ch_dir_num" "$ch_dir_num" "$device_json" "$bus" "$address" "$device_type" "$hw_ch"
 		channel_name=$(echo "$chnames" | awk -v c="$ch" '{print $c}')
 		if [ -n "$channel_name" ]; then
-			echo "$channel_name" >"$leakage_base/$ch/channel_name"
-			log_message "info" "Channel $ch channel_name=$channel_name"
+			echo "$channel_name" >"$leakage_base/$ch_dir_num/channel_name"
+			log_message "info" "Channel $ch_dir_num channel_name=$channel_name (hardware channel $hw_ch)"
 		fi
 		ch=$((ch + 1))
 	done
 
+	return 0
+}
+
+# One logical channel under leakage/<i>/<logical_ch>/ (per-channel Device[] map).
+populate_single_leakage_channel()
+{
+	local device_index="$1"
+	local logical_ch="$2"
+	local device_type="$3"
+	local device_json="$4"
+	local bus="$5"
+	local address="$6"
+	local chnames="$7"
+	local detector_name="$8"
+
+	if [ ! -d "/var/run/hw-management" ]; then
+		log_message "info" "/var/run/hw-management does not exist - skipping channel infrastructure creation"
+		return 0
+	fi
+
+	local leakage_base hw_ch channel_name
+	leakage_base="/var/run/hw-management/leakage/$device_index"
+	mkdir -p "$leakage_base"
+	if [ -n "$detector_name" ]; then
+		echo "$detector_name" >"$leakage_base/device_name"
+	fi
+	if [ ! -f "$leakage_base/device_type" ]; then
+		echo "$device_type" >"$leakage_base/device_type"
+	fi
+
+	if json_probe_true "$device_json"; then
+		sleep 0.5
+	fi
+
+	hw_ch=$(json_device_hw_channel_id "$device_json" "$logical_ch")
+	mkdir -p "$leakage_base/$logical_ch"
+	populate_leakage_channel_dir "$leakage_base/$logical_ch" "$logical_ch" "$device_json" "$bus" "$address" "$device_type" "$hw_ch"
+	channel_name=$(echo "$chnames" | awk -v c="$logical_ch" '{print $c}')
+	if [ -n "$channel_name" ]; then
+		echo "$channel_name" >"$leakage_base/$logical_ch/channel_name"
+		log_message "info" "Channel $logical_ch channel_name=$channel_name (hardware channel $hw_ch)"
+	fi
+	log_message "info" "Leakage runtime channel $logical_ch under $leakage_base (device_type=$device_type, hardware channel $hw_ch)"
 	return 0
 }
 
@@ -1194,6 +1525,7 @@ configure_a2d_registers_raw()
 	local address="$4"
 	local device_type="$5"
 	local num_channels="$6"
+	local hw_channel_id="${7:-0}"
 
 	local cfg_reg cfg_reg_val lo_thresh_reg lo_thresh_val hi_thresh_reg hi_thresh_val
 	local success failed
@@ -1210,7 +1542,11 @@ configure_a2d_registers_raw()
 		return $?
 	fi
 	if [ "$device_type" = "ADS1015" ]; then
-		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels"
+		configure_ads1015_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$num_channels" "$hw_channel_id"
+		return $?
+	fi
+	if [ "$device_type" = "MAX1363" ]; then
+		configure_max1363_raw_i2c "$device_json" "$device_name" "$bus" "$address" "$hw_channel_id"
 		return $?
 	fi
 
@@ -1246,12 +1582,14 @@ configure_a2d_registers_raw()
 }
 
 # Args: device_json, device_name, num_channels, chnames (space-separated words from ChnlNames)
+# Fifth argument: optional hardware ChannelId (1-based, 0 = sequential 1..num_channels).
 configure_device()
 {
 	local device_json="$1"
 	local device_name="$2"
 	local num_channels="$3"
 	local chnames="$4"
+	local hw_channel_id="${5:-0}"
 
 	local device_type bus address need_rebind
 
@@ -1288,7 +1626,7 @@ configure_device()
 	fi
 
 	# 4) Raw register programming — final values for all supported A2D types.
-	if ! configure_a2d_registers_raw "$device_json" "$device_name" "$bus" "$address" "$device_type" "$num_channels"; then
+	if ! configure_a2d_registers_raw "$device_json" "$device_name" "$bus" "$address" "$device_type" "$num_channels" "$hw_channel_id"; then
 		log_message "info" "Register programming failed — try next Device alternative"
 		if [ "$need_rebind" -eq 1 ] && json_probe_true "$device_json"; then
 			rebind_kernel_driver "$bus" "$address" "$device_type"
@@ -1316,6 +1654,48 @@ configure_device()
 	fi
 
 	log_message "info" "Device configuration complete for $device_name"
+	return 0
+}
+
+# Resolve one Device[] entry for a leak detector. Sets resolved_json and resolved_type on success.
+resolve_leak_device_entry()
+{
+	local detector_block="$1"
+	local device_json="$2"
+	local d="$3"
+	local detector_name="$4"
+	local address bus device_type rc_ads
+
+	resolved_json=""
+	resolved_type=""
+	address=$(echo "$device_json" | json_get_string "Address")
+	bus=$(echo "$device_json" | json_get_number "Bus")
+	device_type=$(echo "$device_json" | json_get_string "DeviceType")
+
+	if [ "$device_type" = "ADS1015" ]; then
+		if [ "$d" -gt 0 ]; then
+			if ! probe_i2c_device "$bus" "$address"; then
+				log_message "info" "Leak detector $detector_name: ADS1015 fallback — presence failed at bus $bus addr $address"
+				return 1
+			fi
+			resolved_json="$device_json"
+			resolved_type="ADS1015"
+			return 0
+		fi
+		resolved_json=$(resolve_ads1015_device_entry "$detector_block" "$device_json" "$bus" "$address")
+		rc_ads=$?
+		if [ "$rc_ads" -ne 0 ] || [ -z "$resolved_json" ]; then
+			return 1
+		fi
+		resolved_type=$(echo "$resolved_json" | json_get_string "DeviceType")
+		return 0
+	fi
+
+	if ! device_entry_matches_hw "$bus" "$address" "$device_type"; then
+		return 1
+	fi
+	resolved_json="$device_json"
+	resolved_type="$device_type"
 	return 0
 }
 
@@ -1360,45 +1740,49 @@ EOF
 		log_message "info" "Processing leak detector: $detector_name (Channels: $num_channels)"
 
 		device_found=0
-		d=0
-		while [ "$d" -lt "$num_devices" ]; do
-			device_json=$(echo "$detector_block" | json_get_nested_array_element "Device" "$d")
-			address=$(echo "$device_json" | json_get_string "Address")
-			bus=$(echo "$device_json" | json_get_number "Bus")
-
-			device_type=$(echo "$device_json" | json_get_string "DeviceType")
-			resolved_json=""
-			resolved_type=""
-
-			if [ "$device_type" = "ADS1015" ]; then
-				if [ "$d" -gt 0 ]; then
-					# Explicit fallback after an earlier Device[] entry — use JSON as-is (no TI/MAX template swap).
-					if ! probe_i2c_device "$bus" "$address"; then
-						log_message "info" "Leak detector $detector_name: ADS1015 fallback — presence failed at bus $bus addr $address"
-						d=$((d + 1))
-						continue
-					fi
-					resolved_json="$device_json"
-					resolved_type="ADS1015"
-				else
-					resolved_json=$(resolve_ads1015_device_entry "$detector_block" "$device_json" "$bus" "$address")
-					rc_ads=$?
-					if [ "$rc_ads" -ne 0 ] || [ -z "$resolved_json" ]; then
-						d=$((d + 1))
-						continue
-					fi
-					resolved_type=$(echo "$resolved_json" | json_get_string "DeviceType")
-				fi
-			else
-				if ! device_entry_matches_hw "$bus" "$address" "$device_type"; then
+		if leak_detector_per_channel_devices "$detector_block"; then
+			local channels_configured logical_ch hw_channel_id
+			log_message "info" "Leak detector $detector_name: per-channel Device[] map ($num_devices entries)"
+			channels_configured=0
+			d=0
+			while [ "$d" -lt "$num_devices" ]; do
+				device_json=$(echo "$detector_block" | json_get_nested_array_element "Device" "$d")
+				if ! resolve_leak_device_entry "$detector_block" "$device_json" "$d" "$detector_name"; then
 					d=$((d + 1))
 					continue
 				fi
-				resolved_json="$device_json"
-				resolved_type="$device_type"
+				logical_ch=$((d + 1))
+				hw_channel_id=$(json_device_hw_channel_id "$resolved_json" "$logical_ch")
+				bus=$(echo "$resolved_json" | json_get_number "Bus")
+				address=$(echo "$resolved_json" | json_get_string "Address")
+				configure_device "$resolved_json" "$detector_name" 1 "$chnames" "$hw_channel_id"
+				cfg_rc=$?
+				if [ "$cfg_rc" -ne 0 ]; then
+					log_message "info" "Leak detector $detector_name: channel $logical_ch (hardware $hw_channel_id) did not complete"
+					d=$((d + 1))
+					continue
+				fi
+				populate_single_leakage_channel "$((i + 1))" "$logical_ch" "$resolved_type" "$resolved_json" "$bus" "$address" "$chnames" "$detector_name"
+				channels_configured=$((channels_configured + 1))
+				d=$((d + 1))
+			done
+			if [ "$channels_configured" -gt 0 ]; then
+				device_found=1
+				total_configured=$((total_configured + 1))
+				log_message "info" "Leak detector $detector_name: configured $channels_configured of $num_devices channel device(s)"
 			fi
+		else
+		d=0
+		while [ "$d" -lt "$num_devices" ]; do
+			device_json=$(echo "$detector_block" | json_get_nested_array_element "Device" "$d")
+			if ! resolve_leak_device_entry "$detector_block" "$device_json" "$d" "$detector_name"; then
+				d=$((d + 1))
+				continue
+			fi
+			bus=$(echo "$resolved_json" | json_get_number "Bus")
+			address=$(echo "$resolved_json" | json_get_string "Address")
 
-			configure_device "$resolved_json" "$detector_name" "$num_channels" "$chnames"
+			configure_device "$resolved_json" "$detector_name" "$num_channels" "$chnames" 0
 			cfg_rc=$?
 			if [ "$cfg_rc" -ne 0 ]; then
 				log_message "info" "Leak detector $detector_name: alternative $((d + 1)) did not complete — trying next Device entry"
@@ -1410,6 +1794,7 @@ EOF
 			create_channel_infrastructure "$((i + 1))" "$resolved_type" "$num_channels" "$resolved_json" "$bus" "$address" "$chnames" "$detector_name"
 			break
 		done
+		fi
 
 		if [ "$device_found" -eq 0 ]; then
 			log_message "warning" "No A2D device found for $detector_name"

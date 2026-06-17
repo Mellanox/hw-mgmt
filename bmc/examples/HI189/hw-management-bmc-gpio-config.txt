@@ -39,10 +39,13 @@ Aspeed SoC GPIO (aspeed)
 offset   ABS (ex.)   dir    value   symlink name
 --------------------------------------------------------------------------------------------
   34       558        in      —     GP_STBY_PG
- 144       668        out     1     GP_BMC_GPIO_EXP_RESET_L
 
   bmc_stby_ready in JSON: chip aspeed, offset 34  →  wait_bmc_standby_ready() uses
   /sys/class/gpio/gpio<558>/value when BASE=524.
+
+  Offset 144 (GP_BMC_GPIO_EXP_RESET_L / GPIOS0) is intentionally NOT listed:
+  the PCAL6524 expander reset is driven in-kernel via the exp0 reset-gpios property
+  in the DTS, so exporting it from userspace would conflict with the driver.
 
   Offset 145 (GP_BMC_PWR_CYCLE_BMC / “1V8 power cycle”) is intentionally NOT listed:
   configuring it can reset or power-cycle the BMC (see spc6-ast2700-a1-bmc_ready.sh).
