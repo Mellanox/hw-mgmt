@@ -117,6 +117,8 @@ Top-level files and everything under `usr/` as tracked in this branch:
 bmc/
 ├── DEVELOPER_GUIDE.md            # New HINNN platform: files, kernel baseline, packaging
 ├── copy-from-openbmc.sh          # Helper: pull OpenBMC meta-nvidia files into bmc/ with naming rules
+├── tests/                        # Standalone on-BMC test/validation scripts (not packaged)
+│   └── hw-management-bmc-leakage-validate.sh   # Minimal leakage HW(I2C) vs SW(runtime) PASS/FAIL test + per-channel reading/status
 ├── examples/                     # Reference layouts / sample JSON (not installed as-is unless packaged)
 │   ├── hw-management-bmc-a2d-leakage-config-example.json
 │   ├── hw-management-bmc-bom-example.json
@@ -211,7 +213,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-a2d-leakage-config-example.json`** | Field reference, **`example_leak_detectors`**, and **`deployment_note`** for A2D leakage JSON consumed by **`hw-management-bmc-a2d-leakage-config.sh`**. |
 | **`hw-management-bmc-bom-example.json`** | Shape-only reference for **`/etc/hw-management-bmc-bom.json`**: top-level arrays **`swb`**, **`platform`**, **`pwr`** of **`{"key","spec"}`** objects; each **`spec`** is four space-separated fields: driver name, hex I2C address, Linux I2C bus (BMC adapter #), and devtree label. Loaded by **`hw-management-bmc-devtree.sh`** (override with **`HW_MANAGEMENT_BMC_BOM_JSON`**). Shipped per platform as **`usr/etc/<HID>/hw-management-bmc-bom.json`** (e.g. HI189), copied to **`/etc/`** by plat-specific-preps; the **`examples/`** file matches the schema — bus numbers are board-specific. |
 | **`hw-management-bmc-gpio-config-example.json`** | Field reference for **`/etc/hw-management-bmc-gpio-pins.json`**: **`bmc_stby_ready`**, **`pins[]`** (**`chip`**, **`offset`**, **`direction`**, **`value`**, **`symlink`**); deployable copy under **`example_platform`**. |
-| **`hw-management-bmc-leakage-sysfs.txt`** | ASCII tree and notes for **`/var/run/hw-management/leakage/`** (per-detector dirs, channel **`type`** **`rop`/`flex`**, **`ChnlNames`**, handler **`last_sample`** / **`last_event`**). |
+| **`hw-management-bmc-leakage-sysfs.txt`** | ASCII tree and notes for **`/var/run/hw-management/leakage/`** (per-detector dirs, channel **`type`** **`rop`/`flex`**, **`ChnlNames`**, non‑sequential **`ChannelId`** / per‑channel device‑map, handler **`last_sample`** / **`last_event`**). |
 | **`hw-management-bmc-system-sysfs.txt`** | **`/var/run/hw-management/system/`**: reference lists for **mlxreg-io** / **mlxreg-hotplug** attrs (HI189 / **`nvsw_bmc_hid189_*`** in kernel patch for **`nvidia,hid189`**), udev rules, and GPIO **`symlink`** names from **`hw-management-bmc-gpio-pins.json`**. |
 | **`hw-management-bmc-eeprom-config.txt`** | **`/etc/hw-management-bmc-eeprom.conf`**: VPD EEPROM shell variables (**`eeprom_file`**, HID/BOM sizes/offsets); packaged under **`usr/etc/<HID>/`**, sourced by **`hw-management-bmc-ready-common.sh`**. |
 | **`hw-management-bmc-eeprom-sysfs.txt`** | Example layout for **`/var/run/hw-management/eeprom/`** (**`eeprom_system`**, **`eeprom_bmc`**) from udev **`hw-management-bmc-events.sh`** / **`5-hw-management-bmc-events.rules`**. |
@@ -469,8 +471,8 @@ Platform JSON **`hw-management-bmc-a2d-leakage-config.json`** is installed as **
 |------|---------|
 | `/var/run/hw-management/leakage/N/device_type` | Selected **`DeviceType`** string |
 | `/var/run/hw-management/leakage/N/device_name` | **`Name`** from JSON (human-readable detector id) |
-| `/var/run/hw-management/leakage/N/<j>/` | Per-channel directory; **`j`** = `1` … **`NumChnl`** |
-| `/var/run/hw-management/leakage/N/<j>/input` | If **`Probe`** is true: symlink to the kernel IIO raw attribute (e.g. **`in_voltage*_raw`**) for that channel — **unscaled** sample |
+| `/var/run/hw-management/leakage/N/<j>/` | Per-channel directory. **`j`** is the channel number: `1` … **`NumChnl`** (contiguous) for a scalar/absent **`ChannelId`**; when **`ChannelId`** is an **array** it is the mapped **hardware A2D input** for that logical channel, so it can be **non‑contiguous** (e.g. **`"ChannelId": [1, 4]`** → dirs **`1/`** and **`4/`**); in **per‑channel device‑map** mode it is the 1‑based **`Device[]`** index — see *Channel selection modes* below |
+| `/var/run/hw-management/leakage/N/<j>/input` | If **`Probe`** is true: symlink to the kernel IIO raw attribute for the **wired hardware channel** — **`in_voltage<ChannelId-1>_raw`** (falls back to **`in_voltage<j-1>_raw`** when **`ChannelId`** is absent). **Unscaled** sample |
 | `/var/run/hw-management/leakage/N/<j>/min` | Low threshold from **`LoThreshRegVal`** (bytes → unsigned, big-endian) × **`Scale`**; fallback **`NormalMin`**, then **`WarningMin`** |
 | `/var/run/hw-management/leakage/N/<j>/max` | High threshold from **`HiThreshRegVal`** × **`Scale`**; fallback **`NormalMax`**, then **`WarningMax`** |
 | `/var/run/hw-management/leakage/N/<j>/warn` | **`WarningMax`** from JSON (engineering / config units) |
@@ -479,11 +481,31 @@ Platform JSON **`hw-management-bmc-a2d-leakage-config.json`** is installed as **
 | `/var/run/hw-management/leakage/N/<j>/lcrit` | **`CriticalMin`** from JSON (optional; low-side critical bound) |
 | `/var/run/hw-management/leakage/N/<j>/type` | **`Type`** from JSON (optional; sensor kind label, e.g. **`rop`**, **`flex`**) |
 | `/var/run/hw-management/leakage/N/<j>/scale` | **`Scale`** from JSON |
-| `/var/run/hw-management/leakage/N/<j>/channel_name` | **`ChnlNames[j-1]`** from JSON (optional; human-readable channel name inside channel dir) |
+| `/var/run/hw-management/leakage/N/<j>/channel_name` | **`ChnlNames`** entry in **logical** order (**`ChnlNames[k-1]`** for logical channel *k*; note **`j`** may differ from *k* when **`ChannelId`** maps to a non‑sequential input) |
 
-**Per-`Device` JSON (optional):** **`Device`** is an ordered list of alternatives — the first entry whose presence probe and **`configure_device`** step succeed is used (remaining entries are skipped). Put the BOM you want to win first (e.g. **`MAX1363`** before **`ADS1015`** when both can bind at the same address). Optional **`HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC=1`** restores legacy behavior: skip **`MAX1363`** when the bus looks like **ADS1015** by register read. **`Probe`** — when **`true`**, the kernel driver is bound via **`/sys/bus/i2c/devices/i2c-<bus>/new_device`** *before* **`CfgReg`** / threshold **`i2ctransfer`** writes so the driver does not overwrite programmed values afterward. **`Scale`**, **`WarningMax`**, **`CriticalMax`**, **`WarningMin`**, **`CriticalMin`**, **`NormalMin`**, **`NormalMax`**, **`Type`**, **`LoThreshRegVal`**, **`HiThreshRegVal`** feed the channel files above (thresholds from registers are scaled by **`Scale`**; user limits **`Warning*`** / **`Critical*`** are stored as given in configuration units). Driver names: **`MAX1363`** → `max1363`, **`ADS1015`** → `ads1015` (adjust for your kernel). **`input`** symlinks are created only after configuration; if sysfs names differ on your board, extend **`find_iio_channel_raw`** in the script.
+**Per-`Device` JSON (optional):** By default (**BOM‑alternative mode**) **`Device`** is an ordered list of alternatives — the first entry whose presence probe and **`configure_device`** step succeed is used (remaining entries are skipped). Put the BOM you want to win first (e.g. **`MAX1363`** before **`ADS1015`** when both can bind at the same address). Optional **`HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC=1`** restores legacy behavior: skip **`MAX1363`** when the bus looks like **ADS1015** by register read. **`Probe`** — when **`true`**, the kernel driver is bound via **`/sys/bus/i2c/devices/i2c-<bus>/new_device`** *before* **`CfgReg`** / threshold **`i2ctransfer`** writes so the driver does not overwrite programmed values afterward. **`Scale`**, **`WarningMax`**, **`CriticalMax`**, **`WarningMin`**, **`CriticalMin`**, **`NormalMin`**, **`NormalMax`**, **`Type`**, **`LoThreshRegVal`**, **`HiThreshRegVal`** feed the channel files above (thresholds from registers are scaled by **`Scale`**; user limits **`Warning*`** / **`Critical*`** are stored as given in configuration units). Driver names: **`MAX1363`** → `max1363`, **`ADS1015`** → `ads1015` (adjust for your kernel). **`input`** symlinks are created only after configuration; if sysfs names differ on your board, extend **`find_iio_channel_raw`** in the script.
 
 Example JSON with field notes: **`bmc/examples/hw-management-bmc-a2d-leakage-config-example.json`** (includes **`field_reference`** and **`example_leak_detectors`**; deploy the bare array to **`/etc/hw-management-bmc-a2d-leakage-config.json`** — see **`deployment_note`** in that file).
+
+**Channel selection modes:** the script auto-detects how to treat **`Device[]`**:
+
+- **BOM‑alternative (default):** entries are mutually‑exclusive populations (e.g. **`MAX1363`** *or* **`ADS1015`**, often at the same address). The first present/working entry wins and drives all **`NumChnl`** channels. Use an **array `ChannelId`** here to map each logical channel to its wired hardware input (see below).
+- **Per‑channel device‑map:** triggered when the number of **`Device[]`** entries equals **`NumChnl`**, every **`Bus`**/**`Address`** pair is distinct, *and* no entry uses an array **`ChannelId`**. Then each entry is a separate sensor for one logical channel — entry *k* → channel **`k`** — and each is configured and linked independently.
+
+**Channel mapping (`ChannelId`):** **`ChannelId`** (optional, 1‑based) is the **hardware A2D input** a sensor is wired to, allowing non‑sequential inputs (holes). It may be:
+
+- a **scalar** (e.g. **`"ChannelId": 4`**) — the single hardware input for that **`Device[]`** entry (used by per‑channel device‑map mode);
+- an **array** (e.g. **`"ChannelId": [1, 4]`**) — one hardware input per logical channel, so a single present chip serves all **`NumChnl`** channels. The array form **forces BOM‑alternative mode**, and each runtime **channel directory is named by its mapped input** (here **`1/`** and **`4/`**).
+
+When absent it defaults to the logical channel index. `ChannelId` controls, per channel:
+
+- the **`input`** symlink target — **`in_voltage<ChannelId-1>_raw`** (e.g. input **`4`** → **`in_voltage3_raw`**);
+- the **ADS1015** MUX programmed for the mapped channel(s) — config high byte **`0xc2/0xd2/0xe2/0xf2`** for inputs 1–4 (with an array the first **`CfgRegVal`** byte is a placeholder; the script programs each mapped input);
+- the **MAX1363** scan/monitor bytes in **`CfgRegVal`** — scan‑to‑CS **`0x01/0x03/0x05/0x07`** and monitor tag **`0x11/0x13/0x15/0x1f`** for inputs 1–4, patched from **`ChannelId`** (first mapped input when an array is used).
+
+Note: in **per‑channel device‑map** mode a missing **`Device[0]`** leaves a hole at channel **`1`** (the next present device lands on its own **`Device[]`** index). When one chip provides several channels, prefer an **array `ChannelId`** on a single BOM‑alternative entry so the channel directories carry the wired input numbers.
+
+**Validation tool:** **`bmc/tests/hw-management-bmc-leakage-validate.sh`** (copy to the BMC and run) is a minimal HW‑vs‑SW test: for every configured **`Bus`**/**`Address`** it prints the **I2C presence probe** result next to what the SW runtime (**`/var/run/hw-management/leakage/`**) actually represents, with a **PASS/FAIL** verdict (e.g. HW present but no SW channel, or stale SW link with HW gone), then the live reading / volts / threshold status per configured channel and a summary line. Exit code is non‑zero if any row fails — handy for spotting unpopulated devices / channel holes.
 
 ### Per-leakage hotplug handler (`hw-management-bmc-leakage-handler.sh`)
 

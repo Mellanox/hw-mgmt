@@ -1,5 +1,5 @@
 {
-	"description": "GPIO sysfs init for HI189 / SPC6 AST2700 BMC. Aligned with spc6-ast2700-a1-bmc_ready.sh: aspeed+145 (GP_BMC_PWR_CYCLE_BMC) is not exported (can power-cycle BMC); expander+8 mux init value 0.",
+	"description": "GPIO sysfs init for HI189 / SPC6 AST2700 BMC. Aligned with spc6-ast2700-a1-bmc_ready.sh: aspeed+145 (GP_BMC_PWR_CYCLE_BMC) is not exported (can power-cycle BMC); expander+8 mux init value 0. aspeed+144 (GP_BMC_GPIO_EXP_RESET_L / GPIOS0) is not exported: the pcal6524 expander reset is driven in-kernel via the exp0 reset-gpios property in the DTS.",
 	"bmc_stby_ready": {
 		"chip": "aspeed",
 		"offset": 34
@@ -15,7 +15,6 @@
 		{ "chip": "expander24", "offset": 12, "direction": "in", "symlink": "GP_PWR_BANK_PRESENT_L" },
 		{ "chip": "expander24", "offset": 19, "direction": "out", "value": 0, "symlink": "GP_PROD_CS_FLASH0_EN" },
 		{ "chip": "expander24", "offset": 21, "direction": "out", "value": 0, "symlink": "GP_PROD_CS_FLASH1_EN" },
-		{ "chip": "aspeed", "offset": 34, "direction": "in", "symlink": "GP_STBY_PG" },
-		{ "chip": "aspeed", "offset": 144, "direction": "out", "value": 1, "symlink": "GP_BMC_GPIO_EXP_RESET_L" }
+		{ "chip": "aspeed", "offset": 34, "direction": "in", "symlink": "GP_STBY_PG" }
 	]
 }
