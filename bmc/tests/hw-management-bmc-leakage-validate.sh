@@ -33,7 +33,7 @@ parse_devices() {
 	/"DeviceType"/ { flush(); v=$0; sub(/.*"DeviceType"[ \t]*:[ \t]*"/,"",v); sub(/".*/,"",v); dt=v }
 	/"Bus"/        { v=$0; sub(/.*"Bus"[ \t]*:[ \t]*/,"",v);  sub(/[^0-9].*/,"",v); bus=v }
 	/"Address"/    { v=$0; sub(/.*"Address"[ \t]*:[ \t]*"/,"",v); sub(/".*/,"",v); addr=v }
-	/"ChannelId"/  { v=$0; sub(/.*"ChannelId"[ \t]*:[ \t]*/,"",v); sub(/[^0-9].*/,"",v); ch=v }
+	/"ChannelId"/  { v=$0; sub(/.*"ChannelId"[ \t]*:[ \t]*/,"",v); sub(/[ \t]*,[ \t]*$/,"",v); gsub(/[][ \t]/,"",v); ch=v }
 	END { flush() }
 	' "$1"
 }

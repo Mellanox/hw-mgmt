@@ -61,10 +61,13 @@
 #   sysfs raw attribute for the wired hardware channel: in_voltage<ChannelId-1>_raw
 #   (defaults to in_voltage<j-1>_raw when ChannelId is absent). Paths differ by SoC/driver.
 #
-# • ChannelId (optional, per Device): 1-based hardware A2D input the sensor is wired to (holes
-#   allowed for non-sequential wiring). Drives the input symlink (in_voltage<ChannelId-1>_raw),
-#   the ADS1015 MUX byte (0xc2/0xd2/0xe2/0xf2 = ch 1-4) and the MAX1363 scan/monitor bytes in
-#   CfgRegVal. See hw-management-bmc-a2d-leakage-config-example.json.
+# • ChannelId (optional, per Device): 1-based hardware A2D input(s) the sensor is wired to (holes
+#   allowed). Scalar (e.g. 4) = one input for that Device entry (per-channel device-map mode).
+#   Array (e.g. [1,4]) = one input per logical channel; a single present chip serves all NumChnl
+#   channels (BOM-alternative), and each channel directory is named by its mapped input — so
+#   ChannelId [1,4] produces .../<N>/1/ and .../<N>/4/ (not 1/ and 2/). Drives the input symlink
+#   (in_voltage<ChannelId-1>_raw), the ADS1015 MUX byte (0xc2/0xd2/0xe2/0xf2 = inputs 1-4) and the
+#   MAX1363 scan/monitor bytes in CfgRegVal. See hw-management-bmc-a2d-leakage-config-example.json.
 #
 # • Validate on a live BMC with bmc/tests/hw-management-bmc-leakage-validate.sh: a minimal HW-vs-SW
 #   test that prints each configured Bus/Address I2C probe next to its SW runtime channel with a

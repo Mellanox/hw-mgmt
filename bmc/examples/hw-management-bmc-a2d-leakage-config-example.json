@@ -11,11 +11,11 @@
       "DeviceType": "string, required. e.g. MAX1363, ADS1015, ADS7924 — maps to driver / register logic.",
       "Bus": "number, required. I2C bus number.",
       "Address": "string, required. Hex address; alternatives may share one address when BOMs are mutually exclusive (list MAX1363 before ADS1015).",
-      "ChannelId": "number, optional. Hardware A2D channel (1-based) wired on this device; defaults to the logical channel index (1..NumChnl). Used for IIO sysfs links (in_voltage<N>_raw) and ADS1015 MUX/threshold programming when channels are not sequential.",
+      "ChannelId": "number OR array, optional. 1-based hardware A2D input(s) wired to this device. Scalar (e.g. 4) = one input for this Device entry (per-channel device-map mode). Array (e.g. [1,4]) = one input per logical channel, so a single present chip serves all NumChnl channels; the array form forces BOM-alternative mode and names each runtime channel directory by its mapped input (e.g. 1/ and 4/). Defaults to the logical channel index. Drives the input symlink (in_voltage<ChannelId-1>_raw) and ADS1015 MUX / MAX1363 scan programming.",
       "Probe": "boolean, optional. If true, bind kernel driver (new_device) before register writes.",
       "Type": "string, optional. Sensor kind label (e.g. rop, flex). Published as runtime .../<j>/type.",
       "CfgReg": "string, optional. Configuration register address (hex).",
-      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg. ADS1015: first byte is config high (MUX for ChannelId — 0xc2/0xd2/0xe2/0xf2 for channels 1–4), second byte is config low (mode/comparator). MAX1363: platform monitor burst; byte0 = scan-to-CS (0x01/0x03/0x05/0x07 for channels 1–4), first 0x1x byte = monitor channel tag (0x11/0x13/0x15/0x1f). Script patches these from ChannelId when needed.",
+      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg. ADS1015: first byte is config high (MUX — with a scalar ChannelId it selects the input 0xc2/0xd2/0xe2/0xf2 for inputs 1–4; with an array ChannelId it is a placeholder and the script programs each mapped input), second byte is config low (mode/comparator). MAX1363: platform monitor burst; byte0 = scan-to-CS (0x01/0x03/0x05/0x07 for inputs 1–4), first 0x1x byte = monitor channel tag (0x11/0x13/0x15/0x1f). Script patches these from ChannelId (first mapped input for an array).",
       "LoThreshReg": "string, optional. Low threshold register address.",
       "LoThreshRegVal": "string, optional. Bytes for low threshold (big-endian); scaled to min.",
       "HiThreshReg": "string, optional. High threshold register address.",
@@ -40,7 +40,7 @@
       "Ads7924_configuration_note": "All Ads7924* keys are optional. When omitted, hw-management-bmc-a2d-leakage-config.sh uses defaults: soft reset on (0xaa @ RESET), INT/SLP/ACQ/PWR = 0xe0 0x00 0x00 0x00, INTCNTRL AEN = 0x0f, AWAKE 0x20 then MODE 0x33 (auto-scan). For ULR/LLR and comparator-driven INT you need Scale plus NormalMin/NormalMax (or if those are absent, WarningMin/WarningMax) on raw I2C (Probe false). Per-channel ULR/LLR overrides use Ads7924UlCh1..4 / Ads7924LlCh1..4 only when you need registers to differ from that voltage-derived window."
     },
     "runtime_paths": {
-      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel. j is 1..NumChnl (BOM-alternative mode) or the 1-based Device[] position (per-channel device-map mode; may be non-contiguous when an earlier device is absent).",
+      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel number. j is 1..NumChnl for a scalar/absent ChannelId; the mapped hardware input when ChannelId is an array (non-contiguous, e.g. 1 and 4); or the 1-based Device[] position in per-channel device-map mode.",
       "input": "symlink to the kernel IIO raw attribute for the wired hardware channel: in_voltage<ChannelId-1>_raw (defaults to in_voltage<j-1>_raw when ChannelId is absent).",
       "type": "from Device.Type",
       "lwarn": "from Device.WarningMin",
@@ -147,6 +147,45 @@
           "Bus": 28,
           "Address": "0x48",
           "ChannelId": 4,
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.002,
+          "NormalMin": 2.69,
+          "NormalMax": 3.09,
+          "WarningMin": 2.2,
+          "CriticalMin": 0.13,
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
+        }
+      ]
+    },
+    {
+      "Name": "Example_BOM_Alt_ChannelId_Array",
+      "_comment": "BOM-alternative mode with an array ChannelId: MAX1363 OR ADS1015 is populated, and whichever is present serves both channels. ChannelId [1,4] maps logical channel 1 -> hardware AIN0 (in_voltage0_raw, dir 1/) and logical channel 2 -> hardware AIN3 (in_voltage3_raw, dir 4/). The array form forces BOM-alternative mode and names the runtime channel directories 1/ and 4/.",
+      "NumChnl": 2,
+      "ChnlNames": [
+        "Leak_Ch0_AIN0",
+        "Leak_Ch1_AIN3"
+      ],
+      "Device": [
+        {
+          "DeviceType": "MAX1363",
+          "Bus": 28,
+          "Address": "0x35",
+          "ChannelId": [1, 4],
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.000244140625,
+          "WarningMin": 0.7,
+          "CriticalMin": 0.1,
+          "CfgReg": "0x00",
+          "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+        },
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 28,
+          "Address": "0x48",
+          "ChannelId": [1, 4],
           "Probe": true,
           "Type": "embedded",
           "Scale": 0.002,

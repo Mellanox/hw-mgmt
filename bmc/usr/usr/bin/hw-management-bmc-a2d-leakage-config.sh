@@ -39,6 +39,14 @@
 CONFIG_FILE="${HW_MANAGEMENT_BMC_A2D_LEAKAGE_CONFIG:-/etc/hw-management-bmc-a2d-leakage-config.json}"
 LOG_TAG="a2d_config"
 
+# i2c-tools (i2ctransfer/i2cdetect) live in /usr/sbin; ensure they are reachable even
+# when invoked from a login shell whose PATH omits sbin (e.g. a manual root run).
+case ":$PATH:" in
+*:/usr/sbin:*) ;;
+*) PATH="/usr/sbin:/sbin:$PATH" ;;
+esac
+export PATH
+
 # Source JSON parser library
 if [ -f /usr/bin/hw-management-bmc-json-parser.sh ]; then
 	source /usr/bin/hw-management-bmc-json-parser.sh
@@ -64,7 +72,7 @@ fi
 check_dependencies()
 {
 	if ! command -v i2ctransfer >/dev/null 2>&1; then
-		log_message "err" "i2ctransfer is not installed. Cannot configure I2C devices."
+		log_message "err" "i2ctransfer not found in PATH ($PATH). Install i2c-tools and run as root (it lives in /usr/sbin)."
 		return 1
 	fi
 
@@ -639,12 +647,17 @@ max1363_monitor_channel_tag_byte()
 	esac
 }
 
-# Adjust MAX1363 CfgRegVal for hardware ChannelId (1-based). Patches scan + first monitor tag byte.
+# Adjust MAX1363 CfgRegVal (1-based channels). Patches the monitor tag byte for
+# hw_channel_id and the scan-to-CS range for scan_channel_id (defaults to
+# hw_channel_id). With an array ChannelId, pass the HIGHEST mapped input as
+# scan_channel_id so the scan range still covers every mapped channel, while the
+# monitor tag tracks the first mapped input.
 max1363_cfg_reg_val_for_channel()
 {
 	local cfg_reg_val="$1"
 	local hw_channel_id="$2"
-	local ch b out first_mon scan_b mon_b
+	local scan_channel_id="${3:-$2}"
+	local ch scan_ch b out first_mon scan_b mon_b
 
 	[ -n "$cfg_reg_val" ] || return 1
 	if [ -z "$hw_channel_id" ] || [ "$hw_channel_id" -lt 1 ] 2>/dev/null; then
@@ -653,7 +666,9 @@ max1363_cfg_reg_val_for_channel()
 	fi
 	ch=$((hw_channel_id - 1))
 	[ "$ch" -le 3 ] || return 1
-	scan_b=$(max1363_scan_to_cs_config_byte "$ch") || return 1
+	scan_ch=$((scan_channel_id - 1))
+	[ "$scan_ch" -ge "$ch" ] && [ "$scan_ch" -le 3 ] 2>/dev/null || scan_ch=$ch
+	scan_b=$(max1363_scan_to_cs_config_byte "$scan_ch") || return 1
 	mon_b=$(max1363_monitor_channel_tag_byte "$ch") || return 1
 
 	first_mon=0
@@ -685,7 +700,7 @@ configure_max1363_raw_i2c()
 	local address="$4"
 	local hw_channel_id="${5:-0}"
 
-	local cfg_reg cfg_reg_val patched hw_ch
+	local cfg_reg cfg_reg_val patched hw_ch scan_ch k cid
 
 	cfg_reg=$(echo "$device_json" | json_get_string "CfgReg")
 	cfg_reg_val=$(echo "$device_json" | json_get_string "CfgRegVal")
@@ -702,9 +717,22 @@ configure_max1363_raw_i2c()
 		hw_ch=$(json_device_hw_channel_id "$device_json" 1)
 	fi
 
-	patched=$(max1363_cfg_reg_val_for_channel "$cfg_reg_val" "$hw_ch") || patched="$cfg_reg_val"
+	# With an array ChannelId the chip serves several inputs: keep the scan-to-CS
+	# range covering the HIGHEST mapped input so every mapped channel is converted
+	# (otherwise the scan would narrow to the first input and higher channels go
+	# stale). The monitor tag still tracks the first mapped input (hw_ch).
+	scan_ch="$hw_ch"
+	if json_channelid_is_array "$device_json"; then
+		k=1
+		while cid=$(json_channel_id_at "$device_json" "$k"); do
+			[ "$cid" -gt "$scan_ch" ] 2>/dev/null && scan_ch="$cid"
+			k=$((k + 1))
+		done
+	fi
+
+	patched=$(max1363_cfg_reg_val_for_channel "$cfg_reg_val" "$hw_ch" "$scan_ch") || patched="$cfg_reg_val"
 	if [ "$patched" != "$cfg_reg_val" ]; then
-		log_message "info" "MAX1363 $device_name: CfgRegVal adjusted for hardware channel $hw_ch ($cfg_reg_val -> $patched)"
+		log_message "info" "MAX1363 $device_name: CfgRegVal adjusted (monitor ch $hw_ch, scan to ch $scan_ch): $cfg_reg_val -> $patched"
 	fi
 
 	if write_and_verify_register "$bus" "$address" "$cfg_reg" "$patched" "Configuration Register" "$device_name"; then
@@ -791,7 +819,7 @@ configure_ads1015_raw_i2c()
 	local hw_channel_id="${6:-0}"
 
 	local cfg_lo lo_val hi_val lo_reg hi_reg mux mux_handoff ch nch ch_end ch_step failed skip_thresh mode_msg
-	local t ch_label
+	local t ch_label ch_list k cid
 
 	cfg_lo="0x94"
 	t=$(echo "$device_json" | json_get_string "CfgRegVal" 2>/dev/null) || true
@@ -829,25 +857,40 @@ configure_ads1015_raw_i2c()
 	t=$(echo "$t" | tr -d '"')
 	[ -n "$t" ] && [ "$t" != "null" ] && hi_reg="$t"
 
-	ch=0
-	ch_end=3
-	ch_step=1
+	# Build the list of 0-based MUX indices to program.
+	#   - explicit hw_channel_id (per-channel device map): just that channel
+	#   - ChannelId array (BOM alternative): exactly the mapped hardware channels
+	#   - otherwise: contiguous 0..num_channels-1 (legacy sequential)
+	ch_list=""
 	if [ -n "$hw_channel_id" ] && [ "$hw_channel_id" -ge 1 ] 2>/dev/null; then
-		ch=$((hw_channel_id - 1))
-		ch_end=$ch
-		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, hardware channel $hw_channel_id / MUX index $ch)"
+		ch_list=$((hw_channel_id - 1))
+		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, hardware channel $hw_channel_id / MUX index $ch_list)"
+	elif json_channelid_is_array "$device_json"; then
+		k=1
+		while [ "$k" -le "${num_channels:-0}" ]; do
+			cid=$(json_channel_id_at "$device_json" "$k") || break
+			if [ "$cid" -ge 1 ] 2>/dev/null; then
+				ch_list="$ch_list${ch_list:+ }$((cid - 1))"
+			fi
+			k=$((k + 1))
+		done
+		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, ChannelId MUX indices: ${ch_list:-none})"
 	else
 		nch=4
 		if [ -n "$num_channels" ] && [ "$num_channels" -ge 1 ] 2>/dev/null; then
 			nch="$num_channels"
 			[ "$nch" -gt 4 ] && nch=4
 		fi
-		ch_end=$((nch - 1))
-		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, channels=0..$ch_end)"
+		ch=0
+		while [ "$ch" -lt "$nch" ]; do
+			ch_list="$ch_list${ch_list:+ }$ch"
+			ch=$((ch + 1))
+		done
+		log_message "info" "ADS1015 $device_name: per-channel init ($mode_msg, channel MUX indices: $ch_list)"
 	fi
 
 	failed=0
-	while [ "$ch" -le "$ch_end" ]; do
+	for ch in $ch_list; do
 		mux=$(ads1015_mux_high_byte "$ch") || {
 			failed=1
 			break
@@ -875,7 +918,6 @@ configure_ads1015_raw_i2c()
 				failed=1
 			fi
 		fi
-		ch=$((ch + ch_step))
 	done
 
 	if [ "$failed" -ne 0 ]; then
@@ -1074,14 +1116,81 @@ json_optional_scalar()
 	echo "$v"
 }
 
-# Hardware A2D channel from JSON ChannelId (1-based); default = logical channel index.
+# True (0) when the device JSON has a ChannelId array (vs a scalar / absent).
+json_channelid_is_array()
+{
+	echo "$1" | awk '
+	BEGIN { buf = "" }
+	{ buf = buf $0 }
+	END {
+		p = "\"ChannelId\""
+		i = index(buf, p)
+		if (i == 0) exit 1
+		j = i + length(p)
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) != ":") exit 1
+		j++
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) == "[") exit 0
+		exit 1
+	}'
+}
+
+# n-th value (1-based) of a ChannelId array, or the scalar ChannelId, from device JSON.
+# Prints the value and returns 0; returns 1 if ChannelId is absent or the index is out of range.
+json_channel_id_at()
+{
+	local device_json="$1"
+	local n="$2"
+	echo "$device_json" | awk -v n="$n" '
+	BEGIN { buf = "" }
+	{ buf = buf $0 }
+	END {
+		p = "\"ChannelId\""
+		i = index(buf, p)
+		if (i == 0) exit 1
+		j = i + length(p)
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) != ":") exit 1
+		j++
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) == "[") {
+			# array: return the n-th integer element (1-based)
+			j++
+			cnt = 0; num = ""
+			while (j <= length(buf)) {
+				c = substr(buf, j, 1)
+				if (c ~ /[0-9]/) {
+					num = num c
+				} else if (c == "," || c == "]") {
+					if (num != "") {
+						cnt++
+						if (cnt == n) { print num + 0; exit 0 }
+						num = ""
+					}
+					if (c == "]") exit 1
+				}
+				j++
+			}
+			exit 1
+		}
+		# scalar: same value for any logical channel (legacy per-device single channel)
+		start = j
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[0-9]/) j++
+		if (j > start) { print substr(buf, start, j - start); exit 0 }
+		exit 1
+	}'
+}
+
+# Hardware A2D channel for a logical channel (1-based). Honors a ChannelId array
+# (per logical channel) or a scalar ChannelId; defaults to the logical index.
 json_device_hw_channel_id()
 {
 	local device_json="$1"
 	local logical_ch="$2"
 	local v
 
-	if v=$(json_optional_scalar "$device_json" "ChannelId"); then
+	if v=$(json_channel_id_at "$device_json" "$logical_ch"); then
 		echo "$v"
 	else
 		echo "$logical_ch"
@@ -1104,6 +1213,11 @@ leak_detector_per_channel_devices()
 	d=0
 	while [ "$d" -lt "$num_devices" ]; do
 		dj=$(echo "$block" | json_get_nested_array_element "Device" "$d")
+		# An array ChannelId means this Device serves every logical channel itself
+		# (BOM alternative), so the detector is NOT a per-channel device map.
+		if json_channelid_is_array "$dj"; then
+			return 1
+		fi
 		bus=$(echo "$dj" | json_get_number "Bus")
 		addr=$(echo "$dj" | json_get_string "Address")
 		addr=$(echo "$addr" | tr -d '"')
@@ -1338,15 +1452,20 @@ create_channel_infrastructure()
 	fi
 
 	local ch=1
-	local channel_name hw_ch
+	local channel_name hw_ch ch_dir_num
 	while [ "$ch" -le "$num_channels" ]; do
 		hw_ch=$(json_device_hw_channel_id "$device_json" "$ch")
-		mkdir -p "$leakage_base/$ch"
-		populate_leakage_channel_dir "$leakage_base/$ch" "$ch" "$device_json" "$bus" "$address" "$device_type" "$hw_ch"
+		# Channel directory is named by the (hardware) ChannelId so a non-sequential
+		# map such as ChannelId [1,4] surfaces as leakage/<i>/1 and leakage/<i>/4,
+		# and the input symlink targets in_voltage<ChannelId-1>_raw.
+		ch_dir_num="$hw_ch"
+		[ -n "$ch_dir_num" ] && [ "$ch_dir_num" -ge 1 ] 2>/dev/null || ch_dir_num="$ch"
+		mkdir -p "$leakage_base/$ch_dir_num"
+		populate_leakage_channel_dir "$leakage_base/$ch_dir_num" "$ch_dir_num" "$device_json" "$bus" "$address" "$device_type" "$hw_ch"
 		channel_name=$(echo "$chnames" | awk -v c="$ch" '{print $c}')
 		if [ -n "$channel_name" ]; then
-			echo "$channel_name" >"$leakage_base/$ch/channel_name"
-			log_message "info" "Channel $ch channel_name=$channel_name"
+			echo "$channel_name" >"$leakage_base/$ch_dir_num/channel_name"
+			log_message "info" "Channel $ch_dir_num channel_name=$channel_name (hardware channel $hw_ch)"
 		fi
 		ch=$((ch + 1))
 	done
