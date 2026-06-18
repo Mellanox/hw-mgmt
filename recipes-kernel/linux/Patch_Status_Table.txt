@@ -734,6 +734,7 @@ Kernel-6.1
 |0116-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_post_init after last mux               |
 |0117-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |0118-platform-mellanox-Fix-hotplug-bus-nr-fixup-on-multi.patch   |                    | Downstream accepted                      |            | Fix NULL deref in mux completion_notify        |
+|0119-i2c-designware-Fix-ACPI-power-on-of-AMD-I2C-after-ke.patch  |                    | Downstream accepted                      |            | Fix AMD V3000 I2C controller init after kexec  |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8003-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
