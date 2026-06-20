@@ -79,7 +79,9 @@ hw-management-vr-dpc-update-all.sh --help
 ### Field Descriptions
 
 #### System-Level Fields
-- **System HID** (required): System hardware identifier (format: HI### or hi###)
+- **System HID** (required): System hardware identifier (format: HI### or hi###).
+  For MPS updates the batch script normalizes `HI###` / `hi###` to firmware
+  directory form `hid###` (same rules as `hw-management-dpc-update.sh`).
 
 #### Device-Level Fields (Common)
 - **DeviceType** (required): Device model identifier
@@ -228,8 +230,13 @@ If any specified configuration file doesn't exist:
 
 ### Required Commands
 - `jq` - JSON parser (for parsing configuration file)
-- `hw-management-vr-dpc-update.sh` - MPS VR update script
-- `hw-management-vr-dpc-infineon-update.sh` - Infineon VR update script
+- `hw-management-vr-dpc-update.sh` - required when JSON contains any `mp*`
+  device
+- `hw-management-vr-dpc-infineon-update.sh` - required when JSON contains any
+  `xdpe*` device (not required for MPS-only JSON)
+
+Validation (`--validate-json` and pre-update checks) loads each vendor script
+only if the JSON actually needs that vendor.
 
 ### Installation
 ```bash
@@ -367,6 +374,11 @@ sudo hw-management-vr-dpc-update-all.sh config.json
 
 ## Version History
 
+### Version 2.2 (2026-06)
+- Document conditional vendor script dependencies (MPS-only vs mixed JSON)
+- Document System HID normalization to `hid###` for MPS firmware paths
+- Cross-reference `VR_DPC_README.md` (package entrypoint + full tool chain)
+
 ### Version 2.1 (2026-04)
 - Document Infineon JSON without `CrcFile` / `DeviceConfigFile`
 - Batch Infineon invocation uses `flash -y` (non-interactive)
@@ -385,6 +397,9 @@ sudo hw-management-vr-dpc-update-all.sh config.json
 
 ## See Also
 
+- [VR_DPC_README.md](VR_DPC_README.md) - Full VR/DPC tool chain (package tar.gz,
+  legacy bulk, read-vr)
+- `hw-management-dpc-update.sh` - DPC package entrypoint (`*.tar.gz`)
 - `hw-management-vr-dpc-update.sh` - MPS VR update tool
 - `hw-management-vr-dpc-infineon-update.sh` - Infineon VR update tool
-- `INFINEON_VR_README.md` - Infineon VR tool documentation
+- [INFINEON_VR_README.md](INFINEON_VR_README.md) - Infineon VR tool documentation
