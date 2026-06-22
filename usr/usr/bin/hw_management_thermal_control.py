@@ -57,7 +57,7 @@ import signal
 from hw_management_lib import HW_Mgmt_Logger as Logger
 from hw_management_lib import current_milli_time as current_milli_time
 from hw_management_lib import RepeatedTimer as RepeatedTimer
-from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait
+from hw_management_lib import ObjectSnapshot, compare_snapshots, print_comparison, read_dmi_data, exit_wait, run_shell_cmd
 import json
 import re
 import psutil
@@ -228,6 +228,30 @@ class CONST:
     # SDK load timeout in seconds. On system start SDK load takes additional time
     # so we need to wait for SDK load timeout to avoid false error handling
     SDK_LOAD_TIMEOUT_SEC = 60
+
+    # subclass with CPLD reg definition
+    class CPLD_REG:
+        BASE_ADDR = "0x2500"
+        TACHO1 = "0xe4"
+        TACHO2 = "0xe5"
+        TACHO3 = "0xe6"
+        TACHO4 = "0xe7"
+        TACHO5 = "0xe8"
+        TACHO6 = "0xe9"
+        TACHO7 = "0xeb"
+        TACHO8 = "0xec"
+        TACHO9 = "0xed"
+        TACHO10 = "0xee"
+        TACHO11 = "0xef"
+        TACHO12 = "0xf0"
+        TACHO13 = "0xf1"
+        TACHO14 = "0xf2"
+        TACHO15 = "0xfe"
+        TACHO16 = "0xff"
+        TACHO17 = "0xba"
+        TACHO18 = "0xbb"
+        TACHO19 = "0xb4"
+        TACHO20 = "0xb5"
 
 
 """
@@ -2488,6 +2512,73 @@ class fan_sensor(system_device):
         return fan_fault
 
     # ----------------------------------------------------------------------
+    def _get_rpm_reg_offset(self, tacho_idx):
+        """
+        @summary: Get RPM register offset for current FAN tacho
+        @return: RPM register offset (str in hex format)
+        """
+
+        fan_idx_to_reg_offset = {
+            0: CONST.CPLD_REG.TACHO1,
+            1: CONST.CPLD_REG.TACHO2,
+            2: CONST.CPLD_REG.TACHO3,
+            3: CONST.CPLD_REG.TACHO4,
+            4: CONST.CPLD_REG.TACHO5,
+            5: CONST.CPLD_REG.TACHO6,
+            6: CONST.CPLD_REG.TACHO7,
+            7: CONST.CPLD_REG.TACHO8,
+            8: CONST.CPLD_REG.TACHO9,
+            9: CONST.CPLD_REG.TACHO10,
+            10: CONST.CPLD_REG.TACHO11,
+            11: CONST.CPLD_REG.TACHO12,
+            12: CONST.CPLD_REG.TACHO13,
+            13: CONST.CPLD_REG.TACHO14,
+            14: CONST.CPLD_REG.TACHO15,
+            15: CONST.CPLD_REG.TACHO16,
+            16: CONST.CPLD_REG.TACHO17,
+            17: CONST.CPLD_REG.TACHO18,
+            18: CONST.CPLD_REG.TACHO19,
+            19: CONST.CPLD_REG.TACHO20,
+        }
+        if tacho_idx not in fan_idx_to_reg_offset:
+            self.log.warn("{} fan_idx {} not found. Use default offset {}".format(self.name, tacho_idx, CONST.CPLD_REG.TACHO1))
+            return CONST.CPLD_REG.TACHO1
+        else:
+            return fan_idx_to_reg_offset[tacho_idx]
+
+    # ----------------------------------------------------------------------
+    def _print_fan_speed_debug(self, tacho_id):
+
+        tacho_index = self.tacho_idx + tacho_id
+        # 1. Print fanX speed get properties
+        filename = self.get_hw_path("thermal/fan{}_speed_get".format(tacho_index))
+        file_type = "link" if os.path.islink(filename) else "text file"
+        if file_type == "link":
+            file_target = os.path.realpath(filename)
+        else:
+            file_target = filename
+
+        # 2. Print fanX speed get value by the direct link
+        with open(file_target, "r") as file:
+            file_value = file.read().strip()
+
+        # 3. Print tacho reg value
+        tacho_reg_val = "N/A"
+        try:
+            rpm_reg_offset = self._get_rpm_reg_offset(tacho_index - 1)
+            # read 4 bytes from cpld tacho register starting from current FAN drwr
+            retval, iorw_ret_str = run_shell_cmd("iorw", ["-b", CONST.CPLD_REG.BASE_ADDR, "-o", rpm_reg_offset, "-r", "-l4"])
+            if retval != 0:
+                tacho_reg_val = "failed"
+            else:
+                tacho_reg_val = iorw_ret_str.strip()
+        except Exception as e:
+            self.log.warn("{} get tacho register value failed: {}".format(self.name, e))
+
+        debug_str = "{}:{}, path: {}, val:{}, tacho reg: [{}]".format(filename, file_type, file_target, file_value, tacho_reg_val)
+        return debug_str
+
+    # ----------------------------------------------------------------------
     def _validate_rpm(self):
         """
         Validate FAN RPM against expected speed for current PWM.
@@ -2535,9 +2626,15 @@ class fan_sensor(system_device):
                                                                             rpm_curr,
                                                                             rpm_min,
                                                                             rpm_max))
+                try:
+                    fan_speed_debug_str = self._print_fan_speed_debug(tacho_idx)
+                except Exception as e:
+                    fan_speed_debug_str = "failed to print fan speed debug: {}".format(e)
+                self.log.info("fan speed debug:{}".format(fan_speed_debug_str), id="fan tacho {} speed debug".format(self.tacho_idx), log_repeat=3)
                 fan_tacho_state = False
                 break
-
+            else:
+                self.log.info(None, id="fan tacho {} speed debug".format(self.tacho_idx))
              # 2. Check fan trend
             if pwm_curr >= pwm_min:
                 # if FAN speed stabilized after the last change
