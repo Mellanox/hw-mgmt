@@ -40,8 +40,11 @@ import threading
 import time
 import json
 import tempfile
+import subprocess
 from dataclasses import dataclass
 from typing import Any, Dict, Set, Optional, Hashable
+
+ALLOWED_SHELL_CMDS = ["iorw"]
 
 
 def to_int(value: Any, default: int = 0) -> int:
@@ -120,6 +123,32 @@ def exit_wait(exit_event, timeout, chunk_sec=1.0):
         elapsed += wait_time
 
 # ----------------------------------------------------------------------
+
+
+def run_shell_cmd(cmd, args=None, timeout=2.0):
+    """
+    @summary:
+        Run a shell command
+    @param cmd: command to run
+    @param args: arguments to pass to the command
+    @param timeout: timeout in seconds
+    @return: return code of the command and all stdout/stderr output as combined string
+    """
+    if cmd not in ALLOWED_SHELL_CMDS:
+        return -1, f"Not allowed command: {cmd}"
+
+    if args is None:
+        args = []
+    else:
+        args = [str(arg) for arg in args]
+
+    cmd_args = [cmd] + args
+
+    try:
+        result = subprocess.run(cmd_args, timeout=timeout, capture_output=True, text=True, check=False)
+        return result.returncode, result.stdout.strip() + result.stderr.strip()
+    except Exception as e:
+        return -1, f"Command failed: {' '.join(cmd_args)}. Error: {e}"
 
 
 def current_milli_time():
