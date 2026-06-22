@@ -44,6 +44,8 @@ def _asic_handle_input_harness():
     h.read_file_float = Mock(return_value=55.0)
     h.get_hw_path = lambda p: "/mock/" + p
     h.is_crit_range_violation = Mock(return_value=False)
+    h._sdk_init_in_progress = lambda: False
+    h._read_asic_ready = lambda: True
 
     h._updated = []
 

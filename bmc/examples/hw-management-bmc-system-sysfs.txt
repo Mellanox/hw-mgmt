@@ -212,7 +212,6 @@ asic1_vdddhbid_pwr_alert
 graceful_power_off_req
 cpu_power_off_ready
 cpu_reset
-apml_smb_alert
 cpu_unexp_power_off
 
 ########################################################################

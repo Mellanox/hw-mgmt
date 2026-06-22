@@ -374,6 +374,25 @@ check_bmc_is_supported()
 	esac
 }
 
+# This function checks if the host NOS is SONiC.
+# On SONiC, SONiC itself owns CPU<->BMC communication, so hw-management must
+# skip the BMC sync flow (Redfish login / BMC password rotation / BMC temp
+# polling). On any other host OS the behavior is unchanged.
+# Returns 0 if the host runs SONiC, 1 otherwise (single source of truth:
+# hw_management_sonic_check.py).
+check_host_os_is_sonic()
+{
+	/usr/bin/hw_management_sonic_check.py >/dev/null 2>&1
+}
+
+# Returns 0 when the SONiC host defers usb0 to the NOS (aligned with BMC NOS mode).
+# Requires SONiC plus a host-side contract file (same well-known paths as on the BMC).
+check_host_usb0_managed_by_nos()
+{
+	check_host_os_is_sonic || return 1
+	[ -f /etc/bmc-network-sonic.conf ] || [ -f /etc/bmc-usb-network.conf ]
+}
+
 # This function create or cleans sysfs monitor helper files.
 init_sysfs_monitor_timestamp_files()
 {

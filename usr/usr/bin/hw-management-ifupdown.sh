@@ -38,25 +38,29 @@ source /usr/bin/hw-management-helpers.sh
 
 INTERFACE=$1
 
-# Check if interface parameter exists
 if [ -z "${INTERFACE}" ]; then
-	log_err "Interface parameter is missing"
+	log_err "Missing interface parameter"
 	exit 1
 fi
 
-# Check if /etc/network/interfaces exists
+# Skip ifup only when SONiC host and BMC/host images agree (NOS contract file present).
+# If the host is SONiC but the contract file is absent, BMC may still use static
+# usb0 and the host must run ifup as on non-SONiC images.
+if [ "${INTERFACE}" = "usb0" ] && check_host_usb0_managed_by_nos; then
+	log_info "SONiC host: skip ifup ${INTERFACE} (NOS-owned, contract file present)"
+	exit 0
+fi
+
+if [ ! -e "/sys/class/net/${INTERFACE}" ]; then
+	log_info "Interface ${INTERFACE} is missing"
+	exit 0
+fi
+
 if [ ! -e /etc/network/interfaces ]; then
-	log_err "/etc/network/interfaces is missing"
-	exit 1
+	log_info "/etc/network/interfaces is missing"
+	exit 0
 fi
 
-# Check if interface exists
-if [ ! -d "/sys/class/net/$INTERFACE" ]; then
-	log_err "Interface $INTERFACE does not exist"
-	exit 1
-fi
-
-# Check if interface is defined in /etc/network/interfaces
 if ! ifquery "$INTERFACE" >/dev/null 2>&1; then
 	log_err "Interface $INTERFACE is not defined in /etc/network/interfaces"
 	exit 1
@@ -82,4 +86,3 @@ done
 
 log_err "Failed to ifup interface ${INTERFACE}"
 exit 1
-

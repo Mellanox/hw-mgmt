@@ -62,6 +62,8 @@ source hw-management-helpers.sh
 [ -f "$board_type_file" ] && board_type=$(< $board_type_file) || board_type="Unknown"
 [ -f "$sku_file" ] && sku=$(< $sku_file) || sku="Unknown"
 source hw-management-devtree.sh
+# shellcheck source=/dev/null
+[ -f /usr/bin/hw-management-platform-json.sh ] && . /usr/bin/hw-management-platform-json.sh
 # Local constants and variables
 
 asic_control=1
@@ -87,6 +89,9 @@ hotplug_pwrs=2
 hotplug_pdbs=0
 hotplug_linecards=0
 erot_count=0
+vrot_count=0
+mcu_count=0
+cartridge_count=0
 health_events_count=0
 pwr_events_count=0
 dpu_count=0
@@ -1047,7 +1052,7 @@ add_cpu_board_to_connection_table()
 			;;
 		*)
 			log_err "$product is not supported"
-			exit 0
+			return 1
 			;;
 	esac
 
@@ -1063,7 +1068,7 @@ add_cpu_board_to_connection_table()
 	fi
 
 	connect_table+=(${cpu_connection_table[@]})
-	add_i2c_dynamic_bus_dev_connection_table "${cpu_voltmon_connection_table[@]}"
+	add_i2c_dynamic_bus_dev_connection_table "${cpu_voltmon_connection_table[@]}" || return 1
 }
 
 add_i2c_dynamic_bus_dev_connection_table()
@@ -1071,7 +1076,9 @@ add_i2c_dynamic_bus_dev_connection_table()
 	connection_table=("$@")
 	dynamic_i2cbus_connection_table=()
 
-	echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices
+	if ! echo -n "${connection_table[@]} " >> $config_path/i2c_bus_connect_devices; then
+		return 1
+	fi
 	for ((i=0; i<${#connection_table[@]}; i+=4)); do
 		dynamic_i2cbus_connection_table[$i]="${connection_table[i]}"
 		dynamic_i2cbus_connection_table[$i+1]="${connection_table[i+1]}"
@@ -1093,7 +1100,8 @@ add_come_named_busses()
 		come_named_busses+=( ${amd_snw_named_busses[@]} )
 		;;
 	*)
-		return
+		log_err "unsupported cpu_type '${cpu_type}' for add_come_named_busses"
+		return 1
 		;;
 	esac
 
@@ -2868,12 +2876,56 @@ system_cleanup_specific()
 	esac
 }
 
-check_system()
+check_system_reset_attr_num()
 {
-	# Reset reset_attr_num if it exists.
 	if [ -f "$config_path/reset_attr_num" ]; then
 		rm -f "$config_path"/reset_attr_num
 	fi
+}
+
+check_system_write_i2c_defaults()
+{
+	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default || return 1
+	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu || return 1
+}
+
+check_system_bmc_redfish_login()
+{
+	# Obtain/rotate the BMC password and log in over Redfish only on platforms
+	# with a BMC AND when the host NOS is not SONiC. On SONiC, SONiC owns
+	# CPU<->BMC communication, so hw-management must not drive this flow.
+	if check_bmc_is_supported && ! check_host_os_is_sonic; then
+		pushd /usr/bin
+		for ((i=1; i<=5; i++)); do
+			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
+				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
+				break
+			fi
+			echo "Pinging BMC failed, i=$i"
+			sleep 3
+		done
+		popd
+	fi
+}
+
+check_system_json()
+{
+	local json_file="$1"
+
+	[ -n "$json_file" ] || return 1
+	if [ ! -f "$json_file" ]; then
+		log_err "platform JSON missing: ${json_file}"
+		return 1
+	fi
+	check_system_reset_attr_num
+	platform_json_apply_config "$json_file" || return 1
+	check_system_write_i2c_defaults || return 1
+}
+
+check_system_internal()
+{
+	check_system_reset_attr_num
 	# Check ODM
 	case $board_type in
 		VMOD0001)
@@ -3010,7 +3062,7 @@ check_system()
 								;;
 							*)
 								log_err "$product is not supported"
-								exit 0
+								return 1
 								;;
 						esac
 					else
@@ -3021,7 +3073,7 @@ check_system()
 								;;
 							*)
 								log_err "$product is not supported"
-								exit 0
+								return 1
 								;;
 						esac
 					fi
@@ -3029,21 +3081,19 @@ check_system()
 			esac
 			;;
 	esac
-	echo ${i2c_comex_mon_bus_default} > $config_path/i2c_comex_mon_bus_default
-	echo ${i2c_bus_def_off_eeprom_cpu} > $config_path/i2c_bus_def_off_eeprom_cpu
-	if check_bmc_is_supported; then
-		pushd /usr/bin
-		for ((i=1; i<=5; i++)); do
-			local bmc_ip_addr=$(ip addr show usb0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
-			if [ -n "${bmc_ip_addr}" ] && ping -c 1 "${bmc_ip_addr}" >& /dev/null; then
-				python -c "from hw_management_redfish_client import BMCAccessor; print(BMCAccessor().login())" || true
-				break
-			fi
-			echo "Pinging BMC failed, i=$i"
-			sleep 3
-		done
-		popd
+	check_system_write_i2c_defaults || return 1
+}
+
+check_system()
+{
+	local json_file
+
+	if json_file=$(find_platform_json_config "$sku"); then
+		check_system_json "$json_file" || return 1
+	else
+		check_system_internal || return 1
 	fi
+	check_system_bmc_redfish_login || true
 }
 
 create_event_files()
@@ -3385,6 +3435,12 @@ set_asic_pci_id()
 		echo $minimal_unsupported > "$config_path"/minimal_unsupported
 	fi
 
+	if find_platform_json_config "$sku" >/dev/null && \
+	   [ -n "$platform_json_asic_pci_id" ]; then
+		set_asic_pci_id_from_json
+		return
+	fi
+
 	# Get ASIC PCI Ids.
 	case $sku in
 	HI122|HI123|HI124|HI126|HI156|HI160|HI184)
@@ -3551,6 +3607,12 @@ set_dpu_pci_id()
 	local element
 	local dpu_detected_num=0
 
+	if find_platform_json_config "$sku" >/dev/null && \
+	   [ -n "$platform_json_dpu_pci_id" ]; then
+		set_dpu_pci_id_from_json
+		return
+	fi
+
 	# Get DPU PCI Ids.
 	case $sku in
 	HI160)
@@ -3639,6 +3701,21 @@ set_sodimms()
 
 pre_devtr_init()
 {
+	local json_file
+
+	if json_file=$(find_platform_json_config "$sku"); then
+		if ! source_hw_platform_json_parser; then
+			log_err "platform JSON parser not found, cannot apply board config"
+			return 1
+		fi
+		if ! json_validate "$json_file"; then
+			log_err "platform JSON invalid: ${json_file}"
+			return 1
+		fi
+		platform_json_apply_board "$json_file" || return 1
+		return 0
+	fi
+
 	case $board_type in
 	VMOD0009)
 		case $sku in
@@ -3853,11 +3930,12 @@ do_start()
 	create_symbolic_links
 	run_fixup_script pre
 	check_cpu_type
-	pre_devtr_init
+	pre_devtr_init || exit 1
 	load_modules
 	devtr_check_smbios_device_description
-	check_system
+	check_system || exit 1
 	set_asic_pci_id
+	set_dpu_pci_id
 	set_sodimms
 	set_config_data
 

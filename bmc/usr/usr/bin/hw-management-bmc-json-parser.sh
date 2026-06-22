@@ -287,16 +287,45 @@ json_count_array_elements()
 # Function to count elements in a named array within a JSON block
 # Usage: echo "$json_block" | json_count_nested_array <array_name>
 # Returns: Number of elements in the named array
+# Bracket/brace aware: a new element is a "{" at array level (object brace depth 0),
+# and the named array closes only at a "]" seen at object brace depth 0. This keeps a
+# nested inline array value inside an element (e.g. "ChannelId": [1, 2]) from being
+# mistaken for the end of the array (the old line-based logic closed on any "]" and
+# under-counted such objects).
 json_count_nested_array()
 {
     local array_name="$1"
-    
+
     awk -v arr="$array_name" '
-    BEGIN { in_array = 0; count = 0 }
-    $0 ~ "\"" arr "\".*\\[" { in_array = 1; next }
-    in_array && /\]/ { in_array = 0 }
-    in_array && index($0, "{") > 0 { count++ }
-    END { print count }
+    BEGIN { in_array = 0; obj = 0; count = 0; printed = 0; i = 1 }
+    {
+        line = $0
+        n = length(line)
+        if (!in_array) {
+            p = index(line, "\"" arr "\"")
+            if (p == 0) next
+            b = 0
+            for (k = p; k <= n; k++) {
+                if (substr(line, k, 1) == "[") { b = k; break }
+            }
+            if (b == 0) next
+            in_array = 1
+            i = b + 1
+        }
+        for (k = i; k <= n; k++) {
+            c = substr(line, k, 1)
+            if (c == "{") {
+                if (obj == 0) count++
+                obj++
+            } else if (c == "}") {
+                obj--
+            } else if (c == "]") {
+                if (obj == 0) { print count; printed = 1; exit }
+            }
+        }
+        i = 1
+    }
+    END { if (!printed) print count }
     '
 }
 

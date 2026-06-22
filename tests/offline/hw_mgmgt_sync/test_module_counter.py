@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ########################################################################
 # SPDX-FileCopyrightText: NVIDIA CORPORATION & AFFILIATES
-# Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2023-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 #
 # Test Suite for module_counter functionality
 #
@@ -145,7 +145,8 @@ class TestModuleCounterReliability(unittest.TestCase):
         peripheral_module.LOGGER = mock_logger
 
         # Test with unknown platform (should write 0)
-        with patch('builtins.open', create=True) as mock_open:
+        with patch('builtins.open', create=True) as mock_open, \
+                patch.object(peripheral_module, 'get_platform_config', return_value=[{}]):
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 
@@ -216,7 +217,8 @@ class TestModuleCounterReliability(unittest.TestCase):
         peripheral_module.LOGGER = mock_logger
 
         # Test write_module_counter still works
-        with patch('builtins.open', create=True) as mock_open:
+        with patch('builtins.open', create=True) as mock_open, \
+                patch.object(peripheral_module, 'get_platform_config', return_value=[{}]):
             mock_file = MagicMock()
             mock_open.return_value.__enter__.return_value = mock_file
 

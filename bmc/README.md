@@ -72,6 +72,43 @@ Patch order follows the **rows in the active table**, not the numeric prefix in 
 
 See the comment block at the top of **`recipes-kernel/linux/Patch_BMC_Status_Table.txt`** for the same flow in brief.
 
+### SPC6 AST2700-A2: SONiC vs OpenBMC device tree (`0009`)
+
+Patches **`0008`** and **`0009`** in **`Patch_BMC_Status_Table.txt`** maintain the SPC6 BMC DTS.
+**`0009`** is **`take[sonic]`** only — it is deployed into the SONiC kernel tree, not OpenBMC.
+SONiC and OpenBMC boot differently on the same board:
+
+| Role | File in **`0009`** | Built DTB (SONiC kernel) | Boot model |
+|------|-------------------|--------------------------|------------|
+| SONiC runtime | **`aspeed-nvidia-spc6-bmc.dts`** | **`aspeed-nvidia-spc6-bmc.dtb`** (Aspeed baseline Makefile) | eMMC rootfs; **`nvidia-ast27xx-sunda-sonic.dtsi`** (IRoT without **`ramrofs@403920000`**) |
+| OpenBMC reference mirror | **`aspeed-nvidia-spc6-bmc-openbmc.dts`** | *not built* | Reference copy only — see below |
+
+**OpenBMC reference copy (not built here):** **`aspeed-nvidia-spc6-bmc-openbmc.dts`** in
+**`0009`** is a byte-for-byte mirror of the OpenBMC meta-layer source for diff and resync; it is
+**not** compiled in the SONiC kernel flow and **`0009`** is not applied to OpenBMC builds.
+OpenBMC continues to ship and build **`aspeed-nvidia-spc6-bmc.dts`** from its own layer
+(**`meta-spc6-ast2700/recipes-kernel/linux/linux-aspeed/`** → **`aspeed-nvidia-spc6-bmc.dtb`**).
+
+Mirror source path:
+
+`meta-nvidia/meta-switch/meta-ast2700/meta-spc6-ast2700/recipes-kernel/linux/linux-aspeed/aspeed-nvidia-spc6-bmc.dts`
+
+**When to resync:** after any change to that OpenBMC file (phram-env, TPM GPIO, expander reset,
+I3C pull-ups, or other board DTS fixes), replace the **`openbmc.dts`** hunk in **`0009`** and
+verify with **`diff`** against the OpenBMC tree. SONiC-only deltas stay in
+**`aspeed-nvidia-spc6-bmc.dts`** and the **`nvidia-ast27xx-*-sonic.dtsi`** fragments; do not edit
+**`openbmc.dts`** for SONiC-specific work.
+
+**Makefile:** **`0009`** intentionally does not touch **`arch/arm64/boot/dts/aspeed/Makefile`**.
+Only **`aspeed-nvidia-spc6-bmc.dtb`** is registered and built (Aspeed baseline). Do not add a
+Makefile entry for **`aspeed-nvidia-spc6-bmc-openbmc.dts`** unless a future build path actually
+compiles it.
+
+**Known upstream quirk (mirror only):** the OpenBMC source has a **`#if 0`** **`&pinctrl0`**
+block with an unresolved comment **`pinctrl_salt0_default ????`**. The mirror keeps it as-is; it is
+dead code today and does not affect DTB builds. If OpenBMC enables that block, fix the symbol in the
+meta-layer source first, then resync **`openbmc.dts`** — do not patch it only in **`0009`**.
+
 ## Repository tree (`bmc/`)
 
 Top-level files and everything under `usr/` as tracked in this branch:
@@ -80,6 +117,8 @@ Top-level files and everything under `usr/` as tracked in this branch:
 bmc/
 ├── DEVELOPER_GUIDE.md            # New HINNN platform: files, kernel baseline, packaging
 ├── copy-from-openbmc.sh          # Helper: pull OpenBMC meta-nvidia files into bmc/ with naming rules
+├── tests/                        # Standalone on-BMC test/validation scripts (not packaged)
+│   └── hw-management-bmc-leakage-validate.sh   # Minimal leakage HW(I2C) vs SW(runtime) PASS/FAIL test + per-channel reading/status
 ├── examples/                     # Reference layouts / sample JSON (not installed as-is unless packaged)
 │   ├── hw-management-bmc-a2d-leakage-config-example.json
 │   ├── hw-management-bmc-bom-example.json
@@ -174,7 +213,7 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-a2d-leakage-config-example.json`** | Field reference, **`example_leak_detectors`**, and **`deployment_note`** for A2D leakage JSON consumed by **`hw-management-bmc-a2d-leakage-config.sh`**. |
 | **`hw-management-bmc-bom-example.json`** | Shape-only reference for **`/etc/hw-management-bmc-bom.json`**: top-level arrays **`swb`**, **`platform`**, **`pwr`** of **`{"key","spec"}`** objects; each **`spec`** is four space-separated fields: driver name, hex I2C address, Linux I2C bus (BMC adapter #), and devtree label. Loaded by **`hw-management-bmc-devtree.sh`** (override with **`HW_MANAGEMENT_BMC_BOM_JSON`**). Shipped per platform as **`usr/etc/<HID>/hw-management-bmc-bom.json`** (e.g. HI189), copied to **`/etc/`** by plat-specific-preps; the **`examples/`** file matches the schema — bus numbers are board-specific. |
 | **`hw-management-bmc-gpio-config-example.json`** | Field reference for **`/etc/hw-management-bmc-gpio-pins.json`**: **`bmc_stby_ready`**, **`pins[]`** (**`chip`**, **`offset`**, **`direction`**, **`value`**, **`symlink`**); deployable copy under **`example_platform`**. |
-| **`hw-management-bmc-leakage-sysfs.txt`** | ASCII tree and notes for **`/var/run/hw-management/leakage/`** (per-detector dirs, channel **`type`** **`rop`/`flex`**, **`ChnlNames`**, handler **`last_sample`** / **`last_event`**). |
+| **`hw-management-bmc-leakage-sysfs.txt`** | ASCII tree and notes for **`/var/run/hw-management/leakage/`** (per-detector dirs, channel **`type`** **`rop`/`flex`**, **`ChnlNames`**, non‑sequential **`ChannelId`** / per‑channel device‑map, handler **`last_sample`** / **`last_event`**). |
 | **`hw-management-bmc-system-sysfs.txt`** | **`/var/run/hw-management/system/`**: reference lists for **mlxreg-io** / **mlxreg-hotplug** attrs (HI189 / **`nvsw_bmc_hid189_*`** in kernel patch for **`nvidia,hid189`**), udev rules, and GPIO **`symlink`** names from **`hw-management-bmc-gpio-pins.json`**. |
 | **`hw-management-bmc-eeprom-config.txt`** | **`/etc/hw-management-bmc-eeprom.conf`**: VPD EEPROM shell variables (**`eeprom_file`**, HID/BOM sizes/offsets); packaged under **`usr/etc/<HID>/`**, sourced by **`hw-management-bmc-ready-common.sh`**. |
 | **`hw-management-bmc-eeprom-sysfs.txt`** | Example layout for **`/var/run/hw-management/eeprom/`** (**`eeprom_system`**, **`eeprom_bmc`**) from udev **`hw-management-bmc-events.sh`** / **`5-hw-management-bmc-events.rules`**. |
@@ -196,13 +235,13 @@ Documentation and sample data only. Nothing here is required at runtime unless y
 | **`hw-management-bmc-helpers.sh`** | Platform / ASIC helpers; sources **`hw-management-bmc-helpers-common.sh`** by absolute path. |
 | **`hw-management-bmc-a2d-leakage-read.sh`** | From OpenBMC **`a2d_leakage_read.sh`**: walks **`/var/run/hw-management/leakage/<idx>/<bus>-<addr>/`** (after **`hw-management-bmc-a2d-leakage-config.sh`**), reads **ADS1015** / **ADS7924** (IIO symlink or **`i2ctransfer`**) and writes per-channel **`value`** (volts); **MAX1363** path is still a placeholder. Requires **`bash`**, **`bc`** or **`busybox bc`**, **`i2ctransfer`**. |
 | **`hw-management-bmc-ads1015-force-alarm.sh`** | Debug — per MUX channel **0–3**, programs tight or wide comparator thresholds (**`LoThresh`/`HiThresh`**) and config (**`i2ctransfer`**). **`#!/bin/sh`**. |
-| **`hw-management-bmc-ads1015-read-status.sh`** | Debug — reads ADS1015 config (0x01) and conversion (0x00) via **`i2ctransfer`**; optional MUX channel **0–3** (same numbering as **`ads1015-force-alarm`**). **`#!/bin/sh`**. |
+| **`hw-management-bmc-ads1015-read-status.sh`** | Debug — reads ADS1015 config (0x01) and conversion (0x00) via **`i2ctransfer`**; optional channel **1–4** uses the same MUX bytes as **`hw-management-bmc-a2d-leakage-read.sh`**. **`#!/bin/sh`**. |
 | **`hw-management-bmc-ads7924-force-alarm.sh`** | Debug — programs per-channel **ULR/LLR**, enables **INTCNTRL** alarm bits, and starts auto-scan (same sequence as **`hw-management-bmc-a2d-leakage-config.sh`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-ads7924-read-status.sh`** | Debug — reads ADS7924 **MODECNTRL**, **INTCNTRL** (alarm status/enable), and all four channel data registers (**`i2ctransfer`**, optional **scale**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-force-alarm.sh`** | From OpenBMC **`max1363_force_alarm.sh`**: debug — programs tight/safe per-channel thresholds so selected channels hit alarm (**`i2ctransfer`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-max1363-read-status.sh`** | From OpenBMC **`max1363_read_status.sh`**: debug — prints first read bytes / decoded status flags (**`i2ctransfer`**, **`awk`**). **`#!/bin/sh`**. |
 | **`hw-management-bmc-bios-recovery-flash.sh`** | From OpenBMC **`bios-recovery-flash.sh`**: BMC-side host BIOS recovery — writes CPLD **`spi_chnl_select`** then **`flashcp`** to **`spidev`** (default **`/dev/spidev1.0`**). Requires **`mtd-utils`**, hw-management runtime (**`/var/run/hw-management/system/spi_chnl_select`**). **`#!/bin/bash`**. |
-| **`hw-management-bmc-get-reset-cause.sh`** | Reset-cause exporter under **`bmc/usr/usr/bin/`**. Reads SCU reset logs from U-Boot env keys (**`reset_cause_scu0_0`**, **`reset_cause_scu0_2`**, **`reset_cause_scu1_0`**, **`reset_cause_scu1_3`**), then **`/proc/cmdline`** if env is empty, then per-register **`devmem`** fallback; writes raw SCU words under **`/var/run/hw-management/bmc/`**. **`reset_power_on`** plus **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_others`** live at that root; domain-detail flags (**`reset_ahb`**, **`reset_caliptra`**, **`reset_emmc`**, **`reset_espi`**, **`reset_external`**, **`reset_msi`**, **`reset_soc`**, **`reset_spi`**, **`reset_usb`**) under **`/var/run/hw-management/bmc/domains/`**. |
+| **`hw-management-bmc-get-reset-cause.sh`** | Reset-cause exporter. **Primary (SONiC):** exactly one of **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`** at **`bmc/`** root (**v2** heuristic: WDT **0x070/0x080** + SCU0 **0x050** EXTRST# bit 1). Hardware **`reset_*`** under **`bmc/domains/`**. Source: U-Boot env → **`/proc/cmdline`** → **`devmem`**. |
 | **`hw-management-bmc-show-reset-cause.sh`** | Operator view of reset causes: **`bmc`** (BMC root **`reset_*`** with value 1), **`host`** (**`/var/run/hw-management/system/reset_*`**, same idea as host **`hw-management.sh reset-cause`**), **`bmc-domain`** (**`.../bmc/domains/reset_*`**), **`bmc-raw`** (**`raw_scu*_reset_event_log*`** under the BMC dir). With no arguments, prints all four sections. Overrides: **`BMC_DIR`**, **`BMC_DOMAINS_DIR`**, **`HOST_SYSTEM_DIR`**. **`#!/bin/sh`**. |
 
 ### BIOS recovery flash (`hw-management-bmc-bios-recovery-flash.sh`)
@@ -226,10 +265,13 @@ Policy for collecting and exporting reset cause on SONiC BMC:
 | **`devmem` fallback** | Run **`devmem <addr> 32 || busybox devmem <addr> 32`** (stderr discarded; same **`32`**-bit read). |
 | **Normalization / validation** | Env, **`/proc/cmdline`**, and **`devmem`** values are normalized to `0x...` and validated as hex (`[0-9A-Fa-f]` digits only). |
 | **Published raw values** | Store all SCU words as `0x%08x`: **`raw_scu0_reset_event_log0`**, **`raw_scu0_reset_event_log2`**, **`raw_scu1_reset_event_log0`**, **`raw_scu1_reset_event_log3`**. |
-| **Published semantic files** | Under **`/var/run/hw-management/bmc/`**: **`reset_power_on`**, **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_others`**. Under **`/var/run/hw-management/bmc/domains/`** only: **`reset_external`**, **`reset_soc`**, **`reset_ahb`**, **`reset_caliptra`**, **`reset_usb`**, **`reset_spi`**, **`reset_espi`**, **`reset_emmc`**, **`reset_msi`**. |
+| **Published semantic files** | **`/var/run/hw-management/bmc/`** (primary, exactly one **1**): **`reset_pwr_cycle`**, **`reset_soft_reboot`**, **`reset_unknown`**. **`/var/run/hw-management/bmc/domains/`**: **`reset_power_on`**, **`reset_watchdog`**, **`reset_software`**, **`reset_cpu`**, **`reset_security_watchdog2`**, **`reset_others`**, **`reset_external`**, **`reset_soc`**, **`reset_ahb`**, **`reset_caliptra`**, **`reset_usb`**, **`reset_spi`**, **`reset_espi`**, **`reset_emmc`**, **`reset_msi`**. Raw SCU words: **`raw_scu*_reset_event_log*`** at bmc root. |
 | **Failure behavior** | If any required SCU word cannot be obtained from env, **`/proc/cmdline`**, or **`devmem`**, exit non-zero and print an error to stderr. **`hw-management-bmc-ready.sh`** logs a warning and continues BMC_READY if this script fails. |
 | **AST2700 event-log policy** | Primary logs are **SCU0 0x050**, **SCU0 0x070**, **SCU1 0x050**, **SCU1 0x080**. |
-| **AST2700 mapping policy** | Combine SCU0+SCU1 where applicable: **`power_on`** from PWRST (SCU0/SCU1), **`external`** from EXTRST/SRST (SCU0/SCU1), **`soc`** and **`ahb`** from both domains, **`usb`** from SCU1 USB2D/USB2C/UHCI plus SCU0 USB bus/VHUB/UHCI mask. **`watchdog`** uses SCU1 non-SW WDT bits plus SCU0 watchdog evidence; **`software`** uses SCU1 SW WDT bits; **`security_watchdog2`** is SCU1 WDT2 nibble. **`reset_others`** is 1 only when **`power_on`**, **`watchdog`**, **`software`**, **`cpu`**, and **`security_watchdog2`** are all 0 (domain **`reset_*`** under **`bmc/domains/`** do not affect **`reset_others`**). |
+| **AST2700 mapping policy** | Combine SCU0+SCU1 where applicable: **`power_on`** from PWRST (SCU0/SCU1), **`external`** from EXTRST/SRST (SCU0/SCU1), **`soc`** and **`ahb`** from both domains, **`usb`** from SCU1 USB2D/USB2C/UHCI plus SCU0 USB bus/VHUB/UHCI mask. **`watchdog`** uses SCU1 non-SW WDT bits plus SCU0 watchdog evidence; **`software`** uses SCU1 SW WDT bits; **`security_watchdog2`** is SCU1 WDT2 nibble. All of these live under **`bmc/domains/`**. |
+| **Primary cause (SONiC v2)** | Uses **`any_wdt_log`** (SCU0 **0x070** or SCU1 **0x080** non-zero) and **`scu0_extrst_bit1`** (SCU0 **0x050** bit 1, EXTRST#). **`reset_soft_reboot`**: WDT logged, or no WDT and EXTRST# clear (e.g. **`0xffffff30`**). **`reset_pwr_cycle`**: no WDT log and EXTRST# set (e.g. **`0xffffff32`**). **`reset_unknown`**: WDT log and EXTRST# both set. Heuristic - validated on HI189. |
+| **Export / cleanup** | Each boot rewrites all three v2 primaries (**temp** file + **`mv`** per flag). Writes run **before** **`remove_v1_primary_reset_files`** (drops pre-v2 root **`reset_power_on`**, **`reset_watchdog`**, … only). Fresh images ship v2 from first boot; v2 files are always overwritten, not deleted. |
+| **Operator tools** | **`hw-management-bmc-get-reset-cause.sh`** re-reads SCU and re-exports files. **`hw-management-bmc-show-reset-cause.sh bmc`** shows primary; **`bmc-domain`** / **`bmc-raw`** show detail. After boot, init runs **`get-reset-cause`** once — **`show`** alone is enough unless re-exporting manually. |
 
 ### BMC debug bundle (`hw-management-bmc-generate-dump.sh`)
 
@@ -338,7 +380,7 @@ flowchart TB
 | **hw-management-bmc-i2c-slave-setup** | oneshot | `/usr/bin/hw-management-bmc-i2c-slave-setup.sh` | `WantedBy=multi-user.target` | **`After=multi-user.target`**. **`Before=`** `hw-management-bmc-recovery-handler`. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. |
 | **hw-management-bmc-recovery-handler** | simple | `/usr/bin/hw-management-bmc-recovery-handler.sh` | `WantedBy=multi-user.target` | **`After=`** `multi-user.target`, **`hw-management-bmc-i2c-slave-setup`**. **`Requires=`** i2c-slave-setup. **`EnvironmentFile=/etc/hw-management-bmc-recovery.conf`**. **`ConditionPathExists=/etc/hw-management-bmc-recovery.conf`**. **`Restart=always`**. |
 
-Scripts **`hw-management-bmc-powerctrl.sh`**, **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-gpio-set.sh`**, **`hw-management-bmc-leakage-handler.sh`**, **`hw-management-bmc-get-reset-cause.sh`**, **`hw-management-bmc-show-reset-cause.sh`**, etc., are invoked by other scripts, **udev**, or operators; they are not tied 1:1 to a dedicated systemd unit in this package. The logger unit uses **`hw-management-bmc-reset-cause-logger.sh`** for boot diagnostics, while **`hw-management-bmc-get-reset-cause.sh`** exports reset-cause sysfs-style files: most primary flags at **`/var/run/hw-management/bmc/`**, domain-detail **`reset_*`** under **`/var/run/hw-management/bmc/domains/`** (see reset-cause policy table), raw SCU words at the bmc runtime root.
+Scripts **`hw-management-bmc-powerctrl.sh`**, **`hw-management-bmc-devtree.sh`**, **`hw-management-bmc-gpio-set.sh`**, **`hw-management-bmc-leakage-handler.sh`**, **`hw-management-bmc-get-reset-cause.sh`**, **`hw-management-bmc-show-reset-cause.sh`**, etc., are invoked by other scripts, **udev**, or operators; they are not tied 1:1 to a dedicated systemd unit in this package. The logger unit uses **`hw-management-bmc-reset-cause-logger.sh`** for boot diagnostics, while **`hw-management-bmc-get-reset-cause.sh`** exports reset-cause sysfs-style files: primary **`reset_pwr_cycle`** / **`reset_soft_reboot`** / **`reset_unknown`** at **`/var/run/hw-management/bmc/`** (exactly one **1**), hardware **`reset_*`** under **`/var/run/hw-management/bmc/domains/`** (see reset-cause policy table), raw SCU words at the bmc runtime root.
 
 ### Platform deploy (what plat-specific-preps does)
 
@@ -371,10 +413,10 @@ Static addressing for the BMC↔host **`usb0`** gadget interface (out-of-band li
 | Artifact | Location | Role |
 |----------|----------|------|
 | Template | **`usr/etc/systemd/network/00-hw-management-bmc-usb0.network`** | Shipped on the image as **`/usr/etc/systemd/network/…`**; contains **`Address=__USB0_ADDRESS__`**. Not read by networkd until rendered into **`/etc/systemd/network/`**. |
-| Platform params (optional) | **`usr/etc/<HID>/hw-management-bmc-network.conf`** | One line: **`USB0_ADDRESS=<addr>/<prefix>`** (e.g. **`169.254.0.1/16`**). Copied to **`/etc/hw-management-bmc-usb0.conf`** when present. |
+| Platform params (optional) | **`usr/etc/<HID>/hw-management-bmc-network.conf`** | Non-SONiC: **`USB0_ADDRESS=…`**. SONiC/NOS: install **`/etc/bmc-network-sonic.conf`** (see **`SONIC_USB0_INTEGRATION.md`**). Copied to **`/etc/hw-management-bmc-usb0.conf`** at boot. |
 | Runtime params | **`/etc/hw-management-bmc-usb0.conf`** | Effective source for substitution; may be written by plat-specific-preps (packaged copy, default fallback, or left as an operator-maintained file). |
-| Generated unit | **`/etc/systemd/network/00-hw-management-bmc-usb0.network`** | Written by **`hw-management-bmc-plat-specific-preps.sh`** before **`systemd-networkd`** starts. |
-| SONiC **`dhclient`** guard | **`/usr/lib/systemd/system/sonic-usb-network-init.service.d/10-hw-management-bmc.conf`** | When the generated **`.network`** file exists, **`sonic-usb-network-init`** is skipped so it does not run **`dhclient`** on **`usb0`**. That avoids fighting **`systemd-networkd`** (our unit sets **`DHCP=no`** and a static **`Address=`**) and avoids AppArmor denials on **`dhclient`**. If **`.network`** generation is skipped (invalid **`USB0_ADDRESS`**), SONiC’s service can still run. |
+| Generated unit | **`/etc/systemd/network/00-hw-management-bmc-usb0.network`** | Written by **`hw-management-bmc-plat-specific-preps.sh`** before **`systemd-networkd`** starts when **`USB0_MANAGED_BY_NOS`** is not set. |
+| SONiC **`dhclient`** guard | **`/usr/lib/systemd/system/sonic-usb-network-init.service.d/10-hw-management-bmc.conf`** | When the generated **`.network`** file exists, **`sonic-usb-network-init`** is skipped so it does not run **`dhclient`** on **`usb0`**. That avoids fighting **`systemd-networkd`** (our unit sets **`DHCP=no`** and a static **`Address=`**) and avoids AppArmor denials on **`dhclient`**. If **`.network`** generation is skipped (**`USB0_MANAGED_BY_NOS=1`**, invalid **`USB0_ADDRESS`**, etc.), SONiC’s service can run. |
 
 **Boot order:** **`hw-management-bmc-plat-specific-preps.service`** has **`Before=systemd-networkd.service`**, so the **`/etc/systemd/network/`** file exists before networkd loads configuration. No race on first boot for this unit.
 
@@ -384,8 +426,11 @@ Static addressing for the BMC↔host **`usb0`** gadget interface (out-of-band li
 
 **Defaults and overrides**
 
-- If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`** and **`USB0_ADDRESS`** is read from there. If **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), **`.network`** generation is **skipped** for that boot (fix the platform file).
+- **`USB0_MANAGED_BY_NOS=1`** (values **`1`**, **`yes`**, **`true`**, case-insensitive): hw-management-bmc does **not** write **`00-hw-management-bmc-usb0.network`**, does **not** apply a static **`ip addr`**, and **`usb_net_config`** only loads **`g_ether`** and sets the link up. On **SONiC BMC** images, SONiC installs **`/etc/bmc-network-sonic.conf`** (or **`/etc/bmc-usb-network.conf`**) so **`sonic-usb-network-init`** can configure **`usb0`**. See **`bmc/SONIC_USB0_INTEGRATION.md`**.
+- If **`hw-management-bmc-network.conf`** is **packaged** under **`/etc/<HID>/`** without **`USB0_MANAGED_BY_NOS`**, it is copied to **`/etc/hw-management-bmc-usb0.conf`** and **`USB0_ADDRESS`** is read from there. If **`USB0_ADDRESS`** is missing or fails validation (conservative **`grep -E`** CIDR pattern, BusyBox-safe), **`.network`** generation is **skipped** for that boot (fix the platform file).
 - If the packaged **`hw-management-bmc-network.conf`** is **absent**: use a valid **`USB0_ADDRESS`** from existing **`/etc/hw-management-bmc-usb0.conf`** if present; otherwise apply default **`169.254.0.1/16`** and write **`/etc/hw-management-bmc-usb0.conf`** with a comment so the active value is visible.
+
+**Host CPU (hw-management package):** On SONiC hosts (**`/etc/sonic/sonic_version.yml`**), **`hw-management-ifupdown.sh`** skips **`ifup usb0`** so the host NOS owns addressing (same pattern as BMC Redfish sync).
 
 **Changing address after install:** Edit **`/etc/hw-management-bmc-usb0.conf`** (when no packaged file overrides it each boot), or add **`hw-management-bmc-network.conf`** under the correct **`/etc/<HID>/`**. Then **`networkctl reload`** or restart **`systemd-networkd`** as usual for **`.network`** edits.
 
@@ -426,8 +471,8 @@ Platform JSON **`hw-management-bmc-a2d-leakage-config.json`** is installed as **
 |------|---------|
 | `/var/run/hw-management/leakage/N/device_type` | Selected **`DeviceType`** string |
 | `/var/run/hw-management/leakage/N/device_name` | **`Name`** from JSON (human-readable detector id) |
-| `/var/run/hw-management/leakage/N/<j>/` | Per-channel directory; **`j`** = `1` … **`NumChnl`** |
-| `/var/run/hw-management/leakage/N/<j>/input` | If **`Probe`** is true: symlink to the kernel IIO raw attribute (e.g. **`in_voltage*_raw`**) for that channel — **unscaled** sample |
+| `/var/run/hw-management/leakage/N/<j>/` | Per-channel directory. **`j`** is the channel number: `1` … **`NumChnl`** (contiguous) for a scalar/absent **`ChannelId`**; when **`ChannelId`** is an **array** it is the mapped **hardware A2D input** for that logical channel, so it can be **non‑contiguous** (e.g. **`"ChannelId": [1, 4]`** → dirs **`1/`** and **`4/`**); in **per‑channel device‑map** mode it is the 1‑based **`Device[]`** index — see *Channel selection modes* below |
+| `/var/run/hw-management/leakage/N/<j>/input` | If **`Probe`** is true: symlink to the kernel IIO raw attribute for the **wired hardware channel** — **`in_voltage<ChannelId-1>_raw`** (falls back to **`in_voltage<j-1>_raw`** when **`ChannelId`** is absent). **Unscaled** sample |
 | `/var/run/hw-management/leakage/N/<j>/min` | Low threshold from **`LoThreshRegVal`** (bytes → unsigned, big-endian) × **`Scale`**; fallback **`NormalMin`**, then **`WarningMin`** |
 | `/var/run/hw-management/leakage/N/<j>/max` | High threshold from **`HiThreshRegVal`** × **`Scale`**; fallback **`NormalMax`**, then **`WarningMax`** |
 | `/var/run/hw-management/leakage/N/<j>/warn` | **`WarningMax`** from JSON (engineering / config units) |
@@ -436,11 +481,31 @@ Platform JSON **`hw-management-bmc-a2d-leakage-config.json`** is installed as **
 | `/var/run/hw-management/leakage/N/<j>/lcrit` | **`CriticalMin`** from JSON (optional; low-side critical bound) |
 | `/var/run/hw-management/leakage/N/<j>/type` | **`Type`** from JSON (optional; sensor kind label, e.g. **`rop`**, **`flex`**) |
 | `/var/run/hw-management/leakage/N/<j>/scale` | **`Scale`** from JSON |
-| `/var/run/hw-management/leakage/N/<j>/channel_name` | **`ChnlNames[j-1]`** from JSON (optional; human-readable channel name inside channel dir) |
+| `/var/run/hw-management/leakage/N/<j>/channel_name` | **`ChnlNames`** entry in **logical** order (**`ChnlNames[k-1]`** for logical channel *k*; note **`j`** may differ from *k* when **`ChannelId`** maps to a non‑sequential input) |
 
-**Per-`Device` JSON (optional):** **`Device`** is an ordered list of alternatives — the first entry whose presence probe and **`configure_device`** step succeed is used (remaining entries are skipped). Put the BOM you want to win first (e.g. **`MAX1363`** before **`ADS1015`** when both can bind at the same address). Optional **`HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC=1`** restores legacy behavior: skip **`MAX1363`** when the bus looks like **ADS1015** by register read. **`Probe`** — when **`true`**, the kernel driver is bound via **`/sys/bus/i2c/devices/i2c-<bus>/new_device`** *before* **`CfgReg`** / threshold **`i2ctransfer`** writes so the driver does not overwrite programmed values afterward. **`Scale`**, **`WarningMax`**, **`CriticalMax`**, **`WarningMin`**, **`CriticalMin`**, **`NormalMin`**, **`NormalMax`**, **`Type`**, **`LoThreshRegVal`**, **`HiThreshRegVal`** feed the channel files above (thresholds from registers are scaled by **`Scale`**; user limits **`Warning*`** / **`Critical*`** are stored as given in configuration units). Driver names: **`MAX1363`** → `max1363`, **`ADS1015`** → `ads1015` (adjust for your kernel). **`input`** symlinks are created only after configuration; if sysfs names differ on your board, extend **`find_iio_channel_raw`** in the script.
+**Per-`Device` JSON (optional):** By default (**BOM‑alternative mode**) **`Device`** is an ordered list of alternatives — the first entry whose presence probe and **`configure_device`** step succeed is used (remaining entries are skipped). Put the BOM you want to win first (e.g. **`MAX1363`** before **`ADS1015`** when both can bind at the same address). Optional **`HW_MANAGEMENT_BMC_A2D_USE_ADS_HEURISTIC=1`** restores legacy behavior: skip **`MAX1363`** when the bus looks like **ADS1015** by register read. **`Probe`** — when **`true`**, the kernel driver is bound via **`/sys/bus/i2c/devices/i2c-<bus>/new_device`** *before* **`CfgReg`** / threshold **`i2ctransfer`** writes so the driver does not overwrite programmed values afterward. **`Scale`**, **`WarningMax`**, **`CriticalMax`**, **`WarningMin`**, **`CriticalMin`**, **`NormalMin`**, **`NormalMax`**, **`Type`**, **`LoThreshRegVal`**, **`HiThreshRegVal`** feed the channel files above (thresholds from registers are scaled by **`Scale`**; user limits **`Warning*`** / **`Critical*`** are stored as given in configuration units). Driver names: **`MAX1363`** → `max1363`, **`ADS1015`** → `ads1015` (adjust for your kernel). **`input`** symlinks are created only after configuration; if sysfs names differ on your board, extend **`find_iio_channel_raw`** in the script.
 
 Example JSON with field notes: **`bmc/examples/hw-management-bmc-a2d-leakage-config-example.json`** (includes **`field_reference`** and **`example_leak_detectors`**; deploy the bare array to **`/etc/hw-management-bmc-a2d-leakage-config.json`** — see **`deployment_note`** in that file).
+
+**Channel selection modes:** the script auto-detects how to treat **`Device[]`**:
+
+- **BOM‑alternative (default):** entries are mutually‑exclusive populations (e.g. **`MAX1363`** *or* **`ADS1015`**, often at the same address). The first present/working entry wins and drives all **`NumChnl`** channels. Use an **array `ChannelId`** here to map each logical channel to its wired hardware input (see below).
+- **Per‑channel device‑map:** triggered when the number of **`Device[]`** entries equals **`NumChnl`**, every **`Bus`**/**`Address`** pair is distinct, *and* no entry uses an array **`ChannelId`**. Then each entry is a separate sensor for one logical channel — entry *k* → channel **`k`** — and each is configured and linked independently.
+
+**Channel mapping (`ChannelId`):** **`ChannelId`** (optional, 1‑based) is the **hardware A2D input** a sensor is wired to, allowing non‑sequential inputs (holes). It may be:
+
+- a **scalar** (e.g. **`"ChannelId": 4`**) — the single hardware input for that **`Device[]`** entry (used by per‑channel device‑map mode);
+- an **array** (e.g. **`"ChannelId": [1, 4]`**) — one hardware input per logical channel, so a single present chip serves all **`NumChnl`** channels. The array form **forces BOM‑alternative mode**, and each runtime **channel directory is named by its mapped input** (here **`1/`** and **`4/`**).
+
+When absent it defaults to the logical channel index. `ChannelId` controls, per channel:
+
+- the **`input`** symlink target — **`in_voltage<ChannelId-1>_raw`** (e.g. input **`4`** → **`in_voltage3_raw`**);
+- the **ADS1015** MUX programmed for the mapped channel(s) — config high byte **`0xc2/0xd2/0xe2/0xf2`** for inputs 1–4 (with an array the first **`CfgRegVal`** byte is a placeholder; the script programs each mapped input);
+- the **MAX1363** scan/monitor bytes in **`CfgRegVal`** — scan‑to‑CS **`0x01/0x03/0x05/0x07`** and monitor tag **`0x11/0x13/0x15/0x1f`** for inputs 1–4, patched from **`ChannelId`** (first mapped input when an array is used).
+
+Note: in **per‑channel device‑map** mode a missing **`Device[0]`** leaves a hole at channel **`1`** (the next present device lands on its own **`Device[]`** index). When one chip provides several channels, prefer an **array `ChannelId`** on a single BOM‑alternative entry so the channel directories carry the wired input numbers.
+
+**Validation tool:** **`bmc/tests/hw-management-bmc-leakage-validate.sh`** (copy to the BMC and run) is a minimal HW‑vs‑SW test: for every configured **`Bus`**/**`Address`** it prints the **I2C presence probe** result next to what the SW runtime (**`/var/run/hw-management/leakage/`**) actually represents, with a **PASS/FAIL** verdict (e.g. HW present but no SW channel, or stale SW link with HW gone), then the live reading / volts / threshold status per configured channel and a summary line. Exit code is non‑zero if any row fails — handy for spotting unpopulated devices / channel holes.
 
 ### Per-leakage hotplug handler (`hw-management-bmc-leakage-handler.sh`)
 
