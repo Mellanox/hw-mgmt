@@ -27,6 +27,8 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_BMC_DEFAULT=$(cd "$SCRIPT_DIR/.." && pwd)
 REPO_HI189="${REPO_HI189:-$REPO_BMC_DEFAULT/usr/etc/HI189}"
 
+# Track whether the caller explicitly set HW_MGMT_ROOT before defaulting it.
+_HW_MGMT_ROOT_EXPLICIT="${HW_MGMT_ROOT:+yes}"
 HW_MGMT_ROOT="${HW_MGMT_ROOT:-/var/run/hw-management}"
 CONFIG_DIR="$HW_MGMT_ROOT/config"
 LEAKAGE_ROOT="$HW_MGMT_ROOT/leakage"
@@ -262,6 +264,14 @@ validate_roots_exist()
 
 main()
 {
+	# Skip gracefully when the hardware root doesn't exist and wasn't explicitly
+	# overridden.  This test requires a running hw-management instance; on a dev
+	# machine or in CI without hardware it should not count as a failure.
+	if [[ ! -d "$HW_MGMT_ROOT" && -z "$_HW_MGMT_ROOT_EXPLICIT" ]]; then
+		echo "SKIPPED: $HW_MGMT_ROOT not found — hw-management not running on this host"
+		exit 0
+	fi
+
 	validate_roots_exist
 	validate_config_dir
 	validate_boot_complete_dirs
