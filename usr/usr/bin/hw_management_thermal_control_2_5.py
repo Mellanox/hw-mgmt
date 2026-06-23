@@ -157,7 +157,7 @@ class CONST:
     SENSOR_POLL_TIME_DEF = 30
     TEMP_INIT_VAL_DEF = 25.0
     TEMP_SENSOR_SCALE = 1000.0
-    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None}
+    TEMP_MIN_MAX = {"val_min": 35000, "val_max": 70000, "val_crit": 80000, "val_lcrit": None, "val_hcrit": None, "val_max_clamp": 1000000}
     RPM_MIN_MAX = {"val_min": 5000, "val_max": 30000}
     MODULE_MAX_COOLING_LVL = 960
     TEMP_NA_VAL = 255
@@ -1867,6 +1867,11 @@ class thermal_module_sensor(system_device):
         # taking default values for val_min_offset and val_max_offset
         self.val_min_offset = self.sensors_config.get("val_min_offset", 0)
         self.val_max_offset = self.sensors_config.get("val_max_offset", 0)
+
+        # Tmax_crit should be used if module reported Tmax > Tmax_crit
+        # So Tmax should be never bigger than Tmax_crit. (Optional parameter)
+        self.val_max_clamp = self.read_val_min_max(None, "val_max_clamp", self.scale)
+
         self._validate_config()
 
         self.eeprom_data_timestamp = None
@@ -2014,6 +2019,7 @@ class thermal_module_sensor(system_device):
         val_max = self.read_val_min_max("thermal/{}_temp_crit".format(self.base_file_name), "val_max", scale=self.scale)
         if val_max != 0 and self.scale != 0:
             self.val_max = val_max + self.val_max_offset / self.scale
+            self.val_max = min(self.val_max, self.val_max_clamp)
             self.val_min = self.val_max + self.val_min_offset / self.scale
         else:
             self.val_max = 0.0
