@@ -3,44 +3,90 @@
         "Name": "Mngm_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Mngm_ADC0_Ch0_Embedded_0",
-            "Mngm_ADC0_Ch1_Embedded_1"
+            "Mngm_ADC0_Ch1_Embedded_0",
+            "Mngm_ADC0_Ch2_Flex_1"
         ],
         "Device": [
             {
                 "DeviceType": "MAX1363",
                 "Bus": 27,
                 "Address": "0x34",
-                "ChannelId": [1, 2],
                 "Probe": true,
-                "Type": "embedded",
                 "Scale": 0.000244140625,
-                "WarningMin": 0.7,
-                "CriticalMin": 0.1,
-                "WarningMax": 0.8,
-                "CriticalMax": 0.7,
+                "Types": [
+                    {
+                        "Type": "rop",
+                        "WarningMin": 0.7,
+                        "CriticalMin": 0.1,
+                        "WarningMax": 0.8,
+                        "CriticalMax": 0.7
+                    },
+                    {
+                        "Type": "flex",
+                        "WarningMin": 0.7,
+                        "CriticalMin": 0.1,
+                        "WarningMax": 0.8,
+                        "CriticalMax": 0.7
+                    },
+                    {
+                        "Type": "embedded",
+                        "WarningMin": 0.7,
+                        "CriticalMin": 0.1,
+                        "WarningMax": 0.8,
+                        "CriticalMax": 0.7
+                    }
+                ],
+                "Channels": [
+                    { "Id": 1, "Type": "embedded" },
+                    { "Id": 2, "Type": "flex" }
+                ],
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15",
-                "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). ChannelId is an array mapping each logical channel to a hardware A2D input (AINx = ChannelId-1). Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
+                "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
             },
             {
                 "DeviceType": "ADS1015",
                 "Bus": 27,
                 "Address": "0x49",
-                "ChannelId": [1, 2],
                 "Probe": true,
-                "Type": "embedded",
                 "Scale": 0.002,
-                "NormalMin": 2.69,
-                "NormalMax": 3.09,
-                "NormalMinMax_comment": "Written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max).",
-                "WarningMin": 2.2,
-                "CriticalMin": 0.13,
-                "WarningMax": 2.69,
-                "CriticalMax": 2.2,
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max).",
+                "Types": [
+                    {
+                        "Type": "rop",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    },
+                    {
+                        "Type": "flex",
+                        "NormalMin": 1.69,
+                        "NormalMax": 2.09,
+                        "WarningMin": 1.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 1.69,
+                        "CriticalMax": 1.2
+                    },
+                    {
+                        "Type": "embedded",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    }
+                ],
+                "Channels": [
+                    { "Id": 1, "Type": "embedded" },
+                    { "Id": 2, "Type": "flex" }
+                ],
                 "CfgReg": "0x01",
                 "CfgRegVal": "0xf2 0x83",
-                "CfgRegVal_comment": "ADS1015 config (reg 0x01): second byte 0x83 = continuous, DR=1600SPS, COMP_QUE=11 (comparator disabled, polling). ChannelId is an array mapping each logical channel to a hardware A2D input (AINx = ChannelId-1); the script programs the per-channel MUX from ChannelId and the kernel ti-ads1015 driver exposes in_voltage<ChannelId-1>_raw. First byte (0xf2) is a placeholder MUX, recomputed per channel. Lo/Hi keys are documentation only while COMP_QUE=11; for ALERT use cfg_lo 0x94.",
+                "CfgRegVal_comment": "ADS1015 config (reg 0x01): second byte 0x83 = continuous, DR=1600SPS, COMP_QUE=11 (comparator disabled, polling). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types; the script programs the per-channel MUX from Id and the kernel ti-ads1015 driver exposes in_voltage<Id-1>_raw. First byte (0xf2) is a placeholder MUX, recomputed per channel. Lo/Hi keys are documentation only while COMP_QUE=11; for ALERT use cfg_lo 0x94.",
                 "LoThreshReg": "0x02",
                 "LoThreshRegVal": "0x44 0xc0",
                 "HiThreshReg": "0x03",
@@ -52,44 +98,90 @@
         "Name": "Swb_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Swb_ADC0_Ch0_Embedded_0",
-            "Swb_ADC0_Ch1_Embedded_1"
+            "Swb_ADC0_Ch1_Embedded_0",
+            "Swb_ADC0_Ch4_Flex_1"
         ],
         "Device": [
             {
                 "DeviceType": "MAX1363",
                 "Bus": 28,
                 "Address": "0x35",
-                "ChannelId": [1, 4],
                 "Probe": true,
-                "Type": "embedded",
                 "Scale": 0.000244140625,
-                "WarningMin": 0.7,
-                "CriticalMin": 0.1,
-                "WarningMax": 0.8,
-                "CriticalMax": 0.7,
+                "Types": [
+                    {
+                        "Type": "rop",
+                        "WarningMin": 0.7,
+                        "CriticalMin": 0.1,
+                        "WarningMax": 0.8,
+                        "CriticalMax": 0.7
+                    },
+                    {
+                        "Type": "flex",
+                        "WarningMin": 0.7,
+                        "CriticalMin": 0.1,
+                        "WarningMax": 0.8,
+                        "CriticalMax": 0.7
+                    },
+                    {
+                        "Type": "embedded",
+                        "WarningMin": 0.7,
+                        "CriticalMin": 0.1,
+                        "WarningMax": 0.8,
+                        "CriticalMax": 0.7
+                    }
+                ],
+                "Channels": [
+                    { "Id": 1, "Type": "embedded" },
+                    { "Id": 4, "Type": "embedded" }
+                ],
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15",
-                "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). ChannelId is an array mapping each logical channel to a hardware A2D input (AINx = ChannelId-1). Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
+                "CfgRegVal_comment": "MAX1363 monitor burst (reg 0x00). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types. Script patches the scan/monitor bytes for the first mapped channel; author the burst to scan all mapped channels when monitoring more than one."
             },
             {
                 "DeviceType": "ADS1015",
                 "Bus": 28,
                 "Address": "0x48",
-                "ChannelId": [1, 4],
                 "Probe": true,
-                "Type": "embedded",
                 "Scale": 0.002,
-                "NormalMin": 2.69,
-                "NormalMax": 3.09,
-                "NormalMinMax_comment": "Written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max).",
-                "WarningMin": 2.2,
-                "CriticalMin": 0.13,
-                "WarningMax": 2.69,
-                "CriticalMax": 2.2,
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max).",
+                "Types": [
+                    {
+                        "Type": "rop",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    },
+                    {
+                        "Type": "flex",
+                        "NormalMin": 1.69,
+                        "NormalMax": 2.09,
+                        "WarningMin": 1.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 1.69,
+                        "CriticalMax": 1.2
+                    },
+                    {
+                        "Type": "embedded",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    }
+                ],
+                "Channels": [
+                    { "Id": 1, "Type": "embedded" },
+                    { "Id": 4, "Type": "flex" }
+                ],
                 "CfgReg": "0x01",
                 "CfgRegVal": "0xf2 0x83",
-                "CfgRegVal_comment": "ADS1015 config (reg 0x01): second byte 0x83 = continuous, DR=1600SPS, COMP_QUE=11 (comparator disabled, polling). ChannelId is an array mapping each logical channel to a hardware A2D input (AINx = ChannelId-1); the script programs the per-channel MUX from ChannelId and the kernel ti-ads1015 driver exposes in_voltage<ChannelId-1>_raw. First byte (0xf2) is a placeholder MUX, recomputed per channel. Lo/Hi keys are documentation only while COMP_QUE=11; for ALERT use cfg_lo 0x94.",
+                "CfgRegVal_comment": "ADS1015 config (reg 0x01): second byte 0x83 = continuous, DR=1600SPS, COMP_QUE=11 (comparator disabled, polling). Channels maps each logical channel to a hardware A2D input (AINx = Id-1) and to a Type whose thresholds are defined in Types; the script programs the per-channel MUX from Id and the kernel ti-ads1015 driver exposes in_voltage<Id-1>_raw. First byte (0xf2) is a placeholder MUX, recomputed per channel. Lo/Hi keys are documentation only while COMP_QUE=11; for ALERT use cfg_lo 0x94.",
                 "LoThreshReg": "0x02",
                 "LoThreshRegVal": "0x44 0xc0",
                 "HiThreshReg": "0x03",
