@@ -113,8 +113,8 @@ class RedfishClient:
 
     def __curl_config_auth_header_line(self):
         return (
-            'header = "X-Auth-Token: '
-            + self.__curl_config_escape_double_quoted_value(self.__token) + '"'
+            'header = "X-Auth-Token: ' +
+            self.__curl_config_escape_double_quoted_value(self.__token) + '"'
         )
 
     '''
@@ -427,8 +427,8 @@ class RedfishClient:
         if self.__token is None:
             return curl_config
         hdr = (
-            'header = "X-Auth-Token: '
-            + self.__curl_config_escape_double_quoted_value(self.__token) + '"')
+            'header = "X-Auth-Token: ' +
+            self.__curl_config_escape_double_quoted_value(self.__token) + '"')
         return re.sub(
             r'^header = "X-Auth-Token:[^"]*"',
             hdr,
