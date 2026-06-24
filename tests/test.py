@@ -58,6 +58,7 @@ class TestRunner:
         self.offline_dir = self.tests_dir / "offline"
         self.hardware_dir = self.tests_dir / "hardware"
         self.shell_dir = self.tests_dir / "shell"
+        self.bmc_tests_dir = self.tests_dir.parent / "bmc" / "tests"
         self.logs_dir = self.tests_dir / "logs"
         self.failed_tests = []
         self.passed_tests = []
@@ -119,12 +120,23 @@ class TestRunner:
         return packages
 
     def _missing_requirements(self):
-        """Return the list of required packages that are not currently importable."""
+        """Return the list of required packages that are not currently importable.
+
+        find_spec() can return None for packages on NFS-mounted site-packages
+        even when the package is actually importable.  Fall back to a real
+        import attempt before concluding a package is missing.
+        """
+        import importlib
         import importlib.util
 
         missing = []
         for pkg_name, import_name in self._parse_requirements():
-            if importlib.util.find_spec(import_name) is None:
+            if importlib.util.find_spec(import_name) is not None:
+                continue
+            # find_spec returned None — try a real import before reporting missing
+            try:
+                importlib.import_module(import_name)
+            except ImportError:
                 missing.append(pkg_name)
         return missing
 
@@ -150,7 +162,14 @@ class TestRunner:
 
         print(f"{Colors.CYAN}Auto-installing required dependencies...{Colors.RESET}")
         if not self.install_dependencies():
-            return False
+            # pip failed — check again via real import; packages may already be present
+            # (e.g. find_spec returned None on NFS but import works).
+            still_missing = self._missing_requirements()
+            if still_missing:
+                print(f"{Colors.RED}Still missing after install attempt: {', '.join(still_missing)}{Colors.RESET}")
+                return False
+            print(f"{Colors.GREEN}Packages already available (pip returned non-zero but imports succeed){Colors.RESET}")
+            return True
 
         # Verify everything is now importable.
         still_missing = self._missing_requirements()
@@ -185,8 +204,8 @@ class TestRunner:
                 return True
             else:
                 print(f"{Colors.RED}Failed to install dependencies{Colors.RESET}")
-                if self.verbose:
-                    print(result.stderr)
+                if result.stderr:
+                    print(result.stderr.strip())
                 return False
         except Exception as e:
             print(f"{Colors.RED}Error installing dependencies: {e}{Colors.RESET}")
@@ -311,6 +330,98 @@ class TestRunner:
             if output and self.verbose:
                 print(f"{Colors.YELLOW}Output:{Colors.RESET}")
                 print(output)
+
+    def _run_pytest(self, pytest_args, cwd, test_name):
+        """Run pytest in-process to avoid NFS subprocess import hangs.
+
+        On NFS-mounted home directories, importing pytest in a new subprocess
+        blocks in rpc_wait_bit_killable.  Running via pytest.main() in the
+        current process (where pytest is already imported) avoids this.
+        """
+        import io
+        import contextlib
+        import re as _re
+        try:
+            import pytest
+        except ImportError:
+            self.print_test_result(test_name, False, "pytest not installed")
+            return False
+
+        cmd = [sys.executable, '-m', 'pytest'] + list(pytest_args)
+        self.print_test_start(test_name, cmd, cwd)
+
+        old_cwd = os.getcwd()
+        buf = io.StringIO()
+        # Disable cache-provider to skip .pytest_cache/ writes on NFS
+        effective_args = list(pytest_args) + ['-p', 'no:cacheprovider']
+        # Snapshot sys.modules so test suites that replace entries (e.g.
+        # "sys.modules['hw_management_lib'] = MagicMock()") don't pollute
+        # subsequent pytest.main() calls running in the same process.
+        saved_modules = dict(sys.modules)
+        try:
+            os.chdir(str(cwd))
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                rc = pytest.main(effective_args)
+        except Exception as e:
+            rc = 1
+            buf.write(f"\nException during pytest.main(): {e}\n")
+        finally:
+            os.chdir(old_cwd)
+            # Restore sys.modules: remove newly-added modules and reinstate
+            # any that were replaced by mocks during this test run.
+            for mod in list(sys.modules.keys()):
+                if mod not in saved_modules:
+                    del sys.modules[mod]
+            for mod, val in saved_modules.items():
+                if sys.modules.get(mod) is not val:
+                    sys.modules[mod] = val
+
+        output = buf.getvalue()
+        passed = (rc == 0)
+
+        if self.enable_logs:
+            log_filename = (test_name.replace(' ', '_').replace('/', '_')
+                            .replace('(', '').replace(')', '') + '.log')
+            log_path = self.logs_dir / log_filename
+            with open(str(log_path), 'w', encoding='utf-8') as f:
+                f.write(f"Test: {test_name}\n")
+                f.write(f"Command: {' '.join(cmd)}\n")
+                f.write(f"Working Directory: {cwd}\n")
+                f.write(f"Exit Code: {rc}\n")
+                f.write(f"{'=' * 80}\n\n")
+                f.write(output)
+
+        has_coverage = '--cov' in ' '.join(pytest_args)
+        if passed:
+            summary_lines = []
+            for line in output.split('\n'):
+                if 'passed' in line or 'failed' in line or 'error' in line:
+                    if any(x in line for x in ['passed in', 'failed', 'error']):
+                        summary_lines.append(line.strip())
+                        match = _re.search(r'(\d+)\s+passed', line)
+                        if match:
+                            self.total_test_count += int(match.group(1))
+            if summary_lines:
+                print(f"  {Colors.CYAN}{summary_lines[-1]}{Colors.RESET}")
+            if has_coverage:
+                print(f"\n{Colors.CYAN}Coverage Report:{Colors.RESET}")
+                in_coverage = False
+                for line in output.split('\n'):
+                    if 'Name' in line and 'Stmts' in line and 'Miss' in line:
+                        in_coverage = True
+                    if in_coverage:
+                        if line.strip() and not line.startswith('='):
+                            print(f"  {line}")
+                        elif 'TOTAL' in line:
+                            print(f"  {Colors.BOLD}{line}{Colors.RESET}")
+                            break
+
+        if self.verbose or not passed:
+            self.print_test_result(test_name, passed, output)
+        else:
+            self.print_test_result(test_name, passed)
+
+        return passed
 
     def run_command(self, cmd, cwd, test_name):
         """Run a command and return success status"""
@@ -581,11 +692,38 @@ class TestRunner:
                 pytest_test['cmd'].append(f'--cov-fail-under={self.coverage_min}')
 
         for test in tests:
-            self.run_command(test['cmd'], test['cwd'], test['name'])
+            cmd = test['cmd']
+            # pytest subprocesses hang on NFS-mounted home dirs (rpc_wait_bit_killable
+            # during import).  Run them in-process via pytest.main() instead.
+            if len(cmd) >= 3 and cmd[1:3] == ['-m', 'pytest']:
+                self._run_pytest(cmd[3:], test['cwd'], test['name'])
+            else:
+                self.run_command(cmd, test['cwd'], test['name'])
 
         # Print coverage summary if coverage was enabled
         if self.coverage:
             self.print_coverage_summary()
+
+        return len(self.failed_tests) == 0
+
+    def run_bmc_tests(self):
+        """Run BMC offline validation shell scripts from bmc/tests/"""
+        self.print_header("BMC OFFLINE VALIDATION TESTS")
+
+        if not self.bmc_tests_dir.exists():
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} BMC test directory not found: {self.bmc_tests_dir}")
+            return True
+
+        # Discover validation scripts in alphabetical order.
+        validation_scripts = sorted(self.bmc_tests_dir.glob("hw-management-bmc-*-validation.sh"))
+
+        if not validation_scripts:
+            print(f"{Colors.YELLOW}[SKIPPED]{Colors.RESET} No BMC validation scripts found in {self.bmc_tests_dir}")
+            return True
+
+        for script in validation_scripts:
+            name = f"BMC: {script.stem}"
+            self.run_command(['bash', str(script)], self.bmc_tests_dir, name)
 
         return len(self.failed_tests) == 0
 
@@ -1525,6 +1663,7 @@ Note: Python dependencies are automatically installed if missing
     parser.add_argument('--no-security-scan', action='store_true', help='Skip security scanner (ngci_tool -s2)')
     parser.add_argument('--no-header-check', action='store_true', help='Skip header checker (ngci_tool -hc)')
     parser.add_argument('--no-shellcheck', action='store_true', help='Skip ShellCheck static analysis for shell scripts')
+    parser.add_argument('--skip-dep-check', action='store_true', help='Skip dependency check and auto-install (useful when pip cannot reach PyPI)')
 
     # Coverage options
     parser.add_argument('--coverage', action='store_true', help='Enable code coverage measurement')
@@ -1614,11 +1753,15 @@ Note: Python dependencies are automatically installed if missing
     # Auto-check and install dependencies ONLY if running offline tests
     # Hardware tests use unittest (built-in) and run remotely via SSH
     if args.offline or args.all:
-        print(f"{Colors.CYAN}Checking dependencies...{Colors.RESET}")
-        if not runner.check_dependencies(auto_install=True):
-            print(f"\n{Colors.RED}Failed to install required dependencies{Colors.RESET}")
-            print(f"{Colors.YELLOW}Please install manually: pip install pytest>=6.0{Colors.RESET}")
-            return 1
+        if args.skip_dep_check:
+            print(f"{Colors.CYAN}Skipping dependency check (--skip-dep-check){Colors.RESET}")
+        else:
+            print(f"{Colors.CYAN}Checking dependencies...{Colors.RESET}")
+            if not runner.check_dependencies(auto_install=True):
+                print(f"\n{Colors.RED}Failed to install required dependencies{Colors.RESET}")
+                print(f"{Colors.YELLOW}Please install manually: pip install pytest>=6.0{Colors.RESET}")
+                print(f"{Colors.YELLOW}Or skip the check with: --skip-dep-check{Colors.RESET}")
+                return 1
     elif args.hardware:
         # Hardware tests don't need pytest locally (they use unittest and run remotely)
         print(f"{Colors.CYAN}Skipping dependency check (hardware tests use unittest remotely){Colors.RESET}")
@@ -1635,6 +1778,8 @@ Note: Python dependencies are automatically installed if missing
     # Run offline tests (for --offline or --all)
     if args.offline or args.all:
         if not runner.run_offline_tests():
+            success = False
+        if not runner.run_bmc_tests():
             success = False
 
     # Run shell tests ONLY if explicitly requested with --shell
