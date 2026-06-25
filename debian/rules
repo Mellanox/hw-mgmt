@@ -62,6 +62,8 @@ endif
 	cp usr/etc/hw-management-thermal/* debian/$(pname)/etc/hw-management-thermal
 	dh_installdirs -p$(pname) etc/hw-management-virtual
 	cp -a usr/etc/hw-management-virtual/* debian/$(pname)/etc/hw-management-virtual
+	dh_installdirs -p$(pname) etc/hw-management-cfg
+	cp -a usr/etc/hw-management-cfg/* debian/$(pname)/etc/hw-management-cfg
 	dh_installdirs -p$(pname) etc/hw-management-fast-sysfs-monitor
 	cp -a usr/etc/hw-management-fast-sysfs-monitor/* debian/$(pname)/etc/hw-management-fast-sysfs-monitor
 	@if [ -d usr/etc/hw-management-exec ] && [ -n "$$(find usr/etc/hw-management-exec -maxdepth 1 -type f 2>/dev/null | head -n1)" ]; then \
