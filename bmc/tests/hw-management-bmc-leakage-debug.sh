@@ -39,7 +39,7 @@ echo "config sh   : $SCRIPT $( [ -f "$SCRIPT" ] && echo '(present)' || echo '(MI
 
 sec "2. deployed script fingerprint (is the latest code on the box?)"
 if [ -f "$SCRIPT" ]; then
-	for m in "json_channelid_is_array" "json_channel_id_at" "ch_list" "usr/sbin:/sbin"; do
+	for m in "json_channelid_is_array" "json_channel_id_at" "json_channel_type_at" "json_type_threshold" "resolve_threshold" "json_has_channels_array" "ch_list" "usr/sbin:/sbin"; do
 		if grep -q "$m" "$SCRIPT" 2>/dev/null; then echo "  HAS  : $m"; else echo "  MISS : $m"; fi
 	done
 else

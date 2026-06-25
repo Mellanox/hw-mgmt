@@ -26,7 +26,10 @@ to_volts() {
 	awk -v r="$1" -v s="$2" 'BEGIN { if (r=="" || s=="" || (r+0)!=r || (s+0)!=s) exit 1; printf "%.3f", r*s }'
 }
 
-# DeviceType|Bus|Address|ChannelId tuples from the JSON (BusyBox-awk friendly).
+# DeviceType|Bus|Address|Channels tuples from the JSON (BusyBox-awk friendly).
+# Channels are the hardware input map: new schema Channels[].Id (joined with ","),
+# legacy scalar/array ChannelId. Threshold-bearing Types[] entries carry no "Id",
+# so only Channels[]/ChannelId feed the channel column.
 parse_devices() {
 	awk '
 	function flush() { if (dt!="") printf "%s|%s|%s|%s\n", dt, bus, addr, ch; dt="";bus="";addr="";ch="" }
@@ -34,6 +37,7 @@ parse_devices() {
 	/"Bus"/        { v=$0; sub(/.*"Bus"[ \t]*:[ \t]*/,"",v);  sub(/[^0-9].*/,"",v); bus=v }
 	/"Address"/    { v=$0; sub(/.*"Address"[ \t]*:[ \t]*"/,"",v); sub(/".*/,"",v); addr=v }
 	/"ChannelId"/  { v=$0; sub(/.*"ChannelId"[ \t]*:[ \t]*/,"",v); sub(/[ \t]*,[ \t]*$/,"",v); gsub(/[][ \t]/,"",v); ch=v }
+	/"Id"[ \t]*:/  { v=$0; sub(/.*"Id"[ \t]*:[ \t]*/,"",v); sub(/[^0-9].*/,"",v); if (v!="") ch=(ch=="" ? v : ch","v) }
 	END { flush() }
 	' "$1"
 }

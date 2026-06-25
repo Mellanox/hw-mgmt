@@ -954,28 +954,36 @@ configure_ads7924_raw_i2c()
 	local address="$4"
 	local num_channels="$5"
 
-	local scale_s v_min v_max ll ul i b c t
+	local scale_s v_min v_max ll ul i b c t gtype
 	local int_b slp_b acq_b pwr_b mode_b awake_b aen_b
 	local ul0 ll0 ul1 ll1 ul2 ll2 ul3 ll3
+	local k cid ctype cvmin cvmax cll cul hw
 
 	if ! scale_s=$(json_optional_scalar "$device_json" "Scale"); then
 		log_message "warning" "ADS7924 $device_name: Scale required for alarm threshold codes — skipping raw init"
 		return 1
 	fi
 
+	# Global fallback window: legacy device-level scalars, or (new schema) the first
+	# channel's type. Per-channel windows below override this per hardware input.
+	gtype=""
+	if json_has_channels_array "$device_json"; then
+		gtype=$(json_channel_type_at "$device_json" 1) || gtype=""
+	fi
+
 	v_min=""
 	v_max=""
-	if v_min=$(json_optional_scalar "$device_json" "NormalMin"); then
+	if v_min=$(resolve_threshold "$device_json" "$gtype" "NormalMin"); then
 		:
-	elif v_min=$(json_optional_scalar "$device_json" "WarningMin"); then
+	elif v_min=$(resolve_threshold "$device_json" "$gtype" "WarningMin"); then
 		:
 	else
 		log_message "warning" "ADS7924 $device_name: need NormalMin or WarningMin for LLR — skipping raw init"
 		return 1
 	fi
-	if v_max=$(json_optional_scalar "$device_json" "NormalMax"); then
+	if v_max=$(resolve_threshold "$device_json" "$gtype" "NormalMax"); then
 		:
-	elif v_max=$(json_optional_scalar "$device_json" "WarningMax"); then
+	elif v_max=$(resolve_threshold "$device_json" "$gtype" "WarningMax"); then
 		:
 	else
 		log_message "warning" "ADS7924 $device_name: need NormalMax or WarningMax for ULR — skipping raw init"
@@ -999,6 +1007,45 @@ configure_ads7924_raw_i2c()
 	ll2=$ll
 	ul3=$ul
 	ll3=$ll
+
+	# Per-channel-type windows (new schema): each Channels[k] maps a hardware input
+	# (Id) to a Type whose NormalMin/Max (or WarningMin/Max) defines that input's
+	# ULR/LLR. Explicit Ads7924UlChN/Ads7924LlChN hex overrides below still win.
+	if json_has_channels_array "$device_json"; then
+		k=1
+		while [ "$k" -le "${num_channels:-0}" ] 2>/dev/null; do
+			cid=$(json_channel_id_at "$device_json" "$k") || { k=$((k + 1)); continue; }
+			if [ "$cid" -lt 1 ] 2>/dev/null || [ "$cid" -gt 4 ] 2>/dev/null; then
+				k=$((k + 1))
+				continue
+			fi
+			ctype=$(json_channel_type_at "$device_json" "$k") || ctype=""
+			cvmin=$(resolve_threshold "$device_json" "$ctype" "NormalMin") ||
+				cvmin=$(resolve_threshold "$device_json" "$ctype" "WarningMin") || cvmin=""
+			cvmax=$(resolve_threshold "$device_json" "$ctype" "NormalMax") ||
+				cvmax=$(resolve_threshold "$device_json" "$ctype" "WarningMax") || cvmax=""
+			if [ -n "$cvmin" ] && [ -n "$cvmax" ]; then
+				cll=$(ads7924_volts_to_code8 "$cvmin" "$scale_s")
+				cul=$(ads7924_volts_to_code8 "$cvmax" "$scale_s")
+				if [ "$cul" -le "$cll" ]; then
+					cul=$((cll + 1))
+					[ "$cul" -gt 255 ] && cul=255
+					[ "$cul" -le "$cll" ] && cll=$((cul - 1))
+					[ "$cll" -lt 0 ] && cll=0
+				fi
+				hw=$((cid - 1))
+				case "$hw" in
+				0) ul0=$cul; ll0=$cll ;;
+				1) ul1=$cul; ll1=$cll ;;
+				2) ul2=$cul; ll2=$cll ;;
+				3) ul3=$cul; ll3=$cll ;;
+				esac
+				log_message "info" "ADS7924 $device_name: channel $k (input $cid, type ${ctype:-?}) window LLR=$cll ULR=$cul"
+			fi
+			k=$((k + 1))
+		done
+	fi
+
 	if [ -n "$num_channels" ] && [ "$num_channels" -ge 1 ] 2>/dev/null; then
 		i=1
 		while [ "$i" -le "$num_channels" ] && [ "$i" -le 4 ]; do
@@ -1116,9 +1163,131 @@ json_optional_scalar()
 	echo "$v"
 }
 
-# True (0) when the device JSON has a ChannelId array (vs a scalar / absent).
+# True (0) when the device JSON has a top-level "<name>" array (e.g. Channels / Types).
+json_device_has_array()
+{
+	local json="$1"
+	local name="$2"
+	echo "$json" | awk -v name="$name" '
+	BEGIN { buf = "" }
+	{ buf = buf $0 }
+	END {
+		p = "\"" name "\""
+		i = index(buf, p)
+		if (i == 0) exit 1
+		j = i + length(p)
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) != ":") exit 1
+		j++
+		while (j <= length(buf) && substr(buf, j, 1) ~ /[ \t]/) j++
+		if (substr(buf, j, 1) == "[") exit 0
+		exit 1
+	}'
+}
+
+# True (0) when the device JSON carries a Channels[] array ({Id,Type} per channel).
+json_has_channels_array()
+{
+	json_device_has_array "$1" "Channels"
+}
+
+# True (0) when the device JSON carries a Types[] array (per-type thresholds).
+json_has_types_array()
+{
+	json_device_has_array "$1" "Types"
+}
+
+# The n-th (1-based) Channels[] entry object, or empty.
+json_channel_entry_at()
+{
+	local device_json="$1"
+	local n="$2"
+	[ -n "$n" ] && [ "$n" -ge 1 ] 2>/dev/null || return 1
+	echo "$device_json" | json_get_nested_array_element "Channels" "$((n - 1))"
+}
+
+# Type label of the n-th (1-based) logical channel. New schema: Channels[n].Type.
+# Legacy: device-level "Type". Returns 1 when no type is defined.
+json_channel_type_at()
+{
+	local device_json="$1"
+	local n="$2"
+	local entry v
+
+	if json_has_channels_array "$device_json"; then
+		entry=$(json_channel_entry_at "$device_json" "$n") || return 1
+		[ -n "$entry" ] || return 1
+		v=$(echo "$entry" | json_get_string "Type")
+		[ -n "$v" ] && [ "$v" != "null" ] && { printf '%s' "$v"; return 0; }
+		return 1
+	fi
+
+	v=$(echo "$device_json" | json_get_string "Type" 2>/dev/null) || true
+	v=$(echo "$v" | tr -d '"')
+	[ -n "$v" ] && [ "$v" != "null" ] && { printf '%s' "$v"; return 0; }
+	return 1
+}
+
+# Threshold scalar for a channel type from the device Types[] array.
+# Usage: json_type_threshold <device_json> <type_name> <key>
+# Prints the value and returns 0; returns 1 when Types/type/key is absent.
+json_type_threshold()
+{
+	local device_json="$1"
+	local type_name="$2"
+	local key="$3"
+	local n i elem etype val
+
+	[ -n "$type_name" ] || return 1
+	json_has_types_array "$device_json" || return 1
+	n=$(echo "$device_json" | json_count_nested_array "Types")
+	[ -n "$n" ] && [ "$n" -ge 1 ] 2>/dev/null || return 1
+
+	i=0
+	while [ "$i" -lt "$n" ]; do
+		elem=$(echo "$device_json" | json_get_nested_array_element "Types" "$i")
+		etype=$(echo "$elem" | json_get_string "Type")
+		if [ "$etype" = "$type_name" ]; then
+			if val=$(json_optional_scalar "$elem" "$key"); then
+				printf '%s' "$val"
+				return 0
+			fi
+			return 1
+		fi
+		i=$((i + 1))
+	done
+	return 1
+}
+
+# Resolve one threshold key for a channel: prefer the per-type Types[] entry, then
+# fall back to a device-level scalar (legacy schema only). When a Types[] array is
+# present the device-level scalar fallback is skipped so a value from a different
+# type entry is never read by mistake.
+resolve_threshold()
+{
+	local device_json="$1"
+	local chan_type="$2"
+	local key="$3"
+	local v
+
+	if [ -n "$chan_type" ] && v=$(json_type_threshold "$device_json" "$chan_type" "$key"); then
+		printf '%s' "$v"
+		return 0
+	fi
+	if json_has_types_array "$device_json"; then
+		return 1
+	fi
+	json_optional_scalar "$device_json" "$key"
+}
+
+# True (0) when the device JSON has a ChannelId array (vs a scalar / absent), OR a
+# Channels[] array. Both forms mean a single present chip serves several logical
+# channels (BOM-alternative mode); runtime channel dirs are named by mapped input.
 json_channelid_is_array()
 {
+	if json_has_channels_array "$1"; then
+		return 0
+	fi
 	echo "$1" | awk '
 	BEGIN { buf = "" }
 	{ buf = buf $0 }
@@ -1136,12 +1305,24 @@ json_channelid_is_array()
 	}'
 }
 
-# n-th value (1-based) of a ChannelId array, or the scalar ChannelId, from device JSON.
-# Prints the value and returns 0; returns 1 if ChannelId is absent or the index is out of range.
+# n-th value (1-based) of the channel hardware input map. New schema: Channels[n].Id.
+# Legacy: n-th value of a ChannelId array, or the scalar ChannelId, from device JSON.
+# Prints the value and returns 0; returns 1 if the channel/ChannelId is absent or out of range.
 json_channel_id_at()
 {
 	local device_json="$1"
 	local n="$2"
+	local entry v
+
+	if json_has_channels_array "$device_json"; then
+		entry=$(json_channel_entry_at "$device_json" "$n") || return 1
+		[ -n "$entry" ] || return 1
+		v=$(echo "$entry" | json_get_number "Id")
+		[ -n "$v" ] || return 1
+		printf '%s' "$v"
+		return 0
+	fi
+
 	echo "$device_json" | awk -v n="$n" '
 	BEGIN { buf = "" }
 	{ buf = buf $0 }
@@ -1314,6 +1495,8 @@ find_iio_channel_raw()
 # warn/crit/lwarn/lcrit from WarningMax/CriticalMax/WarningMin/CriticalMin.
 # min: LoThreshRegVal×Scale, else NormalMin, else WarningMin.
 # max: HiThreshRegVal×Scale, else NormalMax, else WarningMax.
+# Thresholds are resolved per channel type (chan_type, 8th arg) from the device
+# Types[] array; legacy device-level scalars are used when no Types[] is present.
 populate_leakage_channel_dir()
 {
 	local ch_dir="$1"
@@ -1323,11 +1506,17 @@ populate_leakage_channel_dir()
 	local address="$5"
 	local device_type="$6"
 	local hw_channel_id="${7:-}"
+	local chan_type="${8:-}"
 
 	rm -f "$ch_dir/min" "$ch_dir/max" "$ch_dir/warn" "$ch_dir/crit" "$ch_dir/lwarn" "$ch_dir/lcrit" "$ch_dir/type" "$ch_dir/scale" "$ch_dir/input" "$ch_dir/channel_name"
 
 	if [ -z "$hw_channel_id" ]; then
 		hw_channel_id=$(json_device_hw_channel_id "$device_json" "$ch_num")
+	fi
+	# Resolve the channel type from Channels[] (new schema) when the caller did not
+	# pass one explicitly; falls back to the legacy device-level Type.
+	if [ -z "$chan_type" ]; then
+		chan_type=$(json_channel_type_at "$device_json" "$ch_num") || chan_type=""
 	fi
 
 	local scale_s=""
@@ -1338,20 +1527,20 @@ populate_leakage_channel_dir()
 	[ -z "$sc_num" ] && sc_num=1
 
 	local v
-	if v=$(json_optional_scalar "$device_json" "WarningMax"); then
+	if v=$(resolve_threshold "$device_json" "$chan_type" "WarningMax"); then
 		echo "$v" >"$ch_dir/warn"
 	fi
-	if v=$(json_optional_scalar "$device_json" "CriticalMax"); then
+	if v=$(resolve_threshold "$device_json" "$chan_type" "CriticalMax"); then
 		echo "$v" >"$ch_dir/crit"
 	fi
-	if v=$(json_optional_scalar "$device_json" "WarningMin"); then
+	if v=$(resolve_threshold "$device_json" "$chan_type" "WarningMin"); then
 		echo "$v" >"$ch_dir/lwarn"
 	fi
-	if v=$(json_optional_scalar "$device_json" "CriticalMin"); then
+	if v=$(resolve_threshold "$device_json" "$chan_type" "CriticalMin"); then
 		echo "$v" >"$ch_dir/lcrit"
 	fi
-	if v=$(json_optional_scalar "$device_json" "Type"); then
-		echo "$v" >"$ch_dir/type"
+	if [ -n "$chan_type" ]; then
+		echo "$chan_type" >"$ch_dir/type"
 	fi
 
 	local lo_hex hi_hex
@@ -1374,18 +1563,18 @@ populate_leakage_channel_dir()
 		fi
 	fi
 
-	# min/max when Lo/Hi register hex absent (e.g. MAX1363): optional NormalMin/NormalMax scalars, else WarningMin/WarningMax
+	# min/max when Lo/Hi register hex absent (e.g. MAX1363): per-type NormalMin/NormalMax, else WarningMin/WarningMax
 	if [ ! -f "$ch_dir/min" ]; then
-		if v=$(json_optional_scalar "$device_json" "NormalMin"); then
+		if v=$(resolve_threshold "$device_json" "$chan_type" "NormalMin"); then
 			echo "$v" >"$ch_dir/min"
-		elif v=$(json_optional_scalar "$device_json" "WarningMin"); then
+		elif v=$(resolve_threshold "$device_json" "$chan_type" "WarningMin"); then
 			echo "$v" >"$ch_dir/min"
 		fi
 	fi
 	if [ ! -f "$ch_dir/max" ]; then
-		if v=$(json_optional_scalar "$device_json" "NormalMax"); then
+		if v=$(resolve_threshold "$device_json" "$chan_type" "NormalMax"); then
 			echo "$v" >"$ch_dir/max"
-		elif v=$(json_optional_scalar "$device_json" "WarningMax"); then
+		elif v=$(resolve_threshold "$device_json" "$chan_type" "WarningMax"); then
 			echo "$v" >"$ch_dir/max"
 		fi
 	fi
@@ -1452,16 +1641,18 @@ create_channel_infrastructure()
 	fi
 
 	local ch=1
-	local channel_name hw_ch ch_dir_num
+	local channel_name hw_ch ch_dir_num chan_type
 	while [ "$ch" -le "$num_channels" ]; do
 		hw_ch=$(json_device_hw_channel_id "$device_json" "$ch")
-		# Channel directory is named by the (hardware) ChannelId so a non-sequential
-		# map such as ChannelId [1,4] surfaces as leakage/<i>/1 and leakage/<i>/4,
-		# and the input symlink targets in_voltage<ChannelId-1>_raw.
+		# Channel directory is named by the (hardware) channel Id so a non-sequential
+		# map such as Channels[].Id [1,4] surfaces as leakage/<i>/1 and leakage/<i>/4,
+		# and the input symlink targets in_voltage<Id-1>_raw.
 		ch_dir_num="$hw_ch"
 		[ -n "$ch_dir_num" ] && [ "$ch_dir_num" -ge 1 ] 2>/dev/null || ch_dir_num="$ch"
+		# Per-channel type (Channels[ch].Type) selects the Types[] threshold set.
+		chan_type=$(json_channel_type_at "$device_json" "$ch") || chan_type=""
 		mkdir -p "$leakage_base/$ch_dir_num"
-		populate_leakage_channel_dir "$leakage_base/$ch_dir_num" "$ch_dir_num" "$device_json" "$bus" "$address" "$device_type" "$hw_ch"
+		populate_leakage_channel_dir "$leakage_base/$ch_dir_num" "$ch_dir_num" "$device_json" "$bus" "$address" "$device_type" "$hw_ch" "$chan_type"
 		channel_name=$(echo "$chnames" | awk -v c="$ch" '{print $c}')
 		if [ -n "$channel_name" ]; then
 			echo "$channel_name" >"$leakage_base/$ch_dir_num/channel_name"
@@ -1490,7 +1681,7 @@ populate_single_leakage_channel()
 		return 0
 	fi
 
-	local leakage_base hw_ch channel_name
+	local leakage_base hw_ch channel_name chan_type
 	leakage_base="/var/run/hw-management/leakage/$device_index"
 	mkdir -p "$leakage_base"
 	if [ -n "$detector_name" ]; then
@@ -1505,8 +1696,11 @@ populate_single_leakage_channel()
 	fi
 
 	hw_ch=$(json_device_hw_channel_id "$device_json" "$logical_ch")
+	# Per-channel device-map: a single channel entry maps to logical channel 1 of
+	# this Device[]; resolve its type from Channels[] (new schema) when present.
+	chan_type=$(json_channel_type_at "$device_json" 1) || chan_type=""
 	mkdir -p "$leakage_base/$logical_ch"
-	populate_leakage_channel_dir "$leakage_base/$logical_ch" "$logical_ch" "$device_json" "$bus" "$address" "$device_type" "$hw_ch"
+	populate_leakage_channel_dir "$leakage_base/$logical_ch" "$logical_ch" "$device_json" "$bus" "$address" "$device_type" "$hw_ch" "$chan_type"
 	channel_name=$(echo "$chnames" | awk -v c="$logical_ch" '{print $c}')
 	if [ -n "$channel_name" ]; then
 		echo "$channel_name" >"$leakage_base/$logical_ch/channel_name"
