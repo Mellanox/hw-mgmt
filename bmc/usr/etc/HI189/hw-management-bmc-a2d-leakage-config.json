@@ -12,28 +12,35 @@
                 "Bus": 27,
                 "Address": "0x34",
                 "Probe": true,
-                "Scale": 0.000244140625,
+                "Scale": 0.0008,
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the Salamandra Excel MAX1363 column (0.8 mV).",
                 "Types": [
                     {
                         "Type": "rop",
-                        "WarningMin": 0.7,
-                        "CriticalMin": 0.1,
-                        "WarningMax": 0.8,
-                        "CriticalMax": 0.7
+                        "NormalMin": 2.8,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.27,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.8,
+                        "CriticalMax": 2.27
                     },
                     {
                         "Type": "flex",
-                        "WarningMin": 0.7,
-                        "CriticalMin": 0.1,
-                        "WarningMax": 0.8,
-                        "CriticalMax": 0.7
+                        "NormalMin": 1.99,
+                        "NormalMax": 2.17,
+                        "WarningMin": 1.73,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 1.99,
+                        "CriticalMax": 1.73
                     },
                     {
                         "Type": "embedded",
-                        "WarningMin": 0.7,
-                        "CriticalMin": 0.1,
-                        "WarningMax": 0.8,
-                        "CriticalMax": 0.7
+                        "NormalMin": 2.8,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.27,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.8,
+                        "CriticalMax": 2.27
                     }
                 ],
                 "Channels": [
@@ -63,12 +70,12 @@
                     },
                     {
                         "Type": "flex",
-                        "NormalMin": 1.69,
-                        "NormalMax": 2.09,
-                        "WarningMin": 1.2,
+                        "NormalMin": 1.93,
+                        "NormalMax": 2.17,
+                        "WarningMin": 1.69,
                         "CriticalMin": 0.13,
-                        "WarningMax": 1.69,
-                        "CriticalMax": 1.2
+                        "WarningMax": 1.93,
+                        "CriticalMax": 1.69
                     },
                     {
                         "Type": "embedded",
@@ -91,6 +98,50 @@
                 "LoThreshRegVal": "0x44 0xc0",
                 "HiThreshReg": "0x03",
                 "HiThreshRegVal": "0x60 0xa0"
+            },
+            {
+                "DeviceType": "ADS7924",
+                "Bus": 27,
+                "Address": "0x49",
+                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for Salamandra.",
+                "Probe": true,
+                "Scale": 0.002,
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max and used to derive the ADS7924 window comparator ULR/LLR codes (volts/Scale, 12-bit, >>4 to 8-bit).",
+                "Types_comment": "PLACEHOLDER thresholds copied from the Salamandra ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
+                "Types": [
+                    {
+                        "Type": "rop",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    },
+                    {
+                        "Type": "flex",
+                        "NormalMin": 1.93,
+                        "NormalMax": 2.17,
+                        "WarningMin": 1.69,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 1.93,
+                        "CriticalMax": 1.69
+                    },
+                    {
+                        "Type": "embedded",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    }
+                ],
+                "Channels": [
+                    { "Id": 1, "Type": "embedded", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
+                    { "Id": 2, "Type": "flex", "CfgReg": "0x0c", "CfgRegVal": "0x43 0x3c" }
+                ],
+                "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
             }
         ]
     },
@@ -107,28 +158,35 @@
                 "Bus": 28,
                 "Address": "0x35",
                 "Probe": true,
-                "Scale": 0.000244140625,
+                "Scale": 0.0008,
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max by hw-management-bmc-a2d-leakage-config.sh (leakage-handler in-band check: raw*Scale vs min/max). Scale 0.0008 V/LSB matches the Salamandra Excel MAX1363 column (0.8 mV).",
                 "Types": [
                     {
                         "Type": "rop",
-                        "WarningMin": 0.7,
-                        "CriticalMin": 0.1,
-                        "WarningMax": 0.8,
-                        "CriticalMax": 0.7
+                        "NormalMin": 2.8,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.27,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.8,
+                        "CriticalMax": 2.27
                     },
                     {
                         "Type": "flex",
-                        "WarningMin": 0.7,
-                        "CriticalMin": 0.1,
-                        "WarningMax": 0.8,
-                        "CriticalMax": 0.7
+                        "NormalMin": 1.99,
+                        "NormalMax": 2.17,
+                        "WarningMin": 1.73,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 1.99,
+                        "CriticalMax": 1.73
                     },
                     {
                         "Type": "embedded",
-                        "WarningMin": 0.7,
-                        "CriticalMin": 0.1,
-                        "WarningMax": 0.8,
-                        "CriticalMax": 0.7
+                        "NormalMin": 2.8,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.27,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.8,
+                        "CriticalMax": 2.27
                     }
                 ],
                 "Channels": [
@@ -158,12 +216,12 @@
                     },
                     {
                         "Type": "flex",
-                        "NormalMin": 1.69,
-                        "NormalMax": 2.09,
-                        "WarningMin": 1.2,
+                        "NormalMin": 1.93,
+                        "NormalMax": 2.17,
+                        "WarningMin": 1.69,
                         "CriticalMin": 0.13,
-                        "WarningMax": 1.69,
-                        "CriticalMax": 1.2
+                        "WarningMax": 1.93,
+                        "CriticalMax": 1.69
                     },
                     {
                         "Type": "embedded",
@@ -186,6 +244,50 @@
                 "LoThreshRegVal": "0x44 0xc0",
                 "HiThreshReg": "0x03",
                 "HiThreshRegVal": "0x60 0xa0"
+            },
+            {
+                "DeviceType": "ADS7924",
+                "Bus": 28,
+                "Address": "0x48",
+                "Address_comment": "PLACEHOLDER: ADS7924 BOM alternative listed at the same socket/address as the ADS1015. Confirm the populated ADS7924 I2C address for Salamandra.",
+                "Probe": true,
+                "Scale": 0.002,
+                "NormalMinMax_comment": "Per-type NormalMin/NormalMax are written to runtime .../min and .../max and used to derive the ADS7924 window comparator ULR/LLR codes (volts/Scale, 12-bit, >>4 to 8-bit).",
+                "Types_comment": "PLACEHOLDER thresholds copied from the Salamandra ADS1015 (same 2 mV scale). The Excel has no ADS7924 column yet — replace with characterized ADS7924 values when available.",
+                "Types": [
+                    {
+                        "Type": "rop",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    },
+                    {
+                        "Type": "flex",
+                        "NormalMin": 1.93,
+                        "NormalMax": 2.17,
+                        "WarningMin": 1.69,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 1.93,
+                        "CriticalMax": 1.69
+                    },
+                    {
+                        "Type": "embedded",
+                        "NormalMin": 2.69,
+                        "NormalMax": 3.09,
+                        "WarningMin": 2.2,
+                        "CriticalMin": 0.13,
+                        "WarningMax": 2.69,
+                        "CriticalMax": 2.2
+                    }
+                ],
+                "Channels": [
+                    { "Id": 1, "Type": "embedded", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
+                    { "Id": 4, "Type": "flex", "CfgReg": "0x10", "CfgRegVal": "0x43 0x3c" }
+                ],
+                "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
             }
         ]
     }
