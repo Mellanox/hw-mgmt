@@ -126,6 +126,48 @@
     o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
       "acpi_enforce_resources=lax acpi=noirq".
 
+================================================================================
+- V.7.0070.0935
+- Tue, 23 Jun 2026
+--------------------------------------------------------------------------------
+
+- New features
+    o 
+
+- Bug fixes
+    o #5079211, hw-mgmt: kernel: Revert mux completion notify, dca3e10
+    o #4984971, hw-mgmt: scripts: Fix polling for graceful power off request, 6c512e3
+    o #4889170, hw-mgmt: patches: 6.1: Fix AMD I2C controller init after kexec, 529a89f
+    o #5085644, hw-mgmt: scripts: Update list of modules to load, 279f222
+    o #4877790, hw-mgmt: documentation: Update README.md with new kernel 6.1.174, 9f2ce1b
+    o #5046588, hw-mgmt: sensors: Add scaling factor for SN6600_LD power and current, e71da32
+    o #N/A, Update changelog and release notes for V.7.0070.0934, b7d8d4e
+    o #5040812, hw-mgmt: scripts: Restrict udev event log size (#2588), c49905d
+    o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 3fd3993
+    o #N/A, hw-mgmt: bmc: read AST2700 reset-cause SCU words from /proc/cmdline, a9f7033
+    o #5014001, docs: Fix Juliet N51XX_LD reset-cause list in user manual (#5014001), 30282bc
+    o #N/A, hw-mgmt: ci: Remove obsolete ONL 4.9/4.19 CI kernel patches, cbf7f60
+    o #N/A, hw-mgmt: debian: Update package maintainer to NVIDIA Switch BSP, 1671dd4
+    o #N/A, hw-mgmt: bmc: leakage: Update json config file for system HI189, 3dcf115
+    o #N/A, hw-mgmt: bmc: HI189: align A2D leakage config with new naming and thresholds, ae42c87
+    o #N/A, Revert "hw-mgmt: kernel: patch 6.12: Add new system platform driver SN6600 (SKU186)" (#2553), 19e1681
+    o #5035319, hw-mgmt: sensors: Add scaling factor for N6100_LD power and current, 22ecc8c
+    o #N/A, hw-mgmt: bmc: Add leakage debug scripts for ADS7924 and ADS1015, 2f08679
+    o #N/A, hw-mgmt: thermal: Refactor hotplug sysfs event init. Add helpers., fdb0bf6
+    o #N/A, hw-mgmt: scripts: Centralize PSU I2C bus/addr in config for dummy PSUs, 0fa14e2
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.0935/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
 
 ================================================================================
 - V.7.0070.0934
