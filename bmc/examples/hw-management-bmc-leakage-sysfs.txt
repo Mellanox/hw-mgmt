@@ -22,11 +22,11 @@
 │   │   ├── input                      # symlink or file: raw IIO sample (unscaled) when Probe path exists
 │   │   ├── min                        # low threshold (register-derived × scale, config units)
 │   │   ├── max                        # high threshold (register-derived × scale)
-│   │   ├── warn                       # WarningMax (config units)
-│   │   ├── crit                       # CriticalMax (config units)
-│   │   ├── lwarn                      # optional: WarningMin
-│   │   ├── lcrit                      # optional: CriticalMin
-│   │   ├── type                       # optional: JSON field "Type" — file content rop or flex (sensor kind)
+│   │   ├── warn                       # WarningMax of this channel's type (config units)
+│   │   ├── crit                       # CriticalMax of this channel's type (config units)
+│   │   ├── lwarn                      # optional: WarningMin of this channel's type
+│   │   ├── lcrit                      # optional: CriticalMin of this channel's type
+│   │   ├── type                       # Channels[].Type — file content rop, flex or embedded (selects Types[] thresholds)
 │   │   ├── scale                      # Scale from JSON
 │   │   ├── channel_name               # optional: ChnlNames text (e.g. Chassis_0_LeakDetector_0_A)
 │   │   ├── last_sample                # optional: 12-bit-aligned code (written on OOB event by leakage-handler)
@@ -37,7 +37,7 @@
 │       ├── max
 │       ├── warn
 │       ├── crit
-│       ├── type                       # optional: rop or flex (same "Type" field as channel 1)
+│       ├── type                       # Channels[].Type for channel 2 (may differ from channel 1, e.g. flex vs embedded)
 │       ├── scale
 │       ├── channel_name               # optional: ChnlNames text (e.g. Chassis_0_LeakDetector_0_B)
 │       ├── last_sample
@@ -58,16 +58,18 @@
 # Notes
 #
 # • input: When JSON Probe is true, the script binds the driver and points input at the kernel
-#   sysfs raw attribute for the wired hardware channel: in_voltage<ChannelId-1>_raw
-#   (defaults to in_voltage<j-1>_raw when ChannelId is absent). Paths differ by SoC/driver.
+#   sysfs raw attribute for the wired hardware channel: in_voltage<Id-1>_raw
+#   (defaults to in_voltage<j-1>_raw when no channel map is given). Paths differ by SoC/driver.
 #
-# • ChannelId (optional, per Device): 1-based hardware A2D input(s) the sensor is wired to (holes
-#   allowed). Scalar (e.g. 4) = one input for that Device entry (per-channel device-map mode).
-#   Array (e.g. [1,4]) = one input per logical channel; a single present chip serves all NumChnl
-#   channels (BOM-alternative), and each channel directory is named by its mapped input — so
-#   ChannelId [1,4] produces .../<N>/1/ and .../<N>/4/ (not 1/ and 2/). Drives the input symlink
-#   (in_voltage<ChannelId-1>_raw), the ADS1015 MUX byte (0xc2/0xd2/0xe2/0xf2 = inputs 1-4) and the
-#   MAX1363 scan/monitor bytes in CfgRegVal. See hw-management-bmc-a2d-leakage-config-example.json.
+# • Channels[] (preferred, per Device): array of {Id, Type}, one per logical channel. Id (1-based)
+#   is the hardware A2D input the sensor is wired to (holes allowed); Type (rop/flex/embedded)
+#   selects that channel's thresholds from the device Types[] array, so two channels on one chip
+#   can carry different bounds. A multi-entry Channels[] means one present chip serves all NumChnl
+#   channels (BOM-alternative), and each channel directory is named by its mapped Id — so
+#   Channels [{Id:1},{Id:4}] produces .../<N>/1/ and .../<N>/4/ (not 1/ and 2/). Id drives the input
+#   symlink (in_voltage<Id-1>_raw), the ADS1015 MUX byte (0xc2/0xd2/0xe2/0xf2 = inputs 1-4) and the
+#   MAX1363 scan/monitor bytes in CfgRegVal. Legacy scalar/array ChannelId + device-level Type are
+#   still honored when Channels[]/Types[] are absent. See hw-management-bmc-a2d-leakage-config-example.json.
 #
 # • Validate on a live BMC with bmc/tests/hw-management-bmc-leakage-validate.sh: a minimal HW-vs-SW
 #   test that prints each configured Bus/Address I2C probe next to its SW runtime channel with a
