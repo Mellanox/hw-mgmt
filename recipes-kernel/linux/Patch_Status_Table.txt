@@ -729,9 +729,6 @@ Kernel-6.1
 |0111-leds-mlxreg-Provide-conversion-for-hardware-LED-colo.patch  |                    | Downstream accepted                      |            |                                                |
 |0112-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
 |0113-net-usb-usbnet-restore-usb-d-name-exception-for-loca.patch  | 07f8bdce68b9       | Bugfix accepted;skip[nvos]               | v6.1.133   | Required for kernels 6.1.115-6.1.132           |
-|0114-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
-|0115-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
-|0116-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_post_init after last mux (4151613)     |
 |0117-nvme-pci-try-flr-on-controller-disable-failure.patch        |                    | Downstream accepted                      |            | NVME SSD FLR additional flow                   |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8002-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
@@ -830,9 +827,6 @@ Kernel-6.12
 |0062-Add-support-for-NXP-s-PCF85053A-RTC-chip.patch              |                    | Downstream accepted                      |            |                                                |
 |0063-reset-phy-using-polling-function-not-register-write.patch   |                    | Downstream accepted                      |            |                                                |
 |0064-hwmon-pmbus-isl68137-Add-support-for-Renesas-RAA2289.patch  |                    | Downstream accepted                      |            | raa228942 raa228943                            |
-|0065-i2c-mux-reg-Downstream-Completion-notify-after-mux-a.patch  |                    | Downstream accepted                      |            | i2c-mux-reg completion_notify after adapters   |
-|0066-i2c-mux-regmap-Amend-completion-notify-flow.patch      |                    | Downstream accepted                      |            |                                                |
-|0067-platform-mellanox-Downstream-Defer-post-init-until-I.patch  |                    | Downstream accepted                      |            | mlxplat_platdevs_init after last mux (4151613) |
 |8000-mlxsw-Use-weak-reverse-dependencies-for-firmware-fla.patch  |                    | Downstream accepted                      |            | Disable FW update                              |
 |8001-platform-mlx-platform-Downstream-Add-SPI-path-for-ra.patch  |                    | Rejected                                 |            | Add SPI                                        |
 |8002-mlxsw-i2c-SONIC-ISSU-Prevent-transaction-execution-f.patch  |                    | Downstream accepted                      |            | Sonic/ISSU                                     |
