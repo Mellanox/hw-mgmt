@@ -1,14 +1,45 @@
 ================================================================================
-- V.7.0070.1074
-- Tue, 23 Jun 2026
+- V.7.0070.1076
+- Thu, 25 Jun 2026
 --------------------------------------------------------------------------------
 
 - New features
-    o nvsw-bmc: ASIC temp events via event register
+    o 
 
 - Bug fixes
-    o Removed kconfig RTC over espi
-    o kernel 6.12 BMC: add ftgmac100 SGMII fixes (0010, 0011)
+    o #N/A, hw-mgmt: kernel 6.12 BMC: add ftgmac100 SGMII fixes (0010, 0011), 12015c1
+    o #N/A, Updated DTS changes following latest OpenBMC commits: Removed leftover (#2612), b04de84
+    o #6181524, hw-mgmt: kernel: nvsw-bmc: ASIC temp events via event register, e11265f
+    o #N/A, Update changelog and release notes for V.7.0070.1073, 68f8b3b
+    o #1355801, hw-mgmt: bmc: add v2 primary reset cause (pwr_cycle vs soft_reboot), 57b4cdc
+    o #N/A, hw-mgmt: bmc: Fix 0009 SPC6 DTS split sund-sonic.dtsi patch hunk, 3885b34
+    o #N/A, Update changelog and release notes for V.7.0070.1072, bb5f0a8
+    o #1721071, hw-mgmt: bmc: Split SPC6 AST2700 A2 DTS for SONiC and OpenBMC boot, 05845b1
+    o #N/A, hw-mgmt: bmc: leakage: Follow-up: Fix ADS1015 logic and json config, 93b9151
+    o #N/A, hw-mgmt: bmc: leakage: Fix ADS1015 logic and json config, 2cf2a1f
+    o #N/A, Update changelog and release notes for V.7.0070.1071, 6376e6e
+    o #5046588, hw-mgmt: sensors: Add scaling factor for SN6600_LD power and current, 9ebcff3
+    o #N/A, hw-mgmt: config: Add support for generic system configuration, 89c2636
+    o #N/A, hw-mgmt: scripts: JSON-driven devtree BOM loading, b0e8882
+    o #5040812, hw-mgmt: scripts: Restrict udev event log size, dd36a99
+    o #N/A, hw-mgmt: docs: BMC thermal sysfs and user manual (HI189 / lm75) (#2575), f3db858
+    o #N/A, hw-mgmt: ifupdown: Restore ifquery guard and retry log wording, 986f962
+    o #N/A, hw-mgmt: bmc: netwroking: Add option to allow usb net IP address by NOS (#2574), 2ee5411
+    o #5027944, hw-mgmt: service: Improve hw-mgmt trace log rotation, 511dddb
+    o #N/A, hw-mgmt: tests: Fix offline test drift, 130194d
+
+- Kernel Patches for New Features:
+    o 
+
+- For detailed patch list: Please view: https://github.com/Mellanox/hw-mgmt/blob/V.7.0070.1076/recipes-kernel/linux/Patch_Status_Table.txt
+
+- Known issues and limitations:
+    o Systems like sn2700 which contain delta 460 PSU may have "Error getting sensor data: dps460/#25: Can't read"
+      which is a temporary inaccessibility of certain alarm attributes read from the PSU.
+    o Systems may show a message of WARNING kernel: … supply vcc not found, using dummy regulator" 
+    o Systems SN2010, SN2100, SN2410, SN2700 and SN2740 (and their "-B" variants) require the following flag in kernel cmdline:
+      "acpi_enforce_resources=lax acpi=noirq". 
+
 
 ================================================================================
 - V.7.0070.1073
