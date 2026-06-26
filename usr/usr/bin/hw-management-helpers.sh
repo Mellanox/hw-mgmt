@@ -218,6 +218,7 @@ show_hw_info()
 check_cpu_type()
 {
 	if [ ! -f $config_path/cpu_type ]; then
+		mkdir -p $config_path
 		# ARM CPU provide "CPU part" field, x86 does not. Check for ARM first.
 		cpu_pn=$(grep -m1 "CPU part" /proc/cpuinfo | awk '{print $4}')
 		cpu_pn=`echo $cpu_pn | cut -c 3- | tr a-z A-Z`
