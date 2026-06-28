@@ -5,27 +5,30 @@
       "Name": "string, required. Human-readable detector id.",
       "NumChnl": "number, required. Channel count for this detector (1-based channel indices under leakage/<i>/).",
       "ChnlNames": "array of strings, optional. If set, written as channel_name file inside leakage/<i>/<j>/.",
-      "Device": "array of device alternatives; first probed I2C match is configured."
+      "Device": "array of device entries. Default BOM-alternative mode: mutually-exclusive populations, first probed I2C match drives all NumChnl channels. Per-channel device-map mode (auto-selected when entry count == NumChnl and all Bus/Address pairs are distinct): entry k is the sensor for logical channel k, each configured and linked independently."
     },
     "device_object": {
       "DeviceType": "string, required. e.g. MAX1363, ADS1015, ADS7924 — maps to driver / register logic.",
       "Bus": "number, required. I2C bus number.",
       "Address": "string, required. Hex address; alternatives may share one address when BOMs are mutually exclusive (list MAX1363 before ADS1015).",
+      "Channels": "array of {Id, Type}, optional (preferred schema). One entry per logical channel: Id = 1-based hardware A2D input (AINx = Id-1), Type = channel kind (rop / flex / embedded) selecting the matching Types[] threshold set. A multi-entry Channels[] means a single present chip serves all NumChnl channels (forces BOM-alternative mode) and names each runtime channel directory by its mapped Id (e.g. 1/ and 4/). Drives the input symlink (in_voltage<Id-1>_raw) and ADS1015 MUX / MAX1363 scan programming. Replaces the legacy ChannelId + device-level Type/threshold fields.",
+      "Types": "array of {Type, thresholds...}, optional (preferred schema). One entry per possible channel kind (populate all kinds even if unused: rop, flex, embedded). Each entry carries that type's thresholds — WarningMin, CriticalMin, WarningMax, CriticalMax, and (ADS1015/ADS7924) NormalMin, NormalMax. A channel's thresholds come from the Types[] entry whose Type matches Channels[].Type, so two channels of different types on one device get different bounds.",
+      "ChannelId": "number OR array, optional (legacy; use Channels instead). 1-based hardware A2D input(s) wired to this device. Scalar (e.g. 4) = one input for this Device entry (per-channel device-map mode). Array (e.g. [1,4]) = one input per logical channel. Defaults to the logical channel index. Drives the input symlink (in_voltage<ChannelId-1>_raw) and ADS1015 MUX / MAX1363 scan programming.",
       "Probe": "boolean, optional. If true, bind kernel driver (new_device) before register writes.",
-      "Type": "string, optional. Sensor kind label (e.g. rop, flex). Published as runtime .../<j>/type.",
+      "Type": "string, optional (legacy; use Channels[].Type + Types[] instead). Device-wide sensor kind label (e.g. rop, flex). Published as runtime .../<j>/type when no Channels[] is present.",
       "CfgReg": "string, optional. Configuration register address (hex).",
-      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg.",
+      "CfgRegVal": "string, optional. Space-separated byte values for CfgReg. ADS1015: first byte is config high (MUX — with a scalar ChannelId it selects the input 0xc2/0xd2/0xe2/0xf2 for inputs 1–4; with an array ChannelId it is a placeholder and the script programs each mapped input), second byte is config low (mode/comparator). MAX1363: platform monitor burst; byte0 = scan-to-CS (0x01/0x03/0x05/0x07 for inputs 1–4), first 0x1x byte = monitor channel tag (0x11/0x13/0x15/0x1f). Script patches these from ChannelId (first mapped input for an array).",
       "LoThreshReg": "string, optional. Low threshold register address.",
       "LoThreshRegVal": "string, optional. Bytes for low threshold (big-endian); scaled to min.",
       "HiThreshReg": "string, optional. High threshold register address.",
       "HiThreshRegVal": "string, optional. Bytes for high threshold; scaled to max.",
-      "NormalMin": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent.",
-      "NormalMax": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent.",
-      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max).",
-      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if NormalMin absent.",
-      "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit.",
-      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if NormalMax absent.",
-      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit.",
+      "NormalMin": "number, optional. Direct runtime .../<j>/min when LoThreshRegVal is absent. Preferred location: inside the matching Types[] entry (per channel type); a device-level value is the legacy fallback.",
+      "NormalMax": "number, optional. Direct runtime .../<j>/max when HiThreshRegVal is absent. Preferred location: inside the matching Types[] entry; device-level is the legacy fallback.",
+      "Scale": "number, optional. Multiplier from raw/counts to engineering units (min/max). Stays at the device level (one ADC scale for all channels).",
+      "WarningMin": "number, optional. User low-side warning bound (engineering units). Runtime: .../<j>/lwarn; also fills min if NormalMin absent. Preferred location: inside the matching Types[] entry; device-level is the legacy fallback.",
+      "CriticalMin": "number, optional. User low-side critical bound (engineering units). Runtime: .../<j>/lcrit. Preferred location: Types[] entry; device-level is legacy.",
+      "WarningMax": "number, optional. User high-side warning bound. Runtime: .../<j>/warn; also fills max if NormalMax absent. Preferred location: Types[] entry; device-level is legacy.",
+      "CriticalMax": "number, optional. User high-side critical bound. Runtime: .../<j>/crit. Preferred location: Types[] entry; device-level is legacy.",
       "Ads7924SoftReset": "boolean, optional. Default true: write 0xaa to RESET before programming (raw I2C only).",
       "Ads7924IntConfig": "string, optional. Hex byte INTCONFIG (0x12), default 0xe0.",
       "Ads7924SlpConfig": "string, optional. Hex byte SLPCONFIG (0x13), default 0x00.",
@@ -39,18 +42,66 @@
       "Ads7924_configuration_note": "All Ads7924* keys are optional. When omitted, hw-management-bmc-a2d-leakage-config.sh uses defaults: soft reset on (0xaa @ RESET), INT/SLP/ACQ/PWR = 0xe0 0x00 0x00 0x00, INTCNTRL AEN = 0x0f, AWAKE 0x20 then MODE 0x33 (auto-scan). For ULR/LLR and comparator-driven INT you need Scale plus NormalMin/NormalMax (or if those are absent, WarningMin/WarningMax) on raw I2C (Probe false). Per-channel ULR/LLR overrides use Ads7924UlCh1..4 / Ads7924LlCh1..4 only when you need registers to differ from that voltage-derived window."
     },
     "runtime_paths": {
-      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel.",
-      "type": "from Device.Type",
-      "lwarn": "from Device.WarningMin",
-      "lcrit": "from Device.CriticalMin",
-      "warn": "from Device.WarningMax",
-      "crit": "from Device.CriticalMax",
-      "min": "LoThreshRegVal×Scale, else NormalMin, else WarningMin",
-      "max": "HiThreshRegVal×Scale, else NormalMax, else WarningMax"
+      "leakage_i_j": "/var/run/hw-management/leakage/<i>/<j>/ where i = detector index, j = channel number = the mapped hardware input from Channels[].Id (non-contiguous, e.g. 1 and 4). Legacy: 1..NumChnl for a scalar/absent ChannelId, or the 1-based Device[] position in per-channel device-map mode.",
+      "input": "symlink to the kernel IIO raw attribute for the wired hardware channel: in_voltage<Id-1>_raw (Channels[].Id; legacy in_voltage<ChannelId-1>_raw, or in_voltage<j-1>_raw when absent).",
+      "type": "from Channels[].Type (legacy: device-level Type)",
+      "lwarn": "from the matching Types[].WarningMin (legacy: device-level WarningMin)",
+      "lcrit": "from the matching Types[].CriticalMin (legacy: device-level CriticalMin)",
+      "warn": "from the matching Types[].WarningMax (legacy: device-level WarningMax)",
+      "crit": "from the matching Types[].CriticalMax (legacy: device-level CriticalMax)",
+      "min": "LoThreshRegVal×Scale, else matching Types[].NormalMin, else Types[].WarningMin (legacy: device-level)",
+      "max": "HiThreshRegVal×Scale, else matching Types[].NormalMax, else Types[].WarningMax (legacy: device-level)"
     },
     "deployment_note": "Copy only the array in example_leak_detectors to /etc/hw-management-bmc-a2d-leakage-config.json (or merge with platform file). The full JSON in this file is for documentation; the BMC tool expects a top-level JSON array."
   },
   "example_leak_detectors": [
+    {
+      "Name": "Example_Types_Channels_PerType_Thresholds",
+      "_comment": "Preferred schema. Two BOM-alternative chips (MAX1363 or ADS1015) each serve both channels. Types[] lists every channel kind (rop/flex/embedded) with its own thresholds; Channels[] maps each logical channel to a hardware input Id and a Type. Here channel 1 (AIN0) is 'embedded' and channel 2 (AIN3) is 'flex', so each channel takes its thresholds from the matching Types[] entry. Runtime dirs are named by Id: leakage/<i>/1 and leakage/<i>/4.",
+      "NumChnl": 2,
+      "ChnlNames": [
+        "Leak_Ch0_AIN0_Embedded",
+        "Leak_Ch1_AIN3_Flex"
+      ],
+      "Device": [
+        {
+          "DeviceType": "MAX1363",
+          "Bus": 28,
+          "Address": "0x35",
+          "Probe": true,
+          "Scale": 0.000244140625,
+          "Types": [
+            { "Type": "rop",      "WarningMin": 0.70, "CriticalMin": 0.10, "WarningMax": 0.80, "CriticalMax": 0.70 },
+            { "Type": "flex",     "WarningMin": 0.60, "CriticalMin": 0.05, "WarningMax": 0.90, "CriticalMax": 0.95 },
+            { "Type": "embedded", "WarningMin": 0.70, "CriticalMin": 0.10, "WarningMax": 0.80, "CriticalMax": 0.70 }
+          ],
+          "Channels": [
+            { "Id": 1, "Type": "embedded" },
+            { "Id": 4, "Type": "flex" }
+          ],
+          "CfgReg": "0x00",
+          "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+        },
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 28,
+          "Address": "0x48",
+          "Probe": true,
+          "Scale": 0.002,
+          "Types": [
+            { "Type": "rop",      "NormalMin": 2.69, "NormalMax": 3.09, "WarningMin": 2.20, "CriticalMin": 0.13, "WarningMax": 2.69, "CriticalMax": 2.20 },
+            { "Type": "flex",     "NormalMin": 2.50, "NormalMax": 3.20, "WarningMin": 2.10, "CriticalMin": 0.10, "WarningMax": 2.80, "CriticalMax": 2.30 },
+            { "Type": "embedded", "NormalMin": 2.69, "NormalMax": 3.09, "WarningMin": 2.20, "CriticalMin": 0.13, "WarningMax": 2.69, "CriticalMax": 2.20 }
+          ],
+          "Channels": [
+            { "Id": 1, "Type": "embedded" },
+            { "Id": 4, "Type": "flex" }
+          ],
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
+        }
+      ]
+    },
     {
       "Name": "Chassis_0_LeakDetector_0_Mgmt",
       "NumChnl": 2,
@@ -113,6 +164,86 @@
           "CriticalMin": 0.02,
           "WarningMax": 0.85,
           "CriticalMax": 0.95
+        }
+      ]
+    },
+    {
+      "Name": "Example_PerChannel_DeviceMap_NonSequential",
+      "_comment": "Per-channel device-map mode: 2 distinct devices == NumChnl, so Device[0] -> channel 1, Device[1] -> channel 2. Each sensor is wired to hardware AIN3 (ChannelId 4), so input links to in_voltage3_raw and the ADS1015 MUX byte is 0xf2.",
+      "NumChnl": 2,
+      "ChnlNames": [
+        "Leak_Mgmt_AIN3",
+        "Leak_Swb_AIN3"
+      ],
+      "Device": [
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 27,
+          "Address": "0x49",
+          "ChannelId": 4,
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.002,
+          "NormalMin": 2.69,
+          "NormalMax": 3.09,
+          "WarningMin": 2.2,
+          "CriticalMin": 0.13,
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
+        },
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 28,
+          "Address": "0x48",
+          "ChannelId": 4,
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.002,
+          "NormalMin": 2.69,
+          "NormalMax": 3.09,
+          "WarningMin": 2.2,
+          "CriticalMin": 0.13,
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
+        }
+      ]
+    },
+    {
+      "Name": "Example_BOM_Alt_ChannelId_Array",
+      "_comment": "BOM-alternative mode with an array ChannelId: MAX1363 OR ADS1015 is populated, and whichever is present serves both channels. ChannelId [1,4] maps logical channel 1 -> hardware AIN0 (in_voltage0_raw, dir 1/) and logical channel 2 -> hardware AIN3 (in_voltage3_raw, dir 4/). The array form forces BOM-alternative mode and names the runtime channel directories 1/ and 4/.",
+      "NumChnl": 2,
+      "ChnlNames": [
+        "Leak_Ch0_AIN0",
+        "Leak_Ch1_AIN3"
+      ],
+      "Device": [
+        {
+          "DeviceType": "MAX1363",
+          "Bus": 28,
+          "Address": "0x35",
+          "ChannelId": [1, 4],
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.000244140625,
+          "WarningMin": 0.7,
+          "CriticalMin": 0.1,
+          "CfgReg": "0x00",
+          "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15"
+        },
+        {
+          "DeviceType": "ADS1015",
+          "Bus": 28,
+          "Address": "0x48",
+          "ChannelId": [1, 4],
+          "Probe": true,
+          "Type": "embedded",
+          "Scale": 0.002,
+          "NormalMin": 2.69,
+          "NormalMax": 3.09,
+          "WarningMin": 2.2,
+          "CriticalMin": 0.13,
+          "CfgReg": "0x01",
+          "CfgRegVal": "0xf2 0x83"
         }
       ]
     }
