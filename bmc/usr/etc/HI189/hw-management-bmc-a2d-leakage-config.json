@@ -3,8 +3,8 @@
         "Name": "Mngm_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Mngm_ADC0_Ch1_Embedded_0",
-            "Mngm_ADC0_Ch2_Flex_1"
+            "Mngm_ADC0_Ch1_Flex_0",
+            "Mngm_ADC0_Ch2_Embedded_1"
         ],
         "Device": [
             {
@@ -44,8 +44,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "embedded" },
-                    { "Id": 2, "Type": "flex" }
+                    { "Id": 1, "Type": "flex" },
+                    { "Id": 2, "Type": "embedded" }
                 ],
                 "CfgReg": "0x00",
                 "CfgRegVal": "0x07 0x00 0x1f 0x1f 0x13 0x14 0x15",
@@ -70,17 +70,17 @@
                     },
                     {
                         "Type": "flex",
-                        "NormalMin": 1.93,
-                        "NormalMax": 2.17,
+                        "NormalMin": 1.8,
+                        "NormalMax": 2.8,
                         "WarningMin": 1.69,
                         "CriticalMin": 0.13,
-                        "WarningMax": 1.93,
+                        "WarningMax": 1.8,
                         "CriticalMax": 1.69
                     },
                     {
                         "Type": "embedded",
                         "NormalMin": 2.69,
-                        "NormalMax": 3.09,
+                        "NormalMax": 3.28,
                         "WarningMin": 2.2,
                         "CriticalMin": 0.13,
                         "WarningMax": 2.69,
@@ -88,8 +88,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "embedded" },
-                    { "Id": 2, "Type": "flex" }
+                    { "Id": 1, "Type": "flex" },
+                    { "Id": 2, "Type": "embedded" }
                 ],
                 "CfgReg": "0x01",
                 "CfgRegVal": "0xf2 0x83",
@@ -121,7 +121,7 @@
                     {
                         "Type": "flex",
                         "NormalMin": 1.93,
-                        "NormalMax": 2.17,
+                        "NormalMax": 2.95,
                         "WarningMin": 1.69,
                         "CriticalMin": 0.13,
                         "WarningMax": 1.93,
@@ -138,8 +138,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "embedded", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
-                    { "Id": 2, "Type": "flex", "CfgReg": "0x0c", "CfgRegVal": "0x43 0x3c" }
+                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
+                    { "Id": 2, "Type": "embedded", "CfgReg": "0x0c", "CfgRegVal": "0x43 0x3c" }
                 ],
                 "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
             }
@@ -149,8 +149,8 @@
         "Name": "Swb_ADC0",
         "NumChnl": 2,
         "ChnlNames": [
-            "Swb_ADC0_Ch1_Embedded_0",
-            "Swb_ADC0_Ch4_Flex_1"
+            "Swb_ADC0_Ch1_Flex_0",
+            "Swb_ADC0_Ch4_Embedded_1"
         ],
         "Device": [
             {
@@ -190,7 +190,7 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "embedded" },
+                    { "Id": 1, "Type": "flex" },
                     { "Id": 4, "Type": "embedded" }
                 ],
                 "CfgReg": "0x00",
@@ -216,17 +216,17 @@
                     },
                     {
                         "Type": "flex",
-                        "NormalMin": 1.93,
-                        "NormalMax": 2.17,
+                        "NormalMin": 1.8,
+                        "NormalMax": 2.8,
                         "WarningMin": 1.69,
                         "CriticalMin": 0.13,
-                        "WarningMax": 1.93,
+                        "WarningMax": 1.8,
                         "CriticalMax": 1.69
                     },
                     {
                         "Type": "embedded",
                         "NormalMin": 2.69,
-                        "NormalMax": 3.09,
+                        "NormalMax": 3.28,
                         "WarningMin": 2.2,
                         "CriticalMin": 0.13,
                         "WarningMax": 2.69,
@@ -234,8 +234,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "embedded" },
-                    { "Id": 4, "Type": "flex" }
+                    { "Id": 1, "Type": "flex" },
+                    { "Id": 4, "Type": "embedded" }
                 ],
                 "CfgReg": "0x01",
                 "CfgRegVal": "0xf2 0x83",
@@ -267,7 +267,7 @@
                     {
                         "Type": "flex",
                         "NormalMin": 1.93,
-                        "NormalMax": 2.17,
+                        "NormalMax": 2.95,
                         "WarningMin": 1.69,
                         "CriticalMin": 0.13,
                         "WarningMax": 1.93,
@@ -284,8 +284,8 @@
                     }
                 ],
                 "Channels": [
-                    { "Id": 1, "Type": "embedded", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
-                    { "Id": 4, "Type": "flex", "CfgReg": "0x10", "CfgRegVal": "0x43 0x3c" }
+                    { "Id": 1, "Type": "flex", "CfgReg": "0x0a", "CfgRegVal": "0x60 0x54" },
+                    { "Id": 4, "Type": "embedded", "CfgReg": "0x10", "CfgRegVal": "0x43 0x3c" }
                 ],
                 "CfgRegVal_comment": "ADS7924 window comparator is programmed PER CHANNEL (not per device): each Channels[] entry sets CfgReg = that input's Upper-Limit register (ULRn = 0x0a + 2*(Id-1); LLRn follows at CfgReg+1) and CfgRegVal = \"0xUL 0xLL\" 8-bit codes (code = volts/Scale, 12-bit, >>4). UL derived from the type NormalMax, LL from NormalMin."
             }
