@@ -1,4 +1,7 @@
 {
+    "tests/offline/test_hw_management_redfish_client.py": {
+        "Password": ["pas************ass'", "\"pa******************ord\"", "\"pa*****************123\"", "\"pa*****************\"", "\"pa*******************\"", "pas***************'", "\"pa*************ret\"", "\"pa****************\""]
+    },
     "usr/usr/bin/hw_management_redfish_client.py": {
         "Password" : ["\"pa*****************\"", "\"password\" : \"******\""]
     },
